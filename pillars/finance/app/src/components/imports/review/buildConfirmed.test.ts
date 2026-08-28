@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildConfirmedTransactions, isConfirmable, partitionConfirmable } from './buildConfirmed';
 
+import type { ParsedTransaction } from '@pops/finance';
+
 import type { ProcessedTransaction } from '../../../store/importStore';
 
 function matched(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransaction {
@@ -157,5 +159,52 @@ describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)',
     expect(dropped.every((t) => !isConfirmable(t))).toBe(true);
     // confirmed carries exactly the rows buildConfirmedTransactions would commit.
     expect(confirmed).toHaveLength(buildConfirmedTransactions(rows).length);
+  });
+});
+
+/**
+ * Every field of a parsed row, as a compile-time exhaustive key list. Adding a
+ * field to `ParsedTransaction` without adding it here fails to typecheck, which
+ * is what keeps the passthrough test below from going stale the way the
+ * hand-written copy in `buildConfirmedTransactions` did (POPS-2604).
+ */
+const PARSED_KEYS = {
+  date: true,
+  description: true,
+  amount: true,
+  account: true,
+  location: true,
+  country: true,
+  foreignAmountMinor: true,
+  foreignCurrency: true,
+  fxFeeCents: true,
+  rawRow: true,
+  checksum: true,
+} satisfies Record<keyof ParsedTransaction, true>;
+
+describe('buildConfirmedTransactions parsed-field passthrough', () => {
+  it('carries every parsed field to the commit payload', () => {
+    const row = matched({
+      location: 'Github.com',
+      country: 'US',
+      foreignAmountMinor: 10_000,
+      foreignCurrency: 'USD',
+      fxFeeCents: 503,
+    });
+
+    const [confirmed] = buildConfirmedTransactions([row]);
+
+    for (const key of Object.keys(PARSED_KEYS) as Array<keyof ParsedTransaction>) {
+      expect(confirmed?.[key], `parsed field ${key} was dropped`).toEqual(row[key]);
+    }
+  });
+
+  it('leaves the foreign-charge columns unset on a domestic row rather than zeroing them', () => {
+    const [confirmed] = buildConfirmedTransactions([matched()]);
+
+    expect(confirmed?.country).toBeUndefined();
+    expect(confirmed?.foreignAmountMinor).toBeUndefined();
+    expect(confirmed?.foreignCurrency).toBeUndefined();
+    expect(confirmed?.fxFeeCents).toBeUndefined();
   });
 });

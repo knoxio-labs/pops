@@ -40,9 +40,16 @@ describe('bankDialect', () => {
     }
   });
 
-  it('gives only the packed-description bank a field parser', () => {
+  it('gives a field parser to the banks whose fields the mapper cannot reach', () => {
+    // ANZ packs them into the description; Amex puts them in unmappable columns.
     expect(bankDialect('ANZ Credit Card').deriveFields).toBeTypeOf('function');
-    expect(bankDialect('Amex').deriveFields).toBeUndefined();
+    expect(bankDialect('Amex').deriveFields).toBeTypeOf('function');
+  });
+
+  it('leaves the banks with no hidden fields without a parser', () => {
+    for (const bank of ['ANZ', 'ING', 'Up'] as const) {
+      expect(bankDialect(bank).deriveFields).toBeUndefined();
+    }
   });
 });
 

@@ -1,4 +1,4 @@
-import { parseAnzDescription } from '@pops/finance';
+import { parseAmexRow, parseAnzDescription } from '@pops/finance';
 
 import type { AnzForeignCharge } from '@pops/finance';
 
@@ -53,10 +53,14 @@ export interface BankDialect {
   columns?: readonly string[];
   amountSign: AmountSign;
   /**
-   * Bank-specific parse of the mapped description into stored fields. Absent
-   * when the export's columns already hold each field separately.
+   * Bank-specific parse of a row into stored fields. Absent when the export's
+   * columns already hold each field separately and the mapper can reach them.
+   *
+   * Takes the whole row, not just the mapped description, because the two banks
+   * that need it hide the same fields in different places: ANZ packs them into
+   * the description string, Amex puts them in columns the mapper does not offer.
    */
-  deriveFields?: (description: string) => DerivedFields;
+  deriveFields?: (description: string, row: Record<string, string>) => DerivedFields;
 }
 
 /**
@@ -74,10 +78,23 @@ const ANZ_CREDIT_CARD: BankDialect = {
 
 const DEFAULT_DIALECT: BankDialect = { hasHeader: true, amountSign: 'debit-positive' };
 
+/**
+ * Amex ships a header row and signs purchases positive like the default, but
+ * its long export carries the merchant country and the foreign-charge detail in
+ * columns the mapper does not offer — so those are read from the row here. Its
+ * short export has none of those columns, which this reads as a domestic row
+ * with no country, the only honest reading available.
+ */
+const AMEX: BankDialect = {
+  hasHeader: true,
+  amountSign: 'debit-positive',
+  deriveFields: (description, row) => ({ description, ...parseAmexRow(row) }),
+};
+
 const DIALECTS: Readonly<Record<BankType, BankDialect>> = {
   ANZ: DEFAULT_DIALECT,
   'ANZ Credit Card': ANZ_CREDIT_CARD,
-  Amex: DEFAULT_DIALECT,
+  Amex: AMEX,
   ING: DEFAULT_DIALECT,
   Up: DEFAULT_DIALECT,
 };
