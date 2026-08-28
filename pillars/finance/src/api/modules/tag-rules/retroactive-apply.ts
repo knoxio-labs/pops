@@ -9,6 +9,14 @@
  * untouched, which is what makes a second run against the same rule a no-op
  * (idempotent).
  *
+ * Additive is also the one operation `single: true` cannot survive unaided —
+ * a merge cannot overwrite, so a rule asserting `venue:supermarket` over a row
+ * already reading `venue:cafe` would store both and take the axis out of
+ * service. Such a value is refused and logged, matching what the AI write path
+ * already does through the same `exceedsFacetCardinality`. This runs on every
+ * caller, including the `tagRules.applyExisting` endpoint, not just the
+ * reviewed one-off backfills.
+ *
  * It does NOT skip a `matchType: 'manual'` row (POPS-2662). That marker is
  * stamped when a PATCH touches `entityId`/`entityName`/`type`/`location` — it
  * says the user fixed the *classification*, not that they curated the tags —
@@ -35,11 +43,36 @@ import {
   transactionTagRulesService,
   transactions,
 } from '../../../db/index.js';
-import { parseStoredTags } from '../../../db/tag-facets.js';
+import { exceedsFacetCardinality, parseStoredTags } from '../../../db/tag-facets.js';
 
 import type { MatchableDescription } from '../../../contract/pattern-match.js';
 
 const BATCH_SIZE = 500;
+
+/**
+ * `existing` plus every rule tag that can join it — dropping any that would be
+ * a second value on a single-valued facet, and saying so.
+ */
+function mergeTags(
+  existing: readonly string[],
+  ruleTags: readonly string[],
+  ruleId: string,
+  transactionId: string
+): string[] {
+  const merged = [...existing];
+  for (const tag of ruleTags) {
+    if (merged.includes(tag)) continue;
+    if (exceedsFacetCardinality(merged, tag)) {
+      console.warn(
+        `[tag-rules] rule ${ruleId} not applying ${JSON.stringify(tag)} to transaction ` +
+          `${transactionId}: the row already carries a value on that single-valued facet`
+      );
+      continue;
+    }
+    merged.push(tag);
+  }
+  return merged;
+}
 
 interface BatchTxn {
   id: string;
@@ -145,15 +178,15 @@ export function applyTagRuleToExistingTransactions(
       result.matched++;
 
       const existingTags = parseStoredTags(txn.tags);
-      const missing = ruleTags.filter((t) => !existingTags.includes(t));
-      if (missing.length === 0) continue;
+      const merged = mergeTags(existingTags, ruleTags, rule.id, txn.id);
+      if (merged.length === existingTags.length) continue;
 
       result.updated++;
       if (dryRun) continue;
 
       db.update(transactions)
         .set({
-          tags: JSON.stringify([...existingTags, ...missing]),
+          tags: JSON.stringify(merged),
           lastEditedTime: new Date().toISOString(),
         })
         .where(eq(transactions.id, txn.id))

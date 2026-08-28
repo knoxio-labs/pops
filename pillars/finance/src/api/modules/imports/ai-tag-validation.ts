@@ -24,6 +24,7 @@
  */
 import {
   CLOSED_TAG_FACETS,
+  exceedsFacetCardinality,
   formatTag,
   isClosedTagFacet,
   parseTagFacet,
@@ -171,8 +172,7 @@ export function validateAiTags(
       continue;
     }
     if (tags.includes(resolved)) continue;
-    const spec = CLOSED_TAG_FACETS.find((f) => f.facet === facet);
-    if (spec?.single === true && tags.some((t) => parseTagFacet(t).facet === facet)) {
+    if (exceedsFacetCardinality(tags, resolved)) {
       rejected.push({ facet, value, reason: 'exceeds-facet-cardinality' });
       continue;
     }

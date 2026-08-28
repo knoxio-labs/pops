@@ -12,11 +12,13 @@ import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
  * human marked `manual`: that marker records a classification fix, not curated
  * tags, and skipping on it cost 23 of 106 matched rows here (POPS-2662).
  *
- * Additive merging is also the one way this pass can leave a row worse than it
- * found it: merging `venue:supermarket` onto a row already carrying
- * `venue:cafe` produces two values on a single-valued facet, which no code on
- * this path rejects. `findTagRuleConflicts` scans for exactly that before
- * anything is written, and `--apply` refuses while any exist.
+ * A rule that would put a second value on a single-valued facet — asserting
+ * `venue:supermarket` over a row already reading `venue:cafe` — has that value
+ * refused by the applier itself, so no run of this script can produce a
+ * two-venue row. What the applier cannot do is tell the author of these rules
+ * that a merchant they thought was settled is not: `findTagRuleConflicts`
+ * reports those rows up front, because a rule whose venue is silently dropped
+ * on some of its matches is a rule that needs rewriting, not re-running.
  *
  * Patterns are digit-free because the digits carry nothing: for `contains`,
  * `normalizeDescription` strips them from the pattern as well as from the
@@ -176,8 +178,8 @@ function reportConflicts(conflicts: readonly TagRuleConflict[]): void {
     );
   }
   console.warn(
-    `${LOG} resolve these (fix the row, or narrow the pattern) before --apply; ` +
-      'the retroactive merge is additive and would leave both values on the row'
+    `${LOG} the applier will refuse the clashing value on these rows, so the run is safe — ` +
+      'but they will not get the tag the rule intends until the row or the rule is fixed'
   );
 }
 
@@ -206,10 +208,6 @@ function main(): void {
     );
     if (conflicts.length > 0) {
       reportConflicts(conflicts);
-      if (apply) {
-        process.exitCode = 1;
-        return;
-      }
     }
 
     let totalUpdated = 0;

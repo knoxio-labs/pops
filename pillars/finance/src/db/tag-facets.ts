@@ -165,3 +165,19 @@ export function parseStoredTags(tagsJson: string | null | undefined): string[] {
     return [];
   }
 }
+
+/**
+ * Would adding `tag` put a second value on a single-valued facet of `existing`?
+ *
+ * The predicate every additive tag write needs, because additive is exactly
+ * the operation `single: true` does not survive: merging cannot overwrite, so
+ * without this it stores both values and the axis stops being groupable. A tag
+ * already present, or one on a multi-valued or open facet, is never a conflict.
+ */
+export function exceedsFacetCardinality(existing: readonly string[], tag: string): boolean {
+  if (existing.includes(tag)) return false;
+  const { facet } = parseTagFacet(tag);
+  const spec = CLOSED_TAG_FACETS.find((entry) => entry.facet === facet);
+  if (spec?.single !== true) return false;
+  return existing.some((present) => parseTagFacet(present).facet === facet);
+}
