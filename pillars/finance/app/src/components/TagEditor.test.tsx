@@ -47,4 +47,70 @@ describe('TagEditor', () => {
 
     expect(screen.queryByPlaceholderText(/Type to add a tag/i)).toBeNull();
   });
+
+  it('renders faceted tags on the trigger as bare values, grouped by facet', () => {
+    render(
+      <TagEditor
+        currentTags={['venue:bar', 'contains:alcohol', 'occasion:out']}
+        availableTags={[]}
+        onSave={vi.fn()}
+      />
+    );
+
+    const trigger = screen.getByRole('button', { name: /Edit tags/i });
+    expect(trigger.textContent).toBe('AlcoholOutBar');
+    expect(trigger.textContent).not.toContain(':');
+  });
+
+  it('renders an unprefixed legacy tag on the trigger without error', () => {
+    render(<TagEditor currentTags={['Groceries']} availableTags={[]} onSave={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /Edit tags/i }).textContent).toBe('Groceries');
+  });
+
+  it('groups the suggestion list under facet headings', () => {
+    render(
+      <TagEditor
+        currentTags={[]}
+        availableTags={['venue:bar', 'contains:alcohol', 'venue:cafe', 'Legacy']}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+
+    const panel = screen.getByPlaceholderText(/Type to add a tag/i).parentElement;
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain('Contains');
+    expect(panel?.textContent).toContain('Venue');
+    expect(panel?.textContent).toContain('Other');
+    expect(screen.getByRole('button', { name: 'Add Venue: Bar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Contains: Alcohol' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Legacy' })).toBeInTheDocument();
+  });
+
+  it('matches the grouped suggestion list', () => {
+    render(
+      <TagEditor
+        currentTags={[]}
+        availableTags={['venue:bar', 'contains:alcohol', 'venue:cafe', 'Legacy']}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Add / })
+        .map((button) => button.getAttribute('aria-label'))
+    ).toMatchInlineSnapshot(`
+      [
+        "Add Contains: Alcohol",
+        "Add Venue: Bar",
+        "Add Venue: Cafe",
+        "Add Legacy",
+      ]
+    `);
+  });
 });

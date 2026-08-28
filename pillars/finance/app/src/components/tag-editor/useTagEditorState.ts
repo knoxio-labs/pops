@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { filterTagSuggestions, type TagEditorProps } from './utils';
+import { orderTagsByFacet } from '../../lib/tags';
+import { filterTagSuggestions, SUGGESTION_LIMIT, type TagEditorProps } from './utils';
 
 export interface PanelHandlers {
   tags: string[];
   inputValue: string;
+  /** Suggestions in display order, already capped at `SUGGESTION_LIMIT`. */
   filtered: string[];
   isSaving: boolean;
   isSuggesting: boolean;
@@ -128,7 +130,11 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
 export function useTagEditorState(props: TagEditorProps) {
   const { currentTags, onSave, onSuggest, availableTags = [] } = props;
   const s = useCoreState(currentTags);
-  const filtered = filterTagSuggestions(s.inputValue, availableTags, s.tags);
+  // Relevance picks the shortlist, then facet grouping fixes its order, so
+  // what Tab completes is always what the panel shows first.
+  const filtered = orderTagsByFacet(
+    filterTagSuggestions(s.inputValue, availableTags, s.tags).slice(0, SUGGESTION_LIMIT)
+  ).map((parsed) => parsed.raw);
   const { addTag, removeTag, handleCancel, handleSave, handleSuggest } = useTagActions({
     s,
     currentTags,

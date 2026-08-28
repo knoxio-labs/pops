@@ -10,6 +10,7 @@ import {
   SortableHeader,
 } from '@pops/ui';
 
+import { TagBadgeRow } from '../../components/tags/TagChip';
 import { ENTITY_TYPES, type Entity } from './types';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -108,15 +109,7 @@ const defaultTagsColumn: ColumnDef<Entity> = {
   cell: ({ row }) => {
     const tags = row.original.defaultTags;
     if (tags.length === 0) return <span className="text-muted-foreground">—</span>;
-    return (
-      <div className="flex flex-wrap gap-1">
-        {tags.map((tag) => (
-          <Badge key={tag} variant="secondary" className="text-xs">
-            {tag}
-          </Badge>
-        ))}
-      </div>
-    );
+    return <TagBadgeRow tags={tags} badgeClassName="text-xs" />;
   },
 };
 

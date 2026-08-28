@@ -315,7 +315,7 @@ const mockRules = [
     descriptionPattern: 'WOOLWORTHS',
     matchType: 'contains' as const,
     entityId: 'ent-1',
-    tags: ['groceries'],
+    tags: ['contains:groceries'],
     confidence: 0.95,
     priority: 0,
     timesApplied: 42,
@@ -375,8 +375,10 @@ describe('TagRulesBrowserPage', () => {
     expect(screen.getByText('NETFLIX.COM')).toBeInTheDocument();
     expect(screen.getByText('contains')).toBeInTheDocument();
     expect(screen.getByText('exact')).toBeInTheDocument();
-    expect(screen.getByText('groceries')).toBeInTheDocument();
-    expect(screen.getByText('subscriptions')).toBeInTheDocument();
+    // A faceted tag shows its value only; a legacy unprefixed one still shows.
+    expect(screen.getByText('Groceries')).toBeInTheDocument();
+    expect(screen.queryByText('contains:groceries')).toBeNull();
+    expect(screen.getByText('Subscriptions')).toBeInTheDocument();
   });
 
   it('resolves entity names for a scoped rule and shows Global for a null entity', async () => {
@@ -481,8 +483,9 @@ describe('TagRulesBrowserPage', () => {
       })
     );
 
+    // The rule editor authors the stored string, so it stays unparsed here.
     const chipInput = within(dialog).getByTestId('chip-input');
-    expect(chipInput).toHaveValue('groceries');
+    expect(chipInput).toHaveValue('contains:groceries');
 
     await user.click(within(dialog).getByText('Save'));
     await waitFor(() =>
@@ -490,7 +493,7 @@ describe('TagRulesBrowserPage', () => {
         path: { id: 'rule-1' },
         body: {
           entityId: 'ent-1',
-          tags: ['groceries'],
+          tags: ['contains:groceries'],
           confidence: 0.95,
           priority: 0,
           isActive: true,
@@ -518,7 +521,7 @@ describe('TagRulesBrowserPage', () => {
         path: { id: 'rule-1' },
         body: {
           entityId: null,
-          tags: ['groceries'],
+          tags: ['contains:groceries'],
           confidence: 0.95,
           priority: 0,
           isActive: true,

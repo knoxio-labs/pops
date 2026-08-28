@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { ButtonPrimitive, Chip, hashToColor } from '@pops/ui';
+import { ButtonPrimitive } from '@pops/ui';
 
+import { describeTag, groupTagsByFacet, orderTagsByFacet } from '../../../lib/tags';
 import { cn } from '../../../lib/utils';
+import { FacetHeading, TagChip } from '../../tags/TagChip';
+
+/** How many vocabulary matches the picker dropdown offers at once. */
+const PICKER_LIMIT = 10;
 
 export interface GroupTagBarProps {
   stagedTags: string[];
@@ -44,16 +49,19 @@ function useClickOutside(
 }
 
 function StagedTagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
-  return (
-    <Chip removable onRemove={onRemove} style={hashToColor(tag)} className="border">
-      {tag}
-    </Chip>
-  );
+  return <TagChip tag={tag} removable onRemove={onRemove} className="border" />;
 }
 
 interface PickerInputProps {
   inputValue: string;
+  /** Matches shown in the dropdown: capped, then ordered by facet. */
   filtered: string[];
+  /**
+   * A vocabulary tag equal to the input ignoring case, searched across every
+   * match rather than only the visible ones — the cap must not turn Enter on
+   * an existing tag into the creation of a near-duplicate.
+   */
+  exactMatch: string | undefined;
   showPicker: boolean;
   onAddTag: (tag: string) => void;
   setInputValue: (v: string) => void;
@@ -61,7 +69,7 @@ interface PickerInputProps {
 }
 
 function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): void {
-  const { inputValue, filtered, onAddTag, setInputValue, setShowPicker } = props;
+  const { inputValue, filtered, exactMatch, onAddTag, setInputValue, setShowPicker } = props;
   if (e.key === 'Tab' && filtered.length > 0) {
     e.preventDefault();
     const first = filtered[0];
@@ -72,7 +80,6 @@ function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): v
   }
   if (e.key === 'Enter') {
     e.preventDefault();
-    const exactMatch = filtered.find((t) => t.toLowerCase() === inputValue.toLowerCase());
     if (exactMatch) {
       onAddTag(exactMatch);
     } else if (inputValue.trim()) {
@@ -89,6 +96,24 @@ function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): v
   }
 }
 
+function PickerOption({ tag, onPick }: { tag: string; onPick: (tag: string) => void }) {
+  const { label, ariaLabel, title } = describeTag(tag);
+  return (
+    <button
+      className="w-full min-h-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
+      title={title}
+      aria-label={ariaLabel}
+      data-tag={tag}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onPick(tag);
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function PickerDropdown({
   filtered,
   onPick,
@@ -98,17 +123,15 @@ function PickerDropdown({
 }) {
   return (
     <div className="absolute top-full left-0 mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-32 max-h-40 overflow-y-auto">
-      {filtered.slice(0, 10).map((tag) => (
-        <button
-          key={tag}
-          className="w-full min-h-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onPick(tag);
-          }}
-        >
-          {tag}
-        </button>
+      {groupTagsByFacet(filtered).map((group) => (
+        <div key={group.label} role="group" aria-label={group.label}>
+          <FacetHeading className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold px-3 pt-1.5 pb-0.5">
+            {group.label}
+          </FacetHeading>
+          {group.tags.map((parsed) => (
+            <PickerOption key={parsed.raw} tag={parsed.raw} onPick={onPick} />
+          ))}
+        </div>
       ))}
     </div>
   );
@@ -154,7 +177,11 @@ export function GroupTagBar({
   const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const filtered = filterAvailableTags(inputValue, availableTags, stagedTags);
+  const ranked = filterAvailableTags(inputValue, availableTags, stagedTags);
+  // Relevance picks the shortlist, then facet grouping fixes its order, so
+  // what Tab completes is always what the dropdown shows first.
+  const filtered = orderTagsByFacet(ranked.slice(0, PICKER_LIMIT)).map((parsed) => parsed.raw);
+  const exactMatch = ranked.find((t) => t.toLowerCase() === inputValue.toLowerCase());
 
   useClickOutside(containerRef, showPicker, () => {
     setShowPicker(false);
@@ -174,6 +201,7 @@ export function GroupTagBar({
         showPicker={showPicker}
         setShowPicker={setShowPicker}
         filtered={filtered}
+        exactMatch={exactMatch}
         onAddTag={onAddTag}
       />
       <ButtonPrimitive

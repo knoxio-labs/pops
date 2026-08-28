@@ -45,8 +45,11 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('@pops/ui', async () => {
+vi.mock('@pops/ui', async (importOriginal) => {
   const React = await import('react');
+  // Real exports underneath the stubs, so a component pulling in a primitive
+  // this mock never listed renders instead of blowing up.
+  const actual = await importOriginal<typeof import('@pops/ui')>();
   const ButtonStub = ({
     children,
     onClick,
@@ -59,6 +62,7 @@ vi.mock('@pops/ui', async () => {
     'aria-label'?: string;
   }) => React.createElement('button', { onClick, disabled, 'aria-label': ariaLabel }, children);
   return {
+    ...actual,
     Button: ButtonStub,
     ButtonPrimitive: ButtonStub,
     Badge: ({ children }: { children: React.ReactNode }) =>

@@ -1,4 +1,7 @@
-import { Button, Chip, hashToColor } from '@pops/ui';
+import { Button } from '@pops/ui';
+
+import { describeTag, groupTagsByFacet, orderTagsByFacet } from '../../lib/tags';
+import { FacetHeading, TagChip } from '../tags/TagChip';
 
 interface PanelProps {
   tags: string[];
@@ -20,18 +23,34 @@ function CurrentTags({ tags, onRemove }: { tags: string[]; onRemove: (tag: strin
   if (tags.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2">
-      {tags.map((tag) => (
-        <Chip
-          key={tag}
+      {orderTagsByFacet(tags).map((parsed) => (
+        <TagChip
+          key={parsed.raw}
+          tag={parsed.raw}
           removable
-          onRemove={() => onRemove(tag)}
-          style={hashToColor(tag)}
+          onRemove={() => onRemove(parsed.raw)}
           className="border"
-        >
-          {tag}
-        </Chip>
+        />
       ))}
     </div>
+  );
+}
+
+function SuggestionButton({ tag, onAddTag }: { tag: string; onAddTag: (tag: string) => void }) {
+  const { label, ariaLabel, title, style } = describeTag(tag);
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onAddTag(tag)}
+      className="rounded-full text-xs h-7 px-3 hover:brightness-110"
+      style={style}
+      title={title}
+      aria-label={`Add ${ariaLabel}`}
+      data-tag={tag}
+    >
+      + {label}
+    </Button>
   );
 }
 
@@ -44,18 +63,16 @@ function Suggestions({
 }) {
   if (filtered.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-2">
-      {filtered.slice(0, 8).map((tag) => (
-        <Button
-          key={tag}
-          variant="outline"
-          size="sm"
-          onClick={() => onAddTag(tag)}
-          className="rounded-full text-xs h-7 px-3 hover:brightness-110"
-          style={hashToColor(tag)}
-        >
-          + {tag}
-        </Button>
+    <div className="space-y-1.5">
+      {groupTagsByFacet(filtered).map((group) => (
+        <div key={group.label} className="space-y-1">
+          <FacetHeading>{group.label}</FacetHeading>
+          <div className="flex flex-wrap gap-2">
+            {group.tags.map((parsed) => (
+              <SuggestionButton key={parsed.raw} tag={parsed.raw} onAddTag={onAddTag} />
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );

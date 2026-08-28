@@ -4,7 +4,9 @@
  */
 import { Loader2, Search } from 'lucide-react';
 
-import { Badge, Button, formatDate } from '@pops/ui';
+import { Button, formatDate } from '@pops/ui';
+
+import { TagBadgeRow } from '../../../components/tags/TagChip';
 
 import type { MatchType } from '../types';
 import type { RulePreviewResult } from './types';
@@ -32,13 +34,12 @@ function MatchRow({ match }: { match: RulePreviewResult['matches'][number] }) {
         <span>{match.account}</span>
         {match.entityName && <span>• {match.entityName}</span>}
         {match.tags.length > 0 && (
-          <span className="flex gap-1">
-            {match.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-2xs">
-                {tag}
-              </Badge>
-            ))}
-          </span>
+          <TagBadgeRow
+            tags={match.tags}
+            variant="outline"
+            className="flex gap-1"
+            badgeClassName="text-2xs"
+          />
         )}
       </div>
     </li>

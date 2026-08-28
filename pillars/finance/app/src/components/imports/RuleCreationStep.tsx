@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Checkbox, EmptyState, Label } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
+import { TagBadgeRow } from '../tags/TagChip';
 import { buildChangeSet, computeProposals, type RuleProposal } from './rule-creation/utils';
 
 function ProposalCard({
@@ -41,13 +42,11 @@ function ProposalCard({
           <p className="text-xs text-muted-foreground font-mono">
             contains &ldquo;{proposal.pattern}&rdquo;
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {proposal.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
+          <TagBadgeRow
+            tags={proposal.tags}
+            className="flex flex-wrap gap-1.5"
+            badgeClassName="text-xs"
+          />
         </div>
       </div>
     </div>

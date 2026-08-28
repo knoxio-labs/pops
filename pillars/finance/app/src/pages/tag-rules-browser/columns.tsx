@@ -1,6 +1,9 @@
 import { Ban, Pencil, Trash2, Wand2 } from 'lucide-react';
 
-import { Badge, Button, Chip, formatDate, hashToColor, SortableHeader } from '@pops/ui';
+import { Badge, Button, formatDate, SortableHeader } from '@pops/ui';
+
+import { TagChip } from '../../components/tags/TagChip';
+import { orderTagsByFacet } from '../../lib/tags';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -45,10 +48,8 @@ const tagsColumn: ColumnDef<TagRule> = {
   header: 'Tags',
   cell: ({ row }) => (
     <div className="flex flex-wrap gap-1">
-      {row.original.tags.map((tag) => (
-        <Chip key={tag} size="sm" style={hashToColor(tag)}>
-          {tag}
-        </Chip>
+      {orderTagsByFacet(row.original.tags).map((parsed) => (
+        <TagChip key={parsed.raw} tag={parsed.raw} size="sm" />
       ))}
     </div>
   ),
