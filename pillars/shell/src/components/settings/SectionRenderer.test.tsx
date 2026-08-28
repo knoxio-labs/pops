@@ -233,6 +233,58 @@ describe('SectionRenderer', () => {
 
       vi.useRealTimers();
     });
+
+    it('keeps a rejected value on screen so a bounded number can be edited across its bounds', async () => {
+      vi.useFakeTimers();
+
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Validation',
+            fields: [
+              {
+                key: 'max_tokens',
+                label: 'Max Tokens',
+                type: 'number',
+                default: '200',
+                validation: { min: 50, max: 2000 },
+              },
+            ],
+          },
+        ],
+      });
+
+      mocks.getBulk.mockReturnValue(defaultBulkData({ max_tokens: '200' }));
+
+      render(<SectionRenderer manifest={manifest} />);
+      const input = screen.getByRole('spinbutton');
+
+      // Every prefix of `800` is out of range on the way in, and each one has to
+      // survive on screen — otherwise the field snaps back to `200` and the
+      // target value is unreachable by typing.
+      fireEvent.change(input, { target: { value: '8' } });
+      expect(input).toHaveValue(8);
+      expect(screen.getByText('Must be at least 50')).toBeInTheDocument();
+
+      fireEvent.change(input, { target: { value: '80' } });
+      expect(input).toHaveValue(80);
+
+      fireEvent.change(input, { target: { value: '800' } });
+      expect(input).toHaveValue(800);
+      expect(screen.queryByText('Must be at least 50')).not.toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(mocks.setBulkMutate).toHaveBeenCalledTimes(1);
+      expect(mocks.setBulkMutate).toHaveBeenCalledWith(
+        { entries: [{ key: 'max_tokens', value: '800' }] },
+        expect.any(Object)
+      );
+
+      vi.useRealTimers();
+    });
   });
 
   describe('environment variable fallback', () => {
