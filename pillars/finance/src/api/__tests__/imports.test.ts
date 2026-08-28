@@ -1628,13 +1628,13 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     const payload = {
       commitKey: '22222222-2222-4222-8222-222222222222',
       transactions: [
-        confirmed({ description: 'THE LOCAL', checksum: 'vocab-replay', tags: ['venue:bar'] }),
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-replay', tags: ['venue:pub'] }),
       ],
     };
     const first = await c.imports.commitImport(payload);
 
     // The vocabulary moves on between the commit and its resubmit.
-    financeDb.raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:bar'").run();
+    financeDb.raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:pub'").run();
 
     const second = await c.imports.commitImport(payload);
     expect(second.data).toEqual(first.data);
@@ -1703,16 +1703,16 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
   });
 
   it('accepts a closed value the namespace does hold without re-adding it', async () => {
-    const before = vocabularyTags().filter((t) => t === 'venue:bar').length;
+    const before = vocabularyTags().filter((t) => t === 'venue:pub').length;
     const c = client();
     await c.imports.commitImport({
       transactions: [
-        confirmed({ description: 'THE LOCAL', checksum: 'vocab-closed-ok', tags: ['venue:bar'] }),
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-closed-ok', tags: ['venue:pub'] }),
       ],
     });
 
     expect(before).toBe(1);
-    expect(vocabularyTags().filter((t) => t === 'venue:bar')).toHaveLength(1);
+    expect(vocabularyTags().filter((t) => t === 'venue:pub')).toHaveLength(1);
   });
 
   it('carries a marker tag onto the transaction but never into the vocabulary', async () => {
@@ -1735,11 +1735,11 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     const c = client();
     await c.imports.commitImport({
       transactions: [
-        confirmed({ description: 'THE LOCAL', checksum: 'vocab-case', tags: ['Venue:Bar'] }),
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-case', tags: ['Venue:Pub'] }),
       ],
     });
 
-    expect(vocabularyTags()).not.toContain('Venue:Bar');
+    expect(vocabularyTags()).not.toContain('Venue:Pub');
   });
 
   it('adds nothing when a later phase of the commit throws', async () => {

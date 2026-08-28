@@ -51,7 +51,7 @@ describe('loadKnownTags — the vocabulary is the only source', () => {
   it('surfaces a vocabulary tag that no transaction carries', () => {
     const harness = freshMigratedFinanceDb();
     try {
-      expect(loadKnownTags(harness.db)).toContain('venue:bar');
+      expect(loadKnownTags(harness.db)).toContain('venue:pub');
     } finally {
       harness.raw.close();
     }
