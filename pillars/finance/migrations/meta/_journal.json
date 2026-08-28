@@ -127,6 +127,13 @@
       "when": 1781913600011,
       "tag": "0066_transaction_foreign_charge_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781913600012,
+      "tag": "0067_tag_namespace",
+      "breakpoints": true
     }
   ]
 }
