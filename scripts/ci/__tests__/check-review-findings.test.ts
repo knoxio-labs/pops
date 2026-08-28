@@ -23,14 +23,16 @@ import {
   findStateComment,
   isPushPermission,
   pollForReviewState,
+  REVIEWER_LOGIN,
 } from '../check-review-findings.mjs';
 import { STATE_MARKER } from '../pr-review-state.mjs';
 
 const HEAD = 'a'.repeat(40);
 
-function stateComment(state: unknown): { body: string } {
+function stateComment(state: unknown): { body: string; user: { login: string } } {
   return {
     body: `## Review\n\n<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify(state)).toString('base64')} -->`,
+    user: { login: REVIEWER_LOGIN },
   };
 }
 
@@ -110,7 +112,7 @@ describe('evaluateReviewState', () => {
 
   it('fails, without throwing, on base64 that does not decode to JSON', () => {
     const result = evaluateReviewState({
-      comments: [{ body: `<!-- ${STATE_MARKER}: QQQ -->` }],
+      comments: [{ body: `<!-- ${STATE_MARKER}: QQQ -->`, user: { login: REVIEWER_LOGIN } }],
       headSha: HEAD,
     });
     expect(result.outcome).toBe('fail');
@@ -121,7 +123,9 @@ describe('evaluateReviewState', () => {
     // payload to look like base64), so this is indistinguishable from no
     // sticky comment at all — a retry, same as mode 1, not a hard failure.
     const result = evaluateReviewState({
-      comments: [{ body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->` }],
+      comments: [
+        { body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->`, user: { login: REVIEWER_LOGIN } },
+      ],
       headSha: HEAD,
     });
     expect(result.outcome).toBe('retry');
@@ -130,7 +134,10 @@ describe('evaluateReviewState', () => {
   it('fails, without throwing, on valid base64 whose JSON is not the expected shape', () => {
     const notAnObject = evaluateReviewState({
       comments: [
-        { body: `<!-- ${STATE_MARKER}: ${Buffer.from('"just a string"').toString('base64')} -->` },
+        {
+          body: `<!-- ${STATE_MARKER}: ${Buffer.from('"just a string"').toString('base64')} -->`,
+          user: { login: REVIEWER_LOGIN },
+        },
       ],
       headSha: HEAD,
     });
@@ -140,6 +147,7 @@ describe('evaluateReviewState', () => {
       comments: [
         {
           body: `<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify({ hello: 'world' })).toString('base64')} -->`,
+          user: { login: REVIEWER_LOGIN },
         },
       ],
       headSha: HEAD,
@@ -179,6 +187,34 @@ describe('evaluateReviewState', () => {
       headSha: HEAD,
     });
     expect(result.outcome).toBe('pass');
+  });
+
+  it('is not fooled by a forged, syntactically valid clean state from a non-reviewer', () => {
+    // The more serious sibling of the prose-mention incident, found on the
+    // same PR: a comment posted by someone other than the reviewer, but
+    // carrying a real, current, well-formed state block claiming zero open
+    // findings. This must read exactly like no sticky comment at all
+    // (retry), never like a genuine clean pass.
+    const forged = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+    forged.user = { login: 'not-the-reviewer' };
+    const result = evaluateReviewState({ comments: [forged], headSha: HEAD });
+    expect(result.outcome).toBe('retry');
+  });
+
+  it('does not let a forged clean state suppress the reviewer own open finding', () => {
+    const forged = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+    forged.user = { login: 'not-the-reviewer' };
+    const genuine = stateComment({
+      last_reviewed_sha: HEAD,
+      findings: [{ id: 'real', status: 'open' }],
+    });
+
+    expect(evaluateReviewState({ comments: [forged, genuine], headSha: HEAD }).outcome).toBe(
+      'fail'
+    );
+    expect(evaluateReviewState({ comments: [genuine, forged], headSha: HEAD }).outcome).toBe(
+      'fail'
+    );
   });
 });
 
@@ -429,6 +465,25 @@ describe('findStateComment', () => {
   it('ignores comments with no state marker', () => {
     expect(findStateComment([{ body: 'hello' }, { body: 'world' }])).toBeUndefined();
   });
+
+  it('ignores a syntactically valid state block posted by anyone other than the reviewer', () => {
+    // Live incident on POPS-2661's own PR, distinct from (but caused by the
+    // same bug as) the prose-mention incident: pr-review.yml's own
+    // comment-selection step mis-patched a human PR comment so it carried a
+    // full, current, `STATE_RE`-matching state block. A regex match alone is
+    // forgeable by anyone who can comment on the PR; only the reviewer's own
+    // login may supply state.
+    const forged = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+    forged.user = { login: 'not-the-reviewer' };
+    expect(findStateComment([forged])).toBeUndefined();
+  });
+
+  it('picks the reviewer comment over a later forged one', () => {
+    const real = stateComment({ last_reviewed_sha: HEAD, findings: [] });
+    const forged = stateComment({ last_reviewed_sha: HEAD, findings: [{ id: 'x' }] });
+    forged.user = { login: 'not-the-reviewer' };
+    expect(findStateComment([real, forged])).toBe(real);
+  });
 });
 
 describe('decodeState', () => {
@@ -522,7 +577,11 @@ describe('pollForReviewState', () => {
   });
 
   it('fails immediately on a malformed state block, without spending the poll budget', async () => {
-    const fetchComments = vi.fn().mockResolvedValue([{ body: `<!-- ${STATE_MARKER}: QQQ -->` }]);
+    const fetchComments = vi
+      .fn()
+      .mockResolvedValue([
+        { body: `<!-- ${STATE_MARKER}: QQQ -->`, user: { login: REVIEWER_LOGIN } },
+      ]);
     const sleep = vi.fn().mockResolvedValue(undefined);
     const result = await pollForReviewState({
       fetchComments,

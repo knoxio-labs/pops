@@ -111,6 +111,27 @@ import { STATE_MARKER } from './pr-review-state.mjs';
 
 const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*-->`, 'u');
 
+/**
+ * The only comment author whose state block this guard ever trusts.
+ *
+ * `pr-review.yml` posts its sticky comment with `GH_TOKEN:
+ * secrets.GITHUB_TOKEN`, which always posts as this login — it is not a
+ * value any PR commenter can produce. Without this check, `findStateComment`
+ * trusted the *last comment matching the marker regex, from anyone* — found
+ * live on this PR's own head, where `pr-review.yml`'s own "fetch the
+ * existing review comment" step (a separate, looser bug — see
+ * `findStateComment`'s docstring) mis-patched a human comment into carrying
+ * a full, syntactically valid state block. Nothing stops any GitHub account
+ * able to comment on the PR from posting `<!-- pr-review-state:
+ * <base64 of {"last_reviewed_sha":"<head>","findings":[]}> -->` directly,
+ * which is a forged clean review, not a mistaken one — the marker format and
+ * `STATE_MARKER` value are public in this same source file. Requiring the
+ * reviewer's own login closes that: a forger would need to also compromise
+ * the `pr-review.yml` workflow's token, at which point this guard is the
+ * least of the repo's problems.
+ */
+export const REVIEWER_LOGIN = 'github-actions[bot]';
+
 /** See the file header's "THE ESCAPE HATCH" section and POPS-2669. */
 const DISMISS_MARKER = 'review-findings-gate-dismiss';
 const DISMISS_RE = new RegExp(`<!--\\s*${DISMISS_MARKER}:\\s*([0-9a-f]{6,64})\\s*-->`, 'gu');
@@ -168,34 +189,53 @@ export function collectDismissedFindingIds(comments) {
  *   (see the file header). Absent (not merely `false`) for a comment nobody
  *   has checked, which {@link collectDismissedFindingIds} also treats as
  *   untrusted — the property only ever grants trust when explicitly `true`.
- * @property {{ login?: string }} [user]
+ * @property {{ login?: string }} [user] `user.login` is also how
+ *   {@link findStateComment} decides whether a comment IS the sticky review
+ *   comment at all — only {@link REVIEWER_LOGIN} counts, for the same
+ *   reason `push_access` above requires a real check rather than a
+ *   self-reported field: an unauthenticated body match is a forgeable body
+ *   match.
  */
 
 /**
  * Pick the sticky review comment out of a PR's issue comments.
  *
- * Matches the actual `<!-- pr-review-state: ... -->` HTML comment (via
- * `STATE_RE`), not a bare substring of the word "pr-review-state" — found
- * live on this PR's own head: a dismiss comment (see "THE ESCAPE HATCH"
- * above) that merely *talks about* `pr-review-state.mjs` in prose was picked
- * as the sticky comment by an earlier, looser version of this function
- * (`body.includes(STATE_MARKER)`, matching `pr-review.yml`'s own "fetch the
- * existing review comment" step), and decoding it then failed with "no
- * pr-review-state block" — a self-inflicted false failure, not a real one.
- * `pr-review.yml`'s bash step has the identical looseness; this function
- * does not, because a false match here is a spurious FAIL rather than a
- * spurious full re-review, which is the more expensive of the two mistakes
- * to make silently.
+ * Two independent trust checks, both required:
  *
- * The reviewer maintains exactly one comment carrying the real marker; if
- * more than one is somehow present, the last wins, matching that step's own
- * tie-break (`| last // empty`).
+ * 1. Matches the actual `<!-- pr-review-state: ... -->` HTML comment (via
+ *    `STATE_RE`), not a bare substring of the word "pr-review-state" — found
+ *    live on this PR's own head: a dismiss comment (see "THE ESCAPE HATCH"
+ *    above) that merely *talks about* `pr-review-state.mjs` in prose was
+ *    picked as the sticky comment by an earlier, looser version of this
+ *    function (`body.includes(STATE_MARKER)`, matching `pr-review.yml`'s own
+ *    "fetch the existing review comment" step), and decoding it then failed
+ *    with "no pr-review-state block" — a self-inflicted false failure, not a
+ *    real one. `pr-review.yml`'s bash step has the identical looseness; this
+ *    function does not, because a false match here is a spurious FAIL
+ *    rather than a spurious full re-review, which is the more expensive of
+ *    the two mistakes to make silently.
+ * 2. Posted by {@link REVIEWER_LOGIN} — also found live on this PR's own
+ *    head, the SAME incident: `pr-review.yml`'s own comment-selection bug
+ *    (see point 1) caused it to patch a human PR comment so that it, too,
+ *    carried a fully valid, current `pr-review-state` block. This function's
+ *    stricter regex was not fooled (the human comment did not match `STATE_RE`
+ *    at the time), but that was luck, not a check — nothing stopped anyone
+ *    able to comment on the PR from posting `<!-- pr-review-state:
+ *    <base64 of {"last_reviewed_sha":"<head>","findings":[]}> -->` directly.
+ *    Requiring the actual reviewer login makes that forgeable only by
+ *    someone who already controls `pr-review.yml`'s own token.
+ *
+ * The reviewer maintains exactly one comment meeting both, carrying the real
+ * marker; if more than one is somehow present, the last wins, matching that
+ * workflow step's own tie-break (`| last // empty`).
  *
  * @param {StickyComment[]} comments
  * @returns {StickyComment | undefined}
  */
 export function findStateComment(comments) {
-  const matches = comments.filter((c) => typeof c.body === 'string' && STATE_RE.test(c.body));
+  const matches = comments.filter(
+    (c) => typeof c.body === 'string' && STATE_RE.test(c.body) && c.user?.login === REVIEWER_LOGIN
+  );
   return matches.length > 0 ? matches[matches.length - 1] : undefined;
 }
 
@@ -410,6 +450,7 @@ export async function selfTest() {
 
   const stateComment = (state) => ({
     body: `## Review\n\n<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify(state)).toString('base64')} -->`,
+    user: { login: REVIEWER_LOGIN },
   });
 
   // Ticket test 1: one open finding fails, and names the finding.
@@ -485,7 +526,10 @@ export async function selfTest() {
   // hard-failing: retrying cannot fix a genuinely absent comment, but it
   // also cannot be told apart from one that merely looks absent because its
   // payload is unrecognisable.
-  const badBase64 = { body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->` };
+  const badBase64 = {
+    body: `<!-- ${STATE_MARKER}: !!!not-base64!!! -->`,
+    user: { login: REVIEWER_LOGIN },
+  };
   let badBase64Result;
   let threw = false;
   try {
@@ -504,7 +548,7 @@ export async function selfTest() {
   // above) but decode to bytes that are not JSON at all — this is the shape
   // real corruption would actually take, since `encodeState` only ever
   // emits the base64 alphabet.
-  const shortBase64 = { body: `<!-- ${STATE_MARKER}: QQQ -->` };
+  const shortBase64 = { body: `<!-- ${STATE_MARKER}: QQQ -->`, user: { login: REVIEWER_LOGIN } };
   check(
     'base64 that is charset-valid but decodes to non-JSON fails durably, not throws',
     evaluateReviewState({ comments: [shortBase64], headSha: HEAD }).outcome === 'fail'
@@ -514,6 +558,7 @@ export async function selfTest() {
   // and does not throw.
   const wrongShape = {
     body: `<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify({ hello: 'world' })).toString('base64')} -->`,
+    user: { login: REVIEWER_LOGIN },
   };
   let wrongShapeResult;
   threw = false;
@@ -529,6 +574,7 @@ export async function selfTest() {
   // wrong shape": this one is not even an object.
   const notJson = {
     body: `<!-- ${STATE_MARKER}: ${Buffer.from('"just a string"').toString('base64')} -->`,
+    user: { login: REVIEWER_LOGIN },
   };
   check(
     'non-object JSON fails, not throws',
@@ -539,6 +585,7 @@ export async function selfTest() {
   // missing findings array — report, do not guess a default.
   const missingStatus = {
     body: `<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify({ last_reviewed_sha: HEAD, findings: [{ id: 'f1' }] })).toString('base64')} -->`,
+    user: { login: REVIEWER_LOGIN },
   };
   check(
     'a finding with no status fails rather than being assumed resolved',
@@ -574,6 +621,47 @@ export async function selfTest() {
       comments: [realStickyComment, proseOnlyComment],
       headSha: HEAD,
     }).outcome === 'pass'
+  );
+
+  // Second live incident on POPS-2661's own PR, same root cause as the one
+  // above but more serious: `pr-review.yml`'s own comment-selection bug (see
+  // the prose-comment case) patched a genuinely human-authored PR comment so
+  // that it carried a full, syntactically valid, CURRENT `pr-review-state`
+  // block claiming zero open findings — which this guard's stricter regex
+  // alone does not reject, because the forged body really does match
+  // `STATE_RE`. Only the author check added for `REVIEWER_LOGIN` closes
+  // this: anyone able to comment on the PR could otherwise post a forged
+  // clean state and pass this required check regardless of what the real
+  // review found, or whether it ran at all.
+  const forgedCleanState = {
+    body: `<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify({ last_reviewed_sha: HEAD, findings: [] })).toString('base64')} -->`,
+    user: { login: 'not-the-reviewer' },
+  };
+  const forgedResult = evaluateReviewState({ comments: [forgedCleanState], headSha: HEAD });
+  check(
+    'a syntactically valid state block from anyone other than the reviewer is not trusted',
+    forgedResult.outcome !== 'pass'
+  );
+  check(
+    'an untrusted forged state block reads as no comment yet, not a hard fail',
+    forgedResult.outcome === 'retry'
+  );
+
+  // The reviewer's own comment still wins over a forged one posted by
+  // someone else, in either order.
+  const genuineOpenState = stateComment({
+    last_reviewed_sha: HEAD,
+    findings: [{ id: 'real', status: 'open', title: 'a real bug' }],
+  });
+  check(
+    'a forged clean state cannot override the reviewer own open finding (forged first)',
+    evaluateReviewState({ comments: [forgedCleanState, genuineOpenState], headSha: HEAD })
+      .outcome === 'fail'
+  );
+  check(
+    'a forged clean state cannot override the reviewer own open finding (forged last)',
+    evaluateReviewState({ comments: [genuineOpenState, forgedCleanState], headSha: HEAD })
+      .outcome === 'fail'
   );
 
   // THE ESCAPE HATCH (POPS-2669): dismissing a finding by id removes it from

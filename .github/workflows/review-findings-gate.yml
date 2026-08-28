@@ -98,6 +98,17 @@ name: Review Findings Gate
 # (`MEMBER` means "in the org", not "has access"; `COLLABORATOR` fires for
 # Read/Triage too, not only Write and above).
 #
+# THE STATE COMMENT ITSELF IS AUTHENTICATED TOO, for the same reason: on this
+# gate's own PR, `pr-review.yml`'s own comment-selection step (a separate bug
+# in that workflow, not this one) mis-patched a plain human PR comment so
+# that it carried a full, current, well-formed `pr-review-state` block. A
+# regex match on the marker alone is forgeable by anyone who can comment on
+# the PR — `findStateComment` in `check-review-findings.mjs` therefore also
+# requires the comment's author to be `REVIEWER_LOGIN`
+# (`github-actions[bot]`, the only identity `pr-review.yml`'s own
+# `GH_TOKEN: secrets.GITHUB_TOKEN` can post as), so a forged clean state from
+# anyone else reads as no comment yet (retry), never as a pass.
+#
 # TIER A: stdlib only. `check-review-findings.mjs` reads JSON (built-in
 # `JSON.parse`) over the GitHub REST API (the `gh` CLI already on every
 # GitHub-hosted runner, the same tool `pr-review.yml`'s own "fetch the
