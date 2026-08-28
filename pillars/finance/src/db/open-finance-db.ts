@@ -22,6 +22,7 @@ import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import { buildImportDedupKeyFromStoredRow } from '../contract/import-dedup.js';
 import { anzForeignChargeNoteField } from './anz-fx-note.js';
+import { rawRowForeignField } from './raw-row-foreign-charge.js';
 
 import type { FinanceDb } from './services/internal.js';
 
@@ -90,6 +91,13 @@ export interface OpenedFinanceDb {
  * not write. Migration `0066_transaction_foreign_charge_columns` backfills the
  * typed columns through it and refuses to run when a candidate note comes back
  * NULL, so the two must be registered together.
+ *
+ * `finance_raw_row_foreign(raw_row, field)` re-derives the country and foreign
+ * charge from the import row stored on every transaction (see
+ * `raw-row-foreign-charge.ts`), routing each row to the parser that owns its
+ * export format. Migration `0072_backfill_foreign_charge_from_raw_row` backfills
+ * through it and aborts when a row states foreign detail no parser can read, so
+ * those two must be registered together too.
  */
 export function registerFinanceSqlFunctions(raw: Database.Database): void {
   raw.function(
@@ -106,6 +114,7 @@ export function registerFinanceSqlFunctions(raw: Database.Database): void {
     }
   );
   raw.function('finance_anz_fx_note', { deterministic: true }, anzForeignChargeNoteField);
+  raw.function('finance_raw_row_foreign', { deterministic: true }, rawRowForeignField);
 }
 
 export function openFinanceDb(path: string): OpenedFinanceDb {

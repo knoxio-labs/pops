@@ -47,6 +47,7 @@ export {
   type AnzForeignCharge,
 } from './anz-description.js';
 export {
+  anzPdfStatementLineDescription,
   parseAnzPdfStatementText,
   planAnzPdfImport,
   type AnzPdfStatement,

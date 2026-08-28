@@ -102,6 +102,21 @@ export interface AnzPdfStatementOptions {
   hashDedupKey: (key: string) => string;
 }
 
+/**
+ * The description column of one statement line, or nothing when the line is not
+ * a transaction row.
+ *
+ * Exported for the `raw_row` backfill (migration
+ * `0072_backfill_foreign_charge_from_raw_row`), which stores the whole line and
+ * so has to find the description again before it can re-derive the same fields
+ * {@link toTransaction} did. It shares {@link STATEMENT_ROW} rather than
+ * re-describing the layout, so a backfilled row and an imported one agree by
+ * construction.
+ */
+export function anzPdfStatementLineDescription(line: string): string | undefined {
+  return STATEMENT_ROW.exec(line)?.[3];
+}
+
 function toTransaction(
   line: string,
   options: AnzPdfStatementOptions

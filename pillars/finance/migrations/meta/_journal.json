@@ -162,6 +162,13 @@
       "when": 1781913600016,
       "tag": "0071_retire_occasion_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1781913600017,
+      "tag": "0072_backfill_foreign_charge_from_raw_row",
+      "breakpoints": true
     }
   ]
 }
