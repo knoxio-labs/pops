@@ -13161,15 +13161,24 @@
                         "newTagProposals": {
                           "type": "number"
                         },
+                        "removed": {
+                          "type": "number"
+                        },
                         "suggestionChanges": {
                           "type": "number"
                         }
                       },
-                      "required": ["affected", "suggestionChanges", "newTagProposals"],
+                      "required": ["affected", "suggestionChanges", "removed", "newTagProposals"],
                       "type": "object"
+                    },
+                    "newTags": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
                     }
                   },
-                  "required": ["counts", "affected"],
+                  "required": ["counts", "affected", "newTags"],
                   "type": "object"
                 }
               }
@@ -13572,15 +13581,29 @@
                             "newTagProposals": {
                               "type": "number"
                             },
+                            "removed": {
+                              "type": "number"
+                            },
                             "suggestionChanges": {
                               "type": "number"
                             }
                           },
-                          "required": ["affected", "suggestionChanges", "newTagProposals"],
+                          "required": [
+                            "affected",
+                            "suggestionChanges",
+                            "removed",
+                            "newTagProposals"
+                          ],
                           "type": "object"
+                        },
+                        "newTags": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
                         }
                       },
-                      "required": ["counts", "affected"],
+                      "required": ["counts", "affected", "newTags"],
                       "type": "object"
                     },
                     "rationale": {

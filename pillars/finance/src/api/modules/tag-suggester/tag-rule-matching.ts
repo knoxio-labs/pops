@@ -10,8 +10,13 @@
  * meant the live path and the ChangeSet preview could disagree about the same
  * rule. SQLite's `LIKE` cannot faithfully reproduce a
  * post-`normalizeDescription` match set without a registered function, so the
- * whole test now runs in JS over one candidate fetch; `isActive` and the
- * entity scope stay in SQL, where they are cheap and exact.
+ * whole test now runs in JS over one candidate fetch.
+ *
+ * `isActive` and the entity scope stay in the SQL `WHERE` as a cheap
+ * pre-narrowing, but they are re-tested in {@link matchTagRules} because that
+ * function also serves an in-memory rule set — the ChangeSet preview's merged
+ * rules (POPS-2599), where a `disable` op flips `isActive` on a row SQL would
+ * still have returned. One predicate, one ordering, both callers.
  *
  * Every branch matches against the normalized description (`norm`) — the
  * regex branch used to test the raw `description` while exact/contains
@@ -35,14 +40,58 @@ const { normalizeDescription, patternMatchesNormalizedDescription } = transactio
 
 const MATCH_TYPE_GROUP_ORDER = ['exact', 'contains', 'regex'] as const;
 
+export type TagRuleMatchType = (typeof MATCH_TYPE_GROUP_ORDER)[number];
+
 export interface TagRuleRow {
   id: string;
   tags: string;
   descriptionPattern: string;
 }
 
-interface TagRuleCandidate extends TagRuleRow {
-  matchType: (typeof MATCH_TYPE_GROUP_ORDER)[number];
+/** The fields {@link matchTagRules} needs to decide whether a rule fires, and in what order. */
+export interface TagRuleMatchable {
+  descriptionPattern: string;
+  matchType: TagRuleMatchType;
+  entityId: string | null;
+  isActive: boolean;
+  confidence: number;
+  priority: number;
+}
+
+/**
+ * A tag rule supplied in memory rather than read from `transaction_tag_rules`
+ * — the ChangeSet preview's merged rule set. `tags` is the parsed form; the
+ * table's JSON column is parsed on the way in.
+ */
+export interface InMemoryTagRule extends TagRuleMatchable {
+  id: string;
+  tags: string[];
+}
+
+function ruleFires(rule: TagRuleMatchable, entityId: string | null, norm: string): boolean {
+  if (!rule.isActive) return false;
+  if (rule.entityId !== null && rule.entityId !== entityId) return false;
+  return patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, norm);
+}
+
+/**
+ * The rules in `rules` that fire for `description` under `entityId`, ordered
+ * `matchType` group (exact, contains, regex), then `priority ASC,
+ * confidence DESC` within each group.
+ */
+export function matchTagRules<T extends TagRuleMatchable>(
+  rules: readonly T[],
+  description: string,
+  entityId: string | null
+): T[] {
+  const norm = normalizeDescription(description);
+  const matched = rules
+    .filter((rule) => ruleFires(rule, entityId, norm))
+    .toSorted((a, b) => a.priority - b.priority || b.confidence - a.confidence);
+
+  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
+    matched.filter((rule) => rule.matchType === matchType)
+  );
 }
 
 function buildEntityFilter(entityId: string | null): ReturnType<typeof or> {
@@ -56,26 +105,27 @@ export function findMatchingTagRules(
   description: string,
   entityId: string | null
 ): TagRuleRow[] {
-  const norm = normalizeDescription(description);
-
-  const matched: TagRuleCandidate[] = db
+  const candidates = db
     .select({
       id: transactionTagRules.id,
       tags: transactionTagRules.tags,
       descriptionPattern: transactionTagRules.descriptionPattern,
       matchType: transactionTagRules.matchType,
+      entityId: transactionTagRules.entityId,
+      isActive: transactionTagRules.isActive,
+      confidence: transactionTagRules.confidence,
+      priority: transactionTagRules.priority,
     })
     .from(transactionTagRules)
     .where(and(eq(transactionTagRules.isActive, true), buildEntityFilter(entityId)))
     .orderBy(asc(transactionTagRules.priority), desc(transactionTagRules.confidence))
-    .all()
-    .filter((rule) =>
-      patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, norm)
-    );
+    .all();
 
-  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
-    matched
-      .filter((rule) => rule.matchType === matchType)
-      .map(({ matchType: _matchType, ...row }) => row)
+  return matchTagRules(candidates, description, entityId).map(
+    ({ id, tags, descriptionPattern }) => ({
+      id,
+      tags,
+      descriptionPattern,
+    })
   );
 }

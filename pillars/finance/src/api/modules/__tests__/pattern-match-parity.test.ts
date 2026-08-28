@@ -152,6 +152,8 @@ const TRIPLES: Triple[] = [
 
 const ENTITY_ID = 'entity-parity';
 const RULE_TAG = 'Parity';
+/** A tag no seeded rule supplies, so the preview's diff is non-empty exactly when the pattern matches. */
+const PREVIEW_PROBE_TAG = 'ParityProbe';
 
 function seedTransaction(raw: Database.Database, description: string): void {
   raw
@@ -213,6 +215,9 @@ function verdictsFor(t: Triple): Record<string, boolean> {
     seedTransaction(raw, t.description);
     const ruleId = t.legacyRow ? seedLegacyRows(raw, t) : seedServiceRows(db, t);
 
+    // The preview reports a before/after diff, not "did this pattern match"
+    // (POPS-2599), so the probed op has to propose a tag nothing else already
+    // supplies — otherwise a matching pattern correctly reports no change.
     const preview = previewTagRuleChangeSet(db, {
       changeSet: {
         ops: [
@@ -221,7 +226,7 @@ function verdictsFor(t: Triple): Record<string, boolean> {
             data: {
               descriptionPattern: t.pattern,
               matchType: t.matchType,
-              tags: [RULE_TAG],
+              tags: [RULE_TAG, PREVIEW_PROBE_TAG],
             },
           },
         ],

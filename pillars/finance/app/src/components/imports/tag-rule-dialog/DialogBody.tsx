@@ -51,28 +51,41 @@ export function FormFields(props: FormFieldsProps) {
   );
 }
 
+const LISTED_ROWS = 12;
+
+function ImpactSummary({ counts }: { counts: ProposeOutput['preview']['counts'] }) {
+  const rows = `${counts.affected} row${counts.affected === 1 ? '' : 's'}`;
+  const changes = `${counts.suggestionChanges} tag change${counts.suggestionChanges === 1 ? '' : 's'}`;
+  return (
+    <p className="text-xs text-muted-foreground" data-testid="impact-summary">
+      {rows} in this import would see different tag suggestions ({changes}
+      {counts.removed > 0 ? `, ${counts.removed} removed` : ''}). Rows you have tagged by hand are
+      left alone.
+    </p>
+  );
+}
+
 export function ImpactPreview({ proposal }: { proposal: ProposeOutput }) {
+  const { counts, affected } = proposal.preview;
+  const listed = affected.slice(0, LISTED_ROWS);
+  const unlisted = counts.affected - listed.length;
   return (
     <>
       <p className="text-muted-foreground text-xs">{proposal.rationale}</p>
       <div className="rounded-md border p-3 space-y-1">
         <p className="font-medium text-xs">Impact preview</p>
-        <p className="text-xs text-muted-foreground">
-          {proposal.preview.counts.affected} matching row
-          {proposal.preview.counts.affected === 1 ? '' : 's'} in this import would receive tag
-          suggestions (simulated without per-row tag locks).
-        </p>
+        <ImpactSummary counts={counts} />
         <ul className="text-xs max-h-28 overflow-y-auto space-y-0.5 font-mono">
-          {proposal.preview.affected.slice(0, 12).map((a) => (
+          {listed.map((a) => (
             <li key={a.transactionId} className="truncate" title={a.description}>
               {a.description.slice(0, 56)}
-              {a.description.length > 56 ? '…' : ''}
+              {a.description.length > 56 ? '\u2026' : ''}
             </li>
           ))}
         </ul>
-        {proposal.preview.affected.length > 12 && (
-          <p className="text-xs text-muted-foreground">
-            +{proposal.preview.affected.length - 12} more
+        {unlisted > 0 && (
+          <p className="text-xs text-muted-foreground" data-testid="impact-unlisted">
+            +{unlisted} more not listed
           </p>
         )}
       </div>

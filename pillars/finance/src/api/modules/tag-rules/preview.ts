@@ -1,85 +1,115 @@
+import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
 /**
- * Deterministic suggestion-impact preview for a tag-rule ChangeSet.
+ * Suggestion-impact preview for a tag-rule ChangeSet — the panel that answers
+ * "what will this rule do?" before the user commits to it.
  *
- * Suggestion-only: rules never override user-entered tags, and the
- * computation reads nothing but the supplied transactions plus the user
- * vocabulary.
+ * It answers that by running the production suggester twice per row: once
+ * over the persisted rule set (`before`) and once over that set with the
+ * ChangeSet overlaid (`after`), diffing the two tag sets. That is the whole
+ * design. It used to hardcode `before` to `[]` and match only the ChangeSet's
+ * own `add` ops, so it reported "did this rule match at all" rather than "did
+ * anything change": a rule proposing a tag an existing rule already supplied
+ * read as full impact on every row, and an `edit`/`disable`/`remove` — the
+ * ops where "what am I about to break?" matters most — read as zero
+ * (POPS-2599).
  *
- * The match test is `patternMatchesNormalizedDescription`, the same predicate
- * `findMatchingTagRules` runs on the live path (POPS-2600) — this preview used
- * to have its own copy, so it could claim a rule matched something production
- * would skip. It normalises both the description and the (not-yet-persisted)
- * candidate pattern, mirroring what `createTransactionTagRule` stores. A naive
- * `toUpperCase()`-only preview would diverge from production for any
- * digit-bearing description (most real bank text) (CF022).
+ * Running `suggestTags` rather than a local matcher is what keeps the preview
+ * and the import pipeline from drifting: corrections, entity defaults and
+ * every persisted rule are in both sides of the diff, and the match predicate
+ * is by construction the one production uses. `recordTagRuleUsage: false`
+ * keeps a preview from counting as a use of the rules it reads.
+ *
+ * `entityDefaultTags` is not available here (it comes from the contacts
+ * pillar's per-run fetch, which the preview endpoint has no access to), so
+ * the entity stage contributes nothing on either side — it cancels out of the
+ * diff, and can only ever mask a rule tag identically in both.
+ *
+ * Counts are computed over every supplied transaction; only the `affected`
+ * detail list is capped at `maxPreviewItems`. Totals taken after truncation
+ * are the failure `previewRuleMatchTransactions` was written to avoid, and
+ * silently capping "affects N transactions" at the page size is the same
+ * failure with a different rule kind.
  */
-import {
-  type FinanceDb,
-  tagVocabularyService,
-  transactionCorrectionsService,
-} from '../../../db/index.js';
+import { suggestTags } from '../tag-suggester/index.js';
+import { loadPersistedTagRules, mergeChangeSetOverRules } from './merged-rules.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
+import type { InMemoryTagRule } from '../tag-suggester/tag-rule-matching.js';
 import type {
   PreviewInputTransaction,
-  TagRuleImpactCounts,
   TagRuleImpactItem,
+  TagRulePreview,
   TagSuggestion,
 } from './types.js';
 
-const { normalizeDescription, patternMatchesNormalizedDescription } = transactionCorrectionsService;
-
-interface ProposedRule {
-  descriptionPattern: string;
-  matchType: 'exact' | 'contains' | 'regex';
-  entityId: string | null;
-  tags: string[];
+interface SuggestArgs {
+  db: FinanceDb;
+  transaction: PreviewInputTransaction;
+  rules: readonly InMemoryTagRule[];
+  vocabulary: Set<string>;
 }
 
-function materializeProposedRules(changeSet: TagRuleChangeSet): ProposedRule[] {
-  const rules: ProposedRule[] = [];
-  for (const op of changeSet.ops) {
-    if (op.op === 'add') {
-      rules.push({
-        descriptionPattern: op.data.descriptionPattern,
-        matchType: op.data.matchType,
-        entityId: op.data.entityId ?? null,
-        tags: op.data.tags,
-      });
-    }
+function suggestOver({ db, transaction, rules, vocabulary }: SuggestArgs): TagSuggestion[] {
+  return suggestTags(db, {
+    description: transaction.description,
+    entityId: transaction.entityId ?? null,
+    recordTagRuleUsage: false,
+    tagRules: rules,
+  }).map((s) => ({
+    tag: s.tag,
+    source: s.source,
+    ...(s.pattern === undefined ? {} : { pattern: s.pattern }),
+    isNew: !vocabulary.has(s.tag.toLowerCase()),
+  }));
+}
+
+interface RowDiff {
+  added: string[];
+  removed: string[];
+}
+
+function diffTags(before: TagSuggestion[], after: TagSuggestion[]): RowDiff {
+  const beforeTags = new Set(before.map((s) => s.tag));
+  const afterTags = new Set(after.map((s) => s.tag));
+  return {
+    added: [...afterTags].filter((tag) => !beforeTags.has(tag)),
+    removed: [...beforeTags].filter((tag) => !afterTags.has(tag)),
+  };
+}
+
+interface Accumulator {
+  affected: TagRuleImpactItem[];
+  affectedCount: number;
+  suggestionChanges: number;
+  removed: number;
+  newTagProposals: number;
+  newTags: Set<string>;
+}
+
+function record(acc: Accumulator, item: TagRuleImpactItem, diff: RowDiff, cap: number): void {
+  acc.affectedCount++;
+  acc.suggestionChanges += diff.added.length + diff.removed.length;
+  acc.removed += diff.removed.length;
+
+  const addedSet = new Set(diff.added);
+  for (const s of item.after.suggestedTags) {
+    if (!s.isNew || !addedSet.has(s.tag)) continue;
+    acc.newTagProposals++;
+    acc.newTags.add(s.tag);
   }
-  return rules;
+
+  if (acc.affected.length < cap) acc.affected.push(item);
 }
 
-function suggestFromRules(
-  description: string,
-  entityId: string | null,
-  rules: ProposedRule[],
-  vocabulary: Set<string>
-): TagSuggestion[] {
-  const normalized = normalizeDescription(description);
-  const seen = new Set<string>();
-  const out: TagSuggestion[] = [];
-
-  for (const rule of rules) {
-    if (rule.entityId && rule.entityId !== entityId) continue;
-    if (!patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized))
-      continue;
-
-    for (const tag of rule.tags) {
-      if (seen.has(tag)) continue;
-      seen.add(tag);
-      out.push({
-        tag,
-        source: 'tag_rule',
-        pattern: rule.descriptionPattern,
-        isNew: !vocabulary.has(tag.toLowerCase()),
-      });
-    }
-  }
-  return out;
-}
-
+/**
+ * The suggestion impact of `changeSet` over `transactions`.
+ *
+ * Rows carrying `userTags` are excluded: a tag rule is a suggestion and never
+ * overrides a row the user has decided, so it has no impact there. Presence,
+ * not length, is the test — a row edited down to no tags is still a decision.
+ * The caller is responsible for sending that field only for edited rows;
+ * without it, hand-tagged rows are reported as rule impact.
+ */
 export function previewTagRuleChangeSet(
   db: FinanceDb,
   args: {
@@ -87,35 +117,51 @@ export function previewTagRuleChangeSet(
     transactions: PreviewInputTransaction[];
     maxPreviewItems: number;
   }
-): { counts: TagRuleImpactCounts; affected: TagRuleImpactItem[] } {
-  const txs = args.transactions.slice(0, args.maxPreviewItems);
+): TagRulePreview {
   const vocabulary = new Set(
     tagVocabularyService.listVocabularyTags(db).map((t) => t.toLowerCase())
   );
-  const proposedRules = materializeProposedRules(args.changeSet);
+  const persisted = loadPersistedTagRules(db);
+  const merged = mergeChangeSetOverRules(persisted, args.changeSet);
 
-  const affected: TagRuleImpactItem[] = [];
-  for (const t of txs) {
-    if (t.userTags && t.userTags.length > 0) continue;
+  const acc: Accumulator = {
+    affected: [],
+    affectedCount: 0,
+    suggestionChanges: 0,
+    removed: 0,
+    newTagProposals: 0,
+    newTags: new Set(),
+  };
 
-    const after = suggestFromRules(t.description, t.entityId ?? null, proposedRules, vocabulary);
-    const before: TagSuggestion[] = [];
-    if (JSON.stringify(before) !== JSON.stringify(after)) {
-      affected.push({
-        transactionId: t.transactionId,
-        description: t.description,
+  for (const transaction of args.transactions) {
+    if (transaction.userTags !== undefined) continue;
+
+    const before = suggestOver({ db, transaction, rules: persisted, vocabulary });
+    const after = suggestOver({ db, transaction, rules: merged, vocabulary });
+    const diff = diffTags(before, after);
+    if (diff.added.length === 0 && diff.removed.length === 0) continue;
+
+    record(
+      acc,
+      {
+        transactionId: transaction.transactionId,
+        description: transaction.description,
         before: { suggestedTags: before },
         after: { suggestedTags: after },
-      });
-    }
+      },
+      diff,
+      args.maxPreviewItems
+    );
   }
 
-  const newTagProposals = affected
-    .flatMap((a) => a.after.suggestedTags)
-    .filter((t) => t.isNew).length;
-
   return {
-    counts: { affected: affected.length, suggestionChanges: affected.length, newTagProposals },
-    affected,
+    counts: {
+      affected: acc.affectedCount,
+      suggestionChanges: acc.suggestionChanges,
+      removed: acc.removed,
+      newTagProposals: acc.newTagProposals,
+    },
+    affected: acc.affected,
+    newTags: [...acc.newTags].toSorted((a, b) => a.localeCompare(b)),
   };
 }

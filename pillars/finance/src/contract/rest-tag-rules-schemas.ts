@@ -39,6 +39,7 @@ export const TagRuleChangeSetSchema = z.object({
   ops: z.array(TagRuleChangeSetOpSchema).min(1),
 });
 
+export type TagRuleUpdate = z.infer<typeof TagRuleUpdateSchema>;
 export type TagRuleChangeSetOp = z.infer<typeof TagRuleChangeSetOpSchema>;
 export type TagRuleChangeSet = z.infer<typeof TagRuleChangeSetSchema>;
 
@@ -49,6 +50,15 @@ export const TagRuleSignalSchema = z.object({
   tags: z.array(z.string()).min(1),
 });
 
+/**
+ * A transaction to preview a ChangeSet against.
+ *
+ * `userTags` is the row's hand-edited tag set and its *presence* is the
+ * signal: a tag rule only ever suggests, so it has no impact on a row the
+ * user has already decided, and such a row is excluded from the impact set.
+ * Omit the field for a row the user has not touched — an empty array means
+ * "edited down to no tags", which is still a decision.
+ */
 export const PreviewInputTransactionSchema = z.object({
   transactionId: z.string().min(1),
   description: z.string().min(1),
@@ -78,12 +88,19 @@ export type TagRuleImpactItem = z.infer<typeof TagRuleImpactItemSchema>;
 const TagRuleImpactCountsSchema = z.object({
   affected: z.number(),
   suggestionChanges: z.number(),
+  removed: z.number(),
   newTagProposals: z.number(),
 });
 
+/**
+ * `counts` covers every supplied transaction; `affected` is capped at the
+ * request's `maxPreviewItems`, so `affected.length < counts.affected` means
+ * the list is truncated and the caller must say so.
+ */
 export const TagRulePreviewSchema = z.object({
   counts: TagRuleImpactCountsSchema,
   affected: z.array(TagRuleImpactItemSchema),
+  newTags: z.array(z.string()),
 });
 
 export const TagRuleChangeSetProposalSchema = z.object({
