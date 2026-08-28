@@ -13,7 +13,8 @@ import type { SourceFormValues } from './types';
 
 interface PlexFriend {
   uuid: string;
-  username: string;
+  username: string | null;
+  displayName: string | null;
 }
 
 type PlexFriendsResult =

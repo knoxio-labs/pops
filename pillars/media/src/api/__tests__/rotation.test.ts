@@ -4,8 +4,8 @@
  * `globalThis.fetch` with a route table keyed on (method, url substring), so
  * each test exercises the real client → orchestration → handler → contract
  * path. No network is hit. Source-sync covers the `tmdb_top_rated` adapter
- * against a mocked TMDB discover endpoint; `plex_friends` degradation is
- * covered via an unconfigured Plex.
+ * against a mocked TMDB discover endpoint; the Plex friends listing is covered
+ * against a mocked community GraphQL API, unconfigured and failing alike.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   moviesService,
   openMediaDb,
+  plexSettingsService,
   rotationExclusions,
   rotationSourcesService,
   type OpenedMediaDb,
@@ -490,10 +491,57 @@ describe('rotation — sync source', () => {
 });
 
 describe('rotation — plex friends', () => {
+  const COMMUNITY_API = 'community.plex.tv/api';
+
   it('degrades to an empty list with an error when Plex is unconfigured', async () => {
     const { data } = await client().rotation.listPlexFriends();
     expect(data.friends).toEqual([]);
     expect(data.error).toBe('Plex token not configured');
+  });
+
+  it('lists friends from the community GraphQL API', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
+    route('POST', COMMUNITY_API, () => ({
+      body: {
+        data: {
+          allFriendsV2: [
+            { user: { id: 'uuid-alice', username: 'alice', displayName: 'Alice', avatar: null } },
+          ],
+        },
+      },
+    }));
+
+    const { data } = await client().rotation.listPlexFriends();
+
+    expect(data.error).toBeNull();
+    expect(data.friends).toEqual([
+      { uuid: 'uuid-alice', username: 'alice', displayName: 'Alice', avatar: null },
+    ]);
+  });
+
+  it('reports the failure instead of a silently empty list when Plex rejects the call', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
+    route('POST', COMMUNITY_API, () => ({
+      status: 410,
+      body: { error: 'Gone' },
+    }));
+
+    const { data } = await client().rotation.listPlexFriends();
+
+    expect(data.friends).toEqual([]);
+    expect(data.error).not.toBeNull();
+  });
+
+  it('reports GraphQL-level errors returned with a 200', async () => {
+    plexSettingsService.setSetting(mediaDb.db, 'plex_token', 'raw-token');
+    route('POST', COMMUNITY_API, () => ({
+      body: { data: null, errors: [{ message: 'Not authorized' }] },
+    }));
+
+    const { data } = await client().rotation.listPlexFriends();
+
+    expect(data.friends).toEqual([]);
+    expect(data.error).toContain('Not authorized');
   });
 });
 

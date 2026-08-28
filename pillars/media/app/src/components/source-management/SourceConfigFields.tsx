@@ -7,10 +7,24 @@ interface FieldsProps {
   plexFriendsQuery: {
     isLoading: boolean;
     data?:
-      | { error: string; friends: { uuid: string; username: string }[] }
-      | { error: null; friends: { uuid: string; username: string }[] }
+      | { error: string; friends: PlexFriendOption[] }
+      | { error: null; friends: PlexFriendOption[] }
       | undefined;
   };
+}
+
+interface PlexFriendOption {
+  uuid: string;
+  username: string | null;
+  displayName: string | null;
+}
+
+/**
+ * Plex leaves both name fields null for managed and home users, so the picker
+ * falls back through them to the uuid rather than rendering a blank option.
+ */
+function friendLabel(friend: PlexFriendOption): string {
+  return friend.displayName ?? friend.username ?? friend.uuid;
 }
 
 function PlexFriendsField({
@@ -32,12 +46,12 @@ function PlexFriendsField({
         const friend = friends.find((f) => f.uuid === e.target.value);
         setConfigValues({
           friendUuid: e.target.value,
-          friendUsername: friend?.username ?? '',
+          friendUsername: friend ? friendLabel(friend) : '',
         });
       }}
       options={[
         { value: '', label: 'Select a friend...' },
-        ...friends.map((f) => ({ value: f.uuid, label: f.username })),
+        ...friends.map((f) => ({ value: f.uuid, label: friendLabel(f) })),
       ]}
       size="sm"
     />

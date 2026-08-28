@@ -5423,12 +5423,9 @@ export type RotationListPlexFriendsResponses = {
     data: {
       error: string | null;
       friends: Array<{
-        home: boolean;
-        id: number;
-        restricted: boolean;
-        thumb: string | null;
-        title: string;
-        username: string;
+        avatar: string | null;
+        displayName: string | null;
+        username: string | null;
         uuid: string;
       }>;
     };

@@ -9,9 +9,10 @@
  * out to REST clients. `redactPlexToken` is the second line of defence, for
  * messages built from upstream response bodies we do not control.
  *
- *  - `getAbsolute` — GET an absolute Plex URL
- *  - `getPath`     — GET a path against a Plex Media Server base URL
- *  - `putAbsolute` — PUT an absolute Plex URL
+ *  - `getAbsolute`  — GET an absolute Plex URL
+ *  - `getPath`      — GET a path against a Plex Media Server base URL
+ *  - `postAbsolute` — POST a JSON body to an absolute Plex URL
+ *  - `putAbsolute`  — PUT an absolute Plex URL
  */
 import { PlexApiError } from './types.js';
 
@@ -88,6 +89,28 @@ export async function getAbsolute<T>(
 /** Generic GET against a Plex Media Server base URL. */
 export async function getPath<T>(baseUrl: string, token: string, path: string): Promise<T> {
   return getAbsolute<T>(`${baseUrl}${path}`, { auth: { token } });
+}
+
+/** Generic JSON POST for any Plex endpoint (absolute URL; credentials go in headers). */
+export async function postAbsolute<T>(
+  absoluteUrl: string,
+  body: unknown,
+  options: PlexRequestOptions = {}
+): Promise<T> {
+  const context = options.context ?? DEFAULT_CONTEXT;
+  const response = await performFetch(
+    absoluteUrl,
+    {
+      method: 'POST',
+      headers: { ...buildHeaders(options.auth), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    context
+  );
+  if (!response.ok) {
+    throw new PlexApiError(response.status, await readErrorMessage(response, context));
+  }
+  return (await response.json()) as T;
 }
 
 /** Generic PUT for any Plex endpoint (absolute URL; credentials go in headers). */
