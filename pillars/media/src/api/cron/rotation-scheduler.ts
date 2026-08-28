@@ -5,24 +5,29 @@
  * handlers all drive the SAME timer, and the next tick is armed only AFTER the
  * current cycle resolves (no pile-up). One immediate tick fires on `start`.
  *
- * The controller runs on a fixed INTERVAL (env `MEDIA_ROTATION_INTERVAL_MS`,
- * default daily), NOT a cron parser. `rotation_cron_expression` is still
- * read/persisted as stored config (the settings UI keeps editing it) but does
- * NOT drive the timer; `nextRunAt` is computed from the interval. To swap in a
- * cron parser, replace the interval arming + `nextRunAt` only.
+ * `rotation_cron_expression` drives the timer: each arm parses it and waits
+ * until the next occurrence in the process's local timezone. The fixed
+ * INTERVAL (env `MEDIA_ROTATION_INTERVAL_MS`, default daily) is the fallback
+ * used only when that expression is unparseable, so a corrupt setting degrades
+ * to periodic runs rather than stopping the engine. An unset or blank
+ * expression falls back to the default cron, not the interval.
  *
  * Persisted state lives in `rotation_settings` (`rotation_enabled` +
  * `rotation_cron_expression`); `resumeIfEnabled` reads it on boot.
+ * `stopForShutdown` clears the timer WITHOUT persisting the disabled flag —
+ * a SIGTERM must not read back as the operator switching rotation off.
  */
 import { type MediaDb, rotationLogService, rotationSettingsService } from '../../db/index.js';
 import { getRotationCyclePolicy } from '../modules/rotation-cycle-policy.js';
 import { emptyResult } from '../modules/rotation-cycle-types.js';
 import { executeRotationCycle } from '../modules/rotation-cycle.js';
+import { resolveArmDelayMs, type ScheduledRun, scheduleAt } from './cron-timer.js';
 
 const ENABLED_KEY = 'rotation_enabled';
 const CRON_KEY = 'rotation_cron_expression';
 const DEFAULT_CRON = '0 3 * * *';
 const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DRAIN_TIMEOUT_MS = 30_000;
 
 export interface RotationSchedulerStatus {
   isRunning: boolean;
@@ -38,10 +43,11 @@ interface SchedulerState {
   db: MediaDb;
   intervalMs: number;
   cronExpression: string;
-  timer: NodeJS.Timeout | undefined;
+  timer: ScheduledRun | undefined;
 }
 
 let state: SchedulerState | null = null;
+let currentCycle: Promise<void> | null = null;
 let isCycleRunning = false;
 let lastCycleAt: string | null = null;
 let lastCycleError: string | null = null;
@@ -52,6 +58,17 @@ function resolveDefaultIntervalMs(): number {
   if (raw === undefined || raw === '') return DEFAULT_INTERVAL_MS;
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_INTERVAL_MS;
+}
+
+/**
+ * The expression to arm from: explicit option, then the stored setting, else
+ * the default. A blank stored value is treated as unset — `cron-parser` reads
+ * an empty string as `* * * * *`, so honouring it would run a full Radarr
+ * cycle every minute.
+ */
+function resolveCronExpression(db: MediaDb, override?: string): string {
+  const candidate = override ?? rotationSettingsService.get(db, CRON_KEY) ?? DEFAULT_CRON;
+  return candidate.trim() === '' ? DEFAULT_CRON : candidate;
 }
 
 function persistEnabled(db: MediaDb, cronExpression: string): void {
@@ -98,20 +115,35 @@ async function runCycle(db: MediaDb): Promise<void> {
   }
 }
 
+/**
+ * Run a cycle while publishing it as `currentCycle`, so `waitForCycleEnd` can
+ * await an in-flight Radarr mutation instead of the process exiting under it.
+ */
+async function trackCycle(db: MediaDb): Promise<void> {
+  const cycle = runCycle(db);
+  currentCycle = cycle;
+  try {
+    await cycle;
+  } finally {
+    if (currentCycle === cycle) currentCycle = null;
+  }
+}
+
 function arm(): void {
   if (state === null) return;
   const current = state;
-  nextRunAt = new Date(Date.now() + current.intervalMs).toISOString();
-  current.timer = setTimeout(() => {
+  const targetMs = Date.now() + resolveArmDelayMs(current.cronExpression, current.intervalMs);
+  nextRunAt = new Date(targetMs).toISOString();
+  current.timer = scheduleAt(targetMs, () => {
     void tick();
-  }, current.intervalMs);
+  });
 }
 
 async function tick(): Promise<void> {
   if (state === null) return;
   const current = state;
   try {
-    await runCycle(current.db);
+    await trackCycle(current.db);
   } catch (err) {
     console.warn('[media-api] rotation scheduler tick failed', err);
   }
@@ -131,9 +163,8 @@ export const rotationScheduler = {
    * the enabled flag + cron expression to `rotation_settings`.
    */
   start(options: RotationSchedulerStartOptions): RotationSchedulerStatus {
-    if (state?.timer !== undefined) clearTimeout(state.timer);
-    const cronExpression =
-      options.cronExpression ?? rotationSettingsService.get(options.db, CRON_KEY) ?? DEFAULT_CRON;
+    state?.timer?.cancel();
+    const cronExpression = resolveCronExpression(options.db, options.cronExpression);
     state = {
       db: options.db,
       intervalMs: options.intervalMs ?? resolveDefaultIntervalMs(),
@@ -147,7 +178,7 @@ export const rotationScheduler = {
 
   /** Clear the timer + persist the disabled flag. No-op if not running. */
   stop(db: MediaDb): RotationSchedulerStatus {
-    if (state?.timer !== undefined) clearTimeout(state.timer);
+    state?.timer?.cancel();
     persistDisabled(db);
     state = null;
     nextRunAt = null;
@@ -156,14 +187,45 @@ export const rotationScheduler = {
 
   /** Run a single cycle directly (no timer arming). Writes a rotation log. */
   async runOnce(db: MediaDb): Promise<void> {
-    await runCycle(db);
+    await trackCycle(db);
+  },
+
+  /**
+   * Clear the timer WITHOUT persisting the disabled flag, for process
+   * shutdown. `stop` is the operator switching rotation off and must persist;
+   * a SIGTERM is not, and persisting there would leave every restarted
+   * container with rotation silently disabled.
+   */
+  stopForShutdown(): void {
+    state?.timer?.cancel();
+    state = null;
+    nextRunAt = null;
+  },
+
+  /**
+   * Resolve once the in-flight cycle settles, or after `timeoutMs`. Returns
+   * `true` when the cycle drained, `false` when the bound elapsed first — the
+   * caller decides whether to proceed with a partial Radarr mutation in flight.
+   */
+  async waitForCycleEnd(timeoutMs: number = DEFAULT_DRAIN_TIMEOUT_MS): Promise<boolean> {
+    const inflight = currentCycle;
+    if (inflight === null) return true;
+    let timer: NodeJS.Timeout | undefined;
+    const expiry = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), timeoutMs);
+      timer.unref();
+    });
+    try {
+      return await Promise.race([inflight.then(() => true), expiry]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   },
 
   /** Start with the persisted cron if `rotation_enabled` is `'true'`. */
   resumeIfEnabled(db: MediaDb): RotationSchedulerStatus | null {
     if (rotationSettingsService.get(db, ENABLED_KEY) !== 'true') return null;
-    const cronExpression = rotationSettingsService.get(db, CRON_KEY) ?? DEFAULT_CRON;
-    return rotationScheduler.start({ db, cronExpression });
+    return rotationScheduler.start({ db, cronExpression: resolveCronExpression(db) });
   },
 
   status(db: MediaDb): RotationSchedulerStatus {
@@ -171,8 +233,7 @@ export const rotationScheduler = {
       isRunning: state !== null,
       isCycleRunning,
       intervalMs: state?.intervalMs ?? resolveDefaultIntervalMs(),
-      cronExpression:
-        state?.cronExpression ?? rotationSettingsService.get(db, CRON_KEY) ?? DEFAULT_CRON,
+      cronExpression: state?.cronExpression ?? resolveCronExpression(db),
       lastCycleAt,
       lastCycleError,
       nextRunAt,
@@ -181,8 +242,9 @@ export const rotationScheduler = {
 
   /** Reset all in-memory state — for tests only. */
   _reset(): void {
-    if (state?.timer !== undefined) clearTimeout(state.timer);
+    state?.timer?.cancel();
     state = null;
+    currentCycle = null;
     isCycleRunning = false;
     lastCycleAt = null;
     lastCycleError = null;

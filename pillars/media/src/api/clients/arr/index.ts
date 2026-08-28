@@ -14,6 +14,7 @@ export {
   getArrConfig,
   getArrSettings,
   getRadarrClient,
+  getRadarrRootFolderPath,
   getRotationDefaults,
   getSonarrClient,
   type ArrSettings,

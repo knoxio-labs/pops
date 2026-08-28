@@ -8,6 +8,7 @@
 import { and, asc, count, desc, eq, type SQL } from 'drizzle-orm';
 
 import { mediaWatchlist } from '../schema.js';
+import { cancelLeaving } from './rotation/removal-queries.js';
 import { isWatchlistMediaUniqueViolation } from './watchlist-unique-violation.js';
 
 import type { MediaDb } from './internal.js';
@@ -100,6 +101,21 @@ export function getWatchlistEntry(db: MediaDb, id: number): MediaWatchlistRow {
   return row;
 }
 
+/**
+ * Rotation's counterpart to the watchlist exclusion in `getEligibleForRemoval`:
+ * that query keeps watchlisted movies from being marked, but a movie already
+ * marked `leaving` when it lands on the watchlist would otherwise sit there
+ * until its window expired. Call on every path that puts a movie on the list.
+ */
+export function clearLeavingOnWatchlist(
+  db: MediaDb,
+  mediaType: 'movie' | 'tv_show',
+  mediaId: number
+): void {
+  if (mediaType !== 'movie') return;
+  cancelLeaving(db, mediaId);
+}
+
 /** Add an item to the watchlist. Idempotent on (mediaType, mediaId). */
 export function addToWatchlist(
   db: MediaDb,
@@ -115,6 +131,7 @@ export function addToWatchlist(
         notes: input.notes ?? null,
       })
       .run();
+    clearLeavingOnWatchlist(db, input.mediaType, input.mediaId);
     return { row: getWatchlistEntry(db, Number(result.lastInsertRowid)), created: true };
   } catch (err) {
     if (isWatchlistMediaUniqueViolation(err)) {

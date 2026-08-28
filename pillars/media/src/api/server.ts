@@ -86,18 +86,33 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
   });
 }
 
+// A rotation cycle mid-flight is deleting from and adding to Radarr; cutting
+// the process off leaves that half-applied. Disarm the timer, then give the
+// in-flight cycle a bounded window to settle before the server closes.
+const ROTATION_DRAIN_TIMEOUT_MS = 30_000;
+
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[media-api] Shutting down (${signal})`);
   plexScheduler.stop();
-  rotationScheduler.stop(mediaDb.db);
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      mediaDb.raw.close();
+  rotationScheduler.stopForShutdown();
+  void rotationScheduler
+    .waitForCycleEnd(ROTATION_DRAIN_TIMEOUT_MS)
+    .then((drained) => {
+      if (!drained) {
+        console.warn(
+          `[media-api] rotation cycle did not settle within ${ROTATION_DRAIN_TIMEOUT_MS}ms; closing anyway`
+        );
+      }
+      return pillarHandle?.stop();
+    })
+    .finally(() => {
+      server.close(() => {
+        mediaDb.raw.close();
+      });
     });
-  });
 }
 
 process.on('SIGTERM', shutdown);

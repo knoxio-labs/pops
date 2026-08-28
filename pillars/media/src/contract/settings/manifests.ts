@@ -42,7 +42,7 @@ export const arrManifest: SettingsManifest = {
       id: 'download_defaults',
       title: 'Download Defaults',
       description:
-        'Quality profile and root folder used when downloading movies via the Download button.',
+        'Quality profile and root folder used when downloading movies via the Download button. The root folder also tells the rotation cycle which Radarr volume to measure — without it the cycle skips.',
       fields: [
         {
           key: 'rotation_quality_profile_id',

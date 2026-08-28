@@ -86,12 +86,20 @@ export interface RotationDefaults {
 }
 
 /**
+ * The Radarr root folder rotation writes to; `null` when unset. Also the path
+ * the cycle matches against Radarr's disk list to find the library volume.
+ */
+export function getRadarrRootFolderPath(db: MediaDb): string | null {
+  return resolve(db, ARR_KEYS.rootFolderPath, 'RADARR_ROOT_FOLDER_PATH');
+}
+
+/**
  * Resolve the rotation download defaults; `null` when either is unset or the
  * profile id is not a number. Stored overrides win over env, as above.
  */
 export function getRotationDefaults(db: MediaDb): RotationDefaults | null {
   const rawProfileId = resolve(db, ARR_KEYS.qualityProfileId, 'RADARR_QUALITY_PROFILE_ID');
-  const rootFolderPath = resolve(db, ARR_KEYS.rootFolderPath, 'RADARR_ROOT_FOLDER_PATH');
+  const rootFolderPath = getRadarrRootFolderPath(db);
   if (!rawProfileId || !rootFolderPath) return null;
   const qualityProfileId = Number(rawProfileId);
   if (!Number.isFinite(qualityProfileId)) return null;
