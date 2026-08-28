@@ -11,7 +11,10 @@
  * Kept out of `backfill-tag-rules.ts` so it can be tested without importing a
  * module whose last line runs the backfill.
  */
-import { transactionCorrectionsService } from '../src/db/index.js';
+import {
+  normalizeDescription,
+  patternMatchesNormalizedDescription,
+} from '../src/contract/pattern-match.js';
 import { CLOSED_TAG_FACETS, parseStoredTags, parseTagFacet } from '../src/db/tag-facets.js';
 
 const SINGLE_VALUED_FACETS = new Set<string>(
@@ -75,9 +78,6 @@ export function findTagRuleConflicts(
   rules: readonly ScannedRule[],
   rows: readonly ScannedTransaction[]
 ): TagRuleConflict[] {
-  const { normalizeDescription, patternMatchesNormalizedDescription } =
-    transactionCorrectionsService;
-
   return rules.flatMap((rule) => {
     const incoming = singleValuedTagsOf(rule);
     if (incoming.length === 0) return [];
