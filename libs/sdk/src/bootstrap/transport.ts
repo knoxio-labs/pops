@@ -1,3 +1,4 @@
+import { defaultFetch } from '../default-fetch.js';
 import { createResolverLeg, resolveWithFallback } from '../registry-path-resolver.js';
 import { LEGACY_REGISTRY_PATHS, REGISTRY_PATHS } from '../registry-paths.js';
 
@@ -116,7 +117,7 @@ export function createHttpRegistryTransport(
 ): RegistryTransport {
   const config: PostConfig = {
     baseUrl: options.baseUrl.replace(/\/+$/, ''),
-    fetchImpl: options.fetchImpl ?? fetch,
+    fetchImpl: options.fetchImpl ?? defaultFetch,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   };
 
