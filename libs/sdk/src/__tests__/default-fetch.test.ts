@@ -15,9 +15,14 @@ import { defaultFetch } from '../default-fetch.js';
 /**
  * A stand-in for the browser's `Window.fetch`: it rejects any call whose
  * receiver is neither `globalThis` nor `undefined`, exactly as Chrome does.
+ *
+ * The `this` parameter is the whole point of the stub, so the return type is
+ * left inferred and the value is handed straight to `vi.stubGlobal`, which
+ * takes the replacement as-is — typing it as `typeof fetch` would need a cast
+ * and the repo forbids those.
  */
-function receiverCheckingFetch(body: unknown): typeof fetch {
-  const impl = function (this: unknown): Promise<Response> {
+function receiverCheckingFetch(body: unknown) {
+  return function (this: unknown): Promise<Response> {
     if (this !== undefined && this !== globalThis) {
       throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
     }
@@ -28,7 +33,6 @@ function receiverCheckingFetch(body: unknown): typeof fetch {
       })
     );
   };
-  return impl as unknown as typeof fetch;
 }
 
 const SNAPSHOT = {
