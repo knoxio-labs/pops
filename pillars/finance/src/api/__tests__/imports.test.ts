@@ -1566,6 +1566,80 @@ describe('imports.commitImport — retroactive reclassification', () => {
 });
 
 describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', () => {
+  it('refuses a closed value an edit op would write onto an existing rule', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT TARGET', ['venue:cafe']) }],
+      transactions: [confirmed({ description: 'EDIT TARGET 1', checksum: 'vocab-edit-seed' })],
+    });
+    const ruleId = (
+      financeDb.raw
+        .prepare('SELECT id FROM transaction_tag_rules WHERE description_pattern = ?')
+        .get('EDIT TARGET') as { id: string }
+    ).id;
+
+    await expect(
+      c.imports.commitImport({
+        tagRuleChangeSets: [
+          {
+            changeSet: {
+              source: 'unit-test',
+              ops: [{ op: 'edit', id: ruleId, data: { tags: ['venue:speakeasy'] } }],
+            },
+          },
+        ],
+        transactions: [confirmed({ description: 'EDIT TARGET 2', checksum: 'vocab-edit' })],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect(tagRuleTags()).toEqual(['venue:cafe']);
+    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+  });
+
+  it('admits an open value an edit op writes onto an existing rule', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT OPEN', ['venue:cafe']) }],
+      transactions: [confirmed({ description: 'EDIT OPEN 1', checksum: 'vocab-edit-open-seed' })],
+    });
+    const ruleId = (
+      financeDb.raw
+        .prepare('SELECT id FROM transaction_tag_rules WHERE description_pattern = ?')
+        .get('EDIT OPEN') as { id: string }
+    ).id;
+
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        {
+          changeSet: {
+            source: 'unit-test',
+            ops: [{ op: 'edit', id: ruleId, data: { tags: ['trip:hunter-valley'] } }],
+          },
+        },
+      ],
+      transactions: [confirmed({ description: 'EDIT OPEN 2', checksum: 'vocab-edit-open' })],
+    });
+
+    expect(vocabularyTags()).toContain('trip:hunter-valley');
+  });
+
+  it('replays a recorded commit without re-judging it against a vocabulary that moved on', async () => {
+    const c = client();
+    const payload = {
+      commitKey: '22222222-2222-4222-8222-222222222222',
+      transactions: [
+        confirmed({ description: 'THE LOCAL', checksum: 'vocab-replay', tags: ['venue:bar'] }),
+      ],
+    };
+    const first = await c.imports.commitImport(payload);
+
+    // The vocabulary moves on between the commit and its resubmit.
+    financeDb.raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:bar'").run();
+
+    const second = await c.imports.commitImport(payload);
+    expect(second.data).toEqual(first.data);
+  });
+
   function storedTags(): string[][] {
     const rows = financeDb.raw.prepare('SELECT tags FROM transactions').all() as { tags: string }[];
     return rows.map((r) => JSON.parse(r.tags) as string[]);

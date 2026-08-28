@@ -121,3 +121,45 @@ describe('suggestTags — dedup is case-insensitive', () => {
     expect(suggested).toEqual([{ tag: 'venue:bar', source: 'rule', pattern: 'THE LOCAL' }]);
   });
 });
+
+describe('suggestTags — the vocabulary is read only when the AI pass has tags to judge', () => {
+  /**
+   * Renaming the table away is the assertion: a pass that never queries it is
+   * unaffected, and one that queries it eagerly throws `no such table`. A
+   * counter around the service would only prove the call happened, not that
+   * nothing else in the chain depends on it.
+   */
+  function hideVocabulary(): void {
+    opened.raw.exec('ALTER TABLE tag_vocabulary RENAME TO tag_vocabulary_hidden');
+  }
+
+  it('does not read it for a row the model did not classify', () => {
+    hideVocabulary();
+
+    expect(() =>
+      suggestTags(db, {
+        description: 'THE LOCAL',
+        entityId: MERCHANT,
+        correctionTags: ['venue:bar'],
+        correctionPattern: 'THE LOCAL',
+        entityDefaultTags: new Map([[MERCHANT, ['occasion:out']]]),
+      })
+    ).not.toThrow();
+  });
+
+  it('does not read it when the model returned nothing usable', () => {
+    hideVocabulary();
+
+    expect(() =>
+      suggestTags(db, { description: 'THE LOCAL', entityId: null, aiTags: [], aiCategory: null })
+    ).not.toThrow();
+  });
+
+  it('does read it once the model returned a tag to judge', () => {
+    hideVocabulary();
+
+    expect(() =>
+      suggestTags(db, { description: 'THE LOCAL', entityId: null, aiTags: ['venue:bar'] })
+    ).toThrow(/tag_vocabulary/);
+  });
+});

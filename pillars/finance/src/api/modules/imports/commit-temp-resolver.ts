@@ -41,14 +41,23 @@ export function resolveTagRuleChangeSetTempIds(
   return { ...cs, ops: cs.ops.map((op) => resolveOpEntityId(op, tempIdMap)) };
 }
 
+/**
+ * Every tag an op writes to `transaction_tag_rules`. Both `add` and `edit`
+ * carry a `tags` array the apply path writes straight through
+ * (`TagRuleUpdateSchema.tags`), so both are collected: scanning only `add`
+ * left an `edit` op as a way past the closed-namespace gate the collected set
+ * feeds (POPS-2602). `disable` and `remove` write no tags.
+ */
 function collectTagsFromOp(op: TagRuleChangeSet['ops'][number], tags: Set<string>): void {
-  if (op.op !== 'add' || !op.data.tags) return;
+  if (op.op !== 'add' && op.op !== 'edit') return;
+  if (!op.data.tags) return;
   for (const t of op.data.tags) {
     const s = t.trim();
     if (s) tags.add(s);
   }
 }
 
+/** Every tag `cs` would write onto a rule, trimmed and de-duplicated. */
 export function collectTagsFromTagRuleChangeSet(cs: TagRuleChangeSet): string[] {
   const tags = new Set<string>();
   for (const op of cs.ops) collectTagsFromOp(op, tags);
