@@ -36,12 +36,17 @@ function emptyState(overrides: Partial<LocalTxState> = {}): LocalTxState {
 
 function renderAssign(initial: LocalTxState) {
   const generateProposal = vi.fn().mockResolvedValue(undefined);
+  const recomputeForEntity = vi.fn().mockResolvedValue(undefined);
   const hook = renderHook(() => {
     const [state, setState] = useState<LocalTxState>(initial);
-    const assign = useAssignCreatedToGroup({ setLocalTransactions: setState, generateProposal });
+    const assign = useAssignCreatedToGroup({
+      setLocalTransactions: setState,
+      generateProposal,
+      recomputeForEntity,
+    });
     return { state, assign };
   });
-  return { hook, generateProposal };
+  return { hook, generateProposal, recomputeForEntity };
 }
 
 describe('useAssignCreatedToGroup (CF014)', () => {

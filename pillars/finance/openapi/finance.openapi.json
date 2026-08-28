@@ -15727,7 +15727,24 @@
                   "properties": {
                     "tags": {
                       "items": {
-                        "type": "string"
+                        "additionalProperties": false,
+                        "properties": {
+                          "isNew": {
+                            "type": "boolean"
+                          },
+                          "pattern": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "enum": ["ai", "rule", "entity"],
+                            "type": "string"
+                          },
+                          "tag": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["tag", "source"],
+                        "type": "object"
                       },
                       "type": "array"
                     }

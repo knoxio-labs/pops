@@ -15,6 +15,7 @@ interface UseCreateEntityArgs {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   handleEntitySelect: UseBulkAssignmentArgs['handleEntitySelect'];
   generateProposal: UseBulkAssignmentArgs['generateProposal'];
+  recomputeForEntity: UseBulkAssignmentArgs['recomputeForEntity'];
 }
 
 /**
@@ -32,6 +33,7 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
     setLocalTransactions,
     handleEntitySelect,
     generateProposal,
+    recomputeForEntity,
   } = args;
 
   /**
@@ -60,7 +62,11 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
     [addPendingEntity, dbEntitiesData?.data]
   );
 
-  const assignCreatedToGroup = useAssignCreatedToGroup({ setLocalTransactions, generateProposal });
+  const assignCreatedToGroup = useAssignCreatedToGroup({
+    setLocalTransactions,
+    generateProposal,
+    recomputeForEntity,
+  });
 
   const handleCreateAndAssignAll = useCallback(
     (transactions: ProcessedTransaction[], entityName: string) => {

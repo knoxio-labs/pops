@@ -11,10 +11,17 @@ const mockEntitiesQuery = vi.fn();
 // Finance-served reevaluate moved to the generated REST SDK. The mock resolves
 // the Hey API `{ data, error }` envelope; per-call `onSuccess` in the component
 // fires on resolve, so tests assert via the resulting UI rather than callbacks.
-const { mockReevaluate } = vi.hoisted(() => ({ mockReevaluate: vi.fn() }));
+const { mockReevaluate, mockSuggestTags } = vi.hoisted(() => ({
+  mockReevaluate: vi.fn(),
+  mockSuggestTags: vi.fn(),
+}));
 
 vi.mock('../../finance-api/index.js', () => ({
   importsReevaluateWithPendingRules: (...args: unknown[]) => mockReevaluate(...args),
+  // Assigning an entity by hand re-derives the row's tag suggestions
+  // (POPS-2595). Without this the lookup would throw inside the hook and the
+  // step would silently exercise the failure path in every test below.
+  transactionsSuggestTags: (...args: unknown[]) => mockSuggestTags(...args),
   correctionsAnalyzeCorrection: async (arg: { body: unknown }) => ({
     data: await mockAnalyzeCorrectionMutateAsync(arg.body),
   }),
@@ -369,6 +376,8 @@ beforeEach(() => {
     },
     error: undefined,
   });
+  // Default: the post-assignment tag recompute finds nothing to add.
+  mockSuggestTags.mockResolvedValue({ data: { tags: [] }, error: undefined });
   // Default: merged-state helpers return the DB data as-is
   mockComputeMergedEntities.mockImplementation((dbEntities: unknown[]) => dbEntities);
   mockComputeMergedRules.mockReturnValue([]);

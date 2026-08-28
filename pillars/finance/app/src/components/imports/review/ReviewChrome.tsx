@@ -49,11 +49,18 @@ export function ReviewFooter({
   committedCount,
   onBack,
   onContinue,
+  isRecomputingTags = false,
 }: {
   unresolvedCount: number;
   committedCount: number;
   onBack: () => void;
   onContinue: () => void;
+  /**
+   * True while a manual entity assignment's tag suggestions are still being
+   * re-derived. Continuing mid-flight would freeze the confirmed set from the
+   * stale suggestions the recompute exists to replace (POPS-2595).
+   */
+  isRecomputingTags?: boolean;
 }) {
   return (
     <div className="flex justify-between gap-3 items-center">
@@ -66,7 +73,8 @@ export function ReviewFooter({
             Resolve all uncertain/failed transactions to continue
           </p>
         )}
-        <Button onClick={onContinue} disabled={unresolvedCount > 0}>
+        <Button onClick={onContinue} disabled={unresolvedCount > 0 || isRecomputingTags}>
+          {isRecomputingTags && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
           {`Continue to Tag Review (${committedCount})`}
         </Button>
       </div>

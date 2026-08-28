@@ -63,10 +63,42 @@ describe('transactions.suggestTags', () => {
     });
 
     const matched = await client().transactions.suggestTags({ description: 'WOOLWORTHS METRO' });
-    expect(matched.tags).toContain('groceries');
+    expect(matched.tags.map((s) => s.tag)).toContain('groceries');
 
     const unmatched = await client().transactions.suggestTags({ description: 'ELECTRICITY BILL' });
     expect(unmatched.tags).toEqual([]);
+  });
+
+  // The import wizard re-runs this endpoint after a manual entity assignment
+  // and has to render the same provenance badges Tag Review shows for a
+  // matcher-resolved row (POPS-2595). Bare tag strings cannot carry that, so
+  // `source`/`pattern` are part of the response contract, not a nicety.
+  it('carries source and pattern provenance for a rule-sourced tag', async () => {
+    await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: ['groceries'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+
+    const { tags } = await client().transactions.suggestTags({ description: 'WOOLWORTHS METRO' });
+    expect(tags).toEqual([{ tag: 'groceries', source: 'rule', pattern: 'WOOLWORTHS' }]);
+  });
+
+  it('marks entity-default tags with the entity source so the 🏪 badge can render', async () => {
+    const contacts = makeContactsFake({
+      seed: [{ id: 'ent-acme', name: 'Acme', defaultTags: ['supplier'] }],
+    });
+    const { tags } = await client(contacts).transactions.suggestTags({
+      description: 'ACME PURCHASE',
+      entityId: 'ent-acme',
+    });
+    expect(tags).toEqual([{ tag: 'supplier', source: 'entity' }]);
   });
 
   it('pulls entity-default tags from the live contacts fetch for the given entityId', async () => {
@@ -77,7 +109,7 @@ describe('transactions.suggestTags', () => {
       description: 'ACME PURCHASE',
       entityId: 'ent-acme',
     });
-    expect(tags).toEqual(expect.arrayContaining(['supplier', 'recurring']));
+    expect(tags.map((s) => s.tag)).toEqual(expect.arrayContaining(['supplier', 'recurring']));
   });
 
   it('contributes no entity tags when contacts is unavailable', async () => {

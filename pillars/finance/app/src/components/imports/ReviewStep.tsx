@@ -1,7 +1,4 @@
-import { useCallback, useMemo } from 'react';
-
 import { useImportStore } from '../../store/importStore';
-import { buildConfirmedTransactions, partitionConfirmable } from './review/buildConfirmed';
 import { DroppedRowsNotice } from './review/DroppedRowsNotice';
 import { ReviewFooter, ReviewHeader } from './review/ReviewChrome';
 import { ReviewDialogs } from './review/ReviewDialogs';
@@ -23,22 +20,9 @@ function toPreviewList(local: LocalTxState) {
  * Step 4: Review transactions and resolve uncertain/failed matches
  */
 export function ReviewStep() {
-  const { processedTransactions, processSessionId, setConfirmedTransactions, nextStep, goToStep } =
-    useImportStore();
-  const { review, proposal, reviewActions, editing, bulk } = useReviewStepHooks();
-
-  // The matched bucket splits into what actually commits and what would be
-  // dropped for want of a merchant. Both the footer count and the drop notice
-  // read from this one partition so they can never disagree with the commit (#3765).
-  const { confirmed, dropped } = useMemo(
-    () => partitionConfirmable(review.localTransactions.matched),
-    [review.localTransactions.matched]
-  );
-
-  const handleContinueToTagReview = useCallback(() => {
-    setConfirmedTransactions(buildConfirmedTransactions(review.localTransactions.matched));
-    nextStep();
-  }, [review.localTransactions.matched, setConfirmedTransactions, nextStep]);
+  const { processedTransactions, processSessionId, goToStep } = useImportStore();
+  const { review, proposal, reviewActions, editing, bulk, commit, isRecomputingTags } =
+    useReviewStepHooks();
 
   const allPreviewTransactions = toPreviewList(review.localTransactions);
 
@@ -58,7 +42,7 @@ export function ReviewStep() {
         setBrowseOpen={proposal.setBrowseOpen}
       />
       <ReviewWarnings warnings={processedTransactions.warnings} />
-      <DroppedRowsNotice count={dropped.length} />
+      <DroppedRowsNotice count={commit.dropped.length} />
       <ReviewTabs
         activeTab={review.activeTab}
         onTabChange={review.handleTabChange}
@@ -81,9 +65,10 @@ export function ReviewStep() {
       />
       <ReviewFooter
         unresolvedCount={review.unresolvedCount}
-        committedCount={confirmed.length}
+        committedCount={commit.confirmed.length}
         onBack={() => goToStep(2)}
-        onContinue={handleContinueToTagReview}
+        onContinue={commit.continueToTagReview}
+        isRecomputingTags={isRecomputingTags}
       />
     </div>
   );

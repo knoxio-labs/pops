@@ -405,7 +405,7 @@ describe('tag-rule usage telemetry — read-only lookups never count as usage', 
     const result = await c.transactions.suggestTags({
       description: 'BUNNINGS WAREHOUSE KINGSGROVE',
     });
-    expect(result.tags).toContain('Hardware');
+    expect(result.tags).toEqual([{ tag: 'Hardware', source: 'rule', pattern: 'BUNNINGS' }]);
 
     const after = transactionTagRulesService.getTransactionTagRule(financeDb.db, rule.id);
     expect(after.timesApplied).toBe(0);

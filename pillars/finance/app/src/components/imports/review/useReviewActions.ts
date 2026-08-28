@@ -8,6 +8,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { TransactionType } from '../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { LocalTxState } from '../hooks/local-tx-reconcile';
+import type { RecomputeForEntity } from '../hooks/useSuggestedTagRecompute';
 
 export type { LocalTxState } from '../hooks/local-tx-reconcile';
 
@@ -67,16 +68,35 @@ export function overridesAutomaticMatch(
   return match.entityId !== entityId;
 }
 
+/** The proposal seed every assignment path builds from its triggering row. */
+function proposalArgs(transaction: ProcessedTransaction, entityId: string, entityName: string) {
+  return {
+    triggeringTransaction: transaction,
+    entityId,
+    entityName,
+    location: transaction.location ?? null,
+    transactionType: transaction.transactionType ?? null,
+  };
+}
+
 interface UseReviewActionsArgs {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   findSimilar: (t: ProcessedTransaction) => ProcessedTransaction[];
   generateProposal: GenerateProposal;
+  /**
+   * Re-derives `suggestedTags` against the entity the user just picked. The
+   * bucket move below carries the row's tag set through untouched, and that
+   * set was computed for a different entity (usually none at all) — see
+   * {@link useSuggestedTagRecompute}.
+   */
+  recomputeForEntity: RecomputeForEntity;
 }
 
 export function useReviewActions({
   setLocalTransactions,
   findSimilar,
   generateProposal,
+  recomputeForEntity,
 }: UseReviewActionsArgs) {
   const handleBulkEntitySelect = useCallback(
     (transactions: ProcessedTransaction[], entityId: string, entityName: string) => {
@@ -93,18 +113,11 @@ export function useReviewActions({
         }
         return updated;
       });
+      void recomputeForEntity(transactions, entityId);
       const firstTx = transactions[0];
-      if (firstTx) {
-        void generateProposal({
-          triggeringTransaction: firstTx,
-          entityId,
-          entityName,
-          location: firstTx.location ?? null,
-          transactionType: firstTx.transactionType ?? null,
-        });
-      }
+      if (firstTx) void generateProposal(proposalArgs(firstTx, entityId, entityName));
     },
-    [generateProposal, setLocalTransactions]
+    [generateProposal, recomputeForEntity, setLocalTransactions]
   );
 
   const handleEntitySelect = useCallback(
@@ -113,14 +126,8 @@ export function useReviewActions({
       setLocalTransactions((prev) =>
         moveOneToMatched(prev, { transaction, entityId, entityName, matchType: 'manual' })
       );
-      const propose = () =>
-        generateProposal({
-          triggeringTransaction: transaction,
-          entityId,
-          entityName,
-          location: transaction.location ?? null,
-          transactionType: transaction.transactionType ?? null,
-        });
+      void recomputeForEntity([transaction], entityId);
+      const propose = () => generateProposal(proposalArgs(transaction, entityId, entityName));
       if (overridesAutomaticMatch(transaction, entityId) || similar.length > 0) {
         void propose();
         return;
@@ -132,7 +139,7 @@ export function useReviewActions({
       if (transaction.entity?.entityId === entityId) return;
       promptToLearn(() => void propose());
     },
-    [findSimilar, generateProposal, setLocalTransactions]
+    [findSimilar, generateProposal, recomputeForEntity, setLocalTransactions]
   );
 
   return { handleBulkEntitySelect, handleEntitySelect };

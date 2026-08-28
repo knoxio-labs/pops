@@ -7561,7 +7561,13 @@ export interface operations {
         };
         content: {
           'application/json': {
-            tags: string[];
+            tags: {
+              isNew?: boolean;
+              pattern?: string;
+              /** @enum {string} */
+              source: 'ai' | 'rule' | 'entity';
+              tag: string;
+            }[];
           };
         };
       };
