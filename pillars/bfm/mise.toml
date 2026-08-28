@@ -5,9 +5,11 @@ sources = ["src/**/*.ts", "scripts/**/*.ts", "tsconfig.build.json"]
 outputs = ["dist/**", "openapi/*.json"]
 
 [tasks.typecheck]
+depends = ["build"]
 run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
 
 [tasks.test]
+depends = ["build"]
 run = "vitest run"
 
 [tasks.lint]

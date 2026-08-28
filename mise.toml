@@ -97,7 +97,7 @@ done
 '''
 
 [tasks.test]
-description = "Run every unit's test suite (fan-out; each unit's test depends on its own build)"
+description = "Run every unit's test suite (fan-out; each unit's test depends on its own build AND any pillar it imports a compiled dist from — POPS-2631)"
 run = "mise run run-all test"
 
 [tasks."test:coverage"]

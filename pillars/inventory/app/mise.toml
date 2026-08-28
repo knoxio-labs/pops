@@ -1,8 +1,12 @@
+# The app imports `@pops/inventory` through its built `dist`, not its `src` —
+# so a change to `pillars/inventory/src` is invisible to `tsc`/vitest here
+# until the pillar is rebuilt (POPS-2631). Build it first rather than trusting
+# whatever `dist` happens to be on disk.
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = ["mise run -C .. build", "tsc --noEmit"]
 
 [tasks.test]
-run = "vitest run"
+run = ["mise run -C .. build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
