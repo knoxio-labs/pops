@@ -889,3 +889,93 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     });
   });
 });
+
+describe('corrections — regex patterns (POPS-2600)', () => {
+  const REGEX_PATTERN = String.raw`\d{4}-\d{2}`;
+
+  async function createRegexCorrection() {
+    return client().corrections.createOrUpdate({
+      descriptionPattern: REGEX_PATTERN,
+      matchType: 'regex',
+      entityId: 'ent-regex',
+      entityName: 'Regex Co',
+    });
+  }
+
+  it('stores a regex pattern verbatim through a create round-trip', async () => {
+    const created = await createRegexCorrection();
+    expect(created.data.descriptionPattern).toBe(REGEX_PATTERN);
+
+    const read = await client().corrections.get(created.data.id);
+    expect(read.data.descriptionPattern).toBe(REGEX_PATTERN);
+  });
+
+  it('stores a regex pattern verbatim through an update round-trip', async () => {
+    const created = await createRegexCorrection();
+    const nextPattern = String.raw`^ACME\s+STORE\.\d+$`;
+
+    const updated = await client().corrections.update(created.data.id, {
+      descriptionPattern: nextPattern,
+    });
+    expect(updated.data.descriptionPattern).toBe(nextPattern);
+
+    const read = await client().corrections.get(created.data.id);
+    expect(read.data.descriptionPattern).toBe(nextPattern);
+  });
+
+  it('still normalizes a contains pattern on write', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'Acme Store 42',
+      matchType: 'contains',
+      entityId: 'ent-acme',
+      entityName: 'Acme',
+    });
+    expect(created.data.descriptionPattern).toBe('ACME STORE');
+  });
+
+  it('400s a createOrUpdate whose regex pattern does not compile', async () => {
+    await expect(
+      client().corrections.createOrUpdate({
+        descriptionPattern: '[unclosed',
+        matchType: 'regex',
+        entityId: 'ent-bad',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().corrections.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+
+  it('400s an update that would set an uncompilable regex pattern', async () => {
+    const created = await createRegexCorrection();
+
+    await expect(
+      client().corrections.update(created.data.id, { descriptionPattern: '(unbalanced' })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.descriptionPattern).toBe(REGEX_PATTERN);
+  });
+
+  it('400s an applyChangeSet add op whose regex pattern does not compile', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'a{2,1}(',
+                matchType: 'regex',
+                entityId: 'ent-bad',
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().corrections.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+});

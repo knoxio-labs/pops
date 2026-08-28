@@ -5,20 +5,19 @@
  * computation reads nothing but the supplied transactions plus the user
  * vocabulary.
  *
- * Both the transaction description and the (not-yet-persisted) candidate
- * pattern are run through the shared `normalizeDescription` — the same
- * normalisation `createTransactionTagRule` applies to a pattern on write and
- * `findMatchingTagRules` applies to a description on match. A naive
+ * The match test is `patternMatchesNormalizedDescription`, the same predicate
+ * `findMatchingTagRules` runs on the live path (POPS-2600) — this preview used
+ * to have its own copy, so it could claim a rule matched something production
+ * would skip. It normalises both the description and the (not-yet-persisted)
+ * candidate pattern, mirroring what `createTransactionTagRule` stores. A naive
  * `toUpperCase()`-only preview would diverge from production for any
- * digit-bearing description (most real bank text), showing a rule as
- * matching (or not) something it wouldn't once actually applied (CF022).
+ * digit-bearing description (most real bank text) (CF022).
  */
 import {
   type FinanceDb,
   tagVocabularyService,
   transactionCorrectionsService,
 } from '../../../db/index.js';
-import { tagRulePatternMatches } from './pattern-match.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
 import type {
@@ -28,7 +27,7 @@ import type {
   TagSuggestion,
 } from './types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { normalizeDescription, patternMatchesNormalizedDescription } = transactionCorrectionsService;
 
 interface ProposedRule {
   descriptionPattern: string;
@@ -64,7 +63,8 @@ function suggestFromRules(
 
   for (const rule of rules) {
     if (rule.entityId && rule.entityId !== entityId) continue;
-    if (!tagRulePatternMatches(rule, normalized)) continue;
+    if (!patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized))
+      continue;
 
     for (const tag of rule.tags) {
       if (seen.has(tag)) continue;

@@ -23,7 +23,6 @@ import {
   transactionTagRulesService,
   transactions,
 } from '../../../db/index.js';
-import { tagRulePatternMatches } from './pattern-match.js';
 
 const BATCH_SIZE = 500;
 
@@ -61,7 +60,11 @@ interface RuleScope {
 
 function ruleMatchesTransaction(rule: RuleScope, txn: BatchTxn, normalized: string): boolean {
   if (rule.entityId && rule.entityId !== txn.entityId) return false;
-  return tagRulePatternMatches(rule, normalized);
+  return transactionCorrectionsService.patternMatchesNormalizedDescription(
+    rule.descriptionPattern,
+    rule.matchType,
+    normalized
+  );
 }
 
 /**

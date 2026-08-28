@@ -16,9 +16,12 @@
  */
 import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 
-import { TransactionTagRuleNotFoundError } from '../errors.js';
+import { InvalidPatternError, TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
-import { normalizeDescription } from './transaction-corrections-types.js';
+import {
+  isValidRegexPattern,
+  normalizePatternForStorage,
+} from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -198,16 +201,18 @@ function reinforceExistingTagRule(
  * against a normalized description and need the same treatment to line up.
  * A `regex` pattern is stored raw: `normalizeDescription` uppercases every
  * character including metacharacters (`\d` -> `\D`, `\s` -> `\S`), which
- * would silently corrupt the pattern.
+ * would silently corrupt the pattern. An uncompilable `regex` pattern throws
+ * `InvalidPatternError` (-> 400) instead of being stored as a rule that can
+ * never fire (POPS-2600).
  */
 export function createTransactionTagRule(
   db: FinanceDb,
   input: CreateTransactionTagRuleInput
 ): TransactionTagRuleRow {
-  const normalized =
-    input.matchType === 'regex'
-      ? input.descriptionPattern
-      : normalizeDescription(input.descriptionPattern);
+  if (input.matchType === 'regex' && !isValidRegexPattern(input.descriptionPattern)) {
+    throw new InvalidPatternError(input.descriptionPattern);
+  }
+  const normalized = normalizePatternForStorage(input.descriptionPattern, input.matchType);
   const entityId = input.entityId ?? null;
 
   const existing = findExistingTagRule(db, input.matchType, normalized, entityId);

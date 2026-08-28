@@ -25,7 +25,8 @@ import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
 
-const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, isValidRegexPattern, normalizePatternForStorage } =
+  transactionCorrectionsService;
 
 /**
  * Reject a ChangeSet `add` whose data carries no `entityId`, no
@@ -82,6 +83,19 @@ export function dropTagsOnlyAddOps(changeSet: ChangeSet): ChangeSet {
 }
 
 /**
+ * Reject a ChangeSet `add` whose `regex` pattern doesn't compile. Every matcher
+ * silently skips an uncompilable pattern, so storing one leaves a rule that
+ * looks active and can never fire (POPS-2600).
+ */
+function assertPatternCompiles(op: Extract<ChangeSetOp, { op: 'add' }>): void {
+  if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
+    throw new ValidationError(
+      `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`
+    );
+  }
+}
+
+/**
  * Add a correction rule, upserting on the `(normalized descriptionPattern,
  * matchType)` key instead of a raw insert (CF035): two `add` ops for the same
  * pattern in one ChangeSet — or across ChangeSets in the same commit — land
@@ -90,8 +104,9 @@ export function dropTagsOnlyAddOps(changeSet: ChangeSet): ChangeSet {
  */
 function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
   assertNotTagsOnly(op);
+  assertPatternCompiles(op);
 
-  const normalized = normalizeDescription(op.data.descriptionPattern);
+  const normalized = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
   const values = {
     entityId: op.data.entityId ?? null,
     entityName: op.data.entityName ?? null,

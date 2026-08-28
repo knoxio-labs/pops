@@ -10,10 +10,12 @@
  * rather than re-implementing it.
  */
 import { MIN_MATCH_CONFIDENCE, type TransactionType } from './corrections-constants.js';
+import { normalizePatternForStorage } from './pattern-match.js';
 
 import type { ChangeSet, ChangeSetOp } from './rest-corrections-schemas.js';
 
 export { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
+export { normalizeDescription } from './pattern-match.js';
 export type { TransactionType } from './corrections-constants.js';
 
 /** Confidence at/above which a learned correction is treated as a confident match. */
@@ -60,25 +62,6 @@ export interface CorrectionRow {
   timesApplied: number;
   createdAt: string;
   lastUsedAt: string | null;
-}
-
-/**
- * Canonicalise a transaction description for matching: fold diacritics, treat
- * hyphens as a space and strip ampersands/periods, uppercase, strip digits,
- * collapse whitespace. Identical to the db-side matcher's normaliser
- * (CF056/CP022) — the two must stay in lockstep, and the entity-matcher's
- * `normalizeKey` folds diacritics and punctuation the same way.
- */
-export function normalizeDescription(description: string): string {
-  return description
-    .normalize('NFKD')
-    .replaceAll(/[\u0300-\u036f]/g, '')
-    .replaceAll(/-/g, ' ')
-    .replaceAll(/[&.]/g, '')
-    .toUpperCase()
-    .replaceAll(/\d+/g, '')
-    .replaceAll(/\s+/g, ' ')
-    .trim();
 }
 
 function parseJsonStringArray(raw: string): string[] {
@@ -154,7 +137,7 @@ function highestTempIdSuffix(rules: CorrectionRow[]): number {
 function makeAddedRow(op: Extract<ChangeSetOp, { op: 'add' }>, tempId: string): CorrectionRow {
   return {
     id: tempId,
-    descriptionPattern: normalizeDescription(op.data.descriptionPattern),
+    descriptionPattern: normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType),
     matchType: op.data.matchType,
     entityId: op.data.entityId ?? null,
     entityName: op.data.entityName ?? null,

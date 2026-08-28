@@ -7,13 +7,21 @@
  * types declared here.
  */
 import type { TransactionType } from '../../contract/corrections-constants.js';
+import type { PatternMatchType } from '../../contract/pattern-match.js';
 import type { transactionCorrections } from '../schema.js';
+
+export {
+  isValidRegexPattern,
+  normalizeDescription,
+  normalizePatternForStorage,
+  patternMatchesNormalizedDescription,
+} from '../../contract/pattern-match.js';
 
 /** Raw drizzle row shape — matches the persisted `transaction_corrections` record. */
 export type TransactionCorrectionRow = typeof transactionCorrections.$inferSelect;
 
 /** Discriminant for how `descriptionPattern` is interpreted against an incoming description. */
-export type TransactionCorrectionMatchType = 'exact' | 'contains' | 'regex';
+export type TransactionCorrectionMatchType = PatternMatchType;
 
 /** Optional `transaction_type` tag stamped onto the matched transaction.
  * Alias of the canonical {@link TransactionType} (#3607). */
@@ -66,27 +74,6 @@ export interface TransactionCorrectionListQuery {
 }
 
 /**
- * Canonical pattern normalisation used by the matcher and on insert/update.
- *
- * Folds diacritics, treats hyphens as a space and strips ampersands/periods,
- * uppercases, strips digits, collapses whitespace, and trims. Kept identical
- * to `contract/corrections-pure.ts`'s `normalizeDescription` (CF056/CP022) —
- * the two must stay in lockstep — and to the entity-matcher's
- * `normalizeKey`, which folds diacritics and punctuation the same way.
- */
-export function normalizeDescription(description: string): string {
-  return description
-    .normalize('NFKD')
-    .replaceAll(/[\u0300-\u036f]/g, '')
-    .replaceAll(/-/g, ' ')
-    .replaceAll(/[&.]/g, '')
-    .toUpperCase()
-    .replaceAll(/\d+/g, '')
-    .replaceAll(/\s+/g, ' ')
-    .trim();
-}
-
-/**
  * A `transaction_corrections` row is a **classification** rule: it must carry
  * an `entityId` and/or a `transactionType` to have anything to classify.
  * `tags` is a suggestion payload riding along an entity/type match, never a
@@ -134,36 +121,4 @@ export function wouldUpdateLeaveTagsOnly(
       input.transactionType !== undefined ? input.transactionType : existing.transactionType,
     tags: input.tags ?? parseStoredTags(existing.tags),
   });
-}
-
-/**
- * Apply-time match predicate shared by the rule matcher and the rule-match
- * preview: does `pattern` (interpreted per `matchType`) hit a pre-normalised
- * description?
- *
- * `normalizedDescription` MUST be the output of {@link normalizeDescription}.
- * The pattern is only uppercased (not fully normalised) and regex runs
- * case-insensitively — identical to how `findAllMatchingTransactionCorrectionsFromDb`
- * decides a rule fires at import time, so a preview cannot diverge from reality.
- */
-export function patternMatchesNormalizedDescription(
-  pattern: string,
-  matchType: TransactionCorrectionMatchType,
-  normalizedDescription: string
-): boolean {
-  switch (matchType) {
-    case 'exact':
-      return pattern.toUpperCase() === normalizedDescription;
-    case 'contains':
-      return pattern.length > 0 && normalizedDescription.includes(pattern.toUpperCase());
-    case 'regex':
-      if (pattern.length === 0) return false;
-      try {
-        return new RegExp(pattern, 'i').test(normalizedDescription);
-      } catch {
-        return false;
-      }
-    default:
-      return false;
-  }
 }

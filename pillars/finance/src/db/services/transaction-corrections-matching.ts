@@ -6,7 +6,7 @@
  * surface through the `transactionCorrectionsService` namespace on the
  * package barrel and the in-tree consumer treats them as one slice.
  */
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { centsToDollars } from '../../money.js';
@@ -19,6 +19,12 @@ import {
 } from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
+
+const MATCH_TYPE_GROUP_ORDER: readonly TransactionCorrectionMatchType[] = [
+  'exact',
+  'contains',
+  'regex',
+];
 
 function ruleMatchesNormalizedDescription(
   rule: TransactionCorrectionRow,
@@ -60,13 +66,19 @@ export function findAllMatchingTransactionCorrectionsFromDb(
 /**
  * Return every active correction whose pattern matches `description`, grouped
  * by `matchType` in `[exact, contains, regex]` order, with each group sorted
- * by `confidence DESC, timesApplied DESC`.
+ * by `confidence DESC, timesApplied DESC, id ASC`.
  *
  * Used by callers that need to surface all matches (not just the winning
- * rule) to the user — typically the rule-management UI.
+ * rule) to the user — typically the rule-management UI — and by the
+ * tag-suggester's correction pass.
  *
- * Regex rules with invalid patterns are silently dropped so a single
- * malformed entry can't poison the result.
+ * The pattern test runs in JS over a single candidate fetch rather than in
+ * SQL. The three per-match-type SQL queries this replaces each had their own
+ * semantics (a raw `LIKE` with no `upper()`, a regex with no `i` flag), so
+ * this matcher disagreed with the classification matcher about the same row
+ * (POPS-2600). SQLite's `LIKE` cannot faithfully reproduce a
+ * post-`normalizeDescription` match set without a registered function — the
+ * same reasoning {@link previewRuleMatchTransactions} already documents.
  */
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
@@ -74,53 +86,21 @@ export function findAllMatchingTransactionCorrections(
 ): TransactionCorrectionRow[] {
   const normalized = normalizeDescription(description);
 
-  const exactMatches = db
+  const matched = db
     .select()
     .from(transactionCorrections)
-    .where(
-      and(
-        eq(transactionCorrections.isActive, true),
-        eq(transactionCorrections.matchType, 'exact'),
-        eq(transactionCorrections.descriptionPattern, normalized)
-      )
+    .where(eq(transactionCorrections.isActive, true))
+    .orderBy(
+      desc(transactionCorrections.confidence),
+      desc(transactionCorrections.timesApplied),
+      asc(transactionCorrections.id)
     )
-    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
-    .all();
+    .all()
+    .filter((rule) => ruleMatchesNormalizedDescription(rule, normalized));
 
-  const containsMatches = db
-    .select()
-    .from(transactionCorrections)
-    .where(
-      and(
-        eq(transactionCorrections.isActive, true),
-        eq(transactionCorrections.matchType, 'contains'),
-        sql`${normalized} LIKE '%' || ${transactionCorrections.descriptionPattern} || '%'`
-      )
-    )
-    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
-    .all();
-
-  const regexCandidates = db
-    .select()
-    .from(transactionCorrections)
-    .where(
-      and(eq(transactionCorrections.isActive, true), eq(transactionCorrections.matchType, 'regex'))
-    )
-    .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
-    .all();
-
-  const regexMatches: TransactionCorrectionRow[] = [];
-  for (const row of regexCandidates) {
-    try {
-      if (new RegExp(row.descriptionPattern).test(normalized)) {
-        regexMatches.push(row);
-      }
-    } catch {
-      // skip invalid regex pattern — see fn doc-comment
-    }
-  }
-
-  return [...exactMatches, ...containsMatches, ...regexMatches];
+  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
+    matched.filter((rule) => rule.matchType === matchType)
+  );
 }
 
 /** Resolved (defaults already applied) input to {@link previewRuleMatchTransactions}. */

@@ -8,9 +8,9 @@
  * the pillar's `NotFoundError` so a missing edit/disable/remove target maps to
  * a 404 on the REST surface.
  *
- * `normalizeDescription` comes from the pillar's own
- * `transactionCorrectionsService` so the normalisation is identical to the
- * DB-side matcher.
+ * `normalizeDescription` and `patternMatchesNormalizedDescription` come from
+ * the pillar's own `transactionCorrectionsService` so normalisation and the
+ * match verdict are identical to the DB-side matcher (POPS-2600).
  */
 import {
   applyChangeSetToRules as applyChangeSetToRulesPure,
@@ -23,26 +23,16 @@ import { classifyCorrectionMatch } from './types.js';
 import type { ChangeSet } from '../../../contract/rest-corrections.js';
 import type { CorrectionMatchResult, CorrectionRow } from './types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { normalizeDescription, patternMatchesNormalizedDescription } = transactionCorrectionsService;
 
-/** Test whether a single rule's pattern matches a normalized description. */
+/**
+ * Test whether a single rule's pattern matches a normalized description.
+ *
+ * Delegates to the one shared predicate (POPS-2600) rather than carrying its
+ * own copy — this used to be a fifth independent implementation.
+ */
 export function ruleMatchesDescription(rule: CorrectionRow, normalized: string): boolean {
-  const pattern = rule.descriptionPattern;
-  switch (rule.matchType) {
-    case 'exact':
-      return pattern.toUpperCase() === normalized;
-    case 'contains':
-      return pattern.length > 0 && normalized.includes(pattern.toUpperCase());
-    case 'regex':
-      if (pattern.length === 0) return false;
-      try {
-        return new RegExp(pattern, 'i').test(normalized);
-      } catch {
-        return false;
-      }
-    default:
-      return false;
-  }
+  return patternMatchesNormalizedDescription(rule.descriptionPattern, rule.matchType, normalized);
 }
 
 /**

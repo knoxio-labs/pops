@@ -18,6 +18,7 @@ import {
   tagVocabularyService,
   transactionCorrectionsService,
   transactionTagRulesService,
+  InvalidPatternError,
   TransactionTagRuleNotFoundError,
 } from '../../db/index.js';
 import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
@@ -28,7 +29,7 @@ import {
   recordTagRuleRejection,
   toTagRule,
 } from '../modules/tag-rules/service.js';
-import { NotFoundError } from '../shared/errors.js';
+import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 
@@ -46,6 +47,9 @@ const MATCH_PREVIEW_HARD_LIMIT = 500;
 function translateTagRuleError(err: unknown, id?: string): never {
   if (err instanceof TransactionTagRuleNotFoundError) {
     throw new NotFoundError('TagRule', id ?? err.id);
+  }
+  if (err instanceof InvalidPatternError) {
+    throw new ValidationError(err.message);
   }
   throw err;
 }
