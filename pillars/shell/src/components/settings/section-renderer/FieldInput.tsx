@@ -13,12 +13,21 @@ import type { FieldProps } from './types';
 export function FieldInput(props: FieldProps) {
   const { field, value, onChange, saveState } = props;
   const [validationError, setValidationError] = useState<string>('');
+  // A rejected value is still what the user typed, so it has to stay on screen:
+  // without a draft the input snaps back to the last valid value on every
+  // keystroke, and a bounded number can never be edited across its own bounds
+  // (typing `2` towards `200` under `min: 50` is rejected mid-word).
+  const [draft, setDraft] = useState<string | null>(null);
 
   const handleChange = useCallback(
     (newVal: string) => {
       const err = validateField(field, newVal);
       setValidationError(err);
-      if (err) return;
+      if (err) {
+        setDraft(newVal);
+        return;
+      }
+      setDraft(null);
       onChange(field.key, newVal);
     },
     [field, onChange]
@@ -29,7 +38,11 @@ export function FieldInput(props: FieldProps) {
   }
 
   return (
-    <NonDurationField props={props} handleChange={handleChange} validationError={validationError} />
+    <NonDurationField
+      props={draft === null ? props : { ...props, value: draft }}
+      handleChange={handleChange}
+      validationError={validationError}
+    />
   );
 }
 
