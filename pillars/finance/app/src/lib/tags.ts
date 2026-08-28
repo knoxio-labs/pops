@@ -172,3 +172,49 @@ export function resolveTypedTag(input: string, availableTags: string[]): string 
   });
   return byValue.length === 1 ? byValue[0] : undefined;
 }
+
+/**
+ * Whether the list carries a specific taxonomy tag.
+ *
+ * Callers name the axis and the value separately because a whole-string
+ * literal is exactly what a namespace rename breaks silently — matching on
+ * the parsed pair means a moved value fails a test rather than a badge.
+ * Comparison is case-insensitive, matching the rest of this module's
+ * tolerance for hand-typed casing.
+ */
+export function hasTagValue(tags: string[], facet: string, value: string): boolean {
+  const wantedFacet = facet.toLowerCase();
+  const wantedValue = value.toLowerCase();
+  return tags.some((raw) => {
+    const parsed = parseTag(raw);
+    return (
+      parsed.facet?.toLowerCase() === wantedFacet && parsed.value.toLowerCase() === wantedValue
+    );
+  });
+}
+
+/**
+ * Rank a vocabulary against what the user has typed, for autocomplete.
+ *
+ * Prefix matches come before substring matches, and already-selected tags
+ * never appear. An empty input ranks nothing and returns the unselected
+ * vocabulary in its given order. The result is uncapped: how many entries a
+ * picker shows is its own layout decision.
+ */
+export function rankTagSuggestions(
+  input: string,
+  availableTags: string[],
+  selectedTags: string[]
+): string[] {
+  const unselected = availableTags.filter((tag) => !selectedTags.includes(tag));
+  if (input === '') return unselected;
+  const lower = input.toLowerCase();
+  const startsWith: string[] = [];
+  const contains: string[] = [];
+  for (const tag of unselected) {
+    const tagLower = tag.toLowerCase();
+    if (tagLower.startsWith(lower)) startsWith.push(tag);
+    else if (tagLower.includes(lower)) contains.push(tag);
+  }
+  return [...startsWith, ...contains];
+}

@@ -5,8 +5,10 @@ import {
   formatFacet,
   formatTagValue,
   groupTagsByFacet,
+  hasTagValue,
   orderTagsByFacet,
   parseTag,
+  rankTagSuggestions,
   resolveTypedTag,
   tagColorKey,
 } from './tags';
@@ -187,5 +189,74 @@ describe('resolveTypedTag', () => {
 
   it('returns nothing for blank input', () => {
     expect(resolveTypedTag('   ', vocabulary)).toBeUndefined();
+  });
+});
+
+describe('hasTagValue', () => {
+  it('matches a tag on both its facet and its value', () => {
+    expect(hasTagValue(['venue:cafe', 'channel:online'], 'channel', 'online')).toBe(true);
+  });
+
+  it('rejects the same value under a different facet', () => {
+    expect(hasTagValue(['project:online'], 'channel', 'online')).toBe(false);
+  });
+
+  it('rejects a different value under the same facet', () => {
+    expect(hasTagValue(['channel:in-person'], 'channel', 'online')).toBe(false);
+  });
+
+  it('rejects the legacy unfaceted tag the namespace migration replaced', () => {
+    expect(hasTagValue(['Online'], 'channel', 'online')).toBe(false);
+  });
+
+  it('ignores casing on both sides', () => {
+    expect(hasTagValue(['Channel:Online'], 'channel', 'online')).toBe(true);
+  });
+
+  it('is false for an empty tag list', () => {
+    expect(hasTagValue([], 'channel', 'online')).toBe(false);
+  });
+});
+
+describe('rankTagSuggestions', () => {
+  it('returns the unselected vocabulary in order when nothing is typed', () => {
+    expect(rankTagSuggestions('', ['venue:bar', 'venue:cafe'], ['venue:bar'])).toEqual([
+      'venue:cafe',
+    ]);
+  });
+
+  it('ranks prefix matches ahead of substring matches', () => {
+    expect(rankTagSuggestions('ca', ['venue:cafe', 'cafeteria', 'candy'], [])).toEqual([
+      'cafeteria',
+      'candy',
+      'venue:cafe',
+    ]);
+  });
+
+  it('preserves the vocabulary order within each rank', () => {
+    expect(rankTagSuggestions('a', ['ant', 'bat', 'ape', 'cab'], [])).toEqual([
+      'ant',
+      'ape',
+      'bat',
+      'cab',
+    ]);
+  });
+
+  it('matches case-insensitively', () => {
+    expect(rankTagSuggestions('BA', ['venue:bar'], [])).toEqual(['venue:bar']);
+  });
+
+  it('never offers a tag that is already selected', () => {
+    expect(rankTagSuggestions('bar', ['venue:bar'], ['venue:bar'])).toEqual([]);
+  });
+
+  it('returns nothing when no tag contains the input', () => {
+    expect(rankTagSuggestions('zzz', ['venue:bar'], [])).toEqual([]);
+  });
+
+  it('does not cap the result, leaving the display limit to the caller', () => {
+    const available = Array.from({ length: 30 }, (_, i) => `venue:v${String(i)}`);
+
+    expect(rankTagSuggestions('venue', available, [])).toHaveLength(30);
   });
 });

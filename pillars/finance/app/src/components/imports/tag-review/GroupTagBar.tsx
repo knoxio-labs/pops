@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ButtonPrimitive } from '@pops/ui';
 
-import { orderTagsByFacet, resolveTypedTag } from '../../../lib/tags';
+import { orderTagsByFacet, rankTagSuggestions, resolveTypedTag } from '../../../lib/tags';
 import { cn } from '../../../lib/utils';
 import { TagChip } from '../../tags/TagChip';
 import { PickerInput } from './GroupTagPicker';
@@ -16,22 +16,6 @@ export interface GroupTagBarProps {
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onApply: () => void;
-}
-
-function filterAvailableTags(input: string, available: string[], staged: string[]): string[] {
-  if (input === '') {
-    return available.filter((t) => !staged.includes(t));
-  }
-  const lower = input.toLowerCase();
-  const startsWith: string[] = [];
-  const contains: string[] = [];
-  for (const t of available) {
-    if (staged.includes(t)) continue;
-    const tLower = t.toLowerCase();
-    if (tLower.startsWith(lower)) startsWith.push(t);
-    else if (tLower.includes(lower)) contains.push(t);
-  }
-  return [...startsWith, ...contains];
 }
 
 function useClickOutside(
@@ -63,7 +47,7 @@ export function GroupTagBar({
   const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const ranked = filterAvailableTags(inputValue, availableTags, stagedTags);
+  const ranked = rankTagSuggestions(inputValue, availableTags, stagedTags);
   // Relevance picks the shortlist, then facet grouping fixes its order, so
   // what Tab completes is always what the dropdown shows first.
   const filtered = orderTagsByFacet(ranked.slice(0, PICKER_LIMIT)).map((parsed) => parsed.raw);
