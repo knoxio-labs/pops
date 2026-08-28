@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto';
 
 import {
+  ContactsPermanentError,
   ContactsUnavailableError,
   type ContactEntity,
   type ContactsClient,
@@ -32,6 +33,8 @@ export interface ContactsFake extends ContactsClient {
   readonly entities: ContactEntity[];
   /** Names passed to `createOrFetchByName`, in order, for assertions. */
   readonly created: { name: string; type: string }[];
+  /** Every `updateDefaultTags` write, in order, for assertions. */
+  readonly defaultTagWrites: { entityId: string; defaultTags: string[] }[];
   /** Flip availability at runtime — lets a test simulate an outage that then
    * recovers (e.g. a commit during the outage, followed by a reconciler tick
    * once contacts is back). */
@@ -61,6 +64,7 @@ export interface ContactsFakeOptions {
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
   const entities = (options.seed ?? []).map(toEntity);
   const created: { name: string; type: string }[] = [];
+  const defaultTagWrites: { entityId: string; defaultTags: string[] }[] = [];
   let unavailable = options.unavailable ?? false;
 
   function filter(query: { search?: string; type?: string }): ContactEntity[] {
@@ -75,6 +79,7 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
   return {
     entities,
     created,
+    defaultTagWrites,
     setUnavailable(value: boolean): void {
       unavailable = value;
     },
@@ -93,6 +98,15 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
       const fresh = toEntity({ name, type });
       entities.push(fresh);
       return { id: fresh.id, name: fresh.name, created: true };
+    },
+    async updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity> {
+      if (unavailable)
+        throw new ContactsUnavailableError('unavailable', 'entity defaultTags update');
+      const target = entities.find((e) => e.id === entityId);
+      if (!target) throw new ContactsPermanentError('not-found', 'entity defaultTags update');
+      target.defaultTags = defaultTags;
+      defaultTagWrites.push({ entityId, defaultTags });
+      return target;
     },
   };
 }

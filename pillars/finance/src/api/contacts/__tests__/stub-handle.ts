@@ -55,6 +55,10 @@ export interface StubImpls {
     name: string;
     type: string;
   }) => Promise<CallResult<{ data: ContactEntity; message: string }>>;
+  update?: (input: {
+    id: string;
+    defaultTags: string[];
+  }) => Promise<CallResult<{ data: ContactEntity; message: string }>>;
 }
 
 export function unexpected(name: string): never {
@@ -67,6 +71,7 @@ export function stubHandle(impls: StubImpls): PillarHandle<ContactsRouter> {
       list: proc(impls.list),
       get: proc(impls.get ?? (() => unexpected('entities.get'))),
       create: proc(impls.create ?? (() => unexpected('entities.create'))),
+      update: proc(impls.update ?? (() => unexpected('entities.update'))),
     },
     callDynamic,
   };
