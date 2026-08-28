@@ -201,6 +201,7 @@ function writeTransactionsPhase(
       });
       imported++;
       insertedIds.push(row.id);
+      tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[CommitImport] Transaction write failed: ${errorMessage}`);

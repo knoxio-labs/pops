@@ -186,6 +186,7 @@ export function finalizeAiResult(
   aiEntry: AiCacheEntry | null
 ): TransactionProcessResult {
   const { db, transaction, context, counters } = args;
+  counters.aiTagValuesRejected += aiEntry?.rejectedTagValues ?? 0;
   if (aiEntry?.entityName) {
     const aiTags = aiEntry.tags ?? [];
     const aiCategory = aiEntry.tags?.length ? null : (aiEntry.category ?? null);

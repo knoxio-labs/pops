@@ -61,11 +61,15 @@ CREATE INDEX idx_entities_owner_uri ON entities (owner_uri);
 const TAG_VOCABULARY_DDL = `
 CREATE TABLE tag_vocabulary (
   tag text PRIMARY KEY NOT NULL,
+  facet text,
+  kind text DEFAULT 'open' NOT NULL,
   source text DEFAULT 'seed' NOT NULL,
   is_active integer DEFAULT 1 NOT NULL,
+  usage_count integer DEFAULT 0 NOT NULL,
   created_at text DEFAULT (datetime('now')) NOT NULL
 );
 CREATE INDEX idx_tag_vocabulary_active ON tag_vocabulary (is_active);
+CREATE INDEX idx_tag_vocabulary_kind ON tag_vocabulary (kind, usage_count);
 `;
 
 const TRANSACTION_TAG_RULES_DDL = `

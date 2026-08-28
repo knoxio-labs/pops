@@ -6,6 +6,7 @@
  * row/input types from a single entry point.
  */
 export * from './errors.js';
+export * from './tag-facets.js';
 export * from './row-types.js';
 export * from './schema.js';
 

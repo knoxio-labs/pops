@@ -21,13 +21,16 @@ import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
-  knownTagsList,
   PROMPT_VERSION_CATEGORIZE,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
+import { logRejectedTagValues, validateAiTags } from './ai-tag-validation.js';
 import { sanitizeEntityName } from './entity-name.js';
 
 export { sanitizeEntityName } from './entity-name.js';
@@ -75,18 +78,28 @@ export interface RawApiCallOptions {
 const SINGLE_KNOWN_ENTITY_INSTRUCTION =
   "If the transaction is from one of the known entities, return its name exactly as listed above (same spelling/casing) — do NOT invent a variant spelling. Only return a name outside this list when the merchant genuinely isn't one of them.";
 
+/**
+ * Build the single-row categorizer prompt.
+ *
+ * The tag half is a classification form, not a generation request (POPS-2606):
+ * one field per closed namespace, each with its available values enumerated
+ * from `knownTags`. Throws `EmptyClosedVocabularyError` when that vocabulary is
+ * empty — there is no prompt to build without it.
+ */
 export function buildPrompt(
   input: CategorizerInput,
   knownTags: string[],
   knownEntityNames: string[] = []
 ): string {
-  return `Given this bank transaction, identify the merchant/entity name and relevant spending tags.
+  const facets = closedFacetOptions(knownTags);
+  return `Given this bank transaction, identify the merchant/entity name and classify it on each tag axis below.
 
 ${buildTransactionData(input)}
 
-Known tags: ${knownTagsList(knownTags)}${knownEntitiesSection(knownEntityNames, SINGLE_KNOWN_ENTITY_INSTRUCTION)}
+Tag axes and their available values:
+${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, SINGLE_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply in JSON only: {"entityName": "...", "tags": ["tag1", "tag2"], "confidence": 0.0-1.0}
+Reply in JSON only: {"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}
 
 ${ENTITY_NAME_RULES}
 
@@ -162,21 +175,34 @@ export interface RawCategorizerEntry {
   tags?: unknown;
   category?: string;
   confidence?: unknown;
+  /** The per-facet classification fields — `venue`, `occasion`, `contains`, … */
+  [facet: string]: unknown;
 }
 
-export function entryFromParsed(parsed: RawCategorizerEntry): AiCacheEntry {
-  const tags = Array.isArray(parsed.tags)
-    ? parsed.tags.filter((t): t is string => typeof t === 'string')
-    : undefined;
+/**
+ * Turn one parsed reply object into an {@link AiCacheEntry}.
+ *
+ * `knownTags` is the closed vocabulary the prompt was built from, and every tag
+ * value in the reply is validated against it: what is not in the closed set for
+ * its facet never becomes a tag. The refused values are logged here and carried
+ * on the entry so the batch counters can count them.
+ */
+export function entryFromParsed(
+  parsed: RawCategorizerEntry,
+  knownTags: readonly string[] = []
+): AiCacheEntry {
+  const { tags, rejected } = validateAiTags(parsed, knownTags);
+  logRejectedTagValues(rejected);
   const confidence =
     typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1
       ? parsed.confidence
       : DEFAULT_AI_CATEGORIZATION_CONFIDENCE;
   return {
     entityName: sanitizeEntityName(parsed.entityName ?? null),
-    category: tags?.[0] ?? parsed.category ?? null,
+    category: tags[0] ?? null,
     tags,
     confidence,
+    ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}),
   };
 }
 
@@ -186,7 +212,7 @@ export function entryFromParsed(parsed: RawCategorizerEntry): AiCacheEntry {
  * JSON object, so the caller degrades the row to *uncertain* rather than
  * hard-failing the whole transaction.
  */
-export function buildEntryFromText(text: string): AiCacheEntry {
+export function buildEntryFromText(text: string, knownTags: readonly string[] = []): AiCacheEntry {
   const jsonSlice = extractJsonFromReply(text);
   if (jsonSlice === null) {
     throw new AiCategorizationError(
@@ -205,7 +231,7 @@ export function buildEntryFromText(text: string): AiCacheEntry {
       'PARSE_ERROR'
     );
   }
-  return entryFromParsed(parsed);
+  return entryFromParsed(parsed, knownTags);
 }
 
 export async function callApiOrThrow(opts: ApiCallOptions): Promise<ApiCallResponse> {

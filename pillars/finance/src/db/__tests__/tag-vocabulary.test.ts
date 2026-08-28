@@ -15,18 +15,27 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { tagVocabulary } from '../schema.js';
-import { listVocabularyTags, upsertVocabularyTag } from '../services/tag-vocabulary.js';
+import {
+  incrementVocabularyUsage,
+  listVocabularyTags,
+  listVocabularyTagsByKind,
+  upsertVocabularyTag,
+} from '../services/tag-vocabulary.js';
 
 import type { FinanceDb } from '../services/internal.js';
 
 const TAG_VOCABULARY_DDL = `
 CREATE TABLE tag_vocabulary (
   tag text PRIMARY KEY NOT NULL,
+  facet text,
+  kind text DEFAULT 'open' NOT NULL,
   source text DEFAULT 'seed' NOT NULL,
   is_active integer DEFAULT 1 NOT NULL,
+  usage_count integer DEFAULT 0 NOT NULL,
   created_at text DEFAULT (datetime('now')) NOT NULL
 );
 CREATE INDEX idx_tag_vocabulary_active ON tag_vocabulary (is_active);
+CREATE INDEX idx_tag_vocabulary_kind ON tag_vocabulary (kind, usage_count);
 `;
 
 interface TestHarness {
@@ -172,5 +181,147 @@ describe('upsertVocabularyTag — conflict path', () => {
       .get();
 
     expect(afterRow?.createdAt).toBe(beforeRow?.createdAt);
+  });
+});
+
+// POPS-2606: `upsertVocabularyTag` derives facet/kind rather than taking them,
+// and `incrementVocabularyUsage` maintains the counter the prompt ranks on.
+describe('upsertVocabularyTag — derived facet and kind', () => {
+  it('derives both from the tag string', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'user');
+
+      expect(
+        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('venue:bar')
+      ).toEqual({ facet: 'venue', kind: 'closed' });
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('never classifies a user-minted unknown facet as closed', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'vibe:cosy', 'user');
+      upsertVocabularyTag(db, 'Groceries', 'user');
+
+      const kinds = raw.prepare('SELECT tag, kind FROM tag_vocabulary ORDER BY tag').all();
+      expect(kinds).toEqual([
+        { tag: 'Groceries', kind: 'open' },
+        { tag: 'vibe:cosy', kind: 'open' },
+      ]);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('corrects facet/kind on a row written before those columns carried a value', () => {
+    const { db, raw } = freshDb();
+    try {
+      raw.prepare("INSERT INTO tag_vocabulary (tag, is_active) VALUES ('venue:bar', 0)").run();
+
+      upsertVocabularyTag(db, 'venue:bar', 'user');
+
+      expect(
+        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('venue:bar')
+      ).toEqual({ facet: 'venue', kind: 'closed' });
+    } finally {
+      raw.close();
+    }
+  });
+});
+
+describe('incrementVocabularyUsage', () => {
+  function countOf(raw: TestHarness['raw'], tag: string): number {
+    return (
+      raw.prepare('SELECT usage_count AS n FROM tag_vocabulary WHERE tag = ?').get(tag) as {
+        n: number;
+      }
+    ).n;
+  }
+
+  it('bumps each named tag by one', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      upsertVocabularyTag(db, 'contains:food', 'seed');
+
+      incrementVocabularyUsage(db, ['venue:bar', 'contains:food']);
+      incrementVocabularyUsage(db, ['venue:bar']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(2);
+      expect(countOf(raw, 'contains:food')).toBe(1);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('counts a tag repeated within one transaction once', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+
+      incrementVocabularyUsage(db, ['venue:bar', 'venue:bar']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(1);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('does not mint a row for a tag absent from the vocabulary', () => {
+    const { db, raw } = freshDb();
+    try {
+      incrementVocabularyUsage(db, ['venue:casino']);
+
+      expect(raw.prepare('SELECT COUNT(*) AS n FROM tag_vocabulary').get()).toEqual({ n: 0 });
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('is a no-op for an empty list', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+
+      incrementVocabularyUsage(db, []);
+
+      expect(countOf(raw, 'venue:bar')).toBe(0);
+    } finally {
+      raw.close();
+    }
+  });
+});
+
+describe('listVocabularyTagsByKind', () => {
+  it('returns only the requested kind, most-used first', () => {
+    const { db, raw } = freshDb();
+    try {
+      for (const tag of ['venue:bar', 'contains:food', 'trip:tokyo', 'enrich:amazon']) {
+        upsertVocabularyTag(db, tag, 'seed');
+      }
+      raw.prepare("UPDATE tag_vocabulary SET usage_count = 200 WHERE tag = 'contains:food'").run();
+      raw.prepare("UPDATE tag_vocabulary SET usage_count = 1 WHERE tag = 'venue:bar'").run();
+
+      expect(listVocabularyTagsByKind(db, 'closed')).toEqual(['contains:food', 'venue:bar']);
+      expect(listVocabularyTagsByKind(db, 'open')).toEqual(['trip:tokyo']);
+      expect(listVocabularyTagsByKind(db, 'marker')).toEqual(['enrich:amazon']);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('hides a deactivated tag', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:bar'").run();
+
+      expect(listVocabularyTagsByKind(db, 'closed')).toEqual([]);
+    } finally {
+      raw.close();
+    }
   });
 });
