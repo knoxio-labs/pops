@@ -8,6 +8,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { SuggestedTagSchema } from './rest-imports-schemas.js';
 import { ERR_RESPONSES } from './rest-schemas.js';
 import {
   CreateTransactionBody,
@@ -45,7 +46,11 @@ export const financeTransactionsContract = c.router({
     method: 'GET',
     path: '/transactions/suggest-tags',
     query: z.object({ description: z.string(), entityId: z.string().optional() }),
-    responses: { 200: z.object({ tags: z.array(z.string()) }) },
+    // Full `SuggestedTag` objects, not bare strings: the import wizard
+    // re-runs this after a manual entity assignment and has to render the
+    // same 🏪/📋 provenance badges Tag Review shows for a matcher-resolved
+    // row, which needs `source`/`pattern`/`isNew`.
+    responses: { 200: z.object({ tags: z.array(SuggestedTagSchema) }) },
     summary: 'Rule-based tag suggestions for a description/entity (no LLM call)',
   },
   descriptionsForPreview: {

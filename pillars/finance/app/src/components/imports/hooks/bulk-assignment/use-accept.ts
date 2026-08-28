@@ -14,6 +14,7 @@ interface AcceptAllArgs {
   dbEntitiesData: ReturnType<typeof useEntities>['dbEntitiesData'];
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   generateProposal: UseBulkAssignmentArgs['generateProposal'];
+  recomputeForEntity: UseBulkAssignmentArgs['recomputeForEntity'];
 }
 
 function resolveEntityId(
@@ -35,8 +36,14 @@ function resolveEntityId(
  * match the same descriptor automatically instead of re-prompting.
  */
 export function useAcceptAll(args: AcceptAllArgs) {
-  const { entities, addPendingEntity, dbEntitiesData, setLocalTransactions, generateProposal } =
-    args;
+  const {
+    entities,
+    addPendingEntity,
+    dbEntitiesData,
+    setLocalTransactions,
+    generateProposal,
+    recomputeForEntity,
+  } = args;
   return useCallback(
     async (transactions: ProcessedTransaction[]) => {
       if (transactions.length === 0) return;
@@ -49,6 +56,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
       try {
         const entityId = resolveEntityId(entityName, entities, addPendingEntity, dbEntitiesData);
         setLocalTransactions((prev) => moveToMatched(prev, transactions, { entityId, entityName }));
+        void recomputeForEntity(transactions, entityId);
         toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
         void generateProposal({
           triggeringTransaction: firstTx,
@@ -63,7 +71,14 @@ export function useAcceptAll(args: AcceptAllArgs) {
         );
       }
     },
-    [entities, addPendingEntity, dbEntitiesData, setLocalTransactions, generateProposal]
+    [
+      entities,
+      addPendingEntity,
+      dbEntitiesData,
+      setLocalTransactions,
+      generateProposal,
+      recomputeForEntity,
+    ]
   );
 }
 

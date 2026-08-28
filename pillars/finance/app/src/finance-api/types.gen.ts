@@ -5573,7 +5573,12 @@ export type TransactionsSuggestTagsResponses = {
    * 200
    */
   200: {
-    tags: Array<string>;
+    tags: Array<{
+      isNew?: boolean;
+      pattern?: string;
+      source: 'ai' | 'rule' | 'entity';
+      tag: string;
+    }>;
   };
 };
 

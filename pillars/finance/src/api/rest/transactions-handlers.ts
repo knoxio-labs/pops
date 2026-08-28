@@ -102,7 +102,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           entityDefaultTags,
           recordTagRuleUsage: false,
         });
-        return { status: 200 as const, body: { tags: suggested.map((s) => s.tag) } };
+        return { status: 200 as const, body: { tags: suggested } };
       }),
 
     descriptionsForPreview: ({ query }: Req['descriptionsForPreview']) =>

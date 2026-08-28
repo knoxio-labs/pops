@@ -1,13 +1,21 @@
-import { act, renderHook } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { createElement, useState, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { elementAt } from '../../../test-utils';
+import { useSuggestedTagRecompute } from '../hooks/useSuggestedTagRecompute';
 import { moveOneToMatched, useReviewActions, type LocalTxState } from './useReviewActions';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
+
+const { mockSuggestTags } = vi.hoisted(() => ({ mockSuggestTags: vi.fn() }));
+vi.mock('../../../finance-api/index.js', () => ({
+  transactionsSuggestTags: (...args: unknown[]) => mockSuggestTags(...args),
+}));
 
 function makeProcessed(
   checksum: string,
@@ -164,10 +172,11 @@ function setupActions(similar: ProcessedTransaction[] = []) {
   const setLocalTransactions = vi.fn();
   const generateProposal = vi.fn().mockResolvedValue(undefined);
   const findSimilar = vi.fn().mockReturnValue(similar);
+  const recomputeForEntity = vi.fn().mockResolvedValue(undefined);
   const { result } = renderHook(() =>
-    useReviewActions({ setLocalTransactions, findSimilar, generateProposal })
+    useReviewActions({ setLocalTransactions, findSimilar, generateProposal, recomputeForEntity })
   );
-  return { result, setLocalTransactions, generateProposal, findSimilar };
+  return { result, setLocalTransactions, generateProposal, findSimilar, recomputeForEntity };
 }
 
 /** Invoke the "Save & Learn" action the fallback toast offers. */
@@ -311,6 +320,191 @@ describe('useReviewActions — correcting a wrong match offers a rule', () => {
       entityId: 'ent-sauna',
       entityName: 'SaunaX',
       matchType: 'manual',
+    });
+  });
+});
+
+/**
+ * The real recompute hook wired to the real actions over real state, with only
+ * the HTTP lookup faked — the merge only holds end to end if the assignment
+ * actually triggers it.
+ */
+function renderReviewWithRecompute(initial: LocalTxState) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+  return renderHook(
+    () => {
+      const [state, setLocalTransactions] = useState<LocalTxState>(initial);
+      const { recomputeForEntity, isRecomputingTags } = useSuggestedTagRecompute({
+        setLocalTransactions,
+      });
+      const actions = useReviewActions({
+        setLocalTransactions,
+        findSimilar: () => [],
+        generateProposal: vi.fn().mockResolvedValue(undefined),
+        recomputeForEntity,
+      });
+      return { state, actions, isRecomputingTags };
+    },
+    { wrapper }
+  );
+}
+
+const suggestTagsOk = (tags: unknown) => ({ data: { tags }, error: undefined });
+
+describe('useReviewActions — a hand-assigned entity re-derives its tags (POPS-2595)', () => {
+  beforeEach(() => {
+    mockSuggestTags.mockReset();
+    toastMock.error.mockClear();
+  });
+
+  it('picks up the entity defaults the row could not have carried while unmatched', async () => {
+    mockSuggestTags.mockResolvedValue(
+      suggestTagsOk([
+        { tag: 'wellness', source: 'entity' },
+        { tag: 'recovery', source: 'rule', pattern: 'SAUNA' },
+      ])
+    );
+    const transaction = makeProcessed('sauna', {
+      description: 'SAUNAX BONDI',
+      suggestedTags: [],
+    });
+    const { result } = renderReviewWithRecompute(emptyState({ uncertain: [transaction] }));
+
+    act(() => {
+      result.current.actions.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.matched[0]?.suggestedTags?.length).toBeGreaterThan(0);
+    });
+    expect(mockSuggestTags).toHaveBeenCalledWith({
+      query: { description: 'SAUNAX BONDI', entityId: 'ent-sauna' },
+    });
+    expect(result.current.state.matched[0]?.suggestedTags).toEqual([
+      { tag: 'recovery', source: 'rule', pattern: 'SAUNA' },
+      { tag: 'wellness', source: 'entity' },
+    ]);
+  });
+
+  it('replaces the previous merchant defaults but keeps what the user typed', async () => {
+    mockSuggestTags.mockResolvedValue(suggestTagsOk([{ tag: 'wellness', source: 'entity' }]));
+    const transaction = makeProcessed('sauna', {
+      description: 'SAUNAX BONDI',
+      status: 'matched',
+      entity: { entityId: 'ent-gym', entityName: 'Gym', matchType: 'ai', confidence: 0.6 },
+      // `hand-typed` stands in for anything not derived from the old entity:
+      // the AI pass is entity-independent and has to survive the recompute.
+      suggestedTags: [
+        { tag: 'hand-typed', source: 'ai' },
+        { tag: 'fitness', source: 'entity' },
+      ],
+    });
+    const { result } = renderReviewWithRecompute(emptyState({ matched: [transaction] }));
+
+    act(() => {
+      result.current.actions.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.matched[0]?.suggestedTags).toEqual([
+        { tag: 'hand-typed', source: 'ai' },
+        { tag: 'wellness', source: 'entity' },
+      ]);
+    });
+  });
+
+  it('assigning a group issues one lookup per distinct description, not per row', async () => {
+    mockSuggestTags.mockResolvedValue(suggestTagsOk([{ tag: 'wellness', source: 'entity' }]));
+    const group = [
+      makeProcessed('a', { description: 'SAUNAX BONDI', suggestedTags: [] }),
+      makeProcessed('b', { description: 'SAUNAX BONDI', suggestedTags: [] }),
+      makeProcessed('c', { description: 'SAUNAX SURRY HILLS', suggestedTags: [] }),
+    ];
+    const { result } = renderReviewWithRecompute(emptyState({ uncertain: group }));
+
+    act(() => {
+      result.current.actions.handleBulkEntitySelect(group, 'ent-sauna', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.matched).toHaveLength(3);
+      for (const tx of result.current.state.matched) {
+        expect(tx.suggestedTags).toEqual([{ tag: 'wellness', source: 'entity' }]);
+      }
+    });
+    expect(mockSuggestTags).toHaveBeenCalledTimes(2);
+  });
+
+  it('never looks up a locally-pending entity, but still sheds the old defaults', async () => {
+    const transaction = makeProcessed('sauna', {
+      status: 'matched',
+      entity: { entityId: 'ent-gym', entityName: 'Gym', matchType: 'ai' },
+      suggestedTags: [
+        { tag: 'fitness', source: 'entity' },
+        { tag: 'dining', source: 'ai' },
+      ],
+    });
+    const { result } = renderReviewWithRecompute(emptyState({ matched: [transaction] }));
+
+    act(() => {
+      result.current.actions.handleEntitySelect(transaction, 'temp:entity:saunax', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.matched[0]?.suggestedTags).toEqual([
+        { tag: 'dining', source: 'ai' },
+      ]);
+    });
+    expect(mockSuggestTags).not.toHaveBeenCalled();
+  });
+
+  it('keeps the existing suggestions and says so when the lookup fails', async () => {
+    mockSuggestTags.mockRejectedValue(new Error('offline'));
+    const transaction = makeProcessed('sauna', {
+      suggestedTags: [{ tag: 'dining', source: 'ai' }],
+    });
+    const { result } = renderReviewWithRecompute(emptyState({ uncertain: [transaction] }));
+
+    act(() => {
+      result.current.actions.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(toastMock.error).toHaveBeenCalledTimes(1);
+    });
+    expect(result.current.state.matched[0]?.suggestedTags).toEqual([
+      { tag: 'dining', source: 'ai' },
+    ]);
+  });
+
+  it('reports the recompute as in flight so Review cannot be left mid-lookup', async () => {
+    let release: (() => void) | undefined;
+    mockSuggestTags.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          release = () => resolve(suggestTagsOk([{ tag: 'wellness', source: 'entity' }]));
+        })
+    );
+    const transaction = makeProcessed('sauna', { suggestedTags: [] });
+    const { result } = renderReviewWithRecompute(emptyState({ uncertain: [transaction] }));
+
+    act(() => {
+      result.current.actions.handleEntitySelect(transaction, 'ent-sauna', 'SaunaX');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isRecomputingTags).toBe(true);
+    });
+
+    await act(async () => {
+      release?.();
+    });
+    await waitFor(() => {
+      expect(result.current.isRecomputingTags).toBe(false);
     });
   });
 });

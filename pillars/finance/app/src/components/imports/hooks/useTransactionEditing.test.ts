@@ -38,10 +38,11 @@ function emptyLocalTx(): LocalTxState {
 function setup() {
   const setLocalTransactions = vi.fn();
   const generateProposal = vi.fn().mockResolvedValue(undefined);
+  const recomputeForEntity = vi.fn().mockResolvedValue(undefined);
   const { result } = renderHook(() =>
-    useTransactionEditing({ setLocalTransactions, generateProposal })
+    useTransactionEditing({ setLocalTransactions, generateProposal, recomputeForEntity })
   );
-  return { result, setLocalTransactions, generateProposal };
+  return { result, setLocalTransactions, generateProposal, recomputeForEntity };
 }
 
 describe('useTransactionEditing — rule-matched inline edits', () => {

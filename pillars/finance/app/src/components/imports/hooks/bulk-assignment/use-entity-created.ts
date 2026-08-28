@@ -15,6 +15,7 @@ export interface CreatedEntity {
 interface UseAssignCreatedToGroupArgs {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   generateProposal: UseBulkAssignmentArgs['generateProposal'];
+  recomputeForEntity: UseBulkAssignmentArgs['recomputeForEntity'];
 }
 
 /**
@@ -27,12 +28,13 @@ interface UseAssignCreatedToGroupArgs {
  * rather than appended a second time.
  */
 export function useAssignCreatedToGroup(args: UseAssignCreatedToGroupArgs) {
-  const { setLocalTransactions, generateProposal } = args;
+  const { setLocalTransactions, generateProposal, recomputeForEntity } = args;
   return useCallback(
     (transactions: ProcessedTransaction[], entity: CreatedEntity) => {
       const firstTx = transactions[0];
       if (!firstTx) return;
       setLocalTransactions((prev) => moveToMatched(prev, transactions, entity));
+      void recomputeForEntity(transactions, entity.entityId);
       toast.success(
         `Created "${entity.entityName}" and assigned to ${pluralize(transactions.length)}`
       );
@@ -44,7 +46,7 @@ export function useAssignCreatedToGroup(args: UseAssignCreatedToGroupArgs) {
         transactionType: firstTx.transactionType ?? null,
       });
     },
-    [setLocalTransactions, generateProposal]
+    [setLocalTransactions, generateProposal, recomputeForEntity]
   );
 }
 

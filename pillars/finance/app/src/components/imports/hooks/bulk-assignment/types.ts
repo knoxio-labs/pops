@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { TransactionType } from '../../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { LocalTxState } from '../local-tx-reconcile';
+import type { RecomputeForEntity } from '../useSuggestedTagRecompute';
 
 export type { LocalTxState } from '../local-tx-reconcile';
 
@@ -27,6 +28,12 @@ export interface UseBulkAssignmentArgs {
     location?: string | null;
     transactionType?: TransactionType | null;
   }) => Promise<void>;
+  /**
+   * Re-derives `suggestedTags` for the assigned rows. The group paths below
+   * reach `moveToMatched` without passing through `handleEntitySelect`, so
+   * they have to ask for the recompute themselves (POPS-2595).
+   */
+  recomputeForEntity: RecomputeForEntity;
 }
 
 export function pluralize(count: number): string {

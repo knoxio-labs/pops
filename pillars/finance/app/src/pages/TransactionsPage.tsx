@@ -120,7 +120,10 @@ function useTagHandlers() {
             query: { description, ...(entityId !== null && { entityId }) },
           })
         );
-        return result.tags;
+        // The transactions table's tag cell offers bare suggestions with no
+        // provenance UI, so the badge metadata the endpoint now carries is
+        // dropped here rather than plumbed through the column.
+        return result.tags.map((suggestion) => suggestion.tag);
       } catch {
         return [];
       }

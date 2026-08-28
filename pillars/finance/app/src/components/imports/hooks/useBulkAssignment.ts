@@ -13,8 +13,13 @@ import type { ProcessedTransaction } from '../../../store/importStore';
  * entity creation, and the EntityCreateDialog state for the ReviewStep.
  */
 export function useBulkAssignment(args: UseBulkAssignmentArgs) {
-  const { setLocalTransactions, handleEntitySelect, openRuleProposalDialog, generateProposal } =
-    args;
+  const {
+    setLocalTransactions,
+    handleEntitySelect,
+    openRuleProposalDialog,
+    generateProposal,
+    recomputeForEntity,
+  } = args;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
 
@@ -31,6 +36,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     setLocalTransactions,
     handleEntitySelect,
     generateProposal,
+    recomputeForEntity,
   });
 
   const handleAcceptAiSuggestion = useAcceptAiSuggestion({
@@ -46,6 +52,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     dbEntitiesData,
     setLocalTransactions,
     generateProposal,
+    recomputeForEntity,
   });
 
   const handleEntityCreated = useEntityCreated({

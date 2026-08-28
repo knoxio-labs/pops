@@ -74,6 +74,7 @@ describe('useAcceptAll (CF014)', () => {
         dbEntitiesData,
         setLocalTransactions: setState,
         generateProposal: vi.fn().mockResolvedValue(undefined),
+        recomputeForEntity: vi.fn().mockResolvedValue(undefined),
       });
       return { state, acceptAll };
     });

@@ -39,6 +39,7 @@ import type {
   CreateEntityOutput,
   ProcessImportOutput,
 } from '../modules/imports/types.js';
+import type { SuggestedTag } from '../modules/tag-suggester/index.js';
 import type { Transaction } from '../modules/transactions-types.js';
 import type { WishListItem } from '../modules/wishlist-types.js';
 
@@ -425,7 +426,7 @@ export function makeClient(app: Express) {
           r.post('/transactions/restore').send(snapshot)
         ),
       suggestTags: (query: { description: string; entityId?: string }) =>
-        call<{ tags: string[] }>((r) => r.get('/transactions/suggest-tags').query(query)),
+        call<{ tags: SuggestedTag[] }>((r) => r.get('/transactions/suggest-tags').query(query)),
       descriptionsForPreview: (query: { limit?: number } = {}) =>
         call<{
           data: { description: string; checksum: string | null }[];

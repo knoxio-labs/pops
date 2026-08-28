@@ -10,6 +10,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { TransactionType } from '../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { LocalTxState } from './local-tx-reconcile';
+import type { RecomputeForEntity } from './useSuggestedTagRecompute';
 
 type GenerateProposal = (args: {
   triggeringTransaction: ProcessedTransaction;
@@ -22,6 +23,7 @@ type GenerateProposal = (args: {
 interface UseTransactionEditingArgs {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   generateProposal: GenerateProposal;
+  recomputeForEntity: RecomputeForEntity;
 }
 
 const COMPARABLE_FIELDS = ['description', 'amount', 'location', 'transactionType'] as const;
@@ -97,10 +99,26 @@ function showLearnToast(invokeRetry: () => void): void {
   toast.success('Transaction updated');
 }
 
+/**
+ * The entity the edit repoints the row to, or null when it leaves the merchant
+ * alone. Repointing is a manual assignment like any other, so the row's tag
+ * suggestions — computed for the previous entity — have to be re-derived
+ * (POPS-2595).
+ */
+function repointedEntityId(
+  transaction: ProcessedTransaction,
+  editedFields: Partial<ProcessedTransaction>
+): string | null {
+  const nextEntityId = editedFields.entity?.entityId;
+  if (!nextEntityId || nextEntityId === transaction.entity?.entityId) return null;
+  return nextEntityId;
+}
+
 interface SaveEditDeps {
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   setEditingTransaction: Dispatch<SetStateAction<ProcessedTransaction | null>>;
   generateProposal: GenerateProposal;
+  recomputeForEntity: RecomputeForEntity;
 }
 
 function buildSaveEdit(deps: SaveEditDeps) {
@@ -127,6 +145,9 @@ function buildSaveEdit(deps: SaveEditDeps) {
     deps.setLocalTransactions((prev) => applyEditToBucket(prev, transaction, updatedTx));
     deps.setEditingTransaction(null);
 
+    const repointedTo = repointedEntityId(transaction, editedFields);
+    if (repointedTo) void deps.recomputeForEntity([updatedTx], repointedTo);
+
     if (shouldLearn && hasChanges) {
       void deps.generateProposal(buildLearnArgs(transaction, editedFields));
       return;
@@ -146,6 +167,7 @@ function buildSaveEdit(deps: SaveEditDeps) {
 export function useTransactionEditing({
   setLocalTransactions,
   generateProposal,
+  recomputeForEntity,
 }: UseTransactionEditingArgs) {
   const [editingTransaction, setEditingTransaction] = useState<ProcessedTransaction | null>(null);
 
@@ -154,8 +176,13 @@ export function useTransactionEditing({
   }, []);
 
   const handleSaveEdit = useCallback(
-    buildSaveEdit({ setLocalTransactions, setEditingTransaction, generateProposal }),
-    [setLocalTransactions, generateProposal]
+    buildSaveEdit({
+      setLocalTransactions,
+      setEditingTransaction,
+      generateProposal,
+      recomputeForEntity,
+    }),
+    [setLocalTransactions, generateProposal, recomputeForEntity]
   );
 
   const handleCancelEdit = useCallback(() => setEditingTransaction(null), []);
