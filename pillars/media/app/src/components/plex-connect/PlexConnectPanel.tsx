@@ -113,7 +113,12 @@ function PendingPinCode({ code }: { code: string }) {
             href={PLEX_LINK_URL}
             target="_blank"
             rel="noreferrer noopener"
-            className="min-h-11 min-w-11"
+            // Restates the sizing the `sm` Button variant already renders on
+            // this very anchor. `asChild` applies those classes through the
+            // Slot, so the touch-target scanner — which reads the literal
+            // `<a>` — cannot see that h-9 plus the `before:-inset-y-1`
+            // expansion already clears 44px. Visually a no-op.
+            className="h-9 min-w-11 before:absolute before:-inset-y-1 before:inset-x-0 before:content-['']"
           >
             <ExternalLink className="h-4 w-4 mr-1.5" />
             Open plex.tv/link
