@@ -1,0 +1,180 @@
+name: Review Findings Gate
+
+# Required check (POPS-2661): blocks a merge while `pr-review.yml`'s own
+# sticky comment still carries an open finding for the PR's head commit.
+#
+# WHY THIS EXISTS. `pr-review.yml` finds real defects and writes them into a
+# sticky comment nothing reads. Before this workflow, `mergeStateStatus` read
+# CLEAN whether the reviewer found nothing, found ten HIGH findings, or never
+# ran — `Review` is not a required context, and its findings are comment
+# prose rather than review threads, so nothing exists for
+# `required_review_thread_resolution` to catch either. #4289 is the proof: it
+# merged with 3 open findings, 2 of them HIGH, all 62 checks green, one of
+# them the defeat of that very PR's own acceptance criterion, stated by the
+# reviewer before the merge.
+#
+# The mechanism already exists and needed no change: `pr-review.yml` already
+# publishes machine-readable state in a trailing HTML comment
+# (`<!-- pr-review-state: <base64 JSON> -->`, see `pr-review-state.mjs`). This
+# workflow is the thing that actually reads it and fails the build — the
+# logic lives in `scripts/ci/check-review-findings.mjs`, tested in
+# `scripts/ci/__tests__/check-review-findings.test.ts`.
+#
+# WHY A SEPARATE WORKFLOW, RATHER THAN A FLAG ON `pr-review.yml` OR A STEP IN
+# `agent-review.yml`:
+#   - `pr-review.yml` cannot itself be a required context. It is
+#     `cancel-in-progress: true` (a newer push should obsolete an in-flight
+#     review, not finish it) and draft-skipped at JOB level (nothing waits on
+#     it, so that is fine there) — see that file's header for what both of
+#     those cost the LAST required context that tried to be both gated and
+#     cancellable/skippable. This job is neither: `cancel-in-progress: false`
+#     and draft handling stays at STEP level, exactly like `agent-review.yml`.
+#   - `agent-review.yml`'s guards answer in the time of one `pnpm install`.
+#     This job can legitimately take minutes — it waits out
+#     `pr-review.yml`'s own ~60s debounce plus however long the model call
+#     takes — and folding that wait into `agent-review`'s job would add that
+#     latency to every PR's fast structural guards, including ones this job
+#     itself skips (drafts, merge groups).
+#
+# THREE FAIL-OPEN MODES, all handled in `check-review-findings.mjs` rather
+# than here — see that file's header for the reasoning:
+#   1. no sticky comment at all (the reviewer never ran, or is still mid-run)
+#   2. a sticky comment whose `last_reviewed_sha` is behind the PR head (the
+#      reviewer debounces ~60s before it even starts, so this is the ORDINARY
+#      state for the first minute or so after every push)
+#   3. a state block that is missing, not valid base64, or decodes to JSON
+#      that is not the expected shape
+# Modes 1 and 2 are transient and expected to clear once the debounced
+# reviewer catches up, so the guard POLLS for those (bounded by
+# `vars.REVIEW_FINDINGS_TIMEOUT_SECONDS`, default 600s) rather than failing
+# outright — that is what keeps this required check PENDING through the
+# ordinary post-push window instead of going red on every single push only to
+# clear a minute later. A PR that pushes and merges within that window would
+# otherwise see this check fail on every push, requiring a manual re-run for
+# no defect of its own. Mode 3 fails immediately without spending the poll
+# budget: waiting does not make an unparseable block start parsing.
+#
+# MERGE GROUPS PASS THROUGH, DELIBERATELY. `merge_group` carries no pull
+# request — no PR number to fetch comments for, no sticky comment tied to the
+# synthetic merge commit — and the code entering the queue already satisfied
+# this exact required check on the PR itself before the queue would admit it.
+# Failing here would evict every queue entry permanently (no push ever
+# arrives at a merge-group commit to retry against); polling would stall the
+# whole queue waiting on a PR-shaped signal that cannot exist there. So this
+# is a deliberate no-op success, not an oversight — decided explicitly rather
+# than discovered by a stuck queue. It still needs the `merge_group:` trigger:
+# a required context that never reports on the merge group's synthetic commit
+# holds that entry in the queue until the check-response timeout evicts it —
+# see `agent-review.yml`'s header for the identical trade.
+#
+# RUNS ON DRAFTS TOO, at JOB level, for the reason `agent-review.yml`'s header
+# documents at length: a job-level `if` makes a required check SKIPPED rather
+# than absent, and GitHub's ruleset does not accept a skipped required check
+# run the way it accepts one a `paths:` filter excluded outright. The actual
+# review-findings check is skipped at STEP level instead: a draft PR cannot
+# be merged regardless of this job's conclusion, and `pr-review.yml` never
+# runs on a draft (also a job-level skip, deliberately — see its header), so
+# polling for a comment that structurally cannot exist yet would only spend
+# the wait budget for nothing.
+#
+# A STUCK PR NEEDS A WAY OUT (POPS-2669). `pr-review-state.mjs` resolves a
+# finding by checking whether its snippet is still in the file, and that
+# check can go permanently wrong: a short anchor that also occurs, correctly,
+# in an unrelated branch of the same function means the finding never
+# resolves no matter what the author does. A gate that blocks on ANY open
+# finding with no way out would wedge that PR forever — worse than the bug
+# this workflow exists to fix, because it gets disabled within a day rather
+# than fixed. `check-review-findings.mjs` therefore accepts a PLAIN PR
+# COMMENT containing `<!-- review-findings-gate-dismiss: <finding-id> -->` to
+# waive exactly one finding by its content-addressed id — see that file's
+# "THE ESCAPE HATCH" section for the id, the reasoning, and why it is
+# deliberately more effort than fixing a real finding. This workflow makes no
+# change of its own for that: the dismiss marker is read from the same
+# comments this job already fetches to find the sticky review comment. Only a
+# commenter with ACTUAL admin/maintain/write permission counts, resolved via
+# `repos/{repo}/collaborators/{login}/permission` for each commenter who
+# posted a marker — never GitHub's `author_association`, which was this
+# gate's first attempt and was reviewed on its own PR as insufficient
+# (`MEMBER` means "in the org", not "has access"; `COLLABORATOR` fires for
+# Read/Triage too, not only Write and above).
+#
+# THE STATE COMMENT ITSELF IS AUTHENTICATED TOO, for the same reason: on this
+# gate's own PR, `pr-review.yml`'s own comment-selection step (a separate bug
+# in that workflow, not this one) mis-patched a plain human PR comment so
+# that it carried a full, current, well-formed `pr-review-state` block. A
+# regex match on the marker alone is forgeable by anyone who can comment on
+# the PR — `findStateComment` in `check-review-findings.mjs` therefore also
+# requires the comment's author to be `REVIEWER_LOGIN`
+# (`github-actions[bot]`, the only identity `pr-review.yml`'s own
+# `GH_TOKEN: secrets.GITHUB_TOKEN` can post as), so a forged clean state from
+# anyone else reads as no comment yet (retry), never as a pass.
+#
+# TIER A: stdlib only. `check-review-findings.mjs` reads JSON (built-in
+# `JSON.parse`) over the GitHub REST API (the `gh` CLI already on every
+# GitHub-hosted runner, the same tool `pr-review.yml`'s own "fetch the
+# existing review comment" step shells out to) — no YAML/TOML, no
+# third-party import — so this job runs install-free. See the tier amendment
+# in docs/architecture/adr-045-guards-must-prove-they-report.md, enforced by
+# scripts/ci/__tests__/guard-job-tiers.test.ts.
+#
+# Optional repo variables:
+#   REVIEW_FINDINGS_TIMEOUT_SECONDS - how long to poll modes 1/2 before
+#                                     failing. Default 600 (10 minutes).
+#   REVIEW_FINDINGS_POLL_SECONDS    - interval between polls. Default 15.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+
+concurrency:
+  group: review-findings-gate-${{ github.event.pull_request.number || github.event.merge_group.head_sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  review-findings-gate:
+    name: review-findings-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Guard self-test (prove it still reports)
+        run: node scripts/ci/check-review-findings.mjs --self-test
+
+      - name: Merge group — already gated on the PR before the queue admitted it
+        if: github.event_name == 'merge_group'
+        run: |
+          echo "No pull request in a merge group: nothing to fetch a sticky comment" \
+               "for. The commit here already satisfied this exact required check on" \
+               "its PR before the queue would admit it."
+
+      - name: Draft PR — pr-review.yml never runs here, so there is nothing to read yet
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        run: |
+          echo "::error::Draft PR: pr-review.yml is job-level skipped on drafts, so no" \
+               "sticky comment can exist yet. A draft cannot merge regardless of this" \
+               "job's conclusion; failing fast here instead of spending the poll" \
+               "budget on a comment that structurally cannot appear."
+          exit 1
+
+      - name: Check the reviewer's own findings
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          MAX_WAIT_SECONDS: ${{ vars.REVIEW_FINDINGS_TIMEOUT_SECONDS || 600 }}
+          POLL_INTERVAL_SECONDS: ${{ vars.REVIEW_FINDINGS_POLL_SECONDS || 15 }}
+        run: |
+          node scripts/ci/check-review-findings.mjs \
+            --repo "$REPO" --pr "$PR" --head "$HEAD" \
+            --max-wait-seconds "$MAX_WAIT_SECONDS" \
+            --poll-interval-seconds "$POLL_INTERVAL_SECONDS"
