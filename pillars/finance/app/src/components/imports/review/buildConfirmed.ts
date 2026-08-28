@@ -1,6 +1,6 @@
 import { requiresEntity } from '../../../lib/transaction-type';
 
-import type { ConfirmedTransaction } from '@pops/finance';
+import type { ConfirmedTransaction, ParsedTransaction } from '@pops/finance';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
@@ -31,17 +31,40 @@ export function partitionConfirmable(matched: ProcessedTransaction[]): {
   return { confirmed, dropped };
 }
 
-export function buildConfirmedTransactions(
-  matched: ProcessedTransaction[]
-): ConfirmedTransaction[] {
-  return matched.filter(isConfirmable).map((t) => ({
+/**
+ * Every field a row arrived with, carried to the wire unchanged.
+ *
+ * Listed exhaustively rather than spread from `t`, because a
+ * {@link ProcessedTransaction} also holds review-only state (`entity`,
+ * `status`, `matchedRules`) that must not reach the commit payload. The cost of
+ * that is a list which silently goes stale: `country` and the three
+ * foreign-charge columns were parsed, carried the whole way here, and then
+ * dropped on this hop, which is why they were NULL on every stored row while
+ * the ANZ parser that fills them was working correctly (POPS-2604). The
+ * companion test enumerates `keyof ParsedTransaction`, so adding a field
+ * without adding it here fails.
+ */
+function parsedFields(t: ProcessedTransaction): ParsedTransaction {
+  return {
     date: t.date,
     description: t.description,
     amount: t.amount,
     account: t.account,
     location: t.location,
+    country: t.country,
+    foreignAmountMinor: t.foreignAmountMinor,
+    foreignCurrency: t.foreignCurrency,
+    fxFeeCents: t.fxFeeCents,
     rawRow: t.rawRow,
     checksum: t.checksum,
+  };
+}
+
+export function buildConfirmedTransactions(
+  matched: ProcessedTransaction[]
+): ConfirmedTransaction[] {
+  return matched.filter(isConfirmable).map((t) => ({
+    ...parsedFields(t),
     transactionType: t.transactionType,
     entityId: t.entity?.entityId,
     entityName: t.entity?.entityName,
