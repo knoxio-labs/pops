@@ -58,6 +58,8 @@ function tryApplyCorrectionStage(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
+    countsAsUsage: (applied) =>
+      transactionChanged(item.tx, applied.processed, item.bucket, applied.bucket),
   });
   if (!correctionApplied) return { handled: false, changed: false };
 
@@ -131,6 +133,11 @@ export function processRemainingItem(
  * bucket through untouched made the rule a no-op for every sibling of the row
  * the user hand-fixed, while the proposal's impact panel counted them (#3814).
  *
+ * Every row this path visits already carries the outcome the rule would give
+ * it, so usage telemetry is credited only when the re-decision actually moves
+ * the row (`countsAsUsage`) — otherwise re-running a re-evaluation, which is
+ * supposed to be a no-op, would credit every covered rule again (POPS-2641).
+ *
  * Deliberately narrower than `processRemainingItem`: only correction rules
  * apply, never the alias/exact/prefix/contains entity matcher, and an outcome
  * that would drop the row out of `matched` is discarded. Re-evaluation exists
@@ -143,9 +150,8 @@ export function reapplyCorrectionToMatched(
   ctx: ReevaluateContext,
   buckets: BucketAccumulator
 ): boolean {
-  // Decide from the winning rule before applying it. `applyLearnedCorrection`
-  // credits `timesApplied` the moment it produces an outcome, so probing with
-  // it and then discarding the result would count a rule that changed nothing.
+  // Decide from the winning rule before applying it: an outcome this path
+  // would discard is not worth building the suggested tags for.
   const winner = findAllMatchingCorrectionFromRules(
     tx.description,
     ctx.rules,
@@ -163,6 +169,7 @@ export function reapplyCorrectionToMatched(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
+    countsAsUsage: (applied) => transactionChanged(tx, applied.processed),
   });
   if (!correctionApplied) {
     buckets.matched.push(tx);

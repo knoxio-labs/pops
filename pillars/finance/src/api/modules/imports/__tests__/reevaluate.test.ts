@@ -70,14 +70,57 @@ function seedTagRule(pattern: string, tags: string[]): void {
     .run();
 }
 
-function timesApplied(id: string): number {
+function seedWeakRule(id: string): void {
+  db.insert(transactionCorrections)
+    .values({
+      id,
+      descriptionPattern: 'COLES',
+      matchType: 'contains',
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      tags: '[]',
+      isActive: true,
+      confidence: 0.72,
+      priority: 0,
+    })
+    .run();
+}
+
+function correctionRow(id: string): { timesApplied: number; lastUsedAt: string | null } {
   const row = db
     .select()
     .from(transactionCorrections)
     .where(eq(transactionCorrections.id, id))
     .get();
   if (!row) throw new Error(`rule ${id} vanished`);
+  return row;
+}
+
+function tagRuleTimesApplied(pattern: string): number {
+  const row = db
+    .select()
+    .from(transactionTagRules)
+    .where(eq(transactionTagRules.descriptionPattern, pattern))
+    .get();
+  if (!row) throw new Error(`tag rule ${pattern} vanished`);
   return row.timesApplied;
+}
+
+function lastUsedAt(id: string): string | null {
+  return correctionRow(id).lastUsedAt;
+}
+
+const SENTINEL_STAMP = '2020-01-01T00:00:00.000Z';
+
+function stampLastUsedAt(id: string, stamp: string): void {
+  db.update(transactionCorrections)
+    .set({ lastUsedAt: stamp })
+    .where(eq(transactionCorrections.id, id))
+    .run();
+}
+
+function timesApplied(id: string): number {
+  return correctionRow(id).timesApplied;
 }
 
 function uncertainTxn(description: string): ProcessedTransaction {
@@ -213,19 +256,7 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
     // A rule whose confidence keeps it short of `matched` would hand a row the
     // user had already dealt with back to the uncertain pile. Re-evaluation
     // propagates approved rules; it does not relitigate settled rows.
-    db.insert(transactionCorrections)
-      .values({
-        id: 'r-weak',
-        descriptionPattern: 'COLES',
-        matchType: 'contains',
-        entityId: 'ent-coles',
-        entityName: 'Coles',
-        tags: '[]',
-        isActive: true,
-        confidence: 0.72,
-        priority: 0,
-      })
-      .run();
+    seedWeakRule('r-weak');
     const alreadyMatched = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
       entityName: 'Woolworths',
@@ -416,10 +447,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     expect(second.nextResult).toEqual(first.nextResult);
   });
 
-  // The one facet that is NOT idempotent, pinned here so the fix is visible when
-  // it lands: a second run changes nothing and still credits the rule again, so
-  // a whole-ledger re-tag inflates every counter by the ledger size (POPS-2641).
-  it('still re-credits usage telemetry on a run that changes nothing (POPS-2641)', async () => {
+  it('does not re-credit usage telemetry on a run that changes nothing (POPS-2641)', async () => {
     seedRule('r-1');
     const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
 
@@ -430,6 +458,10 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       minConfidence: 0.7,
     });
     expect(timesApplied('r-1')).toBe(1);
+    // A sentinel rather than the real stamp: both runs land in the same
+    // millisecond, so comparing the two stamps would pass even if the second
+    // run rewrote it.
+    stampLastUsedAt('r-1', SENTINEL_STAMP);
 
     const second = await reevaluateImportSessionResult({
       db,
@@ -439,6 +471,84 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     });
 
     expect(second.affectedCount).toBe(0);
-    expect(timesApplied('r-1')).toBe(2);
+    expect(timesApplied('r-1')).toBe(1);
+    expect(lastUsedAt('r-1')).toBe(SENTINEL_STAMP);
+  });
+
+  it('does not re-credit a row the rule leaves in the uncertain bucket', async () => {
+    // The rule clears minConfidence but not the match bar, so the row stays
+    // uncertain across both runs and never reaches the matched-row path — the
+    // gate has to hold on the full ladder too, not only on the re-apply branch.
+    seedWeakRule('r-weak');
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: emptyResult([uncertainTxn('COLES SYDNEY')]),
+      minConfidence: 0.7,
+    });
+    expect(first.nextResult.uncertain).toHaveLength(1);
+    expect(timesApplied('r-weak')).toBe(1);
+
+    await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(timesApplied('r-weak')).toBe(1);
+  });
+
+  it('does not re-credit the tag rules a no-op run re-matches', async () => {
+    seedRule('r-1');
+    seedTagRule('COLES', ['venue:supermarket']);
+    const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: emptyResult([uncertainTxn('COLES SYDNEY')]),
+      minConfidence: 0.7,
+    });
+    expect(tagRuleTimesApplied('COLES')).toBe(1);
+
+    await reevaluateImportSessionResult({
+      db,
+      contacts,
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(tagRuleTimesApplied('COLES')).toBe(1);
+  });
+
+  it('still credits a row the run does move, exactly once', async () => {
+    seedRule('r-1');
+    const wronglyMatched = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      matchType: 'ai',
+    });
+
+    const first = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [wronglyMatched], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+    });
+
+    expect(first.affectedCount).toBe(1);
+    expect(timesApplied('r-1')).toBe(1);
+
+    await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: first.nextResult,
+      minConfidence: 0.7,
+    });
+
+    expect(timesApplied('r-1')).toBe(1);
   });
 });

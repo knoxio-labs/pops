@@ -133,6 +133,30 @@ function pushRuleTags(pass: TagPass, tags: string[], pattern: string): void {
   }
 }
 
+function creditTagRules(db: FinanceDb, rules: readonly { id: string }[]): void {
+  for (const rule of rules) {
+    transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
+  }
+}
+
+/**
+ * Credit usage to every tag rule that matches this transaction, without
+ * building any suggestions.
+ *
+ * Split out of `suggestTags` for the caller that can only tell whether an
+ * application counts as a use *after* it has seen the outcome (POPS-2641): it
+ * builds the suggestions with `recordTagRuleUsage: false` and calls this once
+ * the outcome is known. Matching is `suggestTags`' own, so the rules credited
+ * are exactly the ones that would have contributed tags.
+ */
+export function creditTagRuleUsage(
+  db: FinanceDb,
+  description: string,
+  entityId: string | null
+): void {
+  creditTagRules(db, findMatchingTagRules(db, description, entityId));
+}
+
 function addTagRuleTags(pass: TagPass): void {
   const { db, description, entityId, recordTagRuleUsage, tagRules } = pass;
   if (tagRules) {
@@ -141,10 +165,9 @@ function addTagRuleTags(pass: TagPass): void {
     }
     return;
   }
-  for (const rule of findMatchingTagRules(db, description, entityId)) {
-    if (recordTagRuleUsage) {
-      transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
-    }
+  const matching = findMatchingTagRules(db, description, entityId);
+  if (recordTagRuleUsage) creditTagRules(db, matching);
+  for (const rule of matching) {
     pushRuleTags(pass, parseTags(rule.tags), rule.descriptionPattern);
   }
 }
