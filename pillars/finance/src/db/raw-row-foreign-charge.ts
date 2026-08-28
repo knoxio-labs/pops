@@ -30,7 +30,7 @@
  */
 import { parseAmexRow } from '../contract/amex-row.js';
 import { parseAnzDescription, type AnzForeignCharge } from '../contract/anz-description.js';
-import { anzPdfStatementLineDescription } from '../contract/anz-pdf-statement.js';
+import { anzPdfStatementLineDescription } from '../contract/anz-statement-line.js';
 
 /** Present on the long Amex export and on nothing else. */
 const AMEX_FOREIGN_SPEND_COLUMN = 'Foreign Spend Amount';
