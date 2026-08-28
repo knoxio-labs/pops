@@ -148,6 +148,13 @@
       "when": 1781913600014,
       "tag": "0069_tag_vocabulary_facet_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1781913600015,
+      "tag": "0070_fee_and_transfer_types",
+      "breakpoints": true
     }
   ]
 }

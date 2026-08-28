@@ -38,7 +38,7 @@ interface BuildColumnsArgs extends BuildColumnsBase, RowActionHandlers {}
  * Each taxonomy type → its i18n key. The one place the badge labels and the
  * type-filter options agree, so a new type can never render as raw English in
  * one but not the other (`purchase` is surfaced as "Expense"). Typed against
- * `TransactionType` so adding a 9th type without a key fails the build.
+ * `TransactionType` so adding a type without a key fails the build.
  */
 const TYPE_LABEL_KEY: Record<TransactionType, string> = {
   purchase: 'filter.expense',
@@ -49,6 +49,7 @@ const TYPE_LABEL_KEY: Record<TransactionType, string> = {
   loan: 'filter.loan',
   rebate: 'filter.rebate',
   tax: 'filter.tax',
+  fee: 'filter.fee',
 };
 
 function tagsFilterFn(

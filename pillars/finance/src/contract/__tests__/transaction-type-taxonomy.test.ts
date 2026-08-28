@@ -9,7 +9,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { TRANSACTION_TYPES } from '../corrections-constants.js';
+import {
+  isSpendType,
+  SPEND_TRANSACTION_TYPES,
+  TRANSACTION_TYPE_STAT_TILE,
+  TRANSACTION_TYPES,
+} from '../corrections-constants.js';
 import { TransactionTypeSchema as CorrectionsTypeSchema } from '../rest-corrections-schemas.js';
 import { TransactionTypeSchema as ImportsTypeSchema } from '../rest-imports-schemas.js';
 
@@ -22,10 +27,11 @@ const EXPECTED = [
   'loan',
   'rebate',
   'tax',
+  'fee',
 ] as const;
 
 describe('transaction-type taxonomy (#3607)', () => {
-  it('exposes exactly the eight canonical values, in order', () => {
+  it('exposes exactly the canonical values, in order', () => {
     expect([...TRANSACTION_TYPES]).toEqual([...EXPECTED]);
   });
 
@@ -54,5 +60,27 @@ describe('transaction-type taxonomy (#3607)', () => {
 
   it('the schema option set equals the canonical constant', () => {
     expect(new Set(CorrectionsTypeSchema.options)).toEqual(new Set(TRANSACTION_TYPES));
+  });
+
+  it('buckets every type into exactly one headline tile (POPS-2610)', () => {
+    expect(Object.keys(TRANSACTION_TYPE_STAT_TILE).toSorted()).toEqual(
+      [...TRANSACTION_TYPES].toSorted()
+    );
+  });
+
+  it('keeps fees and transfers out of spend, and fees on the expense headline', () => {
+    expect([...SPEND_TRANSACTION_TYPES].toSorted()).toEqual(['purchase', 'refund', 'reversal']);
+    // A fee is money that left (expense tile) but was not spent ON anything.
+    expect(TRANSACTION_TYPE_STAT_TILE.fee).toBe('expense');
+    expect(isSpendType('fee')).toBe(false);
+    expect(isSpendType('transfer')).toBe(false);
+    expect(isSpendType('income')).toBe(false);
+    expect(isSpendType('purchase')).toBe(true);
+  });
+
+  it('tolerates the legacy capitalised stored forms when asked whether they are spend', () => {
+    expect(isSpendType('Expense')).toBe(false);
+    expect(isSpendType('Purchase')).toBe(true);
+    expect(isSpendType('Transfer')).toBe(false);
   });
 });

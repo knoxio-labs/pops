@@ -5,9 +5,16 @@
  * differ per period), instead of one query per budget row. Drives both
  * the list endpoint and the per-row helpers so spend semantics stay in
  * one place.
+ *
+ * Rows are filtered to {@link SPEND_TRANSACTION_TYPES} — the positive list, not
+ * "anything that is not a transfer" (POPS-2610). The old exclusion counted an
+ * inbound card payment, a gift card bought, or a negative income adjustment as
+ * category spend the moment its amount happened to be negative — and had no way
+ * at all to keep a fee out, because a fee was a purchase carrying a tag.
  */
 import { and, sql } from 'drizzle-orm';
 
+import { SPEND_TRANSACTION_TYPES } from '../../contract/corrections-constants.js';
 import { transactions } from '../schema.js';
 import { periodWindowEnd, periodWindowStart } from './period-window.js';
 
@@ -64,7 +71,10 @@ export function bulkComputeSpend(
     const categoryList = Array.from(categories);
 
     const conditions = [
-      sql`${transactions.type} != 'transfer'`,
+      sql`${transactions.type} IN (${sql.join(
+        SPEND_TRANSACTION_TYPES.map((t) => sql`${t}`),
+        sql`, `
+      )})`,
       sql`je.value IN (${sql.join(
         categoryList.map((c) => sql`${c}`),
         sql`, `

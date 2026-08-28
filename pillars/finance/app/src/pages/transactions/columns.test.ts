@@ -70,7 +70,7 @@ describe('buildTransactionFilters', () => {
     expect(accountFilter?.options).toEqual([{ label: 'All Accounts', value: '' }]);
   });
 
-  it('offers every one of the 8 taxonomy types as a translated option (#3757 nit 1)', () => {
+  it('offers every taxonomy type as a translated option (#3757 nit 1)', () => {
     const typeFilter = buildTransactionFilters(t, []).find((f) => f.id === 'type');
 
     // Every option is translated via a real key; a missing key would surface
@@ -85,6 +85,7 @@ describe('buildTransactionFilters', () => {
       { label: 'Loan', value: 'loan' },
       { label: 'Rebate', value: 'rebate' },
       { label: 'Tax', value: 'tax' },
+      { label: 'Fee', value: 'fee' },
     ]);
   });
 
@@ -97,5 +98,6 @@ describe('buildTransactionFilters', () => {
     expect(byValue.get('loan')).toBe('Empréstimo');
     expect(byValue.get('rebate')).toBe('Bonificação');
     expect(byValue.get('tax')).toBe('Imposto');
+    expect(byValue.get('fee')).toBe('Taxa');
   });
 });

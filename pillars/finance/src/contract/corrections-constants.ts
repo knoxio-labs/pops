@@ -44,7 +44,60 @@ export const TRANSACTION_TYPES = [
   'loan',
   'rebate',
   'tax',
+  'fee',
 ] as const;
 
 /** A transaction's semantic type — one of {@link TRANSACTION_TYPES}. */
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
+/**
+ * Which headline bucket a type feeds — the one place "is this spend" is
+ * answered (POPS-2610).
+ *
+ * Amount sign is deliberately not consulted: a positive `refund` is an expense
+ * offset, not income, and a `tax` credit is income, not negative spend. A
+ * `transfer` — an inter-account move, a gift card bought, a card payment
+ * received — is excluded from both, because the same dollars are already
+ * counted where they were actually spent.
+ *
+ * `fee` is spend: interest and late charges are money genuinely leaving. What
+ * the type buys is separability — a fee no longer sits in the same namespace as
+ * the things you bought, so a category total can exclude it and a fee report can
+ * find it without depending on anyone having tagged the row.
+ */
+export const TRANSACTION_TYPE_STAT_TILE = {
+  purchase: 'expense',
+  refund: 'expense',
+  reversal: 'expense',
+  fee: 'expense',
+  income: 'income',
+  loan: 'income',
+  rebate: 'income',
+  tax: 'income',
+  transfer: 'excluded',
+} as const satisfies Record<TransactionType, 'income' | 'expense' | 'excluded'>;
+
+/**
+ * The types that count as spend — what "what did I spend on X" sums. Every
+ * spend aggregation filters on this set rather than on the absence of a tag: a
+ * tag nobody applied excluded nothing (POPS-2610).
+ *
+ * Deliberately NOT the expense tile. A `fee` is money that left the account —
+ * so it belongs on the expense headline — but it was not spent ON anything:
+ * interest and late charges are a cost of the account, not of a category, and
+ * counting them as spend is the distortion this split exists to remove. They
+ * are aggregated on their own, by `type = 'fee'`, with the `fee:` namespace
+ * saying which kind.
+ */
+export const SPEND_TRANSACTION_TYPES = [
+  'purchase',
+  'refund',
+  'reversal',
+] as const satisfies readonly TransactionType[];
+
+const SPEND_TYPE_LOOKUP = new Set<string>(SPEND_TRANSACTION_TYPES);
+
+/** Whether a stored `type` value counts as outgoing spend. */
+export function isSpendType(type: string): boolean {
+  return SPEND_TYPE_LOOKUP.has(type.toLowerCase());
+}

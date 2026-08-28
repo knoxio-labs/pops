@@ -21,6 +21,25 @@ export {
   regexPatternExpectsDigits,
   type PatternMatchType,
 } from './pattern-match.js';
+export {
+  classifyFromDescription,
+  hasGiftCardTag,
+  resolveCommittedType,
+  FEE_PATTERNS,
+  FEE_TAGS,
+  FEE_TAG_PREFIX,
+  INBOUND_TRANSFER_PATTERNS,
+  GIFT_CARD_TAG,
+  type DerivedClassification,
+  type FeeTag,
+} from './transaction-classification.js';
+export {
+  isSpendType,
+  SPEND_TRANSACTION_TYPES,
+  TRANSACTION_TYPES,
+  TRANSACTION_TYPE_STAT_TILE,
+  type TransactionType,
+} from './corrections-constants.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
 export {
   parseAnzDescription,

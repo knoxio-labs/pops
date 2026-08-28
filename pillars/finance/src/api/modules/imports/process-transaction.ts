@@ -1,6 +1,12 @@
 /**
- * Single-transaction classification: correction rules → entity matcher → AI
- * fallback → no-match.
+ * Single-transaction classification: correction rules → descriptor-derived type
+ * (fees, inbound card payments — POPS-2610) → entity matcher → AI fallback →
+ * no-match.
+ *
+ * The descriptor stage sits below the user's own correction rules (an explicit
+ * rule still wins) and above the entity matcher, which has no merchant to find
+ * on an `INTEREST CHARGES` row and would otherwise leave it uncertain and
+ * untyped.
  *
  * Ported from the monolith `lib/process-transaction.ts`, db-injected. The
  * non-AI stages (`classifyWithoutAi`) and the AI-result finalizer
@@ -32,6 +38,7 @@ import {
   buildFromEntityMatch,
   buildUncertainFromAi,
   buildUncertainNoMatch,
+  matchDerivedType,
 } from './process-transaction-helpers.js';
 
 import type {
@@ -80,7 +87,7 @@ function tryEntityMatch(
 }
 
 /**
- * Run the correction/entity-match ladder for one row, without ever
+ * Run the correction/descriptor/entity-match ladder for one row, without ever
  * calling the AI. Returns `{kind:'needsAi'}` when none of those stages
  * resolve it, so the caller can route the row to either the single-row AI
  * fallback (`classifyTransaction`) or a shared batched call
@@ -105,6 +112,9 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
       } as TransactionProcessResult,
     };
   }
+
+  const derived = matchDerivedType(db, transaction, context.knownTags);
+  if (derived) return { kind: 'resolved', result: { matched: derived, batchStatus: 'success' } };
 
   const entityMatched = tryEntityMatch(db, transaction, context);
   if (entityMatched) {
