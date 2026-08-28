@@ -13,16 +13,18 @@
  * (#3683).
  *
  * `applyChangeSetsPhase` runs every correction ChangeSet through
- * `dropTagsOnlyAddOps` before applying it: a tags-only/entityName-only add op
- * (no `entityId`, no `transactionType`, non-empty `tags`) violates the
- * classification-rule/tag-rule table boundary (CF061/#3650) and would throw
- * inside `applyAddOp` — inside this commit's single transaction, that throw
- * would roll back every transaction insert and entity creation over one inert
- * rule. `proposeChangeSetFromCorrectionSignal` already filters this shape out
- * before a user can approve it, so this is a second, defense-in-depth layer
- * for a ChangeSet that reaches commit some other way (a hand-built payload,
- * the AI revise path, a future caller): the bad op is dropped with a logged
- * warning and the rest of the commit proceeds.
+ * `dropUnusableAddOps` before applying it. Two add-op shapes can only ever
+ * produce a rule that never fires: a tags-only/entityName-only op (no
+ * `entityId`, no `transactionType`, non-empty `tags`), which violates the
+ * classification-rule/tag-rule table boundary (CF061/#3650); and a `regex` op
+ * whose pattern does not compile (POPS-2600). Either would throw inside
+ * `applyAddOp` — inside this commit's single transaction, that throw would
+ * roll back every transaction insert and entity creation over one inert rule.
+ * The bad op is dropped with a logged warning and the rest of the commit
+ * proceeds. `proposeChangeSetFromCorrectionSignal` filters the tags-only
+ * shape out before a user can approve it; the uncompilable regex has no such
+ * upstream filter, because the correction detail editor pairs a free-text
+ * pattern with a `regex` option and validates nothing client-side.
  *
  * The outer `db.transaction` handle (`tx`) is threaded into every inner service
  * so the correction/tag-rule ChangeSet applies nest as savepoints rather than
@@ -46,7 +48,7 @@ import {
 } from '../../../db/index.js';
 import { dollarsToCents } from '../../../money.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { applyChangeSet, dropTagsOnlyAddOps } from '../corrections/index.js';
+import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
 import {
   enqueueOutboxCandidatesPhase,
@@ -109,7 +111,7 @@ function applyChangeSetsPhase(
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
   for (const cs of payload.changeSets) {
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
-    const sanitized = dropTagsOnlyAddOps(resolved);
+    const sanitized = dropUnusableAddOps(resolved);
     if (sanitized.ops.length === 0) continue;
     applyChangeSet(tx, sanitized);
     for (const op of sanitized.ops) counts[op.op]++;
