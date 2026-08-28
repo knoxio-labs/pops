@@ -18,6 +18,7 @@ export const TRANSACTION_TYPES = [
   'loan',
   'rebate',
   'tax',
+  'fee',
 ] as const;
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
@@ -32,6 +33,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   loan: 'Loan',
   rebate: 'Rebate',
   tax: 'Tax',
+  fee: 'Fee',
 };
 
 export interface TransactionTypeOption {
@@ -51,12 +53,19 @@ export type StatTile = 'income' | 'expense' | 'excluded';
 /**
  * Explicit type → tile map. Amount sign is NOT used: a positive `refund` is an
  * expense offset, not income; a `tax` credit is income, not a negative expense.
- * `transfer` (an inter-account move) feeds neither tile.
+ * `transfer` (an inter-account move, a gift card bought, a card payment
+ * received) feeds neither tile. A `fee` is money that left and so feeds the
+ * expense tile — what its type buys is separability from the purchases, not
+ * exclusion from the headline (POPS-2610).
+ *
+ * Mirrors the pillar's `TRANSACTION_TYPE_STAT_TILE`; the lockstep test in
+ * `transaction-type.test.ts` fails if the two disagree.
  */
 const TILE_BY_TYPE: Record<TransactionType, StatTile> = {
   purchase: 'expense',
   refund: 'expense',
   reversal: 'expense',
+  fee: 'expense',
   income: 'income',
   loan: 'income',
   rebate: 'income',
@@ -85,9 +94,11 @@ export function labelForType(type: string): string {
 /**
  * Types whose transactions may legitimately have no merchant entity — transfers
  * (inter-account moves), income (salary/interest), the credit adjustments that
- * need not name a payee, and reversals, which are often bank-initiated (a
+ * need not name a payee, reversals, which are often bank-initiated (a
  * fee/interest reversal or a chargeback/ATM-dispute credit) and so carry no
- * merchant (#3757).
+ * merchant (#3757), and fees, which the issuer charges against the account
+ * rather than a merchant (POPS-2610) — a fee dropped for want of an entity is
+ * exactly the row a fee report must not miss.
  */
 const ENTITY_OPTIONAL_TYPES = new Set<string>([
   'transfer',
@@ -96,6 +107,7 @@ const ENTITY_OPTIONAL_TYPES = new Set<string>([
   'rebate',
   'tax',
   'reversal',
+  'fee',
 ]);
 
 /**

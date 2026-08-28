@@ -102,6 +102,7 @@ const TRANSACTION_TYPES = [
   'loan',
   'rebate',
   'tax',
+  'fee',
 ] as const;
 
 const ProcessedTransactionSchema = ParsedTransactionSchema.extend({

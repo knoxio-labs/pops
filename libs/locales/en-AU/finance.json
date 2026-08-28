@@ -231,6 +231,7 @@
   "filter.loan": "Loan",
   "filter.rebate": "Rebate",
   "filter.tax": "Tax",
+  "filter.fee": "Fee",
   "filter.allPriorities": "All Priorities",
   "filter.needing": "Needing",
   "filter.soon": "Soon",

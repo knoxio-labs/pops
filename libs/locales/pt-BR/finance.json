@@ -231,6 +231,7 @@
   "filter.loan": "Empréstimo",
   "filter.rebate": "Bonificação",
   "filter.tax": "Imposto",
+  "filter.fee": "Taxa",
   "filter.allPriorities": "Todas as Prioridades",
   "filter.needing": "Precisando",
   "filter.soon": "Em breve",

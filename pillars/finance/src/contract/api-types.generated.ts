@@ -1299,6 +1299,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             }[];
             pagination: {
@@ -1384,6 +1385,7 @@ export interface operations {
             | 'loan'
             | 'rebate'
             | 'tax'
+            | 'fee'
             | null;
         };
       };
@@ -1421,6 +1423,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             };
             message: string;
@@ -1582,6 +1585,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -1609,6 +1613,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -1665,6 +1670,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             }[];
             message: string;
@@ -1762,6 +1768,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             } | null;
             /** @enum {string|null} */
@@ -1933,6 +1940,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     /** @enum {string} */
@@ -1960,6 +1968,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     id: string;
@@ -2017,6 +2026,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             }[];
             pagination: {
@@ -2108,6 +2118,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -2135,6 +2146,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -2186,6 +2198,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     /** @enum {string} */
@@ -2213,6 +2226,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     id: string;
@@ -2436,6 +2450,7 @@ export interface operations {
               | 'loan'
               | 'rebate'
               | 'tax'
+              | 'fee'
               | null;
           };
         };
@@ -2477,6 +2492,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     /** @enum {string} */
@@ -2504,6 +2520,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     id: string;
@@ -2542,6 +2559,7 @@ export interface operations {
                     | 'loan'
                     | 'rebate'
                     | 'tax'
+                    | 'fee'
                     | null;
                 };
                 before: {
@@ -2560,6 +2578,7 @@ export interface operations {
                     | 'loan'
                     | 'rebate'
                     | 'tax'
+                    | 'fee'
                     | null;
                 };
                 description: string;
@@ -2600,6 +2619,7 @@ export interface operations {
                   | 'loan'
                   | 'rebate'
                   | 'tax'
+                  | 'fee'
                   | null;
               };
             };
@@ -2686,6 +2706,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -2713,6 +2734,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -2759,6 +2781,7 @@ export interface operations {
               | 'loan'
               | 'rebate'
               | 'tax'
+              | 'fee'
               | null;
           };
         };
@@ -2856,6 +2879,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -2883,6 +2907,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -2922,6 +2947,7 @@ export interface operations {
               | 'loan'
               | 'rebate'
               | 'tax'
+              | 'fee'
               | null;
           };
           triggeringTransactions: {
@@ -2967,6 +2993,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     /** @enum {string} */
@@ -2994,6 +3021,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     id: string;
@@ -3041,6 +3069,7 @@ export interface operations {
                   | 'loan'
                   | 'rebate'
                   | 'tax'
+                  | 'fee'
                   | null;
               };
             };
@@ -3214,6 +3243,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             };
           };
@@ -3361,6 +3391,7 @@ export interface operations {
             | 'loan'
             | 'rebate'
             | 'tax'
+            | 'fee'
             | null;
         };
       };
@@ -3398,6 +3429,7 @@ export interface operations {
                 | 'loan'
                 | 'rebate'
                 | 'tax'
+                | 'fee'
                 | null;
             };
             message: string;
@@ -3714,6 +3746,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -3741,6 +3774,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -3852,7 +3886,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               matched: {
                 account: string;
@@ -3920,7 +3955,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               skipped: {
                 account: string;
@@ -3988,7 +4024,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               uncertain: {
                 account: string;
@@ -4056,7 +4093,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               warnings?: {
                 affectedCount?: number;
@@ -4163,6 +4201,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   /** @enum {string} */
@@ -4190,6 +4229,7 @@ export interface operations {
                       | 'loan'
                       | 'rebate'
                       | 'tax'
+                      | 'fee'
                       | null;
                   };
                   id: string;
@@ -4314,7 +4354,8 @@ export interface operations {
               | 'reversal'
               | 'loan'
               | 'rebate'
-              | 'tax';
+              | 'tax'
+              | 'fee';
           }[];
         };
       };
@@ -4645,7 +4686,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               matched: {
                 account: string;
@@ -4713,7 +4755,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               skipped: {
                 account: string;
@@ -4781,7 +4824,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               uncertain: {
                 account: string;
@@ -4849,7 +4893,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               warnings?: {
                 affectedCount?: number;
@@ -4950,6 +4995,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     /** @enum {string} */
@@ -4977,6 +5023,7 @@ export interface operations {
                         | 'loan'
                         | 'rebate'
                         | 'tax'
+                        | 'fee'
                         | null;
                     };
                     id: string;
@@ -5087,7 +5134,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               matched: {
                 account: string;
@@ -5155,7 +5203,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               skipped: {
                 account: string;
@@ -5223,7 +5272,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               uncertain: {
                 account: string;
@@ -5291,7 +5341,8 @@ export interface operations {
                   | 'reversal'
                   | 'loan'
                   | 'rebate'
-                  | 'tax';
+                  | 'tax'
+                  | 'fee';
               }[];
               warnings?: {
                 affectedCount?: number;
@@ -7139,7 +7190,8 @@ export interface operations {
           | 'reversal'
           | 'loan'
           | 'rebate'
-          | 'tax';
+          | 'tax'
+          | 'fee';
         limit?: number;
         offset?: number;
         /** @description Keyset anchor: the `date` of the last row you already have, as `YYYY-MM-DD`. Must be sent together with `beforeId` — supplying one without the other is a 400, because a date alone cannot separate rows that share it. Returns rows sorting strictly after that row under `date DESC, id DESC`. Prefer this over `offset` when paging a list that can change underneath you. */
@@ -7186,7 +7238,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             }[];
             pagination: {
               hasMore: boolean;
@@ -7272,7 +7325,8 @@ export interface operations {
             | 'reversal'
             | 'loan'
             | 'rebate'
-            | 'tax';
+            | 'tax'
+            | 'fee';
         };
       };
     };
@@ -7310,7 +7364,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
             message: string;
           };
@@ -7460,7 +7515,8 @@ export interface operations {
             | 'reversal'
             | 'loan'
             | 'rebate'
-            | 'tax';
+            | 'tax'
+            | 'fee';
         };
       };
     };
@@ -7498,7 +7554,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
             message: string;
           };
@@ -7620,7 +7677,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
           };
         };
@@ -7732,7 +7790,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
           };
         };
@@ -7811,7 +7870,8 @@ export interface operations {
             | 'reversal'
             | 'loan'
             | 'rebate'
-            | 'tax';
+            | 'tax'
+            | 'fee';
         };
       };
     };
@@ -7849,7 +7909,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
             message: string;
           };
@@ -7945,7 +8006,8 @@ export interface operations {
                 | 'reversal'
                 | 'loan'
                 | 'rebate'
-                | 'tax';
+                | 'tax'
+                | 'fee';
             };
             message: string;
           };

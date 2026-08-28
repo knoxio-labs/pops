@@ -258,16 +258,41 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     const c = client();
     const { sessionId } = await c.imports.processImport({
       transactions: [
-        parsed({ description: 'PayID Payment Received', amount: -2300, checksum: 'xfer-1' }),
+        parsed({ description: 'TRANSFER TO SAVINGS', amount: -2300, checksum: 'xfer-1' }),
+        parsed({ description: 'BPAY PAYMENT TO AGL', amount: -8900, checksum: 'xfer-2' }),
       ],
       account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.matched).toHaveLength(0);
-    expect(result.uncertain).toHaveLength(1);
+    expect(result.uncertain).toHaveLength(2);
     expect(result.uncertain[0]?.entity.matchType).toBe('none');
     expect(result.uncertain[0]?.error).toBe('No entity match found (AI categorization disabled)');
+  });
+
+  it('types the closed set of inbound account payments without a rule or entity (POPS-2610)', async () => {
+    const c = client();
+    const { sessionId } = await c.imports.processImport({
+      transactions: [
+        parsed({
+          description: 'PayID Payment Received, Thank you',
+          amount: -2300,
+          checksum: 'inbound-1',
+        }),
+      ],
+      account: 'Amex',
+    });
+
+    // #3607 removed the loose keyword heuristic that guessed a type from any
+    // occurrence of "payment"/"transfer". This is the narrow replacement: a
+    // closed list of account-payment descriptors, typed deterministically, so
+    // money moving between the user's own accounts never reads as spend.
+    const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+    expect(result.uncertain).toHaveLength(0);
+    expect(result.matched).toHaveLength(1);
+    expect(result.matched[0]?.transactionType).toBe('transfer');
+    expect(result.matched[0]?.entity.matchType).toBe('none');
   });
 
   it('returns an empty bucketed result for an empty batch', async () => {
@@ -687,6 +712,48 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
 
     const list = await c.transactions.list({ search: 'COLES SUPERMARKET' });
     expect(list.data).toHaveLength(1);
+  });
+
+  it('commits a gift-card purchase as a transfer, keeping the descriptor tag (POPS-2610)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'WOOLWORTHS GIFT CARDS',
+          checksum: 'commit-gift-card',
+          transactionType: 'purchase',
+          tags: ['contains:gift-card', 'contains:groceries'],
+        }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare('SELECT type, tags FROM transactions WHERE checksum = ?')
+      .get('commit-gift-card') as { type: string; tags: string };
+    expect(row.type).toBe('transfer');
+    expect(JSON.parse(row.tags)).toEqual(['contains:gift-card', 'contains:groceries']);
+  });
+
+  it('leaves a non-purchase gift-card row as the review authored it (POPS-2610)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'GIFT CARD REFUND',
+          amount: 50,
+          checksum: 'commit-gift-card-refund',
+          transactionType: 'refund',
+          entityId: 'ent-woolworths',
+          entityName: 'Woolworths',
+          tags: ['contains:gift-card'],
+        }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare('SELECT type FROM transactions WHERE checksum = ?')
+      .get('commit-gift-card-refund') as { type: string };
+    expect(row.type).toBe('refund');
   });
 
   it('persists match provenance from the confirmed transaction (CF057/#3658)', async () => {
