@@ -15,7 +15,7 @@ import type {
   EntityVenueDefaultsPlan,
   EntityVenueReviewReason,
   LiveEntityDefaults,
-} from './entity-venue-defaults.js';
+} from './entity-venue-plan.js';
 
 /** The single best-supported venue for an entity, or why there isn't one. */
 type VenueVerdict =

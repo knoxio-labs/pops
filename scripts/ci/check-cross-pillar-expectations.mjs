@@ -321,6 +321,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'finance',
     producer: 'contacts',
+    operationId: 'entities.update',
+    path: '/entities/{id}',
+    method: 'patch',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/finance/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'contacts',
     operationId: 'entities.create',
     path: '/entities',
     method: 'post',
