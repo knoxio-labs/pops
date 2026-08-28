@@ -9,7 +9,14 @@
  * ladder — a distinct code from the generic `API_ERROR` so the batch resolver
  * (CP026) can tell "the provider is rate-limiting us" apart from any other
  * failure and trip the shared circuit breaker instead of just degrading one row.
+ *
+ * `EMPTY_VOCABULARY` marks a prompt that could not be built at all because the
+ * closed tag vocabulary is empty (POPS-2606) — a broken database rather than a
+ * provider failure, and worth its own code so it is not read as one. The row
+ * still degrades to uncertain; the import does not fail.
  */
+import { EmptyClosedVocabularyError } from './ai-categorizer-prompt.js';
+
 export class AiCategorizationError extends Error {
   constructor(
     message: string,
@@ -19,6 +26,7 @@ export class AiCategorizationError extends Error {
       | 'INSUFFICIENT_CREDITS'
       | 'PARSE_ERROR'
       | 'RATE_LIMITED'
+      | 'EMPTY_VOCABULARY'
   ) {
     super(message);
     this.name = 'AiCategorizationError';
@@ -55,6 +63,9 @@ function mapKnownApiError(apiError: ParsedApiError): AiCategorizationError | nul
 
 /** Maps any Anthropic call failure to an `AiCategorizationError`, and throws it. */
 export function throwApiError(error: unknown): never {
+  if (error instanceof EmptyClosedVocabularyError) {
+    throw new AiCategorizationError(error.message, 'EMPTY_VOCABULARY');
+  }
   if (isParsedApiError(error)) {
     const known = mapKnownApiError(error);
     if (known) throw known;

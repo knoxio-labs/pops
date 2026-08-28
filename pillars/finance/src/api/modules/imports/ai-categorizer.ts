@@ -94,8 +94,8 @@ function computeCostUsd(inputTokens: number, outputTokens: number): number {
  */
 export async function categorizeWithAi(
   input: CategorizerInput,
-  importBatchId?: string,
-  knownTags: string[] = [],
+  importBatchId: string | undefined,
+  knownTags: string[],
   knownEntityNames: string[] = []
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
@@ -121,7 +121,7 @@ export async function categorizeWithAi(
 
   if (!response.text) return { result: null };
 
-  const entry = buildEntryFromText(response.text);
+  const entry = buildEntryFromText(response.text, knownTags);
   return {
     result: entry,
     usage: {
@@ -143,8 +143,8 @@ export async function categorizeWithAi(
  */
 export async function categorizeBatchWithAi(
   inputs: CategorizerInput[],
-  importBatchId?: string,
-  knownTags: string[] = [],
+  importBatchId: string | undefined,
+  knownTags: string[],
   knownEntityNames: string[] = []
 ): Promise<AiBatchCallResult> {
   if (inputs.length === 0) return { results: [] };
@@ -170,7 +170,7 @@ export async function categorizeBatchWithAi(
 
   if (!response.text) return { results: inputs.map(() => null) };
 
-  const results = parseBatchEntries(response.text, inputs.length);
+  const results = parseBatchEntries(response.text, inputs.length, knownTags);
   return {
     results,
     usage: {

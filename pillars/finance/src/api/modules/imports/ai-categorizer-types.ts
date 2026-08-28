@@ -22,6 +22,13 @@ export interface AiCacheEntry {
    * the reply omits or malforms the field.
    */
   confidence: number;
+  /**
+   * How many values the model returned that were refused by the closed-set
+   * validation (POPS-2606). Absent when nothing was refused. Counted into the
+   * batch's {@link AiCounters}; the values themselves are logged at the point
+   * of rejection, never stored.
+   */
+  rejectedTagValues?: number;
 }
 
 /** Per-call token/cost accounting surfaced to the batch counters. */

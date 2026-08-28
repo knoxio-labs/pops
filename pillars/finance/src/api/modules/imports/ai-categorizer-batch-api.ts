@@ -15,10 +15,12 @@ import {
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
-  knownTagsList,
   PROMPT_VERSION_CATEGORIZE_BATCH,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
@@ -59,14 +61,16 @@ export function buildBatchPrompt(
   const lines = inputs
     .map((input, i) => `${i + 1}. ${buildTransactionData(input).replaceAll('\n', ' | ')}`)
     .join('\n');
+  const facets = closedFacetOptions(knownTags);
 
-  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and relevant spending tags for EACH one.
+  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify EACH one on every tag axis below.
 
 ${lines}
 
-Known tags: ${knownTagsList(knownTags)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
+Tag axes and their available values:
+${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{"entityName": "...", "tags": ["tag1", "tag2"], "confidence": 0.0-1.0}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
 
 ${ENTITY_NAME_RULES}
 
@@ -98,7 +102,11 @@ export async function callBatchApi(opts: BatchApiCallOptions): Promise<ApiCallRe
  * `null` rather than failing every row in the chunk (mirrors the tolerate-
  * prose principle of #3591 at batch granularity).
  */
-export function parseBatchEntries(text: string, expectedCount: number): (AiCacheEntry | null)[] {
+export function parseBatchEntries(
+  text: string,
+  expectedCount: number,
+  knownTags: readonly string[] = []
+): (AiCacheEntry | null)[] {
   const jsonSlice = extractJsonFromReply(text);
   if (jsonSlice === null) {
     throw new AiCategorizationError(
@@ -126,7 +134,7 @@ export function parseBatchEntries(text: string, expectedCount: number): (AiCache
   return Array.from({ length: expectedCount }, (_, i) => {
     const item: unknown = parsed[i];
     if (item === null || typeof item !== 'object' || Array.isArray(item)) return null;
-    return entryFromParsed(item as RawCategorizerEntry);
+    return entryFromParsed(item as RawCategorizerEntry, knownTags);
   });
 }
 

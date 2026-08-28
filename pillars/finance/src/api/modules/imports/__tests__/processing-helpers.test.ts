@@ -24,6 +24,7 @@ function counters(overrides: Partial<AiCounters> = {}): AiCounters {
     aiDisabledCount: 0,
     aiApiCalls: 0,
     aiCacheHits: 0,
+    aiTagValuesRejected: 0,
     totalInputTokens: 0,
     totalOutputTokens: 0,
     totalCostUsd: 0,

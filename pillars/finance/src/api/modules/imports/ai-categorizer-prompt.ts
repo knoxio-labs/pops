@@ -4,6 +4,9 @@
  * CP025/#3656) — the PII-safe transaction-data renderer (CF008) and the
  * entityName/tags/confidence rule blocks neither prompt shape varies.
  */
+import { CLOSED_TAG_FACETS, parseTagFacet } from '../../../db/tag-facets.js';
+
+import type { ClosedTagFacet } from '../../../db/tag-facets.js';
 import type { CategorizerInput } from './ai-categorizer-types.js';
 
 /**
@@ -11,10 +14,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v1.0';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v2.0';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v1.0';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
 
 const PROMPT_FIELD_MAX_CHARS = 200;
 
@@ -56,19 +59,103 @@ export const ENTITY_NAME_RULES = `entityName rules:
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.`;
 
-export const TAGS_RULES = `tags rules:
-- Return 1-4 tags that describe this transaction.
-- Prefer tags from the Known tags list when they fit.
-- You MAY suggest new tags not in the list when they better describe this transaction (e.g. "EV", "Homelab", "Gift Card", "Fast Food").
-- Do NOT use vague tags like "Other" or "Spending" unless nothing else fits.`;
+export const TAGS_RULES = `tag rules:
+- Each tag field above is a closed set. Choose only from the values listed for that field.
+- A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
+- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at.`;
 
 export const CONFIDENCE_RULES = `confidence rules:
 - Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
 
-export function knownTagsList(knownTags: string[]): string {
-  return knownTags.length > 0
-    ? knownTags.join(', ')
-    : 'Groceries, Transport, Dining, Shopping, Utilities, Subscriptions, Entertainment, Health, Insurance';
+/**
+ * Thrown when the closed vocabulary is empty, which no prompt can be built
+ * from. The categorizer's callers already degrade an `AiCategorizationError`
+ * row to *uncertain*, so this surfaces loudly without failing the import.
+ */
+export class EmptyClosedVocabularyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmptyClosedVocabularyError';
+  }
+}
+
+/** One closed facet's values, in the order they were loaded (most-used first). */
+export interface ClosedFacetOptions {
+  facet: ClosedTagFacet;
+  single: boolean;
+  values: string[];
+}
+
+/**
+ * Bucket the closed vocabulary into its facets, preserving the caller's order
+ * within each — `loadKnownTags` ranks by usage, so the values that carry the
+ * corpus lead each list.
+ *
+ * A facet with no values is dropped rather than rendered empty: a field whose
+ * only legal answer is null is noise in the prompt. A tag outside the closed
+ * facets is ignored here; it should not have reached the prompt path at all,
+ * and dropping it silently is safer than showing the model a value it must not
+ * emit.
+ *
+ * Throws {@link EmptyClosedVocabularyError} when nothing at all survives. The
+ * migrations seed the closed vocabulary, so an empty one is a broken database,
+ * not a cold start — the previous behaviour here was to substitute a
+ * hand-written flat list (`Groceries, Transport, Dining, …`), which quietly
+ * reintroduced the pre-migration taxonomy, including values that never existed
+ * in `tag_vocabulary`.
+ */
+export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
+  const byFacet = new Map<string, string[]>();
+  for (const tag of knownTags) {
+    const { facet, value } = parseTagFacet(tag);
+    if (facet === null) continue;
+    const bucket = byFacet.get(facet);
+    if (bucket) bucket.push(value);
+    else byFacet.set(facet, [value]);
+  }
+
+  const options = CLOSED_TAG_FACETS.map(({ facet, single }) => ({
+    facet,
+    single,
+    values: byFacet.get(facet) ?? [],
+  })).filter((option) => option.values.length > 0);
+
+  if (options.length === 0) {
+    throw new EmptyClosedVocabularyError(
+      'Closed tag vocabulary is empty — tag_vocabulary holds no active closed-facet tags. ' +
+        'A database built from migrations carries them; this one did not.'
+    );
+  }
+  return options;
+}
+
+/**
+ * Render the closed vocabulary as one prompt field per facet.
+ *
+ * This is the shape the whole ticket turns on: the model is given a set of
+ * classification fields with enumerated answers, not an open tag list to
+ * generate into. `exactly one of` / `any of` states the cardinality inline as
+ * well as in the JSON shape, because the two together are what make a second
+ * `occasion` read as a violated instruction rather than an oversight.
+ */
+export function closedFacetFields(options: ClosedFacetOptions[]): string {
+  return options
+    .map(
+      ({ facet, single, values }) =>
+        `- ${facet}: ${single ? 'exactly one of' : 'any of'} [${values.join(', ')}]`
+    )
+    .join('\n');
+}
+
+/**
+ * The JSON value shape for one facet field — a bare string for a single-valued
+ * facet, an array for a multi-valued one, so the reply's own structure carries
+ * the cardinality rather than relying on the model to count.
+ */
+export function closedFacetReplyShape(options: ClosedFacetOptions[]): string {
+  return options
+    .map(({ facet, single }) => `"${facet}": ${single ? '"..." | null' : '["..."]'}`)
+    .join(', ');
 }
 
 export function knownEntitiesSection(knownEntityNames: string[], reuseInstruction: string): string {

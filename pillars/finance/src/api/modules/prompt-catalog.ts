@@ -38,7 +38,25 @@ export interface PromptCatalogEntry {
   template: string;
 }
 
-const SAMPLE_KNOWN_TAGS = ['Groceries', 'Dining', 'Transport', 'Utilities', 'Subscriptions'];
+/**
+ * A representative slice of the closed vocabulary, in the `facet:value` form
+ * `loadKnownTags` returns and covering more than one facet — the catalog's
+ * categorizer entries are only a faithful example of the live prompt if the
+ * sample has the shape the live vocabulary has (POPS-2606).
+ */
+const SAMPLE_KNOWN_TAGS = [
+  'contains:groceries',
+  'contains:subscription',
+  'contains:public-transport',
+  'contains:utilities',
+  'venue:supermarket',
+  'venue:cafe',
+  'occasion:home',
+  'occasion:out',
+  'channel:online',
+  'channel:in-person',
+  'fee:surcharge',
+];
 
 const SAMPLE_KNOWN_ENTITY_NAMES = ['Coles', 'Netflix', 'Transport for NSW', 'Woolworths'];
 
@@ -49,8 +67,18 @@ const SAMPLE_TRANSACTION = {
 };
 
 const SAMPLE_ACCEPTED_EXAMPLES: AcceptedCorrectionExample[] = [
-  { pattern: 'WOOLWORTHS', matchType: 'contains', entityName: 'Woolworths', tags: ['Groceries'] },
-  { pattern: 'NETFLIX.COM', matchType: 'exact', entityName: 'Netflix', tags: ['Subscriptions'] },
+  {
+    pattern: 'WOOLWORTHS',
+    matchType: 'contains',
+    entityName: 'Woolworths',
+    tags: ['contains:groceries', 'venue:supermarket'],
+  },
+  {
+    pattern: 'NETFLIX.COM',
+    matchType: 'exact',
+    entityName: 'Netflix',
+    tags: ['contains:subscription', 'channel:online'],
+  },
 ];
 
 const SAMPLE_CORRECTION_INPUT: CorrectionInput = {
@@ -65,7 +93,7 @@ const SAMPLE_GENERATE_TXNS: GenerateRulesTransaction[] = [
     entityName: 'Woolworths',
     amount: -45.2,
     account: 'Everyday',
-    currentTags: ['Groceries'],
+    currentTags: ['contains:groceries'],
   },
   {
     description: 'NETFLIX.COM',
@@ -82,7 +110,7 @@ const SAMPLE_SIGNAL: CorrectionSignal = {
   entityId: 'entity_woolworths',
   entityName: 'Woolworths',
   location: null,
-  tags: ['Groceries'],
+  tags: ['contains:groceries'],
   transactionType: 'purchase',
 };
 
@@ -98,7 +126,7 @@ const SAMPLE_CHANGE_SET: ChangeSet = {
         entityId: 'entity_woolworths',
         entityName: 'Woolworths',
         location: null,
-        tags: ['Groceries'],
+        tags: ['contains:groceries'],
         transactionType: 'purchase',
         confidence: 0.95,
         isActive: true,

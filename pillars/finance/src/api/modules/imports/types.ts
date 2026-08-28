@@ -47,6 +47,14 @@ export interface AiCounters {
   aiDisabledCount: number;
   aiApiCalls: number;
   aiCacheHits: number;
+  /**
+   * Tag values the model returned that were outside the closed set for their
+   * facet and were dropped rather than stored (POPS-2606). A number that stops
+   * being near-zero is evidence the closed vocabulary is missing something,
+   * which is a human decision — the values themselves are logged where they
+   * are rejected.
+   */
+  aiTagValuesRejected: number;
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCostUsd: number;
@@ -75,6 +83,7 @@ export function createAiCounters(): AiCounters {
     aiDisabledCount: 0,
     aiApiCalls: 0,
     aiCacheHits: 0,
+    aiTagValuesRejected: 0,
     totalInputTokens: 0,
     totalOutputTokens: 0,
     totalCostUsd: 0,
