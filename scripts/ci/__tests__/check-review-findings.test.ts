@@ -15,7 +15,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  collectDismissedFindingIds,
   decodeState,
+  dismissMarkerFor,
   evaluateReviewState,
   findStateComment,
   pollForReviewState,
@@ -157,6 +159,114 @@ describe('evaluateReviewState', () => {
     const result = evaluateReviewState({ comments: reversed, headSha: HEAD });
     expect(result.outcome).toBe('fail');
     expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual(['stale-open']);
+  });
+});
+
+describe('the escape hatch (POPS-2669)', () => {
+  it('dismissing the only open finding by id passes', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111') },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('pass');
+  });
+
+  it('reports a dismissed finding back even on a pass, for auditability', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'stale' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111') },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome === 'pass' && result.dismissed?.map((f) => f.id)).toEqual([
+      'aaaaaa111111',
+    ]);
+  });
+
+  it('dismissing one finding does not waive a different, still-open one', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [
+            { id: 'aaaaaa111111', status: 'open', title: 'stale' },
+            { id: 'bbbbbb222222', status: 'open', title: 'real bug' },
+          ],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111') },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('fail');
+    expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual([
+      'bbbbbb222222',
+    ]);
+    expect(result.outcome === 'fail' && result.dismissed?.map((f) => f.id)).toEqual([
+      'aaaaaa111111',
+    ]);
+  });
+
+  it('a dismiss marker for an id that never appears is a harmless no-op', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'bbbbbb222222', status: 'open', title: 'real bug' }],
+        }),
+        { body: dismissMarkerFor('cccccc333333') },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('fail');
+    expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual([
+      'bbbbbb222222',
+    ]);
+  });
+
+  it('accumulates dismissals from more than one comment', () => {
+    const result = evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [
+            { id: 'aaaaaa111111', status: 'open', title: 'a' },
+            { id: 'bbbbbb222222', status: 'open', title: 'b' },
+          ],
+        }),
+        { body: `${dismissMarkerFor('aaaaaa111111')}\nreason one` },
+        { body: `${dismissMarkerFor('bbbbbb222222')}\nreason two` },
+      ],
+      headSha: HEAD,
+    });
+    expect(result.outcome).toBe('pass');
+  });
+});
+
+describe('collectDismissedFindingIds', () => {
+  it('round-trips dismissMarkerFor', () => {
+    expect(collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456') }])).toEqual(
+      new Set(['abc123def456'])
+    );
+  });
+
+  it('ignores a marker whose id is not hex', () => {
+    expect(
+      collectDismissedFindingIds([{ body: '<!-- review-findings-gate-dismiss: not-hex! -->' }])
+    ).toEqual(new Set());
+  });
+
+  it('ignores comments with no dismiss marker', () => {
+    expect(collectDismissedFindingIds([{ body: 'just a normal comment' }])).toEqual(new Set());
   });
 });
 

@@ -77,6 +77,21 @@ name: Review Findings Gate
 # polling for a comment that structurally cannot exist yet would only spend
 # the wait budget for nothing.
 #
+# A STUCK PR NEEDS A WAY OUT (POPS-2669). `pr-review-state.mjs` resolves a
+# finding by checking whether its snippet is still in the file, and that
+# check can go permanently wrong: a short anchor that also occurs, correctly,
+# in an unrelated branch of the same function means the finding never
+# resolves no matter what the author does. A gate that blocks on ANY open
+# finding with no way out would wedge that PR forever — worse than the bug
+# this workflow exists to fix, because it gets disabled within a day rather
+# than fixed. `check-review-findings.mjs` therefore accepts a PLAIN PR
+# COMMENT containing `<!-- review-findings-gate-dismiss: <finding-id> -->` to
+# waive exactly one finding by its content-addressed id — see that file's
+# "THE ESCAPE HATCH" section for the id, the reasoning, and why it is
+# deliberately more effort than fixing a real finding. This workflow makes no
+# change of its own for that: the dismiss marker is read from the same
+# comments this job already fetches to find the sticky review comment.
+#
 # TIER A: stdlib only. `check-review-findings.mjs` reads JSON (built-in
 # `JSON.parse`) over the GitHub REST API (the `gh` CLI already on every
 # GitHub-hosted runner, the same tool `pr-review.yml`'s own "fetch the

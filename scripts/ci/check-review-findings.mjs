@@ -45,6 +45,28 @@
  * `pr-review.yml`'s own selection (`| last // empty`) so the two halves of
  * this mechanism never disagree about which comment is authoritative.
  *
+ * THE ESCAPE HATCH. `pr-review-state.mjs` resolves a finding by checking
+ * whether its snippet is still present in the file — POPS-2669 tracks a bug
+ * where that check can never go true again: a one-line anchor that also
+ * occurs, correctly, in an unrelated branch of the same function means the
+ * finding never resolves no matter what the author does. Without a way out,
+ * a check that blocks on ANY open finding would wedge a PR permanently on
+ * this bug — a worse outcome than the one POPS-2661 exists to fix, because
+ * it gets disabled within a day. So a finding can be dismissed by id: a plain
+ * PR comment containing
+ *
+ *   <!-- review-findings-gate-dismiss: <finding-id> -->
+ *
+ * (plus, by convention, a reason underneath, for whoever reads the PR later)
+ * removes that one finding — and only that one, since the id is content-
+ * addressed from the finding's file and snippet — from the blocking set. It
+ * is deliberately more effort than fixing a real finding: the id is not
+ * printed in the reviewer's own comment, only in this guard's OWN failure
+ * output (see `main`, below), so dismissing one means reading why it failed
+ * first. This is not a general bypass — it dismisses exactly the id named,
+ * nothing else, and every dismissal is a plain, timestamped, attributed PR
+ * comment, not a silent override. See POPS-2669 for the underlying bug.
+ *
  * Stdlib only, deliberately: see `pr-review-state.mjs` and the tier amendment
  * in docs/architecture/adr-045-guards-must-prove-they-report.md, enforced by
  * scripts/ci/__tests__/guard-job-tiers.test.ts. `STATE_MARKER` is imported
@@ -71,6 +93,45 @@ import { execFileSync } from 'node:child_process';
 import { STATE_MARKER } from './pr-review-state.mjs';
 
 const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*-->`, 'u');
+
+/** See the file header's "THE ESCAPE HATCH" section and POPS-2669. */
+const DISMISS_MARKER = 'review-findings-gate-dismiss';
+const DISMISS_RE = new RegExp(`<!--\\s*${DISMISS_MARKER}:\\s*([0-9a-f]{6,64})\\s*-->`, 'gu');
+
+/**
+ * The marker text to dismiss one finding, ready to paste into a PR comment.
+ *
+ * @param {string} findingId
+ * @returns {string}
+ */
+export function dismissMarkerFor(findingId) {
+  return `<!-- ${DISMISS_MARKER}: ${findingId} -->`;
+}
+
+/**
+ * Every finding id anyone has dismissed anywhere in the PR's comments.
+ *
+ * Scans every comment, not just the sticky one — a dismissal is an ordinary,
+ * separate PR comment, timestamped and attributed like any other, precisely
+ * so it is an auditable human decision rather than bookkeeping this guard (or
+ * the reviewer) owns. More than one dismissal comment, or more than one
+ * marker in one comment, all accumulate; nothing here un-dismisses an id
+ * once dismissed in this PR's history.
+ *
+ * @param {StickyComment[]} comments
+ * @returns {Set<string>}
+ */
+export function collectDismissedFindingIds(comments) {
+  /** @type {Set<string>} */
+  const dismissed = new Set();
+  for (const comment of comments) {
+    if (typeof comment.body !== 'string') continue;
+    for (const match of comment.body.matchAll(DISMISS_RE)) {
+      if (match[1]) dismissed.add(match[1]);
+    }
+  }
+  return dismissed;
+}
 
 /**
  * @typedef {object} StickyComment
@@ -173,9 +234,9 @@ function describeError(error) {
 }
 
 /**
- * @typedef {{ outcome: 'pass' }} PassResult
+ * @typedef {{ outcome: 'pass', dismissed?: DecodedFinding[] }} PassResult
  * @typedef {{ outcome: 'retry', reason: string }} RetryResult
- * @typedef {{ outcome: 'fail', reason: string, findings?: DecodedFinding[] }} FailResult
+ * @typedef {{ outcome: 'fail', reason: string, findings?: DecodedFinding[], dismissed?: DecodedFinding[] }} FailResult
  */
 
 /**
@@ -184,7 +245,11 @@ function describeError(error) {
  *
  * `outcome: 'retry'` is reserved for the two ordinary post-push states
  * (POPS-2661 modes 1 and 2); everything else this cannot make sense of is
- * `'fail'`, never `'pass'` — see the file header.
+ * `'fail'`, never `'pass'` — see the file header. A finding whose id has been
+ * dismissed (see "THE ESCAPE HATCH" above and POPS-2669) is excluded from
+ * what blocks, but is always reported back on `dismissed` — on a pass too —
+ * so a dismissal that is silently doing nothing (the id never matched) or
+ * silently doing a lot (several findings waived) is visible either way.
  *
  * @param {{ comments: StickyComment[], headSha: string }} args
  * @returns {PassResult | RetryResult | FailResult}
@@ -221,16 +286,22 @@ export function evaluateReviewState({ comments, headSha }) {
   // literal `'open'` instead would silently pass a typo, a future status this
   // guard does not yet know about, or corrupted-but-still-string-valued data —
   // exactly the fail-open this guard exists to refuse (POPS-2661 review).
-  const open = decoded.state.findings.filter((f) => f.status !== 'resolved');
+  const everOpen = decoded.state.findings.filter((f) => f.status !== 'resolved');
+
+  const dismissedIds = collectDismissedFindingIds(comments);
+  const dismissed = everOpen.filter((f) => f.id !== undefined && dismissedIds.has(f.id));
+  const open = everOpen.filter((f) => !(f.id !== undefined && dismissedIds.has(f.id)));
+
   if (open.length > 0) {
     return {
       outcome: 'fail',
       reason: 'the reviewer has open findings against this head',
       findings: open,
+      ...(dismissed.length > 0 ? { dismissed } : {}),
     };
   }
 
-  return { outcome: 'pass' };
+  return { outcome: 'pass', ...(dismissed.length > 0 ? { dismissed } : {}) };
 }
 
 /**
@@ -434,6 +505,66 @@ export async function selfTest() {
     evaluateReviewState({ comments: twoComments, headSha: HEAD }).outcome === 'pass'
   );
 
+  // THE ESCAPE HATCH (POPS-2669): dismissing a finding by id removes it from
+  // what blocks, and only that id.
+  const twoOpenFindings = stateComment({
+    last_reviewed_sha: HEAD,
+    findings: [
+      { id: 'aaaaaa111111', status: 'open', title: 'a stale finding' },
+      { id: 'bbbbbb222222', status: 'open', title: 'a real one' },
+    ],
+  });
+  const dismissedOnly = evaluateReviewState({
+    comments: [twoOpenFindings, { body: dismissMarkerFor('aaaaaa111111') }],
+    headSha: HEAD,
+  });
+  check(
+    'dismissing the only open finding passes',
+    evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'aaaaaa111111', status: 'open', title: 'a stale finding' }],
+        }),
+        { body: dismissMarkerFor('aaaaaa111111') },
+      ],
+      headSha: HEAD,
+    }).outcome === 'pass'
+  );
+  check(
+    'dismissing one finding does not silently waive a different, still-open one',
+    dismissedOnly.outcome === 'fail' &&
+      (dismissedOnly.findings ?? []).length === 1 &&
+      dismissedOnly.findings?.[0]?.id === 'bbbbbb222222'
+  );
+  check(
+    'a dismissed finding is reported back, not just silently dropped',
+    (dismissedOnly.dismissed ?? []).some((f) => f.id === 'aaaaaa111111')
+  );
+  check(
+    'a dismiss marker for an id that never appears is a harmless no-op',
+    evaluateReviewState({
+      comments: [
+        stateComment({
+          last_reviewed_sha: HEAD,
+          findings: [{ id: 'bbbbbb222222', status: 'open', title: 'a real one' }],
+        }),
+        { body: dismissMarkerFor('cccccc333333') },
+      ],
+      headSha: HEAD,
+    }).outcome === 'fail'
+  );
+  check(
+    'dismissMarkerFor output round-trips through collectDismissedFindingIds',
+    collectDismissedFindingIds([{ body: dismissMarkerFor('abc123def456') }]).has('abc123def456')
+  );
+  check(
+    'garbage where a dismiss id should be is ignored, not matched',
+    !collectDismissedFindingIds([{ body: '<!-- review-findings-gate-dismiss: not-hex! -->' }]).has(
+      'not-hex!'
+    )
+  );
+
   // pollForReviewState: a transient retry that clears within budget passes,
   // and is proven to have actually retried rather than passing on the first
   // look.
@@ -587,6 +718,12 @@ async function main() {
     onRetry: (reason) => console.log(`Waiting for the reviewer: ${reason}`),
   });
 
+  for (const finding of result.dismissed ?? []) {
+    console.log(
+      `Dismissed via ${dismissMarkerFor(finding.id ?? '?')}: ${finding.file ?? ''}: ${finding.title ?? ''}`
+    );
+  }
+
   if (result.outcome === 'pass') {
     console.log('No open findings; the reviewer is current with the PR head.');
     return;
@@ -597,6 +734,9 @@ async function main() {
   for (const finding of result.findings ?? []) {
     console.error(
       `- [${finding.severity ?? 'unknown'}] ${finding.id ?? '?'} ${finding.file ?? ''}: ${finding.title ?? ''}`
+    );
+    console.error(
+      `  believed stale (POPS-2669)? dismiss with: ${dismissMarkerFor(finding.id ?? '?')}`
     );
   }
   process.exitCode = 1;
