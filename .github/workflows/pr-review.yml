@@ -131,15 +131,34 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          # This workflow always posts as this login via `secrets.GITHUB_TOKEN`.
+          # It is not a value any PR commenter can produce, so requiring it here
+          # is what makes the marker match below unforgeable rather than a bare
+          # substring check. Must match `REVIEWER_LOGIN` in
+          # scripts/ci/check-review-findings.mjs, the other consumer of this
+          # same sticky comment.
+          REVIEWER_LOGIN: github-actions[bot]
         run: |
           mkdir -p "$RUNNER_TEMP/review"
           # --slurp and --jq are mutually exclusive in gh, so the filtering is a
           # separate jq call. Slurping is still required: without it gh applies
           # a filter to each page independently, so on a PR with more than one
           # page of comments the wrong (older) comment is picked.
+          #
+          # Two independent checks, both required (POPS-2675): the body must
+          # match the real `<!-- pr-review-state: ... -->` HTML comment, not a
+          # bare substring of the word "pr-review-state" (a comment merely
+          # *mentioning* it in prose matched before), and the author must be
+          # this workflow's own login (an ordinary PR comment can otherwise
+          # forge a fully valid-looking state block). Missing either check let
+          # this step patch a human's comment with review content, live, twice.
           if gh api --paginate --slurp "repos/$REPO/issues/$PR/comments" \
                > "$RUNNER_TEMP/comments.json"; then
-            jq '[.[][]] | map(select(.body | contains("pr-review-state")))
+            jq --arg login "$REVIEWER_LOGIN" \
+              '[.[][]] | map(select(
+                  .user.login == $login
+                  and (.body | test("<!--\\s*pr-review-state:\\s*[A-Za-z0-9+/=]+\\s*-->"))
+                ))
                 | last // empty' \
               < "$RUNNER_TEMP/comments.json" > "$RUNNER_TEMP/found.json"
           else
