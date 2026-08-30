@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { type ComponentPropsWithoutRef, forwardRef, useMemo, useState } from 'react';
 
 import {
   Badge,
@@ -18,6 +18,7 @@ import {
 
 import { unwrap } from '../../finance-api-helpers.js';
 import { correctionsList } from '../../finance-api/index.js';
+import { fetchAllPages } from '../../lib/fetch-all-pages';
 
 import type { Correction } from '@pops/finance';
 
@@ -25,7 +26,7 @@ export type CorrectionRule = Correction;
 
 interface CorrectionsListResult {
   data: CorrectionRule[];
-  pagination: { total: number; limit: number; offset: number };
+  pagination: { total: number; limit: number; offset: number; hasMore: boolean };
 }
 
 export interface RulePickerProps {
@@ -45,16 +46,20 @@ export interface RulePickerProps {
  * proposal dialog when the user wants to target an existing rule with an
  * edit/disable/remove operation.
  *
- * Paginated list is fetched lazily on popover open to avoid paying for the
- * network round-trip when the dialog is dismissed without adding a targeted op.
+ * The list is fetched lazily on popover open, to avoid paying for the network
+ * round-trip when the dialog is dismissed without adding a targeted op — but it
+ * is fetched WHOLE. Filtering happens client-side, so one page would make
+ * "No matching rules." a statement about an arbitrary confidence-ranked slice
+ * rather than about the rules that exist, in the one control whose job is
+ * finding an existing rule.
  */
 function useRulePickerState(props: RulePickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const listQuery = useQuery({
-    queryKey: ['finance', 'corrections', 'list', { limit: 200, offset: 0 }],
+    queryKey: ['finance', 'corrections', 'list', 'all'],
     queryFn: async (): Promise<CorrectionsListResult> =>
-      unwrap(await correctionsList({ query: { limit: 200, offset: 0 } })),
+      fetchAllPages(async (page) => unwrap(await correctionsList({ query: page }))),
     enabled: open,
     staleTime: 30_000,
   });
@@ -117,45 +122,54 @@ export function RulePicker(props: RulePickerProps) {
   );
 }
 
-interface RulePickerTriggerProps {
+interface RulePickerTriggerProps extends ComponentPropsWithoutRef<typeof Button> {
   open: boolean;
-  disabled?: boolean;
   selectedRule: CorrectionRule | null;
   placeholder?: string;
 }
 
-function RulePickerTrigger({ open, disabled, selectedRule, placeholder }: RulePickerTriggerProps) {
-  return (
-    <Button
-      variant="outline"
-      role="combobox"
-      aria-expanded={open}
-      disabled={disabled}
-      className="w-full justify-between font-normal"
-    >
-      {selectedRule ? (
-        <span className="flex items-center gap-2 truncate">
-          <code className="truncate rounded bg-muted px-1 py-0.5 text-xs">
-            {selectedRule.descriptionPattern}
-          </code>
-          {selectedRule.entityName && (
-            <Badge variant="outline" className="text-xs shrink-0">
-              {selectedRule.entityName}
-            </Badge>
-          )}
-          {!selectedRule.isActive && (
-            <Badge variant="secondary" className="text-xs shrink-0">
-              disabled
-            </Badge>
-          )}
-        </span>
-      ) : (
-        <span className="text-muted-foreground">{placeholder ?? 'Pick an existing rule...'}</span>
-      )}
-      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-    </Button>
-  );
-}
+/**
+ * Forwards the ref and every remaining prop onto the button. `PopoverTrigger
+ * asChild` merges its handlers onto this element, so a component that
+ * destructured its own props and dropped the rest left the trigger inert — the
+ * popover could not be opened at all.
+ */
+const RulePickerTrigger = forwardRef<HTMLButtonElement, RulePickerTriggerProps>(
+  function RulePickerTrigger({ open, disabled, selectedRule, placeholder, ...rest }, ref) {
+    return (
+      <Button
+        {...rest}
+        ref={ref}
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        disabled={disabled}
+        className="w-full justify-between font-normal"
+      >
+        {selectedRule ? (
+          <span className="flex items-center gap-2 truncate">
+            <code className="truncate rounded bg-muted px-1 py-0.5 text-xs">
+              {selectedRule.descriptionPattern}
+            </code>
+            {selectedRule.entityName && (
+              <Badge variant="outline" className="text-xs shrink-0">
+                {selectedRule.entityName}
+              </Badge>
+            )}
+            {!selectedRule.isActive && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                disabled
+              </Badge>
+            )}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">{placeholder ?? 'Pick an existing rule...'}</span>
+        )}
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    );
+  }
+);
 
 interface RulePickerListProps {
   isLoading: boolean;
