@@ -34,6 +34,7 @@ export interface RotationCycleLog {
   targetFreeGb: number;
   skippedReason: string | null;
   marked: RotationMovieRef[];
+  skippedForOvershoot: RotationMovieRef[];
   removed: RotationMovieRef[];
   added: RotationMovieRef[];
   failed: RotationFailedMovieRef[];
@@ -53,12 +54,14 @@ export interface RotationLogStats {
 function encodeDetails(result: RotationCycleLog): string | null {
   const hasDetails =
     result.marked.length > 0 ||
+    result.skippedForOvershoot.length > 0 ||
     result.removed.length > 0 ||
     result.added.length > 0 ||
     result.failed.length > 0;
   if (!hasDetails) return null;
   return JSON.stringify({
     marked: result.marked,
+    skippedForOvershoot: result.skippedForOvershoot,
     removed: result.removed,
     added: result.added,
     failed: result.failed,
