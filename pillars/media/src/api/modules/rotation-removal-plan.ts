@@ -27,7 +27,8 @@ export interface RemovalPlan {
   skippedForOvershoot: PlannedRemoval[];
   eligibleCount: number;
   /**
-   * How many of the eligible movies actually carry pressure. The gap between
+   * How many of the eligible movies actually carry pressure. Both counts are
+   * zero when there is no deficit: nothing is ranked at all in that case. The gap between
    * this and `eligibleCount` is the grace-window and unknown-age tail, which is
    * off limits — a deficit larger than what this covers goes unmet by design.
    */
@@ -79,15 +80,26 @@ export async function planRemoval(
   const leavingGb = rotationRemovalQueries.getLeavingMovieSizeGb(db, movieSizes);
   const deficitGb = calculateRemovalDeficit(targetFreeGb, freeSpaceGb, leavingGb);
 
+  // Answer before going near Radarr's queue. Ranking a library nobody has asked
+  // to shrink would let a transient failure of the queue endpoint throw out of
+  // the whole cycle, taking the addition phase — which needs none of this — down
+  // with it.
+  if (deficitGb <= 0) {
+    return {
+      deficitGb,
+      leavingGb,
+      toMark: [],
+      skippedForOvershoot: [],
+      eligibleCount: 0,
+      removableCount: 0,
+    };
+  }
+
   const downloadingIds = await getDownloadingTmdbIds(client);
   const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
   const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays });
   const removable = removableOnly(ranked);
   const counts = { eligibleCount: eligible.length, removableCount: removable.length };
-  if (deficitGb <= 0) {
-    return { deficitGb, leavingGb, toMark: [], skippedForOvershoot: [], ...counts };
-  }
-
   const rankOf = new Map(ranked.map((candidate, index) => [candidate.tmdbId, index + 1]));
   const { selected, skipped } = selectForDeficit(
     removable,

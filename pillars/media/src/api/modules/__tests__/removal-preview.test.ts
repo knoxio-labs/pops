@@ -152,6 +152,22 @@ describe('previewRemoval', () => {
     expect(preview.plan?.removableCount).toBe(LIBRARY.length);
   });
 
+  /**
+   * A cycle that needs no removal still runs an addition phase, and that phase
+   * needs nothing from Radarr's queue — so a queue outage must not reach it.
+   */
+  it('does not touch Radarr for a ranking nobody asked for', async () => {
+    rotationSettingsService.setMany(opened.db, [{ key: 'rotation_target_free_gb', value: '10' }]);
+
+    const preview = await previewRemoval(opened.db);
+
+    expect(preview.plan?.deficitGb).toBe(0);
+    expect(preview.plan?.toMark).toEqual([]);
+    expect(preview.plan?.eligibleCount).toBe(0);
+    const queried = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(queried.some((url) => url.includes('/queue'))).toBe(false);
+  });
+
   it('says why rather than guessing when Radarr is not configured', async () => {
     delete process.env['RADARR_URL'];
     clearStatusCache();
