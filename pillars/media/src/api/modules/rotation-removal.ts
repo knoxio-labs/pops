@@ -1,7 +1,8 @@
 /**
  * Radarr-backed removal helpers for the rotation cycle (api-layer).
  *
- * Wraps the resolved Radarr client: free disk space, per-movie sizes,
+ * Wraps the resolved Radarr client: free disk space, per-movie sizes and
+ * acquisition dates,
  * the active download set, and the expiry sweep that deletes `leaving` movies
  * (with files) once their window elapses and clears their POPS rotation flags.
  * Ported from the monolith `removal-selection.ts` (the Radarr parts). The pure
@@ -86,14 +87,41 @@ export async function getRadarrDiskSpace(
   return bytesToGb(disk.freeSpace);
 }
 
-/** Map of TMDB id → size in GB for every Radarr movie with a file on disk. */
-export async function getRadarrMovieSizes(client: RadarrClient): Promise<MovieSizeMap> {
+/** Map of TMDB id → the ISO timestamp the movie was acquired. */
+export type MovieAcquiredMap = Map<number, string>;
+
+/**
+ * What one `/movie` read tells the cycle: how big each file is, and when each
+ * movie was acquired. Both come from the same fetch so they cannot disagree.
+ */
+export interface RadarrMovieFacts {
+  sizes: MovieSizeMap;
+  acquiredAt: MovieAcquiredMap;
+}
+
+/**
+ * Sizes and acquisition dates for every Radarr movie with a file on disk.
+ *
+ * Acquisition is `movie.added` rather than `movieFile.dateAdded`. On the live
+ * library `added` is earlier for all 676 file-bearing movies, and `dateAdded`
+ * clusters in a single fortnight — the signature of a volume migration
+ * re-importing pre-existing files, which resets the file's recorded date and
+ * its birth time alike. `added` is the one field that migration did not touch.
+ *
+ * Its known error, accepted deliberately: `added` is when the movie entered
+ * Radarr, not when the file arrived, so a movie added while unmonitored and
+ * downloaded much later reads as older than it is.
+ */
+export async function getRadarrMovieFacts(client: RadarrClient): Promise<RadarrMovieFacts> {
   const radarrMovies = await client.getMovies();
-  const map: MovieSizeMap = new Map();
+  const sizes: MovieSizeMap = new Map();
+  const acquiredAt: MovieAcquiredMap = new Map();
   for (const m of radarrMovies) {
-    if (m.sizeOnDisk && m.sizeOnDisk > 0) map.set(m.tmdbId, bytesToGb(m.sizeOnDisk));
+    if (!m.sizeOnDisk || m.sizeOnDisk <= 0) continue;
+    sizes.set(m.tmdbId, bytesToGb(m.sizeOnDisk));
+    if (m.added) acquiredAt.set(m.tmdbId, m.added);
   }
-  return map;
+  return { sizes, acquiredAt };
 }
 
 /** TMDB ids currently downloading in Radarr (queue ↔ movie-list join). */

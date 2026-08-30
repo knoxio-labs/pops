@@ -3,8 +3,9 @@
  *
  * One cycle: batch-sync sources → sweep expired `leaving` movies (delete from
  * Radarr) → measure free space on the volume holding the Radarr root folder →
- * mark eligible movies `leaving` to cover the deficit, stepping over a pick
- * that would overshoot it when something further down still fits → re-measure
+ * rank the eligible movies by removal pressure and mark enough of them
+ * `leaving` to cover the deficit, stepping over a pick that would overshoot it
+ * when something further down still fits → re-measure
  * that volume → add up to the daily cap of candidates when space allows. Returns a {@link RotationCycleResult} the scheduler writes
  * to the rotation log. Ported from the monolith `rotation-cycle.ts`; repointed
  * onto the env-only Radarr client + the pillar's `rotation_settings` kv table.
@@ -25,10 +26,12 @@ import {
   type RotationMovieRef,
   selectForDeficit,
 } from './rotation-cycle-types.js';
+import { rankForRemoval } from './rotation-removal-ranking.js';
 import {
   getDownloadingTmdbIds,
   getRadarrDiskSpace,
-  getRadarrMovieSizes,
+  getRadarrMovieFacts,
+  type MovieAcquiredMap,
   processExpiredMovies,
   RotationDiskSelectionError,
 } from './rotation-removal.js';
@@ -43,7 +46,9 @@ interface MarkLeavingArgs {
   freeSpaceGb: number;
   targetFreeGb: number;
   leavingDays: number;
+  graceDays: number;
   movieSizes: MovieSizeMap;
+  acquiredAt: MovieAcquiredMap;
 }
 
 async function markLeaving(
@@ -51,16 +56,17 @@ async function markLeaving(
   client: RadarrClient,
   args: MarkLeavingArgs
 ): Promise<MarkLeavingOutcome> {
-  const { freeSpaceGb, targetFreeGb, leavingDays, movieSizes } = args;
+  const { freeSpaceGb, targetFreeGb, leavingDays, graceDays, movieSizes, acquiredAt } = args;
   const leavingSizeGb = rotationRemovalQueries.getLeavingMovieSizeGb(db, movieSizes);
   const deficit = calculateRemovalDeficit(targetFreeGb, freeSpaceGb, leavingSizeGb);
   if (deficit <= 0) return { marked: [], skipped: [] };
 
   const downloadingIds = await getDownloadingTmdbIds(client);
   const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
+  const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays });
 
   const { selected, skipped } = selectForDeficit(
-    eligible,
+    ranked,
     (movie) => movieSizes.get(movie.tmdbId) ?? 0,
     deficit
   );
@@ -158,12 +164,14 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
   }
   const { freeSpaceGb, rootFolderPath } = measured;
 
-  const movieSizes = await getRadarrMovieSizes(client);
+  const { sizes: movieSizes, acquiredAt } = await getRadarrMovieFacts(client);
   const marked = await markLeaving(db, client, {
     freeSpaceGb,
     targetFreeGb,
     leavingDays,
+    graceDays: policy.protectedDays,
     movieSizes,
+    acquiredAt,
   });
 
   const postFreeSpaceGb = await reCheckFreeSpace(client, rootFolderPath, freeSpaceGb);

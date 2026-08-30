@@ -8,6 +8,21 @@ export interface RadarrMovie {
   hasFile: boolean;
   /** Size of the movie file on disk in bytes (0 if no file). */
   sizeOnDisk?: number;
+  /**
+   * When the movie was added to Radarr. The pillar's own `movies.created_at`
+   * cannot stand in for this: a bulk import wrote a near-constant value across
+   * the library, which is what left the removal order sorting alphabetically
+   * by rowid (POPS-2578).
+   */
+  added?: string;
+  movieFile?: {
+    /**
+     * When Radarr recorded the file. Later than {@link RadarrMovie.added} for
+     * every movie on the live library, and reset by a volume migration that
+     * re-imports existing files — so it is not the acquisition date.
+     */
+    dateAdded?: string;
+  };
 }
 
 /** Disk space info returned by Radarr /diskspace endpoint. */
