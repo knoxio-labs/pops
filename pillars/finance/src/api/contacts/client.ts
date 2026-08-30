@@ -48,6 +48,7 @@ import {
   NO_CREDENTIAL_REASON,
   UNAUTHORIZED_REASON,
 } from '../pillars/outbound.js';
+import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
 /** The contacts pillar id, as registered with the registry. */
 export const CONTACTS_PILLAR_ID = 'contacts';
@@ -149,34 +150,7 @@ export interface ContactsClient {
   updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity>;
 }
 
-/**
- * Thrown when a contact pre-create fails for a reason expected to clear on
- * retry — contacts unreachable, mid-recovery (`degraded`), or rate-limited
- * (`rate-limited`, 429). The ONE failure mode `commitImport` degrades to an
- * outbox row instead of aborting; retrying the same `{ name, type }` later is
- * expected to eventually succeed.
- */
-export class ContactsUnavailableError extends Error {
-  override readonly name = 'ContactsUnavailableError';
-  constructor(detail: string, operation = 'entity pre-create') {
-    super(`contacts pillar unavailable during ${operation}: ${detail}`);
-  }
-}
-
-/**
- * Thrown when a contact pre-create fails for a reason retrying will NEVER
- * fix — a malformed request, an auth failure, or an SDK/contacts contract
- * mismatch. Retrying `createOrFetchByName` with the same `{ name, type }`
- * would fail identically forever, so this must abort the commit loudly
- * rather than degrade to the outbox the way {@link ContactsUnavailableError}
- * does.
- */
-export class ContactsPermanentError extends Error {
-  override readonly name = 'ContactsPermanentError';
-  constructor(detail: string, operation = 'entity pre-create') {
-    super(`contacts pillar rejected ${operation}: ${detail}`);
-  }
-}
+export { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
 /** The non-ok, non-conflict result kinds this classifier sorts. */
 type ContactsFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;

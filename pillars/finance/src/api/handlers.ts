@@ -4,8 +4,10 @@
  * Logic lives here (not inline in `app.ts`) so tests can call into the
  * shape directly without booting Express.
  */
+import { entityPrecreateOutboxService } from '../db/index.js';
 import { getLastImportInfo } from '../db/services/transactions-reads.js';
 import { getPillarRegistry } from './pillars/registry.js';
+import { resolveServiceAccountKey } from './pillars/service-account.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
@@ -57,6 +59,28 @@ export interface HealthResponse {
     daysSinceLastImport: number | null;
     stale: boolean;
   };
+  /**
+   * The contacts seam, which is the one thing about this pillar that can be
+   * completely broken while everything it serves looks fine.
+   *
+   * A finance with no service-account key answers every request normally and
+   * silently cannot create a single contact — which is how 44 outbox rows
+   * dead-lettered and 55 transactions ended up holding placeholder entity ids
+   * before anyone noticed (POPS-2689). `ok` deliberately stays `true`: the
+   * pillar IS serving, and the container healthcheck must not restart-loop on
+   * a configuration gap. This block is the signal; reading it is an ops job,
+   * not the orchestrator's.
+   */
+  contacts: {
+    /** Whether this process holds a key to call contacts (or any sibling) with. */
+    serviceAccountKey: 'present' | 'missing';
+    outbox: {
+      /** Placeholder entities still awaiting a real contact id. */
+      pending: number;
+      /** Placeholders given up on. Non-zero means real rows hold ids that resolve to nothing. */
+      deadLettered: number;
+    };
+  };
 }
 
 export interface PillarsResponse {
@@ -74,6 +98,7 @@ export function makeRequestHandler(deps: FinanceApiDeps): {
       // bogus 200 OK that hides a broken connection.
       deps.financeDb.raw.prepare('SELECT 1').get();
       const { lastEditedTime, daysSinceLastImport } = getLastImportInfo(deps.financeDb.db);
+      const outbox = entityPrecreateOutboxService.countByStatus(deps.financeDb.db);
       return {
         ok: true,
         status: 'ok',
@@ -86,6 +111,10 @@ export function makeRequestHandler(deps: FinanceApiDeps): {
           stale:
             lastEditedTime !== null &&
             (daysSinceLastImport === null || daysSinceLastImport >= IMPORT_STALE_THRESHOLD_DAYS),
+        },
+        contacts: {
+          serviceAccountKey: resolveServiceAccountKey() === undefined ? 'missing' : 'present',
+          outbox: { pending: outbox.pending, deadLettered: outbox.failed },
         },
       };
     },

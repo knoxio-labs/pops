@@ -41,6 +41,7 @@ export {
   TRANSACTION_TYPE_STAT_TILE,
   type TransactionType,
 } from './corrections-constants.js';
+export { PENDING_CONTACT_ID_PREFIX, isPendingContactId } from './entity-id.js';
 export { type ChangeSet, type ChangeSetOp } from './rest-corrections-schemas.js';
 export {
   parseAnzDescription,

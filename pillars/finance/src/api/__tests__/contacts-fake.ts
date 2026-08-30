@@ -59,6 +59,13 @@ export interface ContactsFakeOptions {
   seed?: SeedContact[];
   /** When true, every read returns `[]` and every create throws (contacts down). */
   unavailable?: boolean;
+  /**
+   * The `detail` the thrown {@link ContactsUnavailableError} carries. Defaults
+   * to `'unavailable'` (contacts is down). Pass `'no-credential'` to simulate
+   * the other shape — this process holding no service-account key, so nothing
+   * was sent at all — which callers are expected to treat differently.
+   */
+  unavailableDetail?: string;
 }
 
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
@@ -66,6 +73,7 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
   const created: { name: string; type: string }[] = [];
   const defaultTagWrites: { entityId: string; defaultTags: string[] }[] = [];
   let unavailable = options.unavailable ?? false;
+  const unavailableDetail = options.unavailableDetail ?? 'unavailable';
 
   function filter(query: { search?: string; type?: string }): ContactEntity[] {
     const search = query.search?.toLowerCase();
@@ -92,7 +100,7 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
     },
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       created.push({ name, type });
-      if (unavailable) throw new ContactsUnavailableError('unavailable');
+      if (unavailable) throw new ContactsUnavailableError(unavailableDetail);
       const existing = entities.find((e) => e.name.toLowerCase() === name.toLowerCase());
       if (existing) return { id: existing.id, name: existing.name, created: false };
       const fresh = toEntity({ name, type });

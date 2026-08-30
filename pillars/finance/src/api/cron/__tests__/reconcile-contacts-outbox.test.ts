@@ -23,6 +23,7 @@ import {
   type OpenedFinanceDb,
 } from '../../../db/index.js';
 import { makeContactsFake, type ContactsFake } from '../../__tests__/contacts-fake.js';
+import { ContactsPermanentError } from '../../contacts/errors.js';
 import { commitImport } from '../../modules/imports/commit.js';
 import {
   startReconcileContactsOutboxWorker,
@@ -255,23 +256,167 @@ describe('startReconcileContactsOutboxWorker', () => {
     expect(row.status).toBe('failed');
     expect(row.attempts).toBeGreaterThanOrEqual(2);
 
-    // A dead-lettered row is no longer selected by `listPending` — one more
-    // tick must not touch it (attempts stays put).
+    // A dead-lettered row is no longer selected by `listPending` — further
+    // ticks of the SAME worker must not touch it (attempts stays put). A new
+    // worker is a different matter: see the boot-requeue test below.
     const attemptsAtDeadLetter = row.attempts;
-    const handle2 = startReconcileContactsOutboxWorker({
-      db: opened.db,
-      contacts,
-      intervalMs: 1_000_000,
-      maxAttempts: 2,
-    });
-    await handle2.runOnce();
-    handle2.stop();
+    await handle.runOnce();
 
     const rowAfter = opened.raw
       .prepare('SELECT status, attempts FROM entity_precreate_outbox WHERE id = ?')
       .get(placeholderId) as { status: string; attempts: number };
     expect(rowAfter.status).toBe('failed');
     expect(rowAfter.attempts).toBe(attemptsAtDeadLetter);
+  });
+
+  /**
+   * POPS-2690. A dead-letter says "an operator needs to look at this", and the
+   * operator's fix — a mounted secret, a granted scope, a redeployed contacts —
+   * arrives as a restart. Without the boot requeue the fix is not retroactive:
+   * the placeholder ids the row left on real transactions and correction rules
+   * stay wrong forever.
+   */
+  it('requeues dead-lettered rows on boot, so a fixed cause is applied retroactively', async () => {
+    const placeholderId = seedOutboxRow('RequeueCo');
+    seedTransactionWithEntity('requeue-txn-1', placeholderId);
+    const contacts = makeContactsFake({ unavailable: true });
+
+    const downHandle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 2,
+    });
+    await downHandle.runOnce();
+    await downHandle.runOnce();
+    downHandle.stop();
+    expect(
+      opened.raw
+        .prepare('SELECT status FROM entity_precreate_outbox WHERE id = ?')
+        .get(placeholderId)
+    ).toEqual({ status: 'failed' });
+
+    // The cause is fixed, and the process restarts.
+    contacts.setUnavailable(false);
+    const upHandle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 2,
+    });
+    await upHandle.runOnce();
+    upHandle.stop();
+
+    const resolved = opened.raw
+      .prepare('SELECT status, resolved_entity_id FROM entity_precreate_outbox WHERE id = ?')
+      .get(placeholderId) as { status: string; resolved_entity_id: string | null };
+    expect(resolved.status).toBe('resolved');
+    expect(resolved.resolved_entity_id).not.toBeNull();
+    expect(getTransactionEntityId('requeue-txn-1')).toBe(resolved.resolved_entity_id);
+  });
+
+  /**
+   * POPS-2690. The boot requeue's premise is that a restart is the operator
+   * attention a dead-letter asked for. That is false for a request contacts
+   * refuses on its own terms — no restart changes its verdict — so such a row
+   * must dead-letter on the first refusal and stay dead through every
+   * subsequent boot, or the requeue re-attempts it `maxAttempts` times per
+   * deploy forever.
+   */
+  it('never requeues a row contacts refused, and gives up on it immediately', async () => {
+    const placeholderId = seedOutboxRow('Refused Co');
+    const contacts: ContactsFake = {
+      ...makeContactsFake(),
+      createOrFetchByName: () => Promise.reject(new ContactsPermanentError('bad-request')),
+    };
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 50,
+    });
+    await handle.runOnce();
+    handle.stop();
+
+    const row = opened.raw
+      .prepare(
+        'SELECT status, attempts, permanent_failure FROM entity_precreate_outbox WHERE id = ?'
+      )
+      .get(placeholderId) as { status: string; attempts: number; permanent_failure: number };
+    expect(row.status).toBe('failed');
+    expect(row.attempts).toBeLessThanOrEqual(2);
+    expect(row.permanent_failure).toBe(1);
+
+    // The restart that heals an outage-dead row must leave this one alone.
+    const rebooted = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 50,
+    });
+    rebooted.stop();
+
+    expect(
+      opened.raw
+        .prepare('SELECT status FROM entity_precreate_outbox WHERE id = ?')
+        .get(placeholderId)
+    ).toEqual({ status: 'failed' });
+  });
+
+  /**
+   * POPS-2690. `no-credential` means nothing was sent — contacts was never
+   * asked. Charging the row an attempt for it burns the whole cap on a fault
+   * only a redeploy can clear, which is how 44 production rows dead-lettered
+   * in under an hour.
+   */
+  it('defers on a missing service-account key instead of spending an attempt', async () => {
+    const placeholderId = seedOutboxRow('NoKeyCo');
+    const contacts = makeContactsFake({ unavailable: true, unavailableDetail: 'no-credential' });
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 2,
+    });
+    const stats = await handle.runOnce();
+    await handle.runOnce();
+    await handle.runOnce();
+    handle.stop();
+
+    expect(stats.deferred).toBe(1);
+    expect(stats.failed).toBe(0);
+    const row = opened.raw
+      .prepare('SELECT status, attempts, last_error FROM entity_precreate_outbox WHERE id = ?')
+      .get(placeholderId) as { status: string; attempts: number; last_error: string | null };
+    expect(row.status).toBe('pending');
+    expect(row.attempts).toBe(0);
+    expect(row.last_error).toContain('no-credential');
+  });
+
+  /**
+   * The credential is a fact about the process, not about a row: one refusal
+   * settles the tick. Without the early exit every row is walked (and stamped)
+   * on every tick for a call that cannot be made.
+   */
+  it('stops the tick at the first missing-credential refusal', async () => {
+    seedOutboxRow('NoKeyCo A');
+    seedOutboxRow('NoKeyCo B');
+    seedOutboxRow('NoKeyCo C');
+    const contacts = makeContactsFake({ unavailable: true, unavailableDetail: 'no-credential' });
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+    });
+    contacts.created.length = 0;
+    const stats = await handle.runOnce();
+    handle.stop();
+
+    expect(stats.deferred).toBe(3);
+    expect(contacts.created).toHaveLength(1);
   });
 
   it('reschedules on a recursive setTimeout and stops cleanly', async () => {

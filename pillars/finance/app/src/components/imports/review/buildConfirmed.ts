@@ -1,3 +1,5 @@
+import { isPendingContactId } from '@pops/finance';
+
 import { requiresEntity } from '../../../lib/transaction-type';
 
 import type { ConfirmedTransaction, ParsedTransaction } from '@pops/finance';
@@ -10,9 +12,17 @@ import type { ProcessedTransaction } from '../../../store/importStore';
  * a resolved merchant (`entityId` + `entityName`); the entity-optional types
  * commit without one. This is the single predicate behind both the commit
  * filter and the pre-commit count/notice, so the two can never drift (#3765).
+ *
+ * A `pending:contact:` id is not a resolved merchant, however complete the pair
+ * looks: it is the placeholder a commit wrote when contacts could not be
+ * reached, and a correction rule carrying one hands it to every future import
+ * of the same merchant. Committing on it writes a transaction whose entity
+ * resolves to nothing (POPS-2692).
  */
 export function isConfirmable(t: ProcessedTransaction): boolean {
-  return !requiresEntity(t.transactionType) || Boolean(t.entity?.entityId && t.entity?.entityName);
+  const entityId = t.entity?.entityId;
+  const hasEntity = Boolean(entityId && t.entity?.entityName && !isPendingContactId(entityId));
+  return !requiresEntity(t.transactionType) || hasEntity;
 }
 
 /**

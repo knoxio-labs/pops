@@ -94,3 +94,51 @@ describe('EntitySection — fixing a wrong auto-match', () => {
     expect(screen.queryByRole('button', { name: /create new entity/i })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * POPS-2692. The picker shows its placeholder for any value it cannot find,
+ * so a rule-matched row carrying a dead `pending:contact:` id looked exactly
+ * like a row nobody had assigned anything to.
+ */
+describe('EntitySection — an entity the picker cannot show', () => {
+  function ruleMatched(entityId: string): ProcessedTransaction {
+    return {
+      date: '2026-06-29',
+      description: 'APPLE.COM/BILL',
+      amount: -144.99,
+      account: 'ANZ Credit Card',
+      rawRow: '{"checksum":"apple"}',
+      checksum: 'apple',
+      entity: { entityId, entityName: 'Apple', matchType: 'learned', confidence: 0.95 },
+      status: 'matched',
+    };
+  }
+
+  it('says the entity was never created when the id is an outbox placeholder', () => {
+    renderSection({
+      transaction: ruleMatched('pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd'),
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(/“Apple” was never created in contacts/i);
+  });
+
+  it('says the contact is gone for a real id the loaded set does not hold', () => {
+    renderSection({ transaction: ruleMatched('ent-deleted') });
+
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(/“Apple” no longer exists in contacts/i);
+    expect(notice).not.toHaveTextContent(/never created/i);
+  });
+
+  it('stays quiet for an entity the picker can show', () => {
+    renderSection({ transaction: ruleMatched('ent-coles') });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('stays quiet while the entity list is still loading', () => {
+    renderSection({ transaction: ruleMatched('ent-beyond-the-page'), entities: undefined });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});

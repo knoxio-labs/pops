@@ -127,6 +127,29 @@ describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)',
     expect(dropped).toEqual([untyped]);
   });
 
+  /**
+   * POPS-2692. The production shape: a 95%-confidence correction rule whose
+   * `entityId` is an outbox placeholder. Both halves of the pair are present,
+   * so the old `entityId && entityName` gate passed it straight through to the
+   * commit — writing a purchase whose entity resolves to nothing.
+   */
+  it('drops a purchase whose entity id is a pending:contact placeholder', () => {
+    const placeholder = matched({
+      transactionType: 'purchase',
+      entity: {
+        entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+        entityName: 'Apple',
+        matchType: 'learned',
+        confidence: 0.95,
+      },
+    });
+    const { confirmed, dropped } = partitionConfirmable([placeholder]);
+
+    expect(confirmed).toHaveLength(0);
+    expect(dropped).toEqual([placeholder]);
+    expect(buildConfirmedTransactions([placeholder])).toHaveLength(0);
+  });
+
   it('keeps entity-optional and entity-resolved rows confirmed, dropped empty', () => {
     const withEntity = matched({ checksum: 'a' });
     const transfer = matched({
