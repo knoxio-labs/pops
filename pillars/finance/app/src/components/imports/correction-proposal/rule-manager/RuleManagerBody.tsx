@@ -12,10 +12,12 @@ interface RuleManagerBodyProps {
   onSearchChange: (v: string) => void;
   orderedMerged: CorrectionRule[];
   orderedFiltered: CorrectionRule[];
+  totalRules: number;
+  windowComplete: boolean;
   canDragReorder: boolean;
   selectedRuleId: string | null;
   onSelectRule: (ruleId: string) => void;
-  onReorderFullList: (reordered: CorrectionRule[]) => void;
+  onReorderFullList: (reordered: CorrectionRule[], movedRuleId: string) => void;
   localOps: LocalOp[];
   selectedOp: LocalOp | null;
   onChangeSelectedOp: (clientId: string, mutator: (op: LocalOp) => LocalOp) => void;
@@ -80,6 +82,8 @@ export function RuleManagerBody(props: RuleManagerBodyProps) {
         onSearchChange={props.onSearchChange}
         orderedMerged={props.orderedMerged}
         orderedFiltered={props.orderedFiltered}
+        totalRules={props.totalRules}
+        windowComplete={props.windowComplete}
         canDragReorder={props.canDragReorder}
         selectedRuleId={props.selectedRuleId}
         onSelectRule={props.onSelectRule}

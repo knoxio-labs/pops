@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyBrowsePriorityMove,
   applyBrowsePriorityReorder,
   compareRulesForBrowse,
   effectiveRulePriority,
+  planBrowsePriorityMove,
   sortRulesForBrowseDisplay,
 } from './correction-browse-reorder';
 
@@ -103,5 +105,108 @@ describe('correction-browse-reorder', () => {
       },
     ];
     expect(effectiveRulePriority(r, ops)).toBe(30);
+  });
+});
+
+/**
+ * The browse window is capped and ordered by confidence, so the rules on screen
+ * are a cross-section of priority order. Renumbering that cross-section rewrites
+ * the matcher's ordering for rules nobody looked at, which is why a partial
+ * window plans a single move instead.
+ */
+describe('planBrowsePriorityMove', () => {
+  const a = rule({ id: 'a', descriptionPattern: 'A', priority: 100 });
+  const b = rule({ id: 'b', descriptionPattern: 'B', priority: 200 });
+  const c = rule({ id: 'c', descriptionPattern: 'C', priority: 300 });
+
+  it('lands a rule between its new neighbours', () => {
+    expect(planBrowsePriorityMove([a, c, b], 'c', [])).toEqual({
+      kind: 'move',
+      ruleId: 'c',
+      priority: 150,
+    });
+  });
+
+  it('emits exactly one edit op, leaving every other rule un-renumbered', () => {
+    const move = planBrowsePriorityMove([a, c, b], 'c', []);
+    if (move.kind !== 'move') throw new Error('expected a move');
+
+    const ops = applyBrowsePriorityMove(move, c, []);
+
+    expect(ops).toHaveLength(1);
+    expect(ops[0]?.kind === 'edit' && ops[0].targetRuleId).toBe('c');
+    expect(ops[0]?.kind === 'edit' && ops[0].data.priority).toBe(150);
+  });
+
+  it('appends past the last rule with a step, not a renumber', () => {
+    expect(planBrowsePriorityMove([b, c, a], 'a', [])).toEqual({
+      kind: 'move',
+      ruleId: 'a',
+      priority: 310,
+    });
+  });
+
+  it('halves the first priority when dropped at the top', () => {
+    expect(planBrowsePriorityMove([b, a, c], 'b', [])).toEqual({
+      kind: 'move',
+      ruleId: 'b',
+      priority: 50,
+    });
+  });
+
+  it('refuses rather than renumber when the neighbours are adjacent', () => {
+    const tight = [
+      rule({ id: 'x', descriptionPattern: 'X', priority: 10 }),
+      rule({ id: 'z', descriptionPattern: 'Z', priority: 40 }),
+      rule({ id: 'y', descriptionPattern: 'Y', priority: 11 }),
+    ];
+
+    expect(planBrowsePriorityMove(tight, 'z', []).kind).toBe('blocked');
+  });
+
+  it('refuses rather than renumber when there is no room above the first rule', () => {
+    const atZero = [
+      rule({ id: 'z', descriptionPattern: 'Z', priority: 50 }),
+      rule({ id: 'x', descriptionPattern: 'X', priority: 1 }),
+    ];
+
+    expect(planBrowsePriorityMove(atZero, 'z', []).kind).toBe('blocked');
+  });
+
+  it("reads a pending edit as the neighbour's current priority", () => {
+    const ops: LocalOp[] = [
+      {
+        kind: 'edit',
+        clientId: 'e1',
+        targetRuleId: 'b',
+        targetRule: b,
+        data: { priority: 900 },
+        dirty: true,
+      },
+    ];
+
+    expect(planBrowsePriorityMove([a, c, b], 'c', ops)).toEqual({
+      kind: 'move',
+      ruleId: 'c',
+      priority: 500,
+    });
+  });
+
+  it('updates the existing edit op instead of stacking a second one', () => {
+    const ops: LocalOp[] = [
+      {
+        kind: 'edit',
+        clientId: 'e1',
+        targetRuleId: 'c',
+        targetRule: c,
+        data: { priority: 999 },
+        dirty: true,
+      },
+    ];
+
+    const next = applyBrowsePriorityMove({ kind: 'move', ruleId: 'c', priority: 150 }, c, ops);
+
+    expect(next).toHaveLength(1);
+    expect(next[0]?.kind === 'edit' && next[0].data.priority).toBe(150);
   });
 });
