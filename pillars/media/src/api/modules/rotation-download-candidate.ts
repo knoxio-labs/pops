@@ -9,8 +9,9 @@
  * `downloadAndProtect` path) and the pillar `(db, …)` services.
  *
  * The `rotationStatus='protected'` write keeps a downloaded movie out of the
- * removal phase — `rotation-removal-queries.getEligibleForRemoval` skips
- * unexpired `protected` rows.
+ * removal phase for `protectedDays`: `getEligibleForRemoval` skips a
+ * `protected` row only while its `rotationExpiresAt` is still in the future,
+ * so the expiry is written with the status and never left null.
  */
 import {
   type MediaDb,
@@ -23,6 +24,7 @@ import { getRadarrClient, getRotationDefaults } from '../clients/arr/index.js';
 import { getImageCache, getTmdbClient } from '../clients/tmdb/index.js';
 import { ConflictError } from '../shared/errors.js';
 import { addMovie } from './library-mutations.js';
+import { getProtectionExpiresAt } from './rotation-cycle-policy.js';
 
 import type { RotationCandidateRow } from '../../db/index.js';
 
@@ -74,7 +76,7 @@ function ensureLibraryRow(db: MediaDb, candidate: RotationCandidateRow): MovieRo
 
 function protectCandidateMovie(db: MediaDb, candidate: RotationCandidateRow): void {
   const movie = ensureLibraryRow(db, candidate);
-  moviesService.setRotationStatus(db, movie.id, 'protected');
+  moviesService.setRotationStatus(db, movie.id, 'protected', getProtectionExpiresAt(db));
 }
 
 /**

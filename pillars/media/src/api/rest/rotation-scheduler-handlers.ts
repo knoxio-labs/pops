@@ -7,10 +7,16 @@
  * `disk-space` degrades to `{ available: false, disks: [] }` when Radarr is
  * unconfigured or unreachable (parity with the monolith); `cancelLeaving`
  * returns `success:false` rather than 404 when the movie is not `leaving`.
+ *
+ * A cancel grants a `protectedDays` reprieve rather than merely clearing the
+ * flags — a bare clear returns the movie to the eligible set at the rank it
+ * already held, so the next cycle re-marks it and the operator has to cancel it
+ * again every night.
  */
 import { type MediaDb, rotationLogService, rotationRemovalQueries } from '../../db/index.js';
 import { getRadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
 import { rotationScheduler } from '../cron/rotation-scheduler.js';
+import { getProtectionExpiresAt } from '../modules/rotation-cycle-policy.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -84,7 +90,11 @@ export function makeRotationSchedulerHandlers(db: MediaDb) {
 
     schedulerCancelLeaving: ({ params }: Req['schedulerCancelLeaving']) =>
       runHttp(() => {
-        const updated = rotationRemovalQueries.cancelLeaving(db, params.movieId);
+        const updated = rotationRemovalQueries.cancelLeaving(
+          db,
+          params.movieId,
+          getProtectionExpiresAt(db)
+        );
         return {
           status: 200 as const,
           body: {

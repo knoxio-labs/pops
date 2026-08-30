@@ -31,7 +31,7 @@ import {
 } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { TmdbClient } from '../clients/tmdb/client.js';
-import { makeClient } from './test-utils.js';
+import { futureIso, makeClient } from './test-utils.js';
 
 const { getTmdbClientMock } = vi.hoisted(() => ({ getTmdbClientMock: vi.fn<() => TmdbClient>() }));
 
@@ -375,7 +375,7 @@ describe('discovery — session assembly with the trending-plex shelf', () => {
     const leaving = (
       await client().movies.create({ tmdbId: nextId(), title: 'Expiring', genres: ['Action'] })
     ).data;
-    moviesService.setRotationStatus(mediaDb.db, leaving.id, 'leaving');
+    moviesService.setRotationStatus(mediaDb.db, leaving.id, 'leaving', futureIso());
     rotationSettingsService.set(mediaDb.db, 'rotation_enabled', 'true');
     stubTmdbShelves();
     // No token seeded → getTrendingFromPlex returns null → shelf yields [].

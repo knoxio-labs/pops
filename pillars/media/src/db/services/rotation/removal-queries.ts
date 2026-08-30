@@ -148,14 +148,33 @@ export function clearRotationStatus(db: MediaDb, id: number): void {
 /**
  * Clear `leaving` status for a movie. Returns `true` when the movie existed and
  * was actually in the `leaving` state, `false` otherwise.
+ *
+ * Pass `reprieveUntil` to convert the cancel into a protection expiring at that
+ * timestamp instead of simply clearing the flags. Without one the movie returns
+ * to the eligible set at exactly the rank it held, so the next cycle with the
+ * same deficit marks it again and the operator's decision survives until 03:00.
+ * The watchlist path deliberately passes nothing: a watchlisted movie is
+ * already a hard exclusion in {@link getEligibleForRemoval}, so a reprieve on
+ * top would only add an expiry that outlives the reason for it.
  */
-export function cancelLeaving(db: MediaDb, movieId: number): boolean {
+export function cancelLeaving(db: MediaDb, movieId: number, reprieveUntil?: string): boolean {
   const movie = db
     .select({ id: movies.id, rotationStatus: movies.rotationStatus })
     .from(movies)
     .where(eq(movies.id, movieId))
     .get();
   if (!movie || movie.rotationStatus !== 'leaving') return false;
-  clearRotationStatus(db, movieId);
+  if (reprieveUntil === undefined) {
+    clearRotationStatus(db, movieId);
+    return true;
+  }
+  db.update(movies)
+    .set({
+      rotationStatus: 'protected',
+      rotationExpiresAt: reprieveUntil,
+      rotationMarkedAt: new Date().toISOString(),
+    })
+    .where(eq(movies.id, movieId))
+    .run();
   return true;
 }
