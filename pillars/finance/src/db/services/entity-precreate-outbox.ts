@@ -87,6 +87,15 @@ export interface RecordAttemptFailureInput {
   /** Cap on total attempts before the row is dead-lettered (default
    * {@link DEFAULT_MAX_RECONCILE_ATTEMPTS}). */
   maxAttempts?: number;
+  /**
+   * The failure is one retrying can never fix (a `ContactsPermanentError`),
+   * so the row is dead-lettered on this attempt rather than after
+   * `maxAttempts` of them, and marked `permanentFailure` so
+   * {@link requeueDeadLettered} leaves it alone. Spending 50 attempts on a
+   * request contacts will reject identically every time is pure noise, and
+   * requeueing it every deploy would repeat that noise forever (POPS-2690).
+   */
+  permanent?: boolean;
 }
 
 /**
@@ -97,7 +106,8 @@ export interface RecordAttemptFailureInput {
  * `lastError` for ops. Once the bumped count reaches `maxAttempts` the row is
  * dead-lettered (`status = 'failed'`) instead of staying `pending` forever,
  * so a contacts outage that never clears can't grow the outbox / retry loop
- * without bound; `listPending` stops selecting a `'failed'` row.
+ * without bound; `listPending` stops selecting a `'failed'` row. `permanent`
+ * dead-letters on this attempt instead of counting to the cap.
  *
  * Every mutation is guarded on `status = 'pending'` inside a single
  * transaction: reconciler passes interleave at the `await` on contacts, so a
@@ -124,15 +134,17 @@ export function recordAttemptFailure(
       .run();
     if (bumped.changes === 0) return 'pending';
 
-    const updated = tx
-      .select({ attempts: entityPrecreateOutbox.attempts })
-      .from(entityPrecreateOutbox)
-      .where(eq(entityPrecreateOutbox.id, id))
-      .get();
-    if ((updated?.attempts ?? 0) < maxAttempts) return 'pending';
+    if (!input.permanent) {
+      const updated = tx
+        .select({ attempts: entityPrecreateOutbox.attempts })
+        .from(entityPrecreateOutbox)
+        .where(eq(entityPrecreateOutbox.id, id))
+        .get();
+      if ((updated?.attempts ?? 0) < maxAttempts) return 'pending';
+    }
 
     tx.update(entityPrecreateOutbox)
-      .set({ status: 'failed' })
+      .set({ status: 'failed', permanentFailure: input.permanent ?? false })
       .where(and(eq(entityPrecreateOutbox.id, id), eq(entityPrecreateOutbox.status, 'pending')))
       .run();
     return 'failed';
@@ -188,17 +200,22 @@ export function countByStatus(db: FinanceDb): OutboxStatusCounts {
 }
 
 /**
- * Return every dead-lettered row to the queue: `status = 'pending'`,
- * `attempts = 0`. Returns how many rows were requeued.
+ * Return the dead-lettered rows a restart could plausibly fix to the queue:
+ * `status = 'pending'`, `attempts = 0`. Returns how many were requeued.
  *
  * Dead-lettering means "this needs operator attention", and the only thing
  * that ever attends to it is a configuration or deployment change — which
  * reaches this process as a restart. So the worker calls this once at boot
  * (see `cron/reconcile-contacts-outbox.ts`): without it a dead-lettered row is
  * terminal forever, and the placeholder ids it left behind in `transactions` /
- * `transaction_corrections` / `transaction_tag_rules` are permanent even after
- * the cause is fixed. Cost of a wrong guess is bounded — a row whose cause has
- * NOT been fixed simply spends its attempts again and dead-letters once more.
+ * `transaction_corrections` / `transaction_tag_rules` stay wrong even after the
+ * cause is fixed. Cost of a wrong guess is bounded — a row whose cause has NOT
+ * been fixed simply spends its attempts again and dead-letters once more.
+ *
+ * `permanentFailure` rows are excluded, and that exclusion is what keeps the
+ * bound meaningful: a request contacts rejects on its own terms is not waiting
+ * on an operator, so requeueing it every deploy would burn `maxAttempts`
+ * against the same refusal forever.
  *
  * `lastError` is deliberately preserved: it is the only record of why the row
  * was given up on, and it stays useful right up until the retry overwrites it.
@@ -207,7 +224,12 @@ export function requeueDeadLettered(db: FinanceDb): number {
   return db
     .update(entityPrecreateOutbox)
     .set({ status: 'pending', attempts: 0 })
-    .where(eq(entityPrecreateOutbox.status, 'failed'))
+    .where(
+      and(
+        eq(entityPrecreateOutbox.status, 'failed'),
+        eq(entityPrecreateOutbox.permanentFailure, false)
+      )
+    )
     .run().changes;
 }
 

@@ -16,12 +16,14 @@
  * dead-lettered (`status = 'failed'`) and `listPending` stops selecting it,
  * so a contacts outage that never clears can't retry the same row forever.
  *
- * Two things keep that cap from turning a configuration fault into permanent
+ * Three rules keep that cap from turning a configuration fault into permanent
  * data damage (POPS-2690). A failure that never reached contacts at all —
- * this process holds no service-account key — is deferred rather than
- * charged an attempt, because retrying cannot fix what only a redeploy can.
- * And every dead-lettered row is requeued once at boot, on the reasoning that
- * a restart is the operator attention the dead-letter was asking for.
+ * this process holds no service-account key — is deferred rather than charged
+ * an attempt, because retrying cannot fix what only a redeploy can. A
+ * permanent refusal from contacts dead-letters immediately and is never
+ * requeued, because no restart changes contacts' verdict on the request. And
+ * every other dead-lettered row is requeued once at boot, on the reasoning
+ * that a restart is the operator attention the dead-letter was asking for.
  *
  * A recursive `setTimeout` arms the next tick only after the current one
  * resolves — mirrors `reconcile-cross-pillar.ts` (also trivial to drive with
@@ -31,7 +33,11 @@
  * pillar that just came back up.
  */
 import { entityPrecreateOutboxService, type FinanceDb } from '../../db/index.js';
-import { ContactsUnavailableError, type ContactsClient } from '../contacts/client.js';
+import {
+  ContactsPermanentError,
+  ContactsUnavailableError,
+  type ContactsClient,
+} from '../contacts/client.js';
 import { NO_CREDENTIAL_REASON } from '../pillars/outbound.js';
 
 import type { EntityPrecreateOutboxRow } from '../../db/index.js';
@@ -137,18 +143,24 @@ async function resolveOne(ctx: ResolveOneContext): Promise<ResolveOneOutcome> {
       });
       return 'deferred';
     }
+    // A permanent refusal is contacts' verdict on this request, not a bad
+    // moment: the same call will be rejected identically forever, so it
+    // dead-letters here rather than after 50 identical rejections — and stays
+    // dead-lettered across the boot requeue.
+    const permanent = err instanceof ContactsPermanentError;
     const outcome = entityPrecreateOutboxService.recordAttemptFailure(db, row.id, {
       nowIso: now.toISOString(),
       error: message,
       maxAttempts,
+      permanent,
     });
     if (outcome === 'failed') {
-      logger?.warn?.('finance contacts outbox row dead-lettered — giving up after max attempts', {
-        id: row.id,
-        name: row.name,
-        maxAttempts,
-        error: message,
-      });
+      logger?.warn?.(
+        permanent
+          ? 'finance contacts outbox row dead-lettered — contacts refused it, retrying cannot help'
+          : 'finance contacts outbox row dead-lettered — giving up after max attempts',
+        { id: row.id, name: row.name, maxAttempts, permanent, error: message }
+      );
       return 'failed';
     }
     logger?.warn?.('finance contacts outbox still pending', {

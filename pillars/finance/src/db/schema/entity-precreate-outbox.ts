@@ -13,6 +13,14 @@ export const entityPrecreateOutbox = sqliteTable(
       .notNull()
       .default('pending'),
     attempts: integer('attempts').notNull().default(0),
+    /**
+     * True when the row dead-lettered on a failure retrying can never fix (a
+     * `ContactsPermanentError` — 400, contract mismatch, refusal), as opposed
+     * to running out of attempts against an outage. The boot requeue skips
+     * these: a restart is not the fix for a request contacts will always
+     * reject (POPS-2690).
+     */
+    permanentFailure: integer('permanent_failure', { mode: 'boolean' }).notNull().default(false),
     lastAttemptAt: text('last_attempt_at'),
     lastError: text('last_error'),
     resolvedEntityId: text('resolved_entity_id'),

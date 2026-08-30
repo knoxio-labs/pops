@@ -23,6 +23,7 @@ import {
   type OpenedFinanceDb,
 } from '../../../db/index.js';
 import { makeContactsFake, type ContactsFake } from '../../__tests__/contacts-fake.js';
+import { ContactsPermanentError } from '../../contacts/errors.js';
 import { commitImport } from '../../modules/imports/commit.js';
 import {
   startReconcileContactsOutboxWorker,
@@ -312,6 +313,55 @@ describe('startReconcileContactsOutboxWorker', () => {
     expect(resolved.status).toBe('resolved');
     expect(resolved.resolved_entity_id).not.toBeNull();
     expect(getTransactionEntityId('requeue-txn-1')).toBe(resolved.resolved_entity_id);
+  });
+
+  /**
+   * POPS-2690. The boot requeue's premise is that a restart is the operator
+   * attention a dead-letter asked for. That is false for a request contacts
+   * refuses on its own terms — no restart changes its verdict — so such a row
+   * must dead-letter on the first refusal and stay dead through every
+   * subsequent boot, or the requeue re-attempts it `maxAttempts` times per
+   * deploy forever.
+   */
+  it('never requeues a row contacts refused, and gives up on it immediately', async () => {
+    const placeholderId = seedOutboxRow('Refused Co');
+    const contacts: ContactsFake = {
+      ...makeContactsFake(),
+      createOrFetchByName: () => Promise.reject(new ContactsPermanentError('bad-request')),
+    };
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 50,
+    });
+    await handle.runOnce();
+    handle.stop();
+
+    const row = opened.raw
+      .prepare(
+        'SELECT status, attempts, permanent_failure FROM entity_precreate_outbox WHERE id = ?'
+      )
+      .get(placeholderId) as { status: string; attempts: number; permanent_failure: number };
+    expect(row.status).toBe('failed');
+    expect(row.attempts).toBeLessThanOrEqual(2);
+    expect(row.permanent_failure).toBe(1);
+
+    // The restart that heals an outage-dead row must leave this one alone.
+    const rebooted = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 50,
+    });
+    rebooted.stop();
+
+    expect(
+      opened.raw
+        .prepare('SELECT status FROM entity_precreate_outbox WHERE id = ?')
+        .get(placeholderId)
+    ).toEqual({ status: 'failed' });
   });
 
   /**
