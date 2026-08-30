@@ -619,7 +619,9 @@ describe('rotationScheduler — disk selection', () => {
       [movie.id],
       new Date(Date.now() - 86_400_000).toISOString()
     );
+    route('GET', '/queue', () => ({ body: { totalRecords: 0, records: [] } }));
     route('GET', '/movie?tmdbId', () => ({ body: [{ id: 5, tmdbId: 77, title: 'Past Due' }] }));
+    route('GET', '/movie', () => ({ body: [{ id: 5, tmdbId: 77, title: 'Past Due' }] }));
     route('DELETE', '/movie/5', () => ({ body: {} }));
 
     await rotationScheduler.runOnce(opened.db);
