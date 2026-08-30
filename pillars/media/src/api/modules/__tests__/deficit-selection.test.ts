@@ -61,6 +61,30 @@ describe('selectForDeficit', () => {
     expect(skipped).toEqual([]);
   });
 
+  it('takes the only movie big enough rather than leaving the deficit unmet', () => {
+    // A 1 GB movie below is not a substitute for the 50 GB one being stepped
+    // over: skipping on the strength of "something smaller exists" strands the
+    // batch at 3 GB against a 20 GB deficit, with the only movie that could
+    // have covered it already passed.
+    const ranked = [film('a', 2), film('big', 50), film('small', 1)];
+
+    const { selected } = selectForDeficit(ranked, sizeOf, 20);
+
+    expect(total(selected)).toBeGreaterThanOrEqual(20);
+    expect(titles(selected)).toContain('big');
+  });
+
+  it('does not walk past a large movie only to take an equally large one below it', () => {
+    // When everything below also overshoots, skipping each in turn would trade
+    // the top-ranked movie for a lower-ranked one no smaller than it.
+    const ranked = [film('a', 2), film('big first', 50), film('big second', 50)];
+
+    const { selected, skipped } = selectForDeficit(ranked, sizeOf, 20);
+
+    expect(titles(selected)).toEqual(['a', 'big first']);
+    expect(skipped).toEqual([]);
+  });
+
   it('accepts the overshoot when nothing further down fits', () => {
     const ranked = [film('a', 3), film('b', 80), film('c', 70)];
 

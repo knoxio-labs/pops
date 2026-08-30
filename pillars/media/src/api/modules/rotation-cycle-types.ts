@@ -69,6 +69,33 @@ export function calculateRemovalDeficit(
  */
 const OVERSHOOT_TOLERANCE = 1.5;
 
+/**
+ * Whether the movies in `rest` that individually fit inside `budget` add up to
+ * `needed`.
+ *
+ * Both halves matter. Asking only whether *something* smaller exists below is
+ * not enough — a single 1 GB movie is no substitute for the 50 GB one being
+ * stepped over, and skipping on that basis leaves the deficit unmet with the
+ * only movie that could have covered it already passed. Asking only whether the
+ * remainder is large enough is not enough either: if everything below also
+ * overshoots, each would be skipped in turn and the batch would work its way
+ * down to a lower-ranked movie no smaller than the one it started with.
+ */
+function restCanCover<T>(
+  rest: readonly T[],
+  sizeOfGb: (item: T) => number,
+  limits: { budget: number; needed: number }
+): boolean {
+  let available = 0;
+  for (const item of rest) {
+    const sizeGb = sizeOfGb(item);
+    if (sizeGb > limits.budget) continue;
+    available += sizeGb;
+    if (available >= limits.needed) return true;
+  }
+  return false;
+}
+
 /** A removal batch: what the walk took, and what it stepped over to avoid overshooting. */
 export interface DeficitSelection<T> {
   selected: T[];
@@ -113,9 +140,12 @@ export function selectForDeficit<T>(
     const budget = remaining * OVERSHOOT_TOLERANCE;
 
     const overshoots = sizeGb > budget;
-    const somethingElseFits = withFiles.slice(i + 1).some((later) => sizeOfGb(later) <= budget);
+    const restFinishesTheJob = restCanCover(withFiles.slice(i + 1), sizeOfGb, {
+      budget,
+      needed: remaining,
+    });
 
-    if (selected.length > 0 && overshoots && somethingElseFits) {
+    if (selected.length > 0 && overshoots && restFinishesTheJob) {
       skipped.push(item);
       continue;
     }
