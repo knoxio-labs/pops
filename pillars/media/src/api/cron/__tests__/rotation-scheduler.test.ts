@@ -84,6 +84,11 @@ function enableRadarr(): void {
   process.env['RADARR_ROOT_FOLDER_PATH'] = '/movies';
 }
 
+/** An acquisition date `days` in the past, in Radarr's `added` format. */
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString();
+}
+
 /** Radarr /diskspace responding with `freeGb` free on the first disk. */
 function routeDiskSpace(freeGb: number, totalGb = 1000): void {
   route('GET', '/diskspace', () => ({
@@ -123,10 +128,8 @@ describe('rotationScheduler.runOnce — cycle', () => {
       { key: 'rotation_leaving_days', value: '7' },
       { key: 'rotation_daily_additions', value: '0' },
     ]);
-    const older = moviesService.createMovie(opened.db, { tmdbId: 11, title: 'Old One' });
-    const newer = moviesService.createMovie(opened.db, { tmdbId: 22, title: 'New One' });
-    opened.raw.exec(`UPDATE movies SET created_at='2020-01-01' WHERE id=${older.id}`);
-    opened.raw.exec(`UPDATE movies SET created_at='2024-01-01' WHERE id=${newer.id}`);
+    moviesService.createMovie(opened.db, { tmdbId: 11, title: 'Old One' });
+    moviesService.createMovie(opened.db, { tmdbId: 22, title: 'New One' });
 
     // Free space (50) well below target (100); both movies are 30 GB on disk.
     routeDiskSpace(50);
@@ -141,6 +144,7 @@ describe('rotationScheduler.runOnce — cycle', () => {
           monitored: true,
           hasFile: true,
           sizeOnDisk: 30 * GB,
+          added: daysAgo(600),
         },
         {
           id: 2,
@@ -149,6 +153,7 @@ describe('rotationScheduler.runOnce — cycle', () => {
           monitored: true,
           hasFile: true,
           sizeOnDisk: 30 * GB,
+          added: daysAgo(300),
         },
       ],
     }));
@@ -156,8 +161,9 @@ describe('rotationScheduler.runOnce — cycle', () => {
     await rotationScheduler.runOnce(opened.db);
 
     const leaving = rotationRemovalQueries.getLeavingMovies(opened.db);
-    // Deficit = 100 - 50 = 50 GB; oldest (30 GB) alone is < 50, so both eligible
-    // get marked until the cumulative size covers the deficit.
+    // Deficit = 100 - 50 = 50 GB; the movie acquired longest ago carries the
+    // most pressure and goes first, and 30 GB alone is < 50, so the next one
+    // down the ranking is marked too.
     expect(leaving.map((m) => m.tmdbId)).toEqual([11, 22]);
 
     const log = rotationLogService.lastCycleLog(opened.db);

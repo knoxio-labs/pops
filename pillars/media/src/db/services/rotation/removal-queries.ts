@@ -11,18 +11,35 @@
  */
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 
-import { mediaWatchlist, movies } from '../../schema.js';
+import { mediaScores, mediaWatchlist, movies, watchHistory } from '../../schema.js';
 
 import type { MediaDb } from '../internal.js';
 
 /** Map of TMDB id → size in GB, as measured from Radarr. */
 export type MovieSizeMap = Map<number, number>;
 
+/**
+ * An eligible movie plus every signal the removal ranking scores it on.
+ *
+ * `createdAt` is deliberately absent: a bulk import wrote a near-constant value
+ * across the library, and ordering by it is what deleted films alphabetically
+ * (POPS-2578). Acquisition dates come from Radarr instead.
+ */
 export interface EligibleMovie {
   id: number;
   tmdbId: number;
   title: string;
-  createdAt: string;
+  /**
+   * Watches counted to completion, excluding any the viewer disavowed. A
+   * partial play is not a watch, and neither is a blacklisted one.
+   */
+  watchCount: number;
+  lastWatchedAt: string | null;
+  /** Mean Elo across the dimensions this movie has actually been compared on. */
+  elo: number | null;
+  eloComparisons: number;
+  voteAverage: number | null;
+  voteCount: number | null;
 }
 
 export interface LeavingMovie {
@@ -41,48 +58,100 @@ export interface ExpiredMovie {
 }
 
 /**
- * Movies eligible for removal, oldest first. Excludes watchlist items,
- * unexpired protected movies, currently-downloading movies, and movies with no
- * Radarr file (size 0 / absent). Already-`leaving` movies are filtered in SQL.
+ * Movies eligible for removal, each carrying the signals the ranking scores.
+ *
+ * Excludes watchlist items, unexpired protected movies, currently-downloading
+ * movies, and movies with no Radarr file (size 0 / absent). Already-`leaving`
+ * movies are filtered in SQL.
+ *
+ * Returned in no meaningful order — ordering is the ranking's job, and this
+ * query ordering by `created_at` was the alphabetical-deletion defect.
  */
+function watchlistedMovieIds(db: MediaDb): Set<number> {
+  const rows = db
+    .select({ mediaId: mediaWatchlist.mediaId })
+    .from(mediaWatchlist)
+    .where(eq(mediaWatchlist.mediaType, 'movie'))
+    .all();
+  return new Set(rows.map((r) => r.mediaId));
+}
+
+interface EligibilityContext {
+  watchlistMovieIds: ReadonlySet<number>;
+  downloadingTmdbIds: ReadonlySet<number>;
+  movieSizes: MovieSizeMap;
+  now: string;
+}
+
+interface EligibilityRow {
+  id: number;
+  tmdbId: number;
+  rotationStatus: string | null;
+  rotationExpiresAt: string | null;
+}
+
+function isEligible(movie: EligibilityRow, ctx: EligibilityContext): boolean {
+  if (ctx.watchlistMovieIds.has(movie.id)) return false;
+  if (
+    movie.rotationStatus === 'protected' &&
+    movie.rotationExpiresAt &&
+    movie.rotationExpiresAt > ctx.now
+  ) {
+    return false;
+  }
+  if (ctx.downloadingTmdbIds.has(movie.tmdbId)) return false;
+  const sizeGb = ctx.movieSizes.get(movie.tmdbId);
+  return sizeGb !== undefined && sizeGb > 0;
+}
+
 export function getEligibleForRemoval(
   db: MediaDb,
   movieSizes: MovieSizeMap,
   downloadingTmdbIds: ReadonlySet<number>
 ): EligibleMovie[] {
-  const now = new Date().toISOString();
+  const ctx: EligibilityContext = {
+    watchlistMovieIds: watchlistedMovieIds(db),
+    downloadingTmdbIds,
+    movieSizes,
+    now: new Date().toISOString(),
+  };
 
-  const watchlistRows = db
-    .select({ mediaId: mediaWatchlist.mediaId })
-    .from(mediaWatchlist)
-    .where(eq(mediaWatchlist.mediaType, 'movie'))
-    .all();
-  const watchlistMovieIds = new Set(watchlistRows.map((r) => r.mediaId));
-
-  const candidates = db
+  return db
     .select({
       id: movies.id,
       tmdbId: movies.tmdbId,
       title: movies.title,
-      createdAt: movies.createdAt,
+      voteAverage: movies.voteAverage,
+      voteCount: movies.voteCount,
       rotationStatus: movies.rotationStatus,
       rotationExpiresAt: movies.rotationExpiresAt,
+      watchCount: sql<number>`(
+        SELECT count(*) FROM ${watchHistory}
+        WHERE ${watchHistory.mediaType} = 'movie'
+          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
+      )`,
+      lastWatchedAt: sql<string | null>`(
+        SELECT max(${watchHistory.watchedAt}) FROM ${watchHistory}
+        WHERE ${watchHistory.mediaType} = 'movie'
+          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
+      )`,
+      elo: sql<number | null>`(
+        SELECT avg(${mediaScores.score}) FROM ${mediaScores}
+        WHERE ${mediaScores.mediaType} = 'movie'
+          AND ${mediaScores.mediaId} = ${movies.id} AND ${mediaScores.comparisonCount} > 0
+      )`,
+      eloComparisons: sql<number>`coalesce((
+        SELECT sum(${mediaScores.comparisonCount}) FROM ${mediaScores}
+        WHERE ${mediaScores.mediaType} = 'movie' AND ${mediaScores.mediaId} = ${movies.id}
+      ), 0)`,
     })
     .from(movies)
     .where(ne(sql`coalesce(${movies.rotationStatus}, '')`, sql`'leaving'`))
-    .orderBy(asc(movies.createdAt))
-    .all();
-
-  return candidates.filter((m) => {
-    if (watchlistMovieIds.has(m.id)) return false;
-    if (m.rotationStatus === 'protected' && m.rotationExpiresAt && m.rotationExpiresAt > now) {
-      return false;
-    }
-    if (downloadingTmdbIds.has(m.tmdbId)) return false;
-    const sizeGb = movieSizes.get(m.tmdbId);
-    if (sizeGb === undefined || sizeGb <= 0) return false;
-    return true;
-  });
+    .all()
+    .filter((movie) => isEligible(movie, ctx))
+    .map(({ rotationStatus: _status, rotationExpiresAt: _expiry, ...movie }) => movie);
 }
 
 /** Total size in GB of movies currently in the `leaving` state. */
