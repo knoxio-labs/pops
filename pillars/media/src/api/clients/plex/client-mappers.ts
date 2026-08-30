@@ -54,6 +54,7 @@ export function mapMediaItem(raw: RawPlexMediaItem): PlexMediaItem {
     addedAt: raw.addedAt,
     updatedAt: raw.updatedAt,
     viewCount: raw.viewCount ?? 0,
+    viewOffsetMs: raw.viewOffset ?? null,
     externalIds: parseGuids(raw.Guid),
     genres: (raw.Genre ?? []).map((g) => g.tag),
     directors: (raw.Director ?? []).map((d) => d.tag),

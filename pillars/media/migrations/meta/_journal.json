@@ -127,6 +127,13 @@
       "when": 1798000006000,
       "tag": "0038_settings_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1798000007000,
+      "tag": "0039_watch_progress_baseline",
+      "breakpoints": true
     }
   ]
 }

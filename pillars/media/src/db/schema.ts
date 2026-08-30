@@ -28,3 +28,4 @@ export { syncLogs } from './schema/sync-logs.js';
 export { tierOverrides } from './schema/tier-overrides.js';
 export { tvShows } from './schema/tv-shows.js';
 export { watchHistory } from './schema/watch-history.js';
+export { watchProgress } from './schema/watch-progress.js';

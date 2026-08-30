@@ -172,6 +172,7 @@ export type {
 } from './services/watch-history.js';
 
 export * as watchHistoryService from './services/watch-history.js';
+export * as watchProgressService from './services/watch-progress.js';
 
 export type {
   BatchProgressEntry,

@@ -3,15 +3,25 @@
  * and TV shows that are ALREADY in the local library. Unlike the full sync
  * (sync-movies / sync-tv) it does not import new media.
  *
+ * Also mirrors unfinished plays into `watch_progress`. Plex carries a
+ * `viewOffset` only while a title is part-watched, so this pass is the whole
+ * truth: what it does not see in progress is no longer in progress.
+ *
  * Ported from the monolith `media/plex/sync-watch-history.ts`, converted to
  * the pillar's `(db, …)` services.
  */
-import { type MediaDb, moviesService } from '../../../../db/index.js';
+import { type MediaDb, moviesService, watchProgressService } from '../../../../db/index.js';
 import { type EpisodeSyncDiagnostics, syncEpisodeWatches } from './sync-episode-match.js';
 import { extractExternalIdAsNumber, logMovieWatch } from './sync-helpers.js';
 
 import type { PlexClient } from '../client.js';
 import type { PlexMediaItem } from '../types.js';
+
+/**
+ * The slice of the Plex client this sync actually uses. Narrower than
+ * `PlexClient` so a caller — or a test — only has to supply what is called.
+ */
+export type WatchHistoryPlexClient = Pick<PlexClient, 'getAllItems' | 'getEpisodes'>;
 
 export interface ShowWatchDiagnostics {
   title: string;
@@ -23,6 +33,8 @@ export interface ShowWatchDiagnostics {
 export interface MovieWatchSyncResult {
   total: number;
   watched: number;
+  /** Unfinished plays mirrored into `watch_progress` this run. */
+  partial: number;
   logged: number;
   alreadyLogged: number;
   noLocalMatch: number;
@@ -40,17 +52,49 @@ export interface WatchHistorySyncResult {
   };
 }
 
+function resolveLocalMovieId(db: MediaDb, item: PlexMediaItem): number | null {
+  const tmdbId = extractExternalIdAsNumber(item, 'tmdb');
+  if (!tmdbId) return null;
+  return moviesService.getMovieByTmdbId(db, tmdbId)?.id ?? null;
+}
+
+/**
+ * Mirror an unfinished play. Returns `false` when Plex reports no offset, which
+ * is the ordinary case — an untouched title carries no `viewOffset` at all.
+ */
+function recordPartialPlay(db: MediaDb, movieId: number, item: PlexMediaItem): boolean {
+  const viewOffsetMs = item.viewOffsetMs;
+  if (viewOffsetMs === null || viewOffsetMs <= 0) return false;
+  watchProgressService.recordProgress(db, {
+    mediaType: 'movie',
+    mediaId: movieId,
+    viewOffsetMs,
+    durationMs: item.durationMs,
+  });
+  return true;
+}
+
 function syncMovieWatches(db: MediaDb, plexItems: PlexMediaItem[]): MovieWatchSyncResult {
   const result: MovieWatchSyncResult = {
     total: plexItems.length,
     watched: 0,
+    partial: 0,
     logged: 0,
     alreadyLogged: 0,
     noLocalMatch: 0,
   };
 
+  const partiallyWatchedMovieIds: number[] = [];
+
   for (const item of plexItems) {
-    if (item.viewCount === 0) continue;
+    if (item.viewCount === 0) {
+      const movieId = resolveLocalMovieId(db, item);
+      if (movieId !== null && recordPartialPlay(db, movieId, item)) {
+        partiallyWatchedMovieIds.push(movieId);
+        result.partial++;
+      }
+      continue;
+    }
     result.watched++;
     const tmdbId = extractExternalIdAsNumber(item, 'tmdb');
     if (!tmdbId) {
@@ -65,12 +109,16 @@ function syncMovieWatches(db: MediaDb, plexItems: PlexMediaItem[]): MovieWatchSy
     if (logMovieWatch(db, movie.id, item.lastViewedAt)) result.logged++;
     else result.alreadyLogged++;
   }
+
+  // Plex reports an offset only while a title is unfinished and clears it on
+  // completion, so anything absent from this pass is no longer part-watched.
+  watchProgressService.retainOnly(db, 'movie', partiallyWatchedMovieIds);
   return result;
 }
 
 async function syncTvShowWatches(
   db: MediaDb,
-  plexClient: PlexClient,
+  plexClient: WatchHistoryPlexClient,
   tvItems: PlexMediaItem[]
 ): Promise<ShowWatchDiagnostics[]> {
   const showResults: ShowWatchDiagnostics[] = [];
@@ -117,7 +165,7 @@ function summarise(
 /** Re-sync watch history for already-imported movies + TV shows. */
 export async function syncWatchHistoryFromPlex(
   db: MediaDb,
-  plexClient: PlexClient,
+  plexClient: WatchHistoryPlexClient,
   movieSectionId?: string,
   tvSectionId?: string
 ): Promise<WatchHistorySyncResult> {
