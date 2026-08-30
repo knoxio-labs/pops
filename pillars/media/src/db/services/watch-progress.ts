@@ -16,6 +16,16 @@ export type WatchProgressRow = typeof watchProgress.$inferSelect;
 
 export type ProgressMediaType = 'movie' | 'episode';
 
+/**
+ * Format a JS Date as the second-precision UTC string SQLite returns from
+ * `datetime('now')` — `YYYY-MM-DD HH:MM:SS`. The column's own default is that
+ * expression, so a raw `toISOString()` would store a differently-shaped string
+ * that sorts and compares inconsistently against it.
+ */
+function nowSqliteDatetime(): string {
+  return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
 export interface RecordProgressInput {
   mediaType: ProgressMediaType;
   mediaId: number;
@@ -43,7 +53,7 @@ export function recordProgress(db: MediaDb, input: RecordProgressInput): void {
       progress,
       viewOffsetMs,
       durationMs: durationMs ?? null,
-      observedAt: new Date().toISOString(),
+      observedAt: nowSqliteDatetime(),
     })
     .onConflictDoUpdate({
       target: [watchProgress.mediaType, watchProgress.mediaId],
@@ -51,7 +61,7 @@ export function recordProgress(db: MediaDb, input: RecordProgressInput): void {
         progress,
         viewOffsetMs,
         durationMs: durationMs ?? null,
-        observedAt: new Date().toISOString(),
+        observedAt: nowSqliteDatetime(),
       },
     })
     .run();

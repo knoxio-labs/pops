@@ -17,6 +17,12 @@ import { extractExternalIdAsNumber, logMovieWatch } from './sync-helpers.js';
 import type { PlexClient } from '../client.js';
 import type { PlexMediaItem } from '../types.js';
 
+/**
+ * The slice of the Plex client this sync actually uses. Narrower than
+ * `PlexClient` so a caller — or a test — only has to supply what is called.
+ */
+export type WatchHistoryPlexClient = Pick<PlexClient, 'getAllItems' | 'getEpisodes'>;
+
 export interface ShowWatchDiagnostics {
   title: string;
   tvdbId: number;
@@ -112,7 +118,7 @@ function syncMovieWatches(db: MediaDb, plexItems: PlexMediaItem[]): MovieWatchSy
 
 async function syncTvShowWatches(
   db: MediaDb,
-  plexClient: PlexClient,
+  plexClient: WatchHistoryPlexClient,
   tvItems: PlexMediaItem[]
 ): Promise<ShowWatchDiagnostics[]> {
   const showResults: ShowWatchDiagnostics[] = [];
@@ -159,7 +165,7 @@ function summarise(
 /** Re-sync watch history for already-imported movies + TV shows. */
 export async function syncWatchHistoryFromPlex(
   db: MediaDb,
-  plexClient: PlexClient,
+  plexClient: WatchHistoryPlexClient,
   movieSectionId?: string,
   tvSectionId?: string
 ): Promise<WatchHistorySyncResult> {

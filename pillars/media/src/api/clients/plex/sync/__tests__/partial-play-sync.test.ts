@@ -19,9 +19,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { moviesService, watchProgressService } from '../../../../../db/index.js';
 import { openMediaDb, type OpenedMediaDb } from '../../../../../db/open-media-db.js';
-import { syncWatchHistoryFromPlex } from '../sync-watch-history.js';
+import { syncWatchHistoryFromPlex, type WatchHistoryPlexClient } from '../sync-watch-history.js';
 
-import type { PlexClient } from '../../client.js';
 import type { PlexMediaItem } from '../../types.js';
 
 let tmpDir: string;
@@ -70,8 +69,11 @@ function plexMovie(tmdbId: number, over: Partial<PlexMediaItem> = {}): PlexMedia
 }
 
 /** A Plex client that serves one movie section and no TV. */
-function clientServing(items: PlexMediaItem[]): PlexClient {
-  return { getAllItems: () => Promise.resolve(items) } as unknown as PlexClient;
+function clientServing(items: PlexMediaItem[]): WatchHistoryPlexClient {
+  return {
+    getAllItems: () => Promise.resolve(items),
+    getEpisodes: () => Promise.resolve([]),
+  };
 }
 
 function seedLibraryMovie(tmdbId: number): number {
