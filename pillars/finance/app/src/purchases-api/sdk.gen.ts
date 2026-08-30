@@ -144,7 +144,7 @@ export const analyticsProductLeaderboard = <ThrowOnError extends boolean = false
   >({ url: '/analytics/product-leaderboard', ...options });
 
 /**
- * Every line carrying an item tag, across every order
+ * Page through lines carrying an item tag, newest first
  */
 export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
   options: Options<PurchaseItemsByTagData, ThrowOnError>

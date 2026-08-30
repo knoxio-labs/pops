@@ -21,6 +21,7 @@ import {
   ListItemsByTagQuerySchema,
   ListPurchasesQuerySchema,
   OkSchema,
+  PaginationMetaSchema,
   PatchItemBodySchema,
 } from './rest-schemas.js';
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
@@ -213,7 +214,9 @@ export const purchasesPurchaseContract = c.router({
     method: 'GET',
     path: '/items',
     query: ListItemsByTagQuerySchema,
-    responses: { 200: z.object({ items: z.array(TaggedItemSchema) }) },
-    summary: 'Every line carrying an item tag, across every order',
+    responses: {
+      200: z.object({ items: z.array(TaggedItemSchema), pagination: PaginationMetaSchema }),
+    },
+    summary: 'Page through lines carrying an item tag, newest first',
   },
 });

@@ -167,9 +167,10 @@ describe('confirming tags', () => {
     confirmItemClassification(opened.db, purchaseId, itemId, { tags: ['appliance'] });
 
     const found = listItemsByTag(opened.db, 'appliance');
-    expect(found).toHaveLength(1);
-    expect(found[0]?.item.id).toBe(itemId);
-    expect(found[0]?.confirmedAt).not.toBeNull();
+    expect(found.total).toBe(1);
+    expect(found.rows).toHaveLength(1);
+    expect(found.rows[0]?.item.id).toBe(itemId);
+    expect(found.rows[0]?.confirmedAt).not.toBeNull();
   });
 });
 
@@ -193,6 +194,6 @@ describe('addressing a line', () => {
     expect(
       confirmItemClassification(opened.db, purchaseId, 'no-such-item', { tags: ['appliance'] })
     ).toBeUndefined();
-    expect(listItemsByTag(opened.db, 'appliance')).toEqual([]);
+    expect(listItemsByTag(opened.db, 'appliance').rows).toEqual([]);
   });
 });

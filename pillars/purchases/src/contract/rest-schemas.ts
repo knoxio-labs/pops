@@ -303,4 +303,13 @@ export const ListPurchasesQuerySchema = z.object({
 export const ListItemsByTagQuerySchema = z.object({
   tag: ItemTagSchema,
   limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+/** Pagination envelope returned by every list endpoint. Mirrors `api/shared/pagination.ts`. */
+export const PaginationMetaSchema = z.object({
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+  hasMore: z.boolean(),
 });

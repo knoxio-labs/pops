@@ -24,7 +24,6 @@ export {
 export {
   deletePurchase,
   getPurchase,
-  listItemsByTag,
   listPurchases,
   selectItemDetails,
   setPurchaseStatus,
@@ -33,8 +32,13 @@ export {
   type PurchaseDetail,
   type PurchaseItemDetail,
   type PurchaseScopeFilter,
-  type TaggedItem,
 } from './services/purchase-reads.js';
+
+export {
+  listItemsByTag,
+  type TaggedItem,
+  type TaggedItemPage,
+} from './services/purchase-item-tags.js';
 
 export { listPurchaseRows, type PurchaseListRow } from './services/purchase-list-rows.js';
 

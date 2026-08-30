@@ -407,6 +407,39 @@ describe('GET /items', () => {
     const res = await requestOn(app).get('/items?tag=Coffee');
     expect(res.status).toBe(400);
   });
+
+  it('reports the true total beyond the page limit and pages to the tail with offset', async () => {
+    for (let i = 0; i < 3; i++) {
+      await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `bulk-${String(i)}`,
+          checksum: `bulk-${String(i)}`,
+          items: [
+            {
+              ref: 'bag',
+              name: `Bag ${String(i)}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+              tags: ['coffee'],
+            },
+          ],
+        });
+    }
+
+    const firstPage = await requestOn(app).get('/items?tag=coffee&limit=2');
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.items).toHaveLength(2);
+    expect(firstPage.body.pagination).toEqual({ total: 3, limit: 2, offset: 0, hasMore: true });
+
+    const lastPage = await requestOn(app).get('/items?tag=coffee&limit=2&offset=2');
+    expect(lastPage.status).toBe(200);
+    expect(lastPage.body.items).toHaveLength(1);
+    expect(lastPage.body.pagination).toEqual({ total: 3, limit: 2, offset: 2, hasMore: false });
+    expect(lastPage.body.items[0].item.id).not.toBe(firstPage.body.items[0].item.id);
+    expect(lastPage.body.items[0].item.id).not.toBe(firstPage.body.items[1].item.id);
+  });
 });
 
 describe('PATCH /purchases/:id/items/:itemId', () => {
