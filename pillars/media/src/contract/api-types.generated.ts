@@ -1696,6 +1696,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/rotation/scheduler/removal-preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** What the next cycle would mark for removal, and why, without writing anything */
+    get: operations['rotation.schedulerRemovalPreview'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/rotation/scheduler/run-now': {
     parameters: {
       query?: never;
@@ -9119,6 +9136,107 @@ export interface operations {
               streak: number;
               totalRotated: number;
             };
+          };
+        };
+      };
+    };
+  };
+  'rotation.schedulerRemovalPreview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              plan: {
+                deficitGb: number;
+                eligibleCount: number;
+                leavingGb: number;
+                removableCount: number;
+                skippedForOvershoot: {
+                  /** @enum {string} */
+                  ageAnchor: 'acquired' | 'watched' | 'unknown';
+                  ageDays: number;
+                  id: number;
+                  keepWeight: number;
+                  pressure: number;
+                  quality: number;
+                  /** @enum {string} */
+                  qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+                  rank: number;
+                  sizeGb: number;
+                  title: string;
+                  tmdbId: number;
+                  watchCount: number;
+                }[];
+                toMark: {
+                  /** @enum {string} */
+                  ageAnchor: 'acquired' | 'watched' | 'unknown';
+                  ageDays: number;
+                  id: number;
+                  keepWeight: number;
+                  pressure: number;
+                  quality: number;
+                  /** @enum {string} */
+                  qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+                  rank: number;
+                  sizeGb: number;
+                  title: string;
+                  tmdbId: number;
+                  watchCount: number;
+                }[];
+              } | null;
+              skippedReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
           };
         };
       };

@@ -5636,6 +5636,91 @@ export type RotationRotationLogStatsResponses = {
 export type RotationRotationLogStatsResponse =
   RotationRotationLogStatsResponses[keyof RotationRotationLogStatsResponses];
 
+export type RotationSchedulerRemovalPreviewData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/rotation/scheduler/removal-preview';
+};
+
+export type RotationSchedulerRemovalPreviewErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type RotationSchedulerRemovalPreviewError =
+  RotationSchedulerRemovalPreviewErrors[keyof RotationSchedulerRemovalPreviewErrors];
+
+export type RotationSchedulerRemovalPreviewResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      plan: {
+        deficitGb: number;
+        eligibleCount: number;
+        leavingGb: number;
+        removableCount: number;
+        skippedForOvershoot: Array<{
+          ageAnchor: 'acquired' | 'watched' | 'unknown';
+          ageDays: number;
+          id: number;
+          keepWeight: number;
+          pressure: number;
+          quality: number;
+          qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+          rank: number;
+          sizeGb: number;
+          title: string;
+          tmdbId: number;
+          watchCount: number;
+        }>;
+        toMark: Array<{
+          ageAnchor: 'acquired' | 'watched' | 'unknown';
+          ageDays: number;
+          id: number;
+          keepWeight: number;
+          pressure: number;
+          quality: number;
+          qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+          rank: number;
+          sizeGb: number;
+          title: string;
+          tmdbId: number;
+          watchCount: number;
+        }>;
+      } | null;
+      skippedReason: string | null;
+    };
+  };
+};
+
+export type RotationSchedulerRemovalPreviewResponse =
+  RotationSchedulerRemovalPreviewResponses[keyof RotationSchedulerRemovalPreviewResponses];
+
 export type RotationSchedulerRunNowData = {
   /**
    * Body

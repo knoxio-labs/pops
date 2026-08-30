@@ -7,6 +7,7 @@
  * service so the cycle result and the persisted log share one definition.
  */
 import type { RotationFailedMovieRef, RotationMovieRef } from '../../db/index.js';
+import type { RankedCandidate } from './rotation-removal-ranking.js';
 
 export type { RotationFailedMovieRef, RotationMovieRef } from '../../db/index.js';
 
@@ -20,9 +21,10 @@ export interface RotationCycleResult {
   freeSpaceGb: number;
   targetFreeGb: number;
   skippedReason: string | null;
-  marked: RotationMovieRef[];
+  /** Each with the arithmetic that put it there, so the decision is auditable. */
+  marked: PlannedRemoval[];
   /** Stepped over so the batch would not overshoot the deficit. */
-  skippedForOvershoot: RotationMovieRef[];
+  skippedForOvershoot: PlannedRemoval[];
   removed: RotationMovieRef[];
   added: RotationMovieRef[];
   failed: RotationFailedMovieRef[];
@@ -67,6 +69,34 @@ export function calculateRemovalDeficit(
  * walk looks past it. 1.5 leaves ordinary variation alone and only reacts to a
  * pick that would free half again more than is being asked for.
  */
+/**
+ * A movie the plan would mark, with the arithmetic that put it there.
+ *
+ * Persisted alongside the cycle log and returned by the preview: a scored
+ * engine whose decisions cannot be reconstructed is not one anyone can argue
+ * with, and the ordering defect this replaced went unnoticed for months
+ * precisely because the log recorded outcomes and not reasons.
+ *
+ * A type alias rather than an interface on purpose: the log service stores this
+ * in an opaque JSON column and types the field as `Record<string, unknown>`,
+ * which only an alias satisfies.
+ */
+export type PlannedRemoval = {
+  id: number;
+  tmdbId: number;
+  title: string;
+  /** Position in the ranking, 1-based. For tied movies this is the draw's outcome. */
+  rank: number;
+  pressure: number;
+  sizeGb: number;
+  ageDays: number;
+  ageAnchor: RankedCandidate['ageAnchor'];
+  watchCount: number;
+  quality: number;
+  qualitySource: RankedCandidate['qualitySource'];
+  keepWeight: number;
+};
+
 const OVERSHOOT_TOLERANCE = 1.5;
 
 /**

@@ -54,6 +54,30 @@ const LeavingMovieSchema = z.object({
   rotationMarkedAt: z.string().nullable(),
 });
 
+const PlannedRemovalSchema = z.object({
+  id: z.number(),
+  tmdbId: z.number(),
+  title: z.string(),
+  rank: z.number(),
+  pressure: z.number(),
+  sizeGb: z.number(),
+  ageDays: z.number(),
+  ageAnchor: z.enum(['acquired', 'watched', 'unknown']),
+  watchCount: z.number(),
+  quality: z.number(),
+  qualitySource: z.enum(['elo', 'tmdb', 'blended', 'none']),
+  keepWeight: z.number(),
+});
+
+const RemovalPlanSchema = z.object({
+  deficitGb: z.number(),
+  leavingGb: z.number(),
+  eligibleCount: z.number(),
+  removableCount: z.number(),
+  toMark: z.array(PlannedRemovalSchema),
+  skippedForOvershoot: z.array(PlannedRemovalSchema),
+});
+
 const DiskSchema = z.object({
   path: z.string(),
   label: z.string(),
@@ -86,6 +110,20 @@ export const rotationSchedulerRoutes = {
       ...ERR_RESPONSES,
     },
     summary: 'Trigger one rotation cycle immediately',
+  },
+  schedulerRemovalPreview: {
+    method: 'GET',
+    path: '/rotation/scheduler/removal-preview',
+    responses: {
+      200: z.object({
+        data: z.object({
+          plan: RemovalPlanSchema.nullable(),
+          skippedReason: z.string().nullable(),
+        }),
+      }),
+      ...ERR_RESPONSES,
+    },
+    summary: 'What the next cycle would mark for removal, and why, without writing anything',
   },
   schedulerLeavingMovies: {
     method: 'GET',
