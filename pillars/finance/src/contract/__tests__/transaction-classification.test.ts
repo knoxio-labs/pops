@@ -71,8 +71,27 @@ describe('classifyFromDescription — inbound account payments', () => {
     expect(derived?.tag).toBeUndefined();
   });
 
+  // ANZ writes THANKYOU as one word on every monthly card payment. The pattern
+  // list had only the spaced spelling, and normalisation collapses whitespace
+  // but never inserts it, so the match missed by a single space and a $500
+  // payment committed as a purchase (POPS-2680).
+  it.each(['PAYMENT THANKYOU 754244', 'PAYMENT THANK YOU 754244'])(
+    'types %s as a transfer, however the bank spells it',
+    (description) => {
+      const derived = classifyFromDescription(description);
+      expect(derived?.type).toBe('transfer');
+      expect(derived?.tag).toBeUndefined();
+    }
+  );
+
   it('does not type an outbound payment to a merchant', () => {
     expect(classifyFromDescription('PAYPAL *SPOTIFY')).toBeNull();
+  });
+
+  // The added pattern is a two-word phrase for the reason the fee patterns are:
+  // a bare THANKYOU would type a merchant that happens to contain it.
+  it('does not type a merchant whose name merely contains the word', () => {
+    expect(classifyFromDescription('THANKYOU CAFE SYDNEY')).toBeNull();
   });
 });
 

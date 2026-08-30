@@ -120,6 +120,11 @@ export const FEE_PATTERNS: ReadonlyArray<{ tag: FeeTag; patterns: readonly strin
 export const INBOUND_TRANSFER_PATTERNS = [
   'PAYMENT RECEIVED',
   'PAYMENT THANK YOU',
+  // ANZ writes it as one word on every monthly card payment. Both spellings are
+  // listed because normalisation collapses whitespace but never inserts it, so
+  // the spaced pattern cannot reach the joined descriptor — a $500 payment
+  // committed as a purchase on that one missing space (POPS-2680).
+  'PAYMENT THANKYOU',
   'THANK YOU FOR YOUR PAYMENT',
   'DIRECT DEBIT RECEIVED',
 ] as const;

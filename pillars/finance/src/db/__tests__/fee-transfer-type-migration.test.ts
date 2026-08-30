@@ -59,6 +59,24 @@ function migrationSql(): string {
   );
 }
 
+/**
+ * Every later migration that backfills a `type` the classifier can derive.
+ *
+ * The agreement invariant below is about the ledger, not about one migration:
+ * a stored row must end up with the type a freshly imported one would get. 0070
+ * established that for the patterns it knew, and it is frozen history — so a
+ * pattern added to the classifier afterwards is backfilled by whichever
+ * migration added it, and the invariant is checked over the migrations
+ * cumulatively. Adding a pattern without a backfill fails the test, which is
+ * the point (POPS-2680).
+ */
+function laterTypeBackfills(): string[] {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return ['0077_correct_mistyped_rows.sql'].map((name) =>
+    readFileSync(join(here, '..', '..', '..', 'migrations', name), 'utf8')
+  );
+}
+
 let raw: Database.Database;
 
 beforeEach(() => {
@@ -274,6 +292,7 @@ describe('0070_fee_and_transfer_types — agreement with the classifier', () => 
     }
 
     raw.exec(migrationSql());
+    for (const sql of laterTypeBackfills()) raw.exec(sql);
 
     for (const [index, descriptor] of descriptors.entries()) {
       const derived = classifyFromDescription(`${descriptor} 12345`);
