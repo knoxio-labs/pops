@@ -29,7 +29,10 @@ export interface EligibleMovie {
   id: number;
   tmdbId: number;
   title: string;
-  /** Watches counted to completion. A partial play is not a watch. */
+  /**
+   * Watches counted to completion, excluding any the viewer disavowed. A
+   * partial play is not a watch, and neither is a blacklisted one.
+   */
   watchCount: number;
   lastWatchedAt: string | null;
   /** Mean Elo across the dimensions this movie has actually been compared on. */
@@ -125,12 +128,14 @@ export function getEligibleForRemoval(
       watchCount: sql<number>`(
         SELECT count(*) FROM ${watchHistory}
         WHERE ${watchHistory.mediaType} = 'movie'
-          AND ${watchHistory.mediaId} = ${movies.id} AND ${watchHistory.completed} = 1
+          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
       )`,
       lastWatchedAt: sql<string | null>`(
         SELECT max(${watchHistory.watchedAt}) FROM ${watchHistory}
         WHERE ${watchHistory.mediaType} = 'movie'
-          AND ${watchHistory.mediaId} = ${movies.id} AND ${watchHistory.completed} = 1
+          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
       )`,
       elo: sql<number | null>`(
         SELECT avg(${mediaScores.score}) FROM ${mediaScores}
