@@ -1,17 +1,19 @@
 import { applyChangeSetToRules, correctionToRow, toCorrection } from '@pops/finance';
 
-import type { Correction, CorrectionRow, Entity } from '@pops/finance';
+import type { Correction, CorrectionRow } from '@pops/finance';
 
 import type { PendingChangeSet, PendingEntity } from '../store/importStore';
 
 /**
- * Stable placeholder edit-time for adapted pending entities. The rule-form
- * entity picker references pending entities by id/name only and never reads
- * this field, so it must be a fixed constant rather than a wall-clock read —
- * a `new Date()` here made {@link computeMergedEntities} impure, so two calls
- * with identical input diverged whenever they straddled a millisecond boundary.
+ * An entity as the pickers consume it. Deliberately narrower than the contract
+ * `Entity`: every picker references an entity by id and name only, and the
+ * merged list carries pending entities that have neither aliases nor an edit
+ * time to report.
  */
-const PENDING_ENTITY_PLACEHOLDER_TIME = '1970-01-01T00:00:00.000Z';
+export interface PickableEntity {
+  id: string;
+  name: string;
+}
 
 /**
  * Fold `applyChangeSetToRules` over each pending ChangeSet in insertion order,
@@ -40,9 +42,9 @@ export function computeMergedRules(
 }
 
 /**
- * Adapt pending entities to the `Entity` interface and merge them with DB
- * entities. When a pending entity's name matches a DB entity's name
- * (case-insensitive), the pending version replaces the DB entry.
+ * Merge the pending entities into the DB entities. When a pending entity's
+ * name matches a DB entity's name (case-insensitive), the pending version
+ * replaces the DB entry.
  * The merged list is sorted alphabetically by name (case-insensitive) so
  * newly-added pending entities appear in their natural position rather than
  * appended at the end.
@@ -50,26 +52,22 @@ export function computeMergedRules(
  * Pure — no internal caching (CF082/#3670); see {@link computeMergedRules}.
  */
 export function computeMergedEntities(
-  dbEntities: Entity[],
+  dbEntities: PickableEntity[],
   pendingEntities: PendingEntity[]
-): Entity[] {
+): PickableEntity[] {
   if (pendingEntities.length === 0) {
     // DB list is already sorted server-side; nothing to merge in.
     return dbEntities;
   }
 
-  const byName = (a: Entity, b: Entity) =>
+  const byName = (a: PickableEntity, b: PickableEntity) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
   const pendingNameSet = new Set(pendingEntities.map((pe) => pe.name.toLowerCase()));
 
-  // The merged list feeds the rule-form entity picker, which references entities
-  // by id/name only, so aliases/lastEditedTime are placeholders.
-  const adaptedPending: Entity[] = pendingEntities.map((pe) => ({
+  const adaptedPending: PickableEntity[] = pendingEntities.map((pe) => ({
     id: pe.tempId,
     name: pe.name,
-    aliases: [],
-    lastEditedTime: PENDING_ENTITY_PLACEHOLDER_TIME,
   }));
 
   const filteredDb = dbEntities.filter((e) => !pendingNameSet.has(e.name.toLowerCase()));

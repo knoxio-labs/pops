@@ -355,11 +355,11 @@ describe('computeMergedEntities', () => {
     expect(result).toHaveLength(2);
     expect(elementAt(result, 0).name).toBe('Another Corp');
     expect(elementAt(result, 1).name).toBe('New Corp');
-    expect(elementAt(result, 0).aliases).toEqual([]);
     expect(elementAt(result, 0).id).toMatch(/^temp:entity:/);
-    // A fixed placeholder, never a wall-clock read — a `new Date()` here would
-    // make computeMergedEntities impure (see the purity test below).
-    expect(elementAt(result, 0).lastEditedTime).toBe('1970-01-01T00:00:00.000Z');
+    // Id and name only: a pending entity has no aliases or edit time to report,
+    // and inventing one made computeMergedEntities impure (see the purity test
+    // below) when it was read from the wall clock.
+    expect(Object.keys(elementAt(result, 0)).toSorted()).toEqual(['id', 'name']);
   });
 
   it('is pure — same input refs recompute a fresh but equal output (no internal caching, CF082/#3670)', () => {

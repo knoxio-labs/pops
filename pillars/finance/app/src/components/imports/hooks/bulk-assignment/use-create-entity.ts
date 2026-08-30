@@ -11,7 +11,7 @@ import type { LocalTxState, UseBulkAssignmentArgs } from './types';
 
 interface UseCreateEntityArgs {
   addPendingEntity: ReturnType<typeof useEntities>['addPendingEntity'];
-  dbEntitiesData: ReturnType<typeof useEntities>['dbEntitiesData'];
+  dbEntities: ReturnType<typeof useEntities>['dbEntities'];
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   handleEntitySelect: UseBulkAssignmentArgs['handleEntitySelect'];
   generateProposal: UseBulkAssignmentArgs['generateProposal'];
@@ -29,7 +29,7 @@ interface UseCreateEntityArgs {
 export function useCreateEntity(args: UseCreateEntityArgs) {
   const {
     addPendingEntity,
-    dbEntitiesData,
+    dbEntities,
     setLocalTransactions,
     handleEntitySelect,
     generateProposal,
@@ -39,18 +39,14 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
   /**
    * Mint a locally-pending entity, returning null (after a toast) when
    * `addPendingEntity` rejects the name as a case-insensitive duplicate of one
-   * already pending or on the loaded DB page.
-   *
-   * That check is only as wide as what was loaded: the contacts pillar caps a
-   * page at 200, so a merchant past the cap is neither offered by the picker
-   * nor caught here, and creating it mints a duplicate entity.
+   * already pending or already in the DB.
    */
   const createPendingEntity = useCallback(
     (name: string): CreatedEntity | null => {
       const trimmed = name.trim();
       if (!trimmed) return null;
       try {
-        const entity = addPendingEntity({ name: trimmed, type: 'company' }, dbEntitiesData?.data);
+        const entity = addPendingEntity({ name: trimmed, type: 'company' }, dbEntities);
         return { entityId: entity.tempId, entityName: entity.name };
       } catch (error) {
         toast.error(
@@ -59,7 +55,7 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
         return null;
       }
     },
-    [addPendingEntity, dbEntitiesData?.data]
+    [addPendingEntity, dbEntities]
   );
 
   const assignCreatedToGroup = useAssignCreatedToGroup({

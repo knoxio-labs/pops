@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useImportStore } from '../../../../store/importStore';
 import { useAcceptAll } from './use-accept';
 
-import type { EntityListResponse } from '../../../../contacts-api/index.js';
+import type { EntityLookup } from '../../../../contacts-api/index.js';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { LocalTxState } from './types';
 
@@ -42,19 +42,7 @@ beforeEach(() => {
 
 describe('useAcceptAll (CF014)', () => {
   it('replaces the existing matched card in place instead of appending a duplicate', async () => {
-    const dbEntitiesData: EntityListResponse = {
-      data: [
-        {
-          id: 'ent-bunnings',
-          name: 'Bunnings',
-          aliases: [],
-          defaultTags: [],
-          type: 'company',
-          lastEditedTime: '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      pagination: { hasMore: false, limit: 50, offset: 0, total: 1 },
-    };
+    const dbEntities: EntityLookup[] = [{ id: 'ent-bunnings', name: 'Bunnings', aliases: [] }];
 
     const alreadyMatched = makeProcessed('bunnings', {
       status: 'matched',
@@ -69,9 +57,9 @@ describe('useAcceptAll (CF014)', () => {
     const { result } = renderHook(() => {
       const [state, setState] = useState<LocalTxState>(emptyState({ matched: [alreadyMatched] }));
       const acceptAll = useAcceptAll({
-        entities: dbEntitiesData.data,
+        entities: dbEntities,
         addPendingEntity: useImportStore.getState().addPendingEntity,
-        dbEntitiesData,
+        dbEntities,
         setLocalTransactions: setState,
         generateProposal: vi.fn().mockResolvedValue(undefined),
         recomputeForEntity: vi.fn().mockResolvedValue(undefined),

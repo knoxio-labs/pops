@@ -15,30 +15,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useImportStore } from '../../../../store/importStore';
 import { EntityField, type EntityOutcome } from './EntityField';
 
-import type { EntityListResponse } from '../../../../contacts-api/index.js';
+import type { LookupResponse } from '../../../../contacts-api/index.js';
 
-const mockEntitiesList = vi.fn();
+const mockEntitiesLookup = vi.fn();
 const mockToastError = vi.fn();
 
 vi.mock('../../../../contacts-api/index.js', () => ({
-  entitiesList: () => mockEntitiesList(),
+  entitiesLookup: () => mockEntitiesLookup(),
 }));
 
 vi.mock('sonner', () => ({
   toast: { error: (msg: string) => mockToastError(msg), success: vi.fn(), info: vi.fn() },
 }));
 
-function dbEntities(...names: Array<[id: string, name: string]>): EntityListResponse {
+function dbEntities(...names: Array<[id: string, name: string]>): LookupResponse {
   return {
-    data: names.map(([id, name]) => ({
-      id,
-      name,
-      aliases: [],
-      defaultTags: [],
-      type: 'company',
-      lastEditedTime: '2026-01-01T00:00:00.000Z',
-    })),
-    pagination: { hasMore: false, limit: 50, offset: 0, total: names.length },
+    entities: names.map(([id, name]) => ({ id, name, aliases: [] })),
+    fetchedAt: '2026-01-01T00:00:00.000Z',
   };
 }
 
@@ -50,7 +43,7 @@ function renderWithQuery(ui: ReactElement) {
 async function renderField(value: EntityOutcome) {
   const onChange = vi.fn();
   renderWithQuery(<EntityField value={value} onChange={onChange} disabled={false} />);
-  await waitFor(() => expect(mockEntitiesList).toHaveBeenCalled());
+  await waitFor(() => expect(mockEntitiesLookup).toHaveBeenCalled());
   return onChange;
 }
 
@@ -62,7 +55,7 @@ async function openPicker() {
 beforeEach(() => {
   vi.clearAllMocks();
   useImportStore.getState().reset();
-  mockEntitiesList.mockResolvedValue({
+  mockEntitiesLookup.mockResolvedValue({
     data: dbEntities(['ent-woolies', 'Woolworths'], ['ent-netflix', 'Netflix']),
   });
 });
@@ -124,29 +117,13 @@ describe('EntityField — creating a merchant that does not exist yet', () => {
   it('does not offer creation while the entity list is still loading', async () => {
     // An incomplete list cannot answer "does this merchant exist?", so offering
     // to create one invites a duplicate of an entity we simply haven't seen.
-    mockEntitiesList.mockReturnValue(new Promise(() => {}));
+    mockEntitiesLookup.mockReturnValue(new Promise(() => {}));
     await renderField({ entityId: null, entityName: null });
 
     const search = await openPicker();
     await userEvent.type(search, 'Universal Hotel');
 
     expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
-  });
-
-  it('does not offer creation when the entity list is a partial page', async () => {
-    mockEntitiesList.mockResolvedValue({
-      data: {
-        ...dbEntities(['ent-woolies', 'Woolworths']),
-        pagination: { hasMore: true, limit: 200, offset: 0, total: 240 },
-      },
-    });
-    await renderField({ entityId: null, entityName: null });
-
-    const search = await openPicker();
-    await userEvent.type(search, 'Universal Hotel');
-
-    expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Showing the first 1 of 240 entities/)).toBeInTheDocument();
   });
 });
 
@@ -179,24 +156,9 @@ describe('EntityField — reporting a broken pair', () => {
   });
 
   it('does not warn while the entity list is still loading', async () => {
-    mockEntitiesList.mockReturnValue(new Promise(() => {}));
+    mockEntitiesLookup.mockReturnValue(new Promise(() => {}));
     await renderField({ entityId: 'ent-woolies', entityName: 'Woolworths' });
 
-    expect(screen.queryByText(/not a known entity/)).not.toBeInTheDocument();
-  });
-
-  it('does not call an unseen id dead when the list is only a partial page', async () => {
-    // The id may live on a page we never fetched; "not in the list" is not
-    // evidence of a deleted entity, and warning here would cry wolf.
-    mockEntitiesList.mockResolvedValue({
-      data: {
-        ...dbEntities(['ent-woolies', 'Woolworths']),
-        pagination: { hasMore: true, limit: 200, offset: 0, total: 240 },
-      },
-    });
-    await renderField({ entityId: 'ent-on-another-page', entityName: 'Bunnings' });
-
-    expect(await screen.findByText(/Showing the first 1 of 240/)).toBeInTheDocument();
     expect(screen.queryByText(/not a known entity/)).not.toBeInTheDocument();
   });
 });

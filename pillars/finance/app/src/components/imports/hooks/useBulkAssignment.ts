@@ -23,7 +23,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
 
-  const { entities, truncated, addPendingEntity, dbEntitiesData } = useEntities();
+  const { entities, dbEntities, addPendingEntity } = useEntities();
 
   const handleCreateEntity = useCallback((transaction: ProcessedTransaction) => {
     setSelectedTransaction(transaction);
@@ -32,7 +32,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
 
   const { handleCreateAndAssignAll, handleCreateEntityWithName } = useCreateEntity({
     addPendingEntity,
-    dbEntitiesData,
+    dbEntities,
     setLocalTransactions,
     handleEntitySelect,
     generateProposal,
@@ -49,7 +49,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
   const handleAcceptAll = useAcceptAll({
     entities,
     addPendingEntity,
-    dbEntitiesData,
+    dbEntities,
     setLocalTransactions,
     generateProposal,
     recomputeForEntity,
@@ -67,8 +67,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     selectedTransaction,
     setSelectedTransaction,
     entities,
-    entitiesTruncated: truncated,
-    dbEntitiesData,
+    dbEntities,
     handleCreateEntity,
     handleCreateEntityWithName,
     handleAcceptAiSuggestion,

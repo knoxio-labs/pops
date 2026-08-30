@@ -11,7 +11,7 @@ import type { useEntities } from '../useEntities';
 interface AcceptAllArgs {
   entities: ReturnType<typeof useEntities>['entities'];
   addPendingEntity: ReturnType<typeof useEntities>['addPendingEntity'];
-  dbEntitiesData: ReturnType<typeof useEntities>['dbEntitiesData'];
+  dbEntities: ReturnType<typeof useEntities>['dbEntities'];
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   generateProposal: UseBulkAssignmentArgs['generateProposal'];
   recomputeForEntity: UseBulkAssignmentArgs['recomputeForEntity'];
@@ -21,11 +21,11 @@ function resolveEntityId(
   entityName: string,
   entities: AcceptAllArgs['entities'],
   addPendingEntity: AcceptAllArgs['addPendingEntity'],
-  dbEntitiesData: AcceptAllArgs['dbEntitiesData']
+  dbEntities: AcceptAllArgs['dbEntities']
 ): string {
   const existing = entities?.find((e) => e.name.toLowerCase() === entityName.toLowerCase())?.id;
   if (existing) return existing;
-  const pending = addPendingEntity({ name: entityName, type: 'company' }, dbEntitiesData?.data);
+  const pending = addPendingEntity({ name: entityName, type: 'company' }, dbEntities);
   return pending.tempId;
 }
 
@@ -39,7 +39,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
   const {
     entities,
     addPendingEntity,
-    dbEntitiesData,
+    dbEntities,
     setLocalTransactions,
     generateProposal,
     recomputeForEntity,
@@ -54,7 +54,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
         return;
       }
       try {
-        const entityId = resolveEntityId(entityName, entities, addPendingEntity, dbEntitiesData);
+        const entityId = resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
         setLocalTransactions((prev) => moveToMatched(prev, transactions, { entityId, entityName }));
         void recomputeForEntity(transactions, entityId);
         toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
@@ -74,7 +74,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
     [
       entities,
       addPendingEntity,
-      dbEntitiesData,
+      dbEntities,
       setLocalTransactions,
       generateProposal,
       recomputeForEntity,

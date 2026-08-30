@@ -13,16 +13,13 @@ describe('resolveEntityExistence', () => {
     expect(resolveEntityExistence('Chargefox', ENTITIES)).toBe('new');
   });
 
-  it('refuses to call an absent name new when the list is truncated', () => {
-    expect(resolveEntityExistence('Chargefox', ENTITIES, true)).toBe('unknown');
-  });
-
-  it('still reports a hit as existing when the list is truncated', () => {
-    expect(resolveEntityExistence('Cloudflare', ENTITIES, true)).toBe('existing');
-  });
-
-  it('is unknown while the list is still loading', () => {
+  it('refuses to call an absent name new while the list is still loading', () => {
+    expect(resolveEntityExistence('Chargefox', undefined)).toBe('unknown');
     expect(resolveEntityExistence('Cloudflare', undefined)).toBe('unknown');
+  });
+
+  it('treats an empty loaded list as complete — every name is new', () => {
+    expect(resolveEntityExistence('Chargefox', [])).toBe('new');
   });
 
   it('is unknown when there is no name to classify', () => {

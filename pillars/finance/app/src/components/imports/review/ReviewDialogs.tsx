@@ -94,7 +94,7 @@ export function ReviewDialogs({
         }}
         onEntityCreated={bulk.handleEntityCreated}
         suggestedName={bulk.selectedTransaction?.entity?.entityName}
-        dbEntities={bulk.dbEntitiesData?.data}
+        dbEntities={bulk.dbEntities}
       />
     </>
   );

@@ -59,20 +59,14 @@ vi.mock('../../finance-api/index.js', () => ({
 }));
 
 vi.mock('../../contacts-api/index.js', () => ({
-  entitiesList: () =>
+  entitiesLookup: () =>
     Promise.resolve({
       data: {
-        data: [
-          { id: 'ent-woolies', name: 'Woolworths' },
-          { id: 'ent-coles', name: 'Coles' },
-        ].map((e) => ({
-          ...e,
-          aliases: [],
-          defaultTags: [],
-          type: 'company',
-          lastEditedTime: '2026-01-01T00:00:00.000Z',
-        })),
-        pagination: { hasMore: false, limit: 50, offset: 0, total: 2 },
+        entities: [
+          { id: 'ent-woolies', name: 'Woolworths', aliases: [] },
+          { id: 'ent-coles', name: 'Coles', aliases: [] },
+        ],
+        fetchedAt: '2026-01-01T00:00:00.000Z',
       },
     }),
 }));

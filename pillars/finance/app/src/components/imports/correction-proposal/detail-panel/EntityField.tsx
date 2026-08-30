@@ -31,18 +31,16 @@ type SelectionState = 'none' | 'resolved' | 'unresolved' | 'unverifiable';
  * What the current `(entityId, entityName)` pair means, given the entities we
  * can see. `unresolved` is the pair a free-text editor used to produce: a name
  * with no id behind it, which applies no merchant at all. `unverifiable` is a
- * set id we cannot judge — the list is still loading or paged, so an absent id
- * is not evidence of a dead one and claiming otherwise would cry wolf.
+ * set id we cannot judge because the list has not loaded yet — an absent id is
+ * not evidence of a dead one, and claiming otherwise would cry wolf.
  */
 function describeSelection(
   value: EntityOutcome,
-  entities: ReturnType<typeof useEntities>['entities'],
-  truncated: boolean
+  entities: ReturnType<typeof useEntities>['entities']
 ): SelectionState {
   if (!value.entityId) return value.entityName ? 'unresolved' : 'none';
   if (!entities) return 'unverifiable';
-  if (entities.some((e) => e.id === value.entityId)) return 'resolved';
-  return truncated ? 'unverifiable' : 'unresolved';
+  return entities.some((e) => e.id === value.entityId) ? 'resolved' : 'unresolved';
 }
 
 function SelectionNote({ state, name }: { state: SelectionState; name: string | null }) {
@@ -70,12 +68,12 @@ function SelectionNote({ state, name }: { state: SelectionState; name: string | 
  * says so when the pair is already broken on a rule it inherited.
  */
 export function EntityField({ value, onChange, disabled }: EntityFieldProps) {
-  const { entities, truncated, addPendingEntity, dbEntitiesData } = useEntities();
-  const state = describeSelection(value, entities, truncated);
+  const { entities, dbEntities, addPendingEntity } = useEntities();
+  const state = describeSelection(value, entities);
 
   const handleCreate = (name: string) => {
     try {
-      const created = addPendingEntity({ name, type: 'company' }, dbEntitiesData?.data);
+      const created = addPendingEntity({ name, type: 'company' }, dbEntities);
       onChange({ entityId: created.tempId, entityName: created.name });
     } catch (error) {
       // `addPendingEntity` throws on a name collision. Unreachable while the
@@ -85,10 +83,10 @@ export function EntityField({ value, onChange, disabled }: EntityFieldProps) {
     }
   };
 
-  // Creating is only offered against a complete list: with entities missing or
-  // paged, "matches no entity" cannot be decided, and creating would duplicate
-  // a merchant that already exists.
-  const canCreate = entities !== undefined && !truncated;
+  // Creating is only offered once the list has loaded: until then "matches no
+  // entity" cannot be decided, and creating would duplicate a merchant that
+  // already exists.
+  const canCreate = entities !== undefined;
 
   return (
     <div className="space-y-1">
@@ -105,12 +103,6 @@ export function EntityField({ value, onChange, disabled }: EntityFieldProps) {
         disabled={disabled}
       />
       <SelectionNote state={state} name={value.entityName} />
-      {truncated && (
-        <FieldWarning>
-          Showing the first {entities?.length ?? 0} of {dbEntitiesData?.pagination.total} entities —
-          manage the rest from the Entities page.
-        </FieldWarning>
-      )}
     </div>
   );
 }

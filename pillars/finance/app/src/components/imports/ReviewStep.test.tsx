@@ -27,12 +27,12 @@ vi.mock('../../finance-api/index.js', () => ({
   }),
 }));
 
-// The entity picker reads `entities.list` over the generated contacts REST
+// The entity picker reads `entities.lookup` over the generated contacts REST
 // client; the mock resolves the Hey API `{ data, error }` envelope so the
-// picker's `unwrap` returns the list payload. Corrections are finance REST
+// picker's `unwrap` returns the whole-set payload. Corrections are finance REST
 // (mocked above) and the proposal dialog itself is stubbed below.
 vi.mock('../../contacts-api/index.js', () => ({
-  entitiesList: (...args: unknown[]) => mockEntitiesQuery(...args),
+  entitiesLookup: (...args: unknown[]) => mockEntitiesQuery(...args),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -358,11 +358,11 @@ beforeEach(() => {
   mockPendingChangeSets = [];
   mockEntitiesQuery.mockResolvedValue({
     data: {
-      data: [
-        { id: 'ent-1', name: 'Woolworths', type: 'company' },
-        { id: 'ent-2', name: 'Coles', type: 'company' },
+      entities: [
+        { id: 'ent-1', name: 'Woolworths', aliases: [] },
+        { id: 'ent-2', name: 'Coles', aliases: [] },
       ],
-      pagination: { total: 2, limit: 100, offset: 0, hasMore: false },
+      fetchedAt: '2026-01-01T00:00:00.000Z',
     },
     error: undefined,
   });
@@ -629,11 +629,11 @@ describe('ReviewStep — low-confidence confirmation flow', () => {
     });
     mockEntitiesQuery.mockResolvedValue({
       data: {
-        data: [
-          { id: 'ent-1', name: 'Woolworths', type: 'company' },
-          { id: 'ent-3', name: 'Spotify', type: 'company' },
+        entities: [
+          { id: 'ent-1', name: 'Woolworths', aliases: [] },
+          { id: 'ent-3', name: 'Spotify', aliases: [] },
         ],
-        pagination: { total: 2, limit: 100, offset: 0, hasMore: false },
+        fetchedAt: '2026-01-01T00:00:00.000Z',
       },
       error: undefined,
     });
@@ -683,8 +683,8 @@ describe('ReviewStep — low-confidence confirmation flow', () => {
     });
     mockEntitiesQuery.mockResolvedValue({
       data: {
-        data: [{ id: 'ent-3', name: 'Spotify', type: 'company' }],
-        pagination: { total: 1, limit: 100, offset: 0, hasMore: false },
+        entities: [{ id: 'ent-3', name: 'Spotify', aliases: [] }],
+        fetchedAt: '2026-01-01T00:00:00.000Z',
       },
       error: undefined,
     });
@@ -711,8 +711,8 @@ describe('ReviewStep — low-confidence confirmation flow', () => {
     });
     mockEntitiesQuery.mockResolvedValue({
       data: {
-        data: [{ id: 'ent-3', name: 'Spotify', type: 'company' }],
-        pagination: { total: 1, limit: 100, offset: 0, hasMore: false },
+        entities: [{ id: 'ent-3', name: 'Spotify', aliases: [] }],
+        fetchedAt: '2026-01-01T00:00:00.000Z',
       },
       error: undefined,
     });
