@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { unwrap as unwrapContacts } from '../../contacts-api-helpers.js';
-import { entitiesList } from '../../contacts-api/index.js';
 import { unwrap } from '../../finance-api-helpers.js';
 import {
   tagRulesApplyExisting,
@@ -11,12 +9,11 @@ import {
   tagRulesDisable,
   tagRulesList,
 } from '../../finance-api/index.js';
+import { useAllEntities } from '../../lib/useAllEntities';
 
 import type { MatchType, TagRule } from './types';
 
 export const PAGE_SIZE = 50;
-const ENTITIES_LIST_INPUT = { limit: 500 } as const;
-
 interface TagRulesListResult {
   data: TagRule[];
   pagination: { total: number; limit: number; offset: number };
@@ -163,10 +160,7 @@ function useApplyExistingFlow() {
 }
 
 function useEntityNames() {
-  const entitiesQuery = useQuery({
-    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
-    queryFn: async () => unwrapContacts(await entitiesList({ query: ENTITIES_LIST_INPUT })),
-  });
+  const entitiesQuery = useAllEntities();
   return useMemo(
     () => new Map((entitiesQuery.data?.data ?? []).map((e) => [e.id, e.name])),
     [entitiesQuery.data]

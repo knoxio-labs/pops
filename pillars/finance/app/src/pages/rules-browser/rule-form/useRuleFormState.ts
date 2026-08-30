@@ -1,13 +1,12 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { unwrap as unwrapContacts } from '../../../contacts-api-helpers.js';
-import { entitiesList } from '../../../contacts-api/index.js';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { correctionsCreateOrUpdate, correctionsUpdate } from '../../../finance-api/index.js';
+import { useAllEntities } from '../../../lib/useAllEntities';
 import { DEFAULT_RULE_FORM_VALUES, type RuleFormValues, RuleFormSchema } from './types';
 
 import type { Correction, MatchType } from '../types';
@@ -15,9 +14,6 @@ import type { Correction, MatchType } from '../types';
 interface UseRuleFormStateOptions {
   onClose: () => void;
 }
-
-/** The contacts pillar clamps `limit` to 200; asking for more just reads as a lie. */
-const ENTITIES_LIST_INPUT = { limit: 200 } as const;
 
 interface CreateRulePayload {
   descriptionPattern: string;
@@ -162,10 +158,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
     defaultValues: DEFAULT_RULE_FORM_VALUES,
   });
   const { createMutation, updateMutation } = useRuleMutations(onClose);
-  const entitiesQuery = useQuery({
-    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
-    queryFn: async () => unwrapContacts(await entitiesList({ query: ENTITIES_LIST_INPUT })),
-  });
+  const entitiesQuery = useAllEntities();
   const entities = (entitiesQuery.data?.data ?? []).map((e) => ({ id: e.id, name: e.name }));
 
   const handleAdd = useCallback(() => {
