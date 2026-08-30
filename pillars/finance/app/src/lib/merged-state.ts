@@ -6,13 +6,15 @@ import type { PendingChangeSet, PendingEntity } from '../store/importStore';
 
 /**
  * An entity as the pickers consume it. Deliberately narrower than the contract
- * `Entity`: every picker references an entity by id and name only, and the
- * merged list carries pending entities that have neither aliases nor an edit
- * time to report.
+ * `Entity`: a picker references an entity by id and name, and matches on its
+ * aliases — an alias is the merchant's other name, so a name-only comparison
+ * reports a known merchant as new and mints a second entity for it. The merged
+ * list carries pending entities, which have no aliases and no edit time.
  */
 export interface PickableEntity {
   id: string;
   name: string;
+  aliases: readonly string[];
 }
 
 /**
@@ -68,6 +70,7 @@ export function computeMergedEntities(
   const adaptedPending: PickableEntity[] = pendingEntities.map((pe) => ({
     id: pe.tempId,
     name: pe.name,
+    aliases: [],
   }));
 
   const filteredDb = dbEntities.filter((e) => !pendingNameSet.has(e.name.toLowerCase()));

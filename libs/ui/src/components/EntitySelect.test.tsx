@@ -109,6 +109,18 @@ describe('EntitySelect — create row', () => {
     expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
   });
 
+  it('is absent when the term is an ALIAS of an existing entity', async () => {
+    const withAlias: EntityOption[] = [
+      { id: 'e1', name: "McDonald's", type: 'company', aliases: ['Maccas'] },
+    ];
+    render(<EntitySelect entities={withAlias} onCreate={vi.fn()} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'maccas');
+
+    expect(screen.queryByText(/^Create/)).not.toBeInTheDocument();
+  });
+
   it('is absent unless onCreate is supplied', async () => {
     render(<EntitySelect entities={ENTITIES} />);
 
@@ -127,5 +139,23 @@ describe('EntitySelect — create row', () => {
     await userEvent.click(screen.getByText('Create “Universal Hotel”'));
 
     expect(await openPicker()).toHaveValue('');
+  });
+});
+
+describe('EntitySelect — searching by alias', () => {
+  it('finds an entity by a name it is also known by', async () => {
+    const onChange = vi.fn();
+    const withAlias: EntityOption[] = [
+      { id: 'e1', name: "McDonald's", type: 'company', aliases: ['Maccas'] },
+      { id: 'e2', name: 'Coles', type: 'company' },
+    ];
+    render(<EntitySelect entities={withAlias} onChange={onChange} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'Maccas');
+
+    const row = screen.getByRole('option', { name: /McDonald/ });
+    await userEvent.click(row);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('e1', "McDonald's");
   });
 });

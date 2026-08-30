@@ -1,8 +1,7 @@
-import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '../lib/utils';
-import { Badge } from '../primitives/badge';
 import {
   Command,
   CommandEmpty,
@@ -13,12 +12,24 @@ import {
 } from '../primitives/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
 import { Button } from './Button';
+import {
+  ClearRow,
+  CreateRow,
+  EntityRow,
+  EntityTriggerLabel,
+} from './entity-select/EntitySelectRows';
 
 export interface EntityOption {
   id: string;
   name: string;
   /** Optional tag shown as a badge (e.g. entity type) */
   type?: string;
+  /**
+   * Other names this entity is known by. Searchable but not rendered: someone
+   * who types a merchant's alias is looking for that merchant, and offering to
+   * create it instead mints a duplicate.
+   */
+  aliases?: readonly string[];
   /** When true, renders the name in italic and shows a "Pending" badge */
   pending?: boolean;
 }
@@ -49,86 +60,16 @@ export interface EntitySelectProps {
   'aria-label'?: string;
 }
 
-function EntityTriggerLabel({
-  selected,
-  placeholder,
-}: {
-  selected?: EntityOption;
-  placeholder: string;
-}) {
-  if (!selected) return <span className="text-muted-foreground">{placeholder}</span>;
-  return (
-    <span className="flex items-center gap-2 truncate">
-      <span className={cn('truncate', selected.pending && 'italic')}>{selected.name}</span>
-      {selected.pending && (
-        <Badge variant="secondary" className="text-xs shrink-0">
-          Pending
-        </Badge>
-      )}
-      {selected.type && (
-        <Badge variant="outline" className="text-xs capitalize shrink-0">
-          {selected.type}
-        </Badge>
-      )}
-    </span>
-  );
-}
-
-function EntityRow({ entity, selectedId }: { entity: EntityOption; selectedId?: string }) {
-  return (
-    <>
-      <Check className={`mr-2 h-4 w-4 ${selectedId === entity.id ? 'opacity-100' : 'opacity-0'}`} />
-      <span className={cn('truncate', entity.pending && 'italic')}>{entity.name}</span>
-      {entity.pending && (
-        <Badge variant="secondary" className="ml-1 text-xs shrink-0">
-          Pending
-        </Badge>
-      )}
-      {entity.type && (
-        <Badge variant="outline" className="ml-auto text-xs capitalize shrink-0">
-          {entity.type}
-        </Badge>
-      )}
-    </>
-  );
-}
-
-/**
- * Always mounted: cmdk filters on the row's own label, so a search term that
- * doesn't match it would hide the only way to select no entity — exactly when
- * the user is searching for what to replace.
- */
-function ClearRow({ label, onSelect }: { label: string; onSelect: () => void }) {
-  return (
-    <CommandGroup forceMount>
-      <CommandItem forceMount value={label} onSelect={onSelect}>
-        <X className="mr-2 h-4 w-4" />
-        <span className="text-muted-foreground">{label}</span>
-      </CommandItem>
-    </CommandGroup>
-  );
-}
-
-/**
- * Always mounted so it survives cmdk's filter — the term that produced it by
- * definition matches no existing entity, so a filtered row would never show.
- */
-function CreateRow({ name, onSelect }: { name: string; onSelect: () => void }) {
-  return (
-    <CommandGroup forceMount>
-      <CommandItem forceMount value={`create:${name}`} onSelect={onSelect}>
-        <Plus className="mr-2 h-4 w-4" />
-        <span className="truncate">Create &ldquo;{name}&rdquo;</span>
-      </CommandItem>
-    </CommandGroup>
-  );
-}
-
 function useEntitySelectState(entities: EntityOption[], onCreate?: (name: string) => void) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const trimmedQuery = query.trim();
-  const nameTaken = entities.some((e) => e.name.toLowerCase() === trimmedQuery.toLowerCase());
+  const target = trimmedQuery.toLowerCase();
+  const nameTaken = entities.some(
+    (e) =>
+      e.name.toLowerCase() === target ||
+      (e.aliases ?? []).some((alias) => alias.toLowerCase() === target)
+  );
   return {
     open,
     query,
@@ -176,7 +117,7 @@ function EntityPickerList({
           {entities.map((entity) => (
             <CommandItem
               key={entity.id}
-              value={`${entity.name} ${entity.type ?? ''}`}
+              value={`${entity.name} ${(entity.aliases ?? []).join(' ')} ${entity.type ?? ''}`}
               onSelect={() => {
                 onChange?.(entity.id, entity.name);
                 state.close();

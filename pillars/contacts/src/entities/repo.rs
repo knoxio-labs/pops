@@ -58,9 +58,15 @@ macro_rules! select_entities {
     };
 }
 
-/// List entities filtered by an optional case-insensitive name `search` and an
+/// List entities filtered by an optional case-insensitive `search` and an
 /// optional exact `type`, ordered case-insensitively by name, with `limit` /
 /// `offset` pagination. Returns the page plus the total matching count.
+///
+/// `search` covers aliases as well as the name. An alias is the entity's other
+/// name — the whole point of recording one is that callers meet the merchant
+/// under it — so a search that only saw `name` reported a known merchant as
+/// unknown, and the callers that resolve a name to an id created a second
+/// entity for it.
 pub async fn list(
     pool: &SqlitePool,
     search: Option<&str>,
@@ -71,7 +77,7 @@ pub async fn list(
     let like = search.map(|s| format!("%{s}%"));
 
     let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
-        "WHERE (?1 IS NULL OR name LIKE ?1) AND (?2 IS NULL OR type = ?2) \
+        "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) \
          ORDER BY name COLLATE NOCASE LIMIT ?3 OFFSET ?4"
     ))
     .bind(like.as_deref())
@@ -83,7 +89,7 @@ pub async fn list(
 
     let total: i64 = sqlx::query(
         "SELECT COUNT(*) AS total FROM entities \
-         WHERE (?1 IS NULL OR name LIKE ?1) AND (?2 IS NULL OR type = ?2)",
+         WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2)",
     )
     .bind(like.as_deref())
     .bind(ty)

@@ -236,6 +236,32 @@ async fn list_filters_paginates_and_orders_case_insensitively() {
     assert_eq!(body["pagination"]["hasMore"], true);
 }
 
+/// An alias is the entity's other name. A search that only saw `name` told the
+/// callers that resolve a name to an id that a known merchant was unknown, and
+/// they created a second entity for it.
+#[tokio::test]
+async fn list_search_matches_an_alias_as_well_as_the_name() {
+    let app = app().await;
+    create_contact(
+        &app,
+        json!({ "name": "McDonald's", "type": "company", "aliases": ["Maccas", "Golden Arches"] }),
+    )
+    .await;
+    create_contact(&app, json!({ "name": "Coles", "type": "company" })).await;
+
+    let (status, body) = send(&app, get("/entities?search=Maccas")).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["pagination"]["total"], 1);
+    assert_eq!(body["data"][0]["name"], "McDonald's");
+
+    let (_, body) = send(&app, get("/entities?search=Arches")).await;
+    assert_eq!(body["pagination"]["total"], 1);
+
+    let (_, body) = send(&app, get("/entities?search=Bunnings")).await;
+    assert_eq!(body["pagination"]["total"], 0);
+}
+
 #[tokio::test]
 async fn list_rejects_an_invalid_type_filter() {
     let app = app().await;

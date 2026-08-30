@@ -4,6 +4,11 @@ import { acceptEntityLabel, resolveEntityExistence } from './entity-existence';
 
 const ENTITIES = [{ name: 'Cloudflare' }, { name: 'Evie Networks' }];
 
+const WITH_ALIASES = [
+  { name: "McDonald's", aliases: ['Maccas', 'Golden Arches'] },
+  { name: 'Coles', aliases: [] },
+];
+
 describe('resolveEntityExistence', () => {
   it('matches an existing entity regardless of case', () => {
     expect(resolveEntityExistence('cloudFLARE', ENTITIES)).toBe('existing');
@@ -20,6 +25,20 @@ describe('resolveEntityExistence', () => {
 
   it('treats an empty loaded list as complete — every name is new', () => {
     expect(resolveEntityExistence('Chargefox', [])).toBe('new');
+  });
+
+  it('treats an alias as the entity, so accepting one does not mint a duplicate', () => {
+    expect(resolveEntityExistence('Maccas', WITH_ALIASES)).toBe('existing');
+    expect(resolveEntityExistence('golden arches', WITH_ALIASES)).toBe('existing');
+  });
+
+  it('still calls a genuinely unknown name new when others carry aliases', () => {
+    expect(resolveEntityExistence('Hungry Jacks', WITH_ALIASES)).toBe('new');
+  });
+
+  it('tolerates an entity with no aliases field at all', () => {
+    expect(resolveEntityExistence('Cloudflare', ENTITIES)).toBe('existing');
+    expect(resolveEntityExistence('Nope', ENTITIES)).toBe('new');
   });
 
   it('is unknown when there is no name to classify', () => {
