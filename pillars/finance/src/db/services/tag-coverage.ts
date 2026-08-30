@@ -10,18 +10,9 @@
  * asserted an occasion — so the gap has to be measured before it can be closed,
  * and re-measured after every future import.
  *
- * Applicability is read off `type`, never off a tag. `venue:`, `occasion:` and
- * `contains:` describe money spent ON something, so they apply exactly to the
- * spend types and to nothing else — a transfer was not spent on anything, and a
- * fee was a cost of the account rather than of a category (POPS-2610). The
- * alternative was an `occasion:admin` tag restating what `type` already says,
- * which was rejected: `type` is set by the importer from the descriptor on every
- * future import with nobody in the loop, whereas a tag needs a human to remember
- * forever — and it was already failing on 21 of the 38 non-spend rows it was
- * supposed to cover. So on a spend row a missing facet always means "not yet
- * decided", and on a non-spend row the facet simply does not apply.
- *
- * This module only counts. It writes nothing and decides nothing.
+ * This module only counts. It writes nothing and decides nothing: which facets
+ * a row is expected to carry, and which rows sit outside a facet's denominator,
+ * are decided in `tag-coverage-expectations.ts`.
  */
 import { isSpendType } from '../../contract/corrections-constants.js';
 import { transactions } from '../schema.js';
@@ -31,93 +22,18 @@ import {
   TAG_FACET_SEPARATOR,
   type ClosedTagFacet,
 } from '../tag-facets.js';
+import {
+  FACET_EXPECTATIONS,
+  findExclusion,
+  isAddressable,
+  isEnrichBlocked,
+  type FacetExclusionReason,
+  type FacetExpectation,
+} from './tag-coverage-expectations.js';
 
 import type { FinanceDb } from './internal.js';
 
-/** Marks a row whose contents the merchant does not determine (Amazon, IKEA). */
-const ENRICH_PREFIX = `enrich${TAG_FACET_SEPARATOR}`;
-
-/**
- * `contains:` values that mean "getting somewhere", not "a thing consumed".
- *
- * Such a row has no occasion of its own — the occasion is whatever you
- * travelled to, and it is recorded on that transaction, not on the fare
- * (POPS-2607). Requiring one here would force a guess onto every future import.
- *
- * The list is what the ledger says rather than what the words suggest, which is
- * why `rideshare` and `flight` are absent despite obviously being travel: all
- * 18 rideshare rows and both flight rows already carry an occasion, while
- * public-transport (0 of 21), tolls (0 of 12), parking (0 of 10) and fuel
- * (0 of 1) never do. `charging` is the one that splits, 9 of 22 — it is here
- * because those nine are a car being charged mid-trip and the rest are it being
- * charged at home, which is a distinction the descriptor cannot make.
- *
- * The exclusion is unconditional: a transit row is out of the occasion metric
- * whether or not it happens to carry one. Excluding only the rows that lack an
- * occasion would make the ratio flattering by construction — every row would be
- * either covered or excluded, and the number would report 100% while saying
- * nothing. Nothing here forbids an occasion on a transit row; the nine `AMPOL`
- * rows that carry `occasion:travel` keep it and simply do not figure in the
- * denominator.
- */
-const TRANSIT_CONTAINS: readonly string[] = [
-  `contains${TAG_FACET_SEPARATOR}public-transport`,
-  `contains${TAG_FACET_SEPARATOR}tolls`,
-  `contains${TAG_FACET_SEPARATOR}parking`,
-  `contains${TAG_FACET_SEPARATOR}fuel`,
-  `contains${TAG_FACET_SEPARATOR}charging`,
-];
-
-/**
- * Which rows a facet is expected on.
- *
- * `enrich:` excludes everywhere: the row is explicitly waiting on an enrichment
- * provider to say what it contains, and asserting a facet over it now would be
- * a guess recorded as a fact.
- *
- * `spendOnly` carries the applicability rule above. It is true for the three
- * facets POPS-2607 requires and false for `channel:`/`fee:`, which are measured
- * over the whole ledger because a fee's kind is precisely what a non-spend row
- * has to say.
- */
-interface FacetExpectation {
-  facet: ClosedTagFacet;
-  /** Whether POPS-2607's acceptance criteria require this facet to be present. */
-  required: boolean;
-  /** Whether the facet applies only to rows whose `type` counts as spend. */
-  spendOnly: boolean;
-  /** Whether a {@link TRANSIT_CONTAINS} row is outside this facet's set. */
-  excludesTransit: boolean;
-}
-
-/**
- * The facets a spend row is required to carry.
- *
- * `venue` is measured but NOT required (POPS-2607). A great deal of spend
- * happens at no place at all — a toll, a subscription, an online service, a
- * payment processor — and there is no honest venue value for those. The two
- * ways to make the axis total were both worse: inventing `venue:online` would
- * restate what `channel:online` already says, which is the redundancy the
- * `occasion:admin` retirement had just deleted, and gating `venue` on
- * `channel` would need `channel` populated first, which it is not. So `venue`
- * is a partial axis, deliberately, and the count below says how partial.
- */
-const REQUIRED_FACETS = new Set<string>(['occasion', 'contains']);
-
-/**
- * The facets that describe money spent ON something, so cannot apply to a
- * transfer or a fee. Wider than {@link REQUIRED_FACETS}: `venue` is not
- * required, but where it is absent that is still only meaningful for spend.
- */
-const SPEND_ONLY_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
-
-const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLOSED_TAG_FACETS.map((closed) => ({
-  facet: closed.facet,
-  required: REQUIRED_FACETS.has(closed.facet),
-  spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
-  excludesTransit: closed.facet === 'occasion',
-}));
-
+export type { FacetExclusionReason } from './tag-coverage-expectations.js';
 /** Coverage of one closed facet across the ledger. */
 export interface FacetCoverage {
   facet: ClosedTagFacet;
@@ -133,8 +49,11 @@ export interface FacetCoverage {
   enrichExcluded: number;
   /** Rows excluded because their `type` is not spend — the facet cannot apply. */
   nonSpendExcluded: number;
-  /** Rows excluded as transit — `occasion:` only, see {@link TRANSIT_CONTAINS}. */
-  transitExcluded: number;
+  /**
+   * Rows excluded by this facet's own rules, one entry per rule it carries and
+   * zero-valued when a rule matched nothing. Empty on a facet with no rules.
+   */
+  excluded: { reason: FacetExclusionReason; transactions: number }[];
   /**
    * Addressable rows carrying more than one value on a single-valued facet.
    *
@@ -184,21 +103,6 @@ function valuesOnFacet(tags: string[], facet: string): number {
   return tags.filter((tag) => tag.startsWith(prefix)).length;
 }
 
-function isEnrichBlocked(tags: string[]): boolean {
-  return tags.some((tag) => tag.startsWith(ENRICH_PREFIX));
-}
-
-function isTransit(tags: string[]): boolean {
-  return tags.some((tag) => TRANSIT_CONTAINS.includes(tag));
-}
-
-/** Is `facet` expected on this row, or outside its addressable set? */
-function isAddressable(expectation: FacetExpectation, row: ScannedRow): boolean {
-  if (isEnrichBlocked(row.tags)) return false;
-  if (expectation.spendOnly && !isSpendType(row.type)) return false;
-  return !(expectation.excludesTransit && isTransit(row.tags));
-}
-
 function measureFacet(
   expectation: FacetExpectation,
   rows: ScannedRow[],
@@ -212,7 +116,10 @@ function measureFacet(
     missing: 0,
     enrichExcluded: 0,
     nonSpendExcluded: 0,
-    transitExcluded: 0,
+    excluded: expectation.exclusions.map((exclusion) => ({
+      reason: exclusion.reason,
+      transactions: 0,
+    })),
     cardinalityViolations: 0,
   };
 
@@ -226,8 +133,10 @@ function measureFacet(
       coverage.nonSpendExcluded += 1;
       continue;
     }
-    if (expectation.excludesTransit && isTransit(tags)) {
-      coverage.transitExcluded += 1;
+    const exclusion = findExclusion(expectation, tags);
+    if (exclusion) {
+      const tally = coverage.excluded.find((entry) => entry.reason === exclusion.reason);
+      if (tally) tally.transactions += 1;
       continue;
     }
     coverage.addressable += 1;

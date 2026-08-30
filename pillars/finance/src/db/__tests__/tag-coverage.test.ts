@@ -21,6 +21,7 @@ import {
   transactions,
   type ClosedTagFacet,
   type FacetCoverage,
+  type FacetExclusionReason,
   type OpenedFinanceDb,
 } from '../index.js';
 
@@ -74,6 +75,16 @@ afterEach(() => {
   opened.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
 });
+
+/** How many rows one of a facet's own exclusion rules removed. */
+function excludedFor(
+  coverage: ReturnType<typeof tagCoverageService.measureTagCoverage>,
+  name: ClosedTagFacet,
+  reason: FacetExclusionReason
+): number {
+  const entry = facet(coverage, name).excluded.find((row) => row.reason === reason);
+  return entry?.transactions ?? 0;
+}
 
 describe('measureTagCoverage — the addressable set', () => {
   it('counts a row with no occasion as missing it, not as absent data', () => {
@@ -184,9 +195,10 @@ describe('measureTagCoverage — transit has no occasion of its own', () => {
     txn('E-TOLL PAYMENT', ['contains:tolls']);
     txn('TFNSW OPAL FARE', ['contains:public-transport']);
 
-    const occasion = facet(measure(), 'occasion');
+    const coverage = measure();
 
-    expect(occasion).toMatchObject({ addressable: 0, missing: 0, transitExcluded: 2 });
+    expect(facet(coverage, 'occasion')).toMatchObject({ addressable: 0, missing: 0 });
+    expect(excludedFor(coverage, 'occasion', 'transit')).toBe(2);
   });
 
   it('still requires contains: on a transit row — the exclusion is occasion-only', () => {
@@ -195,7 +207,7 @@ describe('measureTagCoverage — transit has no occasion of its own', () => {
     const coverage = measure();
 
     expect(facet(coverage, 'contains')).toMatchObject({ addressable: 1, covered: 1 });
-    expect(facet(coverage, 'venue').transitExcluded).toBe(0);
+    expect(facet(coverage, 'venue').excluded).toEqual([]);
   });
 
   // Unconditional on purpose: excluding only the transit rows that LACK an
@@ -204,28 +216,104 @@ describe('measureTagCoverage — transit has no occasion of its own', () => {
   it('excludes a transit row even when it does carry an occasion', () => {
     txn('AMPOL', ['contains:charging', 'occasion:travel']);
 
-    expect(facet(measure(), 'occasion')).toMatchObject({
-      transitExcluded: 1,
-      addressable: 0,
-      covered: 0,
-    });
+    const coverage = measure();
+
+    expect(facet(coverage, 'occasion')).toMatchObject({ addressable: 0, covered: 0 });
+    expect(excludedFor(coverage, 'occasion', 'transit')).toBe(1);
   });
 
   it('does not exclude rideshare or flight, which always carry one already', () => {
     txn('UBER TRIP', ['contains:rideshare']);
     txn('VIRGIN AUSTRALIA', ['contains:flight']);
 
-    expect(facet(measure(), 'occasion')).toMatchObject({
-      addressable: 2,
-      missing: 2,
-      transitExcluded: 0,
-    });
+    const coverage = measure();
+
+    expect(facet(coverage, 'occasion')).toMatchObject({ addressable: 2, missing: 2 });
+    expect(excludedFor(coverage, 'occasion', 'transit')).toBe(0);
   });
 
   it('keeps a transit descriptor off the rule worklist', () => {
     txn('TFNSW OPAL FARE', ['contains:public-transport']);
 
     expect(measure().gaps).toEqual([]);
+  });
+});
+
+describe('measureTagCoverage — a convenience store cannot say what it sold', () => {
+  // The bank feed gives the merchant name and nothing else, and a servo kiosk
+  // sells drinks, snacks, chargers and lottery tickets from one counter. The
+  // value is unknowable rather than un-triaged, so the row is outside the
+  // contains: denominator instead of counting as a miss (POPS-2681).
+  it('excludes a convenience-store row from the contains denominator', () => {
+    txn('METRO PETROLEUM', ['venue:convenience-store', 'occasion:out']);
+
+    const coverage = measure();
+
+    expect(facet(coverage, 'contains')).toMatchObject({ addressable: 0, missing: 0, covered: 0 });
+    expect(excludedFor(coverage, 'contains', 'unknowable-contents')).toBe(1);
+  });
+
+  // The same discipline the transit rule is held to. Excluding only the rows
+  // that LACK a contains: would make the ratio flattering by construction.
+  it('excludes a convenience-store row even when it does carry a contains', () => {
+    txn('EZYMART', ['venue:convenience-store', 'occasion:out', 'contains:food']);
+
+    const coverage = measure();
+
+    expect(facet(coverage, 'contains')).toMatchObject({ addressable: 0, covered: 0, missing: 0 });
+    expect(excludedFor(coverage, 'contains', 'unknowable-contents')).toBe(1);
+  });
+
+  it('keeps the row inside the occasion and venue denominators', () => {
+    txn('METRO PETROLEUM', ['venue:convenience-store']);
+
+    const coverage = measure();
+
+    expect(facet(coverage, 'occasion')).toMatchObject({ addressable: 1, missing: 1 });
+    expect(facet(coverage, 'venue')).toMatchObject({ addressable: 1, covered: 1 });
+    expect(excludedFor(coverage, 'occasion', 'unknowable-contents')).toBe(0);
+  });
+
+  it('reduces the denominator rather than counting the row as covered', () => {
+    txn('WOOLWORTHS', ['venue:supermarket', 'occasion:home', 'contains:groceries']);
+    txn('METRO PETROLEUM', ['venue:convenience-store', 'occasion:out']);
+
+    const contains = facet(measure(), 'contains');
+
+    expect(contains.addressable).toBe(1);
+    expect(contains.covered).toBe(1);
+    expect(contains.missing).toBe(0);
+  });
+
+  it('does not exclude another venue that happens to sell mixed goods', () => {
+    txn('BIG W', ['venue:supermarket', 'occasion:home']);
+
+    const coverage = measure();
+
+    expect(facet(coverage, 'contains')).toMatchObject({ addressable: 1, missing: 1 });
+    expect(excludedFor(coverage, 'contains', 'unknowable-contents')).toBe(0);
+  });
+
+  it('keeps a convenience-store descriptor off the rule worklist when only contains is absent', () => {
+    txn('METRO PETROLEUM', ['venue:convenience-store', 'occasion:out']);
+
+    expect(measure().gaps).toEqual([]);
+  });
+
+  it('still lists the descriptor when a facet it IS addressable for is absent', () => {
+    txn('METRO PETROLEUM', ['venue:convenience-store']);
+
+    expect(measure().gaps).toEqual([
+      { description: 'METRO PETROLEUM', transactions: 1, missingFacets: ['occasion'] },
+    ]);
+  });
+
+  it('lets isCoverageComplete pass on a ledger whose only gap is convenience-store contents', () => {
+    txn('METRO PETROLEUM', ['venue:convenience-store', 'occasion:out']);
+
+    expect(
+      tagCoverageService.isCoverageComplete(measure(['venue:convenience-store', 'occasion:out']))
+    ).toBe(true);
   });
 });
 
