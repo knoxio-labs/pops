@@ -73,6 +73,7 @@ function toItem(
     updatedAt: 0,
     lastViewedAt: null,
     viewCount: 0,
+    viewOffsetMs: null,
     rating: null,
     audienceRating: null,
     contentRating: null,

@@ -59,6 +59,8 @@ export interface RawPlexMediaItem {
   updatedAt: number;
   lastViewedAt?: number;
   viewCount?: number;
+  /** Position reached, in ms. Present only while the title is unfinished. */
+  viewOffset?: number;
   rating?: number;
   audienceRating?: number;
   contentRating?: string;
@@ -135,6 +137,11 @@ export interface PlexMediaItem {
   updatedAt: number;
   lastViewedAt: number | null;
   viewCount: number;
+  /**
+   * Position reached, in ms, or null when the title is not part-watched. Plex
+   * clears this on completion, so it is current state and not a history.
+   */
+  viewOffsetMs: number | null;
   rating: number | null;
   audienceRating: number | null;
   contentRating: string | null;
