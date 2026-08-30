@@ -132,6 +132,20 @@ function enableRadarr(): void {
 }
 
 describe('rotation — candidate queue', () => {
+  it('says so when the movie is already queued rather than reporting a write', async () => {
+    // `rotation_candidates` is unique on tmdb_id and the insert is
+    // conflict-tolerant, so the second call writes nothing. Reporting it as an
+    // add is what let a rotated-out movie look re-queueable when it was not.
+    const tmdbId = nextTmdb();
+
+    const first = await client().rotation.addToQueue({ tmdbId, title: 'Dune' });
+    expect(first.message).toBe('Added to rotation queue');
+
+    const second = await client().rotation.addToQueue({ tmdbId, title: 'Dune' });
+    expect(second.message).toBe('Already in the rotation queue');
+    expect((await client().rotation.listCandidates({ status: 'pending' })).data.total).toBe(1);
+  });
+
   it('adds a movie, reflects it via status + list, then removes it', async () => {
     const tmdbId = nextTmdb();
     await client().rotation.addToQueue({ tmdbId, title: 'Dune', year: 2021, rating: 8.1 });

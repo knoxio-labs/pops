@@ -76,12 +76,18 @@ function ensureManualSource(db: MediaDb): typeof rotationSources.$inferSelect {
 }
 
 /**
- * Add a movie to the rotation queue under the manual source.
+ * Add a movie to the rotation queue under the manual source. Returns `true`
+ * when a candidate row was actually created.
+ *
  * Throws {@link RotationMovieExcludedError} when the movie is on the exclusion
- * list. Idempotent on the tmdb unique index (re-adds are no-ops).
+ * list. `rotation_candidates` carries a unique index on `tmdb_id`, so a movie
+ * that already has a row of any status — including one left at `added` from a
+ * download — collides and nothing is written. Reporting that rather than
+ * swallowing it is what stops the caller believing it queued something it did
+ * not (POPS-2720).
  */
-export function addToQueue(db: MediaDb, input: AddToQueueInput): void {
-  db.transaction((tx) => {
+export function addToQueue(db: MediaDb, input: AddToQueueInput): boolean {
+  return db.transaction((tx) => {
     const excluded = tx
       .select({ id: rotationExclusions.id })
       .from(rotationExclusions)
@@ -90,7 +96,8 @@ export function addToQueue(db: MediaDb, input: AddToQueueInput): void {
     if (excluded) throw new RotationMovieExcludedError(input.tmdbId);
 
     const manualSource = ensureManualSource(tx);
-    tx.insert(rotationCandidates)
+    const result = tx
+      .insert(rotationCandidates)
       .values({
         sourceId: manualSource.id,
         tmdbId: input.tmdbId,
@@ -102,6 +109,7 @@ export function addToQueue(db: MediaDb, input: AddToQueueInput): void {
       })
       .onConflictDoNothing()
       .run();
+    return result.changes > 0;
   });
 }
 
@@ -131,6 +139,25 @@ export function removeFromQueue(db: MediaDb, tmdbId: number): boolean {
     .delete(rotationCandidates)
     .where(and(eq(rotationCandidates.tmdbId, tmdbId), eq(rotationCandidates.status, 'pending')))
     .run();
+  return result.changes > 0;
+}
+
+/**
+ * Drop a movie's candidate row entirely, whatever its status, once its file has
+ * been removed from disk.
+ *
+ * The row is a record of what the engine has already acted on, and the unique
+ * index on `tmdb_id` means it blocks every later insert for that movie — so a
+ * row left at `added` makes a rotated-out movie permanently un-queueable, by
+ * hand or by a source sync (POPS-2720). Rotation is a revolving door; clearing
+ * the row is what lets it revolve.
+ *
+ * This restores eligibility, it does not re-queue: the movie has to be
+ * re-discovered by a source or added by hand. `rotation_exclusions` remains the
+ * explicit "never again" control, and is deliberately untouched here.
+ */
+export function forgetCandidate(db: MediaDb, tmdbId: number): boolean {
+  const result = db.delete(rotationCandidates).where(eq(rotationCandidates.tmdbId, tmdbId)).run();
   return result.changes > 0;
 }
 

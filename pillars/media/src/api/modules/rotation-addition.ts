@@ -76,8 +76,16 @@ async function addCandidate(
  * Add up to `budget` weighted-sampled candidates to Radarr. Returns the count
  * + per-movie refs of what was actually added, plus a `skippedReason` when the
  * whole phase no-ops (budget 0, Radarr/defaults unconfigured, empty queue).
+ *
+ * `onDiskTmdbIds` are the movies Radarr currently holds a file for — the ones
+ * there is no point selecting. A movie whose file rotation already removed is
+ * not among them, so it can be picked up again.
  */
-export async function addMoviesFromQueue(db: MediaDb, budget: number): Promise<AdditionResult> {
+export async function addMoviesFromQueue(
+  db: MediaDb,
+  budget: number,
+  onDiskTmdbIds: ReadonlySet<number>
+): Promise<AdditionResult> {
   if (budget <= 0) {
     return {
       added: 0,
@@ -104,7 +112,7 @@ export async function addMoviesFromQueue(db: MediaDb, budget: number): Promise<A
     };
   }
 
-  const selected = rotationSelectionService.aggregateCandidates(db, budget);
+  const selected = rotationSelectionService.aggregateCandidates(db, budget, onDiskTmdbIds);
   if (selected.length === 0) {
     return { added: 0, addedMovies: [], skippedReason: 'no pending candidates in queue' };
   }

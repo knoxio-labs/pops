@@ -9,7 +9,12 @@
  * SQLite queries live in the db `removal-queries.ts` service; the pure math in
  * `rotation-cycle-types.ts`.
  */
-import { type MediaDb, type MovieSizeMap, rotationRemovalQueries } from '../../db/index.js';
+import {
+  type MediaDb,
+  type MovieSizeMap,
+  rotationCandidatesService,
+  rotationRemovalQueries,
+} from '../../db/index.js';
 import { type RadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
 import {
   bytesToGb,
@@ -192,6 +197,10 @@ export async function processExpiredMovies(
         await client.deleteMovie(check.radarrId, true);
       }
       rotationRemovalQueries.clearRotationStatus(db, movie.id);
+      // The candidate row is unique on tmdbId and nothing else ever clears it,
+      // so leaving it at `added` would make this movie permanently un-queueable
+      // — the engine could never put back what it had taken (POPS-2720).
+      rotationCandidatesService.forgetCandidate(db, movie.tmdbId);
       removed.push({ tmdbId: movie.tmdbId, title: movie.title });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
