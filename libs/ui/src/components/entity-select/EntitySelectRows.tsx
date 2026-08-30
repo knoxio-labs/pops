@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils';
 import { Badge } from '../../primitives/badge';
 import { CommandGroup, CommandItem } from '../../primitives/command';
 
-import type { EntityOption } from '../EntitySelect';
+import type { EntityOption } from './types';
 
 export function EntityTriggerLabel({
   selected,
