@@ -2,6 +2,7 @@
  * Sonarr API client — extends base *arr client with TV show-specific endpoints.
  */
 import { ArrBaseClient } from './base-client.js';
+import { fetchWholeQueue } from './queue-paging.js';
 
 import type {
   ArrStatusResult,
@@ -30,9 +31,18 @@ export class SonarrClient extends ArrBaseClient {
     return this.get<SonarrSeries>(`/series/${id}`);
   }
 
-  /** Fetch the download queue. */
+  /**
+   * Fetch the whole download queue, paging until every record is in hand.
+   * `/queue` is paged and defaults to 10 records.
+   */
   async getQueue(): Promise<SonarrQueueResponse> {
-    return this.get<SonarrQueueResponse>('/queue?includeSeries=true&includeEpisode=true');
+    return fetchWholeQueue(
+      (page, pageSize) =>
+        this.get<SonarrQueueResponse>(
+          `/queue?includeSeries=true&includeEpisode=true&page=${page}&pageSize=${pageSize}`
+        ),
+      'sonarr'
+    );
   }
 
   /** Fetch upcoming episodes from the Sonarr calendar. */

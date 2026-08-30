@@ -2,6 +2,7 @@
  * Radarr API client — extends base *arr client with movie-specific endpoints.
  */
 import { ArrBaseClient } from './base-client.js';
+import { fetchWholeQueue } from './queue-paging.js';
 
 import type {
   ArrStatusResult,
@@ -26,9 +27,17 @@ export class RadarrClient extends ArrBaseClient {
     return this.get<RadarrMovie>(`/movie/${id}`);
   }
 
-  /** Fetch the download queue. */
+  /**
+   * Fetch the whole download queue, paging until every record is in hand.
+   * `/queue` is paged and defaults to 10 records; callers treat absence from
+   * this list as "not downloading", and one of them deletes files on it.
+   */
   async getQueue(): Promise<RadarrQueueResponse> {
-    return this.get<RadarrQueueResponse>('/queue?includeMovie=true');
+    return fetchWholeQueue(
+      (page, pageSize) =>
+        this.get<RadarrQueueResponse>(`/queue?includeMovie=true&page=${page}&pageSize=${pageSize}`),
+      'radarr'
+    );
   }
 
   /** Fetch quality profiles from Radarr. */

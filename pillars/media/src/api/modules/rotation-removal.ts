@@ -118,6 +118,14 @@ export interface ExpiredOutcome {
  * Delete each expired `leaving` movie from Radarr (with files) and clear its
  * POPS rotation flags. Continues on individual failures — one bad delete never
  * aborts the sweep. Returns the per-movie removed / failed lists.
+ *
+ * The queue is re-read here rather than trusted from the sweep that marked
+ * these movies days ago: a title that started downloading again in the meantime
+ * must not have its file deleted, and this is the last point at which that can
+ * still be noticed. It is deliberately a second check — `getEligibleForRemoval`
+ * already excludes downloading titles — because this one is irreversible.
+ * When that read fails the sweep deletes nothing: an unknown queue is reported
+ * as a per-movie failure, never taken as "nothing is downloading".
  */
 export async function processExpiredMovies(
   db: MediaDb,
@@ -126,8 +134,30 @@ export async function processExpiredMovies(
   const expired = rotationRemovalQueries.getExpiredLeavingMovies(db);
   const removed: RotationMovieRef[] = [];
   const failed: RotationFailedMovieRef[] = [];
+  if (expired.length === 0) return { removed, failed };
+
+  let downloading: Set<number>;
+  try {
+    downloading = await getDownloadingTmdbIds(client);
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[rotation] Cannot read the Radarr queue — skipping every expired removal: ${error}`
+    );
+    return {
+      removed,
+      failed: expired.map((movie) => ({ tmdbId: movie.tmdbId, title: movie.title, error })),
+    };
+  }
 
   for (const movie of expired) {
+    if (downloading.has(movie.tmdbId)) {
+      console.warn(
+        `[rotation] Skipping expired removal of ${movie.title} (tmdb=${movie.tmdbId}) — ` +
+          `it is downloading again`
+      );
+      continue;
+    }
     try {
       const check = await client.checkMovie(movie.tmdbId);
       if (check.exists && check.radarrId != null) {
