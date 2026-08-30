@@ -20,6 +20,8 @@ export function buildBodyProps(
     onSearchChange: dialogState.setBrowseSearch,
     orderedMerged: browse.browseOrderedMerged,
     orderedFiltered: browse.browseOrderedFiltered,
+    totalRules: browse.browseTotal,
+    windowComplete: browse.browseWindowComplete,
     canDragReorder: browse.browseCanDragReorder,
     selectedRuleId: selection.browseSelectedRuleId,
     onSelectRule: selection.handleBrowseSelectRule,

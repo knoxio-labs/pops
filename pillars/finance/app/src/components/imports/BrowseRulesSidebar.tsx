@@ -31,7 +31,7 @@ export interface BrowseRulesSidebarProps {
   selectedRuleId: string | null;
   localOps: LocalOp[];
   onSelectRule: (id: string) => void;
-  onReorderFullList: (reordered: CorrectionRule[]) => void;
+  onReorderFullList: (reordered: CorrectionRule[], movedRuleId: string) => void;
 }
 
 function hasLocalOpFor(ruleId: string, localOps: LocalOp[]): boolean {
@@ -96,7 +96,7 @@ function DragPreview({ rule, localOps }: { rule: CorrectionRule | null; localOps
 
 function useDndReorder(
   orderedMerged: CorrectionRule[],
-  onReorderFullList: (r: CorrectionRule[]) => void
+  onReorderFullList: (r: CorrectionRule[], movedRuleId: string) => void
 ) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -116,7 +116,7 @@ function useDndReorder(
       const oldIndex = orderedMerged.findIndex((r) => r.id === active.id);
       const newIndex = orderedMerged.findIndex((r) => r.id === over.id);
       if (oldIndex === -1 || newIndex === -1) return;
-      onReorderFullList(arrayMove(orderedMerged, oldIndex, newIndex));
+      onReorderFullList(arrayMove(orderedMerged, oldIndex, newIndex), String(active.id));
     },
     [orderedMerged, onReorderFullList]
   );
