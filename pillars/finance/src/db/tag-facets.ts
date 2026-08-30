@@ -105,14 +105,20 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * Marks a row a human still owes a decision on.
  *
  * Written by a retirement migration when it meets a row it cannot resolve
- * automatically — a `contains:fee` row the classifier cannot type (0073), or a
- * row whose tag and column disagree (0071). Such a row keeps the retired tag,
- * because the tag is the only surviving evidence of what the row is, and the
- * flag records that the debt is known rather than missed.
+ * automatically. Both retirements so far flag such a row; only one of them
+ * leaves the retired tag on it, and the difference is what coverage turns on:
  *
- * Coverage reads it for exactly that reason: a flagged row's stranded tag is
+ * - **0073** flags AND strands. A `contains:fee` row with no `fee:` value is a
+ *   descriptor the classifier does not recognise, and the tag is the only
+ *   surviving evidence of what the row is, so the strip is guarded to skip it.
+ * - **0071** flags and strips. `occasion:admin` said what `type` already says,
+ *   so the row loses nothing by having it removed — the flag records that the
+ *   row's `type` is the thing to fix.
+ *
+ * Coverage reads the flag for the first case: a flagged row's stranded tag is
  * already-tracked work, so counting it again as a gate failure would report one
- * debt twice (POPS-2683).
+ * debt twice (POPS-2683). A future retirement that strands has to flag, or its
+ * rows become gate failures nothing accounts for.
  */
 export const NEEDS_REVIEW_TAG = 'flag:needs-review';
 

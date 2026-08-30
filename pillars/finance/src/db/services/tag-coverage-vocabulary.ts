@@ -74,10 +74,12 @@ export function buildUnknownTagUsage(
 /**
  * Whether a stranded tag is work nothing else is tracking (POPS-2683).
  *
- * A *retired* value on a row carrying {@link NEEDS_REVIEW_TAG} is neither — the
- * retirement migrations produce that pair deliberately, keeping the tag because
- * it is the only surviving evidence of what the row is, and setting the flag to
- * record that a human owes it a decision. Gating on it would report one debt
+ * A *retired* value on a row carrying {@link NEEDS_REVIEW_TAG} is neither — a
+ * retirement that cannot resolve a row produces that pair deliberately, keeping
+ * the tag because it is the only surviving evidence of what the row is, and
+ * setting the flag to record that a human owes it a decision. Migration 0073 is
+ * the one that does this today; 0071 flags but strips, because `occasion:admin`
+ * said nothing `type` did not already say. Gating on it would report one debt
  * twice, and would quietly turn the coverage gate into a "has anyone written
  * the classifier pattern yet" gate, which is a different question with a
  * different owner.
