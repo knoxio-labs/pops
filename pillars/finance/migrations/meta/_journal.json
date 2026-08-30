@@ -197,6 +197,13 @@
       "when": 1781913600021,
       "tag": "0076_resolve_venue_cardinality",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1781913600022,
+      "tag": "0077_correct_mistyped_rows",
+      "breakpoints": true
     }
   ]
 }
