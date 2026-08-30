@@ -39,7 +39,6 @@ export interface ReviewTabsProps {
   handleAcceptAll: (ts: ProcessedTransaction[]) => void;
   handleCreateAndAssignAll: (ts: ProcessedTransaction[], entityName: string) => void;
   entities?: Array<{ id: string; name: string }>;
-  entitiesTruncated?: boolean;
 }
 
 function buildTabSharedProps(props: ReviewTabsProps) {
@@ -57,7 +56,6 @@ function buildTabSharedProps(props: ReviewTabsProps) {
     onSaveEdit: props.handleSaveEdit,
     onCancelEdit: props.handleCancelEdit,
     entities: props.entities,
-    entitiesTruncated: props.entitiesTruncated,
   };
 }
 

@@ -246,8 +246,8 @@ describe('TransactionCard — the AI accept button names its outcome', () => {
     expect(screen.getByRole('button', { name: 'Create "Chargefox"' })).toBeInTheDocument();
   });
 
-  it('promises neither when the entity list is a truncated page', () => {
-    renderAiCard({ entities: [{ id: 'ent_2', name: 'Cloudflare' }], entitiesTruncated: true });
+  it('promises neither while the entity list is still loading', () => {
+    renderAiCard({ entities: undefined });
     expect(screen.getByRole('button', { name: 'Accept "Chargefox"' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /create "chargefox"/i })).not.toBeInTheDocument();
   });

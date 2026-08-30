@@ -32,8 +32,6 @@ interface TransactionGroupProps {
   ) => void;
   onCancelEdit?: () => void;
   entities?: Array<{ id: string; name: string }>;
-  /** `entities` is one capped page of a larger set — absence proves nothing. */
-  entitiesTruncated?: boolean;
   variant?: 'uncertain' | 'failed';
 }
 
@@ -91,20 +89,11 @@ interface TransactionListProps {
   onAcceptAiSuggestion: TransactionGroupProps['onAcceptAiSuggestion'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
-  entitiesTruncated?: boolean;
   variant: 'uncertain' | 'failed';
 }
 
 function TransactionList(props: TransactionListProps) {
-  const {
-    group,
-    editingTransaction,
-    onSaveEdit,
-    onCancelEdit,
-    entities,
-    entitiesTruncated,
-    variant,
-  } = props;
+  const { group, editingTransaction, onSaveEdit, onCancelEdit, entities, variant } = props;
   return (
     <div className="p-4 space-y-3 border-t border-border">
       {group.transactions.map((transaction, idx) =>
@@ -125,7 +114,6 @@ function TransactionList(props: TransactionListProps) {
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}
-            entitiesTruncated={entitiesTruncated}
             variant={variant}
           />
         )
@@ -138,12 +126,12 @@ function TransactionList(props: TransactionListProps) {
  * Grouped view of transactions with bulk actions
  */
 export function TransactionGroup(props: TransactionGroupProps) {
-  const { group, entities, entitiesTruncated, variant = 'uncertain' } = props;
+  const { group, entities, variant = 'uncertain' } = props;
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEntitySelector, setShowEntitySelector] = useState(false);
 
   const totalAmount = group.transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  const existence = resolveEntityExistence(group.entityName, entities, entitiesTruncated);
+  const existence = resolveEntityExistence(group.entityName, entities);
 
   return (
     <div
@@ -180,7 +168,6 @@ export function TransactionGroup(props: TransactionGroupProps) {
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}
-            entitiesTruncated={entitiesTruncated}
             variant={variant}
           />
         </CollapsibleContent>

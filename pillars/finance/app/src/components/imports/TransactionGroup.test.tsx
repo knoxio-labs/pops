@@ -132,11 +132,10 @@ describe('TransactionGroup — the accept button names its outcome', () => {
     ).toBeInTheDocument();
   });
 
-  it('promises neither when the entity list is a truncated page', () => {
+  it('promises neither while the entity list is still loading', () => {
     renderGroup({
       group: makeGroup({ aiSuggestion: true }),
-      entities: [{ id: 'ent-2', name: 'Coles' }],
-      entitiesTruncated: true,
+      entities: undefined,
     });
 
     expect(

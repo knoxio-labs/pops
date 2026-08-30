@@ -41,8 +41,6 @@ function AiSuggestionPanel({
 interface EntitySectionProps {
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
-  /** `entities` is one capped page of a larger set — absence proves nothing. */
-  entitiesTruncated?: boolean;
   onEntitySelect?: (
     transaction: ProcessedTransaction,
     entityId: string,
@@ -62,14 +60,8 @@ interface EntitySectionProps {
  * which is exactly when the fix wasn't needed.
  */
 export function EntitySection(props: EntitySectionProps) {
-  const {
-    transaction,
-    entities,
-    entitiesTruncated,
-    onEntitySelect,
-    onCreateEntityWithName,
-    onAcceptAiSuggestion,
-  } = props;
+  const { transaction, entities, onEntitySelect, onCreateEntityWithName, onAcceptAiSuggestion } =
+    props;
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
   return (
@@ -78,7 +70,7 @@ export function EntitySection(props: EntitySectionProps) {
         <AiSuggestionPanel
           transaction={transaction}
           entityName={suggestedName}
-          existence={resolveEntityExistence(suggestedName, entities, entitiesTruncated)}
+          existence={resolveEntityExistence(suggestedName, entities)}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
         />
       )}

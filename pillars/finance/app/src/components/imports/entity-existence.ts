@@ -1,9 +1,9 @@
 /**
  * Whether the entity a button is about to assign already exists.
  *
- * `unknown` is not a nicety: the entity list is one capped page, so a name
- * missing from it is not proof the merchant is absent. Promising "Create X"
- * on that evidence would be a lie whenever the list is truncated.
+ * `unknown` covers the window before the entity list has loaded: until it has,
+ * a name missing from it is not proof the merchant is absent, and promising
+ * "Create X" on that evidence would be a lie.
  */
 export type EntityExistence = 'existing' | 'new' | 'unknown';
 
@@ -11,20 +11,17 @@ export type EntityExistence = 'existing' | 'new' | 'unknown';
 export type AcceptScope = 'one' | 'all';
 
 /**
- * Classify `entityName` against the entities currently loaded.
- *
- * @param truncated Set when the list is an incomplete page of a larger set;
- *   an absent name then resolves to `unknown` rather than `new`.
+ * Classify `entityName` against the entities currently loaded. `entities` is
+ * the complete contact set once loaded (see `useEntities`), so an absent name
+ * is `new` rather than merely unseen.
  */
 export function resolveEntityExistence(
   entityName: string | null | undefined,
-  entities: ReadonlyArray<{ name: string }> | undefined,
-  truncated = false
+  entities: ReadonlyArray<{ name: string }> | undefined
 ): EntityExistence {
   if (!entityName || !entities) return 'unknown';
   const target = entityName.toLowerCase();
-  if (entities.some((e) => e.name.toLowerCase() === target)) return 'existing';
-  return truncated ? 'unknown' : 'new';
+  return entities.some((e) => e.name.toLowerCase() === target) ? 'existing' : 'new';
 }
 
 const LABELS: Record<EntityExistence, Record<AcceptScope, (name: string) => string>> = {

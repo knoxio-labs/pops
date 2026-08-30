@@ -62,7 +62,6 @@ export function ReviewStep() {
         handleAcceptAll={bulk.handleAcceptAll}
         handleCreateAndAssignAll={bulk.handleCreateAndAssignAll}
         entities={bulk.entities}
-        entitiesTruncated={bulk.entitiesTruncated}
       />
       <ReviewFooter
         unresolvedCount={review.unresolvedCount}
