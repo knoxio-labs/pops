@@ -1,18 +1,15 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { unwrap as unwrapContacts } from '../../../contacts-api-helpers.js';
-import { entitiesList } from '../../../contacts-api/index.js';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { tagRulesUpdate } from '../../../finance-api/index.js';
+import { useAllEntities } from '../../../lib/useAllEntities';
 import { TagRuleEditFormSchema, type TagRuleEditFormValues } from './types';
 
 import type { TagRule } from '../types';
-
-const ENTITIES_LIST_INPUT = { limit: 500 } as const;
 
 interface UseTagRuleEditFormOptions {
   rule: TagRule | null;
@@ -47,10 +44,7 @@ export function useTagRuleEditForm({ rule, onClose }: UseTagRuleEditFormOptions)
     });
   }, [rule, form]);
 
-  const entitiesQuery = useQuery({
-    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
-    queryFn: async () => unwrapContacts(await entitiesList({ query: ENTITIES_LIST_INPUT })),
-  });
+  const entitiesQuery = useAllEntities();
   const entities = (entitiesQuery.data?.data ?? []).map((e) => ({ id: e.id, name: e.name }));
 
   const updateMutation = useMutation({

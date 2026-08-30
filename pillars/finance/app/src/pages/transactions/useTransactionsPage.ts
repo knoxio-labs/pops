@@ -3,11 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { unwrap as unwrapContacts } from '../../contacts-api-helpers.js';
-import { entitiesList } from '../../contacts-api/index.js';
 import { unwrap } from '../../finance-api-helpers.js';
 import { transactionsAvailableTags, transactionsList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
+import { useAllEntities } from '../../lib/useAllEntities';
 import {
   DEFAULT_TRANSACTION_VALUES,
   type Transaction,
@@ -15,8 +14,6 @@ import {
   TransactionFormSchema,
 } from './types';
 import { useTransactionMutations } from './useTransactionMutations';
-
-const ENTITIES_LIST_INPUT = { limit: 500 } as const;
 
 /**
  * Build the API payload from the form values.
@@ -118,10 +115,7 @@ function useTransactionsPageQueries() {
     queryKey: ['finance', 'transactions', 'availableTags'],
     queryFn: async () => unwrap(await transactionsAvailableTags()),
   });
-  const entitiesQuery = useQuery({
-    queryKey: ['contacts', 'entities', 'list', ENTITIES_LIST_INPUT],
-    queryFn: async () => unwrapContacts(await entitiesList({ query: ENTITIES_LIST_INPUT })),
-  });
+  const entitiesQuery = useAllEntities();
   return { query, availableTags: availableTagsData?.tags ?? [], entitiesQuery };
 }
 
