@@ -90,6 +90,12 @@ const ImpactItemSchema = z.object({
   after: ClassificationOutcomeSchema,
 });
 
+/**
+ * `preview.counts` covers every candidate transaction whose outcome the
+ * ChangeSet would change; `preview.affected` is capped at the request's
+ * `maxPreviewItems`, so `affected.length < counts.affected` means the list is
+ * truncated and the caller must say so.
+ */
 export const ChangeSetProposalSchema = z.object({
   changeSet: ChangeSetSchema,
   rationale: z.string(),

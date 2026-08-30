@@ -7,6 +7,7 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { describeForMatching, patternMatchesDescription } from '../../../contract/pattern-match.js';
 import { type FinanceDb, transactionCorrections, transactions } from '../../../db/index.js';
 import { applyChangeSetToRules, findMatchingCorrectionFromRules } from './pure.js';
 import { parseCorrectionTags, type CorrectionMatchResult, type CorrectionRow } from './types.js';
@@ -24,24 +25,53 @@ interface CandidateTransaction {
   tags: string | null;
 }
 
+/**
+ * Candidate transactions for a rule's impact preview.
+ *
+ * `exact`/`contains` use a SQL `LIKE` prefilter (mirroring the monolith
+ * normalizer) — a coarse superset that `buildImpactItem` narrows down by
+ * actually resolving each candidate's winning rule.
+ *
+ * `regex` has no SQL-side equivalent (sqlite has no `REGEXP` operator here),
+ * so the real predicate — {@link patternMatchesDescription} against the raw
+ * description, the same test `findAllMatchingCorrectionFromRules` runs at
+ * match time (POPS-2600) — is applied in memory over every row. Returning
+ * `.where(undefined)` unfiltered, as this used to, handed the impact preview
+ * an arbitrary table-order slice instead of actual candidates.
+ *
+ * Unlimited: the caller counts and caps separately so a truncated count is
+ * never reported as the true match count (POPS-2699, mirroring POPS-2599's
+ * fix for tag-rule previews).
+ */
 function fetchCandidates(
   db: FinanceDb,
   matchType: 'exact' | 'contains' | 'regex',
-  normalizedPattern: string,
-  maxPreviewItems: number
+  normalizedPattern: string
 ): CandidateTransaction[] {
+  const columns = {
+    id: transactions.id,
+    description: transactions.description,
+    tags: transactions.tags,
+  };
+
+  if (matchType === 'regex') {
+    return db
+      .select(columns)
+      .from(transactions)
+      .all()
+      .filter((row) =>
+        patternMatchesDescription(normalizedPattern, 'regex', describeForMatching(row.description))
+      );
+  }
+
   const upper = sql`upper(${transactions.description})`;
   const noDigits = sql`replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(${upper}, '0', ''), '1', ''), '2', ''), '3', ''), '4', ''), '5', ''), '6', ''), '7', ''), '8', ''), '9', '')`;
   const collapsed = sql`replace(replace(replace(${noDigits}, '  ', ' '), '  ', ' '), '  ', ' ')`;
-  const prefilter = matchType === 'regex' ? upper : collapsed;
 
   return db
-    .select({ id: transactions.id, description: transactions.description, tags: transactions.tags })
+    .select(columns)
     .from(transactions)
-    .where(
-      matchType === 'regex' ? undefined : sql`${prefilter} LIKE '%' || ${normalizedPattern} || '%'`
-    )
-    .limit(maxPreviewItems)
+    .where(sql`${collapsed} LIKE '%' || ${normalizedPattern} || '%'`)
     .all();
 }
 
@@ -97,6 +127,7 @@ function outcomeChanged(
   );
 }
 
+/** Counts over every matching candidate, not just the ones surfaced in `affected`. */
 function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCounts {
   let entityChanges = 0;
   let locationChanges = 0;
@@ -154,6 +185,11 @@ export interface ImpactPreviewArgs {
   maxPreviewItems: number;
 }
 
+/**
+ * Counts cover every candidate whose outcome the ChangeSet would change;
+ * `affected` is capped at `args.maxPreviewItems`, so `affected.length <
+ * counts.affected` means the list is truncated.
+ */
 export function computeChangeSetImpact(
   db: FinanceDb,
   args: ImpactPreviewArgs
@@ -162,19 +198,18 @@ export function computeChangeSetImpact(
   counts: ChangeSetImpactCounts;
   rulesBefore: CorrectionRow[];
 } {
-  const candidates = fetchCandidates(
-    db,
-    args.matchType,
-    args.normalizedPattern,
-    args.maxPreviewItems
-  );
+  const candidates = fetchCandidates(db, args.matchType, args.normalizedPattern);
   const rulesBefore = db.select().from(transactionCorrections).all();
   const rulesAfter = applyChangeSetToRules(rulesBefore, args.changeSet);
 
-  const affected: ChangeSetImpactItem[] = [];
+  const changed: ChangeSetImpactItem[] = [];
   for (const c of candidates) {
     const item = buildImpactItem(c, rulesBefore, rulesAfter, args.minConfidence);
-    if (item) affected.push(item);
+    if (item) changed.push(item);
   }
-  return { affected, counts: computeImpactCounts(affected), rulesBefore };
+  return {
+    affected: changed.slice(0, args.maxPreviewItems),
+    counts: computeImpactCounts(changed),
+    rulesBefore,
+  };
 }
