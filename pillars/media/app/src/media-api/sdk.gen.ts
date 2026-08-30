@@ -307,6 +307,9 @@ import type {
   RotationSchedulerLastCycleLogResponses,
   RotationSchedulerLeavingMoviesData,
   RotationSchedulerLeavingMoviesResponses,
+  RotationSchedulerRemovalPreviewData,
+  RotationSchedulerRemovalPreviewErrors,
+  RotationSchedulerRemovalPreviewResponses,
   RotationSchedulerRunNowData,
   RotationSchedulerRunNowErrors,
   RotationSchedulerRunNowResponses,
@@ -2057,6 +2060,22 @@ export const rotationRotationLogStats = <ThrowOnError extends boolean = false>(
     url: '/rotation/scheduler/log-stats',
     ...options,
   });
+
+/**
+ * What the next cycle would mark for removal, and why, without writing anything
+ */
+export const rotationSchedulerRemovalPreview = <ThrowOnError extends boolean = false>(
+  options?: Options<RotationSchedulerRemovalPreviewData, ThrowOnError>
+): RequestResult<
+  RotationSchedulerRemovalPreviewResponses,
+  RotationSchedulerRemovalPreviewErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    RotationSchedulerRemovalPreviewResponses,
+    RotationSchedulerRemovalPreviewErrors,
+    ThrowOnError
+  >({ url: '/rotation/scheduler/removal-preview', ...options });
 
 /**
  * Trigger one rotation cycle immediately

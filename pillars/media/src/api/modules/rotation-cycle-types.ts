@@ -7,6 +7,7 @@
  * service so the cycle result and the persisted log share one definition.
  */
 import type { RotationFailedMovieRef, RotationMovieRef } from '../../db/index.js';
+import type { PlannedRemoval } from './rotation-removal-plan.js';
 
 export type { RotationFailedMovieRef, RotationMovieRef } from '../../db/index.js';
 
@@ -20,9 +21,10 @@ export interface RotationCycleResult {
   freeSpaceGb: number;
   targetFreeGb: number;
   skippedReason: string | null;
-  marked: RotationMovieRef[];
+  /** Each with the arithmetic that put it there, so the decision is auditable. */
+  marked: PlannedRemoval[];
   /** Stepped over so the batch would not overshoot the deficit. */
-  skippedForOvershoot: RotationMovieRef[];
+  skippedForOvershoot: PlannedRemoval[];
   removed: RotationMovieRef[];
   added: RotationMovieRef[];
   failed: RotationFailedMovieRef[];

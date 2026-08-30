@@ -14436,6 +14436,259 @@
         "tags": ["rotation"]
       }
     },
+    "/rotation/scheduler/removal-preview": {
+      "get": {
+        "operationId": "rotation.schedulerRemovalPreview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "plan": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "deficitGb": {
+                              "type": "number"
+                            },
+                            "eligibleCount": {
+                              "type": "number"
+                            },
+                            "leavingGb": {
+                              "type": "number"
+                            },
+                            "removableCount": {
+                              "type": "number"
+                            },
+                            "skippedForOvershoot": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "ageAnchor": {
+                                    "enum": ["acquired", "watched", "unknown"],
+                                    "type": "string"
+                                  },
+                                  "ageDays": {
+                                    "type": "number"
+                                  },
+                                  "id": {
+                                    "type": "number"
+                                  },
+                                  "keepWeight": {
+                                    "type": "number"
+                                  },
+                                  "pressure": {
+                                    "type": "number"
+                                  },
+                                  "quality": {
+                                    "type": "number"
+                                  },
+                                  "qualitySource": {
+                                    "enum": ["elo", "tmdb", "blended", "none"],
+                                    "type": "string"
+                                  },
+                                  "rank": {
+                                    "type": "number"
+                                  },
+                                  "sizeGb": {
+                                    "type": "number"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "tmdbId": {
+                                    "type": "number"
+                                  },
+                                  "watchCount": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "tmdbId",
+                                  "title",
+                                  "rank",
+                                  "pressure",
+                                  "sizeGb",
+                                  "ageDays",
+                                  "ageAnchor",
+                                  "watchCount",
+                                  "quality",
+                                  "qualitySource",
+                                  "keepWeight"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "toMark": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "ageAnchor": {
+                                    "enum": ["acquired", "watched", "unknown"],
+                                    "type": "string"
+                                  },
+                                  "ageDays": {
+                                    "type": "number"
+                                  },
+                                  "id": {
+                                    "type": "number"
+                                  },
+                                  "keepWeight": {
+                                    "type": "number"
+                                  },
+                                  "pressure": {
+                                    "type": "number"
+                                  },
+                                  "quality": {
+                                    "type": "number"
+                                  },
+                                  "qualitySource": {
+                                    "enum": ["elo", "tmdb", "blended", "none"],
+                                    "type": "string"
+                                  },
+                                  "rank": {
+                                    "type": "number"
+                                  },
+                                  "sizeGb": {
+                                    "type": "number"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "tmdbId": {
+                                    "type": "number"
+                                  },
+                                  "watchCount": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "tmdbId",
+                                  "title",
+                                  "rank",
+                                  "pressure",
+                                  "sizeGb",
+                                  "ageDays",
+                                  "ageAnchor",
+                                  "watchCount",
+                                  "quality",
+                                  "qualitySource",
+                                  "keepWeight"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "deficitGb",
+                            "leavingGb",
+                            "eligibleCount",
+                            "removableCount",
+                            "toMark",
+                            "skippedForOvershoot"
+                          ],
+                          "type": "object"
+                        },
+                        "skippedReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["plan", "skippedReason"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "What the next cycle would mark for removal, and why, without writing anything",
+        "tags": ["rotation"]
+      }
+    },
     "/rotation/scheduler/run-now": {
       "post": {
         "operationId": "rotation.schedulerRunNow",

@@ -10,7 +10,7 @@ import {
   formatDate,
 } from '@pops/ui';
 
-import { parseDetails, type LogDetails, type LogEntryData } from './types';
+import { parseDetails, type LogDetails, type LogEntryData, type MarkedMovie } from './types';
 
 function DetailList({
   label,
@@ -29,6 +29,46 @@ function DetailList({
         {items.map((m) => (
           <li key={m.tmdbId}>{m.title}</li>
         ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The one-line answer to "why this one?". Absent on log entries written before
+ * the engine recorded its reasoning, in which case only the title shows.
+ */
+export function reasonFor(movie: MarkedMovie): string | null {
+  if (movie.pressure === undefined) return null;
+  const parts = [`#${movie.rank ?? '?'}`];
+  if (movie.ageDays !== undefined) {
+    parts.push(
+      `${Math.round(movie.ageDays)}d ${movie.ageAnchor === 'watched' ? 'since watched' : 'on disk'}`
+    );
+  }
+  parts.push(movie.watchCount === 1 ? 'watched once' : `watched ${movie.watchCount ?? 0}×`);
+  if (movie.quality !== undefined) parts.push(`quality ${movie.quality.toFixed(2)}`);
+  parts.push(`pressure ${movie.pressure.toFixed(0)}`);
+  return parts.join(' · ');
+}
+
+function MarkedList({ label, items }: { label: string; items?: MarkedMovie[] }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </h4>
+      <ul className="space-y-1 text-sm">
+        {items.map((m) => {
+          const reason = reasonFor(m);
+          return (
+            <li key={m.tmdbId}>
+              {m.title}
+              {reason && <span className="block text-xs text-muted-foreground">{reason}</span>}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -131,7 +171,8 @@ function LogEntryBody({ details }: { details: LogDetails | null }) {
     <div className="border-t px-4 pb-4 pt-3">
       {details ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <DetailList label="Marked Leaving" items={details.marked} />
+          <MarkedList label="Marked Leaving" items={details.marked} />
+          <MarkedList label="Skipped (would overshoot)" items={details.skippedForOvershoot} />
           <DetailList label="Removed" items={details.removed} />
           <DetailList label="Added" items={details.added} />
           {details.failed && details.failed.length > 0 && <FailedList items={details.failed} />}

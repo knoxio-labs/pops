@@ -17,6 +17,7 @@ import { type MediaDb, rotationLogService, rotationRemovalQueries } from '../../
 import { getRadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
 import { rotationScheduler } from '../cron/rotation-scheduler.js';
 import { getProtectionExpiresAt } from '../modules/rotation-cycle-policy.js';
+import { previewRemoval } from '../modules/rotation-cycle.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -81,6 +82,9 @@ export function makeRotationSchedulerHandlers(db: MediaDb) {
           },
         };
       }),
+
+    schedulerRemovalPreview: () =>
+      runHttp(async () => ({ status: 200 as const, body: { data: await previewRemoval(db) } })),
 
     schedulerLeavingMovies: () =>
       runHttp(() => ({

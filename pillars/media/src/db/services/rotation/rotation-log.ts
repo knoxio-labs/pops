@@ -19,6 +19,15 @@ export interface RotationMovieRef {
   title: string;
 }
 
+/**
+ * A marked movie plus the arithmetic behind it, as the api layer computed it.
+ *
+ * Typed loosely on purpose: `details` is an opaque JSON column in the contract,
+ * and the ranking's components are the api layer's to define. This service only
+ * has to know the shape is serialisable.
+ */
+export type RotationMarkedRef = RotationMovieRef & Record<string, unknown>;
+
 /** Per-movie reference for failed removals, which may carry an error message. */
 export interface RotationFailedMovieRef extends RotationMovieRef {
   error?: string;
@@ -33,8 +42,8 @@ export interface RotationCycleLog {
   freeSpaceGb: number;
   targetFreeGb: number;
   skippedReason: string | null;
-  marked: RotationMovieRef[];
-  skippedForOvershoot: RotationMovieRef[];
+  marked: RotationMarkedRef[];
+  skippedForOvershoot: RotationMarkedRef[];
   removed: RotationMovieRef[];
   added: RotationMovieRef[];
   failed: RotationFailedMovieRef[];

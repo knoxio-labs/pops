@@ -1,5 +1,26 @@
+/**
+ * A movie the cycle marked, with the ranking components that put it there.
+ *
+ * Everything past `title` is optional because entries written before the
+ * scored engine carry only the reference, and an old log must still render.
+ */
+export interface MarkedMovie {
+  tmdbId: number;
+  title: string;
+  rank?: number;
+  pressure?: number;
+  sizeGb?: number;
+  ageDays?: number;
+  ageAnchor?: 'acquired' | 'watched' | 'unknown';
+  watchCount?: number;
+  quality?: number;
+  qualitySource?: 'elo' | 'tmdb' | 'blended' | 'none';
+  keepWeight?: number;
+}
+
 export interface LogDetails {
-  marked?: { tmdbId: number; title: string }[];
+  marked?: MarkedMovie[];
+  skippedForOvershoot?: MarkedMovie[];
   removed?: { tmdbId: number; title: string }[];
   added?: { tmdbId: number; title: string }[];
   failed?: { tmdbId: number; title: string; error?: string }[];

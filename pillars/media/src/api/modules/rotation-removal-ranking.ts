@@ -201,6 +201,24 @@ function effectiveAge(candidate: RemovalCandidate, acquired: string | undefined,
 }
 
 /**
+ * The pressure formula itself, over the three components the log persists.
+ *
+ * Exported so a stored breakdown can be checked against the arithmetic that
+ * produced it: a component set that cannot reproduce its own pressure is not a
+ * record of a decision, it is a decoration.
+ */
+export function pressureFrom(parts: {
+  ageDays: number;
+  quality: number;
+  keepWeight: number;
+}): number {
+  return (
+    (Math.pow(parts.ageDays, ALPHA) * Math.pow(RATING_SPREAD, 1 - 2 * parts.quality)) /
+    parts.keepWeight
+  );
+}
+
+/**
  * Rank every candidate by removal pressure, highest first.
  *
  * A movie inside the grace window, or with no age the ranking can trust, scores
@@ -226,7 +244,7 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
     const pressure =
       age.anchor === 'unknown' || withinGrace
         ? 0
-        : (Math.pow(age.days, ALPHA) * Math.pow(RATING_SPREAD, 1 - 2 * quality.value)) / keep;
+        : pressureFrom({ ageDays: age.days, quality: quality.value, keepWeight: keep });
 
     return {
       ...candidate,

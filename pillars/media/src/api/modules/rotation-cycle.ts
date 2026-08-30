@@ -19,16 +19,12 @@ import {
 import { addMoviesFromQueue } from './rotation-addition.js';
 import { getRotationCyclePolicy } from './rotation-cycle-policy.js';
 import {
-  calculateRemovalDeficit,
   emptyResult,
   getAdditionBudget,
   type RotationCycleResult,
-  type RotationMovieRef,
-  selectForDeficit,
 } from './rotation-cycle-types.js';
-import { rankForRemoval, removableOnly } from './rotation-removal-ranking.js';
+import { type PlannedRemoval, planRemoval, type RemovalPlan } from './rotation-removal-plan.js';
 import {
-  getDownloadingTmdbIds,
   getRadarrDiskSpace,
   getRadarrMovieFacts,
   type MovieAcquiredMap,
@@ -37,9 +33,15 @@ import {
 } from './rotation-removal.js';
 import { syncAllSources } from './rotation-sync-all.js';
 
+/** A removal plan, or the reason a real cycle would not have got that far. */
+export interface RemovalPreview {
+  plan: RemovalPlan | null;
+  skippedReason: string | null;
+}
+
 interface MarkLeavingOutcome {
-  marked: RotationMovieRef[];
-  skipped: RotationMovieRef[];
+  marked: PlannedRemoval[];
+  skipped: PlannedRemoval[];
 }
 
 interface MarkLeavingArgs {
@@ -51,38 +53,30 @@ interface MarkLeavingArgs {
   acquiredAt: MovieAcquiredMap;
 }
 
+/**
+ * Plan the removals, then commit the plan. The planning half is shared with the
+ * preview route so the two cannot drift; only the `markMoviesAsLeaving` write
+ * below is exclusive to a real cycle.
+ */
 async function markLeaving(
   db: MediaDb,
   client: RadarrClient,
   args: MarkLeavingArgs
 ): Promise<MarkLeavingOutcome> {
-  const { freeSpaceGb, targetFreeGb, leavingDays, graceDays, movieSizes, acquiredAt } = args;
-  const leavingSizeGb = rotationRemovalQueries.getLeavingMovieSizeGb(db, movieSizes);
-  const deficit = calculateRemovalDeficit(targetFreeGb, freeSpaceGb, leavingSizeGb);
-  if (deficit <= 0) return { marked: [], skipped: [] };
-
-  const downloadingIds = await getDownloadingTmdbIds(client);
-  const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
-  const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays });
-
-  const { selected, skipped } = selectForDeficit(
-    removableOnly(ranked),
-    (movie) => movieSizes.get(movie.tmdbId) ?? 0,
-    deficit
-  );
-  if (selected.length === 0) return { marked: [], skipped: [] };
+  const { leavingDays, ...planArgs } = args;
+  const plan = await planRemoval(db, client, planArgs);
+  if (plan.toMark.length === 0) {
+    return { marked: [], skipped: plan.skippedForOvershoot };
+  }
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + leavingDays);
   rotationRemovalQueries.markMoviesAsLeaving(
     db,
-    selected.map((m) => m.id),
+    plan.toMark.map((m) => m.id),
     expiresAt.toISOString()
   );
-  return {
-    marked: selected.map((m) => ({ tmdbId: m.tmdbId, title: m.title })),
-    skipped: skipped.map((m) => ({ tmdbId: m.tmdbId, title: m.title })),
-  };
+  return { marked: plan.toMark, skipped: plan.skippedForOvershoot };
 }
 
 async function reCheckFreeSpace(
@@ -133,6 +127,35 @@ async function measureLibraryVolume(
           : 'Radarr unavailable — cannot measure disk space',
     };
   }
+}
+
+/**
+ * What the next cycle's removal phase would do, without doing any of it.
+ *
+ * Shares {@link planRemoval} with {@link executeRotationCycle} so the preview
+ * cannot drift from the engine: a preview that models the cycle rather than
+ * running its planner is worth very little. `plan` is null exactly when a real
+ * cycle would have skipped, and `skippedReason` says why.
+ */
+export async function previewRemoval(db: MediaDb): Promise<RemovalPreview> {
+  const policy = getRotationCyclePolicy(db);
+  const client = getRadarrClient(db);
+  if (!client) return { plan: null, skippedReason: 'Radarr not configured' };
+
+  const measured = await measureLibraryVolume(client, getRadarrRootFolderPath(db));
+  if (measured.freeSpaceGb === null) {
+    return { plan: null, skippedReason: measured.skippedReason };
+  }
+
+  const { sizes: movieSizes, acquiredAt } = await getRadarrMovieFacts(client);
+  const plan = await planRemoval(db, client, {
+    freeSpaceGb: measured.freeSpaceGb,
+    targetFreeGb: policy.targetFreeGb,
+    graceDays: policy.protectedDays,
+    movieSizes,
+    acquiredAt,
+  });
+  return { plan, skippedReason: null };
 }
 
 /**
