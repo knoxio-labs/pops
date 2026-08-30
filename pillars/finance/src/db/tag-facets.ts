@@ -95,12 +95,33 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  *   `occasion:` now applies to spend and is silent elsewhere, so a missing
  *   occasion on a spend row always means "not yet decided".
  *
- * `contains:fee` was retired on the same reasoning (migration 0072,
+ * `contains:fee` was retired on the same reasoning (migration 0073,
  * POPS-2632): `contains:` says what a purchase contained, and since POPS-2610
  * a fee is not a purchase — it has its own `type` and a `fee:` value naming
  * which fee it is. The rows the classifier could not type keep the tag and
  * carry `flag:needs-review`, because there the tag is the only evidence left.
  */
+/**
+ * Marks a row a human still owes a decision on.
+ *
+ * Written by a retirement migration when it meets a row it cannot resolve
+ * automatically. Both retirements so far flag such a row; only one of them
+ * leaves the retired tag on it, and the difference is what coverage turns on:
+ *
+ * - **0073** flags AND strands. A `contains:fee` row with no `fee:` value is a
+ *   descriptor the classifier does not recognise, and the tag is the only
+ *   surviving evidence of what the row is, so the strip is guarded to skip it.
+ * - **0071** flags and strips. `occasion:admin` said what `type` already says,
+ *   so the row loses nothing by having it removed — the flag records that the
+ *   row's `type` is the thing to fix.
+ *
+ * Coverage reads the flag for the first case: a flagged row's stranded tag is
+ * already-tracked work, so counting it again as a gate failure would report one
+ * debt twice (POPS-2683). A future retirement that strands has to flag, or its
+ * rows become gate failures nothing accounts for.
+ */
+export const NEEDS_REVIEW_TAG = 'flag:needs-review';
+
 export const CLOSED_TAG_FACETS = [
   { facet: 'venue', single: true },
   { facet: 'occasion', single: true },

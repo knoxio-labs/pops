@@ -41,6 +41,23 @@ export function listVocabularyTags(db: FinanceDb): string[] {
 }
 
 /**
+ * Return every vocabulary tag, retired ones included.
+ *
+ * Distinct from {@link listVocabularyTags}: a caller that has to tell a
+ * *retired* value from one the vocabulary has never held needs both sets, and
+ * only this one can answer the second half (POPS-2683). Nothing that offers
+ * values to a human or to the categorizer should use it — a retired value is
+ * retired precisely so it stops being offered.
+ */
+export function listAllVocabularyTags(db: FinanceDb): string[] {
+  return db
+    .select({ tag: tagVocabulary.tag })
+    .from(tagVocabulary)
+    .all()
+    .map((row) => row.tag);
+}
+
+/**
  * Return the active vocabulary tags of one kind, most-used first.
  *
  * The ordering is load-bearing rather than cosmetic: the categorizer prompt

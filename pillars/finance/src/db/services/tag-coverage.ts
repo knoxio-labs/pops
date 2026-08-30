@@ -30,10 +30,17 @@ import {
   type FacetExclusionReason,
   type FacetExpectation,
 } from './tag-coverage-expectations.js';
+import {
+  buildUnknownTagUsage,
+  isUntrackedStrandedTag,
+  type TagVocabularySnapshot,
+  type UnknownTagUsage,
+} from './tag-coverage-vocabulary.js';
 
 import type { FinanceDb } from './internal.js';
 
 export type { FacetExclusionReason } from './tag-coverage-expectations.js';
+export type { TagVocabularySnapshot, UnknownTagUsage } from './tag-coverage-vocabulary.js';
 /** Coverage of one closed facet across the ledger. */
 export interface FacetCoverage {
   facet: ClosedTagFacet;
@@ -73,12 +80,6 @@ export interface DescriptorGap {
   missingFacets: ClosedTagFacet[];
 }
 
-/** A stored tag that is not an active vocabulary row. */
-export interface UnknownTagUsage {
-  tag: string;
-  transactions: number;
-}
-
 /** The whole picture, for a before/after record on the ticket. */
 export interface TagCoverage {
   /** Rows scanned. */
@@ -86,7 +87,13 @@ export interface TagCoverage {
   facets: FacetCoverage[];
   /** `tags` → how many transactions carry exactly that many. Ascending, dense. */
   tagCountHistogram: { tags: number; transactions: number }[];
-  /** Tags stored on a transaction but absent from the active vocabulary. */
+  /**
+   * Tags stored on a transaction but absent from the active vocabulary.
+   *
+   * Reported in full whether or not they gate — the audit's job is to say what
+   * it saw, and a stranded tag stays visible even when
+   * {@link isCoverageComplete} has decided it is already-tracked work.
+   */
   outsideVocabulary: UnknownTagUsage[];
   /** Descriptors with a gap, most frequent first — the rule-writing worklist. */
   gaps: DescriptorGap[];
@@ -160,19 +167,6 @@ function buildHistogram(rows: ScannedRow[]): { tags: number; transactions: numbe
   return histogram;
 }
 
-function buildUnknownTagUsage(rows: ScannedRow[], vocabulary: Set<string>): UnknownTagUsage[] {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    for (const tag of new Set(row.tags)) {
-      if (vocabulary.has(tag)) continue;
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, transactions: count }))
-    .toSorted((a, b) => b.transactions - a.transactions || a.tag.localeCompare(b.tag));
-}
-
 /**
  * Group the gaps by descriptor, so the worklist is one line per rule to write
  * rather than one line per row to review. A descriptor is listed when any of
@@ -210,11 +204,11 @@ function buildGaps(rows: ScannedRow[]): DescriptorGap[] {
 /**
  * Measure facet coverage over every transaction in the ledger.
  *
- * `activeVocabulary` is passed in rather than read here so the caller decides
- * what "active" means — the audit script reads the live table, a test supplies
- * a fixture — and so this stays a pure count over two inputs.
+ * `vocabulary` is passed in rather than read here so the caller decides what it
+ * contains — the audit script reads the live table, a test supplies a fixture —
+ * and so this stays a pure count over two inputs.
  */
-export function measureTagCoverage(db: FinanceDb, activeVocabulary: string[]): TagCoverage {
+export function measureTagCoverage(db: FinanceDb, vocabulary: TagVocabularySnapshot): TagCoverage {
   const rows: ScannedRow[] = db
     .select({
       description: transactions.description,
@@ -239,7 +233,7 @@ export function measureTagCoverage(db: FinanceDb, activeVocabulary: string[]): T
       measureFacet(expectation, rows, singleByFacet.get(expectation.facet) === true)
     ),
     tagCountHistogram: buildHistogram(rows),
-    outsideVocabulary: buildUnknownTagUsage(rows, new Set(activeVocabulary)),
+    outsideVocabulary: buildUnknownTagUsage(rows, vocabulary),
     gaps: buildGaps(rows),
   };
 }
@@ -247,10 +241,11 @@ export function measureTagCoverage(db: FinanceDb, activeVocabulary: string[]): T
 /**
  * True when every acceptance criterion POPS-2607 states as a count is met:
  * no required facet missing, no stored cardinality violation, no tag outside
- * the active vocabulary. Lets the audit script gate rather than only report.
+ * the active vocabulary that something else is not already tracking. Lets the
+ * audit script gate rather than only report.
  */
 export function isCoverageComplete(coverage: TagCoverage): boolean {
-  if (coverage.outsideVocabulary.length > 0) return false;
+  if (coverage.outsideVocabulary.some(isUntrackedStrandedTag)) return false;
   return coverage.facets.every(
     (facet) => facet.cardinalityViolations === 0 && (!facet.required || facet.missing === 0)
   );

@@ -24,7 +24,7 @@
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import { openFinanceDb, tagCoverageService, tagVocabularyService } from '../src/db/index.js';
 
-import type { TagCoverage } from '../src/db/index.js';
+import type { TagCoverage, UnknownTagUsage } from '../src/db/index.js';
 
 const LOG = '[audit-tag-coverage]';
 /** Descriptors printed in the worklist; the tail past this earns no rule. */
@@ -73,6 +73,20 @@ function reportHistogram(coverage: TagCoverage): void {
   console.warn(`\n${LOG} tags per transaction — ${line}`);
 }
 
+/**
+ * Why a stranded tag does or does not gate.
+ *
+ * Printed for every one, so a reader never sees a tag listed here next to
+ * COMPLETE and has to guess whether that is a bug (POPS-2683).
+ */
+function standing(usage: UnknownTagUsage): string {
+  if (!usage.retired) return 'not a vocabulary value at all — gates';
+  if (usage.unflagged > 0) {
+    return `retired; ${usage.unflagged} row(s) not flagged for review — gates`;
+  }
+  return 'retired, every row flagged for review — tracked elsewhere, does not gate';
+}
+
 function reportVocabulary(coverage: TagCoverage): void {
   if (coverage.outsideVocabulary.length === 0) {
     console.warn(`\n${LOG} every stored tag is in the active vocabulary`);
@@ -82,7 +96,7 @@ function reportVocabulary(coverage: TagCoverage): void {
     `\n${LOG} ${coverage.outsideVocabulary.length} tag(s) outside the active vocabulary:`
   );
   for (const usage of coverage.outsideVocabulary) {
-    console.warn(`  ${usage.tag} — ${usage.transactions} transaction(s)`);
+    console.warn(`  ${usage.tag} — ${usage.transactions} transaction(s), ${standing(usage)}`);
   }
 }
 
@@ -113,8 +127,10 @@ function main(): void {
 
   const opened = openFinanceDb(resolveFinanceSqlitePath());
   try {
-    const vocabulary = tagVocabularyService.listVocabularyTags(opened.db);
-    const coverage = tagCoverageService.measureTagCoverage(opened.db, vocabulary);
+    const coverage = tagCoverageService.measureTagCoverage(opened.db, {
+      active: tagVocabularyService.listVocabularyTags(opened.db),
+      known: tagVocabularyService.listAllVocabularyTags(opened.db),
+    });
     const complete = tagCoverageService.isCoverageComplete(coverage);
 
     if (asJson) {
