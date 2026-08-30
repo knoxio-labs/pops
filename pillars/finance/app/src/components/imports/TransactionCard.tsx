@@ -20,6 +20,8 @@ interface TransactionCardProps {
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;
+  /** `entities` is one capped page of a larger set — absence proves nothing. */
+  entitiesTruncated?: boolean;
   readonly?: boolean;
   showMatchType?: boolean;
   variant?: 'matched' | 'uncertain' | 'failed';
@@ -35,6 +37,7 @@ export function TransactionCard({
   onAcceptAiSuggestion,
   onEdit,
   entities,
+  entitiesTruncated,
   readonly = false,
   showMatchType = false,
   variant = 'matched',
@@ -53,6 +56,7 @@ export function TransactionCard({
         <EntitySection
           transaction={transaction}
           entities={entities}
+          entitiesTruncated={entitiesTruncated}
           onEntitySelect={onEntitySelect}
           onCreateEntityWithName={onCreateEntityWithName}
           onAcceptAiSuggestion={onAcceptAiSuggestion}

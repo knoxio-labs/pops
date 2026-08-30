@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TransactionCard } from './TransactionCard';
 
@@ -214,5 +214,48 @@ describe('TransactionCard override indicators (US-07)', () => {
     );
 
     expect(screen.queryByText(/overridden/)).toBeNull();
+  });
+});
+
+describe('TransactionCard — the AI accept button names its outcome', () => {
+  const aiTx = makeTx({
+    status: 'uncertain',
+    ruleProvenance: undefined,
+    entity: { matchType: 'ai', confidence: 0.6, entityName: 'Chargefox' },
+  });
+
+  function renderAiCard(overrides: Partial<Parameters<typeof TransactionCard>[0]> = {}) {
+    return render(
+      <TransactionCard
+        transaction={aiTx}
+        variant="uncertain"
+        onAcceptAiSuggestion={vi.fn()}
+        entities={[{ id: 'ent_1', name: 'Chargefox' }]}
+        {...overrides}
+      />
+    );
+  }
+
+  it('offers to assign when the suggested entity already exists', () => {
+    renderAiCard();
+    expect(screen.getByRole('button', { name: 'Assign to "Chargefox"' })).toBeInTheDocument();
+  });
+
+  it('offers to create when the suggested entity is absent from a complete list', () => {
+    renderAiCard({ entities: [{ id: 'ent_2', name: 'Cloudflare' }] });
+    expect(screen.getByRole('button', { name: 'Create "Chargefox"' })).toBeInTheDocument();
+  });
+
+  it('promises neither when the entity list is a truncated page', () => {
+    renderAiCard({ entities: [{ id: 'ent_2', name: 'Cloudflare' }], entitiesTruncated: true });
+    expect(screen.getByRole('button', { name: 'Accept "Chargefox"' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create "chargefox"/i })).not.toBeInTheDocument();
+  });
+
+  it('accepts the suggestion when clicked', () => {
+    const onAcceptAiSuggestion = vi.fn();
+    renderAiCard({ onAcceptAiSuggestion });
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to "Chargefox"' }));
+    expect(onAcceptAiSuggestion).toHaveBeenCalledWith(aiTx);
   });
 });

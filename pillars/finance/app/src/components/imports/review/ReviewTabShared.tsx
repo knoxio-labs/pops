@@ -26,6 +26,7 @@ export interface ReviewTabBaseProps {
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
   entities?: Array<{ id: string; name: string }>;
+  entitiesTruncated?: boolean;
 }
 
 export function ViewModeToggle({
@@ -83,6 +84,7 @@ export function GroupedView({
           onSaveEdit={props.onSaveEdit}
           onCancelEdit={props.onCancelEdit}
           entities={props.entities}
+          entitiesTruncated={props.entitiesTruncated}
           variant={variant}
         />
       ))}
@@ -117,6 +119,7 @@ export function ListView({
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={props.entities}
+            entitiesTruncated={props.entitiesTruncated}
             variant={variant}
           />
         )
