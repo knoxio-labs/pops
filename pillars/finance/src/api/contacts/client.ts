@@ -342,6 +342,10 @@ async function patchDefaultTags(
  * is a substring filter, so the exact match is re-checked client-side over the
  * matching page. Backs the fetch-first leg of create-or-fetch, returning the
  * existing contact for reuse before any create is attempted.
+ *
+ * An alias counts as the entity's name: a descriptor that reads "Maccas" names
+ * the contact that answers to it, and creating a second entity for the alias
+ * is the duplicate this leg exists to prevent. A name match still wins.
  */
 async function fetchByExactName(
   handle: PillarHandle<ContactsRouter>,
@@ -350,5 +354,9 @@ async function fetchByExactName(
 ): Promise<ContactEntity | null> {
   const matches = await pageThroughEntities(handle, { search: name }, maxPages);
   const target = name.toLowerCase();
-  return matches.find((e) => e.name.toLowerCase() === target) ?? null;
+  return (
+    matches.find((e) => e.name.toLowerCase() === target) ??
+    matches.find((e) => e.aliases.some((alias) => alias.toLowerCase() === target)) ??
+    null
+  );
 }

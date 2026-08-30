@@ -91,6 +91,30 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('reuses a contact matched only by an ALIAS, never creating a second one for it', async () => {
+    const existing = entity({ id: 'mcd-id', name: "McDonald's", aliases: ['Maccas'] });
+    const create = vi.fn(() => unexpected('entities.create'));
+    const list = vi.fn(async () => page([existing], false));
+    const client = createContactsClient(() => stubHandle({ list, create }));
+
+    const result = await client.createOrFetchByName('maccas', 'company');
+
+    expect(result).toEqual({ id: 'mcd-id', name: "McDonald's", created: false });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('prefers an exact name match over another contact carrying it as an alias', async () => {
+    const byAlias = entity({ id: 'alias-id', name: 'Other Co', aliases: ['Acme'] });
+    const byName = entity({ id: 'acme-id', name: 'Acme' });
+    const create = vi.fn(() => unexpected('entities.create'));
+    const list = vi.fn(async () => page([byAlias, byName], false));
+    const client = createContactsClient(() => stubHandle({ list, create }));
+
+    const result = await client.createOrFetchByName('Acme', 'company');
+
+    expect(result.id).toBe('acme-id');
+  });
+
   it('tolerates a 409 race: fetch-first misses, create 409s, re-fetch resolves (created=false)', async () => {
     const existing = entity({ id: 'raced-id', name: 'Globex' });
     let listCalls = 0;

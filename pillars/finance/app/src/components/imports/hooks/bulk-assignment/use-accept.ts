@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
+import { entityAnswersTo } from '../../entity-existence';
 import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs } from './types';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -23,7 +24,8 @@ function resolveEntityId(
   addPendingEntity: AcceptAllArgs['addPendingEntity'],
   dbEntities: AcceptAllArgs['dbEntities']
 ): string {
-  const existing = entities?.find((e) => e.name.toLowerCase() === entityName.toLowerCase())?.id;
+  const target = entityName.toLowerCase();
+  const existing = entities?.find((e) => entityAnswersTo(e, target))?.id;
   if (existing) return existing;
   const pending = addPendingEntity({ name: entityName, type: 'company' }, dbEntities);
   return pending.tempId;
@@ -94,9 +96,8 @@ export function useAcceptAiSuggestion(args: {
       if (!transaction.entity?.entityName) return;
       let entityId = transaction.entity.entityId;
       if (!entityId && entities) {
-        const matching = entities.find(
-          (e) => e.name.toLowerCase() === transaction.entity?.entityName?.toLowerCase()
-        );
+        const target = transaction.entity.entityName.toLowerCase();
+        const matching = entities.find((e) => entityAnswersTo(e, target));
         if (matching) entityId = matching.id;
       }
       if (!entityId) {
