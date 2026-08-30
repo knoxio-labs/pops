@@ -45,7 +45,9 @@ function reportFacets(coverage: TagCoverage): void {
     const excluded = [
       facet.enrichExcluded > 0 ? `${facet.enrichExcluded} enrich` : '',
       facet.nonSpendExcluded > 0 ? `${facet.nonSpendExcluded} non-spend` : '',
-      facet.transitExcluded > 0 ? `${facet.transitExcluded} transit` : '',
+      ...facet.excluded.map((entry) =>
+        entry.transactions > 0 ? `${entry.transactions} ${entry.reason}` : ''
+      ),
     ]
       .filter(Boolean)
       .join(', ');

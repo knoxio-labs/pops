@@ -134,6 +134,7 @@ export * as tagCoverageService from './services/tag-coverage.js';
 export type {
   TagCoverage,
   FacetCoverage,
+  FacetExclusionReason,
   DescriptorGap,
   UnknownTagUsage,
 } from './services/tag-coverage.js';
