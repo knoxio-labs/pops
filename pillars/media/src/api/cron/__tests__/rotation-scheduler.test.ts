@@ -317,7 +317,7 @@ describe('rotation scheduler — REST', () => {
     }
   });
 
-  it('cancelLeaving clears the leaving flag and returns success', async () => {
+  it('cancelLeaving reprieves the movie rather than merely clearing the flag', async () => {
     const movie = moviesService.createMovie(opened.db, { tmdbId: 55, title: 'Going' });
     rotationRemovalQueries.markMoviesAsLeaving(opened.db, [movie.id], '2099-01-01T00:00:00.000Z');
 
@@ -326,7 +326,12 @@ describe('rotation scheduler — REST', () => {
 
     const cancelled = await makeClient(app()).rotation.schedulerCancelLeaving(movie.id);
     expect(cancelled.data.success).toBe(true);
-    expect(moviesService.getMovie(opened.db, movie.id).rotationStatus).toBeNull();
+
+    // A bare clear would return the movie to the eligible set at the rank it
+    // already held, so the next cycle would re-mark it the same night.
+    const after = moviesService.getMovie(opened.db, movie.id);
+    expect(after.rotationStatus).toBe('protected');
+    expect(Date.parse(after.rotationExpiresAt ?? '')).toBeGreaterThan(Date.now());
 
     const missing = await makeClient(app()).rotation.schedulerCancelLeaving(movie.id);
     expect(missing.data.success).toBe(false);

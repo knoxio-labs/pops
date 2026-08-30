@@ -863,3 +863,13 @@ function makeComparisonsClient(r: BoundAgent) {
       }>(r.post('/tier-list').send(body)),
   };
 }
+
+/**
+ * An ISO timestamp `days` ahead of now, for the rotation expiry every
+ * `setRotationStatus` call must supply.
+ */
+export function futureIso(days = 7): string {
+  const at = new Date();
+  at.setDate(at.getDate() + days);
+  return at.toISOString();
+}

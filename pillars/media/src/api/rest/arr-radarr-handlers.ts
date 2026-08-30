@@ -26,6 +26,7 @@ import {
   testRadarr,
   testRadarrSaved,
 } from '../clients/arr/index.js';
+import { getProtectionExpiresAt } from '../modules/rotation-cycle-policy.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { requireRadarr, type ArrReq } from './arr-handlers-shared.js';
 import { runHttp } from './error-mapping.js';
@@ -128,7 +129,7 @@ export function makeRadarrHandlers(db: MediaDb) {
 
         const existing = moviesService.getMovieByTmdbId(db, body.tmdbId);
         const movie = existing ?? createProtectedLibraryEntry(db, body);
-        moviesService.setRotationStatus(db, movie.id, 'protected');
+        moviesService.setRotationStatus(db, movie.id, 'protected', getProtectionExpiresAt(db));
 
         return { status: 200 as const, body: { data: { alreadyInRadarr: check.exists } } };
       }),

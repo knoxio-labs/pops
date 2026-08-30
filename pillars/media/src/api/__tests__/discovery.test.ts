@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { moviesService, openMediaDb, type OpenedMediaDb } from '../../db/index.js';
 import { createMediaApiApp } from '../app.js';
 import { TmdbClient } from '../clients/tmdb/client.js';
-import { makeClient } from './test-utils.js';
+import { futureIso, makeClient } from './test-utils.js';
 
 import type { TmdbSearchResponse, TmdbSearchResult } from '../clients/tmdb/types.js';
 
@@ -393,7 +393,7 @@ describe('discovery — session assembly + shelf paging', () => {
 
   it('omits the leaving-soon shelf while rotation is disabled, even with leaving movies', async () => {
     const expiring = await makeMovie('Expiring', { genres: ['Action'] });
-    moviesService.setRotationStatus(mediaDb.db, expiring.id, 'leaving');
+    moviesService.setRotationStatus(mediaDb.db, expiring.id, 'leaving', futureIso());
 
     await expect(
       client().discovery.getShelfPage('leaving-soon', { limit: 3 })
