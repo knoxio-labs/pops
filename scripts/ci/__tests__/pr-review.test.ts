@@ -152,6 +152,54 @@ describe('a pull request reviewed across three pushes', () => {
     });
   });
 
+  it('marks a finding resolved when the fix lands in a different file', () => {
+    // POPS-2705, reproduced end to end. The finding is anchored to the file
+    // that declares the secret — correctly, and that declaration stays — and
+    // the fix is the entry added to the file that must supply it. Before the
+    // remedy, the next pass re-checked only the anchor, found the declaration
+    // still there, and re-posted the finding as open on a branch that had
+    // already fixed it.
+    const base = commit('defaults.yml', 'secrets: {}\n', 'base');
+    writeFileSync(join(repo, 'compose.yml'), 'secrets:\n  finance_api_key:\n    external: true\n');
+    const head1 = commit('defaults.yml', 'secrets: {}\n', 'declare the secret');
+
+    const comment1 = publish(head1, 'full', {
+      findings: [
+        {
+          file: 'compose.yml',
+          title: 'finance_api_key has no source',
+          severity: 'high',
+          snippet: 'finance_api_key:',
+          body: 'Nothing supplies this secret, so `docker compose up` cannot resolve it.',
+          remedy: { file: 'defaults.yml', contains: 'finance_api_key:' },
+        },
+      ],
+    });
+    expect(comment1).toContain('1 open finding.');
+    expect(comment1).toContain('Resolves when `defaults.yml` contains:');
+
+    // The fix: the entry lands in the other file. The anchor is untouched.
+    const head2 = commit(
+      'defaults.yml',
+      'secrets:\n  finance_api_key: "{{ vault_key }}"\n',
+      'supply it'
+    );
+    const comment2 = publish(head2, 'incremental', { findings: [] }, comment1);
+    expect(comment2).toContain('No open findings.');
+    expect(comment2).toContain('~~finance_api_key has no source~~');
+    expect(parseState(comment2).findings[0]).toMatchObject({
+      status: 'resolved',
+      resolved_in: head2,
+    });
+
+    // And it is not a one-way latch: revert the supplying file and the finding
+    // comes back, because status is recomputed rather than remembered.
+    const head3 = commit('defaults.yml', 'secrets: {}\n', 'revert it');
+    const comment3 = publish(head3, 'incremental', { findings: [] }, comment2);
+    expect(comment3).toContain('1 open finding.');
+    expect(base).not.toBe(head3);
+  });
+
   it('reports empty when head has not moved since the last review', () => {
     const base = commit('a.ts', 'a\n', 'base');
     const head = commit('a.ts', 'b\n', 'change');

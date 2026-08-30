@@ -9,7 +9,9 @@
  * had already said, so a ten-push PR collected ten overlapping opinions and no
  * record of which concerns had been dealt with. This one edits ONE comment,
  * reviews only the commits pushed since the last run, carries open findings
- * forward, and marks a finding resolved when the code it pointed at is gone.
+ * forward, and marks a finding resolved when the code it pointed at is gone —
+ * or, when the fix belongs in a different file than the one the finding is
+ * anchored to, when that file has it.
  *
  * Two subcommands, either side of the model call:
  *
@@ -115,7 +117,9 @@ Write your findings as JSON to \`{out}\` in exactly this shape:
    "title": "one line, under 80 chars",
    "severity": "high" | "medium" | "low",
    "snippet": "the exact offending line(s), copied verbatim from the file",
-   "body": "what is wrong and what the consequence is, 1-3 sentences"}
+   "body": "what is wrong and what the consequence is, 1-3 sentences",
+   "remedy": {"file": "path where the fix has to land",
+              "contains": "text whose presence there means this is fixed"}}
 ]}
 
 The \`snippet\` field is load-bearing: it is how a finding is tracked across
@@ -123,6 +127,17 @@ pushes and how it is later detected as fixed. Copy it verbatim from the file —
 do not paraphrase, do not add line numbers, do not include surrounding context.
 If a finding is about something absent rather than something present, omit
 \`snippet\` entirely.
+
+\`remedy\` is optional and is what makes a CROSS-FILE fix visible. Set it
+whenever the code you are pointing at is fine and the fix belongs in a
+different file — "this file declares X and some other file must provide it" is
+the common shape. \`file\` is where the fix has to land, and \`contains\` is
+the exact text whose presence in that file means the problem is gone: a key
+name, a declaration, an entry. Choose text specific enough that it cannot
+already be there today, and check that it is not. Without \`remedy\`, a finding
+anchored to A whose fix lands in B stays open forever — the snippet in A is
+still present, and still correct. Omit it when the fix belongs in the file you
+anchored to; that case is already handled by \`snippet\`.
 
 Report an empty list if the diff is clean. An empty list is a normal outcome and
 is strongly preferred to a padded one.
@@ -398,6 +413,10 @@ function selfTest() {
   check('filled prompt carries the rubric', filled.includes(RUBRIC[0]));
   check('filled prompt keeps the JSON shape', filled.includes('"severity"'));
   check(
+    'filled prompt still asks for a cross-file remedy',
+    filled.includes('"remedy"') && filled.includes('CROSS-FILE')
+  );
+  check(
     'filled prompt defines what earns the blocking severity',
     filled.includes('only severity that blocks a merge') && filled.includes('concrete failure')
   );
@@ -418,6 +437,26 @@ function selfTest() {
     'sha3'
   );
   check('reintroduced code reopens', back[0]?.status === 'open' && back[0]?.resolved_in === null);
+
+  // POPS-2705: the anchor is still there, and still correct — the fix landed
+  // in another file. Checking the anchor alone answers "open" forever, and on
+  // a repo that gates on findings that blocks a merge nothing can clear.
+  const crossFile = finding({ remedy: { file: 'b.yml', contains: 'the_missing_key:' } });
+  const landed = verifyStatus(
+    [crossFile],
+    (path) => (path === 'b.yml' ? 'the_missing_key: value' : 'const x = 1;'),
+    'sha2'
+  );
+  check(
+    'a fix in another file resolves the finding',
+    landed[0]?.status === 'resolved' && landed[0]?.resolved_in === 'sha2'
+  );
+  const notLanded = verifyStatus(
+    [crossFile],
+    (path) => (path === 'b.yml' ? 'something else entirely' : 'const x = 1;'),
+    'sha2'
+  );
+  check('an unlanded remedy leaves the finding open', notLanded[0]?.status === 'open');
 
   // A dangling last-reviewed sha (rebase, force-push) must fall back to full.
   check(
