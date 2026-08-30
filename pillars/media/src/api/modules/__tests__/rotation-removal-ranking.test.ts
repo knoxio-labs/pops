@@ -5,7 +5,13 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { keepWeight, rankForRemoval, type RemovalCandidate } from '../rotation-removal-ranking.js';
+import { selectForDeficit } from '../rotation-cycle-types.js';
+import {
+  keepWeight,
+  rankForRemoval,
+  type RemovalCandidate,
+  removableOnly,
+} from '../rotation-removal-ranking.js';
 
 const NOW = new Date('2026-08-31T00:00:00.000Z');
 
@@ -268,5 +274,47 @@ describe('ranking properties', () => {
 
   it('handles an empty candidate list', () => {
     expect(rank([])).toEqual([]);
+  });
+});
+
+describe('removableOnly', () => {
+  it('drops the grace-window and unknown-age tail', () => {
+    const fresh = candidate('Fresh');
+    const unknown = candidate('Unknown');
+    const old = candidate('Old');
+    const acquired = new Map([
+      [fresh.tmdbId, daysAgo(2)],
+      [old.tmdbId, daysAgo(400)],
+    ]);
+
+    const removable = removableOnly(rank([fresh, unknown, old], { acquired }));
+
+    expect(removable.map((c) => c.title)).toEqual(['Old']);
+  });
+
+  /**
+   * The defect this exists to stop: a deficit bigger than everything with real
+   * pressure used to walk on into the zero-pressure tail and mark a download
+   * made two days ago.
+   */
+  it('leaves a deficit unmet rather than eating a movie inside its grace window', () => {
+    const fresh = candidate('Fresh');
+    const old = candidate('Old');
+    const acquired = new Map([
+      [fresh.tmdbId, daysAgo(2)],
+      [old.tmdbId, daysAgo(400)],
+    ]);
+    const sizes = new Map([
+      [fresh.tmdbId, 40],
+      [old.tmdbId, 5],
+    ]);
+
+    const { selected } = selectForDeficit(
+      removableOnly(rank([fresh, old], { acquired })),
+      (movie) => sizes.get(movie.tmdbId) ?? 0,
+      30
+    );
+
+    expect(selected.map((c) => c.title)).toEqual(['Old']);
   });
 });

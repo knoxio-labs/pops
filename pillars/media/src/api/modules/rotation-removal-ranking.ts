@@ -254,3 +254,17 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
 
   return ranked.toSorted((a, b) => b.pressure - a.pressure);
 }
+
+/**
+ * The subset of a ranking the engine is allowed to remove.
+ *
+ * Zero pressure is not "last in line", it is "not a candidate": it marks a
+ * movie inside its grace window or one whose acquisition date is unknown, and
+ * neither may be eaten. Sorting alone does not enforce that — a deficit larger
+ * than everything above the zero-pressure tail would walk straight into it and
+ * delete a download made yesterday, so the tail has to be cut off rather than
+ * merely sorted last.
+ */
+export function removableOnly(ranked: readonly RankedCandidate[]): RankedCandidate[] {
+  return ranked.filter((candidate) => candidate.pressure > 0);
+}

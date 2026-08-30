@@ -26,7 +26,7 @@ import {
   type RotationMovieRef,
   selectForDeficit,
 } from './rotation-cycle-types.js';
-import { rankForRemoval } from './rotation-removal-ranking.js';
+import { rankForRemoval, removableOnly } from './rotation-removal-ranking.js';
 import {
   getDownloadingTmdbIds,
   getRadarrDiskSpace,
@@ -66,7 +66,7 @@ async function markLeaving(
   const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays });
 
   const { selected, skipped } = selectForDeficit(
-    ranked,
+    removableOnly(ranked),
     (movie) => movieSizes.get(movie.tmdbId) ?? 0,
     deficit
   );
