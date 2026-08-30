@@ -16,6 +16,13 @@
  * dead-lettered (`status = 'failed'`) and `listPending` stops selecting it,
  * so a contacts outage that never clears can't retry the same row forever.
  *
+ * Two things keep that cap from turning a configuration fault into permanent
+ * data damage (POPS-2690). A failure that never reached contacts at all —
+ * this process holds no service-account key — is deferred rather than
+ * charged an attempt, because retrying cannot fix what only a redeploy can.
+ * And every dead-lettered row is requeued once at boot, on the reasoning that
+ * a restart is the operator attention the dead-letter was asking for.
+ *
  * A recursive `setTimeout` arms the next tick only after the current one
  * resolves — mirrors `reconcile-cross-pillar.ts` (also trivial to drive with
  * `vi.useFakeTimers()` in tests) — fan-out per tick is sequential rather than
@@ -24,7 +31,8 @@
  * pillar that just came back up.
  */
 import { entityPrecreateOutboxService, type FinanceDb } from '../../db/index.js';
-import { type ContactsClient } from '../contacts/client.js';
+import { ContactsUnavailableError, type ContactsClient } from '../contacts/client.js';
+import { NO_CREDENTIAL_REASON } from '../pillars/outbound.js';
 
 import type { EntityPrecreateOutboxRow } from '../../db/index.js';
 
@@ -53,6 +61,12 @@ export interface ReconcileOutboxTickStats {
   stillPending: number;
   /** Rows dead-lettered THIS tick (attempts just reached `maxAttempts`). */
   failed: number;
+  /**
+   * Rows left untouched because this process holds no service-account key and
+   * contacts could not be asked at all. They keep their attempts — see
+   * `entityPrecreateOutboxService.recordAttemptDeferred`.
+   */
+  deferred: number;
 }
 
 export interface ReconcileContactsOutboxHandle {
@@ -66,11 +80,20 @@ export interface ReconcileContactsOutboxHandle {
 }
 
 function emptyStats(): ReconcileOutboxTickStats {
-  return { resolved: 0, stillPending: 0, failed: 0 };
+  return { resolved: 0, stillPending: 0, failed: 0, deferred: 0 };
+}
+
+/**
+ * True when the failure is this process holding no service-account key, as
+ * opposed to contacts being unreachable. Nothing was sent, so the row must not
+ * be charged an attempt for it (POPS-2690).
+ */
+function isMissingCredential(err: unknown): boolean {
+  return err instanceof ContactsUnavailableError && err.detail === NO_CREDENTIAL_REASON;
 }
 
 /** Outcome of one {@link resolveOne} attempt, feeding the per-tick stats. */
-type ResolveOneOutcome = 'resolved' | 'pending' | 'failed';
+type ResolveOneOutcome = 'resolved' | 'pending' | 'failed' | 'deferred';
 
 interface ResolveOneContext {
   db: FinanceDb;
@@ -85,8 +108,9 @@ interface ResolveOneContext {
  * Attempt to resolve one outbox row against contacts. Returns `'resolved'`
  * when the row resolved (reassignment + `markResolved` committed
  * atomically), `'pending'` when it's still under the attempt cap and will be
- * retried next tick, or `'failed'` when this attempt just tipped it over
- * `maxAttempts` and it has been dead-lettered instead.
+ * retried next tick, `'failed'` when this attempt just tipped it over
+ * `maxAttempts` and it has been dead-lettered instead, or `'deferred'` when
+ * there was no credential to call contacts with and the row was left as it is.
  */
 async function resolveOne(ctx: ResolveOneContext): Promise<ResolveOneOutcome> {
   const { db, contacts, row, now, maxAttempts, logger } = ctx;
@@ -106,6 +130,13 @@ async function resolveOne(ctx: ResolveOneContext): Promise<ResolveOneOutcome> {
     return 'resolved';
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (isMissingCredential(err)) {
+      entityPrecreateOutboxService.recordAttemptDeferred(db, row.id, {
+        nowIso: now.toISOString(),
+        error: message,
+      });
+      return 'deferred';
+    }
     const outcome = entityPrecreateOutboxService.recordAttemptFailure(db, row.id, {
       nowIso: now.toISOString(),
       error: message,
@@ -129,6 +160,54 @@ async function resolveOne(ctx: ResolveOneContext): Promise<ResolveOneOutcome> {
   }
 }
 
+/** Everything one pass needs, plus the worker-scoped report-once sink. */
+interface TickContext {
+  db: FinanceDb;
+  contacts: ContactsClient;
+  now: () => Date;
+  maxAttempts: number;
+  logger: ReconcileWorkerLogger | undefined;
+  /** Called with the number of rows left unattempted when the credential is missing. */
+  reportDeferred: (rows: number) => void;
+}
+
+/**
+ * One reconciliation pass over every pending row.
+ *
+ * Stops at the first missing-credential refusal: holding no key is a fact
+ * about the process, not about the row that happened to surface it, so
+ * walking the rest would stamp every one of them for a call that cannot be
+ * made.
+ */
+async function runReconcileTick(ctx: TickContext): Promise<ReconcileOutboxTickStats> {
+  const stats = emptyStats();
+  const rows = entityPrecreateOutboxService.listPending(ctx.db);
+  for (const [index, row] of rows.entries()) {
+    const outcome = await resolveOne({
+      db: ctx.db,
+      contacts: ctx.contacts,
+      row,
+      now: ctx.now(),
+      maxAttempts: ctx.maxAttempts,
+      logger: ctx.logger,
+    });
+    if (outcome === 'resolved') stats.resolved += 1;
+    else if (outcome === 'failed') stats.failed += 1;
+    else if (outcome === 'pending') stats.stillPending += 1;
+    else {
+      stats.deferred = rows.length - index;
+      ctx.reportDeferred(stats.deferred);
+      break;
+    }
+  }
+  ctx.logger?.info?.('finance contacts outbox tick complete', {
+    ...stats,
+    count: rows.length,
+    deadLettered: entityPrecreateOutboxService.countByStatus(ctx.db).failed,
+  });
+  return stats;
+}
+
 export function startReconcileContactsOutboxWorker(
   options: ReconcileContactsOutboxOptions
 ): ReconcileContactsOutboxHandle {
@@ -140,25 +219,24 @@ export function startReconcileContactsOutboxWorker(
 
   let timer: NodeJS.Timeout | undefined;
   let stopped = false;
+  let reportedMissingCredential = false;
 
   async function runOnce(): Promise<ReconcileOutboxTickStats> {
-    const stats = emptyStats();
-    const rows = entityPrecreateOutboxService.listPending(options.db);
-    for (const row of rows) {
-      const outcome = await resolveOne({
-        db: options.db,
-        contacts: options.contacts,
-        row,
-        now: now(),
-        maxAttempts,
-        logger,
-      });
-      if (outcome === 'resolved') stats.resolved += 1;
-      else if (outcome === 'failed') stats.failed += 1;
-      else stats.stillPending += 1;
-    }
-    logger?.info?.('finance contacts outbox tick complete', { ...stats, count: rows.length });
-    return stats;
+    return runReconcileTick({
+      db: options.db,
+      contacts: options.contacts,
+      now,
+      maxAttempts,
+      logger,
+      reportDeferred: (rows: number) => {
+        if (reportedMissingCredential) return;
+        reportedMissingCredential = true;
+        logger?.warn?.(
+          'finance contacts outbox deferred — no service-account key, attempts not spent',
+          { rows }
+        );
+      },
+    });
   }
 
   function arm(): void {
@@ -177,6 +255,18 @@ export function startReconcileContactsOutboxWorker(
       });
     }
     arm();
+  }
+
+  // A dead-lettered row is waiting on an operator, and an operator's fix — a
+  // mounted secret, a granted scope, a contacts deployment — reaches this
+  // process as a restart. Requeueing here is what makes that fix retroactive;
+  // without it the placeholder ids a dead-lettered row left on real rows are
+  // permanent (POPS-2690).
+  const requeued = entityPrecreateOutboxService.requeueDeadLettered(options.db);
+  if (requeued > 0) {
+    logger?.info?.('finance contacts outbox requeued dead-lettered rows on boot', {
+      count: requeued,
+    });
   }
 
   void tick();

@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  entityPrecreateOutboxService,
   openFinanceDb,
   transactions,
   transactionsService,
@@ -110,5 +111,72 @@ describe('GET /health', () => {
     expect(res.body.import.lastEditedTime).toBe('not-a-timestamp');
     expect(res.body.import.daysSinceLastImport).toBeNull();
     expect(res.body.import.stale).toBe(true);
+  });
+});
+
+/**
+ * POPS-2689: a finance holding no service-account key serves every request
+ * normally and silently cannot create a contact, so nothing about the pillar
+ * looks wrong while imports quietly accumulate placeholder entity ids. These
+ * two facts are the only signal that says so without reading container logs.
+ */
+describe('GET /health — the contacts seam', () => {
+  const KEY_ENV = 'POPS_INTERNAL_API_KEY';
+  const FILE_ENV = 'POPS_INTERNAL_API_KEY_FILE';
+  let savedKey: string | undefined;
+  let savedFile: string | undefined;
+
+  beforeEach(() => {
+    savedKey = process.env[KEY_ENV];
+    savedFile = process.env[FILE_ENV];
+    delete process.env[KEY_ENV];
+    delete process.env[FILE_ENV];
+  });
+
+  afterEach(() => {
+    if (savedKey === undefined) delete process.env[KEY_ENV];
+    else process.env[KEY_ENV] = savedKey;
+    if (savedFile === undefined) delete process.env[FILE_ENV];
+    else process.env[FILE_ENV] = savedFile;
+  });
+
+  it('reports a missing service-account key without failing the probe', async () => {
+    const res = await requestOn(app(), (r) => r.get('/health'));
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.contacts.serviceAccountKey).toBe('missing');
+  });
+
+  it('reports the key as present once one is configured', async () => {
+    process.env[KEY_ENV] = 'pops_sa_test.key';
+
+    const res = await requestOn(app(), (r) => r.get('/health'));
+
+    expect(res.body.contacts.serviceAccountKey).toBe('present');
+  });
+
+  it('counts outbox placeholders by whether they are still being retried', async () => {
+    const pendingId = entityPrecreateOutboxService.buildPendingContactId();
+    entityPrecreateOutboxService.enqueue(financeDb.db, {
+      id: pendingId,
+      name: 'Still Trying Co',
+      type: 'company',
+    });
+    const deadId = entityPrecreateOutboxService.buildPendingContactId();
+    entityPrecreateOutboxService.enqueue(financeDb.db, {
+      id: deadId,
+      name: 'Given Up Co',
+      type: 'company',
+    });
+    entityPrecreateOutboxService.recordAttemptFailure(financeDb.db, deadId, {
+      nowIso: new Date().toISOString(),
+      error: 'contacts pillar unavailable during entity pre-create: unavailable',
+      maxAttempts: 1,
+    });
+
+    const res = await requestOn(app(), (r) => r.get('/health'));
+
+    expect(res.body.contacts.outbox).toEqual({ pending: 1, deadLettered: 1 });
   });
 });

@@ -20,6 +20,7 @@
  */
 import { and, eq, sql } from 'drizzle-orm';
 
+import { PENDING_CONTACT_ID_PREFIX } from '../../contract/entity-id.js';
 import {
   entityPrecreateOutbox,
   transactionCorrections,
@@ -30,20 +31,11 @@ import {
 import type { EntityType } from '../entity-types.js';
 import type { FinanceDb } from './internal.js';
 
-/** Reserved namespace for a pending contact placeholder written to `entity_id`
- * columns while contacts is unreachable. Distinct from the request-scoped
- * `temp:entity:{uuid}` commit placeholder (see `commit-validation.ts`) — this
- * one IS meant to be persisted, and is only ever replaced by the reconciler. */
-export const PENDING_CONTACT_ID_PREFIX = 'pending:contact:';
+export { PENDING_CONTACT_ID_PREFIX, isPendingContactId } from '../../contract/entity-id.js';
 
 /** Mint a fresh placeholder entity id for an outbox row. */
 export function buildPendingContactId(): string {
   return `${PENDING_CONTACT_ID_PREFIX}${crypto.randomUUID()}`;
-}
-
-/** True if `entityId` is an outbox placeholder rather than a real contact id. */
-export function isPendingContactId(entityId: string): boolean {
-  return entityId.startsWith(PENDING_CONTACT_ID_PREFIX);
 }
 
 /** Raw drizzle row shape. */
@@ -145,6 +137,78 @@ export function recordAttemptFailure(
       .run();
     return 'failed';
   });
+}
+
+/**
+ * Record a reconciliation attempt that could not even be made, without
+ * spending one of the row's {@link DEFAULT_MAX_RECONCILE_ATTEMPTS} attempts.
+ *
+ * The attempt cap exists to stop an outage that never clears from retrying
+ * forever, and an outage is the only thing it can meaningfully bound. A
+ * process holding no service-account key is not an outage: nothing was sent,
+ * contacts was never asked, and no number of retries will change the answer
+ * until the configuration does. Counting those as attempts dead-letters the
+ * whole outbox in ~50 minutes for a fault the retry loop has no part in
+ * (POPS-2689 did exactly that to 44 rows). The row keeps its `pending` status
+ * and its attempt count, and still records `lastAttemptAt`/`lastError` so the
+ * reason is visible to ops.
+ *
+ * Guarded on `status = 'pending'` for the same reason as
+ * {@link recordAttemptFailure}: a losing interleaved pass must not stamp a row
+ * a winning pass already resolved.
+ */
+export function recordAttemptDeferred(
+  db: FinanceDb,
+  id: string,
+  input: { nowIso: string; error: string }
+): void {
+  db.update(entityPrecreateOutbox)
+    .set({ lastAttemptAt: input.nowIso, lastError: input.error })
+    .where(and(eq(entityPrecreateOutbox.id, id), eq(entityPrecreateOutbox.status, 'pending')))
+    .run();
+}
+
+/** Count of rows per outbox status, for the tick log and `/health`. */
+export interface OutboxStatusCounts {
+  pending: number;
+  resolved: number;
+  failed: number;
+}
+
+/** How many rows sit in each status. Cheap enough for a per-tick log line. */
+export function countByStatus(db: FinanceDb): OutboxStatusCounts {
+  const counts: OutboxStatusCounts = { pending: 0, resolved: 0, failed: 0 };
+  const rows = db
+    .select({ status: entityPrecreateOutbox.status, count: sql<number>`count(*)` })
+    .from(entityPrecreateOutbox)
+    .groupBy(entityPrecreateOutbox.status)
+    .all();
+  for (const row of rows) counts[row.status] = row.count;
+  return counts;
+}
+
+/**
+ * Return every dead-lettered row to the queue: `status = 'pending'`,
+ * `attempts = 0`. Returns how many rows were requeued.
+ *
+ * Dead-lettering means "this needs operator attention", and the only thing
+ * that ever attends to it is a configuration or deployment change — which
+ * reaches this process as a restart. So the worker calls this once at boot
+ * (see `cron/reconcile-contacts-outbox.ts`): without it a dead-lettered row is
+ * terminal forever, and the placeholder ids it left behind in `transactions` /
+ * `transaction_corrections` / `transaction_tag_rules` are permanent even after
+ * the cause is fixed. Cost of a wrong guess is bounded — a row whose cause has
+ * NOT been fixed simply spends its attempts again and dead-letters once more.
+ *
+ * `lastError` is deliberately preserved: it is the only record of why the row
+ * was given up on, and it stays useful right up until the retry overwrites it.
+ */
+export function requeueDeadLettered(db: FinanceDb): number {
+  return db
+    .update(entityPrecreateOutbox)
+    .set({ status: 'pending', attempts: 0 })
+    .where(eq(entityPrecreateOutbox.status, 'failed'))
+    .run().changes;
 }
 
 /** Mark a row resolved once contacts confirms the real entity id. Does NOT

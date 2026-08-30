@@ -1,10 +1,15 @@
-import { Sparkles } from 'lucide-react';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 
 import { Badge } from '@pops/ui';
 
 import { AcceptEntityButton } from '../AcceptEntityButton';
 import { type EntityExistence, resolveEntityExistence } from '../entity-existence';
 import { EntitySelect } from '../EntitySelect';
+import {
+  classifyAssignedEntity,
+  isUnresolvedEntity,
+  type UnresolvedEntityState,
+} from '../lib/assigned-entity';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -38,6 +43,44 @@ function AiSuggestionPanel({
   );
 }
 
+/**
+ * What each cause means and what to do about it. Two causes, two actions: a
+ * placeholder was never a contact and needs one chosen, while a missing id was
+ * one and is not any more.
+ */
+const UNRESOLVED_ENTITY_MESSAGE: Record<UnresolvedEntityState, (named: string) => string> = {
+  'never-created': (named) =>
+    `${named} was never created in contacts, so this row has no usable merchant. Pick one to fix it.`,
+  missing: (named) => `${named} no longer exists in contacts. Pick a replacement.`,
+};
+
+/**
+ * Says which entity the row is carrying when the picker cannot show it.
+ *
+ * Without this the picker falls back to "Choose entity…" — the same thing it
+ * shows for a row with no entity at all — so a rule that matched and assigned
+ * a merchant reads as a rule that assigned nothing, and the fix is never
+ * prompted (POPS-2692).
+ */
+function UnresolvedEntityNotice({
+  state,
+  entityName,
+}: {
+  state: UnresolvedEntityState;
+  entityName: string | undefined;
+}) {
+  const named = entityName ? `“${entityName}”` : 'this row\u2019s entity';
+  return (
+    <div
+      role="status"
+      className="mb-2 p-2 rounded-md border flex items-start gap-2 text-xs text-warning bg-warning/10 border-warning/25"
+    >
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+      <span>{UNRESOLVED_ENTITY_MESSAGE[state](named)}</span>
+    </div>
+  );
+}
+
 interface EntitySectionProps {
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
@@ -64,6 +107,7 @@ export function EntitySection(props: EntitySectionProps) {
     props;
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
+  const assigned = classifyAssignedEntity(transaction, entities);
   return (
     <div className="mb-3">
       {suggestedName && onAcceptAiSuggestion && (
@@ -73,6 +117,9 @@ export function EntitySection(props: EntitySectionProps) {
           existence={resolveEntityExistence(suggestedName, entities)}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
         />
+      )}
+      {isUnresolvedEntity(assigned) && (
+        <UnresolvedEntityNotice state={assigned} entityName={transaction.entity?.entityName} />
       )}
       <EntitySelect
         entities={entities ?? []}
