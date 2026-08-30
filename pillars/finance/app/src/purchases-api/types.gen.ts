@@ -228,6 +228,7 @@ export type PurchaseItemsByTagData = {
   query: {
     tag: string;
     limit?: number;
+    offset?: number;
   };
   url: '/items';
 };
@@ -268,6 +269,12 @@ export type PurchaseItemsByTagResponses = {
         url: string | null;
       };
     }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
   };
 };
 
