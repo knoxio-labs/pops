@@ -22,6 +22,7 @@ import {
   merge,
   normalize,
   parseState,
+  remedyFromModel,
   render,
   STATE_MARKER,
   STATE_VERSION,
@@ -94,6 +95,52 @@ describe('findingFromModel', () => {
 
   it('stamps first_seen with the reviewing sha', () => {
     expect(findingFromModel({ file: 'a.ts', title: 't' }, 'deadbee').first_seen).toBe('deadbee');
+  });
+});
+
+describe('remedyFromModel', () => {
+  it('reads a well-formed remedy', () => {
+    expect(
+      remedyFromModel({ file: 'roles/secrets/defaults/main.yml', contains: 'api_key:' })
+    ).toEqual({ file: 'roles/secrets/defaults/main.yml', contains: 'api_key:' });
+  });
+
+  it('is null for anything that is not an object', () => {
+    for (const raw of [undefined, null, 'main.yml', 42, []]) {
+      expect(remedyFromModel(raw)).toBeNull();
+    }
+  });
+
+  it('drops a remedy with no file to look in', () => {
+    expect(remedyFromModel({ contains: 'api_key:' })).toBeNull();
+    expect(remedyFromModel({ file: '   ', contains: 'api_key:' })).toBeNull();
+  });
+
+  it('drops a remedy with nothing to look for', () => {
+    // A remedy whose `contains` is empty (or only whitespace, which normalizes
+    // to empty) matches every file, so honouring it would resolve the finding
+    // on the very next run without anybody fixing anything.
+    expect(remedyFromModel({ file: 'main.yml' })).toBeNull();
+    expect(remedyFromModel({ file: 'main.yml', contains: '' })).toBeNull();
+    expect(remedyFromModel({ file: 'main.yml', contains: ' \n\t ' })).toBeNull();
+  });
+
+  it('is carried onto a finding built from the model', () => {
+    const finding = findingFromModel(
+      { file: 'a.yml', title: 't', remedy: { file: 'b.yml', contains: 'key:' } },
+      'sha'
+    );
+    expect(finding.remedy).toEqual({ file: 'b.yml', contains: 'key:' });
+  });
+
+  it('leaves the finding id alone', () => {
+    // Identity must not depend on the remedy: a re-report that words the
+    // remedy differently is the same finding, not a second one.
+    const withRemedy = findingFromModel(
+      { file: 'a.yml', title: 't', snippet: 'x', remedy: { file: 'b.yml', contains: 'key:' } },
+      'sha'
+    );
+    expect(withRemedy.id).toBe(findingId('a.yml', 'x'));
   });
 });
 
@@ -224,6 +271,72 @@ describe('verifyStatus', () => {
     expect(f?.resolved_in).toBe('sha2');
   });
 
+  it('resolves a finding whose fix landed in another file', () => {
+    // POPS-2705. The anchor still reads exactly as reported — correctly, it is
+    // the declaration — and the fix is an entry added to a different file. A
+    // snippet-only check answers "open" forever.
+    const prior = makeFinding({
+      file: 'docker-compose.yml',
+      snippet: 'pops_finance_api_key:',
+      remedy: { file: 'defaults/main.yml', contains: 'pops_finance_api_key:' },
+    });
+    const [f] = verifyStatus(
+      [prior],
+      (path) =>
+        path === 'defaults/main.yml'
+          ? 'pops_finance_api_key: "{{ vault_pops_finance_api_key }}"\n'
+          : 'secrets:\n  pops_finance_api_key:\n',
+      'sha2'
+    );
+    expect(f).toMatchObject({ status: 'resolved', resolved_in: 'sha2' });
+  });
+
+  it('keeps a cross-file finding open until its remedy actually lands', () => {
+    const prior = makeFinding({
+      file: 'docker-compose.yml',
+      snippet: 'pops_finance_api_key:',
+      remedy: { file: 'defaults/main.yml', contains: 'pops_finance_api_key:' },
+    });
+    const [f] = verifyStatus(
+      [prior],
+      (path) =>
+        path === 'defaults/main.yml'
+          ? 'some_other_key: value\n'
+          : 'secrets:\n  pops_finance_api_key:\n',
+      'sha2'
+    );
+    expect(f).toMatchObject({ status: 'open', resolved_in: null });
+  });
+
+  it('resolves a snippet-less finding once its remedy lands', () => {
+    // "X is missing" is exactly the shape that has no snippet to track, so
+    // before the remedy it could never be answered by the tree at all.
+    const prior = makeFinding({ snippet: null, remedy: { file: 'b.yml', contains: 'key:' } });
+    const [f] = verifyStatus([prior], () => 'key: value', 'sha2');
+    expect(f).toMatchObject({ status: 'resolved', resolved_in: 'sha2' });
+  });
+
+  it('reopens a cross-file finding when its remedy is reverted', () => {
+    const prior = makeFinding({
+      snippet: 'as unknown as Foo',
+      status: 'resolved',
+      resolved_in: 'sha2',
+      remedy: { file: 'b.yml', contains: 'key:' },
+    });
+    const [f] = verifyStatus(
+      [prior],
+      (path) => (path === 'b.yml' ? 'nothing here' : 'x as unknown as Foo;'),
+      'sha3'
+    );
+    expect(f).toMatchObject({ status: 'open', resolved_in: null });
+  });
+
+  it('still resolves a cross-file finding when the anchor itself is deleted', () => {
+    const prior = makeFinding({ remedy: { file: 'b.yml', contains: 'key:' } });
+    const [f] = verifyStatus([prior], () => null, 'sha2');
+    expect(f?.status).toBe('resolved');
+  });
+
   it('leaves a snippet-less finding alone', () => {
     // There is nothing to look for, so the tree cannot answer. Reading "absent"
     // as "fixed" would auto-resolve every "X is missing" finding on the next run.
@@ -282,6 +395,20 @@ describe('merge', () => {
     expect(merge([a, b], []).map((f) => f.id)).toEqual([a.id, b.id]);
   });
 
+  it('keeps a recorded remedy when the finding is re-reported without one', () => {
+    // Dropping it would make the finding unresolvable again on the next run,
+    // which is the whole bug the field exists to fix.
+    const prior = makeFinding({ remedy: { file: 'b.yml', contains: 'key:' } });
+    const [f] = merge([prior], [makeFinding({ remedy: null })]);
+    expect(f?.remedy).toEqual({ file: 'b.yml', contains: 'key:' });
+  });
+
+  it('takes a newer remedy over the recorded one', () => {
+    const prior = makeFinding({ remedy: { file: 'b.yml', contains: 'key:' } });
+    const [f] = merge([prior], [makeFinding({ remedy: { file: 'c.yml', contains: 'other:' } })]);
+    expect(f?.remedy).toEqual({ file: 'c.yml', contains: 'other:' });
+  });
+
   it('does not mutate the prior findings', () => {
     const prior = makeFinding({ title: 'original' });
     merge([prior], [makeFinding({ title: 'reworded' })]);
@@ -329,6 +456,19 @@ describe('render', () => {
     expect(body).toContain('<summary>1 resolved finding</summary>');
     expect(body).toContain('~~fixed thing~~');
     expect(body).toContain('No open findings.');
+  });
+
+  it('says where a cross-file fix has to land', () => {
+    // Otherwise the finding reads as unfixable to whoever has to fix it: the
+    // code it points at is correct and deleting it is not the remedy.
+    const cross = makeFinding({ remedy: { file: 'defaults/main.yml', contains: 'api_key:' } });
+    const body = render(
+      { version: STATE_VERSION, last_reviewed_sha: 's', findings: [cross] },
+      's',
+      'full'
+    );
+    expect(body).toContain('Resolves when `defaults/main.yml` contains:');
+    expect(body).toContain('api_key:');
   });
 
   it('marks how long an open finding has been outstanding', () => {

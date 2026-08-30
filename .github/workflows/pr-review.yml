@@ -30,8 +30,10 @@ name: PR Review
 # THE REVIEW COMPOUNDS. Each run reviews only the commits pushed since the last
 # one, edits ONE sticky comment rather than posting a new one, carries open
 # findings forward, and marks a finding resolved when the code it pointed at is
-# gone. All of that bookkeeping lives in `scripts/ci/pr-review-state.mjs` and is
-# tested; this workflow only sequences it around the model call.
+# gone — or, for a finding whose fix belongs in another file, when that other
+# file has it (POPS-2705). All of that bookkeeping lives in
+# `scripts/ci/pr-review-state.mjs` and is tested; this workflow only sequences
+# it around the model call.
 #
 # TIER A: no `pnpm install`, so both scripts are stdlib-only. Adding an import
 # to either means moving this job across that line in the same commit — see the

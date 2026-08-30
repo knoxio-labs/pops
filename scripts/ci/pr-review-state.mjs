@@ -46,9 +46,20 @@ const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*--
  * @property {string} body what is wrong and what the consequence is
  * @property {string} severity one of {@link SEVERITIES}
  * @property {string | null} snippet the offending code, verbatim, or null
+ * @property {Remedy | null} remedy where the fix lands when it lands somewhere
+ *   else, see {@link remedyFromModel}
  * @property {'open' | 'resolved'} status recomputed each run, never remembered
  * @property {string} first_seen sha this was first reported on
  * @property {string | null} resolved_in sha it was first seen fixed on
+ */
+
+/**
+ * Where a finding's fix has to land, when that is not the file it is anchored
+ * to.
+ *
+ * @typedef {object} Remedy
+ * @property {string} file repo-relative path the fix must touch
+ * @property {string} contains text whose presence in that file means fixed
  */
 
 /**
@@ -93,6 +104,32 @@ export function emptyState() {
 }
 
 /**
+ * Read a finding's optional remedy out of the reviewer's raw JSON output.
+ *
+ * A finding is anchored to the file that shows the problem, but the fix does
+ * not always belong there: "this compose file declares a secret the secrets
+ * role must provide" is anchored to the compose file and fixed in the role.
+ * {@link verifyStatus} checks the anchor's snippet, which stays correctly
+ * present after such a fix, so without this the finding could never resolve —
+ * it blocked a merge on a PR that had already fixed it (POPS-2705).
+ *
+ * Both fields must be non-empty strings; a half-specified remedy is dropped
+ * rather than half-honoured, because a remedy with no `contains` would match
+ * any file and resolve the finding on sight.
+ *
+ * @param {unknown} raw
+ * @returns {Remedy | null}
+ */
+export function remedyFromModel(raw) {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const record = /** @type {Record<string, unknown>} */ (raw);
+  const file = typeof record.file === 'string' ? record.file.trim() : '';
+  const contains = typeof record.contains === 'string' ? record.contains : '';
+  if (file === '' || normalize(contains) === '') return null;
+  return { file, contains };
+}
+
+/**
  * Build a finding from the reviewer's raw JSON output.
  *
  * The id is computed here rather than requested from the model: models do not
@@ -126,6 +163,7 @@ export function findingFromModel(raw, sha) {
     body: typeof record.body === 'string' ? record.body : '',
     severity,
     snippet,
+    remedy: remedyFromModel(record.remedy),
     status: 'open',
     first_seen: sha,
     resolved_in: null,
@@ -186,6 +224,7 @@ export function parseState(commentBody) {
       body: typeof f.body === 'string' ? f.body : '',
       severity: typeof f.severity === 'string' ? f.severity : 'medium',
       snippet: typeof f.snippet === 'string' ? f.snippet : null,
+      remedy: remedyFromModel(f.remedy),
       status: f.status === 'resolved' ? 'resolved' : 'open',
       first_seen: typeof f.first_seen === 'string' ? f.first_seen : '',
       resolved_in: typeof f.resolved_in === 'string' ? f.resolved_in : null,
@@ -227,15 +266,41 @@ export function computeDiffRange(baseSha, headSha, lastReviewedSha, isAncestor) 
 }
 
 /**
+ * Does `path`, as of the reviewed commit, contain `needle`?
+ *
+ * Whitespace-insensitive for the same reason finding identity is: a reindent
+ * or a formatter pass must not change the answer.
+ *
+ * @param {(path: string) => string | null} readFile
+ * @param {string} path
+ * @param {string} needle
+ * @returns {boolean}
+ */
+function fileContains(readFile, path, needle) {
+  const content = readFile(path);
+  return content !== null && normalize(content).includes(normalize(needle));
+}
+
+/**
  * Recompute open/resolved for every finding against the reviewed commit.
  *
  * Status is derived from the code, not remembered, and not asked of the model.
- * A finding is open exactly when its snippet is still present. That makes the
- * pass idempotent, lets a genuinely reintroduced problem reopen itself, and
- * avoids trusting a model to remember what it said last time.
+ * That makes the pass idempotent, lets a genuinely reintroduced problem reopen
+ * itself, and avoids trusting a model to remember what it said last time.
  *
- * Snippet-less findings cannot be checked this way and keep the status they
- * already had.
+ * Two questions, in this order:
+ *
+ *   1. Has the remedy landed? Only for a finding that declared one — the fix
+ *      lives in a different file than the anchor. This has to come first: the
+ *      anchor's snippet is still present after such a fix, and still correct,
+ *      so asking about the snippet alone answers "open" forever. That is
+ *      POPS-2705, found on a PR where the fix was two commits old and the
+ *      finding still blocked the merge.
+ *   2. Otherwise, is the snippet still present? A finding is open exactly
+ *      while the code it pointed at is there.
+ *
+ * A finding with neither a landed remedy nor a snippet cannot be checked
+ * against the tree at all and keeps the status it already had.
  *
  * @param {Finding[]} findings
  * @param {(path: string) => string | null} readFile
@@ -244,15 +309,23 @@ export function computeDiffRange(baseSha, headSha, lastReviewedSha, isAncestor) 
  */
 export function verifyStatus(findings, readFile, headSha) {
   return findings.map((finding) => {
-    if (finding.snippet === null) return { ...finding };
-    const content = readFile(finding.file);
-    const present = content !== null && normalize(content).includes(normalize(finding.snippet));
-    if (present) return { ...finding, status: 'open', resolved_in: null };
-    return {
+    /** @returns {Finding} */
+    const resolved = () => ({
       ...finding,
       status: 'resolved',
       resolved_in: finding.status === 'resolved' ? finding.resolved_in : headSha,
-    };
+    });
+    if (
+      finding.remedy !== null &&
+      fileContains(readFile, finding.remedy.file, finding.remedy.contains)
+    ) {
+      return resolved();
+    }
+    if (finding.snippet === null) return { ...finding };
+    if (fileContains(readFile, finding.file, finding.snippet)) {
+      return { ...finding, status: 'open', resolved_in: null };
+    }
+    return resolved();
   });
 }
 
@@ -282,6 +355,10 @@ export function merge(prior, incoming) {
     existing.title = finding.title;
     existing.body = finding.body;
     existing.severity = finding.severity;
+    // A re-report that omits the remedy keeps the one already recorded rather
+    // than clearing it: losing it would make the finding unresolvable again,
+    // which is the bug this field exists to fix.
+    existing.remedy = finding.remedy ?? existing.remedy;
     existing.status = 'open';
     existing.resolved_in = null;
   }
@@ -327,6 +404,15 @@ export function render(state, headSha, mode) {
         ''
       );
       if (finding.snippet) lines.push('```', finding.snippet, '```', '');
+      if (finding.remedy) {
+        lines.push(
+          `Resolves when \`${finding.remedy.file}\` contains:`,
+          '```',
+          finding.remedy.contains,
+          '```',
+          ''
+        );
+      }
     }
   }
 
