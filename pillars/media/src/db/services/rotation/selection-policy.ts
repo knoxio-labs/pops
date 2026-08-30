@@ -9,7 +9,7 @@
  */
 import { eq } from 'drizzle-orm';
 
-import { movies, rotationCandidates, rotationExclusions, rotationSources } from '../../schema.js';
+import { rotationCandidates, rotationExclusions, rotationSources } from '../../schema.js';
 
 import type { MediaDb } from '../internal.js';
 
@@ -71,31 +71,24 @@ function buildSourcePriorityMap(db: MediaDb): Map<number, number> {
   return new Map(sources.map((s) => [s.id, s.priority]));
 }
 
-function buildExcludedSets(db: MediaDb): {
-  excludedTmdbIds: Set<number>;
-  libraryTmdbIds: Set<number>;
-} {
+function buildExcludedTmdbIds(db: MediaDb): Set<number> {
   const exclusions = db
     .select({ tmdbId: rotationExclusions.tmdbId })
     .from(rotationExclusions)
     .all();
-  const libraryMovies = db.select({ tmdbId: movies.tmdbId }).from(movies).all();
-  return {
-    excludedTmdbIds: new Set(exclusions.map((e) => e.tmdbId)),
-    libraryTmdbIds: new Set(libraryMovies.map((m) => m.tmdbId)),
-  };
+  return new Set(exclusions.map((e) => e.tmdbId));
 }
 
 function dedupePendingCandidates(
   pending: PendingRow[],
   sourcePriorityMap: Map<number, number>,
   excludedTmdbIds: Set<number>,
-  libraryTmdbIds: Set<number>
+  onDiskTmdbIds: ReadonlySet<number>
 ): Map<number, DedupedCandidate> {
   const deduped = new Map<number, DedupedCandidate>();
   for (const c of pending) {
     if (excludedTmdbIds.has(c.tmdbId)) continue;
-    if (libraryTmdbIds.has(c.tmdbId)) continue;
+    if (onDiskTmdbIds.has(c.tmdbId)) continue;
     const priority = sourcePriorityMap.get(c.sourceId) ?? DEFAULT_SOURCE_PRIORITY;
     const existing = deduped.get(c.tmdbId);
     if (!existing || priority > existing.sourcePriority) {
@@ -147,20 +140,30 @@ export function weightedSample<T extends { weight: number }>(items: T[], count: 
  * is `source_priority × (rating / 10)`; a null rating uses
  * `source_priority × 0.5`. Returns `[]` for a non-positive count or an empty
  * eligible pool.
+ *
+ * `onDiskTmdbIds` is the set of movies that actually hold a file, taken from
+ * Radarr. It used to be every row in `movies`, which is a different claim: the
+ * pillar deliberately keeps a movie's row after rotation deletes its file, to
+ * preserve its Elo, watch history and tier overrides. Matching on rows
+ * therefore made a rotated-out movie permanently un-addable — the engine could
+ * never put back anything it had taken (POPS-2720).
  */
-export function aggregateCandidates(db: MediaDb, count: number): SelectedCandidate[] {
+export function aggregateCandidates(
+  db: MediaDb,
+  count: number,
+  onDiskTmdbIds: ReadonlySet<number>
+): SelectedCandidate[] {
   if (count <= 0) return [];
 
   const pending = fetchPendingCandidates(db);
   if (pending.length === 0) return [];
 
   const sourcePriorityMap = buildSourcePriorityMap(db);
-  const { excludedTmdbIds, libraryTmdbIds } = buildExcludedSets(db);
   const deduped = dedupePendingCandidates(
     pending,
     sourcePriorityMap,
-    excludedTmdbIds,
-    libraryTmdbIds
+    buildExcludedTmdbIds(db),
+    onDiskTmdbIds
   );
 
   const weighted = Array.from(deduped.values()).map((c) => ({

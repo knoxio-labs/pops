@@ -181,7 +181,7 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
     policy.avgMovieGb,
     policy.dailyAdditions
   );
-  const additions = await addMoviesFromQueue(db, budget);
+  const additions = await addMoviesFromQueue(db, budget, new Set(movieSizes.keys()));
 
   return {
     ...emptyResult(targetFreeGb),

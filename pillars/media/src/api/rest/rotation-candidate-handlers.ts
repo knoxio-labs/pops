@@ -26,8 +26,13 @@ export function makeRotationCandidateHandlers(db: MediaDb) {
     addToQueue: ({ body }: Req['addToQueue']) =>
       runHttp(() =>
         guardRotation(() => {
-          rotationCandidatesService.addToQueue(db, body);
-          return { status: 200 as const, body: { message: 'Added to rotation queue' } };
+          const queued = rotationCandidatesService.addToQueue(db, body);
+          return {
+            status: 200 as const,
+            body: {
+              message: queued ? 'Added to rotation queue' : 'Already in the rotation queue',
+            },
+          };
         })
       ),
 
