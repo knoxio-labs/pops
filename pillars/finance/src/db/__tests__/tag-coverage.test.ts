@@ -52,9 +52,13 @@ function txn(description: string, tags: string[], type: TransactionType = 'purch
 }
 
 function measure(
-  vocabulary: string[] = []
+  active: string[] = [],
+  retired: string[] = []
 ): ReturnType<typeof tagCoverageService.measureTagCoverage> {
-  return tagCoverageService.measureTagCoverage(opened.db, vocabulary);
+  return tagCoverageService.measureTagCoverage(opened.db, {
+    active,
+    known: [...active, ...retired],
+  });
 }
 
 function facet(
@@ -342,13 +346,17 @@ describe('measureTagCoverage — vocabulary and histogram', () => {
 
     const coverage = measure(['venue:restaurant']);
 
-    expect(coverage.outsideVocabulary).toEqual([{ tag: 'occasion:travel', transactions: 1 }]);
+    expect(coverage.outsideVocabulary).toEqual([
+      { tag: 'occasion:travel', transactions: 1, retired: false, unflagged: 1 },
+    ]);
   });
 
   it('counts a tag repeated on one row only once', () => {
     txn('ODD', ['venue:bar', 'venue:bar']);
 
-    expect(measure([]).outsideVocabulary).toEqual([{ tag: 'venue:bar', transactions: 1 }]);
+    expect(measure([]).outsideVocabulary).toEqual([
+      { tag: 'venue:bar', transactions: 1, retired: false, unflagged: 1 },
+    ]);
   });
 
   it('reports a dense histogram including the empty buckets between', () => {
@@ -415,6 +423,76 @@ describe('measureTagCoverage — the rule worklist', () => {
     for (let i = 0; i < 11; i += 1) txn('PayID Payment Received, Thank you', [], 'transfer');
 
     expect(measure().gaps).toEqual([]);
+  });
+});
+
+describe('isCoverageComplete — a retired tag on a flagged row is tracked elsewhere', () => {
+  // The retirement migrations (0071, 0073) deliberately leave a row carrying a
+  // retired value when they cannot resolve it, because the tag is the only
+  // surviving evidence of what the row is, and flag it so the debt is recorded.
+  // Gating on that pair reports one debt twice and turns the coverage gate into
+  // a "has anyone written the classifier pattern yet" gate (POPS-2683).
+  it('passes when every row carrying the retired value is flagged for review', () => {
+    txn('VIRGIN AUSTRALIA', ['occasion:travel', 'contains:fee', 'flag:needs-review']);
+
+    const coverage = measure(['occasion:travel', 'flag:needs-review'], ['contains:fee']);
+
+    expect(tagCoverageService.isCoverageComplete(coverage)).toBe(true);
+  });
+
+  // The audit reports what it saw; only the gate changed. A stranded tag that
+  // stops being printed is a debt that stops being visible.
+  it('still reports the retired tag even though it does not gate', () => {
+    txn('VIRGIN AUSTRALIA', ['occasion:travel', 'contains:fee', 'flag:needs-review']);
+
+    const coverage = measure(['occasion:travel', 'flag:needs-review'], ['contains:fee']);
+
+    expect(coverage.outsideVocabulary).toEqual([
+      { tag: 'contains:fee', transactions: 1, retired: true, unflagged: 0 },
+    ]);
+  });
+
+  it('fails when the same retired value sits on a row nobody flagged', () => {
+    txn('VIRGIN AUSTRALIA', ['occasion:travel', 'contains:fee']);
+
+    const coverage = measure(['occasion:travel'], ['contains:fee']);
+
+    expect(coverage.outsideVocabulary[0]).toMatchObject({ retired: true, unflagged: 1 });
+    expect(tagCoverageService.isCoverageComplete(coverage)).toBe(false);
+  });
+
+  // One unflagged row is enough. The exemption is per value, not per row, so a
+  // value must be fully accounted for before it stops gating.
+  it('fails when one of several rows carrying the retired value is unflagged', () => {
+    txn('VIRGIN AUSTRALIA', ['occasion:travel', 'contains:fee', 'flag:needs-review']);
+    txn('QANTAS', ['occasion:travel', 'contains:fee']);
+
+    const coverage = measure(['occasion:travel', 'flag:needs-review'], ['contains:fee']);
+
+    expect(coverage.outsideVocabulary[0]).toMatchObject({ transactions: 2, unflagged: 1 });
+    expect(tagCoverageService.isCoverageComplete(coverage)).toBe(false);
+  });
+
+  // The exemption is for values the vocabulary retired, not for typos. A flag
+  // does not excuse a value nothing ever seeded.
+  it('fails on a value the vocabulary has never held, flagged or not', () => {
+    txn('MYSTERY', ['occasion:out', 'contains:typo', 'flag:needs-review']);
+
+    const coverage = measure(['occasion:out', 'flag:needs-review']);
+
+    expect(coverage.outsideVocabulary[0]).toMatchObject({ tag: 'contains:typo', retired: false });
+    expect(tagCoverageService.isCoverageComplete(coverage)).toBe(false);
+  });
+
+  it('leaves a ledger with no flagged rows behaving exactly as before', () => {
+    txn('WOOLWORTHS', ['venue:supermarket', 'occasion:home', 'contains:groceries']);
+
+    expect(
+      tagCoverageService.isCoverageComplete(
+        measure(['venue:supermarket', 'occasion:home', 'contains:groceries'])
+      )
+    ).toBe(true);
+    expect(tagCoverageService.isCoverageComplete(measure(['venue:supermarket']))).toBe(false);
   });
 });
 

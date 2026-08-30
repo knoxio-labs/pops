@@ -136,6 +136,7 @@ export type {
   FacetCoverage,
   FacetExclusionReason,
   DescriptorGap,
+  TagVocabularySnapshot,
   UnknownTagUsage,
 } from './services/tag-coverage.js';
 
