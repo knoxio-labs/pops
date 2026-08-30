@@ -152,3 +152,43 @@ describe('progressByMediaId', () => {
     expect(progressByMediaId(opened.db, 'movie', [])).toEqual(new Map());
   });
 });
+
+describe('observedAt', () => {
+  const SQLITE_DATETIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+
+  function sqliteNow(): string {
+    const row = opened.raw.prepare(`SELECT datetime('now') AS now`).get() as { now: string };
+    return row.now;
+  }
+
+  it('writes the same shape on insert as the column default', () => {
+    record(1, HOUR_MS / 2);
+
+    const [row] = listProgress(opened.db, 'movie');
+    expect(row?.observedAt).toMatch(SQLITE_DATETIME);
+  });
+
+  it('writes the same shape on update', () => {
+    record(1, HOUR_MS / 2);
+    record(1, HOUR_MS / 3);
+
+    const [row] = listProgress(opened.db, 'movie');
+    expect(row?.observedAt).toMatch(SQLITE_DATETIME);
+  });
+
+  /**
+   * The point of matching the format is that stored values stay comparable
+   * with anything SQLite writes itself, which a lexicographic comparison
+   * against `datetime('now')` is the cheapest way to prove.
+   */
+  it('sorts against a value SQLite produced for the same instant', () => {
+    const before = sqliteNow();
+    record(1, HOUR_MS / 2);
+    const after = sqliteNow();
+
+    const [row] = listProgress(opened.db, 'movie');
+    const observedAt = row?.observedAt ?? '';
+    expect(observedAt >= before).toBe(true);
+    expect(observedAt <= after).toBe(true);
+  });
+});
