@@ -86,10 +86,10 @@ describe('EntitySection — fixing a wrong auto-match', () => {
     );
   });
 
-  it('keeps Accept as the one-click path but drops the duplicate create buttons', () => {
+  it('keeps the one-click accept path but drops the duplicate create buttons', () => {
     renderSection();
 
-    expect(screen.getByRole('button', { name: /accept "McDonald's"/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Assign to "McDonald\'s"' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^create new$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /create new entity/i })).not.toBeInTheDocument();
   });

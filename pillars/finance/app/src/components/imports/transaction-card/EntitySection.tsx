@@ -1,38 +1,39 @@
 import { Sparkles } from 'lucide-react';
 
-import { Badge, Button } from '@pops/ui';
+import { Badge } from '@pops/ui';
 
+import { AcceptEntityButton } from '../AcceptEntityButton';
+import { type EntityExistence, resolveEntityExistence } from '../entity-existence';
 import { EntitySelect } from '../EntitySelect';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
 interface AiSuggestionProps {
   transaction: ProcessedTransaction;
-  aiSuggestedEntityExists: boolean;
+  entityName: string;
+  existence: EntityExistence;
   onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
 }
 
 function AiSuggestionPanel({
   transaction,
-  aiSuggestedEntityExists,
+  entityName,
+  existence,
   onAcceptAiSuggestion,
 }: AiSuggestionProps) {
   return (
     <div className="mb-2 p-2 bg-app-accent/10 rounded-md border border-app-accent/20">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="w-4 h-4 text-app-accent" />
-        <span className="text-sm text-app-accent">
-          AI suggestion: {transaction.entity?.entityName}
-        </span>
+        <span className="text-sm text-app-accent">AI suggestion: {entityName}</span>
       </div>
-      <Button
-        variant="default"
-        size="sm"
+      <AcceptEntityButton
+        existence={existence}
+        scope="one"
+        entityName={entityName}
         onClick={() => onAcceptAiSuggestion(transaction)}
-        className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90 w-full"
-      >
-        {aiSuggestedEntityExists ? '✓' : '+'} Accept "{transaction.entity?.entityName}"
-      </Button>
+        className="w-full"
+      />
     </div>
   );
 }
@@ -40,6 +41,8 @@ function AiSuggestionPanel({
 interface EntitySectionProps {
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
+  /** `entities` is one capped page of a larger set — absence proves nothing. */
+  entitiesTruncated?: boolean;
   onEntitySelect?: (
     transaction: ProcessedTransaction,
     entityId: string,
@@ -59,19 +62,23 @@ interface EntitySectionProps {
  * which is exactly when the fix wasn't needed.
  */
 export function EntitySection(props: EntitySectionProps) {
-  const { transaction, entities, onEntitySelect, onCreateEntityWithName, onAcceptAiSuggestion } =
-    props;
-  const hasAiSuggestion = transaction.entity?.matchType === 'ai' && transaction.entity?.entityName;
-  const aiSuggestedEntityExists = Boolean(
-    hasAiSuggestion &&
-    entities?.some((e) => e.name.toLowerCase() === transaction.entity?.entityName?.toLowerCase())
-  );
+  const {
+    transaction,
+    entities,
+    entitiesTruncated,
+    onEntitySelect,
+    onCreateEntityWithName,
+    onAcceptAiSuggestion,
+  } = props;
+  const suggestedName =
+    transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
   return (
     <div className="mb-3">
-      {hasAiSuggestion && onAcceptAiSuggestion && (
+      {suggestedName && onAcceptAiSuggestion && (
         <AiSuggestionPanel
           transaction={transaction}
-          aiSuggestedEntityExists={aiSuggestedEntityExists}
+          entityName={suggestedName}
+          existence={resolveEntityExistence(suggestedName, entities, entitiesTruncated)}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
         />
       )}

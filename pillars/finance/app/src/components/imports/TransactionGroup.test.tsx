@@ -55,7 +55,7 @@ describe('TransactionGroup — standardized bulk entity picker', () => {
     const user = userEvent.setup();
     const { container } = renderGroup();
 
-    await user.click(screen.getByRole('button', { name: /assign all/i }));
+    await user.click(screen.getByRole('button', { name: /choose entity/i }));
 
     expect(screen.getByText(/select entity to assign to all 2 transactions/i)).toBeInTheDocument();
 
@@ -78,7 +78,7 @@ describe('TransactionGroup — standardized bulk entity picker', () => {
   it("offers no separate create button — creation is the picker's own row", () => {
     renderGroup({ group: makeGroup({ aiSuggestion: true }) });
 
-    expect(screen.getByRole('button', { name: /accept all as/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /assign all to/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /create new for all/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /choose existing/i })).not.toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('TransactionGroup — standardized bulk entity picker', () => {
     const onCreateAndAssignAll = vi.fn();
     renderGroup({ onCreateAndAssignAll });
 
-    await user.click(screen.getByRole('button', { name: /assign all/i }));
+    await user.click(screen.getByRole('button', { name: /choose entity/i }));
     await user.click(screen.getByRole('combobox'));
     await user.type(screen.getByPlaceholderText(/search entities/i), 'SaunaX');
     await user.click(screen.getByText(/create “SaunaX”/i));
@@ -105,8 +105,50 @@ describe('TransactionGroup — standardized bulk entity picker', () => {
     const user = userEvent.setup();
     renderGroup({ entities: [] });
 
-    await user.click(screen.getByRole('button', { name: /assign all/i }));
+    await user.click(screen.getByRole('button', { name: /choose entity/i }));
 
     expect(screen.getByRole('combobox')).toBeInTheDocument();
+  });
+});
+
+describe('TransactionGroup — the accept button names its outcome', () => {
+  it('offers to assign when the suggested entity already exists', () => {
+    renderGroup({ group: makeGroup({ aiSuggestion: true }) });
+
+    expect(
+      screen.getByRole('button', { name: 'Assign all to "Bunnings Warehouse"' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^create /i })).not.toBeInTheDocument();
+  });
+
+  it('offers to create when the suggested entity is absent from a complete list', () => {
+    renderGroup({
+      group: makeGroup({ aiSuggestion: true }),
+      entities: [{ id: 'ent-2', name: 'Coles' }],
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Create "Bunnings Warehouse" & assign all' })
+    ).toBeInTheDocument();
+  });
+
+  it('promises neither when the entity list is a truncated page', () => {
+    renderGroup({
+      group: makeGroup({ aiSuggestion: true }),
+      entities: [{ id: 'ent-2', name: 'Coles' }],
+      entitiesTruncated: true,
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Accept all as "Bunnings Warehouse"' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create "bunnings/i })).not.toBeInTheDocument();
+  });
+
+  it('leaves the picker under a name of its own, not a second "assign all"', () => {
+    renderGroup({ group: makeGroup({ aiSuggestion: true }) });
+
+    expect(screen.getByRole('button', { name: /choose entity/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /assign all/i })).toHaveLength(1);
   });
 });

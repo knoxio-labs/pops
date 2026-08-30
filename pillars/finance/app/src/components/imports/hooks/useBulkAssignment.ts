@@ -23,7 +23,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
 
-  const { entities, addPendingEntity, dbEntitiesData } = useEntities();
+  const { entities, truncated, addPendingEntity, dbEntitiesData } = useEntities();
 
   const handleCreateEntity = useCallback((transaction: ProcessedTransaction) => {
     setSelectedTransaction(transaction);
@@ -67,6 +67,7 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     selectedTransaction,
     setSelectedTransaction,
     entities,
+    entitiesTruncated: truncated,
     dbEntitiesData,
     handleCreateEntity,
     handleCreateEntityWithName,

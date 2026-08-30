@@ -2,39 +2,40 @@ import { ChevronRight, Sparkles } from 'lucide-react';
 
 import { Badge, Button, CollapsibleTrigger } from '@pops/ui';
 
+import { AcceptEntityButton } from '../AcceptEntityButton';
+import { type EntityExistence } from '../entity-existence';
+
 import type { ProcessedTransaction } from '@pops/finance';
 
 import type { TransactionGroup as TransactionGroupType } from '../../../lib/transaction-utils';
 
 interface GroupBulkActionsProps {
   group: TransactionGroupType;
-  entityExists?: boolean;
+  existence: EntityExistence;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
   onToggleEntitySelector: () => void;
 }
 
 /**
- * "Accept All" takes the AI's guess as-is; everything else — picking a
+ * The accept button takes the AI's guess as-is; everything else — picking a
  * different existing merchant or naming one that doesn't exist yet — is the
- * single picker behind "Assign all". Choosing and creating were two buttons
+ * single picker behind "Choose entity". Choosing and creating were two buttons
  * leading to two surfaces for what is one decision.
  */
 function GroupBulkActions(props: GroupBulkActionsProps) {
-  const { group, entityExists, onAcceptAll, onToggleEntitySelector } = props;
+  const { group, existence, onAcceptAll, onToggleEntitySelector } = props;
   return (
     <div className="flex gap-2">
       {group.aiSuggestion && (
-        <Button
-          variant="default"
-          size="sm"
+        <AcceptEntityButton
+          existence={existence}
+          scope="all"
+          entityName={group.entityName}
           onClick={() => onAcceptAll(group.transactions)}
-          className="bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
-        >
-          {entityExists ? '✓' : '+'} Accept All as "{group.entityName}"
-        </Button>
+        />
       )}
       <Button variant="outline" size="sm" onClick={onToggleEntitySelector}>
-        Assign all...
+        Choose entity...
       </Button>
     </div>
   );
