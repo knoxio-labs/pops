@@ -334,9 +334,40 @@ describe('tags', () => {
       })
     );
 
-    expect(listItemsByTag(opened.db, 'coffee')).toHaveLength(3);
-    expect(listItemsByTag(opened.db, 'kitchen')).toHaveLength(1);
-    expect(listItemsByTag(opened.db, 'nonexistent')).toHaveLength(0);
+    expect(listItemsByTag(opened.db, 'coffee').rows).toHaveLength(3);
+    expect(listItemsByTag(opened.db, 'coffee').total).toBe(3);
+    expect(listItemsByTag(opened.db, 'kitchen').rows).toHaveLength(1);
+    expect(listItemsByTag(opened.db, 'kitchen').total).toBe(1);
+    expect(listItemsByTag(opened.db, 'nonexistent').rows).toHaveLength(0);
+    expect(listItemsByTag(opened.db, 'nonexistent').total).toBe(0);
+  });
+
+  it('reports the true total even when it exceeds the page limit, and pages to the tail with offset', () => {
+    const items = Array.from({ length: 5 }, (_, i) => ({
+      name: `Bag ${String(i)}`,
+      unitPriceCents: 100 + i,
+      lineTotalCents: 100 + i,
+      tags: ['coffee'],
+    }));
+    createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'bulk', sourceOrderId: 'BULK-1', totalCents: 510, items })
+    );
+
+    // 5 lines carry `coffee`, but the page is capped at 2: `total` must
+    // still report every line, not just what fit on the page.
+    const firstPage = listItemsByTag(opened.db, 'coffee', 2);
+    expect(firstPage.rows).toHaveLength(2);
+    expect(firstPage.total).toBe(5);
+
+    // Paging with offset must reach rows the first page could not — the
+    // last page holds whatever remains past `total - limit`.
+    const lastPage = listItemsByTag(opened.db, 'coffee', 2, 3);
+    expect(lastPage.rows).toHaveLength(2);
+    expect(lastPage.total).toBe(5);
+    expect(lastPage.rows.map((row) => row.item.id)).not.toEqual(
+      firstPage.rows.map((row) => row.item.id)
+    );
   });
 
   it('de-duplicates a tag repeated on one line', () => {
@@ -367,8 +398,8 @@ describe('tags', () => {
     );
 
     expect(getPurchase(opened.db, id)?.items).toHaveLength(100);
-    expect(listItemsByTag(opened.db, 'groceries', 500)).toHaveLength(100);
-    expect(listItemsByTag(opened.db, 'fresh', 500)).toHaveLength(50);
+    expect(listItemsByTag(opened.db, 'groceries', 500).rows).toHaveLength(100);
+    expect(listItemsByTag(opened.db, 'fresh', 500).rows).toHaveLength(50);
   });
 });
 

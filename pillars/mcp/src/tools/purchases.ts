@@ -68,7 +68,7 @@ type PurchasesShape = {
   purchase: {
     list: (input: ListPurchasesInput) => unknown;
     get: (input: { id: string }) => unknown;
-    itemsByTag: (input: { tag: string; limit?: number }) => unknown;
+    itemsByTag: (input: { tag: string; limit?: number; offset?: number }) => unknown;
   };
   analytics: {
     merchantSpend: (input: MerchantSpendInput) => unknown;
@@ -185,22 +185,25 @@ const search: ToolDef = {
 const itemsByTag: ToolDef = {
   name: 'purchases.items.byTag',
   description:
-    "Every line item carrying a POPS item tag, across every order. Each hit reports the tag's own confirmedAt beside the line: null means a classification pass proposed the tag and it may be reconsidered, non-null means a human asserted it. Do not treat the two as the same evidence.",
+    "Line items carrying a POPS item tag, across every order, newest first — one page at a time (max results, 1-500, default 200). The response's pagination.total is the true count for the tag; page with limit/offset to see the rest rather than reading the returned page as the whole set. Each hit reports the tag's own confirmedAt beside the line: null means a classification pass proposed the tag and it may be reconsidered, non-null means a human asserted it. Do not treat the two as the same evidence.",
   inputSchema: {
     type: 'object',
     properties: {
       tag: { type: 'string', description: 'Item tag slug, lower-case (e.g. "snack")' },
-      limit: { type: 'number', description: 'Max results, 1-500' },
+      limit: { type: 'number', description: 'Max results, 1-500 (default 200)' },
+      offset: { type: 'number', description: 'Pagination offset (default 0)' },
     },
     required: ['tag'],
   },
   handler: async (args) => {
     const tag = reqStr(args, 'tag');
     if (!tag) return toolError('Missing required field: tag');
+    const input: { tag: string; limit?: number; offset?: number } = { tag };
     const limit = optNum(args, 'limit');
-    return mapCallResult(
-      await purchases().purchase.itemsByTag(limit === undefined ? { tag } : { tag, limit })
-    );
+    if (limit !== undefined) input.limit = limit;
+    const offset = optNum(args, 'offset');
+    if (offset !== undefined) input.offset = offset;
+    return mapCallResult(await purchases().purchase.itemsByTag(input));
   },
 };
 

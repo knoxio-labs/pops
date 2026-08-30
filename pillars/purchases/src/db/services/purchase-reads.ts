@@ -89,12 +89,6 @@ export interface PurchaseItemDetail {
   readonly landedCostCents: number;
 }
 
-/** A line that carries a given tag, with that tag's confirmation marker. */
-export interface TaggedItem {
-  readonly item: PurchaseItemRow;
-  readonly confirmedAt: string | null;
-}
-
 /** An order and every list hanging off it. */
 export interface PurchaseDetail {
   readonly purchase: PurchaseRow;
@@ -260,27 +254,6 @@ export function selectItemDetails(
     units: unitsByItem.get(item.id) ?? [],
     landedCostCents: landedCostCents(item),
   }));
-}
-
-/**
- * Every line carrying a given item tag, across every order. The query
- * `purchase_item_tags` exists to serve — a JSON array column would answer
- * it only with a full scan.
- *
- * The tag's confirmation marker travels with each line rather than being
- * dropped. It cannot live on the line itself — the tag is on the join row —
- * and without it a caller summing "everything tagged `snack`" cannot tell
- * which of those labels a human ever agreed with.
- */
-export function listItemsByTag(db: PurchasesDb, tag: string, limit = 200): readonly TaggedItem[] {
-  return db
-    .select({ item: purchaseItems, confirmedAt: purchaseItemTags.confirmedAt })
-    .from(purchaseItemTags)
-    .innerJoin(purchaseItems, eq(purchaseItems.id, purchaseItemTags.itemId))
-    .where(eq(purchaseItemTags.tag, tag))
-    .orderBy(desc(purchaseItems.createdAt), asc(purchaseItems.position), asc(purchaseItems.id))
-    .limit(limit)
-    .all();
 }
 
 /**

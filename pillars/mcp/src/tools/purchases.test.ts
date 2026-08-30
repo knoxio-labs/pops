@@ -147,8 +147,19 @@ describe('purchases.items.byTag', () => {
     expect(purchase.itemsByTag).toHaveBeenCalledWith({ tag: 'snack', limit: 20 });
   });
 
+  it('passes an offset when given one', async () => {
+    await tool('purchases.items.byTag').handler({ tag: 'snack', offset: 40 });
+    expect(purchase.itemsByTag).toHaveBeenCalledWith({ tag: 'snack', offset: 40 });
+  });
+
   it('tells the model the confirmation marker is not decoration', () => {
     expect(tool('purchases.items.byTag').description).toMatch(/confirmedAt/);
+  });
+
+  it('does not claim completeness the response does not deliver', () => {
+    const description = tool('purchases.items.byTag').description;
+    expect(description).not.toMatch(/^Every line item/);
+    expect(description).toMatch(/pagination\.total/);
   });
 });
 

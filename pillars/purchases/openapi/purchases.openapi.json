@@ -891,6 +891,15 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -1051,9 +1060,28 @@
                         "type": "object"
                       },
                       "type": "array"
+                    },
+                    "pagination": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "offset": {
+                          "type": "number"
+                        },
+                        "total": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["total", "limit", "offset", "hasMore"],
+                      "type": "object"
                     }
                   },
-                  "required": ["items"],
+                  "required": ["items", "pagination"],
                   "type": "object"
                 }
               }
@@ -1061,7 +1089,7 @@
             "description": "200"
           }
         },
-        "summary": "Every line carrying an item tag, across every order",
+        "summary": "Page through lines carrying an item tag, newest first",
         "tags": ["purchase"]
       }
     },

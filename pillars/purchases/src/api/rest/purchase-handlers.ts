@@ -15,6 +15,7 @@ import {
   listItemsByTag,
   listPurchaseRows,
 } from '../../db/index.js';
+import { paginationMeta } from '../shared/pagination.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
 import {
@@ -41,6 +42,8 @@ type CreateBody = z.infer<typeof CreatePurchaseBodySchema>;
 type AttachDocumentBody = z.infer<typeof AttachDocumentBodySchema>;
 type PatchItemBody = z.infer<typeof PatchItemBodySchema>;
 type ProposalDecisionBody = z.infer<typeof InventoryProposalDecisionSchema>;
+
+const ITEMS_BY_TAG_DEFAULT_LIMIT = 200;
 
 function notFound(id: string) {
   return {
@@ -213,14 +216,20 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
       return { status: 200 as const, body: { unit } };
     },
 
-    itemsByTag: async ({ query }: { query: TagQuery }) => ({
-      status: 200 as const,
-      body: {
-        items: listItemsByTag(db, query.tag, query.limit).map((row) => ({
-          item: toPurchaseItemBody(row.item),
-          confirmedAt: row.confirmedAt,
-        })),
-      },
-    }),
+    itemsByTag: async ({ query }: { query: TagQuery }) => {
+      const limit = query.limit ?? ITEMS_BY_TAG_DEFAULT_LIMIT;
+      const offset = query.offset ?? 0;
+      const { rows, total } = listItemsByTag(db, query.tag, limit, offset);
+      return {
+        status: 200 as const,
+        body: {
+          items: rows.map((row) => ({
+            item: toPurchaseItemBody(row.item),
+            confirmedAt: row.confirmedAt,
+          })),
+          pagination: paginationMeta(total, limit, offset),
+        },
+      };
+    },
   };
 }

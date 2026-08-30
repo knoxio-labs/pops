@@ -44,7 +44,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Every line carrying an item tag, across every order */
+    /** Page through lines carrying an item tag, newest first */
     get: operations['purchase.itemsByTag'];
     put?: never;
     post?: never;
@@ -729,6 +729,7 @@ export interface operations {
       query: {
         tag: string;
         limit?: number;
+        offset?: number;
       };
       header?: never;
       path?: never;
@@ -776,6 +777,12 @@ export interface operations {
                 url: string | null;
               };
             }[];
+            pagination: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
           };
         };
       };
