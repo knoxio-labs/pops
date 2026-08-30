@@ -31,7 +31,8 @@ import { buildAddChangeSet, buildEditChangeSet } from './changeset-builders.js';
 import { computeChangeSetImpact } from './changeset-impact.js';
 import { type CorrectionRow } from './types.js';
 
-const { isTagsOnlyCorrectionInput, normalizeDescription } = transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, normalizeDescription, normalizePatternForStorage } =
+  transactionCorrectionsService;
 
 interface FeedbackInfo {
   changeSet: ChangeSet;
@@ -95,8 +96,11 @@ export async function proposeChangeSetFromCorrectionSignal(
   args: ProposeArgs
 ): Promise<ChangeSetProposal> {
   const { effectiveSignal, feedback } = await resolveEffectiveSignal(db, args.signal);
-  const normalizedPattern = normalizeDescription(effectiveSignal.descriptionPattern);
   const matchType = effectiveSignal.matchType;
+  const normalizedPattern = normalizePatternForStorage(
+    effectiveSignal.descriptionPattern,
+    matchType
+  );
   const existing = findExistingRule(db, matchType, normalizedPattern);
 
   if (!existing && isTagsOnlyCorrectionInput(effectiveSignal)) {
