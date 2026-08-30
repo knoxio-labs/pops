@@ -41,18 +41,28 @@ function rule(id: string, pattern: string): Correction {
   };
 }
 
-/** Page one is full and reports more; the sought rule is only on page two. */
+/**
+ * Page one reports more; the sought rule is only on page two. The pages are
+ * kept small deliberately — `hasMore` is what drives the paging, and rendering
+ * a realistically-sized first page would only make every keystroke in these
+ * tests re-filter hundreds of rows.
+ */
+const FIRST_PAGE_SIZE = 3;
+
 function servesTwoPages() {
-  const firstPage = Array.from({ length: 500 }, (_, i) => rule(`bulk-${i}`, `BULK ${i}`));
+  const firstPage = Array.from({ length: FIRST_PAGE_SIZE }, (_, i) =>
+    rule(`bulk-${i}`, `BULK ${i}`)
+  );
   const secondPage = [rule('sought', 'SAUNA X DARLINGHURST')];
+  const total = FIRST_PAGE_SIZE + 1;
   mockCorrectionsList.mockImplementation(({ query }: { query: { offset: number } }) =>
     Promise.resolve({
       data:
         query.offset === 0
-          ? { data: firstPage, pagination: { total: 501, limit: 500, offset: 0, hasMore: true } }
+          ? { data: firstPage, pagination: { total, limit: 500, offset: 0, hasMore: true } }
           : {
               data: secondPage,
-              pagination: { total: 501, limit: 500, offset: 500, hasMore: false },
+              pagination: { total, limit: 500, offset: FIRST_PAGE_SIZE, hasMore: false },
             },
       error: undefined,
     })
@@ -96,7 +106,7 @@ describe('RulePicker — searching the rule set, not a page of it', () => {
 
     await waitFor(() => expect(mockCorrectionsList).toHaveBeenCalledTimes(2));
     expect(mockCorrectionsList).toHaveBeenNthCalledWith(2, {
-      query: { limit: 500, offset: 500 },
+      query: { limit: 500, offset: FIRST_PAGE_SIZE },
     });
   });
 
