@@ -21,9 +21,10 @@ import { getRotationCyclePolicy } from './rotation-cycle-policy.js';
 import {
   emptyResult,
   getAdditionBudget,
+  type PlannedRemoval,
   type RotationCycleResult,
 } from './rotation-cycle-types.js';
-import { type PlannedRemoval, planRemoval, type RemovalPlan } from './rotation-removal-plan.js';
+import { planRemoval, type RemovalPlan } from './rotation-removal-plan.js';
 import {
   getRadarrDiskSpace,
   getRadarrMovieFacts,

@@ -10,37 +10,13 @@
  */
 import { type MediaDb, type MovieSizeMap, rotationRemovalQueries } from '../../db/index.js';
 import { type RadarrClient } from '../clients/arr/index.js';
-import { calculateRemovalDeficit, selectForDeficit } from './rotation-cycle-types.js';
+import {
+  calculateRemovalDeficit,
+  type PlannedRemoval,
+  selectForDeficit,
+} from './rotation-cycle-types.js';
 import { type RankedCandidate, rankForRemoval, removableOnly } from './rotation-removal-ranking.js';
 import { getDownloadingTmdbIds, type MovieAcquiredMap } from './rotation-removal.js';
-
-/**
- * A movie the plan would mark, with the arithmetic that put it there.
- *
- * Persisted alongside the cycle log and returned by the preview: a scored
- * engine whose decisions cannot be reconstructed is not one anyone can argue
- * with, and the ordering defect this replaced went unnoticed for months
- * precisely because the log recorded outcomes and not reasons.
- *
- * A type alias rather than an interface on purpose: the log service stores this
- * in an opaque JSON column and types the field as `Record<string, unknown>`,
- * which only an alias satisfies.
- */
-export type PlannedRemoval = {
-  id: number;
-  tmdbId: number;
-  title: string;
-  /** Position in the ranking, 1-based. For tied movies this is the draw's outcome. */
-  rank: number;
-  pressure: number;
-  sizeGb: number;
-  ageDays: number;
-  ageAnchor: RankedCandidate['ageAnchor'];
-  watchCount: number;
-  quality: number;
-  qualitySource: RankedCandidate['qualitySource'];
-  keepWeight: number;
-};
 
 export interface RemovalPlan {
   deficitGb: number;
