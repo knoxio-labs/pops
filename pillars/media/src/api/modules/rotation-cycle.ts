@@ -3,7 +3,8 @@
  *
  * One cycle: batch-sync sources → sweep expired `leaving` movies (delete from
  * Radarr) → measure free space on the volume holding the Radarr root folder →
- * mark the oldest eligible movies `leaving` to cover the deficit → re-measure
+ * mark eligible movies `leaving` to cover the deficit, stepping over a pick
+ * that would overshoot it when something further down still fits → re-measure
  * that volume → add up to the daily cap of candidates when space allows. Returns a {@link RotationCycleResult} the scheduler writes
  * to the rotation log. Ported from the monolith `rotation-cycle.ts`; repointed
  * onto the env-only Radarr client + the pillar's `rotation_settings` kv table.
@@ -22,6 +23,7 @@ import {
   getAdditionBudget,
   type RotationCycleResult,
   type RotationMovieRef,
+  selectForDeficit,
 } from './rotation-cycle-types.js';
 import {
   getDownloadingTmdbIds,
@@ -31,6 +33,11 @@ import {
   RotationDiskSelectionError,
 } from './rotation-removal.js';
 import { syncAllSources } from './rotation-sync-all.js';
+
+interface MarkLeavingOutcome {
+  marked: RotationMovieRef[];
+  skipped: RotationMovieRef[];
+}
 
 interface MarkLeavingArgs {
   freeSpaceGb: number;
@@ -43,34 +50,33 @@ async function markLeaving(
   db: MediaDb,
   client: RadarrClient,
   args: MarkLeavingArgs
-): Promise<RotationMovieRef[]> {
+): Promise<MarkLeavingOutcome> {
   const { freeSpaceGb, targetFreeGb, leavingDays, movieSizes } = args;
   const leavingSizeGb = rotationRemovalQueries.getLeavingMovieSizeGb(db, movieSizes);
   const deficit = calculateRemovalDeficit(targetFreeGb, freeSpaceGb, leavingSizeGb);
-  if (deficit <= 0) return [];
+  if (deficit <= 0) return { marked: [], skipped: [] };
 
   const downloadingIds = await getDownloadingTmdbIds(client);
   const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
 
-  const toMark: typeof eligible = [];
-  let accumulated = 0;
-  for (const movie of eligible) {
-    const sizeGb = movieSizes.get(movie.tmdbId) ?? 0;
-    if (sizeGb <= 0) continue;
-    toMark.push(movie);
-    accumulated += sizeGb;
-    if (accumulated >= deficit) break;
-  }
-  if (toMark.length === 0) return [];
+  const { selected, skipped } = selectForDeficit(
+    eligible,
+    (movie) => movieSizes.get(movie.tmdbId) ?? 0,
+    deficit
+  );
+  if (selected.length === 0) return { marked: [], skipped: [] };
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + leavingDays);
   rotationRemovalQueries.markMoviesAsLeaving(
     db,
-    toMark.map((m) => m.id),
+    selected.map((m) => m.id),
     expiresAt.toISOString()
   );
-  return toMark.map((m) => ({ tmdbId: m.tmdbId, title: m.title }));
+  return {
+    marked: selected.map((m) => ({ tmdbId: m.tmdbId, title: m.title })),
+    skipped: skipped.map((m) => ({ tmdbId: m.tmdbId, title: m.title })),
+  };
 }
 
 async function reCheckFreeSpace(
@@ -172,10 +178,11 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
   return {
     ...emptyResult(targetFreeGb),
     ...afterSweep,
-    moviesMarkedLeaving: marked.length,
+    moviesMarkedLeaving: marked.marked.length,
     moviesAdded: additions.added,
     freeSpaceGb,
-    marked,
+    marked: marked.marked,
+    skippedForOvershoot: marked.skipped,
     added: additions.addedMovies,
   };
 }

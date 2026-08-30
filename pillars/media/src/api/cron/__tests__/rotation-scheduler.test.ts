@@ -360,6 +360,7 @@ describe('rotation scheduler — REST', () => {
       targetFreeGb: 100,
       skippedReason: null,
       marked: [],
+      skippedForOvershoot: [],
       removed: [],
       added: [],
       failed: [],
