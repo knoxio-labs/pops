@@ -12,8 +12,9 @@
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import { mediaScores, mediaWatchlist, movies, watchHistory } from '../../schema.js';
+import { type MediaDb, outerColumn } from '../internal.js';
 
-import type { MediaDb } from '../internal.js';
+const outerMovieId = outerColumn(movies, movies.id);
 
 /** Map of TMDB id → size in GB, as measured from Radarr. */
 export type MovieSizeMap = Map<number, number>;
@@ -128,23 +129,23 @@ export function getEligibleForRemoval(
       watchCount: sql<number>`(
         SELECT count(*) FROM ${watchHistory}
         WHERE ${watchHistory.mediaType} = 'movie'
-          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.mediaId} = ${outerMovieId}
           AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
       )`,
       lastWatchedAt: sql<string | null>`(
         SELECT max(${watchHistory.watchedAt}) FROM ${watchHistory}
         WHERE ${watchHistory.mediaType} = 'movie'
-          AND ${watchHistory.mediaId} = ${movies.id}
+          AND ${watchHistory.mediaId} = ${outerMovieId}
           AND ${watchHistory.completed} = 1 AND ${watchHistory.blacklisted} = 0
       )`,
       elo: sql<number | null>`(
         SELECT avg(${mediaScores.score}) FROM ${mediaScores}
         WHERE ${mediaScores.mediaType} = 'movie'
-          AND ${mediaScores.mediaId} = ${movies.id} AND ${mediaScores.comparisonCount} > 0
+          AND ${mediaScores.mediaId} = ${outerMovieId} AND ${mediaScores.comparisonCount} > 0
       )`,
       eloComparisons: sql<number>`coalesce((
         SELECT sum(${mediaScores.comparisonCount}) FROM ${mediaScores}
-        WHERE ${mediaScores.mediaType} = 'movie' AND ${mediaScores.mediaId} = ${movies.id}
+        WHERE ${mediaScores.mediaType} = 'movie' AND ${mediaScores.mediaId} = ${outerMovieId}
       ), 0)`,
     })
     .from(movies)
