@@ -104,19 +104,6 @@ export interface RadarrMovieFacts {
   acquiredAt: MovieAcquiredMap;
 }
 
-/**
- * Sizes and acquisition dates for every Radarr movie with a file on disk.
- *
- * Acquisition is `movie.added` rather than `movieFile.dateAdded`. On the live
- * library `added` is earlier for all 676 file-bearing movies, and `dateAdded`
- * clusters in a single fortnight — the signature of a volume migration
- * re-importing pre-existing files, which resets the file's recorded date and
- * its birth time alike. `added` is the one field that migration did not touch.
- *
- * Its known error, accepted deliberately: `added` is when the movie entered
- * Radarr, not when the file arrived, so a movie added while unmonitored and
- * downloaded much later reads as older than it is.
- */
 /** The slice of the Radarr client {@link getRadarrMovieFacts} needs. */
 export type MovieFactsClient = Pick<RadarrClient, 'getMovies'>;
 
@@ -135,6 +122,13 @@ function acquisitionDate(movie: RadarrMovie): string | undefined {
   return movie.movieFile?.dateAdded ?? movie.added;
 }
 
+/**
+ * Sizes and acquisition dates for every Radarr movie with a file on disk.
+ *
+ * A movie Radarr knows about but holds no file for is absent from both maps:
+ * it occupies no space and there is nothing to date. See
+ * {@link acquisitionDate} for which of Radarr's two dates is the acquisition.
+ */
 export async function getRadarrMovieFacts(client: MovieFactsClient): Promise<RadarrMovieFacts> {
   const radarrMovies = await client.getMovies();
   const sizes: MovieSizeMap = new Map();
