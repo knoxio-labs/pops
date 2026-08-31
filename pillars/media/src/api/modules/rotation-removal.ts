@@ -15,7 +15,7 @@ import {
   rotationCandidatesService,
   rotationRemovalQueries,
 } from '../../db/index.js';
-import { type RadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
+import { type RadarrClient, type RadarrDiskSpace, type RadarrMovie } from '../clients/arr/index.js';
 import {
   bytesToGb,
   type RotationFailedMovieRef,
@@ -104,27 +104,40 @@ export interface RadarrMovieFacts {
   acquiredAt: MovieAcquiredMap;
 }
 
+/** The slice of the Radarr client {@link getRadarrMovieFacts} needs. */
+export type MovieFactsClient = Pick<RadarrClient, 'getMovies'>;
+
+/**
+ * When the file on disk was actually obtained.
+ *
+ * `movie.added` is when the *record* entered Radarr, which for anything added
+ * as a wanted item and downloaded later is not when the library grew — on the
+ * live library the two disagree by a median of 138 days and by as much as 672,
+ * and ranking on `added` invents ages for files that did not exist yet. The
+ * file's own `dateAdded` is the download, and matches the file's birth time on
+ * disk. `added` remains the fallback for a file Radarr has no date for, which
+ * is better than treating the movie as ageless.
+ */
+function acquisitionDate(movie: RadarrMovie): string | undefined {
+  return movie.movieFile?.dateAdded ?? movie.added;
+}
+
 /**
  * Sizes and acquisition dates for every Radarr movie with a file on disk.
  *
- * Acquisition is `movie.added` rather than `movieFile.dateAdded`. On the live
- * library `added` is earlier for all 676 file-bearing movies, and `dateAdded`
- * clusters in a single fortnight — the signature of a volume migration
- * re-importing pre-existing files, which resets the file's recorded date and
- * its birth time alike. `added` is the one field that migration did not touch.
- *
- * Its known error, accepted deliberately: `added` is when the movie entered
- * Radarr, not when the file arrived, so a movie added while unmonitored and
- * downloaded much later reads as older than it is.
+ * A movie Radarr knows about but holds no file for is absent from both maps:
+ * it occupies no space and there is nothing to date. See
+ * {@link acquisitionDate} for which of Radarr's two dates is the acquisition.
  */
-export async function getRadarrMovieFacts(client: RadarrClient): Promise<RadarrMovieFacts> {
+export async function getRadarrMovieFacts(client: MovieFactsClient): Promise<RadarrMovieFacts> {
   const radarrMovies = await client.getMovies();
   const sizes: MovieSizeMap = new Map();
   const acquiredAt: MovieAcquiredMap = new Map();
   for (const m of radarrMovies) {
     if (!m.sizeOnDisk || m.sizeOnDisk <= 0) continue;
     sizes.set(m.tmdbId, bytesToGb(m.sizeOnDisk));
-    if (m.added) acquiredAt.set(m.tmdbId, m.added);
+    const acquired = acquisitionDate(m);
+    if (acquired) acquiredAt.set(m.tmdbId, acquired);
   }
   return { sizes, acquiredAt };
 }
