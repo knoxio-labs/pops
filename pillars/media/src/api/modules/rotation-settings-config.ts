@@ -17,7 +17,29 @@ export const ROTATION_SETTING_KEYS = {
   dailyAdditions: { key: 'rotation_daily_additions', default: '2' },
   avgMovieGb: { key: 'rotation_avg_movie_gb', default: '15' },
   protectedDays: { key: 'rotation_protected_days', default: '30' },
-} as const satisfies Record<string, { key: string; default: string }>;
+  ageExponent: { key: 'rotation_age_exponent', default: '1.2' },
+  ratingSpread: { key: 'rotation_rating_spread', default: '3' },
+  keepUnwatched: { key: 'rotation_keep_unwatched', default: '2.5' },
+  keepExponent: { key: 'rotation_keep_exponent', default: '1.4' },
+  /**
+   * The removal ranking's grace window. Distinct from `protectedDays` — which
+   * is the reprieve a manual cancel grants. They were one setting only because
+   * the cycle happened to pass `protectedDays` as `graceDays`, and a slider
+   * that silently relengthened every manual reprieve would be a trap.
+   *
+   * `inheritsFrom` is what makes the split safe on an existing install. An
+   * operator who had raised `protectedDays` to 90 was, before the split, also
+   * running a 90-day grace window; defaulting this key to a flat 30 would drop
+   * that to 30 on upgrade and quietly make every film aged 31–90 days
+   * deletable. Until the operator moves this slider, the old value is still
+   * the answer.
+   */
+  graceDays: {
+    key: 'rotation_grace_days',
+    default: '30',
+    inheritsFrom: 'rotation_protected_days',
+  },
+} as const satisfies Record<string, { key: string; default: string; inheritsFrom?: string }>;
 
 export type RotationSettingName = keyof typeof ROTATION_SETTING_KEYS;
 
@@ -32,6 +54,11 @@ export interface SaveSettingsInput {
   dailyAdditions?: number;
   avgMovieGb?: number;
   protectedDays?: number;
+  ageExponent?: number;
+  ratingSpread?: number;
+  keepUnwatched?: number;
+  keepExponent?: number;
+  graceDays?: number;
 }
 
 /** Read all rotation settings, falling back to defaults for unset keys. */
@@ -40,8 +67,10 @@ export function getRotationSettings(db: MediaDb): RotationSettings {
   const stored = rotationSettingsService.getMany(db, keys);
   const result = {} as RotationSettings;
   for (const name of Object.keys(ROTATION_SETTING_KEYS) as RotationSettingName[]) {
-    const def = ROTATION_SETTING_KEYS[name];
-    result[name] = stored[def.key] ?? def.default;
+    const def: { key: string; default: string; inheritsFrom?: string } =
+      ROTATION_SETTING_KEYS[name];
+    const inherited = def.inheritsFrom === undefined ? undefined : stored[def.inheritsFrom];
+    result[name] = stored[def.key] ?? inherited ?? def.default;
   }
   return result;
 }
@@ -66,6 +95,11 @@ const ENCODERS: {
   dailyAdditions: (i) => (i.dailyAdditions === undefined ? undefined : String(i.dailyAdditions)),
   avgMovieGb: (i) => (i.avgMovieGb === undefined ? undefined : String(i.avgMovieGb)),
   protectedDays: (i) => (i.protectedDays === undefined ? undefined : String(i.protectedDays)),
+  ageExponent: (i) => (i.ageExponent === undefined ? undefined : String(i.ageExponent)),
+  ratingSpread: (i) => (i.ratingSpread === undefined ? undefined : String(i.ratingSpread)),
+  keepUnwatched: (i) => (i.keepUnwatched === undefined ? undefined : String(i.keepUnwatched)),
+  keepExponent: (i) => (i.keepExponent === undefined ? undefined : String(i.keepExponent)),
+  graceDays: (i) => (i.graceDays === undefined ? undefined : String(i.graceDays)),
 };
 
 /** Persist the provided settings subset. Returns the number of keys written. */

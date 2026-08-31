@@ -140,7 +140,34 @@ export const SettingsSchema = z.object({
   dailyAdditions: z.string(),
   avgMovieGb: z.string(),
   protectedDays: z.string(),
+  ageExponent: z.string(),
+  ratingSpread: z.string(),
+  keepUnwatched: z.string(),
+  keepExponent: z.string(),
+  graceDays: z.string(),
 });
+
+/**
+ * Bounds for the removal-pressure sliders, shared by the save body and the
+ * preview's query overrides so the two can never disagree about what is a
+ * legal value.
+ *
+ * They are ranges rather than a free number because each one has a degenerate
+ * end: an age exponent of 0 makes every movie the same age, a rating spread
+ * below 1 inverts the ranking so the best-rated go first, and a keep weight of
+ * 0 divides by zero.
+ */
+export const TUNING_BOUNDS = {
+  ageExponent: { min: 0.5, max: 3, step: 0.05 },
+  ratingSpread: { min: 1, max: 10, step: 0.25 },
+  keepUnwatched: { min: 0.25, max: 6, step: 0.25 },
+  keepExponent: { min: 0.5, max: 3, step: 0.05 },
+  graceDays: { min: 0, max: 90, step: 1 },
+} as const;
+
+function tuned(name: keyof typeof TUNING_BOUNDS): z.ZodNumber {
+  return z.number().min(TUNING_BOUNDS[name].min).max(TUNING_BOUNDS[name].max);
+}
 
 export const SaveSettingsBody = z.object({
   enabled: z.boolean().optional(),
@@ -150,6 +177,25 @@ export const SaveSettingsBody = z.object({
   dailyAdditions: z.number().int().min(1).optional(),
   avgMovieGb: z.number().gt(0).optional(),
   protectedDays: z.number().int().min(0).optional(),
+  ageExponent: tuned('ageExponent').optional(),
+  ratingSpread: tuned('ratingSpread').optional(),
+  keepUnwatched: tuned('keepUnwatched').optional(),
+  keepExponent: tuned('keepExponent').optional(),
+  graceDays: tuned('graceDays').int().optional(),
+});
+
+/**
+ * Unsaved slider values for the preview. Coerced because they arrive as query
+ * string values, and every one is optional: an omitted knob falls back to what
+ * is stored, so the preview of an untouched form matches the real next cycle.
+ */
+export const RemovalPreviewQuery = z.object({
+  ageExponent: z.coerce.number().pipe(tuned('ageExponent')).optional(),
+  ratingSpread: z.coerce.number().pipe(tuned('ratingSpread')).optional(),
+  keepUnwatched: z.coerce.number().pipe(tuned('keepUnwatched')).optional(),
+  keepExponent: z.coerce.number().pipe(tuned('keepExponent')).optional(),
+  graceDays: z.coerce.number().pipe(tuned('graceDays').int()).optional(),
+  topCount: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 export const SaveSettingsResultSchema = z.object({

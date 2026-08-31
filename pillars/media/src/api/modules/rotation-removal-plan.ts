@@ -15,7 +15,12 @@ import {
   type PlannedRemoval,
   selectForDeficit,
 } from './rotation-cycle-types.js';
-import { type RankedCandidate, rankForRemoval, removableOnly } from './rotation-removal-ranking.js';
+import {
+  type RankedCandidate,
+  rankForRemoval,
+  removableOnly,
+  type RotationTuning,
+} from './rotation-removal-ranking.js';
 import { getDownloadingTmdbIds, type MovieAcquiredMap } from './rotation-removal.js';
 
 export interface RemovalPlan {
@@ -27,8 +32,13 @@ export interface RemovalPlan {
   skippedForOvershoot: PlannedRemoval[];
   eligibleCount: number;
   /**
+   * The head of the ranking, whether or not the deficit calls for any of it.
+   * Empty unless the caller asked for it via `topCount`.
+   */
+  topRanked: PlannedRemoval[];
+  /**
    * How many of the eligible movies actually carry pressure. Both counts are
-   * zero when there is no deficit: nothing is ranked at all in that case. The gap between
+   * zero when there is no deficit and no `topCount`: nothing is ranked then. The gap between
    * this and `eligibleCount` is the grace-window and unknown-age tail, which is
    * off limits — a deficit larger than what this covers goes unmet by design.
    */
@@ -41,6 +51,14 @@ export interface RemovalPlanArgs {
   graceDays: number;
   movieSizes: MovieSizeMap;
   acquiredAt: MovieAcquiredMap;
+  tuning: RotationTuning;
+  /**
+   * Rank and return this many movies even when nothing needs removing. The
+   * settings preview asks the question hypothetically — "who is next out?" —
+   * and an empty answer whenever the disk happens to be healthy would make the
+   * sliders impossible to judge.
+   */
+  topCount?: number;
 }
 
 function describe(
@@ -76,20 +94,21 @@ export async function planRemoval(
   client: RadarrClient,
   args: RemovalPlanArgs
 ): Promise<RemovalPlan> {
-  const { freeSpaceGb, targetFreeGb, graceDays, movieSizes, acquiredAt } = args;
+  const { freeSpaceGb, targetFreeGb, graceDays, movieSizes, acquiredAt, tuning } = args;
   const leavingGb = rotationRemovalQueries.getLeavingMovieSizeGb(db, movieSizes);
   const deficitGb = calculateRemovalDeficit(targetFreeGb, freeSpaceGb, leavingGb);
 
   // Answer before going near Radarr's queue. Ranking a library nobody has asked
   // to shrink would let a transient failure of the queue endpoint throw out of
   // the whole cycle, taking the addition phase — which needs none of this — down
-  // with it.
-  if (deficitGb <= 0) {
+  // with it. A preview asks the question deliberately, so it opts back in.
+  if (deficitGb <= 0 && args.topCount === undefined) {
     return {
       deficitGb,
       leavingGb,
       toMark: [],
       skippedForOvershoot: [],
+      topRanked: [],
       eligibleCount: 0,
       removableCount: 0,
     };
@@ -97,7 +116,7 @@ export async function planRemoval(
 
   const downloadingIds = await getDownloadingTmdbIds(client);
   const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
-  const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays });
+  const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays, tuning });
   const removable = removableOnly(ranked);
   const counts = { eligibleCount: eligible.length, removableCount: removable.length };
   const rankOf = new Map(ranked.map((candidate, index) => [candidate.tmdbId, index + 1]));
@@ -109,12 +128,14 @@ export async function planRemoval(
 
   const at = (candidate: RankedCandidate): PlannedRemoval =>
     describe(candidate, rankOf.get(candidate.tmdbId) ?? 0, movieSizes);
+  const topRanked = removable.slice(0, args.topCount ?? 0).map(at);
 
   return {
     deficitGb,
     leavingGb,
     toMark: selected.map(at),
     skippedForOvershoot: skipped.map(at),
+    topRanked,
     ...counts,
   };
 }

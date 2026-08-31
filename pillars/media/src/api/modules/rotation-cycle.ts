@@ -25,6 +25,7 @@ import {
   type RotationCycleResult,
 } from './rotation-cycle-types.js';
 import { planRemoval, type RemovalPlan } from './rotation-removal-plan.js';
+import { type RotationTuning } from './rotation-removal-ranking.js';
 import {
   getRadarrDiskSpace,
   getRadarrMovieFacts,
@@ -33,6 +34,22 @@ import {
   RotationDiskSelectionError,
 } from './rotation-removal.js';
 import { syncAllSources } from './rotation-sync-all.js';
+
+/** How many movies the settings preview lists when the caller names no count. */
+const DEFAULT_PREVIEW_COUNT = 10;
+
+/**
+ * Unsaved slider values to score with, instead of what is stored.
+ *
+ * The point of the preview is to answer "what would this do?" before anyone
+ * commits to it, so the tuning has to arrive with the request rather than the
+ * request reading it back out of the database.
+ */
+export interface PreviewOverrides {
+  tuning?: Partial<RotationTuning>;
+  graceDays?: number;
+  topCount?: number;
+}
 
 /** A removal plan, or the reason a real cycle would not have got that far. */
 export interface RemovalPreview {
@@ -52,6 +69,7 @@ interface MarkLeavingArgs {
   graceDays: number;
   movieSizes: MovieSizeMap;
   acquiredAt: MovieAcquiredMap;
+  tuning: RotationTuning;
 }
 
 /**
@@ -138,8 +156,12 @@ async function measureLibraryVolume(
  * running its planner is worth very little. `plan` is null exactly when a real
  * cycle would have skipped, and `skippedReason` says why.
  */
-export async function previewRemoval(db: MediaDb): Promise<RemovalPreview> {
+export async function previewRemoval(
+  db: MediaDb,
+  overrides?: PreviewOverrides
+): Promise<RemovalPreview> {
   const policy = getRotationCyclePolicy(db);
+  const graceDays = overrides?.graceDays ?? policy.graceDays;
   const client = getRadarrClient(db);
   if (!client) return { plan: null, skippedReason: 'Radarr not configured' };
 
@@ -152,9 +174,11 @@ export async function previewRemoval(db: MediaDb): Promise<RemovalPreview> {
   const plan = await planRemoval(db, client, {
     freeSpaceGb: measured.freeSpaceGb,
     targetFreeGb: policy.targetFreeGb,
-    graceDays: policy.protectedDays,
+    graceDays,
     movieSizes,
     acquiredAt,
+    tuning: { ...policy.tuning, ...overrides?.tuning },
+    topCount: overrides?.topCount ?? DEFAULT_PREVIEW_COUNT,
   });
   return { plan, skippedReason: null };
 }
@@ -193,9 +217,10 @@ export async function executeRotationCycle(db: MediaDb): Promise<RotationCycleRe
     freeSpaceGb,
     targetFreeGb,
     leavingDays,
-    graceDays: policy.protectedDays,
+    graceDays: policy.graceDays,
     movieSizes,
     acquiredAt,
+    tuning: policy.tuning,
   });
 
   const postFreeSpaceGb = await reCheckFreeSpace(client, rootFolderPath, freeSpaceGb);

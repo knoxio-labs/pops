@@ -1713,6 +1713,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/rotation/scheduler/reset-queue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Un-mark every movie queued for removal, deleting nothing */
+    post: operations['rotation.schedulerResetQueue'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/rotation/scheduler/run-now': {
     parameters: {
       query?: never;
@@ -9143,7 +9160,14 @@ export interface operations {
   };
   'rotation.schedulerRemovalPreview': {
     parameters: {
-      query?: never;
+      query?: {
+        ageExponent?: number;
+        ratingSpread?: number;
+        keepUnwatched?: number;
+        keepExponent?: number;
+        graceDays?: number;
+        topCount?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -9195,8 +9219,92 @@ export interface operations {
                   tmdbId: number;
                   watchCount: number;
                 }[];
+                topRanked: {
+                  /** @enum {string} */
+                  ageAnchor: 'acquired' | 'watched' | 'unknown';
+                  ageDays: number;
+                  id: number;
+                  keepWeight: number;
+                  pressure: number;
+                  quality: number;
+                  /** @enum {string} */
+                  qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+                  rank: number;
+                  sizeGb: number;
+                  title: string;
+                  tmdbId: number;
+                  watchCount: number;
+                }[];
               } | null;
               skippedReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'rotation.schedulerResetQueue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              cleared: number;
             };
           };
         };
@@ -9443,12 +9551,17 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              ageExponent: string;
               avgMovieGb: string;
               cronExpression: string;
               dailyAdditions: string;
               enabled: string;
+              graceDays: string;
+              keepExponent: string;
+              keepUnwatched: string;
               leavingDays: string;
               protectedDays: string;
+              ratingSpread: string;
               targetFreeGb: string;
             };
           };
@@ -9467,12 +9580,17 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          ageExponent?: number;
           avgMovieGb?: number;
           cronExpression?: string;
           dailyAdditions?: number;
           enabled?: boolean;
+          graceDays?: number;
+          keepExponent?: number;
+          keepUnwatched?: number;
           leavingDays?: number;
           protectedDays?: number;
+          ratingSpread?: number;
           targetFreeGb?: number;
         };
       };

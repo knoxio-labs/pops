@@ -1181,6 +1181,16 @@ export const MODULES = [
               },
             ],
           },
+          {
+            id: 'tuning',
+            title: 'Removal Ranking',
+            description:
+              'How the cycle decides what goes first. The preview re-ranks the library as you move a slider; nothing changes for the engine until you save.',
+            widget: {
+              bundleSlot: 'rotation-tuning',
+            },
+            fields: [],
+          },
         ],
       },
       {

@@ -27,28 +27,46 @@
  * and a signal that does not consistently order is not a rating signal.
  */
 
-/** Mild superlinearity, so pressure accelerates instead of plateauing. */
-const ALPHA = 1.2;
-
 /**
- * A top-rated movie ages this many times slower than an average one, and a
- * bottom-rated one this many times faster — a nine-fold spread end to end.
- */
-const RATING_SPREAD = 3;
-
-/** Keep-weight for a movie that has never been watched to completion. */
-const KEEP_UNWATCHED = 2.5;
-
-/**
- * How fast rewatching earns protection: `watches^KEEP_EXPONENT` for one watch
- * or more, giving 1.0 / 2.6 / 4.7 / 7.0 for one through four.
+ * The four terms of the pressure formula the operator can tune.
  *
- * A curve rather than a lookup table because no movie in the library has been
- * watched four times — a table's top band would be unreachable. The shape is
- * non-monotonic on purpose: unwatched is a debt not yet paid, watched once is
- * consumed, watched repeatedly is a classic.
+ * They are settings rather than constants because the values that shipped were
+ * fitted against a snapshot in which two of the three signals were broken —
+ * ages came from the wrong Radarr field and every movie read as unwatched with
+ * no Elo — so the numbers were never worth the confidence a constant implies
+ * (POPS-2730). The grace window travels separately, in `RankingInput`, because
+ * it excludes rather than scales.
  */
-const KEEP_EXPONENT = 1.4;
+export interface RotationTuning {
+  /** Mild superlinearity, so pressure accelerates instead of plateauing. */
+  ageExponent: number;
+  /**
+   * A top-rated movie ages this many times slower than an average one, and a
+   * bottom-rated one this many times faster — the square of it, end to end.
+   * At 1 the rating stops mattering at all.
+   */
+  ratingSpread: number;
+  /** Keep-weight for a movie that has never been watched to completion. */
+  keepUnwatched: number;
+  /**
+   * How fast rewatching earns protection: `watches^keepExponent` for one watch
+   * or more, giving 1.0 / 2.6 / 4.7 / 7.0 at 1.4 for one through four.
+   *
+   * A curve rather than a lookup table because no movie in the library has
+   * been watched four times — a table's top band would be unreachable. The
+   * shape is non-monotonic on purpose: unwatched is a debt not yet paid,
+   * watched once is consumed, watched repeatedly is a classic.
+   */
+  keepExponent: number;
+}
+
+/** What the formula scored with before any of it was tunable. */
+export const DEFAULT_TUNING: RotationTuning = {
+  ageExponent: 1.2,
+  ratingSpread: 3,
+  keepUnwatched: 2.5,
+  keepExponent: 1.4,
+};
 
 /**
  * Vote count at which a TMDB rating is trusted on its own terms. Below it the
@@ -96,6 +114,8 @@ export interface RankingInput {
   acquiredAt: ReadonlyMap<number, string>;
   /** Movies acquired within this many days carry no pressure at all. */
   graceDays: number;
+  /** Defaults to {@link DEFAULT_TUNING} when the caller has no stored values. */
+  tuning?: RotationTuning;
   now?: Date;
   /**
    * Tiebreak source. Re-rolled per cycle rather than seeded per movie: a stable
@@ -106,9 +126,9 @@ export interface RankingInput {
 }
 
 /** Keep-weight for a completed-watch count. Higher keeps the movie longer. */
-export function keepWeight(watchCount: number): number {
-  if (watchCount <= 0) return KEEP_UNWATCHED;
-  return Math.pow(watchCount, KEEP_EXPONENT);
+export function keepWeight(watchCount: number, tuning: RotationTuning): number {
+  if (watchCount <= 0) return tuning.keepUnwatched;
+  return Math.pow(watchCount, tuning.keepExponent);
 }
 
 /**
@@ -207,13 +227,13 @@ function effectiveAge(candidate: RemovalCandidate, acquired: string | undefined,
  * produced it: a component set that cannot reproduce its own pressure is not a
  * record of a decision, it is a decoration.
  */
-export function pressureFrom(parts: {
-  ageDays: number;
-  quality: number;
-  keepWeight: number;
-}): number {
+export function pressureFrom(
+  parts: { ageDays: number; quality: number; keepWeight: number },
+  tuning: RotationTuning
+): number {
   return (
-    (Math.pow(parts.ageDays, ALPHA) * Math.pow(RATING_SPREAD, 1 - 2 * parts.quality)) /
+    (Math.pow(parts.ageDays, tuning.ageExponent) *
+      Math.pow(tuning.ratingSpread, 1 - 2 * parts.quality)) /
     parts.keepWeight
   );
 }
@@ -227,6 +247,7 @@ export function pressureFrom(parts: {
  */
 export function rankForRemoval(input: RankingInput): RankedCandidate[] {
   const { candidates, acquiredAt, graceDays } = input;
+  const tuning = input.tuning ?? DEFAULT_TUNING;
   const now = (input.now ?? new Date()).getTime();
   const random = input.random ?? Math.random;
 
@@ -239,12 +260,12 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
   const ranked = candidates.map((candidate) => {
     const age = effectiveAge(candidate, acquiredAt.get(candidate.tmdbId), now);
     const quality = resolveQuality(candidate, sortedElos, libraryMean);
-    const keep = keepWeight(candidate.watchCount);
+    const keep = keepWeight(candidate.watchCount, tuning);
     const withinGrace = age.anchor !== 'unknown' && age.days < graceDays;
     const pressure =
       age.anchor === 'unknown' || withinGrace
         ? 0
-        : pressureFrom({ ageDays: age.days, quality: quality.value, keepWeight: keep });
+        : pressureFrom({ ageDays: age.days, quality: quality.value, keepWeight: keep }, tuning);
 
     return {
       ...candidate,

@@ -56,7 +56,7 @@ import { manifest as financeManifest } from '@pops/app-finance';
 import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
-import { PlexConnectPanel, manifest as mediaManifest } from '@pops/app-media';
+import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
 import { manifest as purchasesManifest } from '@pops/app-purchases';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
@@ -133,6 +133,7 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
     navOrder: 20,
     settingsWidgetBundles: {
       'plex-connect': PlexConnectPanel,
+      'rotation-tuning': RotationTuningPanel,
     },
   },
   inventory: { manifest: inventoryManifest, navOrder: 30 },

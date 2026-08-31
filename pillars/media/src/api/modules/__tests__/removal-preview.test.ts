@@ -24,7 +24,8 @@ import {
 import { clearStatusCache } from '../../clients/arr/index.js';
 import { rotationScheduler } from '../../cron/rotation-scheduler.js';
 import { previewRemoval } from '../rotation-cycle.js';
-import { pressureFrom } from '../rotation-removal-ranking.js';
+import { DEFAULT_TUNING, pressureFrom } from '../rotation-removal-ranking.js';
+import { getRotationSettings } from '../rotation-settings-config.js';
 
 const RADARR_URL = 'http://radarr.test:7878';
 const GB = 1_073_741_824;
@@ -159,13 +160,65 @@ describe('previewRemoval', () => {
   it('does not touch Radarr for a ranking nobody asked for', async () => {
     rotationSettingsService.setMany(opened.db, [{ key: 'rotation_target_free_gb', value: '10' }]);
 
+    await rotationScheduler.runOnce(opened.db);
+
+    const queried = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(queried.some((url) => url.includes('/queue'))).toBe(false);
+  });
+
+  /**
+   * The cycle skips the ranking when the disk is healthy; the preview must
+   * not. Its whole job is the hypothetical — "who is next out?" — and an empty
+   * answer whenever there happens to be room would make the sliders unjudgeable.
+   */
+  it('still ranks when nothing needs removing, because that is the question asked', async () => {
+    rotationSettingsService.setMany(opened.db, [{ key: 'rotation_target_free_gb', value: '10' }]);
+
     const preview = await previewRemoval(opened.db);
 
     expect(preview.plan?.deficitGb).toBe(0);
     expect(preview.plan?.toMark).toEqual([]);
-    expect(preview.plan?.eligibleCount).toBe(0);
-    const queried = fetchMock.mock.calls.map(([input]) => String(input));
-    expect(queried.some((url) => url.includes('/queue'))).toBe(false);
+    expect(preview.plan?.topRanked.map((m) => m.title)).toEqual(['Ancient', 'Middling', 'Recent']);
+  });
+
+  it('scores with the tuning it is handed rather than what is stored', async () => {
+    const stored = await previewRemoval(opened.db);
+    const steeper = await previewRemoval(opened.db, { tuning: { ageExponent: 2 } });
+
+    const before = stored.plan?.topRanked ?? [];
+    const after = steeper.plan?.topRanked ?? [];
+    expect(after.map((m) => m.title)).toEqual(before.map((m) => m.title));
+    // Every fixture movie shares a rating, so quality is the library mean for
+    // all of them and only the age term can separate them. A steeper exponent
+    // must therefore move every pressure and spread them further apart.
+    for (const [i, movie] of after.entries()) {
+      expect(movie.pressure).not.toBe(before[i]?.pressure);
+    }
+    const spread = (list: { pressure: number }[]) =>
+      (list.at(0)?.pressure ?? 0) / (list.at(-1)?.pressure ?? 1);
+    expect(spread(after)).toBeGreaterThan(spread(before));
+  });
+
+  it('leaves the stored tuning alone — a preview is not a save', async () => {
+    await previewRemoval(opened.db, { tuning: { ageExponent: 2 }, graceDays: 1 });
+
+    const settings = getRotationSettings(opened.db);
+    expect(settings.ageExponent).toBe('1.2');
+    expect(settings.graceDays).toBe('30');
+  });
+
+  it('honours a grace window handed in with the request', async () => {
+    const preview = await previewRemoval(opened.db, { graceDays: 500 });
+
+    // Only 'Ancient' at 900 days is outside a 500-day grace window.
+    expect(preview.plan?.topRanked.map((m) => m.title)).toEqual(['Ancient']);
+    expect(preview.plan?.removableCount).toBe(1);
+  });
+
+  it('lists at most the number of movies asked for', async () => {
+    const preview = await previewRemoval(opened.db, { topCount: 2 });
+
+    expect(preview.plan?.topRanked).toHaveLength(2);
   });
 
   it('says why rather than guessing when Radarr is not configured', async () => {
@@ -197,7 +250,7 @@ describe('the persisted breakdown', () => {
 
     expect(parsed.marked.length).toBe(2);
     for (const movie of parsed.marked) {
-      expect(pressureFrom(movie)).toBeCloseTo(movie.pressure, 10);
+      expect(pressureFrom(movie, DEFAULT_TUNING)).toBeCloseTo(movie.pressure, 10);
     }
   });
 });

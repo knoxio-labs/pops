@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 
+import { RemovalPreviewQuery } from './rest-rotation-schemas.js';
 import { ERR_RESPONSES, IdParam } from './rest-schemas.js';
 
 const SchedulerStatusSchema = z.object({
@@ -76,6 +77,7 @@ const RemovalPlanSchema = z.object({
   removableCount: z.number(),
   toMark: z.array(PlannedRemovalSchema),
   skippedForOvershoot: z.array(PlannedRemovalSchema),
+  topRanked: z.array(PlannedRemovalSchema),
 });
 
 const DiskSchema = z.object({
@@ -114,6 +116,7 @@ export const rotationSchedulerRoutes = {
   schedulerRemovalPreview: {
     method: 'GET',
     path: '/rotation/scheduler/removal-preview',
+    query: RemovalPreviewQuery,
     responses: {
       200: z.object({
         data: z.object({
@@ -124,6 +127,16 @@ export const rotationSchedulerRoutes = {
       ...ERR_RESPONSES,
     },
     summary: 'What the next cycle would mark for removal, and why, without writing anything',
+  },
+  schedulerResetQueue: {
+    method: 'POST',
+    path: '/rotation/scheduler/reset-queue',
+    body: z.object({}).optional(),
+    responses: {
+      200: z.object({ data: z.object({ cleared: z.number() }) }),
+      ...ERR_RESPONSES,
+    },
+    summary: 'Un-mark every movie queued for removal, deleting nothing',
   },
   schedulerLeavingMovies: {
     method: 'GET',
