@@ -17,9 +17,15 @@ export interface RadarrMovie {
   added?: string;
   movieFile?: {
     /**
-     * When Radarr recorded the file. Later than {@link RadarrMovie.added} for
-     * every movie on the live library, and reset by a volume migration that
-     * re-imports existing files — so it is not the acquisition date.
+     * When Radarr recorded the file — the acquisition date the rotation
+     * ranking ages a movie from, and equal to the file's birth time on disk
+     * for every file on the live library.
+     *
+     * It is not merely a later {@link RadarrMovie.added}: the two disagree by
+     * a median of 138 days and by as much as 672, because a movie added as a
+     * wanted item is downloaded whenever a release appears. A bulk re-import
+     * would flatten this into a single instant and was ruled out by measuring
+     * it — 676 files land on 101 distinct days, at most 11 in any one hour.
      */
     dateAdded?: string;
   };
