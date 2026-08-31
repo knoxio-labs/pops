@@ -31,9 +31,10 @@ let opened: OpenedMediaDb;
 let tmdbSeq = 700_000;
 
 /**
- * Push the `watch_history` and `media_scores` id sequences well past the
- * `movies` one, so no row can accidentally satisfy a comparison against the
- * wrong table's key.
+ * Push the `watch_history` and `media_scores` id sequences past the `movies`
+ * one, so no row of either can accidentally satisfy a comparison against the
+ * wrong table's key. `media_scores` is capped by its own unique index at one
+ * row per (movie, dimension), so the ballast spans every dimension there.
  */
 function offsetIdSequences(): void {
   const ballast = createMovie(opened.db, { tmdbId: ++tmdbSeq, title: 'Ballast' });
@@ -48,6 +49,34 @@ function offsetIdSequences(): void {
         blacklisted: 1,
       })
       .run();
+  }
+  for (const dimension of listDimensions(opened.db)) {
+    opened.db
+      .insert(mediaScores)
+      .values({
+        mediaType: 'movie',
+        mediaId: ballast.id,
+        dimensionId: dimension.id,
+        score: 1500,
+        comparisonCount: 0,
+      })
+      .run();
+  }
+}
+
+/**
+ * The fixture guarantee the correlation cases rest on. Asserted rather than
+ * assumed: if a row's own id ever equals the movie it points at, a query
+ * correlated to the wrong table answers correctly by accident and the case
+ * stops testing anything.
+ */
+function expectNoIdCoincidence(movieIds: number[]): void {
+  const ids = movieIds.join(',');
+  for (const table of ['watch_history', 'media_scores']) {
+    const row = opened.raw
+      .prepare(`SELECT count(*) AS n FROM ${table} WHERE id = media_id AND media_id IN (${ids})`)
+      .get() as { n: number };
+    expect(row.n).toBe(0);
   }
 }
 
@@ -147,6 +176,8 @@ describe('subquery correlation', () => {
     ]);
     const sizes: MovieSizeMap = new Map([...other.sizes, ...target.sizes]);
 
+    expectNoIdCoincidence([other.id, target.id]);
+
     const all = getEligibleForRemoval(opened.db, sizes, new Set());
     expect(all.find((m) => m.id === target.id)?.watchCount).toBe(2);
     expect(all.find((m) => m.id === target.id)?.lastWatchedAt).toBe('2026-03-01T00:00:00.000Z');
@@ -178,6 +209,8 @@ describe('subquery correlation', () => {
       ])
       .run();
     const sizes: MovieSizeMap = new Map([...other.sizes, ...target.sizes]);
+
+    expectNoIdCoincidence([other.id, target.id]);
 
     const all = getEligibleForRemoval(opened.db, sizes, new Set());
     const scored = all.find((m) => m.id === target.id);
