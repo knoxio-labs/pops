@@ -23,13 +23,23 @@ export const ROTATION_SETTING_KEYS = {
   keepExponent: { key: 'rotation_keep_exponent', default: '1.4' },
   /**
    * The removal ranking's grace window. Distinct from `protectedDays` — which
-   * is the reprieve a manual cancel grants — though it defaults to the same 30
-   * so separating the two changes no behaviour. They were one setting only
-   * because the cycle happened to pass `protectedDays` as `graceDays`, and a
-   * slider that silently relengthened every manual reprieve would be a trap.
+   * is the reprieve a manual cancel grants. They were one setting only because
+   * the cycle happened to pass `protectedDays` as `graceDays`, and a slider
+   * that silently relengthened every manual reprieve would be a trap.
+   *
+   * `inheritsFrom` is what makes the split safe on an existing install. An
+   * operator who had raised `protectedDays` to 90 was, before the split, also
+   * running a 90-day grace window; defaulting this key to a flat 30 would drop
+   * that to 30 on upgrade and quietly make every film aged 31–90 days
+   * deletable. Until the operator moves this slider, the old value is still
+   * the answer.
    */
-  graceDays: { key: 'rotation_grace_days', default: '30' },
-} as const satisfies Record<string, { key: string; default: string }>;
+  graceDays: {
+    key: 'rotation_grace_days',
+    default: '30',
+    inheritsFrom: 'rotation_protected_days',
+  },
+} as const satisfies Record<string, { key: string; default: string; inheritsFrom?: string }>;
 
 export type RotationSettingName = keyof typeof ROTATION_SETTING_KEYS;
 
@@ -57,8 +67,10 @@ export function getRotationSettings(db: MediaDb): RotationSettings {
   const stored = rotationSettingsService.getMany(db, keys);
   const result = {} as RotationSettings;
   for (const name of Object.keys(ROTATION_SETTING_KEYS) as RotationSettingName[]) {
-    const def = ROTATION_SETTING_KEYS[name];
-    result[name] = stored[def.key] ?? def.default;
+    const def: { key: string; default: string; inheritsFrom?: string } =
+      ROTATION_SETTING_KEYS[name];
+    const inherited = def.inheritsFrom === undefined ? undefined : stored[def.inheritsFrom];
+    result[name] = stored[def.key] ?? inherited ?? def.default;
   }
   return result;
 }

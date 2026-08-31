@@ -578,6 +578,22 @@ describe('rotation — settings', () => {
     });
   });
 
+  it('inherits an unset grace window from a customised protectedDays, not from the default', async () => {
+    await client().rotation.saveSettings({ protectedDays: 90 });
+
+    const { data } = await client().rotation.getSettings();
+    expect(data.graceDays).toBe('90');
+  });
+
+  it('stops inheriting once the grace window has been set in its own right', async () => {
+    await client().rotation.saveSettings({ protectedDays: 90 });
+    await client().rotation.saveSettings({ graceDays: 14 });
+
+    const { data } = await client().rotation.getSettings();
+    expect(data.graceDays).toBe('14');
+    expect(data.protectedDays).toBe('90');
+  });
+
   it('save-then-get round-trips the provided keys, leaving the rest at defaults', async () => {
     const saved = await client().rotation.saveSettings({
       cronExpression: '0 5 * * *',
