@@ -7,6 +7,7 @@
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
 export { PlexConnectPanel } from './components/plex-connect/PlexConnectPanel';
+export { RotationTuningPanel } from './components/rotation-tuning/RotationTuningPanel';
 
 // Side-effect: register search result components
 import './components/search/register';

@@ -248,3 +248,22 @@ export function cancelLeaving(db: MediaDb, movieId: number, reprieveUntil?: stri
     .run();
   return true;
 }
+
+/**
+ * Un-mark every movie queued for removal, and report how many were cleared.
+ *
+ * The bulk counterpart to {@link cancelLeaving}, and deliberately without its
+ * reprieve: cancelling one film is the operator overruling the ranking for
+ * that title, whereas resetting the queue is the operator asking for the whole
+ * library to be ranked again — protecting everything it just released would
+ * make the next cycle rank nothing. Nothing is deleted and no file is touched;
+ * the movies simply return to the eligible set.
+ */
+export function resetLeavingQueue(db: MediaDb): number {
+  const result = db
+    .update(movies)
+    .set({ rotationStatus: null, rotationExpiresAt: null, rotationMarkedAt: null })
+    .where(eq(movies.rotationStatus, 'leaving'))
+    .run();
+  return result.changes;
+}

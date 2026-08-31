@@ -570,6 +570,11 @@ describe('rotation — settings', () => {
       dailyAdditions: '2',
       avgMovieGb: '15',
       protectedDays: '30',
+      ageExponent: '1.2',
+      ratingSpread: '3',
+      keepUnwatched: '2.5',
+      keepExponent: '1.4',
+      graceDays: '30',
     });
   });
 
@@ -586,5 +591,59 @@ describe('rotation — settings', () => {
     expect(data.targetFreeGb).toBe('250');
     expect(data.enabled).toBe('true');
     expect(data.leavingDays).toBe('7');
+  });
+});
+
+describe('rotation — removal preview + queue reset', () => {
+  it('reports Radarr as unconfigured rather than pretending it planned nothing', async () => {
+    const { data } = await client().rotation.schedulerRemovalPreview();
+    expect(data.plan).toBeNull();
+    expect(data.skippedReason).toBe('Radarr not configured');
+  });
+
+  it('rejects a tuning value outside the slider bounds instead of ranking with it', async () => {
+    await expect(
+      client().rotation.schedulerRemovalPreview({ ageExponent: 12 })
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(client().rotation.schedulerRemovalPreview({ topCount: 0 })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it('accepts a value at each end of a slider — the bounds are inclusive', async () => {
+    await expect(
+      client().rotation.schedulerRemovalPreview({ ageExponent: 0.5, graceDays: 0 })
+    ).resolves.toBeDefined();
+    await expect(
+      client().rotation.schedulerRemovalPreview({ ageExponent: 3, graceDays: 90 })
+    ).resolves.toBeDefined();
+  });
+
+  it('previewing does not write the previewed values back to the settings', async () => {
+    await client().rotation.schedulerRemovalPreview({ ageExponent: 2.5, keepUnwatched: 6 });
+
+    const { data } = await client().rotation.getSettings();
+    expect(data.ageExponent).toBe('1.2');
+    expect(data.keepUnwatched).toBe('2.5');
+  });
+
+  it('un-marks every leaving movie and reports the count, deleting nothing in Radarr', async () => {
+    const first = moviesService.createMovie(mediaDb.db, { tmdbId: nextTmdb(), title: 'One' });
+    const second = moviesService.createMovie(mediaDb.db, { tmdbId: nextTmdb(), title: 'Two' });
+    const expiresAt = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    moviesService.setRotationStatus(mediaDb.db, first.id, 'leaving', expiresAt);
+    moviesService.setRotationStatus(mediaDb.db, second.id, 'leaving', expiresAt);
+    expect((await client().rotation.schedulerLeavingMovies()).data).toHaveLength(2);
+
+    const { data } = await client().rotation.schedulerResetQueue();
+
+    expect(data).toEqual({ cleared: 2 });
+    expect((await client().rotation.schedulerLeavingMovies()).data).toEqual([]);
+    expect(calls.some((cl) => cl.method === 'DELETE')).toBe(false);
+  });
+
+  it('reports zero rather than failing when nothing is queued', async () => {
+    const { data } = await client().rotation.schedulerResetQueue();
+    expect(data).toEqual({ cleared: 0 });
   });
 });

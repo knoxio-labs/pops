@@ -6,6 +6,7 @@
  * parse so a corrupt row can never NaN-poison the cycle.
  */
 import { type MediaDb } from '../../db/index.js';
+import { type RotationTuning } from './rotation-removal-ranking.js';
 import { getRotationSettings, ROTATION_SETTING_KEYS } from './rotation-settings-config.js';
 
 export interface RotationCyclePolicy {
@@ -14,6 +15,8 @@ export interface RotationCyclePolicy {
   dailyAdditions: number;
   avgMovieGb: number;
   protectedDays: number;
+  graceDays: number;
+  tuning: RotationTuning;
 }
 
 function num(value: string, fallback: string): number {
@@ -33,6 +36,13 @@ export function getRotationCyclePolicy(db: MediaDb): RotationCyclePolicy {
     dailyAdditions: num(settings.dailyAdditions, ROTATION_SETTING_KEYS.dailyAdditions.default),
     avgMovieGb: num(settings.avgMovieGb, ROTATION_SETTING_KEYS.avgMovieGb.default),
     protectedDays: num(settings.protectedDays, ROTATION_SETTING_KEYS.protectedDays.default),
+    graceDays: num(settings.graceDays, ROTATION_SETTING_KEYS.graceDays.default),
+    tuning: {
+      ageExponent: num(settings.ageExponent, ROTATION_SETTING_KEYS.ageExponent.default),
+      ratingSpread: num(settings.ratingSpread, ROTATION_SETTING_KEYS.ratingSpread.default),
+      keepUnwatched: num(settings.keepUnwatched, ROTATION_SETTING_KEYS.keepUnwatched.default),
+      keepExponent: num(settings.keepExponent, ROTATION_SETTING_KEYS.keepExponent.default),
+    },
   };
 }
 

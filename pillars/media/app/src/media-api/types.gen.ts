@@ -5639,7 +5639,14 @@ export type RotationRotationLogStatsResponse =
 export type RotationSchedulerRemovalPreviewData = {
   body?: never;
   path?: never;
-  query?: never;
+  query?: {
+    ageExponent?: number;
+    ratingSpread?: number;
+    keepUnwatched?: number;
+    keepExponent?: number;
+    graceDays?: number;
+    topCount?: number;
+  };
   url: '/rotation/scheduler/removal-preview';
 };
 
@@ -5712,6 +5719,20 @@ export type RotationSchedulerRemovalPreviewResponses = {
           tmdbId: number;
           watchCount: number;
         }>;
+        topRanked: Array<{
+          ageAnchor: 'acquired' | 'watched' | 'unknown';
+          ageDays: number;
+          id: number;
+          keepWeight: number;
+          pressure: number;
+          quality: number;
+          qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
+          rank: number;
+          sizeGb: number;
+          title: string;
+          tmdbId: number;
+          watchCount: number;
+        }>;
       } | null;
       skippedReason: string | null;
     };
@@ -5720,6 +5741,62 @@ export type RotationSchedulerRemovalPreviewResponses = {
 
 export type RotationSchedulerRemovalPreviewResponse =
   RotationSchedulerRemovalPreviewResponses[keyof RotationSchedulerRemovalPreviewResponses];
+
+export type RotationSchedulerResetQueueData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path?: never;
+  query?: never;
+  url: '/rotation/scheduler/reset-queue';
+};
+
+export type RotationSchedulerResetQueueErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type RotationSchedulerResetQueueError =
+  RotationSchedulerResetQueueErrors[keyof RotationSchedulerResetQueueErrors];
+
+export type RotationSchedulerResetQueueResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      cleared: number;
+    };
+  };
+};
+
+export type RotationSchedulerResetQueueResponse =
+  RotationSchedulerResetQueueResponses[keyof RotationSchedulerResetQueueResponses];
 
 export type RotationSchedulerRunNowData = {
   /**
@@ -5889,12 +5966,17 @@ export type RotationGetSettingsResponses = {
    */
   200: {
     data: {
+      ageExponent: string;
       avgMovieGb: string;
       cronExpression: string;
       dailyAdditions: string;
       enabled: string;
+      graceDays: string;
+      keepExponent: string;
+      keepUnwatched: string;
       leavingDays: string;
       protectedDays: string;
+      ratingSpread: string;
       targetFreeGb: string;
     };
   };
@@ -5908,12 +5990,17 @@ export type RotationSaveSettingsData = {
    * Body
    */
   body?: {
+    ageExponent?: number;
     avgMovieGb?: number;
     cronExpression?: string;
     dailyAdditions?: number;
     enabled?: boolean;
+    graceDays?: number;
+    keepExponent?: number;
+    keepUnwatched?: number;
     leavingDays?: number;
     protectedDays?: number;
+    ratingSpread?: number;
     targetFreeGb?: number;
   };
   path?: never;

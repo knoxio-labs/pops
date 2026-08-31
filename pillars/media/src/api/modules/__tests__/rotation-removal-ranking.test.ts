@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { selectForDeficit } from '../rotation-cycle-types.js';
 import {
+  DEFAULT_TUNING,
   keepWeight,
   rankForRemoval,
   type RemovalCandidate,
@@ -130,16 +131,16 @@ describe('watch count', () => {
   });
 
   it('is non-monotonic in watch count — unwatched sits between once and twice', () => {
-    expect(keepWeight(1)).toBeLessThan(keepWeight(0));
-    expect(keepWeight(0)).toBeLessThan(keepWeight(2));
-    expect(keepWeight(2)).toBeLessThan(keepWeight(3));
+    expect(keepWeight(1, DEFAULT_TUNING)).toBeLessThan(keepWeight(0, DEFAULT_TUNING));
+    expect(keepWeight(0, DEFAULT_TUNING)).toBeLessThan(keepWeight(2, DEFAULT_TUNING));
+    expect(keepWeight(2, DEFAULT_TUNING)).toBeLessThan(keepWeight(3, DEFAULT_TUNING));
   });
 
   it('keeps rising past the fourth watch rather than topping out', () => {
     // No movie in the library has four completed watches, so a lookup table
     // would have an unreachable top band.
-    expect(keepWeight(5)).toBeGreaterThan(keepWeight(4));
-    expect(keepWeight(9)).toBeGreaterThan(keepWeight(5));
+    expect(keepWeight(5, DEFAULT_TUNING)).toBeGreaterThan(keepWeight(4, DEFAULT_TUNING));
+    expect(keepWeight(9, DEFAULT_TUNING)).toBeGreaterThan(keepWeight(5, DEFAULT_TUNING));
   });
 });
 
@@ -268,7 +269,7 @@ describe('ranking properties', () => {
     const [ranked] = rank([film]);
     expect(ranked?.ageDays).toBeCloseTo(200, 0);
     expect(ranked?.ageAnchor).toBe('watched');
-    expect(ranked?.keepWeight).toBeCloseTo(keepWeight(2), 5);
+    expect(ranked?.keepWeight).toBeCloseTo(keepWeight(2, DEFAULT_TUNING), 5);
     expect(ranked?.quality).toBeGreaterThan(0);
   });
 

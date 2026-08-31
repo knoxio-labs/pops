@@ -580,6 +580,11 @@ interface RotationSettingsWire {
   dailyAdditions: string;
   avgMovieGb: string;
   protectedDays: string;
+  ageExponent: string;
+  ratingSpread: string;
+  keepUnwatched: string;
+  keepExponent: string;
+  graceDays: string;
 }
 
 interface RotationSchedulerStatusWire {
@@ -622,6 +627,34 @@ interface LeavingMovieWire {
   posterPath: string | null;
   rotationExpiresAt: string | null;
   rotationMarkedAt: string | null;
+}
+
+interface RankedMovieWire {
+  id: number;
+  tmdbId: number;
+  title: string;
+  rank: number;
+  pressure: number;
+  sizeGb: number;
+  ageDays: number;
+  ageAnchor: string;
+  watchCount: number;
+  quality: number;
+  qualitySource: string;
+  keepWeight: number;
+}
+
+interface RemovalPreviewWire {
+  plan: {
+    deficitGb: number;
+    leavingGb: number;
+    eligibleCount: number;
+    removableCount: number;
+    toMark: RankedMovieWire[];
+    skippedForOvershoot: RankedMovieWire[];
+    topRanked: RankedMovieWire[];
+  } | null;
+  skippedReason: string | null;
 }
 
 interface RadarrDiskWire {
@@ -684,6 +717,10 @@ function makeRotationClient(r: BoundAgent) {
       send<{ data: { success: boolean; result: CycleResultWire | null } }>(
         r.post('/rotation/scheduler/run-now').send({})
       ),
+    schedulerRemovalPreview: (query: Record<string, number> = {}) =>
+      send<{ data: RemovalPreviewWire }>(r.get('/rotation/scheduler/removal-preview').query(query)),
+    schedulerResetQueue: () =>
+      send<{ data: { cleared: number } }>(r.post('/rotation/scheduler/reset-queue').send({})),
     schedulerLeavingMovies: () =>
       send<{ data: LeavingMovieWire[] }>(r.get('/rotation/scheduler/leaving')),
     schedulerCancelLeaving: (movieId: number) =>

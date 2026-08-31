@@ -17,7 +17,7 @@ import { type MediaDb, rotationLogService, rotationRemovalQueries } from '../../
 import { getRadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
 import { rotationScheduler } from '../cron/rotation-scheduler.js';
 import { getProtectionExpiresAt } from '../modules/rotation-cycle-policy.js';
-import { previewRemoval } from '../modules/rotation-cycle.js';
+import { type PreviewOverrides, previewRemoval } from '../modules/rotation-cycle.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -36,6 +36,17 @@ async function readDiskSpace(
   } catch {
     return { available: false, disks: [] };
   }
+}
+
+/**
+ * Split the preview's flat query into the tuning it overrides and the rest.
+ *
+ * An omitted knob has to stay omitted rather than become a default, so that
+ * previewing an untouched form shows what the next real cycle would do.
+ */
+function previewOverrides(query: Req['schedulerRemovalPreview']['query']): PreviewOverrides {
+  const { graceDays, topCount, ...tuning } = query;
+  return { tuning, graceDays, topCount };
 }
 
 const DEFAULT_LOG_LIMIT = 20;
@@ -83,8 +94,17 @@ export function makeRotationSchedulerHandlers(db: MediaDb) {
         };
       }),
 
-    schedulerRemovalPreview: () =>
-      runHttp(async () => ({ status: 200 as const, body: { data: await previewRemoval(db) } })),
+    schedulerRemovalPreview: ({ query }: Req['schedulerRemovalPreview']) =>
+      runHttp(async () => ({
+        status: 200 as const,
+        body: { data: await previewRemoval(db, previewOverrides(query)) },
+      })),
+
+    schedulerResetQueue: () =>
+      runHttp(() => ({
+        status: 200 as const,
+        body: { data: { cleared: rotationRemovalQueries.resetLeavingQueue(db) } },
+      })),
 
     schedulerLeavingMovies: () =>
       runHttp(() => ({

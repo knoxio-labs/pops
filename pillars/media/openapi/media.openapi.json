@@ -14439,7 +14439,62 @@
     "/rotation/scheduler/removal-preview": {
       "get": {
         "operationId": "rotation.schedulerRemovalPreview",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ageExponent",
+            "schema": {
+              "maximum": 3,
+              "minimum": 0.5,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ratingSpread",
+            "schema": {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keepUnwatched",
+            "schema": {
+              "maximum": 6,
+              "minimum": 0.25,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keepExponent",
+            "schema": {
+              "maximum": 3,
+              "minimum": 0.5,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "graceDays",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "topCount",
+            "schema": {
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -14587,6 +14642,67 @@
                                 "type": "object"
                               },
                               "type": "array"
+                            },
+                            "topRanked": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "ageAnchor": {
+                                    "enum": ["acquired", "watched", "unknown"],
+                                    "type": "string"
+                                  },
+                                  "ageDays": {
+                                    "type": "number"
+                                  },
+                                  "id": {
+                                    "type": "number"
+                                  },
+                                  "keepWeight": {
+                                    "type": "number"
+                                  },
+                                  "pressure": {
+                                    "type": "number"
+                                  },
+                                  "quality": {
+                                    "type": "number"
+                                  },
+                                  "qualitySource": {
+                                    "enum": ["elo", "tmdb", "blended", "none"],
+                                    "type": "string"
+                                  },
+                                  "rank": {
+                                    "type": "number"
+                                  },
+                                  "sizeGb": {
+                                    "type": "number"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "tmdbId": {
+                                    "type": "number"
+                                  },
+                                  "watchCount": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "tmdbId",
+                                  "title",
+                                  "rank",
+                                  "pressure",
+                                  "sizeGb",
+                                  "ageDays",
+                                  "ageAnchor",
+                                  "watchCount",
+                                  "quality",
+                                  "qualitySource",
+                                  "keepWeight"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
                           "required": [
@@ -14595,7 +14711,8 @@
                             "eligibleCount",
                             "removableCount",
                             "toMark",
-                            "skippedForOvershoot"
+                            "skippedForOvershoot",
+                            "topRanked"
                           ],
                           "type": "object"
                         },
@@ -14686,6 +14803,121 @@
           }
         },
         "summary": "What the next cycle would mark for removal, and why, without writing anything",
+        "tags": ["rotation"]
+      }
+    },
+    "/rotation/scheduler/reset-queue": {
+      "post": {
+        "operationId": "rotation.schedulerResetQueue",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cleared": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["cleared"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Un-mark every movie queued for removal, deleting nothing",
         "tags": ["rotation"]
       }
     },
@@ -15072,6 +15304,9 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "ageExponent": {
+                          "type": "string"
+                        },
                         "avgMovieGb": {
                           "type": "string"
                         },
@@ -15084,10 +15319,22 @@
                         "enabled": {
                           "type": "string"
                         },
+                        "graceDays": {
+                          "type": "string"
+                        },
+                        "keepExponent": {
+                          "type": "string"
+                        },
+                        "keepUnwatched": {
+                          "type": "string"
+                        },
                         "leavingDays": {
                           "type": "string"
                         },
                         "protectedDays": {
+                          "type": "string"
+                        },
+                        "ratingSpread": {
                           "type": "string"
                         },
                         "targetFreeGb": {
@@ -15101,7 +15348,12 @@
                         "leavingDays",
                         "dailyAdditions",
                         "avgMovieGb",
-                        "protectedDays"
+                        "protectedDays",
+                        "ageExponent",
+                        "ratingSpread",
+                        "keepUnwatched",
+                        "keepExponent",
+                        "graceDays"
                       ],
                       "type": "object"
                     }
@@ -15126,6 +15378,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "ageExponent": {
+                    "maximum": 3,
+                    "minimum": 0.5,
+                    "type": "number"
+                  },
                   "avgMovieGb": {
                     "exclusiveMinimum": true,
                     "minimum": 0,
@@ -15143,6 +15400,21 @@
                   "enabled": {
                     "type": "boolean"
                   },
+                  "graceDays": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "keepExponent": {
+                    "maximum": 3,
+                    "minimum": 0.5,
+                    "type": "number"
+                  },
+                  "keepUnwatched": {
+                    "maximum": 6,
+                    "minimum": 0.25,
+                    "type": "number"
+                  },
                   "leavingDays": {
                     "maximum": 9007199254740991,
                     "minimum": 1,
@@ -15152,6 +15424,11 @@
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "ratingSpread": {
+                    "maximum": 10,
+                    "minimum": 1,
+                    "type": "number"
                   },
                   "targetFreeGb": {
                     "minimum": 0,

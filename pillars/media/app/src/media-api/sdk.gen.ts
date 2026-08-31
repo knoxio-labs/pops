@@ -310,6 +310,9 @@ import type {
   RotationSchedulerRemovalPreviewData,
   RotationSchedulerRemovalPreviewErrors,
   RotationSchedulerRemovalPreviewResponses,
+  RotationSchedulerResetQueueData,
+  RotationSchedulerResetQueueErrors,
+  RotationSchedulerResetQueueResponses,
   RotationSchedulerRunNowData,
   RotationSchedulerRunNowErrors,
   RotationSchedulerRunNowResponses,
@@ -2076,6 +2079,29 @@ export const rotationSchedulerRemovalPreview = <ThrowOnError extends boolean = f
     RotationSchedulerRemovalPreviewErrors,
     ThrowOnError
   >({ url: '/rotation/scheduler/removal-preview', ...options });
+
+/**
+ * Un-mark every movie queued for removal, deleting nothing
+ */
+export const rotationSchedulerResetQueue = <ThrowOnError extends boolean = false>(
+  options?: Options<RotationSchedulerResetQueueData, ThrowOnError>
+): RequestResult<
+  RotationSchedulerResetQueueResponses,
+  RotationSchedulerResetQueueErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    RotationSchedulerResetQueueResponses,
+    RotationSchedulerResetQueueErrors,
+    ThrowOnError
+  >({
+    url: '/rotation/scheduler/reset-queue',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Trigger one rotation cycle immediately
