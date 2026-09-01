@@ -1,6 +1,4 @@
-import { resolve, sep } from 'node:path';
-
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   HERO_ALLOWED_MIME_TYPES,
@@ -10,41 +8,8 @@ import {
   isValidHeroFilename,
   relativeHeroPath,
 } from '../hero-paths';
-import {
-  DEFAULT_FOOD_RECIPES_DIR,
-  cardPathFor,
-  heroPathFor,
-  recipeDirFor,
-  recipesRootDir,
-  resolveServablePath,
-  thumbPathFor,
-} from '../hero-paths.node';
-
-const ORIGINAL_ENV = process.env['FOOD_RECIPES_DIR'];
 
 describe('hero-paths', () => {
-  beforeEach(() => {
-    delete process.env['FOOD_RECIPES_DIR'];
-  });
-  afterEach(() => {
-    if (ORIGINAL_ENV === undefined) delete process.env['FOOD_RECIPES_DIR'];
-    else process.env['FOOD_RECIPES_DIR'] = ORIGINAL_ENV;
-  });
-
-  describe('recipesRootDir', () => {
-    it('defaults to ./data/food/recipes when env is unset', () => {
-      expect(recipesRootDir()).toBe(resolve(DEFAULT_FOOD_RECIPES_DIR));
-    });
-    it('defaults when env is empty string', () => {
-      process.env['FOOD_RECIPES_DIR'] = '';
-      expect(recipesRootDir()).toBe(resolve(DEFAULT_FOOD_RECIPES_DIR));
-    });
-    it('honours an absolute path', () => {
-      process.env['FOOD_RECIPES_DIR'] = '/var/pops/recipes';
-      expect(recipesRootDir()).toBe('/var/pops/recipes');
-    });
-  });
-
   describe('assertValidRecipeId', () => {
     it('accepts positive integers', () => {
       expect(assertValidRecipeId(1)).toBe(1);
@@ -61,29 +26,11 @@ describe('hero-paths', () => {
     );
   });
 
-  describe('absolute path helpers', () => {
-    beforeEach(() => {
-      process.env['FOOD_RECIPES_DIR'] = '/tmp/pops-test-recipes';
-    });
-    it('recipeDirFor joins root and recipe id', () => {
-      expect(recipeDirFor(7)).toBe(resolve('/tmp/pops-test-recipes/7'));
-    });
-    it('heroPathFor uses the extension', () => {
-      expect(heroPathFor(7, 'webp')).toBe(resolve('/tmp/pops-test-recipes/7/hero.webp'));
-    });
-    it('thumbPathFor is fixed webp', () => {
-      expect(thumbPathFor(7)).toBe(resolve('/tmp/pops-test-recipes/7/hero-thumb.webp'));
-    });
-    it('cardPathFor is fixed webp', () => {
-      expect(cardPathFor(7)).toBe(resolve('/tmp/pops-test-recipes/7/hero-card.webp'));
-    });
-  });
-
   describe('relativeHeroPath', () => {
     it('uses POSIX separators regardless of platform', () => {
       const rel = relativeHeroPath(99, 'png');
       expect(rel).toBe('99/hero.png');
-      expect(rel.includes(sep === '/' ? '\\' : '\\')).toBe(false);
+      expect(rel.includes('\\')).toBe(false);
     });
   });
 
@@ -110,23 +57,6 @@ describe('hero-paths', () => {
       'HERO.JPG',
     ])('rejects %s', (name) => {
       expect(isValidHeroFilename(name)).toBe(false);
-    });
-  });
-
-  describe('resolveServablePath', () => {
-    beforeEach(() => {
-      process.env['FOOD_RECIPES_DIR'] = '/tmp/pops-test-recipes';
-    });
-    it('resolves a valid hero filename under the root', () => {
-      expect(resolveServablePath(7, 'hero.jpg')).toBe(resolve('/tmp/pops-test-recipes/7/hero.jpg'));
-    });
-    it('returns null for unknown filenames', () => {
-      expect(resolveServablePath(7, 'evil.gif')).toBeNull();
-    });
-    it('rejects traversal attempts via recipe id', () => {
-      // assertValidRecipeId rejects non-positive-integers before any path join,
-      // so an out-of-range id throws rather than escaping the root.
-      expect(() => resolveServablePath(-1, 'hero.jpg')).toThrow();
     });
   });
 

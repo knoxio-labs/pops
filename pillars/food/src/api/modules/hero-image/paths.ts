@@ -1,7 +1,13 @@
 /**
- * Mirrors the layout in `pillars/food/app/src/storage/hero-paths.ts`. The API
- * can't import from the browser-bundled app at runtime, so the absolute-path
- * resolution is duplicated here — keep both in sync.
+ * Filesystem resolution for recipe hero images: owns `FOOD_RECIPES_DIR` and
+ * every absolute path under it, including the traversal defence the static
+ * route depends on.
+ *
+ * `pillars/food/app/src/storage/hero-paths.ts` is the browser half. It shares
+ * the *layout* (`<recipe_id>/hero.<ext>`) so its URL builder and this module
+ * agree on names, but it holds no path resolution of its own: browser code
+ * cannot read `process.env` or `node:path`, so a resolver there is dead or
+ * wrong. `scripts/ci/check-writable-path-defaults.mjs` now enforces that.
  */
 import { resolve, sep } from 'node:path';
 

@@ -28,13 +28,21 @@
  *   - That the absolute path is mounted as a volume. An unmounted path is
  *     writable but container-local, so it survives this guard and is lost on
  *     the next roll. Volume wiring lives in the homelab repo.
- *   - `pillars/<id>/app/**`. Those trees are browser bundles served by the
- *     shell image; they have no Dockerfile of their own, so there is no image
- *     for this guard to hold responsible. Only `pillars/<id>/src/**`, the
- *     tree each pillar Dockerfile copies in as `dist`, is scanned.
  *   - Paths not reached through an environment variable whose name ends in
  *     `_DIR`, `_PATH`, or `_ROOT`. A hard-coded relative path with no
  *     override is invisible here.
+ *   - `VITE_`-prefixed variables anywhere. Vite exposes those to the browser
+ *     by design; they are client config, not filesystem locations.
+ *
+ * `pillars/<id>/app/**` is held to a stricter rule than `src/**`, not exempted
+ * from this one. Those trees are browser bundles served by the shell image:
+ * they have no Dockerfile of their own, so no image can be made responsible
+ * for a path they resolve, and they cannot read `process.env` in a browser
+ * anyway. Any env-backed filesystem path there is therefore a violation
+ * regardless of whether its default is absolute — there is no correct way to
+ * write one. POPS-2741 is where that hole was found: a Node-only duplicate of
+ * the food path helpers sat in an app tree for months, dead but carrying the
+ * exact POPS-2735 defect, with no gate able to see it.
  *
  * Usage:
  *   node scripts/ci/check-writable-path-defaults.mjs
@@ -62,6 +70,23 @@ const PATH_ENV_SUFFIX = /_(DIR|PATH|ROOT)$/;
  * there is no `process.env` node to match on.
  */
 const ENV_VAR_NAME = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * Variables Vite hands to the browser. `VITE_ASSET_PATH` is a URL prefix, not
+ * a directory, so matching it on the suffix rule alone would be a false
+ * positive in exactly the trees the app rule below scrutinises hardest.
+ */
+const CLIENT_ENV_PREFIX = /^VITE_/;
+
+/**
+ * True when a variable name denotes a filesystem location this guard governs.
+ *
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isFilesystemPathVar(name) {
+  return PATH_ENV_SUFFIX.test(name) && !CLIENT_ENV_PREFIX.test(name);
+}
 
 /**
  * Classify a string literal as a filesystem path, or reject it as not one.
@@ -160,7 +185,7 @@ function scanScope(scope, constants) {
   /** @param {ts.Node} node */
   const visit = (node) => {
     const envName = envVarNameOf(node, constants);
-    if (envName !== null && PATH_ENV_SUFFIX.test(envName)) envVars.add(envName);
+    if (envName !== null && isFilesystemPathVar(envName)) envVars.add(envName);
 
     if (ts.isStringLiteral(node)) {
       // A bare `'MEDIA_IMAGES_DIR'` is a variable NAME, not a path. Matching it
@@ -168,7 +193,7 @@ function scanScope(scope, constants) {
       // `getEnv('MEDIA_IMAGES_DIR')` has no `process.env` node to match on, and
       // media — the pillar that produced POPS-2735 — is written exactly that
       // way, so the originating case was invisible until this branch existed.
-      if (ENV_VAR_NAME.test(node.text) && PATH_ENV_SUFFIX.test(node.text)) {
+      if (ENV_VAR_NAME.test(node.text) && isFilesystemPathVar(node.text)) {
         envVars.add(node.text);
       } else {
         noteLiteral(node.text);
@@ -213,7 +238,7 @@ function scanScope(scope, constants) {
  *
  * @param {string} fileName  Used only for diagnostics.
  * @param {string} source
- * @returns {{ findings: { where: string, envVars: string[], relativeDefaults: string[] }[], resolversSeen: number, unparseable: boolean }}
+ * @returns {{ findings: { where: string, envVars: string[], relativeDefaults: string[] }[], resolvers: { where: string, envVars: string[], relativeDefaults: string[] }[], resolversSeen: number, unparseable: boolean }}
  */
 export function findRelativeDefaults(fileName, source) {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.ESNext, true);
@@ -231,12 +256,16 @@ export function findRelativeDefaults(fileName, source) {
       resolversSeen: 0,
       unparseable: true,
       findings: [],
+      resolvers: [],
     };
   }
 
   const constants = collectStringConstants(sourceFile);
   /** @type {{ where: string, envVars: string[], relativeDefaults: string[] }[]} */
   const findings = [];
+  /** Every env-backed path resolver, relative default or not. */
+  /** @type {{ where: string, envVars: string[], relativeDefaults: string[] }[]} */
+  const resolvers = [];
   let resolversSeen = 0;
 
   /** @param {ts.Node} scope @param {string} label */
@@ -246,6 +275,7 @@ export function findRelativeDefaults(fileName, source) {
     // Counted whether or not its default is relative: this is the signal that
     // the AST walk still recognises the subject at all.
     resolversSeen += 1;
+    resolvers.push({ where: label, envVars, relativeDefaults });
     if (relativeDefaults.length === 0) return;
     findings.push({ where: label, envVars, relativeDefaults });
   };
@@ -278,7 +308,7 @@ export function findRelativeDefaults(fileName, source) {
     }
     visit(statement);
   }
-  return { findings, resolversSeen, unparseable: false };
+  return { findings, resolvers, resolversSeen, unparseable: false };
 }
 
 /**
@@ -481,6 +511,39 @@ export function run() {
             reason: verdict.reason,
           });
         }
+      }
+    }
+
+    for (const source of listRuntimeSources(join(PILLARS_DIR, pillar, 'app', 'src'))) {
+      const relative = source.slice(repoRoot.length + 1);
+      const scan = findRelativeDefaults(relative, readFileSync(source, 'utf8'));
+      resolversSeen += scan.resolversSeen;
+      if (scan.unparseable) {
+        violations.push({
+          pillar,
+          file: relative,
+          where: 'whole file',
+          envVars: [],
+          relativeDefaults: [],
+          reason: 'TypeScript could not parse this file, so it was not checked',
+        });
+        continue;
+      }
+      // Stricter than the src rule: an app tree is a browser bundle with no
+      // Dockerfile, so no image can be held responsible for a path it
+      // resolves and an absolute default is no more correct than a relative
+      // one. Resolving a filesystem path here is the violation.
+      for (const resolver of scan.resolvers) {
+        violations.push({
+          pillar,
+          file: relative,
+          where: resolver.where,
+          envVars: resolver.envVars,
+          relativeDefaults: resolver.relativeDefaults,
+          reason:
+            'an app tree is browser-bundled and has no image, so it must not resolve a ' +
+            'filesystem path from the environment at all',
+        });
       }
     }
   }
@@ -695,6 +758,19 @@ function selfTest() {
     "export const root = (): string => process.env['X_DIR'] ?? './data/x';\n"
   );
   const scansEachResolverOnce = arrowConst.findings.length === 1 && arrowConst.resolversSeen === 1;
+  // An app tree must not resolve a filesystem path at all — an absolute
+  // default is no more correct there than a relative one, because no image
+  // owns the path (POPS-2741).
+  const appAbsolute = findRelativeDefaults('app.ts', FIXTURE_ABSOLUTE);
+  const appRuleSeesAbsolute =
+    appAbsolute.resolvers.length === 1 && appAbsolute.findings.length === 0;
+
+  // Vite's own variables are client config, not directories.
+  const ignoresViteVars =
+    findRelativeDefaults(
+      'vite.ts',
+      "export const p = process.env['VITE_ASSET_PATH'] ?? './assets';\n"
+    ).resolvers.length === 0;
 
   // A resolver that reads through a lookup wrapper must still be seen.
   const wrapped = findRelativeDefaults('wrapped.ts', FIXTURE_WRAPPED_ENV).findings;
@@ -723,6 +799,8 @@ function selfTest() {
     foldingOk &&
     catchesUnparseable &&
     countsResolversSeen &&
+    appRuleSeesAbsolute &&
+    ignoresViteVars &&
     catchesEmptyDockerfile &&
     scansEachResolverOnce &&
     seesWrappedEnvReads &&
@@ -748,6 +826,8 @@ function selfTest() {
     console.error(`  classifies path literals:            ${literalsOk}`);
     console.error(`  folds line continuations:            ${foldingOk}`);
     console.error(`  reports an unparseable source:       ${catchesUnparseable}`);
+    console.error(`  app rule sees an absolute default:   ${appRuleSeesAbsolute}`);
+    console.error(`  ignores VITE_ client variables:      ${ignoresViteVars}`);
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);
     console.error(`  scans each resolver exactly once:    ${scansEachResolverOnce}`);
@@ -767,7 +847,8 @@ function selfTest() {
     'self-test OK — guard catches a relative default that is unnamed, uncreated, or ' +
       'left root-owned; clears absolute defaults and shared-variable ladders; and ' +
       'reports rather than falls silent on an unparseable source, an empty Dockerfile, ' +
-      'or a scan that discovers nothing.'
+      'or a scan that discovers nothing; and holds app trees to the stricter no-filesystem ' +
+      'rule while ignoring VITE_ client config.'
   );
   return true;
 }
@@ -811,17 +892,23 @@ function main() {
     process.exit(0);
   }
 
-  console.error(
-    `check-writable-path-defaults: ${violations.length} unguarded relative path default(s).\n`
-  );
+  console.error(`check-writable-path-defaults: ${violations.length} violation(s).\n`);
   for (const violation of violations) {
     console.error(`  ${violation.file} — ${violation.where}`);
-    console.error(`    variables: ${violation.envVars.join(', ')}`);
-    console.error(`    defaults:  ${violation.relativeDefaults.join(', ')}`);
+    if (violation.envVars.length > 0) {
+      console.error(`    variables: ${violation.envVars.join(', ')}`);
+    }
+    if (violation.relativeDefaults.length > 0) {
+      console.error(`    defaults:  ${violation.relativeDefaults.join(', ')}`);
+    }
     console.error(`    ${violation.reason}`);
     console.error(
-      `    fix: in pillars/${violation.pillar}/Dockerfile, mkdir -p and chown the absolute\n` +
-        `         path, then set it with ENV — the image must be correct with no compose.\n`
+      violation.file.includes(`/app/`)
+        ? `    fix: move this resolution into pillars/${violation.pillar}/src (the API tree),\n` +
+            `         which ships in an image that can own the path. Browser code cannot\n` +
+            `         read process.env, so a resolver here is dead or wrong.\n`
+        : `    fix: in pillars/${violation.pillar}/Dockerfile, mkdir -p and chown the absolute\n` +
+            `         path, then set it with ENV — the image must be correct with no compose.\n`
     );
   }
   process.exit(1);
