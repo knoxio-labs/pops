@@ -414,7 +414,7 @@ export function evaluateFinding(finding, dockerfile) {
  * @param {string} dir
  * @returns {string[]}
  */
-function listRuntimeSources(dir) {
+export function listRuntimeSources(dir) {
   if (!existsSync(dir)) return [];
   /** @type {string[]} */
   const out = [];
@@ -425,8 +425,12 @@ function listRuntimeSources(dir) {
       out.push(...listRuntimeSources(full));
       continue;
     }
-    if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) continue;
-    if (/\.(test|spec)\.ts$/.test(entry.name)) continue;
+    // `.tsx` matters as much as `.ts`: an app tree is overwhelmingly TSX, so a
+    // `.ts`-only sweep left ~860 files unscanned and made the app rule below
+    // very nearly vacuous. `createSourceFile` picks the TSX parser off the
+    // file name, so the extension has to survive into `findRelativeDefaults`.
+    if (!/\.tsx?$/.test(entry.name) || entry.name.endsWith('.d.ts')) continue;
+    if (/\.(test|spec)\.tsx?$/.test(entry.name)) continue;
     out.push(full);
   }
   return out;
@@ -444,12 +448,139 @@ function listRuntimeSources(dir) {
 const DISCOVERY_FLOOR = { pillars: 8, resolvers: 10 };
 
 /**
+ * Minimum `.tsx` files the lister must still collect from app trees.
+ *
+ * App trees hold ~860 today. The floor exists so that dropping `.tsx` from the
+ * extension filter — which leaves every parser fixture green — fails loudly
+ * instead of quietly scanning almost nothing.
+ */
+const TSX_FLOOR = 100;
+
+/** Pillar directory names, for the self-test's assertions against the real tree. */
+const PILLAR_NAMES = existsSync(PILLARS_DIR)
+  ? readdirSync(PILLARS_DIR, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+  : [];
+
+/**
  * Run the guard over the repository.
  *
  * @returns {{ violations: { pillar: string, file: string, where: string, envVars: string[], relativeDefaults: string[], reason: string }[], pillarsScanned: number, resolversSeen: number }}
  */
+/**
+ * @typedef {{
+ *   pillar: string,
+ *   file: string,
+ *   where: string,
+ *   envVars: string[],
+ *   relativeDefaults: string[],
+ *   reason: string,
+ * }} Violation
+ */
+
+/**
+ * Scan one pillar's already-loaded sources.
+ *
+ * Pure, and exported, so the self-test can drive the combinations the real
+ * tree does not currently contain — notably a pillar whose `src/` is empty but
+ * whose `app/src/` holds a resolver. That case used to be skipped outright:
+ * the app scan sat behind an early `continue` on an empty `src/`, which made
+ * "an app tree must never resolve a filesystem path" conditional on the
+ * pillar having a backend at all.
+ *
+ * @param {{
+ *   pillar: string,
+ *   srcFiles: { file: string, source: string }[],
+ *   appFiles: { file: string, source: string }[],
+ *   dockerfile: { env: Map<string, string>, created: string[], chowned: string[] } | null,
+ * }} input
+ * @returns {{ violations: Violation[], resolversSeen: number }}
+ */
+export function scanPillar({ pillar, srcFiles, appFiles, dockerfile }) {
+  /** @type {Violation[]} */
+  const violations = [];
+  let resolversSeen = 0;
+
+  /** @param {string} file @returns {Violation} */
+  const unparseable = (file) => ({
+    pillar,
+    file,
+    where: 'whole file',
+    envVars: [],
+    relativeDefaults: [],
+    reason: 'TypeScript could not parse this file, so it was not checked',
+  });
+
+  for (const { file, source } of srcFiles) {
+    const scan = findRelativeDefaults(file, source);
+    resolversSeen += scan.resolversSeen;
+    if (scan.unparseable) {
+      violations.push(unparseable(file));
+      continue;
+    }
+    for (const finding of scan.findings) {
+      if (dockerfile === null) {
+        violations.push({
+          pillar,
+          file,
+          where: finding.where,
+          envVars: finding.envVars,
+          relativeDefaults: finding.relativeDefaults,
+          reason: `pillars/${pillar}/Dockerfile does not exist, so nothing can set these`,
+        });
+        continue;
+      }
+      const verdict = evaluateFinding(finding, dockerfile);
+      if (!verdict.ok) {
+        violations.push({
+          pillar,
+          file,
+          where: finding.where,
+          envVars: finding.envVars,
+          relativeDefaults: finding.relativeDefaults,
+          reason: verdict.reason,
+        });
+      }
+    }
+  }
+
+  // Unconditional, and deliberately not nested under the loop above: an app
+  // tree is a browser bundle with no Dockerfile, so no image can be held
+  // responsible for a path it resolves and an absolute default is no more
+  // correct than a relative one. Resolving a filesystem path here is the
+  // violation, whatever the pillar's `src/` does or does not contain.
+  for (const { file, source } of appFiles) {
+    const scan = findRelativeDefaults(file, source);
+    resolversSeen += scan.resolversSeen;
+    if (scan.unparseable) {
+      violations.push(unparseable(file));
+      continue;
+    }
+    for (const resolver of scan.resolvers) {
+      violations.push({
+        pillar,
+        file,
+        where: resolver.where,
+        envVars: resolver.envVars,
+        relativeDefaults: resolver.relativeDefaults,
+        reason:
+          'an app tree is browser-bundled and has no image, so it must not resolve a ' +
+          'filesystem path from the environment at all',
+      });
+    }
+  }
+
+  return { violations, resolversSeen };
+}
+
+/**
+ * Run the guard over the repository.
+ *
+ * @returns {{ violations: Violation[], pillarsScanned: number, resolversSeen: number }}
+ */
 export function run() {
-  /** @type {{ pillar: string, file: string, where: string, envVars: string[], relativeDefaults: string[], reason: string }[]} */
+  /** @type {Violation[]} */
   const violations = [];
   // Not an existsSync skip: a missing pillars/ tree must reach the discovery
   // floor as zero and be reported, never crash with a readdir stack trace and
@@ -464,88 +595,27 @@ export function run() {
   let pillarsScanned = 0;
   let resolversSeen = 0;
 
+  /** @param {string} dir @returns {{ file: string, source: string }[]} */
+  const load = (dir) =>
+    listRuntimeSources(dir).map((path) => ({
+      file: path.slice(repoRoot.length + 1),
+      source: readFileSync(path, 'utf8'),
+    }));
+
   for (const pillar of pillars) {
-    const sources = listRuntimeSources(join(PILLARS_DIR, pillar, 'src'));
-    if (sources.length === 0) continue;
+    const srcFiles = load(join(PILLARS_DIR, pillar, 'src'));
+    const appFiles = load(join(PILLARS_DIR, pillar, 'app', 'src'));
+    if (srcFiles.length === 0 && appFiles.length === 0) continue;
     pillarsScanned += 1;
+
     const dockerfilePath = join(PILLARS_DIR, pillar, 'Dockerfile');
     const dockerfile = existsSync(dockerfilePath)
       ? parseDockerfile(readFileSync(dockerfilePath, 'utf8'))
       : null;
 
-    for (const source of sources) {
-      const relative = source.slice(repoRoot.length + 1);
-      const scan = findRelativeDefaults(relative, readFileSync(source, 'utf8'));
-      resolversSeen += scan.resolversSeen;
-      if (scan.unparseable) {
-        violations.push({
-          pillar,
-          file: relative,
-          where: 'whole file',
-          envVars: [],
-          relativeDefaults: [],
-          reason: 'TypeScript could not parse this file, so it was not checked',
-        });
-        continue;
-      }
-      for (const finding of scan.findings) {
-        if (dockerfile === null) {
-          violations.push({
-            pillar,
-            file: relative,
-            where: finding.where,
-            envVars: finding.envVars,
-            relativeDefaults: finding.relativeDefaults,
-            reason: `pillars/${pillar}/Dockerfile does not exist, so nothing can set these`,
-          });
-          continue;
-        }
-        const verdict = evaluateFinding(finding, dockerfile);
-        if (!verdict.ok) {
-          violations.push({
-            pillar,
-            file: relative,
-            where: finding.where,
-            envVars: finding.envVars,
-            relativeDefaults: finding.relativeDefaults,
-            reason: verdict.reason,
-          });
-        }
-      }
-    }
-
-    for (const source of listRuntimeSources(join(PILLARS_DIR, pillar, 'app', 'src'))) {
-      const relative = source.slice(repoRoot.length + 1);
-      const scan = findRelativeDefaults(relative, readFileSync(source, 'utf8'));
-      resolversSeen += scan.resolversSeen;
-      if (scan.unparseable) {
-        violations.push({
-          pillar,
-          file: relative,
-          where: 'whole file',
-          envVars: [],
-          relativeDefaults: [],
-          reason: 'TypeScript could not parse this file, so it was not checked',
-        });
-        continue;
-      }
-      // Stricter than the src rule: an app tree is a browser bundle with no
-      // Dockerfile, so no image can be held responsible for a path it
-      // resolves and an absolute default is no more correct than a relative
-      // one. Resolving a filesystem path here is the violation.
-      for (const resolver of scan.resolvers) {
-        violations.push({
-          pillar,
-          file: relative,
-          where: resolver.where,
-          envVars: resolver.envVars,
-          relativeDefaults: resolver.relativeDefaults,
-          reason:
-            'an app tree is browser-bundled and has no image, so it must not resolve a ' +
-            'filesystem path from the environment at all',
-        });
-      }
-    }
+    const scanned = scanPillar({ pillar, srcFiles, appFiles, dockerfile });
+    violations.push(...scanned.violations);
+    resolversSeen += scanned.resolversSeen;
   }
   return { violations, pillarsScanned, resolversSeen };
 }
@@ -595,6 +665,19 @@ const DEFAULT_MEDIA_IMAGES_DIR = './data/media/images';
 export function getMediaImagesDir(): string {
   return getEnv('MEDIA_IMAGES_DIR') ?? DEFAULT_MEDIA_IMAGES_DIR;
 }
+`;
+
+/**
+ * A resolver hidden in a TSX file. An app tree is overwhelmingly `.tsx`, so a
+ * `.ts`-only sweep made the app rule very nearly vacuous — the JSX here is
+ * what proves the file is parsed as TSX rather than reported unparseable.
+ */
+const FIXTURE_TSX_RESOLVER = `
+const DEFAULT_DIR = './data/thing';
+export function thingDir(): string {
+  return process.env['THING_DIR'] ?? DEFAULT_DIR;
+}
+export const Panel = () => <div className="p">{thingDir()}</div>;
 `;
 
 /** The SQLite ladder: a pillar-specific var, then a shared one, then a default. */
@@ -779,6 +862,37 @@ function selfTest() {
     wrapped[0].envVars.includes('MEDIA_IMAGES_DIR') &&
     evaluateFinding(wrapped[0], good).ok;
 
+  // The parser cases below prove TSX is understood; this proves it is
+  // COLLECTED. Reverting the lister's extension filter leaves every parser
+  // fixture green, so without an assertion against the real tree the .tsx
+  // hole could reopen silently — which is how it shipped in the first place.
+  const tsxCollected = PILLAR_NAMES.flatMap((pillar) =>
+    listRuntimeSources(join(PILLARS_DIR, pillar, 'app', 'src'))
+  ).filter((file) => file.endsWith('.tsx'));
+  const collectsTsxFromAppTrees = tsxCollected.length >= TSX_FLOOR;
+
+  // TSX must parse as TSX and be scanned like any other source.
+  const tsxScan = findRelativeDefaults('Panel.tsx', FIXTURE_TSX_RESOLVER);
+  const scansTsx =
+    !tsxScan.unparseable &&
+    tsxScan.findings.length === 1 &&
+    tsxScan.findings[0].envVars.includes('THING_DIR');
+  // The same source under a `.ts` name is genuinely unparseable (the arrow
+  // generic and JSX collide), which is what makes the extension load-bearing
+  // rather than cosmetic.
+  const tsxNeedsItsExtension = findRelativeDefaults('Panel.ts', FIXTURE_TSX_RESOLVER).unparseable;
+
+  // A pillar with no backend sources at all must still have its app tree
+  // scanned. This combination does not exist in the repo today, so only a
+  // synthetic input can hold the guard to its own "regardless" wording.
+  const appOnlyPillar = scanPillar({
+    pillar: 'ghost',
+    srcFiles: [],
+    appFiles: [{ file: 'pillars/ghost/app/src/paths.ts', source: FIXTURE_POSTER_CACHE }],
+    dockerfile: null,
+  });
+  const scansAppTreeWithoutSrc = appOnlyPillar.violations.length === 1;
+
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
   const runOk = parseArgs([]).kind === 'run';
@@ -804,6 +918,10 @@ function selfTest() {
     catchesEmptyDockerfile &&
     scansEachResolverOnce &&
     seesWrappedEnvReads &&
+    collectsTsxFromAppTrees &&
+    scansTsx &&
+    tsxNeedsItsExtension &&
+    scansAppTreeWithoutSrc &&
     floorIsAboveZero &&
     realScanClearsFloor &&
     helpOk &&
@@ -831,7 +949,14 @@ function selfTest() {
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);
     console.error(`  scans each resolver exactly once:    ${scansEachResolverOnce}`);
-    console.error(`  sees env reads through a wrapper:       ${seesWrappedEnvReads}`);
+    console.error(`  sees env reads through a wrapper:    ${seesWrappedEnvReads}`);
+    console.error(
+      `  collects .tsx from app trees:        ${collectsTsxFromAppTrees} ` +
+        `(${tsxCollected.length}, floor ${TSX_FLOOR})`
+    );
+    console.error(`  scans .tsx sources:                  ${scansTsx}`);
+    console.error(`  parses TSX only with its extension:  ${tsxNeedsItsExtension}`);
+    console.error(`  scans an app tree with no src/:      ${scansAppTreeWithoutSrc}`);
     console.error(`  discovery floor is above zero:       ${floorIsAboveZero}`);
     console.error(
       `  real scan clears the floor:          ${realScanClearsFloor} ` +
