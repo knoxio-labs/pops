@@ -250,8 +250,13 @@ export function findRelativeDefaults(fileName, source) {
 
   for (const statement of sourceFile.statements) {
     if (ts.isVariableStatement(statement)) {
+      // `consider` scans the whole subtree, so a `const f = () => …` resolver
+      // is already covered here. Descending as well would scan it twice —
+      // reporting one violation as two and inflating the resolver counter the
+      // discovery floor is measured against.
       const line = sourceFile.getLineAndCharacterOfPosition(statement.getStart()).line + 1;
       consider(statement, `module-level statement at line ${line}`);
+      continue;
     }
     visit(statement);
   }
@@ -650,6 +655,17 @@ function selfTest() {
     realScan.pillarsScanned >= DISCOVERY_FLOOR.pillars &&
     realScan.resolversSeen >= DISCOVERY_FLOOR.resolvers;
 
+  // A `const f = () => …` resolver sits inside a module-level statement AND is
+  // a function scope, so a naive walk scans it twice: one violation reported
+  // as two, and a resolver counter inflated above the floor it is checked
+  // against. Every resolver in the repo today is a function declaration, so
+  // only a fixture can hold this shape.
+  const arrowConst = findRelativeDefaults(
+    'arrow.ts',
+    "export const root = (): string => process.env['X_DIR'] ?? './data/x';\n"
+  );
+  const scansEachResolverOnce = arrowConst.findings.length === 1 && arrowConst.resolversSeen === 1;
+
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
   const runOk = parseArgs([]).kind === 'run';
@@ -671,6 +687,7 @@ function selfTest() {
     catchesUnparseable &&
     countsResolversSeen &&
     catchesEmptyDockerfile &&
+    scansEachResolverOnce &&
     floorIsAboveZero &&
     realScanClearsFloor &&
     helpOk &&
@@ -695,6 +712,7 @@ function selfTest() {
     console.error(`  reports an unparseable source:       ${catchesUnparseable}`);
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);
+    console.error(`  scans each resolver exactly once:    ${scansEachResolverOnce}`);
     console.error(`  discovery floor is above zero:       ${floorIsAboveZero}`);
     console.error(
       `  real scan clears the floor:          ${realScanClearsFloor} ` +

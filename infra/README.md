@@ -20,13 +20,21 @@ breaking change for every downstream deployer.
 `registry-api` carries the extra alias `core-api` on both `frontend` and
 `backend`.
 
-**Volumes** — 21, each explicitly `name:`d: `pops-sqlite-data`,
+**Volumes** — 24, each explicitly `name:`d: `pops-sqlite-data`,
 `pops-redis-data`, `pops-metabase-data`, `pops-paperless-{data,media,consume}`,
-`pops-paperless-redis`, `pops-food-ingest-data`, `pops-cerebrum-engrams-data`,
-`pops-media-images-data`, plus 11 per-pillar `pops-<id>-data`. Of those 11 only
-`pops-bfm-data` is mounted by an API container; the other 10 exist for the
-Litestream sidecars and the pillars they belong to still write to the shared
-`pops-sqlite-data`.
+`pops-paperless-redis`, `pops-food-ingest-data`, `pops-food-recipes-data`,
+`pops-cerebrum-engrams-data`, `pops-media-images-data`,
+`pops-inventory-images-data`, `pops-inventory-documents-data`, plus 11
+per-pillar `pops-<id>-data`. Of those 11 only `pops-bfm-data` is mounted by an
+API container; the other 10 exist for the Litestream sidecars and the pillars
+they belong to still write to the shared `pops-sqlite-data`.
+
+The six non-`pops-<id>-data` blob volumes hold bytes the pillar writes at
+runtime rather than a database: ingest media, recipe hero images, engram
+Markdown, the poster/backdrop cache, and inventory photos plus documents. Each
+has a matching `mkdir`/`chown` and `ENV` in its pillar image so the path is
+writable with no compose at all (POPS-2737); the volume is what makes it
+survive an image roll.
 
 **Secrets** — 16, each `file: ../secrets/<name>`, resolved from `infra/` (so the
 gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
