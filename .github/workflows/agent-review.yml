@@ -108,7 +108,8 @@ jobs:
           node scripts/ci/check-docs-model.mjs --self-test
           node scripts/ci/check-tests-typechecked.mjs --self-test
           node scripts/ci/check-mise-setup-single-source.mjs --self-test
-          # Not a guard over the source tree like the eight above — it is the
+          node scripts/ci/check-writable-path-defaults.mjs --self-test
+          # Not a guard over the source tree like the nine above — it is the
           # gate that decides whether the merge queue's macOS compile happens.
           # It self-tests in its own job too, immediately before it answers;
           # this preflight is what makes a broken scoper fail on the PR rather
@@ -138,3 +139,5 @@ jobs:
         run: node scripts/ci/check-tests-typechecked.mjs
       - name: Mise setup single-source guard (one pinned jdx/mise-action, and the pin retries its download)
         run: node scripts/ci/check-mise-setup-single-source.mjs
+      - name: Writable-path default guard (POPS-2737 — every env-backed relative path default is created, chowned and ENV'd by its own image)
+        run: node scripts/ci/check-writable-path-defaults.mjs

@@ -8,10 +8,16 @@
  *
  * Resolution order for the config file:
  *   1. `CEREBRUM_REFLEX_CONFIG` — an explicit path to `reflexes.toml`.
- *   2. `CEREBRUM_REFLEX_CONFIG_DIR` (or `ENGRAM_ROOT`) — a directory whose
- *      `.config/reflexes.toml` is used.
+ *   2. `CEREBRUM_REFLEX_CONFIG_DIR` (or `CEREBRUM_ENGRAMS_DIR`) — a directory
+ *      whose `.config/reflexes.toml` is used, matching how glia resolves its
+ *      own TOML from the same engram root.
  *   3. A safe default under the cwd that almost certainly does not exist,
  *      yielding an empty reflex set.
+ *
+ * Step 2 read `ENGRAM_ROOT` until POPS-2737. Nothing sets that name — the
+ * engram root is `CEREBRUM_ENGRAMS_DIR` everywhere else — so the ladder fell
+ * through to step 3, and `updateReflexConfig` then wrote its TOML back to a
+ * cwd-relative path under the root-owned /app, failing with EACCES.
  */
 import { join } from 'node:path';
 
@@ -20,11 +26,11 @@ import { ReflexService } from './reflex-service.js';
 import type { CerebrumDb } from '../../../db/index.js';
 
 /** Resolve the absolute path to `reflexes.toml` from the environment. */
-export function resolveReflexConfigPath(): string {
-  const explicit = process.env['CEREBRUM_REFLEX_CONFIG'];
+export function resolveReflexConfigPath(env: NodeJS.ProcessEnv = process.env): string {
+  const explicit = env['CEREBRUM_REFLEX_CONFIG'];
   if (explicit && explicit.length > 0) return explicit;
 
-  const dir = process.env['CEREBRUM_REFLEX_CONFIG_DIR'] ?? process.env['ENGRAM_ROOT'];
+  const dir = env['CEREBRUM_REFLEX_CONFIG_DIR'] ?? env['CEREBRUM_ENGRAMS_DIR'];
   if (dir && dir.length > 0) return join(dir, '.config', 'reflexes.toml');
 
   return join(process.cwd(), 'engrams', '.config', 'reflexes.toml');
