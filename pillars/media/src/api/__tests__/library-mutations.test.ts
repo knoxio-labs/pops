@@ -204,6 +204,19 @@ describe('library — addMovie', () => {
     vi.spyOn(tmdb, 'getMovie').mockRejectedValue(new TmdbApiError(404, 'Not found'));
     await expect(client().library.addMovie(999999)).rejects.toMatchObject({ status: 404 });
   });
+
+  it('still adds the movie when caching its images fails', async () => {
+    vi.spyOn(tmdb, 'getMovie').mockResolvedValue(movieDetail());
+    vi.mocked(imageCache.downloadMovieImages).mockRejectedValue(
+      Object.assign(new Error("EACCES: permission denied, mkdir 'data'"), { code: 'EACCES' })
+    );
+
+    const res = await client().library.addMovie(603);
+
+    expect(res.created).toBe(true);
+    const listed = await client().library.list();
+    expect(listed.data.map((i) => i.title)).toContain('The Matrix');
+  });
 });
 
 describe('library — refreshMovie', () => {
