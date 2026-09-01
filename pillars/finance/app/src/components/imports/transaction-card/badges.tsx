@@ -1,6 +1,8 @@
-import { Sparkles, Zap } from 'lucide-react';
+import { ArrowLeftRight, Sparkles, Zap } from 'lucide-react';
 
 import { Badge, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+
+import { labelForType } from '../../../lib/transaction-type';
 
 import type { MatchedRule } from '@pops/finance';
 
@@ -53,6 +55,35 @@ function ruleMatchedTitle(ruleProvenance: ProcessedTransaction['ruleProvenance']
   ].join('\n');
 }
 
+/**
+ * The row's semantic type (POPS-2610), so review can tell a transfer — money
+ * moving between accounts, excluded from both headline tiles — from a real
+ * expense without opening the editor. An untyped row is called out rather than
+ * left blank: "no badge" would read as "not a transfer", and a credit that
+ * resolved an entity is deliberately left untyped for review.
+ */
+function TransactionTypeBadge({ transaction }: { transaction: ProcessedTransaction }) {
+  const transactionType = transaction.transactionType;
+  if (transactionType === undefined) {
+    return (
+      <Badge
+        variant="outline"
+        className="text-xs text-muted-foreground"
+        title="No transaction type assigned yet"
+      >
+        Untyped
+      </Badge>
+    );
+  }
+  const label = labelForType(transactionType);
+  return (
+    <Badge variant="outline" className="text-xs" title={`Transaction type: ${label}`}>
+      {transactionType === 'transfer' && <ArrowLeftRight className="w-3 h-3" aria-hidden="true" />}
+      {label}
+    </Badge>
+  );
+}
+
 export function HeaderBadges({ transaction }: { transaction: ProcessedTransaction }) {
   const matchType = transaction.entity?.matchType;
   const isAutoMatched = matchType !== undefined && AUTO_MATCH_TYPES.includes(matchType);
@@ -62,6 +93,7 @@ export function HeaderBadges({ transaction }: { transaction: ProcessedTransactio
   const overriddenRules = transaction.matchedRules?.slice(1) ?? [];
   return (
     <>
+      <TransactionTypeBadge transaction={transaction} />
       {transaction.manuallyEdited && (
         <Badge variant="secondary" className="text-xs">
           Edited

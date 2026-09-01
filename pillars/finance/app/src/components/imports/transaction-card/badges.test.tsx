@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { labelForType } from '../../../lib/transaction-type';
 import { HeaderBadges } from './badges';
 
 import type { ProcessedTransaction } from '../../../store/import-store-types';
@@ -109,5 +110,32 @@ describe('HeaderBadges — Edited badge (store-side manuallyEdited)', () => {
   it('does not show "Edited" when manuallyEdited is absent', () => {
     render(<HeaderBadges transaction={makeTx('ai')} />);
     expect(screen.queryByText('Edited')).not.toBeInTheDocument();
+  });
+});
+
+describe('HeaderBadges — transaction-type badge', () => {
+  it('labels a transfer so it is distinguishable from spend', () => {
+    render(<HeaderBadges transaction={makeTx('none', { transactionType: 'transfer' })} />);
+    const badge = screen.getByText('Transfer').closest('[data-slot="badge"]');
+    expect(badge).toHaveAttribute('title', 'Transaction type: Transfer');
+    expect(badge?.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('uses the shared display label rather than the raw stored value', () => {
+    render(<HeaderBadges transaction={makeTx('exact', { transactionType: 'purchase' })} />);
+    expect(screen.getByText('Expense')).toBeInTheDocument();
+    expect(screen.queryByText('purchase')).not.toBeInTheDocument();
+  });
+
+  it.each(['income', 'refund', 'fee'] as const)('carries no transfer icon for %s', (type) => {
+    render(<HeaderBadges transaction={makeTx('exact', { transactionType: type })} />);
+    const badge = screen.getByText(labelForType(type)).closest('[data-slot="badge"]');
+    expect(badge?.querySelector('svg')).not.toBeInTheDocument();
+  });
+
+  it('calls out an untyped row instead of rendering nothing', () => {
+    render(<HeaderBadges transaction={makeTx('exact', { transactionType: undefined })} />);
+    expect(screen.getByText('Untyped')).toBeInTheDocument();
+    expect(screen.queryByText('Transfer')).not.toBeInTheDocument();
   });
 });
