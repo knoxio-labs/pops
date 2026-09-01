@@ -12,6 +12,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TagEditor } from './TagEditor';
 
+const FACETS = [
+  { facet: 'venue', kind: 'closed' },
+  { facet: 'contains', kind: 'open' },
+  { facet: 'trip', kind: 'open' },
+  { facet: 'flag', kind: 'marker' },
+] as const;
+
 describe('TagEditor', () => {
   it('opens the popover and shows the tag input when the trigger is clicked', () => {
     render(
@@ -127,16 +134,88 @@ describe('TagEditor', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(['venue:bar']));
   });
 
-  it('creates the typed tag when the vocabulary has no such value', async () => {
+  it('saves a value on the axis the user picks, slugged', async () => {
     const onSave = vi.fn();
-    render(<TagEditor currentTags={[]} availableTags={['venue:bar']} onSave={onSave} />);
+    render(
+      <TagEditor
+        currentTags={[]}
+        availableTags={['venue:bar']}
+        facets={[...FACETS]}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Type to add a tag/i), {
+      target: { value: 'Cairns 2026' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create trip:cairns-2026' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['trip:cairns-2026']));
+  });
+
+  it('offers every open axis and no closed one', () => {
+    render(<TagEditor currentTags={[]} availableTags={[]} facets={[...FACETS]} onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Type to add a tag/i), {
+      target: { value: 'sunscreen' },
+    });
+
+    expect(
+      screen
+        .getAllByRole('button', { name: /^Create / })
+        .map((button) => button.getAttribute('aria-label'))
+    ).toEqual(['Create contains:sunscreen', 'Create trip:sunscreen']);
+  });
+
+  it('does not store a bare tag when the user presses Enter on a value with no axis', async () => {
+    const onSave = vi.fn();
+    render(<TagEditor currentTags={[]} availableTags={[]} facets={[...FACETS]} onSave={onSave} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
     const input = screen.getByPlaceholderText(/Type to add a tag/i);
-    fireEvent.change(input, { target: { value: 'brand new' } });
+    fireEvent.change(input, { target: { value: 'Cairns 2026' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['brand new']));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith([]));
+  });
+
+  it('adds on Enter when the typed text already names an open axis', async () => {
+    const onSave = vi.fn();
+    render(<TagEditor currentTags={[]} availableTags={[]} facets={[...FACETS]} onSave={onSave} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.change(input, { target: { value: 'trip:Cairns 2026' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['trip:cairns-2026']));
+  });
+
+  it('explains a marker axis rather than offering to create on it', () => {
+    render(<TagEditor currentTags={[]} availableTags={[]} facets={[...FACETS]} onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Type to add a tag/i), {
+      target: { value: 'flag:mine' },
+    });
+
+    expect(screen.getByText(/set by the system/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Create / })).toBeNull();
+  });
+
+  it('offers no creation when the taxonomy has not loaded', () => {
+    render(<TagEditor currentTags={[]} availableTags={[]} onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Type to add a tag/i), {
+      target: { value: 'Cairns 2026' },
+    });
+
+    expect(screen.queryByRole('button', { name: /^Create / })).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+import type { TagFacetOption } from '../../lib/tags';
+
 /** Source attribution for a tag — from AI, correction rule, or entity defaults. */
 export type TagSource = 'ai' | 'rule' | 'entity';
 
@@ -16,6 +18,12 @@ export interface TagEditorProps {
   onSuggest?: () => Promise<string[]>;
   /** Available tags for autocomplete. */
   availableTags?: string[];
+  /**
+   * The taxonomy, which decides what a typed value may be created as. Without
+   * it the panel still adds existing tags but offers no way to mint one — a
+   * facet is not something to guess at on the user's behalf.
+   */
+  facets?: TagFacetOption[];
   /** Whether to disable editing (shows tags read-only). */
   disabled?: boolean;
   /** Optional source attribution metadata keyed by tag name. */

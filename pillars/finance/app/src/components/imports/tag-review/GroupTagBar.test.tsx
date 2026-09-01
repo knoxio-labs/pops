@@ -5,10 +5,17 @@ import { GroupTagBar } from './GroupTagBar';
 
 const VOCABULARY = ['venue:bar', 'venue:cafe', 'contains:alcohol', 'Legacy'];
 
+const FACETS = [
+  { facet: 'venue', kind: 'closed' },
+  { facet: 'contains', kind: 'open' },
+  { facet: 'trip', kind: 'open' },
+] as const;
+
 function renderBar(overrides: Partial<Parameters<typeof GroupTagBar>[0]> = {}) {
   const props = {
     stagedTags: [],
     availableTags: VOCABULARY,
+    facets: [...FACETS],
     onAddTag: vi.fn(),
     onRemoveTag: vi.fn(),
     onApply: vi.fn(),
@@ -104,14 +111,60 @@ describe('GroupTagBar', () => {
     expect(props.onAddTag).not.toHaveBeenCalledWith('Bar');
   });
 
-  it('creates the typed tag when the vocabulary has no such value', () => {
+  it('offers a slugged value on each open axis when the vocabulary has no such value', () => {
     const props = renderBar();
     const input = screen.getByPlaceholderText('+ Add tag…');
 
-    fireEvent.change(input, { target: { value: 'brand new' } });
+    fireEvent.change(input, { target: { value: 'Cairns 2026' } });
+
+    expect(screen.getByLabelText('Create trip:cairns-2026')).toBeInTheDocument();
+    expect(screen.getByLabelText('Create contains:cairns-2026')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Create venue:cairns-2026')).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Create trip:cairns-2026'));
+
+    expect(props.onAddTag).toHaveBeenCalledWith('trip:cairns-2026');
+  });
+
+  it('refuses to mint an unfaceted tag on Enter', () => {
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'Cairns 2026' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(props.onAddTag).toHaveBeenCalledWith('brand new');
+    expect(props.onAddTag).not.toHaveBeenCalled();
+  });
+
+  it('adds the tag on Enter when the typed text already names an open axis', () => {
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'trip:Cairns 2026' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(props.onAddTag).toHaveBeenCalledWith('trip:cairns-2026');
+  });
+
+  it('says why a closed axis cannot take a new value instead of offering to create it', () => {
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'venue:speakeasy' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(screen.getByText(/fixed set/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Create venue:speakeasy')).toBeNull();
+    expect(props.onAddTag).not.toHaveBeenCalled();
+  });
+
+  it('offers no creation at all until the taxonomy has loaded', () => {
+    renderBar({ facets: [] });
+    const input = screen.getByPlaceholderText('+ Add tag…');
+
+    fireEvent.change(input, { target: { value: 'Cairns 2026' } });
+
+    expect(screen.queryByText(/^Create/i)).toBeNull();
   });
 
   it('does not guess an axis when two facets share the typed value', () => {
@@ -121,7 +174,7 @@ describe('GroupTagBar', () => {
     fireEvent.change(input, { target: { value: 'bar' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(props.onAddTag).toHaveBeenCalledWith('bar');
-    expect(props.onAddTag).not.toHaveBeenCalledWith('venue:bar');
+    expect(props.onAddTag).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Create contains:bar')).toBeInTheDocument();
   });
 });

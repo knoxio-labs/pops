@@ -9,11 +9,14 @@ import { buildTagMetaMap } from './tagReviewUtils';
 
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
+import type { TagFacetOption } from '../../../lib/tags';
+
 export interface TransactionTagRowProps {
   transaction: ConfirmedTransaction;
   tags: string[];
   suggestedTagMeta: SuggestedTag[];
   availableTags: string[];
+  facets: TagFacetOption[];
   onSave: (tags: string[]) => void;
   onSaveTagRule?: (transaction: ConfirmedTransaction, tags: string[]) => void;
 }
@@ -28,6 +31,7 @@ export function TransactionTagRow({
   tags,
   suggestedTagMeta,
   availableTags,
+  facets,
   onSave,
   onSaveTagRule,
 }: TransactionTagRowProps) {
@@ -71,6 +75,7 @@ export function TransactionTagRow({
           currentTags={tags}
           onSave={onSave}
           availableTags={availableTags}
+          facets={facets}
           tagMeta={tagMeta}
         />
       </div>

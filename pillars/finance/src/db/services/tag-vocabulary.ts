@@ -14,7 +14,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { tagVocabulary } from '../schema.js';
-import { parseTagFacet, tagFacetKind, type TagFacetKind } from '../tag-facets.js';
+import { parseTagFacet, tagFacetKind } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -29,7 +29,7 @@ export type TagVocabularySource = 'seed' | 'user';
  *
  * No explicit ORDER BY — SQLite makes no ordering guarantee in that case. The
  * router treats the result as a set, so order is not observable to clients.
- * Callers that need a ranked list use {@link listVocabularyTagsByKind}.
+ * Callers that need a ranked list use {@link listVocabularyTagsForFacets}.
  */
 export function listVocabularyTags(db: FinanceDb): string[] {
   return db
@@ -58,18 +58,26 @@ export function listAllVocabularyTags(db: FinanceDb): string[] {
 }
 
 /**
- * Return the active vocabulary tags of one kind, most-used first.
+ * Return the active vocabulary tags on the named facets, most-used first.
  *
- * The ordering is load-bearing rather than cosmetic: the categorizer prompt
- * presents the closed vocabulary in this order so the values that actually
- * carry the corpus lead. `tag` breaks ties so the result is deterministic for a
- * cold vocabulary, where every count is zero.
+ * Scoped by facet rather than by kind because the two questions differ: the
+ * categorizer prompt is built from the facets it classifies into, and one of
+ * them (`contains`) is open, so a kind filter would leave that axis out of the
+ * prompt entirely. An empty facet list returns nothing rather than everything —
+ * "the values on no facets" is the empty set, and the alternative would hand a
+ * caller with a mis-derived list the whole vocabulary.
+ *
+ * The ordering is load-bearing rather than cosmetic: the prompt presents the
+ * vocabulary in this order so the values that actually carry the corpus lead.
+ * `tag` breaks ties so the result is deterministic for a cold vocabulary, where
+ * every count is zero.
  */
-export function listVocabularyTagsByKind(db: FinanceDb, kind: TagFacetKind): string[] {
+export function listVocabularyTagsForFacets(db: FinanceDb, facets: readonly string[]): string[] {
+  if (facets.length === 0) return [];
   return db
     .select({ tag: tagVocabulary.tag })
     .from(tagVocabulary)
-    .where(and(eq(tagVocabulary.isActive, true), eq(tagVocabulary.kind, kind)))
+    .where(and(eq(tagVocabulary.isActive, true), inArray(tagVocabulary.facet, [...facets])))
     .orderBy(sql`${tagVocabulary.usageCount} desc`, tagVocabulary.tag)
     .all()
     .map((row) => row.tag);

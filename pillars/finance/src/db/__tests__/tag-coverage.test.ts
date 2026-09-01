@@ -19,7 +19,7 @@ import {
   openFinanceDb,
   tagCoverageService,
   transactions,
-  type ClosedTagFacet,
+  type ClassifiedTagFacet,
   type FacetCoverage,
   type FacetExclusionReason,
   type OpenedFinanceDb,
@@ -63,7 +63,7 @@ function measure(
 
 function facet(
   coverage: ReturnType<typeof tagCoverageService.measureTagCoverage>,
-  name: ClosedTagFacet
+  name: ClassifiedTagFacet
 ): FacetCoverage {
   const found = coverage.facets.find((f) => f.facet === name);
   if (!found) throw new Error(`no coverage reported for ${name}`);
@@ -83,7 +83,7 @@ afterEach(() => {
 /** How many rows one of a facet's own exclusion rules removed. */
 function excludedFor(
   coverage: ReturnType<typeof tagCoverageService.measureTagCoverage>,
-  name: ClosedTagFacet,
+  name: ClassifiedTagFacet,
   reason: FacetExclusionReason
 ): number {
   const entry = facet(coverage, name).excluded.find((row) => row.reason === reason);

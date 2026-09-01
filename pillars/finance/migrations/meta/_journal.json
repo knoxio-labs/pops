@@ -211,6 +211,13 @@
       "when": 1781913600023,
       "tag": "0078_outbox_permanent_failure",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1781913600024,
+      "tag": "0079_contains_open_facet",
+      "breakpoints": true
     }
   ]
 }

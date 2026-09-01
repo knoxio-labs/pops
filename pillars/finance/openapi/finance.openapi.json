@@ -12798,6 +12798,47 @@
         "tags": ["tagRules"]
       }
     },
+    "/tag-rules/facets": {
+      "get": {
+        "operationId": "tagRules.facets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "facets": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "facet": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["closed", "open", "marker"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["facet", "kind"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["facets"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "The tag namespaces and who may mint a value on each",
+        "tags": ["tagRules"]
+      }
+    },
     "/tag-rules/match-preview": {
       "post": {
         "operationId": "tagRules.matchPreview",

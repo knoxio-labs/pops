@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ButtonPrimitive } from '@pops/ui';
 
-import { orderTagsByFacet, rankTagSuggestions, resolveTypedTag } from '../../../lib/tags';
+import {
+  orderTagsByFacet,
+  planTagCreation,
+  rankTagSuggestions,
+  resolveTypedTag,
+  type TagFacetOption,
+} from '../../../lib/tags';
 import { cn } from '../../../lib/utils';
 import { TagChip } from '../../tags/TagChip';
 import { PickerInput } from './GroupTagPicker';
@@ -13,6 +19,8 @@ const PICKER_LIMIT = 10;
 export interface GroupTagBarProps {
   stagedTags: string[];
   availableTags: string[];
+  /** The taxonomy a typed value may be created on. Empty offers no creation. */
+  facets: TagFacetOption[];
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onApply: () => void;
@@ -40,6 +48,7 @@ function StagedTagPill({ tag, onRemove }: { tag: string; onRemove: () => void })
 export function GroupTagBar({
   stagedTags,
   availableTags,
+  facets,
   onAddTag,
   onRemoveTag,
   onApply,
@@ -52,6 +61,8 @@ export function GroupTagBar({
   // what Tab completes is always what the dropdown shows first.
   const filtered = orderTagsByFacet(ranked.slice(0, PICKER_LIMIT)).map((parsed) => parsed.raw);
   const exactMatch = resolveTypedTag(inputValue, availableTags);
+  const creation =
+    exactMatch === undefined ? planTagCreation(inputValue, facets) : ({ kind: 'none' } as const);
 
   useClickOutside(containerRef, showPicker, () => {
     setShowPicker(false);
@@ -72,6 +83,7 @@ export function GroupTagBar({
         setShowPicker={setShowPicker}
         filtered={filtered}
         exactMatch={exactMatch}
+        creation={creation}
         onAddTag={onAddTag}
       />
       <ButtonPrimitive

@@ -151,6 +151,91 @@ export function orderTagsByFacet(tags: string[]): ParsedTag[] {
 }
 
 /**
+ * Turn what someone typed into the value half of a stored tag:
+ * `Cairns 2026` → `cairns-2026`.
+ *
+ * Stored values are lower-case hyphenated slugs, and until this existed the
+ * only way to add one was to type the slug by hand — so what actually landed in
+ * the vocabulary was whatever the field held, spaces and capitals included, as
+ * a tag no other row would ever match. Accents are folded rather than dropped
+ * so `Café` and `Cafe` cannot become two values.
+ *
+ * Returns `''` when nothing survives (`'!!!'`), which callers read as "there is
+ * no tag to create here" rather than minting an empty value.
+ */
+export function slugifyTagValue(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Compose the stored form of a tag from its axis and a slugified value. */
+export function composeTag(facet: string, value: string): string {
+  return `${facet}${FACET_SEPARATOR}${value}`;
+}
+
+/** Who may mint a value on a facet — mirrors the pillar's `TagFacetKind`. */
+export type TagFacetKind = 'closed' | 'open' | 'marker';
+
+/** One axis of the taxonomy, as the API reports it. */
+export interface TagFacetOption {
+  facet: string;
+  kind: TagFacetKind;
+}
+
+/**
+ * What typing `input` into a tag picker would create.
+ *
+ * A tag has to name an axis to be worth anything — an unfaceted `Cairns 2026`
+ * is invisible to every report that groups by facet — so creating one is a
+ * choice of axis, and this is the state machine that choice runs through.
+ *
+ * - `none` — nothing typed, or nothing survives slugging (`!!!`).
+ * - `ready` — the text already names an open axis (`trip:cairns 2026`), so
+ *   there is a tag to add and nothing left to ask.
+ * - `choose` — a bare value: the user picks which axis it belongs to.
+ * - `refused` — the text names an axis nobody may mint on. A closed axis holds
+ *   a fixed set of values and a marker axis is written from provenance, so the
+ *   answer is not "pick a different name" but "this is not yours to create",
+ *   and saying so here is what stops the commit rejecting it three screens
+ *   later.
+ */
+export type TagCreationIntent =
+  | { kind: 'none' }
+  | { kind: 'ready'; tag: string }
+  | { kind: 'choose'; value: string; facets: string[] }
+  | { kind: 'refused'; facet: string; facetKind: Exclude<TagFacetKind, 'open'> };
+
+/**
+ * Decide what the typed text would create, given the taxonomy.
+ *
+ * An unrecognised prefix is not treated as a facet: `4:30 coffee` names no
+ * axis, and inventing one from any colon a user types would grow the taxonomy
+ * by accident. It falls through to `choose`, with the whole string slugged.
+ */
+export function planTagCreation(
+  input: string,
+  facets: readonly TagFacetOption[]
+): TagCreationIntent {
+  const mintable = facets.filter((option) => option.kind === 'open').map((option) => option.facet);
+  const parsed = parseTag(input.trim());
+  const named = parsed.facet === null ? undefined : facets.find((o) => o.facet === parsed.facet);
+  if (named !== undefined && named.kind !== 'open') {
+    return { kind: 'refused', facet: named.facet, facetKind: named.kind };
+  }
+  if (named !== undefined) {
+    const value = slugifyTagValue(parsed.value);
+    return value === '' ? { kind: 'none' } : { kind: 'ready', tag: composeTag(named.facet, value) };
+  }
+  const value = slugifyTagValue(input);
+  if (value === '' || mintable.length === 0) return { kind: 'none' };
+  return { kind: 'choose', value, facets: mintable };
+}
+
+/**
  * The vocabulary tag a typed string names.
  *
  * Pickers show the value alone, so someone who types what they can see means

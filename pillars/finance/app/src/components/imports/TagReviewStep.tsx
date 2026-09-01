@@ -66,6 +66,7 @@ function EntityGroups({ state }: { state: ReturnType<typeof useTagReviewState> }
           localTags={state.localTags}
           suggestedTagMeta={state.suggestedTagMeta}
           availableTags={state.availableTags}
+          facets={state.facets}
           onUpdateTag={state.updateTag}
           onApplyGroupTags={state.handleApplyGroupTags}
           onSaveTagRule={state.handleOpenTagRuleDialog}

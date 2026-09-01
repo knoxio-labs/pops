@@ -2,7 +2,7 @@
  * The one way an additive tag backfill can leave a row worse than it found it.
  *
  * `applyTagRuleToExistingTransactions` merges a rule's tags into every row it
- * matches without consulting `CLOSED_TAG_FACETS`, so a rule asserting
+ * matches without consulting `CLASSIFIED_TAG_FACETS`, so a rule asserting
  * `venue:supermarket` over a row already carrying `venue:cafe` writes both —
  * re-creating exactly the stored cardinality violations 0076 was written to
  * clear, and doing it silently, since the retroactive result reports a count
@@ -12,10 +12,10 @@
  * module whose last line runs the backfill.
  */
 import { describeForMatching, patternMatchesDescription } from '../src/contract/pattern-match.js';
-import { CLOSED_TAG_FACETS, parseStoredTags, parseTagFacet } from '../src/db/tag-facets.js';
+import { CLASSIFIED_TAG_FACETS, parseStoredTags, parseTagFacet } from '../src/db/tag-facets.js';
 
 const SINGLE_VALUED_FACETS = new Set<string>(
-  CLOSED_TAG_FACETS.filter((facet) => facet.single).map((facet) => facet.facet)
+  CLASSIFIED_TAG_FACETS.filter((facet) => facet.single).map((facet) => facet.facet)
 );
 
 /** A rule as the backfill plans it, narrowed to what a conflict scan needs. */

@@ -1,12 +1,19 @@
 import { Button } from '@pops/ui';
 
-import { describeTag, groupTagsByFacet, orderTagsByFacet } from '../../lib/tags';
+import {
+  describeTag,
+  groupTagsByFacet,
+  orderTagsByFacet,
+  type TagCreationIntent,
+} from '../../lib/tags';
 import { FacetHeading, TagChip } from '../tags/TagChip';
+import { TagCreationRow } from '../tags/TagCreationRow';
 
 interface PanelProps {
   tags: string[];
   inputValue: string;
   filtered: string[];
+  creation: TagCreationIntent;
   isSaving: boolean;
   isSuggesting: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -133,6 +140,7 @@ export function TagEditorPanel(props: PanelProps) {
         className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
         autoFocus
       />
+      <TagCreationRow creation={props.creation} onAddTag={props.onAddTag} />
       <Suggestions filtered={props.filtered} onAddTag={props.onAddTag} />
       <PanelActions
         isSaving={props.isSaving}

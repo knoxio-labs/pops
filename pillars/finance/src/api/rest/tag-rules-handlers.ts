@@ -21,6 +21,7 @@ import {
   InvalidPatternError,
   TransactionTagRuleNotFoundError,
 } from '../../db/index.js';
+import { TAG_FACETS } from '../../db/tag-facets.js';
 import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
 import { applyTagRuleToExistingTransactions } from '../modules/tag-rules/retroactive-apply.js';
 import {
@@ -83,6 +84,8 @@ export function makeTagRulesHandlers(db: FinanceDb) {
         status: 200 as const,
         body: { tags: tagVocabularyService.listVocabularyTags(db) },
       })),
+
+    facets: () => runHttp(() => ({ status: 200 as const, body: { facets: [...TAG_FACETS] } })),
 
     matchPreview: ({ body }: Req['matchPreview']) =>
       runHttp(() => {

@@ -7,9 +7,9 @@
  * caller-supplied transactions, so the domain has no cross-pillar coupling.
  *
  * propose/preview/matchPreview are `POST`: a GET cannot carry a body.
- * `vocabulary` (a static path) must be registered before `get` (`:id`) below
- * — the router matches by declaration order, and an unordered pair here
- * would make `get` shadow `vocabulary`.
+ * `vocabulary` and `facets` (static paths) must be registered before `get`
+ * (`:id`) below — the router matches by declaration order, and an unordered
+ * pair here would make `get` shadow them.
  *
  * Schemas live in `rest-tag-rules-schemas.ts`; the ChangeSet schemas are
  * re-exported here because the in-pillar imports pipeline imports them from
@@ -64,6 +64,18 @@ export const financeTagRulesContract = c.router({
     path: '/tag-rules/vocabulary',
     responses: { 200: z.object({ tags: z.array(z.string()) }) },
     summary: 'List the user tag vocabulary',
+  },
+  facets: {
+    method: 'GET',
+    path: '/tag-rules/facets',
+    responses: {
+      200: z.object({
+        facets: z.array(
+          z.object({ facet: z.string(), kind: z.enum(['closed', 'open', 'marker']) })
+        ),
+      }),
+    },
+    summary: 'The tag namespaces and who may mint a value on each',
   },
   matchPreview: {
     method: 'POST',

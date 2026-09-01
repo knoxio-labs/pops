@@ -20,7 +20,7 @@ import {
   incrementVocabularyUsage,
   isKnownTag,
   listVocabularyTags,
-  listVocabularyTagsByKind,
+  listVocabularyTagsForFacets,
   loadKnownTagSet,
   normalizeTagForComparison,
   upsertVocabularyTag,
@@ -299,8 +299,8 @@ describe('incrementVocabularyUsage', () => {
   });
 });
 
-describe('listVocabularyTagsByKind', () => {
-  it('returns only the requested kind, most-used first', () => {
+describe('listVocabularyTagsForFacets', () => {
+  it('returns only the requested facets, most-used first', () => {
     const { db, raw } = freshDb();
     try {
       for (const tag of ['venue:bar', 'contains:food', 'trip:tokyo', 'enrich:amazon']) {
@@ -309,9 +309,36 @@ describe('listVocabularyTagsByKind', () => {
       raw.prepare("UPDATE tag_vocabulary SET usage_count = 200 WHERE tag = 'contains:food'").run();
       raw.prepare("UPDATE tag_vocabulary SET usage_count = 1 WHERE tag = 'venue:bar'").run();
 
-      expect(listVocabularyTagsByKind(db, 'closed')).toEqual(['contains:food', 'venue:bar']);
-      expect(listVocabularyTagsByKind(db, 'open')).toEqual(['trip:tokyo']);
-      expect(listVocabularyTagsByKind(db, 'marker')).toEqual(['enrich:amazon']);
+      expect(listVocabularyTagsForFacets(db, ['venue', 'contains'])).toEqual([
+        'contains:food',
+        'venue:bar',
+      ]);
+      expect(listVocabularyTagsForFacets(db, ['trip'])).toEqual(['trip:tokyo']);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('returns an open facet the categorizer classifies into, which a kind filter would have dropped', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'contains:food', 'seed');
+
+      expect(
+        raw.prepare('SELECT kind FROM tag_vocabulary WHERE tag = ?').get('contains:food')
+      ).toEqual({ kind: 'open' });
+      expect(listVocabularyTagsForFacets(db, ['contains'])).toEqual(['contains:food']);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('returns nothing for an empty facet list rather than the whole vocabulary', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+
+      expect(listVocabularyTagsForFacets(db, [])).toEqual([]);
     } finally {
       raw.close();
     }
@@ -323,7 +350,7 @@ describe('listVocabularyTagsByKind', () => {
       upsertVocabularyTag(db, 'venue:bar', 'seed');
       raw.prepare("UPDATE tag_vocabulary SET is_active = 0 WHERE tag = 'venue:bar'").run();
 
-      expect(listVocabularyTagsByKind(db, 'closed')).toEqual([]);
+      expect(listVocabularyTagsForFacets(db, ['venue'])).toEqual([]);
     } finally {
       raw.close();
     }

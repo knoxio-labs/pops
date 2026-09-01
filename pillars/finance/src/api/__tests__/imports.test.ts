@@ -1782,6 +1782,40 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     expect(vocabularyTags()).toContain('trip:hunter-valley');
   });
 
+  it('admits a contains value the user names during review, which used to be rejected as closed', async () => {
+    const c = client();
+
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'CHEMIST WAREHOUSE',
+          checksum: 'vocab-contains-open',
+          tags: ['contains:sunscreen'],
+        }),
+      ],
+    });
+
+    expect(vocabularyTags()).toContain('contains:sunscreen');
+  });
+
+  it('still refuses a venue value the user names during review', async () => {
+    const c = client();
+
+    await expect(
+      c.imports.commitImport({
+        transactions: [
+          confirmed({
+            description: 'THE HIDDEN DOOR',
+            checksum: 'vocab-venue-closed',
+            tags: ['venue:speakeasy'],
+          }),
+        ],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+  });
+
   it('replays a recorded commit without re-judging it against a vocabulary that moved on', async () => {
     const c = client();
     const payload = {

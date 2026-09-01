@@ -1,0 +1,19 @@
+-- Make `contains` an open facet: a human may mint a value on it.
+--
+-- `contains:` answers what a purchase contained, and that question meets a new
+-- answer on almost every import. Closed, the only way to record one was a
+-- migration, so the values a human actually reached for were either dropped or
+-- typed as an unfaceted tag that no report groups by. Open, they are minted at
+-- the point of tagging like any `trip:` or `project:` value.
+--
+-- The axis is still classified: `CLASSIFIED_TAG_FACETS` in
+-- `src/db/tag-facets.ts` keeps `contains`, so the categorizer goes on filling
+-- it from whatever the vocabulary holds — including the values minted here.
+-- What changes is who may add to that list, which is `kind`, and nothing else.
+-- The prompt reads its values by facet rather than by kind for exactly this
+-- reason.
+--
+-- Values are untouched. Only the `kind` column moves, and only on rows whose
+-- facet is `contains`; a row that predates 0069's facet backfill has a null
+-- facet and is not one of them.
+UPDATE tag_vocabulary SET kind = 'open' WHERE facet = 'contains';

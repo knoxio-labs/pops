@@ -4500,6 +4500,27 @@ export type TagRulesApplyResponses = {
 
 export type TagRulesApplyResponse = TagRulesApplyResponses[keyof TagRulesApplyResponses];
 
+export type TagRulesFacetsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/tag-rules/facets';
+};
+
+export type TagRulesFacetsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    facets: Array<{
+      facet: string;
+      kind: 'closed' | 'open' | 'marker';
+    }>;
+  };
+};
+
+export type TagRulesFacetsResponse = TagRulesFacetsResponses[keyof TagRulesFacetsResponses];
+
 export type TagRulesMatchPreviewData = {
   /**
    * Body

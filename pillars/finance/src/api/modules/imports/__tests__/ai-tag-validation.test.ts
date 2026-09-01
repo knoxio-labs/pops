@@ -33,7 +33,7 @@ describe('validateAiTags — a value outside the closed set', () => {
 
     expect(result.tags).toEqual(['occasion:out', 'contains:food']);
     expect(result.rejected).toEqual([
-      { facet: 'venue', value: 'casino', reason: 'value-not-in-closed-set' },
+      { facet: 'venue', value: 'casino', reason: 'value-not-listed' },
     ]);
   });
 
@@ -42,7 +42,7 @@ describe('validateAiTags — a value outside the closed set', () => {
 
     expect(result.tags).toEqual(['contains:food']);
     expect(result.rejected).toHaveLength(1);
-    expect(result.rejected[0]?.reason).toBe('value-not-in-closed-set');
+    expect(result.rejected[0]?.reason).toBe('value-not-listed');
   });
 
   it('does not let a value from one facet satisfy another', () => {
@@ -52,7 +52,7 @@ describe('validateAiTags — a value outside the closed set', () => {
     expect(result.rejected[0]).toEqual({
       facet: 'venue',
       value: 'contains:food',
-      reason: 'value-not-in-closed-set',
+      reason: 'value-not-listed',
     });
   });
 
@@ -82,7 +82,7 @@ describe('validateAiTags — namespaces that are not the model’s to write', ()
       const result = validateAiTags({ tags: [tag] }, VOCAB);
 
       expect(result.tags).toEqual([]);
-      expect(result.rejected[0]?.reason).toBe('facet-not-closed');
+      expect(result.rejected[0]?.reason).toBe('facet-not-classified');
     }
   );
 
@@ -90,7 +90,7 @@ describe('validateAiTags — namespaces that are not the model’s to write', ()
     const result = validateAiTags({ tags: ['trip:hunter-valley-2026'] }, VOCAB);
 
     expect(result.tags).toEqual([]);
-    expect(result.rejected[0]?.reason).toBe('facet-not-closed');
+    expect(result.rejected[0]?.reason).toBe('facet-not-classified');
   });
 
   it('ignores a marker field the model invents alongside the real ones', () => {
@@ -107,7 +107,7 @@ describe('validateAiTags — namespaces that are not the model’s to write', ()
     expect(result.rejected[0]).toEqual({
       facet: null,
       value: 'Groceries',
-      reason: 'facet-not-closed',
+      reason: 'facet-not-classified',
     });
   });
 });
@@ -140,7 +140,7 @@ describe('validateAiTags — cardinality', () => {
     const result = validateAiTags({ venue: ['casino', 'bar'] }, VOCAB);
 
     expect(result.tags).toEqual(['venue:bar']);
-    expect(result.rejected[0]?.reason).toBe('value-not-in-closed-set');
+    expect(result.rejected[0]?.reason).toBe('value-not-listed');
   });
 
   it('keeps every value on a multi-valued facet', () => {
@@ -190,13 +190,13 @@ describe('logRejectedTagValues', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       logRejectedTagValues([
-        { facet: 'venue', value: 'casino', reason: 'value-not-in-closed-set' },
-        { facet: 'enrich', value: 'amazon', reason: 'facet-not-closed' },
+        { facet: 'venue', value: 'casino', reason: 'value-not-listed' },
+        { facet: 'enrich', value: 'amazon', reason: 'facet-not-classified' },
       ]);
 
       expect(warn).toHaveBeenCalledTimes(2);
       expect(warn.mock.calls[0]?.[0]).toContain('venue:casino');
-      expect(warn.mock.calls[0]?.[0]).toContain('value-not-in-closed-set');
+      expect(warn.mock.calls[0]?.[0]).toContain('value-not-listed');
       expect(warn.mock.calls[1]?.[0]).toContain('enrich is marker');
     } finally {
       warn.mockRestore();
