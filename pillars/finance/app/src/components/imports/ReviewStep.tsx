@@ -42,7 +42,7 @@ export function ReviewStep() {
         setBrowseOpen={proposal.setBrowseOpen}
       />
       <ReviewWarnings warnings={processedTransactions.warnings} />
-      <DroppedRowsNotice count={commit.dropped.length} />
+      <DroppedRowsNotice dropped={commit.dropped} />
       <ReviewTabs
         activeTab={review.activeTab}
         onTabChange={review.handleTabChange}

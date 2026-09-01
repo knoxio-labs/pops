@@ -3,10 +3,12 @@
  * (fees, inbound card payments — POPS-2610) → entity matcher → AI fallback →
  * no-match.
  *
- * The descriptor stage sits below the user's own correction rules (an explicit
- * rule still wins) and above the entity matcher, which has no merchant to find
- * on an `INTEREST CHARGES` row and would otherwise leave it uncertain and
- * untyped.
+ * The descriptor stage sits below the user's own correction rules and above the
+ * entity matcher, which has no merchant to find on an `INTEREST CHARGES` row and
+ * would otherwise leave it uncertain and untyped. A correction rule that carries
+ * its own `transactionType` still wins outright; one that names only a merchant
+ * does NOT suppress the descriptor's type — `apply-learned-correction.ts` falls
+ * back to it, so "the rule says who, the descriptor says what" (POPS-2754).
  *
  * Ported from the monolith `lib/process-transaction.ts`, db-injected. The
  * non-AI stages (`classifyWithoutAi`) and the AI-result finalizer

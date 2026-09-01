@@ -905,8 +905,34 @@ describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
 
     // Footer promises only the committable count, not matched.length (2).
     expect(screen.getByText('Continue to Tag Review (1)')).toBeInTheDocument();
-    // The dropped row is surfaced with a fix instruction, not silently gone.
-    expect(screen.getByText(/a merchant entity or a non-merchant type/)).toBeInTheDocument();
+    // The dropped row is surfaced with the fix its own reason calls for, not
+    // silently gone (POPS-2754 split the two reasons apart).
+    expect(
+      screen.getByText(/assign a merchant entity, or change the type to a non-merchant one/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/set a transaction type on the money coming in/)).toBeNull();
+  });
+
+  it('names the missing type, not a missing merchant, for an untyped credit', () => {
+    mockProcessedTransactions = {
+      matched: [
+        makeTx('APPLE.COM/BILL', {
+          status: 'matched',
+          amount: 139.72,
+          transactionType: undefined,
+          entity: { entityId: 'ent-apple', entityName: 'Apple', matchType: 'learned' },
+        }),
+      ],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    expect(screen.getByText(/set a transaction type on the money coming in/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/assign a merchant entity, or change the type to a non-merchant one/)
+    ).toBeNull();
   });
 
   it('shows the full count and no notice when every matched row is committable', () => {

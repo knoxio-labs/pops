@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildConfirmedTransactions, isConfirmable, partitionConfirmable } from './buildConfirmed';
+import {
+  buildConfirmedTransactions,
+  dropReason,
+  isConfirmable,
+  partitionConfirmable,
+} from './buildConfirmed';
 
 import type { ParsedTransaction } from '@pops/finance';
 
@@ -240,5 +245,47 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
 
     expect(confirmed?.foreignCurrency).toBeUndefined();
     expect(confirmed?.fxCaptureSource).toBe('anz-descriptor');
+  });
+});
+
+describe('dropReason — an untyped credit is never committed as spend (POPS-2754)', () => {
+  const credit = (overrides: Partial<ProcessedTransaction> = {}) =>
+    matched({
+      description: 'APPLE.COM/BILL',
+      amount: 139.72,
+      entity: { entityId: 'ent-apple', entityName: 'Apple', matchType: 'learned' },
+      ...overrides,
+    });
+
+  it('drops a credit with a resolved merchant but no type', () => {
+    expect(dropReason(credit())).toBe('type');
+    expect(isConfirmable(credit())).toBe(false);
+  });
+
+  it('drops a $0 row with no type — it is not a debit either', () => {
+    expect(dropReason(credit({ amount: 0 }))).toBe('type');
+  });
+
+  it('commits the same credit once it names its type', () => {
+    expect(dropReason(credit({ transactionType: 'refund' }))).toBeNull();
+    expect(
+      dropReason(credit({ transactionType: 'transfer', entity: { matchType: 'none' } }))
+    ).toBeNull();
+  });
+
+  it('still commits an untyped debit with a merchant, as before', () => {
+    expect(dropReason(matched())).toBeNull();
+  });
+
+  it('reports the missing merchant, not the missing type, on an untyped debit', () => {
+    expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBe('entity');
+  });
+
+  it('keeps the untyped credit out of the commit payload and in the dropped list', () => {
+    const { confirmed, dropped } = partitionConfirmable([credit(), matched()]);
+
+    expect(confirmed.map((t) => t.description)).toEqual(['WOOLWORTHS 1234']);
+    expect(dropped.map((t) => t.description)).toEqual(['APPLE.COM/BILL']);
+    expect(buildConfirmedTransactions([credit()])).toEqual([]);
   });
 });

@@ -49,6 +49,11 @@ CREATE TABLE transactions (
   tags text NOT NULL DEFAULT '[]',
   last_edited_time text NOT NULL
 );
+CREATE TABLE transaction_corrections (
+  id text PRIMARY KEY NOT NULL,
+  description_pattern text NOT NULL,
+  transaction_type text
+);
 `;
 
 function migrationSql(): string {
@@ -72,7 +77,7 @@ function migrationSql(): string {
  */
 function laterTypeBackfills(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
-  return ['0077_correct_mistyped_rows.sql'].map((name) =>
+  return ['0077_correct_mistyped_rows.sql', '0080_retype_rule_shadowed_rows.sql'].map((name) =>
     readFileSync(join(here, '..', '..', '..', 'migrations', name), 'utf8')
   );
 }

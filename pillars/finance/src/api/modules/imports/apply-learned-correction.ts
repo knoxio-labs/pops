@@ -5,18 +5,23 @@
  * - DB matching → `transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb`
  * - In-memory matching (merged/pending rules) → corrections module `findAllMatchingCorrectionFromRules`
  * - classification + tag parsing → corrections module helpers
+ *
+ * The rule's `transactionType` is applied whether or not the rule also names an
+ * entity. It used to be carried only on the entity-less path, so a rule saying
+ * "PAYMENT THANKYOU is ANZ, and it is a transfer" applied the merchant and
+ * dropped the transfer, and the row committed as a `purchase` (POPS-2754). When
+ * the rule carries no type at all, {@link resolveAppliedType} falls back to the
+ * descriptor rather than leaving the row untyped.
  */
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
 import {
   classifyCorrectionMatch,
-  type CorrectionMatchStatus,
   type CorrectionRow,
   findAllMatchingCorrectionFromRules,
-  parseCorrectionTags,
   resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
 import { creditTagRuleUsage } from '../tag-suggester/index.js';
-import { buildSuggestedTags } from './tag-management.js';
+import { buildEntityMatch, buildTypeOnlyMatch } from './correction-match-builders.js';
 
 import type { MatchedRule, ParsedTransaction, ProcessedTransaction } from './types.js';
 
@@ -80,91 +85,6 @@ function toMatchedRules(rules: CorrectionRow[]): MatchedRule[] {
 type ApplyArgs = ApplyLearnedCorrectionArgs & {
   collectTagRules: (ruleIds: readonly string[]) => void;
 };
-
-interface TypeOnlyMatchArgs {
-  db: FinanceDb;
-  transaction: ParsedTransaction;
-  correction: CorrectionRow;
-  matchedRules: MatchedRule[];
-  knownTags: string[];
-  status: CorrectionMatchStatus;
-  collectTagRules: (ruleIds: readonly string[]) => void;
-}
-
-function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, knownTags, status, collectTagRules } = args;
-  return {
-    ...transaction,
-    location: correction.location ?? transaction.location,
-    transactionType: correction.transactionType ?? undefined,
-    entity: { matchType: 'learned', confidence: correction.confidence },
-    ruleProvenance: {
-      source: 'correction',
-      ruleId: correction.id,
-      pattern: correction.descriptionPattern,
-      matchType: correction.matchType,
-      confidence: correction.confidence,
-    },
-    matchedRules,
-    status,
-    suggestedTags: buildSuggestedTags(db, {
-      description: transaction.description,
-      entityId: null,
-      correctionTags: parseCorrectionTags(correction.tags),
-      aiCategory: null,
-      knownTags,
-      correctionPattern: correction.descriptionPattern,
-      recordTagRuleUsage: false,
-      onTagRulesMatched: collectTagRules,
-    }),
-  };
-}
-
-interface EntityMatchArgs {
-  db: FinanceDb;
-  transaction: ParsedTransaction;
-  correction: CorrectionRow;
-  matchedRules: MatchedRule[];
-  status: 'matched' | 'uncertain';
-  entityId: string;
-  knownTags: string[];
-  entityDefaultTags: ReadonlyMap<string, string[]>;
-  collectTagRules: (ruleIds: readonly string[]) => void;
-}
-
-function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
-  const { db, transaction, correction, matchedRules, status, entityId, knownTags } = args;
-  return {
-    ...transaction,
-    location: correction.location ?? transaction.location,
-    entity: {
-      entityId,
-      entityName: correction.entityName ?? 'Unknown',
-      matchType: 'learned',
-      confidence: correction.confidence,
-    },
-    ruleProvenance: {
-      source: 'correction',
-      ruleId: correction.id,
-      pattern: correction.descriptionPattern,
-      matchType: correction.matchType,
-      confidence: correction.confidence,
-    },
-    matchedRules,
-    status,
-    suggestedTags: buildSuggestedTags(db, {
-      description: transaction.description,
-      entityId,
-      correctionTags: parseCorrectionTags(correction.tags),
-      aiCategory: null,
-      knownTags,
-      correctionPattern: correction.descriptionPattern,
-      entityDefaultTags: args.entityDefaultTags,
-      recordTagRuleUsage: false,
-      onTagRulesMatched: args.collectTagRules,
-    }),
-  };
-}
 
 function handleNoEntityCorrection(
   db: FinanceDb,

@@ -6,30 +6,49 @@ import type { ConfirmedTransaction, ParsedTransaction } from '@pops/finance';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
+/** Why a matched row cannot be committed as it stands, or `null` when it can. */
+export type DropReason = 'entity' | 'type';
+
 /**
- * Whether a matched row can actually be committed. A type that
- * {@link requiresEntity} (a `purchase`/`refund`, or an unset/unknown type) needs
- * a resolved merchant (`entityId` + `entityName`); the entity-optional types
- * commit without one. This is the single predicate behind both the commit
- * filter and the pre-commit count/notice, so the two can never drift (#3765).
+ * Why a matched row would be dropped at commit, or `null` when it commits.
  *
- * A `pending:contact:` id is not a resolved merchant, however complete the pair
+ * Two things can be missing. A type that {@link requiresEntity} (a
+ * `purchase`/`refund`, or an unset/unknown type) needs a resolved merchant
+ * (`entityId` + `entityName`); the entity-optional types commit without one. A
+ * `pending:contact:` id is not a resolved merchant, however complete the pair
  * looks: it is the placeholder a commit wrote when contacts could not be
  * reached, and a correction rule carrying one hands it to every future import
  * of the same merchant. Committing on it writes a transaction whose entity
  * resolves to nothing (POPS-2692).
+ *
+ * A **credit** (amount >= 0) additionally needs a type of its own. The pillar
+ * refuses to store one without it rather than defaulting to `purchase`
+ * (`commit-columns.ts`), so sending it would fail the whole batch — and the
+ * default it replaced is what booked a `+$139.72` Apple refund as spend
+ * (POPS-2754). Surfacing the row here makes it fixable in the Matched tab
+ * instead.
+ *
+ * This is the single predicate behind both the commit filter and the
+ * pre-commit count/notice, so the two can never drift (#3765).
  */
-export function isConfirmable(t: ProcessedTransaction): boolean {
+export function dropReason(t: ProcessedTransaction): DropReason | null {
+  if (t.amount >= 0 && !t.transactionType) return 'type';
   const entityId = t.entity?.entityId;
   const hasEntity = Boolean(entityId && t.entity?.entityName && !isPendingContactId(entityId));
-  return !requiresEntity(t.transactionType) || hasEntity;
+  if (requiresEntity(t.transactionType) && !hasEntity) return 'entity';
+  return null;
+}
+
+/** Whether a matched row can actually be committed — see {@link dropReason}. */
+export function isConfirmable(t: ProcessedTransaction): boolean {
+  return dropReason(t) === null;
 }
 
 /**
- * Split the matched bucket into what will commit and what will be dropped for
- * want of a merchant, so the Review step can show a truthful count and surface
- * the dropped rows instead of losing them silently (#3765). The two arrays are
- * disjoint and exhaustive over `matched`.
+ * Split the matched bucket into what will commit and what will be dropped, so
+ * the Review step can show a truthful count and surface the dropped rows
+ * instead of losing them silently (#3765). The two arrays are disjoint and
+ * exhaustive over `matched`.
  */
 export function partitionConfirmable(matched: ProcessedTransaction[]): {
   confirmed: ProcessedTransaction[];
