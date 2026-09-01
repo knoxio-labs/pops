@@ -31,7 +31,7 @@ interface DialogFooterProps {
 
 function DialogActions(props: DialogFooterProps) {
   return (
-    <DialogFooter className="gap-2 sm:gap-0">
+    <DialogFooter>
       <Button type="button" variant="outline" onClick={props.onCancel} disabled={props.busy}>
         Cancel
       </Button>
