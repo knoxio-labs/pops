@@ -8,13 +8,27 @@ import { toast } from 'sonner';
 
 import { unionTags } from './tagReviewUtils';
 
-import type { EntityGroupProps } from './EntityGroup';
+import type { SuggestedTag } from '@pops/finance';
+
+import type { ConfirmedGroup } from './tagReviewUtils';
+
+/**
+ * What the hook needs, which is less than the component takes — declared here
+ * rather than imported from `EntityGroup` so the dependency runs one way.
+ */
+export interface EntityGroupStateInput {
+  group: ConfirmedGroup;
+  localTags: Record<string, string[]>;
+  suggestedTagMeta: Record<string, SuggestedTag[]>;
+  onUpdateTag: (checksum: string, tags: string[]) => void;
+  onApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
+}
 
 function pluralizeTransactions(count: number): string {
   return `${count} transaction${count !== 1 ? 's' : ''}`;
 }
 
-export function useEntityGroupState(props: EntityGroupProps) {
+export function useEntityGroupState(props: EntityGroupStateInput) {
   const { group, localTags, suggestedTagMeta, onApplyGroupTags, onUpdateTag } = props;
   const [expanded, setExpanded] = useState(true);
   const [groupStagedTags, setGroupStagedTags] = useState<string[]>([]);

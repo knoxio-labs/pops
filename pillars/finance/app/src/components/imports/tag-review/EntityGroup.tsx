@@ -8,19 +8,15 @@ import { GroupTagBar } from './GroupTagBar';
 import { TransactionTagRow } from './TransactionTagRow';
 import { useEntityGroupState } from './useEntityGroupState';
 
-import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
+import type { ConfirmedTransaction } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
 import type { ConfirmedGroup } from './tagReviewUtils';
+import type { EntityGroupStateInput } from './useEntityGroupState';
 
-export interface EntityGroupProps {
-  group: ConfirmedGroup;
-  localTags: Record<string, string[]>;
-  suggestedTagMeta: Record<string, SuggestedTag[]>;
+export interface EntityGroupProps extends EntityGroupStateInput {
   availableTags: string[];
   facets: TagFacetOption[];
-  onUpdateTag: (checksum: string, tags: string[]) => void;
-  onApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
   onSaveTagRule: (group: ConfirmedGroup) => void;
   onSaveTagRuleForTransaction: (transaction: ConfirmedTransaction, tags: string[]) => void;
 }
