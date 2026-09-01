@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { unwrap } from '../../media-api-helpers.js';
 import { watchlistStatus } from '../../media-api/index.js';
+import { toastActionError } from './actionError';
 
 import type { DiscoverActionResult } from '../useDiscoverCardActions';
 import type { useDiscoverMutations } from './discoverMutations';
@@ -31,8 +32,8 @@ export function useAddToLibrary({ mutations, pending }: AddDeps) {
         if (result.created) toast.success(`Added "${result.data.title}" to library`);
         else toast.info(`"${result.data.title}" is already in library`);
         return { ok: true, inLibrary: true };
-      } catch {
-        toast.error('Failed to add to library');
+      } catch (err) {
+        toastActionError('add to library', err);
         return { ok: false };
       } finally {
         pending.remove(tmdbId);
@@ -56,8 +57,8 @@ export function useAddToWatchlist({ mutations, queryClient, pending }: AddDeps) 
         else toast.info(`"${libResult.data.title}" is already on watchlist`);
         void invalidateWatchlist(queryClient);
         return { ok: true, inLibrary: true, onWatchlist: true };
-      } catch {
-        toast.error('Failed to add to watchlist');
+      } catch (err) {
+        toastActionError('add to watchlist', err);
         return { ok: false };
       } finally {
         pending.remove(tmdbId);
@@ -84,8 +85,8 @@ export function useRemoveFromWatchlist({ mutations, queryClient, pending }: AddD
         toast.success(`Removed "${libResult.data.title}" from watchlist`);
         void invalidateWatchlist(queryClient);
         return { ok: true, inLibrary: true, onWatchlist: false };
-      } catch {
-        toast.error('Failed to remove from watchlist');
+      } catch (err) {
+        toastActionError('remove from watchlist', err);
         return { ok: false };
       } finally {
         pending.remove(tmdbId);
@@ -117,8 +118,8 @@ export function useMarkWatched({ mutations, queryClient, pending }: AddDeps) {
           isWatched: true,
           onWatchlist: watchResult.watchlistRemoved ? false : undefined,
         };
-      } catch {
-        toast.error('Failed to mark as watched');
+      } catch (err) {
+        toastActionError('mark as watched', err);
         return { ok: false };
       } finally {
         pending.remove(tmdbId);
@@ -142,8 +143,8 @@ export function useMarkRewatched({ mutations, pending }: AddDeps) {
         });
         toast.success(`Logged rewatch of "${libResult.data.title}"`);
         return { ok: true, inLibrary: true, isWatched: true };
-      } catch {
-        toast.error('Failed to log rewatch');
+      } catch (err) {
+        toastActionError('log rewatch', err);
         return { ok: false };
       } finally {
         pending.remove(tmdbId);
@@ -172,9 +173,9 @@ export function useNotInterested({
         await mutations.dismissMutation.mutateAsync({ tmdbId });
         void queryClient.invalidateQueries({ queryKey: ['media', 'discovery', 'getDismissed'] });
         return { ok: true };
-      } catch {
+      } catch (err) {
         optimistic.remove(tmdbId);
-        toast.error('Failed to dismiss');
+        toastActionError('dismiss', err);
         return { ok: false };
       } finally {
         dismissing.remove(tmdbId);
