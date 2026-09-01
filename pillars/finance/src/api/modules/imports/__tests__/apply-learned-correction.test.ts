@@ -347,3 +347,118 @@ describe('applyLearnedCorrection — usage telemetry gated by isPreview, not by 
     expect(timesApplied('r-1')).toBe(0);
   });
 });
+
+describe('applyLearnedCorrection — the rule and the descriptor both get a say (POPS-2754)', () => {
+  const cardPayment = () =>
+    transaction({ description: 'PAYMENT THANKYOU 008667', amount: 4545.37 });
+
+  it("applies an entity-bearing rule's own transactionType instead of dropping it", () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: cardPayment(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'PAYMENT THANKYOU',
+          entityId: 'ent-anz',
+          entityName: 'ANZ',
+          transactionType: 'transfer',
+        }),
+      ],
+    });
+
+    expect(result?.processed.transactionType).toBe('transfer');
+    expect(result?.processed.entity?.entityName).toBe('ANZ');
+  });
+
+  it('falls back to the descriptor when an entity-bearing rule carries no type', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: cardPayment(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'PAYMENT THANKYOU',
+          entityId: 'ent-anz',
+          entityName: 'ANZ',
+          transactionType: null,
+        }),
+      ],
+    });
+
+    expect(result?.processed.transactionType).toBe('transfer');
+  });
+
+  it('carries the derived fee: value when the descriptor types the row a fee', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'INTEREST CHARGED',
+          entityId: 'ent-anz',
+          entityName: 'ANZ',
+          transactionType: null,
+          tags: '["contains:banking"]',
+        }),
+      ],
+    });
+
+    expect(result?.processed.transactionType).toBe('fee');
+    expect(result?.processed.suggestedTags?.map((s) => s.tag)).toEqual([
+      'fee:interest',
+      'contains:banking',
+    ]);
+  });
+
+  it("keeps exactly one fee: value when the rule's own tags name a different one", () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'INTEREST CHARGED',
+          entityId: 'ent-anz',
+          entityName: 'ANZ',
+          transactionType: null,
+          tags: '["fee:late"]',
+        }),
+      ],
+    });
+
+    const tags = result?.processed.suggestedTags?.map((s) => s.tag) ?? [];
+    expect(tags.filter((t) => t.startsWith('fee:'))).toEqual(['fee:interest']);
+  });
+
+  it('lets an explicit rule type override the descriptor, entity-bearing or not', () => {
+    const withEntity = applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [
+        rule({
+          descriptionPattern: 'INTEREST CHARGED',
+          entityId: 'ent-anz',
+          entityName: 'ANZ',
+          transactionType: 'purchase',
+        }),
+      ],
+    });
+
+    expect(withEntity?.processed.transactionType).toBe('purchase');
+    expect(withEntity?.processed.suggestedTags?.map((s) => s.tag)).not.toContain('fee:interest');
+  });
+
+  it('leaves an ordinary merchant untyped, as it was before', () => {
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction(),
+      minConfidence: 0.7,
+      knownTags: [],
+      rules: [rule({ transactionType: null })],
+    });
+
+    expect(result?.processed.transactionType).toBeUndefined();
+  });
+});

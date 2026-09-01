@@ -218,6 +218,13 @@
       "when": 1781913600024,
       "tag": "0079_contains_open_facet",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1781913600025,
+      "tag": "0080_retype_rule_shadowed_rows",
+      "breakpoints": true
     }
   ]
 }

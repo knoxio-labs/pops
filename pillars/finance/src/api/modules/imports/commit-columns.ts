@@ -7,7 +7,9 @@
  */
 import { resolveCommittedType } from '../../../contract/transaction-classification.js';
 import { dollarsToCents } from '../../../money.js';
+import { ValidationError } from '../../shared/errors.js';
 
+import type { TransactionType } from '../../../contract/corrections-constants.js';
 import type { FxCaptureSource } from '../../../contract/fx-capture.js';
 import type { importsService } from '../../../db/index.js';
 import type { CommitPayload } from './types.js';
@@ -58,9 +60,36 @@ function foreignChargeColumns(txn: ConfirmedRow): {
 }
 
 /**
+ * The `type` a confirmed row is stored with.
+ *
+ * A debit with no declared type is a `purchase` — the one default the
+ * classification ladder is allowed to assume, and the column is `NOT NULL` so
+ * something must be written. A **credit** with no declared type is refused
+ * instead of defaulted. `buildFromEntityMatch` deliberately leaves a positive
+ * entity match untyped precisely so it cannot commit as a purchase, and this
+ * default silently undid that: a `+$139.72 APPLE.COM/BILL` refund committed as
+ * a `purchase` and subtracted $139.72 from the month's reported expenses
+ * (POPS-2754). Refusing is safe because every credit that has been decided
+ * carries its decision — a refund, a rebate, an inbound transfer all name their
+ * type — so the only row this rejects is one nobody typed.
+ */
+function committedType(txn: ConfirmedRow, tags: string[]): TransactionType {
+  if (txn.transactionType) return resolveCommittedType(txn.transactionType, tags);
+  if (txn.amount >= 0) {
+    throw new ValidationError(
+      { description: txn.description, amount: txn.amount, date: txn.date },
+      `Refusing to commit credit '${txn.description}' (${txn.amount}) with no transaction type: ` +
+        'a positive amount is not a purchase, and this pillar will not guess which type it is'
+    );
+  }
+  return resolveCommittedType('purchase', tags);
+}
+
+/**
  * The confirmed row as it is written: every wire optional collapsed to its
- * column default, and `type` resolved through {@link resolveCommittedType} so a
- * gift-card purchase is stored as the transfer it is (POPS-2610).
+ * column default, and `type` resolved through {@link committedType} so a
+ * gift-card purchase is stored as the transfer it is (POPS-2610) and an untyped
+ * credit is refused rather than booked as spend (POPS-2754).
  */
 export function transactionColumns(
   txn: ConfirmedRow,
@@ -73,7 +102,7 @@ export function transactionColumns(
     account: txn.account,
     amountCents: dollarsToCents(txn.amount),
     date: txn.date,
-    type: resolveCommittedType(txn.transactionType ?? 'purchase', tags),
+    type: committedType(txn, tags),
     tags,
     entityId: entityId ?? null,
     entityName: txn.entityName ?? null,
