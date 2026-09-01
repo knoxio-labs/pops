@@ -84,6 +84,13 @@ RUN mkdir -p /data/sqlite /data/media/images && chown -R node:node /data
 # MEDIA_SQLITE_PATH still wins; on its own it lands on /data/sqlite/media.db.
 ENV SQLITE_PATH=/data/sqlite/pops.db
 
+# The image-cache root, for the same reason: the code default
+# (`./data/media/images`, see pillars/media/src/api/clients/env.ts) is relative
+# to the working directory, and /app is root-owned, so an unset
+# MEDIA_IMAGES_DIR makes every cache write EACCES on `mkdir 'data'` — poster
+# requests 404 and adding a movie 500s. Compose may still override it.
+ENV MEDIA_IMAGES_DIR=/data/media/images
+
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/media/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/media/migrations ./migrations

@@ -86,7 +86,8 @@ function detailToUpdateInput(detail: TmdbMovieDetail): UpdateMovieInput {
  *
  * Idempotent: returns the existing record (`created: false`) if the movie is
  * already in the library. Otherwise fetches full detail from TMDB, inserts a
- * record, and downloads poster/backdrop images to the local cache.
+ * record, and downloads poster/backdrop images to the local cache. Caching is
+ * best-effort: a cache write that fails leaves the movie added.
  */
 export async function addMovie(deps: MovieMutationDeps, tmdbId: number): Promise<AddMovieResult> {
   const { db, tmdbClient, imageCache } = deps;
@@ -96,7 +97,19 @@ export async function addMovie(deps: MovieMutationDeps, tmdbId: number): Promise
   const detail = await tmdbClient.getMovie(tmdbId);
   const row = moviesService.createMovie(db, detailToCreateInput(detail));
 
-  await imageCache.downloadMovieImages(detail.tmdbId, detail.posterPath, detail.backdropPath, null);
+  // The row is already committed, so a failed cache write must not fail the
+  // add: the byte route re-downloads on demand, and reporting an error for a
+  // movie that IS in the library is the worse answer.
+  try {
+    await imageCache.downloadMovieImages(
+      detail.tmdbId,
+      detail.posterPath,
+      detail.backdropPath,
+      null
+    );
+  } catch (err) {
+    console.warn(`[Library] Caching images for movie ${detail.tmdbId} failed:`, err);
+  }
   return { movie: row, created: true };
 }
 
