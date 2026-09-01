@@ -283,4 +283,15 @@ describe('TagRuleProposalDialog', () => {
       expect(text).not.toMatch(/revis/i);
     }
   });
+  it('keeps the footer buttons spaced at every breakpoint', async () => {
+    const { container } = renderDialog();
+    await screen.findByText(/Save tag rule/i);
+
+    const footer = container.ownerDocument.querySelector('[data-slot="dialog-footer"]');
+    expect(footer).not.toBeNull();
+
+    const classes = (footer as HTMLElement).className.split(/\s+/).filter(Boolean);
+    expect(classes).toContain('gap-2');
+    expect(classes.filter((c) => /(^|:)gap-0$/.test(c))).toEqual([]);
+  });
 });
