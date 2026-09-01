@@ -3,19 +3,33 @@
  * each, and how many values a transaction may carry on each axis.
  *
  * Since the 2026-08-28 namespace migration (POPS-2611) every stored tag is
- * `facet:value`. The facet's *kind* decides who may create a value on that
- * axis (POPS-2606):
+ * `facet:value`. Two independent properties describe a facet, and conflating
+ * them is what this module exists to prevent:
  *
- * - `closed` — a fixed set. Nobody mints; the categorizer classifies into it,
- *   and a value outside the set is a validation error, not a suggestion.
+ * **Kind** — who may mint a value on the axis (POPS-2606):
+ *
+ * - `closed` — a fixed set. Nobody mints; a value outside the set is a
+ *   validation error, not a suggestion.
  * - `open` — a human, or another pillar, adds a value deliberately.
  * - `marker` — the system writes it from provenance (an enrichment provider,
  *   a person link, a review flag).
  *
+ * **Classified** — whether the categorizer fills the axis in, listed in
+ * {@link CLASSIFIED_TAG_FACETS}. The model always chooses from the values the
+ * prompt lists, whoever minted them, so a classified axis may still be open:
+ * `contains:` is exactly that. Its values are what a purchase contained, and
+ * that is an open-ended question a human meets a new answer to on almost every
+ * import ("contains:sunscreen"), while the categorizer still classifies every
+ * row against whatever the vocabulary currently holds. Making it `closed`
+ * meant a human could not name a new one without a migration; making it
+ * unclassified would have cost the axis its coverage. The other four stay
+ * closed because their value sets are the buckets the reports group by, and a
+ * sixth venue invented mid-import is a bucket nothing else counts.
+ *
  * This module owns the *rules*; `tag_vocabulary` owns the *values*. It
- * deliberately carries no list of closed values: that list lives in the table
- * and is read from it, so there is nothing here to drift out of step with the
- * database.
+ * deliberately carries no list of classified values: that list lives in the
+ * table and is read from it, so there is nothing here to drift out of step
+ * with the database.
  */
 
 /** Who is permitted to mint a value on a facet. */
@@ -32,7 +46,7 @@ export const TAG_FACET_SEPARATOR = ':';
 export const TAG_FACET_KINDS = {
   venue: 'closed',
   occasion: 'closed',
-  contains: 'closed',
+  contains: 'open',
   channel: 'closed',
   fee: 'closed',
   trip: 'open',
@@ -54,10 +68,11 @@ export const TAG_FACET_KINDS = {
 export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
 
 /**
- * The closed facets, in the order they are presented to the model, each with
- * its cardinality.
+ * The facets the categorizer classifies into, in the order they are presented
+ * to the model, each with its cardinality.
  *
- * `single: true` is a rule about the world, not a presentation hint — a
+ * Membership here is independent of {@link TAG_FACET_KINDS}: `contains` is an
+ * open facet and is still classified. `single: true` is a rule about the world, not a presentation hint — a
  * transaction happens on one occasion and through one channel. `contains` and
  * `fee` are genuinely multi-valued. The order is fixed so a prompt diff is a
  * real change rather than a key-iteration accident.
@@ -122,7 +137,7 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  */
 export const NEEDS_REVIEW_TAG = 'flag:needs-review';
 
-export const CLOSED_TAG_FACETS = [
+export const CLASSIFIED_TAG_FACETS = [
   { facet: 'venue', single: true },
   { facet: 'occasion', single: true },
   { facet: 'contains', single: false },
@@ -130,10 +145,10 @@ export const CLOSED_TAG_FACETS = [
   { facet: 'fee', single: false },
 ] as const satisfies readonly { facet: keyof typeof TAG_FACET_KINDS; single: boolean }[];
 
-/** A closed facet — the only facets the categorizer may write into. */
-export type ClosedTagFacet = (typeof CLOSED_TAG_FACETS)[number]['facet'];
+/** A classified facet — the only facets the categorizer may write into. */
+export type ClassifiedTagFacet = (typeof CLASSIFIED_TAG_FACETS)[number]['facet'];
 
-const CLOSED_FACET_SET = new Set<string>(CLOSED_TAG_FACETS.map((f) => f.facet));
+const CLASSIFIED_FACET_SET = new Set<string>(CLASSIFIED_TAG_FACETS.map((f) => f.facet));
 
 /**
  * Split a stored tag into its facet and value. Only the first separator
@@ -149,6 +164,18 @@ export function parseTagFacet(tag: string): { facet: string | null; value: strin
   return { facet: tag.slice(0, index), value };
 }
 
+/**
+ * The taxonomy as a list, for the surfaces that have to show it.
+ *
+ * Derived from {@link TAG_FACET_KINDS} rather than written out again, so a
+ * facet added there reaches the pickers without a second edit. Declaration
+ * order is the presentation order — the map groups the closed axes first, and
+ * a picker that renders this list gets that grouping for free.
+ */
+export const TAG_FACETS: readonly { facet: string; kind: TagFacetKind }[] = Object.entries(
+  TAG_FACET_KINDS
+).map(([facet, kind]) => ({ facet, kind }));
+
 /** The kind of a facet name, defaulting per {@link DEFAULT_TAG_FACET_KIND}. */
 export function tagFacetKind(facet: string | null): TagFacetKind {
   if (facet === null) return DEFAULT_TAG_FACET_KIND;
@@ -157,9 +184,9 @@ export function tagFacetKind(facet: string | null): TagFacetKind {
   );
 }
 
-/** True when `facet` is a closed facet the categorizer may classify into. */
-export function isClosedTagFacet(facet: string | null): facet is ClosedTagFacet {
-  return facet !== null && CLOSED_FACET_SET.has(facet);
+/** True when `facet` is one the categorizer may classify into. */
+export function isClassifiedTagFacet(facet: string | null): facet is ClassifiedTagFacet {
+  return facet !== null && CLASSIFIED_FACET_SET.has(facet);
 }
 
 /** Compose a stored tag from a facet and a value. */
@@ -198,7 +225,7 @@ export function parseStoredTags(tagsJson: string | null | undefined): string[] {
 export function exceedsFacetCardinality(existing: readonly string[], tag: string): boolean {
   if (existing.includes(tag)) return false;
   const { facet } = parseTagFacet(tag);
-  const spec = CLOSED_TAG_FACETS.find((entry) => entry.facet === facet);
+  const spec = CLASSIFIED_TAG_FACETS.find((entry) => entry.facet === facet);
   if (spec?.single !== true) return false;
   return existing.some((present) => parseTagFacet(present).facet === facet);
 }

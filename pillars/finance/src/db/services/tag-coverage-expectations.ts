@@ -9,7 +9,11 @@
  * counting module applies these and adds nothing of its own.
  */
 import { isSpendType } from '../../contract/corrections-constants.js';
-import { CLOSED_TAG_FACETS, TAG_FACET_SEPARATOR, type ClosedTagFacet } from '../tag-facets.js';
+import {
+  CLASSIFIED_TAG_FACETS,
+  TAG_FACET_SEPARATOR,
+  type ClassifiedTagFacet,
+} from '../tag-facets.js';
 
 /** Marks a row whose contents the merchant does not determine (Amazon, IKEA). */
 const ENRICH_PREFIX = `enrich${TAG_FACET_SEPARATOR}`;
@@ -97,7 +101,7 @@ const UNKNOWABLE_CONTENTS_EXCLUSION: FacetExclusion = {
  * The exclusions each facet carries. A facet absent from this map has none,
  * and is measured over every spend row without an `enrich:` marker.
  */
-const EXCLUSIONS_BY_FACET: Partial<Record<ClosedTagFacet, readonly FacetExclusion[]>> = {
+const EXCLUSIONS_BY_FACET: Partial<Record<ClassifiedTagFacet, readonly FacetExclusion[]>> = {
   occasion: [TRANSIT_EXCLUSION],
   contains: [UNKNOWABLE_CONTENTS_EXCLUSION],
 };
@@ -115,7 +119,7 @@ const EXCLUSIONS_BY_FACET: Partial<Record<ClosedTagFacet, readonly FacetExclusio
  * has to say.
  */
 export interface FacetExpectation {
-  facet: ClosedTagFacet;
+  facet: ClassifiedTagFacet;
   /** Whether POPS-2607's acceptance criteria require this facet to be present. */
   required: boolean;
   /** Whether the facet applies only to rows whose `type` counts as spend. */
@@ -145,12 +149,14 @@ const REQUIRED_FACETS = new Set<string>(['occasion', 'contains']);
  */
 const SPEND_ONLY_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
 
-export const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLOSED_TAG_FACETS.map((closed) => ({
-  facet: closed.facet,
-  required: REQUIRED_FACETS.has(closed.facet),
-  spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
-  exclusions: EXCLUSIONS_BY_FACET[closed.facet] ?? [],
-}));
+export const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLASSIFIED_TAG_FACETS.map(
+  (closed) => ({
+    facet: closed.facet,
+    required: REQUIRED_FACETS.has(closed.facet),
+    spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
+    exclusions: EXCLUSIONS_BY_FACET[closed.facet] ?? [],
+  })
+);
 
 /** True when `enrich:` marks the row as waiting on an enrichment provider. */
 export function isEnrichBlocked(tags: string[]): boolean {

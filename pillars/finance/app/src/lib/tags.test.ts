@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  composeTag,
   describeTag,
   formatFacet,
   formatTagValue,
@@ -8,10 +9,19 @@ import {
   hasTagValue,
   orderTagsByFacet,
   parseTag,
+  planTagCreation,
   rankTagSuggestions,
   resolveTypedTag,
+  slugifyTagValue,
   tagColorKey,
 } from './tags';
+
+const FACETS = [
+  { facet: 'venue', kind: 'closed' },
+  { facet: 'contains', kind: 'open' },
+  { facet: 'trip', kind: 'open' },
+  { facet: 'flag', kind: 'marker' },
+] as const;
 
 describe('parseTag', () => {
   it('splits a prefixed tag into facet and value', () => {
@@ -258,5 +268,96 @@ describe('rankTagSuggestions', () => {
     const available = Array.from({ length: 30 }, (_, i) => `venue:v${String(i)}`);
 
     expect(rankTagSuggestions('venue', available, [])).toHaveLength(30);
+  });
+});
+
+describe('slugifyTagValue', () => {
+  it('lower-cases and hyphenates what was typed', () => {
+    expect(slugifyTagValue('Cairns 2026')).toBe('cairns-2026');
+  });
+
+  it('folds accents rather than dropping them', () => {
+    expect(slugifyTagValue('Café')).toBe('cafe');
+  });
+
+  it('collapses runs of punctuation and whitespace into one hyphen', () => {
+    expect(slugifyTagValue('  gift — card  ')).toBe('gift-card');
+  });
+
+  it('never leaves a leading or trailing hyphen', () => {
+    expect(slugifyTagValue('-tolls-')).toBe('tolls');
+  });
+
+  it('returns an empty string when nothing survives', () => {
+    expect(slugifyTagValue('!!!')).toBe('');
+  });
+
+  it('leaves an already-slugged value alone', () => {
+    expect(slugifyTagValue('hunter-valley')).toBe('hunter-valley');
+  });
+});
+
+describe('composeTag', () => {
+  it('joins an axis and a value with the stored separator', () => {
+    expect(composeTag('trip', 'cairns-2026')).toBe('trip:cairns-2026');
+  });
+});
+
+describe('planTagCreation', () => {
+  it('asks which axis a bare value belongs to, offering only the open ones', () => {
+    expect(planTagCreation('Cairns 2026', FACETS)).toEqual({
+      kind: 'choose',
+      value: 'cairns-2026',
+      facets: ['contains', 'trip'],
+    });
+  });
+
+  it('is ready when the typed text already names an open axis', () => {
+    expect(planTagCreation('trip:Cairns 2026', FACETS)).toEqual({
+      kind: 'ready',
+      tag: 'trip:cairns-2026',
+    });
+  });
+
+  it('refuses a closed axis instead of offering to create the value', () => {
+    expect(planTagCreation('venue:speakeasy', FACETS)).toEqual({
+      kind: 'refused',
+      facet: 'venue',
+      facetKind: 'closed',
+    });
+  });
+
+  it("refuses a marker axis, which is the system's to write", () => {
+    expect(planTagCreation('flag:needs-review', FACETS)).toEqual({
+      kind: 'refused',
+      facet: 'flag',
+      facetKind: 'marker',
+    });
+  });
+
+  it('treats an unrecognised prefix as part of the value, not as a new axis', () => {
+    expect(planTagCreation('4:30 coffee', FACETS)).toEqual({
+      kind: 'choose',
+      value: '4-30-coffee',
+      facets: ['contains', 'trip'],
+    });
+  });
+
+  it('creates nothing from an empty input', () => {
+    expect(planTagCreation('   ', FACETS)).toEqual({ kind: 'none' });
+  });
+
+  it('creates nothing when no character survives slugging', () => {
+    expect(planTagCreation('!!!', FACETS)).toEqual({ kind: 'none' });
+  });
+
+  it('creates nothing when an open axis is named with no value left', () => {
+    expect(planTagCreation('trip:!!!', FACETS)).toEqual({ kind: 'none' });
+  });
+
+  it('offers nothing to choose from when the taxonomy has no open axis', () => {
+    expect(planTagCreation('Cairns 2026', [{ facet: 'venue', kind: 'closed' }])).toEqual({
+      kind: 'none',
+    });
   });
 });

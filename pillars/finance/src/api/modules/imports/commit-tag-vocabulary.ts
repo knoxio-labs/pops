@@ -12,13 +12,16 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  *
  * So the answer depends on the facet's `kind` (see `src/db/tag-facets.ts`):
  *
- * - **closed** (`venue:` `occasion:` `contains:` `channel:` `fee:`) — the set is
+ * - **closed** (`venue:` `occasion:` `channel:` `fee:`) — the set is
  *   fixed. A value outside it is a validation error at commit, surfaced to the
  *   user, and never upserted. This is the same rule `ai-tag-validation.ts`
  *   applies to the categorizer, now applied to the human too.
- * - **open** (`trip:` `asset:` `project:` `hobby:` `tax:`, and any unprefixed
- *   tag) — a new value is legitimate: a deliberately created trip or asset must
- *   not be lost. It is upserted as part of the commit.
+ * - **open** (`contains:` `trip:` `asset:` `project:` `hobby:` `tax:`, and any
+ *   unprefixed tag) — a new value is legitimate: a deliberately created trip,
+ *   asset, or thing a purchase contained must not be lost. It is upserted as
+ *   part of the commit. `contains:` is open and still classified — the
+ *   categorizer keeps filling it from the vocabulary, this is only who may add
+ *   to that vocabulary.
  * - **marker** (`enrich:` `person:` `flag:`) — provenance the system writes.
  *   Admitted, because a contact's `defaultTags` legitimately carries `enrich:`
  *   values onto a transaction, but never upserted from a commit payload: a

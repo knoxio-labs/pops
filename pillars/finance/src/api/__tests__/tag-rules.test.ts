@@ -65,6 +65,29 @@ const addOp = {
   ],
 };
 
+describe('tagRules — facets', () => {
+  it('names who may mint a value on each facet', async () => {
+    const { facets } = await client().tagRules.facets();
+    const kindOf = (facet: string) => facets.find((entry) => entry.facet === facet)?.kind;
+
+    expect(kindOf('venue')).toBe('closed');
+    expect(kindOf('trip')).toBe('open');
+    expect(kindOf('enrich')).toBe('marker');
+  });
+
+  it('reports contains as open — the axis a human names a new value on', async () => {
+    const { facets } = await client().tagRules.facets();
+
+    expect(facets).toContainEqual({ facet: 'contains', kind: 'open' });
+  });
+
+  it('is not shadowed by the :id route', async () => {
+    const { facets } = await client().tagRules.facets();
+
+    expect(facets.length).toBeGreaterThan(0);
+  });
+});
+
 describe('tagRules — vocabulary & apply', () => {
   it('upserts accepted new tags on apply, ignoring blanks', async () => {
     const initial = (await client().tagRules.vocabulary()).tags;

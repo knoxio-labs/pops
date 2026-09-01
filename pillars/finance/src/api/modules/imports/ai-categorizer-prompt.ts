@@ -4,9 +4,9 @@
  * CP025/#3656) — the PII-safe transaction-data renderer (CF008) and the
  * entityName/tags/confidence rule blocks neither prompt shape varies.
  */
-import { CLOSED_TAG_FACETS, parseTagFacet } from '../../../db/tag-facets.js';
+import { CLASSIFIED_TAG_FACETS, parseTagFacet } from '../../../db/tag-facets.js';
 
-import type { ClosedTagFacet } from '../../../db/tag-facets.js';
+import type { ClassifiedTagFacet } from '../../../db/tag-facets.js';
 import type { CategorizerInput } from './ai-categorizer-types.js';
 
 /**
@@ -98,21 +98,21 @@ export class EmptyClosedVocabularyError extends Error {
   }
 }
 
-/** One closed facet's values, in the order they were loaded (most-used first). */
+/** One classified facet's values, in the order they were loaded (most-used first). */
 export interface ClosedFacetOptions {
-  facet: ClosedTagFacet;
+  facet: ClassifiedTagFacet;
   single: boolean;
   values: string[];
 }
 
 /**
- * Bucket the closed vocabulary into its facets, preserving the caller's order
+ * Bucket the offered vocabulary into its facets, preserving the caller's order
  * within each — `loadKnownTags` ranks by usage, so the values that carry the
  * corpus lead each list.
  *
  * A facet with no values is dropped rather than rendered empty: a field whose
- * only legal answer is null is noise in the prompt. A tag outside the closed
- * facets is ignored here; it should not have reached the prompt path at all,
+ * only legal answer is null is noise in the prompt. A tag outside the
+ * classified facets is ignored here; it should not have reached the prompt path at all,
  * and dropping it silently is safer than showing the model a value it must not
  * emit.
  *
@@ -133,7 +133,7 @@ export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
     else byFacet.set(facet, [value]);
   }
 
-  const options = CLOSED_TAG_FACETS.map(({ facet, single }) => ({
+  const options = CLASSIFIED_TAG_FACETS.map(({ facet, single }) => ({
     facet,
     single,
     values: byFacet.get(facet) ?? [],
@@ -141,7 +141,7 @@ export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
 
   if (options.length === 0) {
     throw new EmptyClosedVocabularyError(
-      'Closed tag vocabulary is empty — tag_vocabulary holds no active closed-facet tags. ' +
+      'Closed tag vocabulary is empty — tag_vocabulary holds no active value on a classified facet. ' +
         'A database built from migrations carries them; this one did not.'
     );
   }

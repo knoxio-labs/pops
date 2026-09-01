@@ -6,12 +6,13 @@
  * own `suggestTags` (which also takes the handle).
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
+import { CLASSIFIED_TAG_FACETS } from '../../../db/tag-facets.js';
 import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
 
 /**
- * Load the closed tag vocabulary, most-used value first. Called once per import
- * batch and threaded into the categorizer prompt and `buildSuggestedTags`, so
- * neither re-queries per transaction.
+ * Load the vocabulary of every classified facet, most-used value first. Called
+ * once per import batch and threaded into the categorizer prompt and
+ * `buildSuggestedTags`, so neither re-queries per transaction.
  *
  * Reads `tag_vocabulary` and nothing else (POPS-2606). It used to union in
  * every distinct tag on a stored transaction, and that union was a ratchet: a
@@ -19,13 +20,20 @@ import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
  * next prompt, with the same standing as a deliberate one. The vocabulary is
  * now the only thing that confers standing.
  *
- * Restricted to `closed` because these are the values the model is permitted to
- * write. `open` values are a human's to add and `marker` values are the
- * system's to derive; putting either in front of the categorizer would invite
- * exactly the guess the closed sets exist to prevent.
+ * Selected by facet rather than by kind: what the model may write is decided by
+ * {@link CLASSIFIED_TAG_FACETS}, not by who minted the value. `contains` is an
+ * open facet the categorizer still classifies into, so a kind filter would drop
+ * its values out of the prompt and silently stop the axis being filled. A facet
+ * outside that list stays out — an `open` value on an unclassified axis is a
+ * human's to add and a `marker` value is the system's to derive, and putting
+ * either in front of the categorizer would invite exactly the guess the listed
+ * sets exist to prevent.
  */
 export function loadKnownTags(db: FinanceDb): string[] {
-  return tagVocabularyService.listVocabularyTagsByKind(db, 'closed');
+  return tagVocabularyService.listVocabularyTagsForFacets(
+    db,
+    CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)
+  );
 }
 
 export interface BuildSuggestedTagsOptions {

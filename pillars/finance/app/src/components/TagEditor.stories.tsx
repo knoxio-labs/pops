@@ -142,3 +142,23 @@ export const WithAvailableTags: Story = {
     ],
   },
 };
+
+// Creating a value: type a name, then pick the axis it belongs to. Only the
+// open axes are offered — a closed one holds a fixed set.
+export const CreatingATag: Story = {
+  args: {
+    currentTags: ['venue:cafe'],
+    onSave: (tags) => {
+      console.log('Saved:', tags);
+    },
+    availableTags: ['venue:cafe', 'venue:bar', 'contains:coffee', 'trip:hunter-valley'],
+    facets: [
+      { facet: 'venue', kind: 'closed' },
+      { facet: 'occasion', kind: 'closed' },
+      { facet: 'contains', kind: 'open' },
+      { facet: 'trip', kind: 'open' },
+      { facet: 'project', kind: 'open' },
+      { facet: 'flag', kind: 'marker' },
+    ],
+  },
+};

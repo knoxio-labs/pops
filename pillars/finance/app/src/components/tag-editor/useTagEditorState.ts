@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { orderTagsByFacet, rankTagSuggestions, resolveTypedTag } from '../../lib/tags';
+import {
+  orderTagsByFacet,
+  planTagCreation,
+  rankTagSuggestions,
+  resolveTypedTag,
+  type TagCreationIntent,
+} from '../../lib/tags';
 import { SUGGESTION_LIMIT, type TagEditorProps } from './utils';
 
 export interface PanelHandlers {
@@ -8,6 +14,8 @@ export interface PanelHandlers {
   inputValue: string;
   /** Suggestions in display order, already capped at `SUGGESTION_LIMIT`. */
   filtered: string[];
+  /** What the typed text would create, driving the panel's create row. */
+  creation: TagCreationIntent;
   isSaving: boolean;
   isSuggesting: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -32,6 +40,7 @@ interface KeyDownDeps {
   state: CoreState;
   filtered: string[];
   availableTags: string[];
+  creation: TagCreationIntent;
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onCancel: () => void;
@@ -43,11 +52,21 @@ function completeFirstSuggestion({ filtered, onAddTag }: KeyDownDeps): void {
 }
 
 /**
- * Suggestions show the value alone, so typing what is on screen must reuse
- * the faceted tag behind it rather than mint a bare duplicate.
+ * Enter adds what the typed text unambiguously names, and nothing else.
+ *
+ * Suggestions show the value alone, so typing what is on screen must reuse the
+ * faceted tag behind it rather than mint a bare duplicate. A value that names
+ * nothing is not minted here either: it needs an axis, and the create row is
+ * where that is chosen. Enter used to store the raw string, which is how
+ * `Cairns 2026` became a tag no report could group.
  */
-function addTypedTag({ state, availableTags, onAddTag }: KeyDownDeps): void {
-  onAddTag(resolveTypedTag(state.inputValue, availableTags) ?? state.inputValue);
+function addTypedTag({ state, availableTags, creation, onAddTag }: KeyDownDeps): void {
+  const existing = resolveTypedTag(state.inputValue, availableTags);
+  if (existing !== undefined) {
+    onAddTag(existing);
+    return;
+  }
+  if (creation.kind === 'ready') onAddTag(creation.tag);
 }
 
 function removeLastTag({ state, onRemoveTag }: KeyDownDeps): void {
@@ -145,13 +164,17 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
 }
 
 export function useTagEditorState(props: TagEditorProps) {
-  const { currentTags, onSave, onSuggest, availableTags = [] } = props;
+  const { currentTags, onSave, onSuggest, availableTags = [], facets = [] } = props;
   const s = useCoreState(currentTags);
   // Relevance picks the shortlist, then facet grouping fixes its order, so
   // what Tab completes is always what the panel shows first.
   const filtered = orderTagsByFacet(
     rankTagSuggestions(s.inputValue, availableTags, s.tags).slice(0, SUGGESTION_LIMIT)
   ).map((parsed) => parsed.raw);
+  const creation =
+    resolveTypedTag(s.inputValue, availableTags) === undefined
+      ? planTagCreation(s.inputValue, facets)
+      : ({ kind: 'none' } as const);
   const { addTag, removeTag, handleCancel, handleSave, handleSuggest } = useTagActions({
     s,
     currentTags,
@@ -163,6 +186,7 @@ export function useTagEditorState(props: TagEditorProps) {
     tags: s.tags,
     inputValue: s.inputValue,
     filtered,
+    creation,
     isSaving: s.isSaving,
     isSuggesting: s.isSuggesting,
     inputRef: s.inputRef,
@@ -182,6 +206,7 @@ export function useTagEditorState(props: TagEditorProps) {
       },
       filtered,
       availableTags,
+      creation,
       onAddTag: addTag,
       onRemoveTag: removeTag,
       onCancel: handleCancel,

@@ -458,6 +458,8 @@ export function makeClient(app: Express) {
           r.post('/tag-rules/match-preview').send(body)
         ),
       vocabulary: () => call<{ tags: string[] }>((r) => r.get('/tag-rules/vocabulary')),
+      facets: () =>
+        call<{ facets: { facet: string; kind: string }[] }>((r) => r.get('/tag-rules/facets')),
       propose: (body: Record<string, unknown>) =>
         call<TagRuleProposal>((r) => r.post('/tag-rules/propose').send(body)),
       preview: (body: Record<string, unknown>) =>

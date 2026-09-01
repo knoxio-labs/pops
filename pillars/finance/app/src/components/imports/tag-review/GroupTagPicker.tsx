@@ -2,8 +2,9 @@
  * The vocabulary picker inside `GroupTagBar` — an input, a facet-grouped
  * dropdown, and the keyboard handling that keeps the two in agreement.
  */
-import { describeTag, groupTagsByFacet } from '../../../lib/tags';
+import { describeTag, groupTagsByFacet, type TagCreationIntent } from '../../../lib/tags';
 import { FacetHeading } from '../../tags/TagChip';
+import { TagCreationRow } from '../../tags/TagCreationRow';
 
 export interface PickerInputProps {
   inputValue: string;
@@ -16,6 +17,8 @@ export interface PickerInputProps {
    * creation of a near-duplicate.
    */
   exactMatch: string | undefined;
+  /** What the typed text would create, when it names no existing tag. */
+  creation: TagCreationIntent;
   showPicker: boolean;
   onAddTag: (tag: string) => void;
   setInputValue: (v: string) => void;
@@ -23,7 +26,7 @@ export interface PickerInputProps {
 }
 
 function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): void {
-  const { inputValue, filtered, exactMatch, onAddTag, setInputValue, setShowPicker } = props;
+  const { filtered, exactMatch, creation, onAddTag, setInputValue, setShowPicker } = props;
   if (e.key === 'Tab' && filtered.length > 0) {
     e.preventDefault();
     const first = filtered[0];
@@ -34,12 +37,12 @@ function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): v
   }
   if (e.key === 'Enter') {
     e.preventDefault();
-    if (exactMatch) {
-      onAddTag(exactMatch);
-    } else if (inputValue.trim()) {
-      onAddTag(inputValue.trim());
-      setInputValue('');
-    }
+    // A bare value is not stored on Enter any more: it names no axis, and the
+    // create row below is where one is chosen. Only a tag that already exists,
+    // or typed text that already names an open axis, is unambiguous enough.
+    const resolved = exactMatch ?? (creation.kind === 'ready' ? creation.tag : undefined);
+    if (resolved === undefined) return;
+    onAddTag(resolved);
     setShowPicker(false);
     setInputValue('');
     return;
@@ -68,7 +71,7 @@ function PickerOption({ tag, onPick }: { tag: string; onPick: (tag: string) => v
   );
 }
 
-function PickerDropdown({
+function PickerOptions({
   filtered,
   onPick,
 }: {
@@ -76,7 +79,7 @@ function PickerDropdown({
   onPick: (tag: string) => void;
 }) {
   return (
-    <div className="absolute top-full left-0 mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-32 max-h-40 overflow-y-auto">
+    <>
       {groupTagsByFacet(filtered).map((group) => (
         <div key={group.label} role="group" aria-label={group.label}>
           <FacetHeading className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold px-3 pt-1.5 pb-0.5">
@@ -87,15 +90,23 @@ function PickerDropdown({
           ))}
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
 export function PickerInput(
   props: PickerInputProps & { containerRef: React.RefObject<HTMLDivElement | null> }
 ) {
-  const { containerRef, inputValue, setInputValue, setShowPicker, showPicker, filtered, onAddTag } =
-    props;
+  const {
+    containerRef,
+    inputValue,
+    setInputValue,
+    setShowPicker,
+    showPicker,
+    filtered,
+    creation,
+    onAddTag,
+  } = props;
   const handlePick = (tag: string) => {
     onAddTag(tag);
     setShowPicker(false);
@@ -114,8 +125,15 @@ export function PickerInput(
         placeholder="+ Add tag…"
         className="text-xs border border-dashed border-border rounded-full px-2 py-0.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-24"
       />
-      {showPicker && filtered.length > 0 && (
-        <PickerDropdown filtered={filtered} onPick={handlePick} />
+      {showPicker && (filtered.length > 0 || creation.kind !== 'none') && (
+        <div className="absolute top-full left-0 mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-32 max-h-40 overflow-y-auto">
+          {filtered.length > 0 && <PickerOptions filtered={filtered} onPick={handlePick} />}
+          {creation.kind !== 'none' && (
+            <div className="px-3 py-1.5 border-t first:border-t-0">
+              <TagCreationRow creation={creation} onAddTag={handlePick} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

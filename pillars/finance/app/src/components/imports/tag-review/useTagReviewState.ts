@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { unwrap } from '../../../finance-api-helpers.js';
-import { transactionsAvailableTags } from '../../../finance-api/index.js';
+import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
 import { groupByEntity } from './tagReviewUtils';
 import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
@@ -20,6 +20,7 @@ import type {
   TagRuleImpactItem,
 } from '@pops/finance';
 
+import type { TagFacetOption } from '../../../lib/tags';
 import type { ImportStore as ImportStoreType } from '../../../store/import-store-types';
 import type { ConfirmedGroup } from './tagReviewUtils';
 
@@ -27,6 +28,8 @@ export interface UseTagReviewStateOutput {
   confirmedTransactions: ConfirmedTransaction[];
   groups: ConfirmedGroup[];
   availableTags: string[];
+  /** The tag taxonomy, for the pickers that mint a value on one of its axes. */
+  facets: TagFacetOption[];
   localTags: Record<string, string[]>;
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   updateTag: (checksum: string, tags: string[]) => void;
@@ -97,6 +100,22 @@ function useAvailableTags(localTags: Record<string, string[]>): string[] {
   }, [serverTags, localTags]);
 }
 
+/**
+ * The taxonomy the pickers offer to create tags on.
+ *
+ * Fetched rather than hard-coded so a facet added to the pillar reaches the UI
+ * without a matching edit here; an unanswered query yields no axes, which the
+ * pickers read as "nothing may be created yet" rather than falling back to a
+ * guessed list.
+ */
+function useTagFacets(): TagFacetOption[] {
+  const { data } = useQuery({
+    queryKey: ['finance', 'tagRules', 'facets'],
+    queryFn: async () => unwrap(await tagRulesFacets()),
+  });
+  return data?.facets ?? [];
+}
+
 function useTagRuleHandler(args: {
   addPendingTagRuleChangeSet: ImportStoreType['addPendingTagRuleChangeSet'];
   dialogGroupNameRef: React.MutableRefObject<string | null>;
@@ -147,6 +166,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
 
   const groups = useMemo(() => groupByEntity(confirmedTransactions), [confirmedTransactions]);
   const availableTags = useAvailableTags(localTags);
+  const facets = useTagFacets();
 
   const { updateTag, handleAcceptAll, handleApplyGroupTags, unappliedSuggestionCount } =
     useTagActions({
@@ -180,6 +200,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     confirmedTransactions,
     groups,
     availableTags,
+    facets,
     localTags,
     suggestedTagMeta,
     updateTag,

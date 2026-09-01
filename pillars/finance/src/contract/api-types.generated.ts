@@ -588,6 +588,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/tag-rules/facets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The tag namespaces and who may mint a value on each */
+    get: operations['tagRules.facets'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tag-rules/match-preview': {
     parameters: {
       query?: never;
@@ -6300,6 +6317,32 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'tagRules.facets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            facets: {
+              facet: string;
+              /** @enum {string} */
+              kind: 'closed' | 'open' | 'marker';
+            }[];
           };
         };
       };

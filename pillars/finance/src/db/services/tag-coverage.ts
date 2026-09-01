@@ -17,10 +17,10 @@
 import { isSpendType } from '../../contract/corrections-constants.js';
 import { transactions } from '../schema.js';
 import {
-  CLOSED_TAG_FACETS,
+  CLASSIFIED_TAG_FACETS,
   parseStoredTags,
   TAG_FACET_SEPARATOR,
-  type ClosedTagFacet,
+  type ClassifiedTagFacet,
 } from '../tag-facets.js';
 import {
   FACET_EXPECTATIONS,
@@ -43,7 +43,7 @@ export type { FacetExclusionReason } from './tag-coverage-expectations.js';
 export type { TagVocabularySnapshot, UnknownTagUsage } from './tag-coverage-vocabulary.js';
 /** Coverage of one closed facet across the ledger. */
 export interface FacetCoverage {
-  facet: ClosedTagFacet;
+  facet: ClassifiedTagFacet;
   /** True when POPS-2607's acceptance criteria require this facet. */
   required: boolean;
   /** Rows the facet is expected on, after the exclusions below. */
@@ -77,7 +77,7 @@ export interface DescriptorGap {
   /** How many transactions share this descriptor. */
   transactions: number;
   /** Required facets absent from at least one of those transactions. */
-  missingFacets: ClosedTagFacet[];
+  missingFacets: ClassifiedTagFacet[];
 }
 
 /** The whole picture, for a before/after record on the ticket. */
@@ -173,12 +173,15 @@ function buildHistogram(rows: ScannedRow[]): { tags: number; transactions: numbe
  * its rows is missing a required facet it is addressable for.
  */
 function buildGaps(rows: ScannedRow[]): DescriptorGap[] {
-  const byDescription = new Map<string, { transactions: number; missing: Set<ClosedTagFacet> }>();
+  const byDescription = new Map<
+    string,
+    { transactions: number; missing: Set<ClassifiedTagFacet> }
+  >();
 
   for (const row of rows) {
     let entry = byDescription.get(row.description);
     if (!entry) {
-      entry = { transactions: 0, missing: new Set<ClosedTagFacet>() };
+      entry = { transactions: 0, missing: new Set<ClassifiedTagFacet>() };
       byDescription.set(row.description, entry);
     }
     entry.transactions += 1;
@@ -224,7 +227,7 @@ export function measureTagCoverage(db: FinanceDb, vocabulary: TagVocabularySnaps
     }));
 
   const singleByFacet = new Map<string, boolean>(
-    CLOSED_TAG_FACETS.map((closed) => [closed.facet, closed.single])
+    CLASSIFIED_TAG_FACETS.map((closed) => [closed.facet, closed.single])
   );
 
   return {

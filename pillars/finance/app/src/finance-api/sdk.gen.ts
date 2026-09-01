@@ -132,6 +132,8 @@ import type {
   TagRulesDisableData,
   TagRulesDisableErrors,
   TagRulesDisableResponses,
+  TagRulesFacetsData,
+  TagRulesFacetsResponses,
   TagRulesGetData,
   TagRulesGetErrors,
   TagRulesGetResponses,
@@ -926,6 +928,17 @@ export const tagRulesApply = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options?.headers,
     },
+  });
+
+/**
+ * The tag namespaces and who may mint a value on each
+ */
+export const tagRulesFacets = <ThrowOnError extends boolean = false>(
+  options?: Options<TagRulesFacetsData, ThrowOnError>
+): RequestResult<TagRulesFacetsResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<TagRulesFacetsResponses, unknown, ThrowOnError>({
+    url: '/tag-rules/facets',
+    ...options,
   });
 
 /**

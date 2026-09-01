@@ -1,42 +1,48 @@
 /**
- * Validation of the categorizer's tag output against the closed vocabulary
- * (POPS-2606).
+ * Validation of the categorizer's tag output against the vocabulary it was
+ * offered (POPS-2606).
  *
- * The model is asked to classify into closed namespaces, and this is the point
+ * The model is asked to classify into the listed values, and this is the point
  * where "asked to" becomes "may only". Every value it returns is checked
- * against the vocabulary the prompt was built from; a value outside the closed
- * set for its facet is dropped, counted and logged, never stored. That is what
+ * against the vocabulary the prompt was built from; a value the prompt did not
+ * list for its facet is dropped, counted and logged, never stored. That is what
  * stops the vocabulary ratcheting: before this, a coined tag survived one
  * commit and became permanent vocabulary with the same standing as a
  * deliberate one.
  *
+ * The gate is the *listed set*, not the facet's kind. `contains` is an open
+ * facet — a human mints values on it — and the model still may not, because
+ * minting is a deliberate act and a classifier reaching for an unlisted value
+ * is guessing whether or not someone else could have added it.
+ *
  * What is rejected, and why each case is separate:
  *
- * - a value not in its facet's closed set — the case the ticket exists for;
- * - a facet that is not closed at all, including every `open` facet and every
- *   `marker` one. A `enrich:`/`person:`/`flag:` value is invalid *regardless of
- *   whether the value exists*, because those are written by the system from
- *   provenance and a model asserting one is asserting provenance it cannot
- *   have;
+ * - a value the prompt did not list for its facet — the case the ticket exists
+ *   for;
+ * - a facet the categorizer does not classify into at all. A
+ *   `enrich:`/`person:`/`flag:` value is invalid *regardless of whether the
+ *   value exists*, because those are written by the system from provenance and
+ *   a model asserting one is asserting provenance it cannot have; a `trip:` or
+ *   `project:` value is a human's deliberate choice, not a classification;
  * - more than one value on a single-valued facet — cardinality is enforced
  *   here on the write path, not as a constraint over stored rows, which
  *   already hold violations (POPS-2607).
  */
 import {
-  CLOSED_TAG_FACETS,
+  CLASSIFIED_TAG_FACETS,
   exceedsFacetCardinality,
   formatTag,
-  isClosedTagFacet,
+  isClassifiedTagFacet,
   parseTagFacet,
   tagFacetKind,
 } from '../../../db/tag-facets.js';
 
 /** Why a returned value was refused. */
 export type TagRejectionReason =
-  /** The facet is closed but does not hold this value. */
-  | 'value-not-in-closed-set'
-  /** The facet is `open` or `marker` — not the model's to write. */
-  | 'facet-not-closed'
+  /** The facet is classified but the prompt did not list this value. */
+  | 'value-not-listed'
+  /** The categorizer does not classify into this facet at all. */
+  | 'facet-not-classified'
   /**
    * A second value on a facet that holds one. The first valid value is kept
    * and each later one is refused, so a reply of two occasions yields the
@@ -54,7 +60,7 @@ export interface RejectedTagValue {
 }
 
 export interface TagValidationResult {
-  /** The surviving tags as stored strings, in closed-facet order. */
+  /** The surviving tags as stored strings, in classified-facet order. */
   tags: string[];
   rejected: RejectedTagValue[];
 }
@@ -72,17 +78,17 @@ function asStringList(raw: unknown): string[] {
 }
 
 /**
- * Index the closed vocabulary as `facet -> lowercased value -> stored tag`.
+ * Index the offered vocabulary as `facet -> lowercased value -> stored tag`.
  *
  * Lowercasing only the lookup key means a reply of `Bar` resolves to the stored
  * `venue:bar` — forgiving about the form of an answer, unforgiving about
  * whether it is one of the available answers.
  */
-function indexClosedVocabulary(knownTags: readonly string[]): Map<string, Map<string, string>> {
+function indexOfferedVocabulary(knownTags: readonly string[]): Map<string, Map<string, string>> {
   const index = new Map<string, Map<string, string>>();
   for (const tag of knownTags) {
     const { facet, value } = parseTagFacet(tag);
-    if (!isClosedTagFacet(facet)) continue;
+    if (!isClassifiedTagFacet(facet)) continue;
     let byValue = index.get(facet);
     if (!byValue) {
       byValue = new Map<string, string>();
@@ -122,7 +128,7 @@ function validateFacetValues(pass: FacetPass): void {
   for (const value of raw) {
     const resolved = byValue?.get(stripOwnFacetPrefix(facet, value).toLowerCase());
     if (resolved === undefined) {
-      rejected.push({ facet, value, reason: 'value-not-in-closed-set' });
+      rejected.push({ facet, value, reason: 'value-not-listed' });
       continue;
     }
     // Resolve before counting: a value repeated is one value said twice, not a
@@ -140,35 +146,35 @@ function validateFacetValues(pass: FacetPass): void {
 
 /**
  * Validate a categorizer reply's tag output against `knownTags` — the same
- * closed vocabulary the prompt was rendered from.
+ * vocabulary the prompt was rendered from.
  *
  * Reads both the per-facet fields of a v2 reply (`{"venue": "bar", "contains":
  * ["food"]}`) and the legacy flat `tags` array, so a model that ignores the new
  * shape is validated rather than trusted. Everything that survives is returned
- * as a stored `facet:value` string in closed-facet order; everything that does
+ * as a stored `facet:value` string in classified-facet order; everything that does
  * not is returned in `rejected` for the caller to count and log.
  */
 export function validateAiTags(
   fields: RawTagFields,
   knownTags: readonly string[]
 ): TagValidationResult {
-  const index = indexClosedVocabulary(knownTags);
+  const index = indexOfferedVocabulary(knownTags);
   const tags: string[] = [];
   const rejected: RejectedTagValue[] = [];
 
-  for (const { facet, single } of CLOSED_TAG_FACETS) {
+  for (const { facet, single } of CLASSIFIED_TAG_FACETS) {
     validateFacetValues({ facet, single, raw: asStringList(fields[facet]), index, tags, rejected });
   }
 
   for (const entry of asStringList(fields.tags)) {
     const { facet, value } = parseTagFacet(entry);
-    if (!isClosedTagFacet(facet)) {
-      rejected.push({ facet, value, reason: 'facet-not-closed' });
+    if (!isClassifiedTagFacet(facet)) {
+      rejected.push({ facet, value, reason: 'facet-not-classified' });
       continue;
     }
     const resolved = index.get(facet)?.get(value.toLowerCase());
     if (resolved === undefined) {
-      rejected.push({ facet, value, reason: 'value-not-in-closed-set' });
+      rejected.push({ facet, value, reason: 'value-not-listed' });
       continue;
     }
     if (tags.includes(resolved)) continue;
@@ -186,7 +192,7 @@ export function validateAiTags(
  * Log the refused values for one reply.
  *
  * Logged rather than swallowed because a value the model keeps reaching for is
- * evidence the closed vocabulary is missing something — which is a human
+ * evidence the offered vocabulary is missing something — which is a human
  * decision, and can only be made from a record of what was asked for. The
  * merchant description is deliberately absent: this line carries the model's
  * vocabulary, not the transaction.
