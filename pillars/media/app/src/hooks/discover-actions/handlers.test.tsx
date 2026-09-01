@@ -22,6 +22,7 @@ vi.mock('../../media-api/index.js', () => ({
   watchHistoryLog: vi.fn(),
 }));
 
+import { MediaApiError } from '../../media-api-helpers.js';
 import { useDiscoverMutations } from './discoverMutations';
 import { useAddToLibrary, useNotInterested } from './handlers';
 import { usePendingSet } from './usePendingSet';
@@ -70,6 +71,22 @@ describe('discover action error toasts', () => {
     expect(serverErrorToast).not.toEqual(notFoundToast);
     expect(serverErrorToast).toMatch(/unavailable/i);
     expect(notFoundToast).toMatch(/not found/i);
+  });
+
+  it('logs the raw error to the console for browser-side triage', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderAddToLibrary();
+    libraryAddMovie.mockResolvedValueOnce(failure(500, 'boom'));
+
+    await result.current.run(11);
+
+    const [, logged] =
+      consoleError.mock.calls.find(
+        ([label]) => label === 'discover action failed: add to library'
+      ) ?? [];
+    expect(logged).toBeInstanceOf(MediaApiError);
+    expect((logged as MediaApiError).status).toBe(500);
+    consoleError.mockRestore();
   });
 
   it('surfaces the server message and status for other failures', async () => {
