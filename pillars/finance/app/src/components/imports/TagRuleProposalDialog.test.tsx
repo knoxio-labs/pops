@@ -292,6 +292,8 @@ describe('TagRuleProposalDialog', () => {
 
     const classes = (footer as HTMLElement).className.split(/\s+/).filter(Boolean);
     expect(classes).toContain('gap-2');
+    // The regression was an `sm:gap-0` override cancelling the base gap at sm and up.
+    expect(classes).not.toContain('sm:gap-0');
     expect(classes.filter((c) => /(^|:)gap-0$/.test(c))).toEqual([]);
   });
 });
