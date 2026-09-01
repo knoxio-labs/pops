@@ -13,15 +13,16 @@ name: Agent Review
 # than skipping the job. See that file's header.
 #
 # The guards live here rather than in `quality.yml` because each is a Node
-# script reading the source tree — one job, one checkout, nine invariants.
+# script reading the source tree — one job, one checkout, ten invariants.
 # Every guard runs its own `--self-test` first, so one that has quietly stopped
 # catching anything fails the job instead of passing.
 #
-# THIS JOB IS TIER B and therefore installs the workspace. Four of the nine
-# guards read structured config through a real parser — `check-mise-tool-
-# overrides` and `check-node-pin` (TOML), `check-homelab-service-isolation`
-# (compose YAML), `check-mise-setup-single-source` (workflow YAML) — and a
-# parser needs `node_modules` on disk. The other five
+# THIS JOB IS TIER B and therefore installs the workspace. Five of the ten
+# guards read structured config or source through a real parser — `check-mise-
+# tool-overrides` and `check-node-pin` (TOML), `check-homelab-service-isolation`
+# (compose YAML), `check-mise-setup-single-source` (workflow YAML),
+# `check-writable-path-defaults` (the TypeScript AST) — and a parser needs
+# `node_modules` on disk. The other five
 # read JSON, TypeScript source or Markdown and would run fine without the
 # install; they ride along because the tier is a property of the JOB, not of
 # each guard, and splitting the job would split the required `agent-review`

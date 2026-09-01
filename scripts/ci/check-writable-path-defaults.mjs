@@ -57,6 +57,13 @@ const PILLARS_DIR = join(repoRoot, 'pillars');
 const PATH_ENV_SUFFIX = /_(DIR|PATH|ROOT)$/;
 
 /**
+ * Shape of an environment variable NAME, as opposed to a value: SCREAMING_SNAKE
+ * and nothing else. Used to recognise a name handed to a lookup wrapper, where
+ * there is no `process.env` node to match on.
+ */
+const ENV_VAR_NAME = /^[A-Z][A-Z0-9_]*$/;
+
+/**
  * Classify a string literal as a filesystem path, or reject it as not one.
  *
  * Rejects URLs and anything without a path separator, so a function that
@@ -155,7 +162,18 @@ function scanScope(scope, constants) {
     const envName = envVarNameOf(node, constants);
     if (envName !== null && PATH_ENV_SUFFIX.test(envName)) envVars.add(envName);
 
-    if (ts.isStringLiteral(node)) noteLiteral(node.text);
+    if (ts.isStringLiteral(node)) {
+      // A bare `'MEDIA_IMAGES_DIR'` is a variable NAME, not a path. Matching it
+      // is what lets this guard see a resolver that reads through a wrapper:
+      // `getEnv('MEDIA_IMAGES_DIR')` has no `process.env` node to match on, and
+      // media — the pillar that produced POPS-2735 — is written exactly that
+      // way, so the originating case was invisible until this branch existed.
+      if (ENV_VAR_NAME.test(node.text) && PATH_ENV_SUFFIX.test(node.text)) {
+        envVars.add(node.text);
+      } else {
+        noteLiteral(node.text);
+      }
+    }
 
     // `join(process.cwd(), 'data', 'engrams')` is cwd-relative however it is
     // spelled, so it counts as a relative default even with no `./` literal.
@@ -504,6 +522,18 @@ export function getMediaImagesDir(): string {
 }
 `;
 
+/**
+ * media's shape: the variable name reaches a wrapper as a string, so there is
+ * no `process.env` node anywhere in the resolver. This is how the pillar that
+ * produced POPS-2735 stayed invisible to the first version of this guard.
+ */
+const FIXTURE_WRAPPED_ENV = `
+const DEFAULT_MEDIA_IMAGES_DIR = './data/media/images';
+export function getMediaImagesDir(): string {
+  return getEnv('MEDIA_IMAGES_DIR') ?? DEFAULT_MEDIA_IMAGES_DIR;
+}
+`;
+
 /** The SQLite ladder: a pillar-specific var, then a shared one, then a default. */
 const FIXTURE_LADDER = `
 export const DEFAULT_FOOD_SQLITE_PATH = './data/food.db';
@@ -666,6 +696,13 @@ function selfTest() {
   );
   const scansEachResolverOnce = arrowConst.findings.length === 1 && arrowConst.resolversSeen === 1;
 
+  // A resolver that reads through a lookup wrapper must still be seen.
+  const wrapped = findRelativeDefaults('wrapped.ts', FIXTURE_WRAPPED_ENV).findings;
+  const seesWrappedEnvReads =
+    wrapped.length === 1 &&
+    wrapped[0].envVars.includes('MEDIA_IMAGES_DIR') &&
+    evaluateFinding(wrapped[0], good).ok;
+
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
   const runOk = parseArgs([]).kind === 'run';
@@ -688,6 +725,7 @@ function selfTest() {
     countsResolversSeen &&
     catchesEmptyDockerfile &&
     scansEachResolverOnce &&
+    seesWrappedEnvReads &&
     floorIsAboveZero &&
     realScanClearsFloor &&
     helpOk &&
@@ -713,6 +751,7 @@ function selfTest() {
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);
     console.error(`  scans each resolver exactly once:    ${scansEachResolverOnce}`);
+    console.error(`  sees env reads through a wrapper:       ${seesWrappedEnvReads}`);
     console.error(`  discovery floor is above zero:       ${floorIsAboveZero}`);
     console.error(
       `  real scan clears the floor:          ${realScanClearsFloor} ` +
