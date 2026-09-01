@@ -1,13 +1,15 @@
 /**
  * Browser-safe hero-image helpers: constants + filename validators + URL
- * builder. NO `node:path`, NO `process.env`, NO filesystem — those live in
- * `./hero-paths.node.ts` so this module can be imported by browser bundles
- * (e.g. `HeroImageUploader`) without breaking Vite resolution.
+ * builder. NO `node:path`, NO `process.env`, NO filesystem — this module is
+ * imported by browser bundles (e.g. `HeroImageUploader`) and anything
+ * Node-only would break Vite resolution.
  *
- * Layout convention (defined here so both the browser URL builder and the
- * Node-side absolute-path helpers agree on names):
+ * Filesystem resolution lives server-side in
+ * `pillars/food/src/api/modules/hero-image/paths.ts`, which owns
+ * `FOOD_RECIPES_DIR` and every absolute path derived from it. This file
+ * knows the layout only well enough to build URLs:
  *
- *   ${FOOD_RECIPES_DIR}/<recipe_id>/
+ *   <recipe_id>/
  *     hero.<ext>          original upload (jpg|png|webp)
  *     hero-thumb.webp     320px wide
  *     hero-card.webp      640px wide
@@ -15,9 +17,6 @@
  * `recipes.hero_image_path` stores the relative path of the original
  * (`<recipe_id>/hero.<ext>`); thumbnail paths are derived at read time.
  */
-
-/** Hard-coded default for `FOOD_RECIPES_DIR`. */
-export const DEFAULT_FOOD_RECIPES_DIR = './data/food/recipes';
 
 /** File extensions allowed for the original hero upload. */
 export const HERO_ORIGINAL_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const;
