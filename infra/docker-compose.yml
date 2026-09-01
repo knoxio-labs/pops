@@ -112,11 +112,19 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+      # Uploaded item photos and documents. Both roots are ENV'd in the image
+      # (POPS-2737) so a missing mount degrades to container-local rather than
+      # EACCES — but without these volumes every upload is lost on the next
+      # image roll.
+      - inventory-images-data:/data/inventory/images
+      - inventory-documents-data:/data/inventory/documents
     environment:
       NODE_ENV: production
       PORT: '3002'
       INVENTORY_SQLITE_PATH: /data/sqlite/inventory.db
       INVENTORY_SELF_BASE_URL: http://inventory-api:3002
+      INVENTORY_IMAGES_DIR: /data/inventory/images
+      INVENTORY_DOCUMENTS_DIR: /data/inventory/documents
       POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3002'
@@ -297,6 +305,9 @@ services:
       # writes downloaded media here and the API serves it back; both must
       # resolve the SAME path or reads/writes silently miss each other.
       - food-ingest-data:/data/food/ingest
+      # Recipe hero images, written by the API on upload and served back by
+      # the static route. Container-local without this mount (POPS-2737).
+      - food-recipes-data:/data/food/recipes
     environment:
       NODE_ENV: production
       PORT: '3005'
@@ -307,6 +318,7 @@ services:
       AI_API_URL: http://ai-api:3008
       POPS_REGISTRY_ENABLED: 'true'
       FOOD_INGEST_DIR: /data/food/ingest
+      FOOD_RECIPES_DIR: /data/food/recipes
     expose:
       - '3005'
     depends_on:
@@ -1287,6 +1299,12 @@ volumes:
     name: pops-cerebrum-engrams-data
   media-images-data:
     name: pops-media-images-data
+  food-recipes-data:
+    name: pops-food-recipes-data
+  inventory-images-data:
+    name: pops-inventory-images-data
+  inventory-documents-data:
+    name: pops-inventory-documents-data
   # Per-pillar volumes for the litestream sidecars above (ADR-039 workstream
   # S11). Reference/opt-in only — nothing mounts these into a pillar API
   # container yet, see the sidecars' section comment.

@@ -90,6 +90,12 @@ RUN mkdir -p /data/sqlite /data/cerebrum/engrams && chown -R node:node /data
 # /data/sqlite/cerebrum.db.
 ENV SQLITE_PATH=/data/sqlite/pops.db
 
+# The engram root, for the same reason: the code default resolves under the
+# process cwd (`join(process.cwd(), 'data', 'engrams')`), /app is root-owned,
+# and the process runs as `node` — so an unset variable makes reclassify and
+# link edits EACCES. Glia and reflex read their TOML from this root too.
+ENV CEREBRUM_ENGRAMS_DIR=/data/cerebrum/engrams
+
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/cerebrum/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/cerebrum/migrations ./migrations

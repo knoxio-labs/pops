@@ -81,14 +81,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 # image's contents at the mount point, ownership included — so a directory
 # missing here arrives root-owned on the volume's FIRST EVER mount and the
 # pillar cannot write there. `food-ingest-data` fails the same way as the
-# database volume, just later: at the first ingest rather than at boot.
-RUN mkdir -p /data/sqlite /data/food/ingest && chown -R node:node /data
+# database volume, just later: at the first ingest rather than at boot, and
+# `food-recipes-data` at the first hero image.
+RUN mkdir -p /data/sqlite /data/food/ingest /data/food/recipes && chown -R node:node /data
 
 # The image's own database default, so it boots with no environment at all.
 # `SQLITE_PATH` is the lowest-precedence path the resolver reads (see
 # pillars/food/src/api/food-sqlite-path.ts), so compose's per-pillar
 # FOOD_SQLITE_PATH still wins; on its own it lands on /data/sqlite/food.db.
 ENV SQLITE_PATH=/data/sqlite/pops.db
+
+# The media roots, for the same reason the database has one: both code
+# defaults (`./data/food/recipes`, `./data/food/ingest`) are relative to the
+# working directory, /app is root-owned, and the process runs as `node` — so
+# an unset variable makes the first `mkdir` EACCES on `mkdir 'data'` rather
+# than writing anywhere. Compose sets both today, but the compose that runs
+# the fleet lives in another repository, so the image must stand alone.
+ENV FOOD_RECIPES_DIR=/data/food/recipes
+ENV FOOD_INGEST_DIR=/data/food/ingest
 
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/food/dist ./dist
