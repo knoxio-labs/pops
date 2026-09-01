@@ -575,45 +575,92 @@ export function scanPillar({ pillar, srcFiles, appFiles, dockerfile }) {
 }
 
 /**
- * Run the guard over the repository.
+ * Discover pillar directory names.
  *
- * @returns {{ violations: Violation[], pillarsScanned: number, resolversSeen: number }}
+ * Not an existsSync skip: a missing `pillars/` tree must reach the discovery
+ * floor as zero and be reported, never crash with a readdir stack trace and
+ * never be swallowed into a clean result (ADR-045).
+ *
+ * @returns {string[]}
  */
-export function run() {
-  /** @type {Violation[]} */
-  const violations = [];
-  // Not an existsSync skip: a missing pillars/ tree must reach the discovery
-  // floor as zero and be reported, never crash with a readdir stack trace and
-  // never be swallowed into a clean result (ADR-045).
-  const pillars = existsSync(PILLARS_DIR)
+function defaultListPillars() {
+  return existsSync(PILLARS_DIR)
     ? readdirSync(PILLARS_DIR, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name)
         .toSorted()
     : [];
+}
 
+/**
+ * Read one pillar's runtime sources from disk.
+ *
+ * @param {string} pillar
+ * @param {'src' | 'app'} tree
+ * @returns {{ file: string, source: string }[]}
+ */
+function defaultLoadSources(pillar, tree) {
+  const dir =
+    tree === 'src' ? join(PILLARS_DIR, pillar, 'src') : join(PILLARS_DIR, pillar, 'app', 'src');
+  return listRuntimeSources(dir).map((path) => ({
+    file: path.slice(repoRoot.length + 1),
+    source: readFileSync(path, 'utf8'),
+  }));
+}
+
+/**
+ * Read and parse one pillar's Dockerfile, or null when it has none.
+ *
+ * @param {string} pillar
+ * @returns {{ env: Map<string, string>, created: string[], chowned: string[] } | null}
+ */
+function defaultLoadDockerfile(pillar) {
+  const dockerfilePath = join(PILLARS_DIR, pillar, 'Dockerfile');
+  return existsSync(dockerfilePath) ? parseDockerfile(readFileSync(dockerfilePath, 'utf8')) : null;
+}
+
+/**
+ * Run the guard over the repository.
+ *
+ * The three readers are injectable so the self-test can drive THIS function —
+ * skip guard and all — over a synthetic tree. Testing the extracted
+ * `scanPillar` instead is not equivalent: the bug that shipped lived in the
+ * `continue` below, and a test that calls `scanPillar` directly stays green
+ * while that line is wrong.
+ *
+ * @param {{
+ *   listPillars?: () => string[],
+ *   loadSources?: (pillar: string, tree: 'src' | 'app') => { file: string, source: string }[],
+ *   loadDockerfile?: (pillar: string) => { env: Map<string, string>, created: string[], chowned: string[] } | null,
+ * }} [deps]
+ * @returns {{ violations: Violation[], pillarsScanned: number, resolversSeen: number }}
+ */
+export function run(deps = {}) {
+  const {
+    listPillars = defaultListPillars,
+    loadSources = defaultLoadSources,
+    loadDockerfile = defaultLoadDockerfile,
+  } = deps;
+
+  /** @type {Violation[]} */
+  const violations = [];
   let pillarsScanned = 0;
   let resolversSeen = 0;
 
-  /** @param {string} dir @returns {{ file: string, source: string }[]} */
-  const load = (dir) =>
-    listRuntimeSources(dir).map((path) => ({
-      file: path.slice(repoRoot.length + 1),
-      source: readFileSync(path, 'utf8'),
-    }));
-
-  for (const pillar of pillars) {
-    const srcFiles = load(join(PILLARS_DIR, pillar, 'src'));
-    const appFiles = load(join(PILLARS_DIR, pillar, 'app', 'src'));
+  for (const pillar of listPillars()) {
+    const srcFiles = loadSources(pillar, 'src');
+    const appFiles = loadSources(pillar, 'app');
+    // Both trees, not just `src`: a pillar with no backend still has an app
+    // tree that must never resolve a filesystem path.
     if (srcFiles.length === 0 && appFiles.length === 0) continue;
     pillarsScanned += 1;
 
-    const dockerfilePath = join(PILLARS_DIR, pillar, 'Dockerfile');
-    const dockerfile = existsSync(dockerfilePath)
-      ? parseDockerfile(readFileSync(dockerfilePath, 'utf8'))
-      : null;
-
-    const scanned = scanPillar({ pillar, srcFiles, appFiles, dockerfile });
+    const scanned = scanPillar({
+      pillar,
+      srcFiles,
+      appFiles,
+      dockerfile: loadDockerfile(pillar),
+    });
     violations.push(...scanned.violations);
     resolversSeen += scanned.resolversSeen;
   }
@@ -884,14 +931,31 @@ function selfTest() {
 
   // A pillar with no backend sources at all must still have its app tree
   // scanned. This combination does not exist in the repo today, so only a
-  // synthetic input can hold the guard to its own "regardless" wording.
-  const appOnlyPillar = scanPillar({
-    pillar: 'ghost',
-    srcFiles: [],
-    appFiles: [{ file: 'pillars/ghost/app/src/paths.ts', source: FIXTURE_POSTER_CACHE }],
-    dockerfile: null,
+  // synthetic tree can hold the guard to its own "regardless" wording — and
+  // it is driven through run() rather than scanPillar, because the bug being
+  // pinned lived in run()'s own skip guard. A scanPillar-only test stays green
+  // while that `continue` is wrong, which is the whole failure this case
+  // exists to prevent.
+  const appOnlyRun = run({
+    listPillars: () => ['ghost'],
+    loadSources: (_pillar, tree) =>
+      tree === 'app'
+        ? [{ file: 'pillars/ghost/app/src/paths.ts', source: FIXTURE_POSTER_CACHE }]
+        : [],
+    loadDockerfile: () => null,
   });
-  const scansAppTreeWithoutSrc = appOnlyPillar.violations.length === 1;
+  const scansAppTreeWithoutSrc =
+    appOnlyRun.violations.length === 1 && appOnlyRun.pillarsScanned === 1;
+
+  // The mirror case: a pillar with neither tree is skipped, so the injected
+  // readers cannot make every pillar count and hide a discovery collapse.
+  const emptyPillarRun = run({
+    listPillars: () => ['ghost'],
+    loadSources: () => [],
+    loadDockerfile: () => null,
+  });
+  const skipsEmptyPillar =
+    emptyPillarRun.pillarsScanned === 0 && emptyPillarRun.violations.length === 0;
 
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
@@ -922,6 +986,7 @@ function selfTest() {
     scansTsx &&
     tsxNeedsItsExtension &&
     scansAppTreeWithoutSrc &&
+    skipsEmptyPillar &&
     floorIsAboveZero &&
     realScanClearsFloor &&
     helpOk &&
@@ -957,6 +1022,7 @@ function selfTest() {
     console.error(`  scans .tsx sources:                  ${scansTsx}`);
     console.error(`  parses TSX only with its extension:  ${tsxNeedsItsExtension}`);
     console.error(`  scans an app tree with no src/:      ${scansAppTreeWithoutSrc}`);
+    console.error(`  skips a pillar with neither tree:    ${skipsEmptyPillar}`);
     console.error(`  discovery floor is above zero:       ${floorIsAboveZero}`);
     console.error(
       `  real scan clears the floor:          ${realScanClearsFloor} ` +
