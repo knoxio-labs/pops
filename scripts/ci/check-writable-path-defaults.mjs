@@ -195,18 +195,40 @@ function scanScope(scope, constants) {
  *
  * @param {string} fileName  Used only for diagnostics.
  * @param {string} source
- * @returns {{ where: string, envVars: string[], relativeDefaults: string[] }[]}
+ * @returns {{ findings: { where: string, envVars: string[], relativeDefaults: string[] }[], resolversSeen: number, unparseable: boolean }}
  */
 export function findRelativeDefaults(fileName, source) {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.ESNext, true);
+  // A file TypeScript could not parse yields a partial tree, and a partial
+  // tree is how this guard would silently stop seeing a resolver it used to
+  // cover (ADR-045: a shape the guard cannot model is a violation, not a
+  // pass). Report it rather than scanning the wreckage.
+  // `parseDiagnostics` is not on the public SourceFile type, so it is read
+  // reflectively rather than through a cast that would lie about the shape.
+  const parseDiagnostics = /** @type {{ length: number } | undefined} */ (
+    Reflect.get(sourceFile, 'parseDiagnostics')
+  );
+  if (parseDiagnostics !== undefined && parseDiagnostics.length > 0) {
+    return {
+      resolversSeen: 0,
+      unparseable: true,
+      findings: [],
+    };
+  }
+
   const constants = collectStringConstants(sourceFile);
   /** @type {{ where: string, envVars: string[], relativeDefaults: string[] }[]} */
   const findings = [];
+  let resolversSeen = 0;
 
   /** @param {ts.Node} scope @param {string} label */
   const consider = (scope, label) => {
     const { envVars, relativeDefaults } = scanScope(scope, constants);
-    if (envVars.length === 0 || relativeDefaults.length === 0) return;
+    if (envVars.length === 0) return;
+    // Counted whether or not its default is relative: this is the signal that
+    // the AST walk still recognises the subject at all.
+    resolversSeen += 1;
+    if (relativeDefaults.length === 0) return;
     findings.push({ where: label, envVars, relativeDefaults });
   };
 
@@ -233,7 +255,7 @@ export function findRelativeDefaults(fileName, source) {
     }
     visit(statement);
   }
-  return findings;
+  return { findings, resolversSeen, unparseable: false };
 }
 
 /**
@@ -358,21 +380,41 @@ function listRuntimeSources(dir) {
 }
 
 /**
+ * Minimum subjects a healthy scan must find.
+ *
+ * ADR-045: a guard that iterates a discovered set must fail when the set is
+ * empty rather than reporting OK over a repo it can no longer read. Both
+ * numbers are far below today's counts (16 pillars, 20 resolvers) and exist
+ * to catch total discovery loss — a moved `pillars/` tree, a renamed source
+ * layout, an AST walk that stops matching `process.env` — not to track growth.
+ */
+const DISCOVERY_FLOOR = { pillars: 8, resolvers: 10 };
+
+/**
  * Run the guard over the repository.
  *
- * @returns {{ pillar: string, file: string, where: string, envVars: string[], relativeDefaults: string[], reason: string }[]}
+ * @returns {{ violations: { pillar: string, file: string, where: string, envVars: string[], relativeDefaults: string[], reason: string }[], pillarsScanned: number, resolversSeen: number }}
  */
 export function run() {
   /** @type {{ pillar: string, file: string, where: string, envVars: string[], relativeDefaults: string[], reason: string }[]} */
   const violations = [];
-  const pillars = readdirSync(PILLARS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .toSorted();
+  // Not an existsSync skip: a missing pillars/ tree must reach the discovery
+  // floor as zero and be reported, never crash with a readdir stack trace and
+  // never be swallowed into a clean result (ADR-045).
+  const pillars = existsSync(PILLARS_DIR)
+    ? readdirSync(PILLARS_DIR, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .toSorted()
+    : [];
+
+  let pillarsScanned = 0;
+  let resolversSeen = 0;
 
   for (const pillar of pillars) {
     const sources = listRuntimeSources(join(PILLARS_DIR, pillar, 'src'));
     if (sources.length === 0) continue;
+    pillarsScanned += 1;
     const dockerfilePath = join(PILLARS_DIR, pillar, 'Dockerfile');
     const dockerfile = existsSync(dockerfilePath)
       ? parseDockerfile(readFileSync(dockerfilePath, 'utf8'))
@@ -380,7 +422,20 @@ export function run() {
 
     for (const source of sources) {
       const relative = source.slice(repoRoot.length + 1);
-      for (const finding of findRelativeDefaults(relative, readFileSync(source, 'utf8'))) {
+      const scan = findRelativeDefaults(relative, readFileSync(source, 'utf8'));
+      resolversSeen += scan.resolversSeen;
+      if (scan.unparseable) {
+        violations.push({
+          pillar,
+          file: relative,
+          where: 'whole file',
+          envVars: [],
+          relativeDefaults: [],
+          reason: 'TypeScript could not parse this file, so it was not checked',
+        });
+        continue;
+      }
+      for (const finding of scan.findings) {
         if (dockerfile === null) {
           violations.push({
             pillar,
@@ -406,7 +461,7 @@ export function run() {
       }
     }
   }
-  return violations;
+  return { violations, pillarsScanned, resolversSeen };
 }
 
 const USAGE =
@@ -523,11 +578,11 @@ function selfTest() {
   const mkdirOnly = parseDockerfile(DOCKERFILE_MKDIR_ONLY);
   const noChown = parseDockerfile(DOCKERFILE_NO_CHOWN);
 
-  const poster = findRelativeDefaults('poster.ts', FIXTURE_POSTER_CACHE);
-  const ladder = findRelativeDefaults('ladder.ts', FIXTURE_LADDER);
-  const cwdJoin = findRelativeDefaults('engrams.ts', FIXTURE_CWD_JOIN);
-  const absolute = findRelativeDefaults('ingest.ts', FIXTURE_ABSOLUTE);
-  const nonPaths = findRelativeDefaults('url.ts', FIXTURE_NON_PATHS);
+  const poster = findRelativeDefaults('poster.ts', FIXTURE_POSTER_CACHE).findings;
+  const ladder = findRelativeDefaults('ladder.ts', FIXTURE_LADDER).findings;
+  const cwdJoin = findRelativeDefaults('engrams.ts', FIXTURE_CWD_JOIN).findings;
+  const absolute = findRelativeDefaults('ingest.ts', FIXTURE_ABSOLUTE).findings;
+  const nonPaths = findRelativeDefaults('url.ts', FIXTURE_NON_PATHS).findings;
 
   const detectsPoster = poster.length === 1 && poster[0].envVars.includes('MEDIA_IMAGES_DIR');
   const detectsLadder =
@@ -565,6 +620,36 @@ function selfTest() {
   const foldingOk =
     folded.created.includes('/data/inventory/images') && folded.chowned.includes('/data');
 
+  // --- Degenerate cases (ADR-045): the guard must REPORT, not fall silent,
+  // when its subject is missing, malformed, or no longer recognised.
+
+  // A source TypeScript cannot parse must not be scanned as if it were fine.
+  const brokenScan = findRelativeDefaults(
+    'broken.ts',
+    "export function x(): string { return process.env['A_DIR'] ?? './data/a' "
+  );
+  const catchesUnparseable = brokenScan.unparseable && brokenScan.findings.length === 0;
+
+  // An absolute default still counts as a resolver seen — that counter is what
+  // detects an AST walk which has stopped matching anything at all.
+  const countsResolversSeen =
+    findRelativeDefaults('ingest.ts', FIXTURE_ABSOLUTE).resolversSeen === 1 &&
+    findRelativeDefaults('empty.ts', 'export const x = 1;\n').resolversSeen === 0;
+
+  // A Dockerfile with nothing in it must fail the finding, never pass it.
+  const catchesEmptyDockerfile =
+    detectsPoster && !evaluateFinding(poster[0], parseDockerfile('')).ok;
+
+  // A repo scan that discovers nothing must not be able to report clean: the
+  // floor is above zero, so an empty result trips it.
+  const floorIsAboveZero = DISCOVERY_FLOOR.pillars > 0 && DISCOVERY_FLOOR.resolvers > 0;
+
+  // And the real scan must clear that floor, or the floor is fiction.
+  const realScan = run();
+  const realScanClearsFloor =
+    realScan.pillarsScanned >= DISCOVERY_FLOOR.pillars &&
+    realScan.resolversSeen >= DISCOVERY_FLOOR.resolvers;
+
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
   const runOk = parseArgs([]).kind === 'run';
@@ -583,6 +668,11 @@ function selfTest() {
     catchesNoChown &&
     literalsOk &&
     foldingOk &&
+    catchesUnparseable &&
+    countsResolversSeen &&
+    catchesEmptyDockerfile &&
+    floorIsAboveZero &&
+    realScanClearsFloor &&
     helpOk &&
     selfTestOk &&
     runOk &&
@@ -602,6 +692,14 @@ function selfTest() {
     console.error(`  catches mkdir without chown:         ${catchesNoChown}`);
     console.error(`  classifies path literals:            ${literalsOk}`);
     console.error(`  folds line continuations:            ${foldingOk}`);
+    console.error(`  reports an unparseable source:       ${catchesUnparseable}`);
+    console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
+    console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);
+    console.error(`  discovery floor is above zero:       ${floorIsAboveZero}`);
+    console.error(
+      `  real scan clears the floor:          ${realScanClearsFloor} ` +
+        `(${realScan.pillarsScanned} pillars, ${realScan.resolversSeen} resolvers)`
+    );
     console.error(`  recognised --help:                   ${helpOk}`);
     console.error(`  recognised --self-test:              ${selfTestOk}`);
     console.error(`  recognised a bare run:               ${runOk}`);
@@ -610,7 +708,9 @@ function selfTest() {
   }
   console.log(
     'self-test OK — guard catches a relative default that is unnamed, uncreated, or ' +
-      'left root-owned, and clears absolute defaults and shared-variable ladders.'
+      'left root-owned; clears absolute defaults and shared-variable ladders; and ' +
+      'reports rather than falls silent on an unparseable source, an empty Dockerfile, ' +
+      'or a scan that discovers nothing.'
   );
   return true;
 }
@@ -630,9 +730,27 @@ function main() {
     process.exit(selfTest() ? 0 : 1);
   }
 
-  const violations = run();
+  const { violations, pillarsScanned, resolversSeen } = run();
+
+  // Checked BEFORE the violation list: an empty list means "clean" only if the
+  // scan actually saw the repo. Discovery loss otherwise reads as success.
+  if (pillarsScanned < DISCOVERY_FLOOR.pillars || resolversSeen < DISCOVERY_FLOOR.resolvers) {
+    console.error(
+      'check-writable-path-defaults: discovery floor not met — this guard can no longer\n' +
+        'see its subject, so a clean result would be meaningless.\n\n' +
+        `  pillars with a src/ tree: ${pillarsScanned} (floor ${DISCOVERY_FLOOR.pillars})\n` +
+        `  env-backed path resolvers: ${resolversSeen} (floor ${DISCOVERY_FLOOR.resolvers})\n\n` +
+        '  Either pillars/ moved, a pillar source layout changed, or the AST walk\n' +
+        '  stopped matching process.env reads. Fix the guard before trusting it.\n'
+    );
+    process.exit(1);
+  }
+
   if (violations.length === 0) {
-    console.log('check-writable-path-defaults: OK — every env-backed relative default is guarded.');
+    console.log(
+      'check-writable-path-defaults: OK — every env-backed relative default is guarded ' +
+        `(${resolversSeen} resolvers across ${pillarsScanned} pillars).`
+    );
     process.exit(0);
   }
 
