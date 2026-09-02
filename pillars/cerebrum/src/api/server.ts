@@ -16,7 +16,11 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openCerebrumDb } from '../db/index.js';
@@ -110,15 +114,17 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[cerebrum-api] Shutting down (${signal})`);
-  void (pillarHandle?.stop() ?? Promise.resolve())
-    .then(() => stopThalamusWatcher())
-    .then(() => closeCerebrumIngestQueue())
-    .then(() => closeCerebrumEmbeddingsQueue())
-    .finally(() => {
-      server.close(() => {
-        cerebrumDb.raw.close();
-      });
-    });
+  void shutdownPillar({
+    label: 'cerebrum-api',
+    steps: [
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+      { name: 'thalamus-watcher', run: () => stopThalamusWatcher() },
+      { name: 'ingest-queue', run: () => closeCerebrumIngestQueue() },
+      { name: 'embeddings-queue', run: () => closeCerebrumEmbeddingsQueue() },
+    ],
+    server,
+    closeDb: () => cerebrumDb.raw.close(),
+  });
 }
 
 process.on('SIGTERM', shutdown);

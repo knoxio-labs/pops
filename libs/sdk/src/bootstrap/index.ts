@@ -12,6 +12,12 @@ export {
 export { type BootstrapLogger } from './logger.js';
 export { type HealthApp, type HealthResponseLike } from './health-route.js';
 export {
+  shutdownPillar,
+  type ClosableServer,
+  type ShutdownPillarOptions,
+  type ShutdownStep,
+} from './shutdown.js';
+export {
   createHttpRegistryTransport,
   RegistryNetworkError,
   RegistryTransportError,

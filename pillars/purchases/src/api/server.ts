@@ -1,4 +1,8 @@
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
@@ -156,14 +160,18 @@ function shutdown(signal: NodeJS.Signals): void {
   // between two nightly ticks anyway, so draining costs nothing here.
   reconcileUriWorker.stop();
   sweepRunner.stop();
-  void Promise.all([sweepRunner.drain().catch(() => undefined), reconcileUriWorker.drain()])
-    .then(() => pillarHandle?.stop() ?? Promise.resolve())
-    .catch(() => undefined)
-    .finally(() => {
-      server.close(() => {
-        purchasesDb.raw.close();
-      });
-    });
+  void shutdownPillar({
+    label: 'purchases-api',
+    steps: [
+      {
+        name: 'trigger-drain',
+        run: () => Promise.all([sweepRunner.drain(), reconcileUriWorker.drain()]),
+      },
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+    ],
+    server,
+    closeDb: () => purchasesDb.raw.close(),
+  });
 }
 
 process.on('SIGTERM', shutdown);

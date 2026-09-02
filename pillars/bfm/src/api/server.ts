@@ -37,7 +37,11 @@
  *     means the deploy that first breaks the invariant is the one that
  *     crashes, not the incident that later depends on it.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 
 import {
   assertRefreshTokenRetentionCoversTtl,
@@ -170,10 +174,11 @@ function shutdown(signal: NodeJS.Signals): void {
   // in-flight handler holding the handle would otherwise fail on a closed
   // connection rather than finish. Closing at all is what checkpoints the WAL,
   // so the next boot opens a clean file instead of replaying one.
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      bfmDb.raw.close();
-    });
+  void shutdownPillar({
+    label: 'bfm-api',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
+    closeDb: () => bfmDb.raw.close(),
   });
 }
 

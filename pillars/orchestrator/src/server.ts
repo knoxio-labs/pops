@@ -22,7 +22,11 @@
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister before the HTTP server shuts down.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { setRegistryUrl } from '@pops/pillar-sdk/discovery';
 import { parseBareOrigin, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
@@ -85,8 +89,10 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[orchestrator] Shutting down (${signal})`);
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close();
+  void shutdownPillar({
+    label: 'orchestrator',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
   });
 }
 
