@@ -249,10 +249,11 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('location ~ ^/pillars/health/?$ {');
     });
 
-    it('keeps /media/images/, /health, /docs/, and the SPA fallback', () => {
+    it('keeps /media/images/, /health, /docs/, /design/, and the SPA fallback', () => {
       expect(rendered).toContain('location /media/images/ {');
       expect(rendered).toContain('location /health {');
       expect(rendered).toContain('location /docs/ {');
+      expect(rendered).toContain('location /design/ {');
       expect(rendered).toMatch(/location \/ \{[\s\S]*?try_files \$uri \$uri\/ \/index\.html;/);
     });
 
@@ -456,6 +457,7 @@ describe('generate-nginx-conf', () => {
       expect(rendered).not.toContain('location /trpc {');
       expect(rendered).toContain('location ~ ^/pillars/?$ {');
       expect(rendered).toContain('location /docs/ {');
+      expect(rendered).toContain('location /design/ {');
       expect(rendered).toMatch(/location \/ \{[\s\S]*?try_files \$uri \$uri\/ \/index\.html;/);
     });
 

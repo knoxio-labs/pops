@@ -151,6 +151,26 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
         proxy_send_timeout 10s;
     }
 
+    # Design playground.
+    #
+    # \`pops-design\` is the design playground's static nginx image
+    # (pillars/design). Same shape as \`/docs/\` above: variable-form
+    # \`proxy_pass\` so the shell boots without it, and the trailing slash
+    # strips the \`/design/\` prefix. The bundle is built with that prefix as
+    # its base, so the asset URLs it emits come straight back through here.
+    location /design/ {
+        set $pops_design_upstream http://pops-design:80;
+        proxy_pass $pops_design_upstream/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+        proxy_send_timeout 10s;
+    }
+
     # SPA fallback — serve index.html for all routes.
     #
     # index.html is the only file naming the current asset hashes, so a
