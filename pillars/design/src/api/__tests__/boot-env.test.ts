@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PORT, resolvePort, resolveSqlitePath, resolveVersion } from '../boot-env.js';
+import {
+  DEFAULT_PORT,
+  resolvePort,
+  resolveSelfBaseUrl,
+  resolveSqlitePath,
+  resolveVersion,
+  shouldSelfRegister,
+} from '../boot-env.js';
 
 describe('resolvePort', () => {
   it('defaults to the pillar’s assigned port', () => {
@@ -57,6 +64,38 @@ describe('resolveSqlitePath', () => {
   it('treats blank values as unset', () => {
     expect(resolveSqlitePath({ DESIGN_SQLITE_PATH: '  ', SQLITE_PATH: '' })).toBe(
       './data/design.db'
+    );
+  });
+});
+
+describe('shouldSelfRegister', () => {
+  it('is off when the fleet flag is unset', () => {
+    expect(shouldSelfRegister({})).toBe(false);
+  });
+
+  it('is on for exactly the string the fleet sets', () => {
+    expect(shouldSelfRegister({ POPS_REGISTRY_ENABLED: 'true' })).toBe(true);
+  });
+
+  it.each(['TRUE', '1', 'yes', 'false', ''])('stays off for %o', (raw) => {
+    expect(shouldSelfRegister({ POPS_REGISTRY_ENABLED: raw })).toBe(false);
+  });
+});
+
+describe('resolveSelfBaseUrl', () => {
+  it('advertises the loopback origin for the bound port when unset', () => {
+    expect(resolveSelfBaseUrl(3015, {})).toBe('http://localhost:3015');
+  });
+
+  it('prefers the pillar’s own variable', () => {
+    expect(resolveSelfBaseUrl(3015, { DESIGN_SELF_BASE_URL: 'http://design-api:3015' })).toBe(
+      'http://design-api:3015'
+    );
+  });
+
+  it('crashes boot on a malformed origin rather than registering it', () => {
+    expect(() => resolveSelfBaseUrl(3015, { DESIGN_SELF_BASE_URL: 'design-api:3015' })).toThrow(
+      /design-api/
     );
   });
 });

@@ -679,6 +679,8 @@ services:
       NODE_ENV: production
       PORT: '3015'
       DESIGN_SQLITE_PATH: /data/sqlite/design.db
+      DESIGN_SELF_BASE_URL: http://design-api:3015
+      POPS_REGISTRY_ENABLED: 'true'
     expose:
       - '3015'
 

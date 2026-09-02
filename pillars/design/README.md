@@ -1,6 +1,6 @@
 # @pops/design
 
-The design playground: a UI pillar where a screen is designed on the product's own tokens and components before anything implements it. It serves no contract and registers nothing — like `pillars/docs`, the playground is a static bundle built by Vite and served by nginx, and the shell's nginx proxies it at `/design/`.
+The design playground: a UI pillar where a screen is designed on the product's own tokens and components before anything implements it. It serves no contract — like `pillars/docs`, the playground is a static bundle built by Vite and served by nginx, and the shell's nginx proxies it at `/design/`.
 
 It does own a database, which is the one way it is not like `pillars/docs`: the comment threads left on a design have to live somewhere, and this is where they are written. That store and its API are the pillar's second image — see [Comments](#comments) below.
 
@@ -72,6 +72,14 @@ The overlay renders inside the canvas iframe rather than over it, because anchor
 Threads live in `src/db`, behind the Express API in `src/api`. Identity is Cloudflare Access: a human session in production, the tunnel's operator when no Access team is configured, and a **service token** for the two headless callers — the Vite dev proxy and `scripts/design-feedback-mcp.mjs`, the MCP server a session reads threads through. A service-token JWT carries `common_name` and no email at all, which is why `libs/sdk/src/access/cloudflare-jwt.ts` grew a principal that is not a person.
 
 A thread is `open`, then `applied`, `rejected` or `outdated`. Reopening one clears the resolution, so "when was this closed" never reads a stale timestamp.
+
+The API registers with the `registry` pillar on boot, and for this pillar that
+is not about discovery — its callers reach it at a fixed path. It registers
+because the shell **renders its production nginx conf from the live registry**
+and emits one `/<id>-api/` block per registered pillar: a pillar that never
+registers has no route on the running host, however complete
+`pillars/shell/nginx.conf` looks and however green that file's drift test is.
+`scripts/ci/check-pillar-registration.mjs` holds every pillar to it (POPS-2793).
 
 Nothing above is needed to use the playground. With no `POPS_DESIGN_FEEDBACK_URL` in the repo-root `.env` there is no dev proxy, the overlay's identity call fails, and comment mode hides itself. See `.env.example`.
 

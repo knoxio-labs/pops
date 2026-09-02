@@ -1134,6 +1134,13 @@ services:
   # an unset team name here means the pillar trusts the tunnel instead, which
   # is correct only because nothing reaches it except through the shell's
   # Access-protected hostname.
+  #
+  # It registers with the registry like any other pillar, and for this one that
+  # is not about discovery — its clients reach it at a fixed path. pops-shell
+  # renders its production nginx conf from the LIVE registry and emits one
+  # `/<id>-api/` block per registered pillar, so without this the playground's
+  # overlay would 404 on a host where the committed conf looks complete
+  # (POPS-2793).
   design-api:
     build:
       context: ..
@@ -1154,8 +1161,10 @@ services:
       NODE_ENV: production
       PORT: '3015'
       DESIGN_SQLITE_PATH: /data/sqlite/design.db
+      DESIGN_SELF_BASE_URL: http://design-api:3015
       CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
       CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
+      POPS_REGISTRY_ENABLED: 'true'
 
   metabase:
     image: metabase/metabase:v0.52.5
