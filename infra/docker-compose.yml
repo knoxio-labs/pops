@@ -999,6 +999,23 @@ services:
       BFM_LITESTREAM_REPLICA_URL: ${BFM_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
+  # `pops-design-data` is mounted by `design-api`, so this sidecar replicates a
+  # live database rather than an empty volume — the same exception `bfm` is.
+  design-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-design-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-design-data:/data/sqlite:ro
+      - ./litestream/design.yml:/etc/litestream.yml:ro
+    environment:
+      DESIGN_LITESTREAM_REPLICA_URL: ${DESIGN_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
   # Cross-pillar orchestrator (ADR-029, epics 06+07). Federates over the
   # pillars via @pops/pillar-sdk (REST); owns no domain DB. nginx routes
   # /orchestrator-api/ here on port 3009. Built from the app Dockerfile;
@@ -1104,6 +1121,41 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # The comment API behind the design playground's overlay (`pillars/design`).
+  #
+  # The pillar ships two images: `pops-design` above serves the static bundle
+  # from nginx, and this one serves the threads it writes. Same reason bfm
+  # mounts its own volume — the pillar is greenfield, so there is no shared
+  # `sqlite-data` history to inherit.
+  #
+  # Access is passed through so a service-token JWT can be verified: the local
+  # dev proxy and the feedback MCP server authenticate as service tokens, and
+  # an unset team name here means the pillar trusts the tunnel instead, which
+  # is correct only because nothing reaches it except through the shell's
+  # Access-protected hostname.
+  design-api:
+    build:
+      context: ..
+      dockerfile: pillars/design/Dockerfile.api
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-design-api:${POPS_IMAGE_TAG:-main}
+    container_name: pops-design-api
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - pops-design-data:/data/sqlite
+    environment:
+      NODE_ENV: production
+      PORT: '3015'
+      DESIGN_SQLITE_PATH: /data/sqlite/design.db
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
 
   metabase:
     image: metabase/metabase:v0.52.5
@@ -1358,6 +1410,9 @@ volumes:
   # greenfield and so was never on the shared `sqlite-data` to be migrated off.
   pops-bfm-data:
     name: pops-bfm-data
+
+  pops-design-data:
+    name: pops-design-data
 
 secrets:
   notion_api_token:

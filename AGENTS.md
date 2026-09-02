@@ -43,9 +43,11 @@ GitHub Copilot no longer reviews this repository and is not coming back. Do not 
 Design a screen before implementing it. `pillars/design` is the playground: a UI pillar that renders on the product's own tokens and `@pops/ui`, with experiments, variants and named states — its README is the HOW. Its **design surface** is exactly three directories: `pillars/design/src/screens`, `pillars/design/src/experiments` and `pillars/design/src/fixtures`. `scripts/ci/design-surface-only.mjs` is that list as code.
 
 - **A PR confined to the design surface skips the LLM review, the findings gate's wait, and the test mandate.** Its gate is lint, format, typecheck and build (the pillar's `unit-quality` row) plus the required deterministic checks. A design iteration is reviewed by looking at it.
-- **Everything else in the pillar is plumbing** — the chrome, the registry, the frames, the image, the API — and gets the ordinary treatment: review, tests, the lot. A PR that touches one surface file and one plumbing file is a plumbing PR.
+- **Everything else in the pillar is plumbing** — the chrome, the registry, the frames, the images, the comment API — and gets the ordinary treatment: review, tests, the lot. A PR that touches one surface file and one plumbing file is a plumbing PR.
+- **The test mandate applies in full to `src/api` and `src/db`.** That code is auth-bearing: it verifies Cloudflare Access sessions, admits service tokens, and writes the only record of a design decision that was asked for and not yet made.
 - The surface still answers to the frontend rules: tokens only, Lucide only, 44px touch targets, no raw palette colours. The guards scan it like any other pillar.
 - Fixtures are fictional and typed. A screen never imports a pillar contract, a generated client or a data package; it composes `@pops/ui` and, through a declared subpath, an app's exported components.
+- **Comments close the loop.** Press `i` on the playground and pin a comment on any element; a session reads it through the `design-feedback` MCP server in `.mcp.json`, applies it at the anchored file and line, replies, and sets the thread's status. The overlay hides itself when the comment API is unreachable, which is the normal state of a checkout with no service token.
 
 ### Security (Do Not Violate)
 
@@ -109,8 +111,11 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 | `bfm`          | 3014 | devices, pairing codes, refresh tokens (Backend-for-Mobile) | data pillar; the only backend the iPhone app dials |
 | `shell`        | 5568 | React SPA host                                              | UI pillar; Vite + nginx, **not** the default 5173  |
 | `design`       | 5569 | design playground: screens, experiments, variants, states   | UI pillar; Vite + nginx, served at `/design/`      |
+| `design-api`   | 3015 | comment threads left on the playground                      | the design pillar's second image; see below        |
 
-The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, `docs`, and `design` own no DB.
+The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, `design`, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
+
+`design` is the one pillar that ships **two images**: `pops-design` serves the playground as static files from nginx, and `pops-design-api` serves the comment threads written on it — one image cannot be both. `docker-build.yml` and `pillar-quality.yml` discover `Dockerfile.*` alongside `Dockerfile` for exactly this.
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 
@@ -206,6 +211,8 @@ pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (
 │                          # Exceptions to the shape: `contacts` is Rust (axum, src/entities,
 │                          #   Cargo.toml); `orchestrator`, `mcp` and `documents` own no DB;
 │                          #   `shell` and `docs` are UI/static and serve no contract;
+│                          #   `design` is UI/static too but owns a DB anyway (comment
+│                          #     threads) and ships a second image, `Dockerfile.api`;
 │                          #   `moltbot` ships no Dockerfile (upstream image).
 
 libs/                      # Shared libraries — no service, no DB, and a lib must NEVER

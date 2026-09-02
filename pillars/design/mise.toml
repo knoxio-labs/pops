@@ -1,7 +1,21 @@
 [tasks.build]
-run = "tsc --noEmit && vite build"
-sources = ["src/**/*", "index.html", "vite.config.ts", "tsconfig.json", "package.json"]
+description = "the API into dist/api (tsc -b) and the playground into dist/web (vite)"
+run = "tsc -b tsconfig.build.json && vite build"
+sources = [
+  "src/**/*",
+  "index.html",
+  "vite.config.ts",
+  "tsconfig.json",
+  "tsconfig.build.json",
+  "package.json",
+]
 outputs = ["dist/**"]
+
+[tasks."dev:api"]
+run = "tsx watch --clear-screen=false src/api/server.ts"
+
+[tasks.start]
+run = "node dist/api/server.js"
 
 [tasks.dev]
 run = "vite"

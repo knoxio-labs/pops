@@ -207,6 +207,7 @@ describe('KnownPillarId', () => {
         'ai',
         'purchases',
         'bfm',
+        'design',
       ]
     >();
   });

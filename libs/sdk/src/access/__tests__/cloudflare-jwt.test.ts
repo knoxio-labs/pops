@@ -169,6 +169,88 @@ describe('createCloudflareAccessVerifier', () => {
     );
   });
 
+  describe('verifyPrincipal', () => {
+    it('resolves an email-bearing token to a user principal', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(
+        verifier.verifyPrincipal(signAccessToken({ email: 'operator@pops.local' }))
+      ).resolves.toEqual({ kind: 'user', email: 'operator@pops.local' });
+    });
+
+    /**
+     * The service-token shape: Access exchanges a Client-Id/Secret pair for a
+     * JWT whose identity is `common_name`, with no `email` at all.
+     */
+    it('resolves a common_name-only token to a service principal', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(
+        verifier.verifyPrincipal(signAccessToken({ common_name: 'abc123.access', type: 'app' }))
+      ).resolves.toEqual({ kind: 'service', commonName: 'abc123.access' });
+    });
+
+    it('reads a token carrying both claims as the human, not the service', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(
+        verifier.verifyPrincipal(
+          signAccessToken({ email: 'operator@pops.local', common_name: 'abc123.access' })
+        )
+      ).resolves.toEqual({ kind: 'user', email: 'operator@pops.local' });
+    });
+
+    it('rejects a token with neither email nor common_name', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(verifier.verifyPrincipal(signAccessToken({ sub: 'nobody' }))).rejects.toThrow(
+        /missing email and common_name/
+      );
+    });
+
+    it('rejects an empty common_name the same as a missing one', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(verifier.verifyPrincipal(signAccessToken({ common_name: '' }))).rejects.toThrow(
+        /missing email and common_name/
+      );
+    });
+
+    it('still runs the signature check before reading any claim', async () => {
+      const impostor = rsaKeyPair();
+      const { verifier } = makeVerifier();
+
+      await expect(
+        verifier.verifyPrincipal(
+          signAccessToken({ common_name: 'abc123.access' }, { key: impostor.privateKey })
+        )
+      ).rejects.toThrow();
+    });
+
+    it('still enforces the configured audience', async () => {
+      const { verifier } = makeVerifier({ audience: AUDIENCE });
+
+      await expect(
+        verifier.verifyPrincipal(
+          signAccessToken({ common_name: 'abc123.access', aud: ['some-other-application'] })
+        )
+      ).rejects.toThrow(/audience mismatch/);
+    });
+
+    /**
+     * The opt-in is the whole point: a pillar that calls `verify` must keep
+     * refusing service tokens, or every existing human-only gate would have
+     * silently widened.
+     */
+    it('leaves verify() rejecting the same service token', async () => {
+      const { verifier } = makeVerifier();
+
+      await expect(
+        verifier.verify(signAccessToken({ common_name: 'abc123.access' }))
+      ).rejects.toThrow(/missing email claim/);
+    });
+  });
+
   describe('audience', () => {
     it('accepts a token whose aud array contains the configured audience', async () => {
       const { verifier } = makeVerifier({ audience: AUDIENCE });

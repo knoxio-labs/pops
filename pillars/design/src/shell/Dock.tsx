@@ -1,3 +1,4 @@
+import { CommentsTool } from './CommentsTool';
 import { StateTool } from './StateTool';
 import { ThemeTool } from './ThemeTool';
 import { VariantTool } from './VariantTool';
@@ -9,19 +10,21 @@ import type { Viewport } from './viewport';
 
 /**
  * The floating bottom-centre dock over the canvas: theme, design (variant),
- * state and viewport. It is chrome — it never enters the frame, so nothing
+ * state, viewport and comments. It is chrome — it never enters the frame, so nothing
  * on it can be mistaken for part of a design.
  */
 export function Dock({
   catalog,
   theme,
   viewport,
+  comments,
   onThemeSelect,
   onViewportSelect,
 }: {
   catalog: Catalog;
   theme: CanvasTheme;
   viewport: Viewport;
+  comments: { active: boolean; openCount: number; onToggle: () => void };
   onThemeSelect: (theme: CanvasTheme) => void;
   onViewportSelect: (viewport: Viewport) => void;
 }) {
@@ -32,6 +35,11 @@ export function Dock({
         <VariantTool catalog={catalog} />
         <StateTool catalog={catalog} />
         <ViewportTool viewport={viewport} onSelect={onViewportSelect} />
+        <CommentsTool
+          active={comments.active}
+          openCount={comments.openCount}
+          onToggle={comments.onToggle}
+        />
       </div>
     </div>
   );

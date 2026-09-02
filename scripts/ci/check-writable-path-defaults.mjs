@@ -409,6 +409,30 @@ export function evaluateFinding(finding, dockerfile) {
 }
 
 /**
+ * Whether ANY of a pillar's images guards one finding, and if none does, why.
+ *
+ * Any rather than every: a pillar may ship more than one image and the code
+ * that resolves the path runs in only one of them. `pillars/design` ships a
+ * static nginx image for the playground and `Dockerfile.api` for the comment
+ * API — demanding a SQLite path of the nginx image would be demanding it of an
+ * image that opens no database.
+ *
+ * @param {{ envVars: string[], relativeDefaults: string[] }} finding
+ * @param {{ name: string, parsed: { env: Map<string, string>, created: string[], chowned: string[] } }[]} dockerfiles
+ * @returns {string | null} `null` when some image guards it, else every image's reason.
+ */
+export function evaluateAcrossImages(finding, dockerfiles) {
+  /** @type {string[]} */
+  const reasons = [];
+  for (const { name, parsed } of dockerfiles) {
+    const verdict = evaluateFinding(finding, parsed);
+    if (verdict.ok) return null;
+    reasons.push(dockerfiles.length === 1 ? verdict.reason : `${name}: ${verdict.reason}`);
+  }
+  return reasons.join(' | ');
+}
+
+/**
  * Recursively list runtime `.ts` files under a directory, skipping tests.
  *
  * @param {string} dir
@@ -493,11 +517,11 @@ const PILLAR_NAMES = existsSync(PILLARS_DIR)
  *   pillar: string,
  *   srcFiles: { file: string, source: string }[],
  *   appFiles: { file: string, source: string }[],
- *   dockerfile: { env: Map<string, string>, created: string[], chowned: string[] } | null,
+ *   dockerfiles: { name: string, parsed: { env: Map<string, string>, created: string[], chowned: string[] } }[],
  * }} input
  * @returns {{ violations: Violation[], resolversSeen: number }}
  */
-export function scanPillar({ pillar, srcFiles, appFiles, dockerfile }) {
+export function scanPillar({ pillar, srcFiles, appFiles, dockerfiles }) {
   /** @type {Violation[]} */
   const violations = [];
   let resolversSeen = 0;
@@ -520,26 +544,26 @@ export function scanPillar({ pillar, srcFiles, appFiles, dockerfile }) {
       continue;
     }
     for (const finding of scan.findings) {
-      if (dockerfile === null) {
+      if (dockerfiles.length === 0) {
         violations.push({
           pillar,
           file,
           where: finding.where,
           envVars: finding.envVars,
           relativeDefaults: finding.relativeDefaults,
-          reason: `pillars/${pillar}/Dockerfile does not exist, so nothing can set these`,
+          reason: `pillars/${pillar} ships no Dockerfile, so nothing can set these`,
         });
         continue;
       }
-      const verdict = evaluateFinding(finding, dockerfile);
-      if (!verdict.ok) {
+      const reason = evaluateAcrossImages(finding, dockerfiles);
+      if (reason !== null) {
         violations.push({
           pillar,
           file,
           where: finding.where,
           envVars: finding.envVars,
           relativeDefaults: finding.relativeDefaults,
-          reason: verdict.reason,
+          reason,
         });
       }
     }
@@ -609,14 +633,20 @@ function defaultLoadSources(pillar, tree) {
 }
 
 /**
- * Read and parse one pillar's Dockerfile, or null when it has none.
+ * Read and parse every image a pillar ships — `Dockerfile` and any
+ * `Dockerfile.<variant>` beside it, matching the discovery in
+ * `docker-build.yml`.
  *
  * @param {string} pillar
- * @returns {{ env: Map<string, string>, created: string[], chowned: string[] } | null}
+ * @returns {{ name: string, parsed: { env: Map<string, string>, created: string[], chowned: string[] } }[]}
  */
-function defaultLoadDockerfile(pillar) {
-  const dockerfilePath = join(PILLARS_DIR, pillar, 'Dockerfile');
-  return existsSync(dockerfilePath) ? parseDockerfile(readFileSync(dockerfilePath, 'utf8')) : null;
+function defaultLoadDockerfiles(pillar) {
+  const dir = join(PILLARS_DIR, pillar);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((name) => name === 'Dockerfile' || name.startsWith('Dockerfile.'))
+    .sort()
+    .map((name) => ({ name, parsed: parseDockerfile(readFileSync(join(dir, name), 'utf8')) }));
 }
 
 /**
@@ -631,7 +661,7 @@ function defaultLoadDockerfile(pillar) {
  * @param {{
  *   listPillars?: () => string[],
  *   loadSources?: (pillar: string, tree: 'src' | 'app') => { file: string, source: string }[],
- *   loadDockerfile?: (pillar: string) => { env: Map<string, string>, created: string[], chowned: string[] } | null,
+ *   loadDockerfiles?: (pillar: string) => { name: string, parsed: { env: Map<string, string>, created: string[], chowned: string[] } }[],
  * }} [deps]
  * @returns {{ violations: Violation[], pillarsScanned: number, resolversSeen: number }}
  */
@@ -639,7 +669,7 @@ export function run(deps = {}) {
   const {
     listPillars = defaultListPillars,
     loadSources = defaultLoadSources,
-    loadDockerfile = defaultLoadDockerfile,
+    loadDockerfiles = defaultLoadDockerfiles,
   } = deps;
 
   /** @type {Violation[]} */
@@ -659,7 +689,7 @@ export function run(deps = {}) {
       pillar,
       srcFiles,
       appFiles,
-      dockerfile: loadDockerfile(pillar),
+      dockerfiles: loadDockerfiles(pillar),
     });
     violations.push(...scanned.violations);
     resolversSeen += scanned.resolversSeen;
@@ -942,7 +972,7 @@ function selfTest() {
       tree === 'app'
         ? [{ file: 'pillars/ghost/app/src/paths.ts', source: FIXTURE_POSTER_CACHE }]
         : [],
-    loadDockerfile: () => null,
+    loadDockerfiles: () => [],
   });
   const scansAppTreeWithoutSrc =
     appOnlyRun.violations.length === 1 && appOnlyRun.pillarsScanned === 1;
@@ -952,10 +982,32 @@ function selfTest() {
   const emptyPillarRun = run({
     listPillars: () => ['ghost'],
     loadSources: () => [],
-    loadDockerfile: () => null,
+    loadDockerfiles: () => [],
   });
   const skipsEmptyPillar =
     emptyPillarRun.pillarsScanned === 0 && emptyPillarRun.violations.length === 0;
+
+  // A pillar shipping two images: the finding belongs to whichever image runs
+  // the code, so one guarding image is enough — and no guarding image must
+  // still fail, naming both.
+  const twoImageFinding = { envVars: ['THING_PATH'], relativeDefaults: ['./data/thing.db'] };
+  const guardingImage = { name: 'Dockerfile.api', parsed: good };
+  const bystanderImage = { name: 'Dockerfile', parsed: parseDockerfile('FROM nginx\n') };
+  const passesWhenOneImageGuards =
+    evaluateAcrossImages(
+      { envVars: ['MEDIA_IMAGES_DIR'], relativeDefaults: ['./data/media/images'] },
+      [bystanderImage, guardingImage]
+    ) === null;
+  const failsWhenNoImageGuards = (() => {
+    const reason = evaluateAcrossImages(twoImageFinding, [bystanderImage, guardingImage]);
+    return reason !== null && reason.includes('Dockerfile:') && reason.includes('Dockerfile.api:');
+  })();
+  // With one image the reason stays unprefixed, so the common message is
+  // unchanged by the multi-image rule.
+  const singleImageReasonIsUnprefixed = (() => {
+    const reason = evaluateAcrossImages(twoImageFinding, [{ name: 'Dockerfile', parsed: good }]);
+    return reason !== null && !reason.startsWith('Dockerfile:');
+  })();
 
   const helpOk = parseArgs(['--help']).kind === 'help';
   const selfTestOk = parseArgs(['--self-test']).kind === 'self-test';
@@ -978,6 +1030,9 @@ function selfTest() {
     catchesUnparseable &&
     countsResolversSeen &&
     appRuleSeesAbsolute &&
+    passesWhenOneImageGuards &&
+    failsWhenNoImageGuards &&
+    singleImageReasonIsUnprefixed &&
     ignoresViteVars &&
     catchesEmptyDockerfile &&
     scansEachResolverOnce &&
@@ -1010,6 +1065,9 @@ function selfTest() {
     console.error(`  folds line continuations:            ${foldingOk}`);
     console.error(`  reports an unparseable source:       ${catchesUnparseable}`);
     console.error(`  app rule sees an absolute default:   ${appRuleSeesAbsolute}`);
+    console.error(`  passes when one image guards it:     ${passesWhenOneImageGuards}`);
+    console.error(`  fails when no image guards it:       ${failsWhenNoImageGuards}`);
+    console.error(`  leaves a single image's reason bare: ${singleImageReasonIsUnprefixed}`);
     console.error(`  ignores VITE_ client variables:      ${ignoresViteVars}`);
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);

@@ -29,6 +29,21 @@ export interface CloudflareAccessIdentity {
   email: string;
 }
 
+/**
+ * Either party Access will vouch for.
+ *
+ * A human session carries `email`. A service token — the credential a
+ * headless caller presents as `CF-Access-Client-Id`/`-Secret`, which Access
+ * exchanges for a JWT at the edge — carries no email at all; its identity is
+ * the token's `common_name`. The two are kept as distinct variants rather
+ * than an optional email so a caller must decide what a service principal is
+ * allowed to do, instead of discovering `undefined` where it expected a
+ * person.
+ */
+export type CloudflareAccessPrincipal =
+  | { kind: 'user'; email: string }
+  | { kind: 'service'; commonName: string };
+
 export interface CloudflareAccessVerifierOptions {
   /** Cloudflare Zero Trust team name; the JWKS host is derived from it. */
   teamName: string;
@@ -47,8 +62,20 @@ export interface CloudflareAccessVerifierOptions {
 }
 
 export interface CloudflareAccessVerifier {
-  /** Resolve a `cf-access-jwt-assertion` value, or throw if it is not a valid session. */
+  /**
+   * Resolve a `cf-access-jwt-assertion` value to a human session, or throw.
+   * A service-token JWT is rejected here exactly as it always was ("missing
+   * email claim"); a pillar that admits service tokens opts in through
+   * {@link CloudflareAccessVerifier.verifyPrincipal}.
+   */
   verify(token: string): Promise<CloudflareAccessIdentity>;
+  /**
+   * Resolve a `cf-access-jwt-assertion` value to whichever principal it
+   * carries — a human session or a service token — or throw. The signature,
+   * algorithm and audience checks are the same as {@link verify}; only the
+   * claim read at the end differs.
+   */
+  verifyPrincipal(token: string): Promise<CloudflareAccessPrincipal>;
 }
 
 /** How long a fetched JWKS is trusted. Cloudflare rotates on a far slower cadence. */
@@ -115,22 +142,29 @@ export function createCloudflareAccessVerifier(
     return keys;
   }
 
+  async function verifiedClaims(token: string): Promise<jwt.JwtPayload> {
+    const kid = readKid(token);
+    const publicKey = (await signingKeys()).get(kid);
+    if (!publicKey) {
+      throw new CloudflareAccessError(`Invalid JWT: public key not found for kid ${kid}`);
+    }
+
+    // `algorithms` is the pin. Never widen it to read the token's own header.
+    const payload = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+    if (typeof payload === 'string') {
+      throw new CloudflareAccessError('Invalid JWT: payload is not a claim set');
+    }
+
+    assertAudience(payload.aud, audience);
+    return payload;
+  }
+
   return {
     async verify(token: string): Promise<CloudflareAccessIdentity> {
-      const kid = readKid(token);
-      const publicKey = (await signingKeys()).get(kid);
-      if (!publicKey) {
-        throw new CloudflareAccessError(`Invalid JWT: public key not found for kid ${kid}`);
-      }
-
-      // `algorithms` is the pin. Never widen it to read the token's own header.
-      const payload = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
-      if (typeof payload === 'string') {
-        throw new CloudflareAccessError('Invalid JWT: payload is not a claim set');
-      }
-
-      assertAudience(payload.aud, audience);
-      return { email: readEmail(payload) };
+      return { email: readEmail(await verifiedClaims(token)) };
+    },
+    async verifyPrincipal(token: string): Promise<CloudflareAccessPrincipal> {
+      return readPrincipal(await verifiedClaims(token));
     },
   };
 }
@@ -160,12 +194,30 @@ function assertAudience(
   }
 }
 
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
 function readEmail(payload: jwt.JwtPayload): string {
-  const email = (payload as { email?: unknown }).email;
-  if (typeof email !== 'string' || email === '') {
+  const email = nonEmptyString((payload as { email?: unknown }).email);
+  if (email === undefined) {
     throw new CloudflareAccessError('Invalid JWT: missing email claim');
   }
   return email;
+}
+
+/**
+ * `email` wins when both are present: Access never issues a token carrying
+ * both, so a token that does is at best malformed and is read as the more
+ * constrained (human) principal rather than the broader one.
+ */
+function readPrincipal(payload: jwt.JwtPayload): CloudflareAccessPrincipal {
+  const claims = payload as { email?: unknown; common_name?: unknown };
+  const email = nonEmptyString(claims.email);
+  if (email !== undefined) return { kind: 'user', email };
+  const commonName = nonEmptyString(claims.common_name);
+  if (commonName !== undefined) return { kind: 'service', commonName };
+  throw new CloudflareAccessError('Invalid JWT: missing email and common_name claims');
 }
 
 /**
@@ -200,6 +252,24 @@ export async function verifyCloudflareAccessJwt(
   token: string,
   env: NodeJS.ProcessEnv = process.env
 ): Promise<CloudflareAccessIdentity> {
+  return ambientVerifier(env).verify(token);
+}
+
+/**
+ * The {@link CloudflareAccessVerifier.verifyPrincipal} counterpart of
+ * {@link verifyCloudflareAccessJwt}: same memoised verifier, same
+ * configuration, but a service-token JWT resolves to a service principal
+ * instead of being rejected. Only a pillar that has decided what a service
+ * principal may do should call this one.
+ */
+export async function verifyCloudflareAccessPrincipal(
+  token: string,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<CloudflareAccessPrincipal> {
+  return ambientVerifier(env).verifyPrincipal(token);
+}
+
+function ambientVerifier(env: NodeJS.ProcessEnv): CloudflareAccessVerifier {
   const config = readCloudflareAccessConfig(env);
   if (!config) {
     throw new CloudflareAccessError('CLOUDFLARE_ACCESS_TEAM_NAME not configured');
@@ -214,5 +284,5 @@ export async function verifyCloudflareAccessJwt(
     verifier = createCloudflareAccessVerifier(config);
     verifiersByConfig.set(cacheKey, verifier);
   }
-  return verifier.verify(token);
+  return verifier;
 }

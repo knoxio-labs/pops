@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
-import { applyThemeToDocument } from './theme';
+import { CommentsOverlay } from '../comments/CommentsOverlay';
+import { applyThemeToDocument, encodeTheme, type CanvasTheme } from './theme';
 import { fromFrameRoute, themeFromSearch, type FrameToShell, type ShellToFrame } from './viewport';
 
 function post(message: FrameToShell): void {
@@ -10,19 +11,27 @@ function post(message: FrameToShell): void {
 
 /**
  * The chrome-less document the canvas iframe loads: the surface under its
- * theme and nothing else. The theme arrives once in the URL and afterwards
- * over postMessage; every navigation inside the frame is reported up so the
- * shell's address bar stays the canonical address.
+ * theme, and the comment overlay when the shell turns it on. The theme
+ * arrives once in the URL and afterwards over postMessage; every navigation
+ * inside the frame is reported up so the shell's address bar stays the
+ * canonical address.
  */
 export function FrameShell() {
   const location = useLocation();
+  const [theme, setTheme] = useState<CanvasTheme>(() => themeFromSearch(window.location.search));
+  const [commentsActive, setCommentsActive] = useState(false);
+  const route = fromFrameRoute(location.pathname, location.search);
 
   useEffect(() => {
     applyThemeToDocument(document, themeFromSearch(window.location.search));
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== window.parent) return;
       const data = event.data as ShellToFrame;
-      if (data.kind === 'theme') applyThemeToDocument(document, data.theme);
+      if (data.kind === 'theme') {
+        applyThemeToDocument(document, data.theme);
+        setTheme(data.theme);
+      }
+      if (data.kind === 'comments') setCommentsActive(data.active);
     };
     window.addEventListener('message', onMessage);
     post({ kind: 'ready' });
@@ -30,12 +39,23 @@ export function FrameShell() {
   }, []);
 
   useEffect(() => {
-    post({ kind: 'route', route: fromFrameRoute(location.pathname, location.search) });
-  }, [location.pathname, location.search]);
+    post({ kind: 'route', route });
+  }, [route]);
+
+  const onOpenCountChange = useCallback((open: number) => {
+    post({ kind: 'comment-count', open });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Outlet />
+      <CommentsOverlay
+        active={commentsActive}
+        route={route}
+        themeKey={encodeTheme(theme)}
+        onOpenCountChange={onOpenCountChange}
+        onExit={() => post({ kind: 'comments-exit' })}
+      />
     </div>
   );
 }

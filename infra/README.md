@@ -11,11 +11,11 @@ breaking change for every downstream deployer.
 
 **Networks** — three, all `driver: bridge`:
 
-| Key         | Docker name      | On it                                                                                                                   |
-| ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `frontend`  | `pops-frontend`  | Every pillar API except `documents-api`, plus `pops-orchestrator`, `pops-shell`, `pops-docs`, `pops-design`, `metabase` |
-| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 11 Litestream sidecars    |
-| `documents` | `pops-documents` | `documents-api`, `paperless-ngx`, `paperless-redis` — paperless is on this network only                                 |
+| Key         | Docker name      | On it                                                                                                                                 |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `frontend`  | `pops-frontend`  | Every pillar API except `documents-api`, plus `pops-orchestrator`, `pops-shell`, `pops-docs`, `pops-design`, `design-api`, `metabase` |
+| `backend`   | `pops-backend`   | Every pillar API, both workers, `pops-orchestrator`, `pops-redis`, `pops-mcp`, `moltbot`, the 12 Litestream sidecars                  |
+| `documents` | `pops-documents` | `documents-api`, `paperless-ngx`, `paperless-redis` — paperless is on this network only                                               |
 
 `registry-api` carries the extra alias `core-api` on both `frontend` and
 `backend`.
@@ -67,7 +67,7 @@ next to the compose file, and watchtower mounts the docker socket.
 ## prod vs dev
 
 Dev builds the same services from `pillars/<id>/Dockerfile` and pins no GHCR
-image except on `media-api`. Prod defines 37 services, dev 22. Profiles keep
+image except on `media-api`. Prod defines 39 services, dev 23. Profiles keep
 `litestream` / `moltbot` / `mcp` out of a plain `up` in prod, `moltbot` / `mcp`
 in dev. 15 services carry
 `com.centurylinklabs.watchtower.enable: 'true'`; `cerebrum-api`,

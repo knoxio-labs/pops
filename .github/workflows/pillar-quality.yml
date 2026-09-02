@@ -11,7 +11,7 @@ name: Pillar Image
 #
 # What remains is the ONE thing nothing else does automatically: building the
 # FULL pillar image (not just the builder stage) on push to main. On PRs the
-# builder stage of every `pillars/*/Dockerfile` is already validated by
+# builder stage of every `pillars/*/Dockerfile*` is already validated by
 # `docker-build.yml`; `publish-images.yml` does full builds but is
 # `workflow_dispatch`-only during the colocation series, so without this job
 # nothing would surface a broken full-image build when main advances. Pillars
@@ -46,43 +46,50 @@ concurrency:
 
 jobs:
   discover:
-    name: Discover pillars
+    name: Discover pillar images
     runs-on: ubuntu-latest
     outputs:
-      pillars: ${{ steps.list.outputs.pillars }}
+      dockerfiles: ${{ steps.list.outputs.dockerfiles }}
       count: ${{ steps.list.outputs.count }}
     steps:
       - uses: actions/checkout@v7
       - id: list
-        name: Enumerate pillars from disk
-        # A pillar is any `pillars/<x>` carrying a package.json. Derived from
-        # disk so adding or removing a pillar needs no workflow edit. Matches
-        # the original discover scope exactly — this de-dup PR only drops the
-        # redundant per-pillar source matrix + the PR trigger, it does not
-        # widen the set of images built on push.
+        name: Enumerate pillar images from disk
+        # Every image a pillar ships, as a Dockerfile path. Derived from disk
+        # so adding or removing one needs no workflow edit.
+        #
+        # A pillar is any `pillars/<x>` carrying a package.json, and it may
+        # ship more than one image: `pillars/design` has a static nginx image
+        # for the playground and `Dockerfile.api` for the comment API, since
+        # one image cannot be both. Discovering `Dockerfile.*` alongside
+        # `Dockerfile` is what keeps a variant image's full build gated on
+        # push the same as a primary one — matching the same widening in
+        # `docker-build.yml`.
         run: |
           set -euo pipefail
           json=$(find pillars -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
             | sort \
             | while read -r dir; do
-                if [ -f "$dir/package.json" ]; then basename "$dir"; fi
+                if [ -f "$dir/package.json" ]; then
+                  find "$dir" -maxdepth 1 \( -name Dockerfile -o -name 'Dockerfile.*' \) | sort
+                fi
               done \
             | jq -R -s -c 'split("\n") | map(select(length > 0))')
           count=$(echo "$json" | jq 'length')
-          echo "pillars=$json" >> "$GITHUB_OUTPUT"
+          echo "dockerfiles=$json" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
           echo "Discovered $count pillar image(s):"
           echo "$json" | jq .
 
   docker:
-    name: ${{ matrix.pillar }} pillar — Docker image builds
+    name: ${{ matrix.dockerfile }} — Docker image build
     needs: [discover]
     if: needs.discover.outputs.count != '0'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        pillar: ${{ fromJson(needs.discover.outputs.pillars) }}
+        dockerfile: ${{ fromJson(needs.discover.outputs.dockerfiles) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -92,6 +99,6 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: pillars/${{ matrix.pillar }}/Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: false
-          tags: pops-${{ matrix.pillar }}:${{ github.sha }}
+          tags: pops-image-under-test:${{ github.sha }}

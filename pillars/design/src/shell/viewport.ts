@@ -42,11 +42,24 @@ export function frameSize(
 /**
  * Frame ↔ shell messages (same-origin postMessage). The canvas is always an
  * iframe, so this is the only channel between the chrome and the surface:
- * the frame reports where it navigated, the shell pushes theme changes.
+ * the frame reports where it navigated and how many threads are open there,
+ * the shell pushes theme changes and whether comment mode is on.
+ *
+ * The comment overlay lives INSIDE the frame rather than over it. Anchoring
+ * is a hit test against the surface's own document, and an overlay in the
+ * chrome would have to undo the frame's scale and offset to run one — with
+ * every scroll and resize a chance to drift. The cost is this pair of
+ * messages, which is the smaller thing to keep correct.
  */
-export type FrameToShell = { kind: 'route'; route: string } | { kind: 'ready' };
+export type FrameToShell =
+  | { kind: 'route'; route: string }
+  | { kind: 'ready' }
+  | { kind: 'comment-count'; open: number }
+  | { kind: 'comments-exit' };
 
-export type ShellToFrame = { kind: 'theme'; theme: CanvasTheme };
+export type ShellToFrame =
+  | { kind: 'theme'; theme: CanvasTheme }
+  | { kind: 'comments'; active: boolean };
 
 export const FRAME_PREFIX = '/frame';
 const THEME_PARAM = 'theme';

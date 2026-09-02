@@ -660,6 +660,28 @@ services:
       timeout: 5s
       retries: 3
 
+  # The comment API behind the playground's overlay. Second image of the same
+  # pillar; see the prod file for why the pillar ships two.
+  design-api:
+    build:
+      context: ..
+      dockerfile: pillars/design/Dockerfile.api
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-design-api
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - pops-design-data:/data/sqlite
+    environment:
+      NODE_ENV: production
+      PORT: '3015'
+      DESIGN_SQLITE_PATH: /data/sqlite/design.db
+    expose:
+      - '3015'
+
   metabase:
     image: metabase/metabase:v0.52.5
     container_name: pops-metabase
@@ -922,6 +944,9 @@ volumes:
   # so it starts where ADR-039 workstream S11 wants every pillar to end up.
   pops-bfm-data:
     name: pops-bfm-data
+
+  pops-design-data:
+    name: pops-design-data
 
 secrets:
   notion_api_token:
