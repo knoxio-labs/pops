@@ -75,6 +75,34 @@ A thread is `open`, then `applied`, `rejected` or `outdated`. Reopening one clea
 
 Nothing above is needed to use the playground. With no `POPS_DESIGN_FEEDBACK_URL` in the repo-root `.env` there is no dev proxy, the overlay's identity call fails, and comment mode hides itself. See `.env.example`.
 
+## The working loop
+
+The playground is worth having only if a design gets decided in it and the
+decision reaches the code. That is a loop, and each step of it is a skill under
+`.claude/skills/`, one operation and one commit each:
+
+| Step                                       | Skill                       |
+| ------------------------------------------ | --------------------------- |
+| Open a question with variants to answer it | `design-new-experiment`     |
+| Add another answer                         | `design-new-variant`        |
+| Record what a human chose, and why         | `design-decide-experiment`  |
+| Retire a question nobody will answer       | `design-archive-experiment` |
+| Act on a comment pinned on the playground  | `design-apply-feedback`     |
+| Wait for the next comment and act on it    | `design-monitor-feedback`   |
+| Turn a decided experiment into an issue    | `design-promote`            |
+
+The mechanics of scaffolding are in `scripts/design-new-experiment.mjs`, not in
+the skill: the skill owns the judgement (is this really two designs? what is the
+question?) and the script owns the directory layout and the `experiment.yaml`
+the registry demands. A skill that also had to remember where files go would
+spend its attention on the wrong half.
+
+Two rules the loop rests on. **Nothing is copied into an app**: `design-promote`
+writes the issue an implementing PR starts from, listing screens, states,
+fixtures, the decision and its rationale — the implementation is written against
+the app's own code. And **the decision is not the session's to make**: a session
+records a choice, it does not take one.
+
 ## Commands
 
 ```bash
