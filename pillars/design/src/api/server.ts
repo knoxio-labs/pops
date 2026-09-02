@@ -20,13 +20,7 @@
  */
 import { openDesignDb } from '../db/index.js';
 import { createDesignApiApp } from './app.js';
-import {
-  resolvePort,
-  resolveSelfBaseUrl,
-  resolveSqlitePath,
-  resolveVersion,
-  shouldSelfRegister,
-} from './boot-env.js';
+import { resolvePort, resolveSqlitePath, resolveVersion, shouldSelfRegister } from './boot-env.js';
 import { registerDesignPillar } from './register.js';
 
 const port = resolvePort();
@@ -44,7 +38,7 @@ const server = app.listen(port, () => {
 });
 
 async function register(): Promise<void> {
-  pillarHandle = await registerDesignPillar(version, resolveSelfBaseUrl(port));
+  pillarHandle = await registerDesignPillar(version, port);
 }
 
 let shuttingDown = false;

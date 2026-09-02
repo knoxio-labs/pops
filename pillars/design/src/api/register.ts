@@ -4,6 +4,7 @@
  */
 import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
 
+import { resolveSelfBaseUrl } from './boot-env.js';
 import { buildDesignManifest } from './manifest.js';
 
 /** The one call this module makes, injectable so a test can make it reject. */
@@ -19,7 +20,7 @@ const callBootstrap: BootstrapFn = (input) => bootstrapPillar(input);
 
 /**
  * Register this pillar and return its handle, or `undefined` if registration
- * failed.
+ * failed for any reason — including a malformed advertised origin.
  *
  * Never rejects. It is called after `listen`, so an escaping rejection would
  * be unhandled and would take down a process that is already answering
@@ -37,10 +38,16 @@ const callBootstrap: BootstrapFn = (input) => bootstrapPillar(input);
  */
 export async function registerDesignPillar(
   version: string,
-  baseUrl: string,
+  port: number,
   bootstrap: BootstrapFn = callBootstrap
 ): Promise<PillarBootstrapHandle | undefined> {
   try {
+    // Resolved in here, not by the caller. `resolveSelfBaseUrl` throws on a
+    // malformed origin — deliberately, since the registry stores what it is
+    // handed — and a throw outside this try is the same unhandled rejection
+    // by another route: a mistyped DESIGN_SELF_BASE_URL would kill a process
+    // that is serving comments perfectly well.
+    const baseUrl = resolveSelfBaseUrl(port);
     return await bootstrap({ manifest: buildDesignManifest(version), baseUrl });
   } catch (err) {
     console.error('[design-api] Registration failed; serving unregistered', err);

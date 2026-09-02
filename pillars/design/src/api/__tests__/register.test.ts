@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { registerDesignPillar } from '../register.js';
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -11,15 +12,14 @@ describe('registerDesignPillar', () => {
     const handle = { stop: () => Promise.resolve() };
     const bootstrap = vi.fn().mockResolvedValue(handle);
 
-    await expect(registerDesignPillar('1.2.3', 'http://design-api:3015', bootstrap)).resolves.toBe(
-      handle
-    );
+    await expect(registerDesignPillar('1.2.3', 3015, bootstrap)).resolves.toBe(handle);
   });
 
   it('registers the running version at the advertised origin', async () => {
+    vi.stubEnv('DESIGN_SELF_BASE_URL', 'http://design-api:3015');
     const bootstrap = vi.fn().mockResolvedValue({ stop: () => Promise.resolve() });
 
-    await registerDesignPillar('1.2.3', 'http://design-api:3015', bootstrap);
+    await registerDesignPillar('1.2.3', 3015, bootstrap);
 
     const [input] = bootstrap.mock.calls[0] ?? [];
     expect(input?.baseUrl).toBe('http://design-api:3015');
@@ -33,17 +33,27 @@ describe('registerDesignPillar', () => {
 
     // The assertion that matters: this runs after `listen`, so a rejection
     // escaping here is unhandled and kills a process that is already serving.
-    await expect(
-      registerDesignPillar('1.2.3', 'http://design-api:3015', bootstrap)
-    ).resolves.toBeUndefined();
+    await expect(registerDesignPillar('1.2.3', 3015, bootstrap)).resolves.toBeUndefined();
     expect(logged).toHaveBeenCalledOnce();
+  });
+
+  it('resolves undefined on a malformed advertised origin, without calling the registry', async () => {
+    // resolveSelfBaseUrl throws on this — correctly, since the registry stores
+    // what it is handed. Resolving the origin outside the try would make that
+    // throw the same process-killing unhandled rejection by another route.
+    vi.stubEnv('DESIGN_SELF_BASE_URL', 'design-api:3015');
+    const bootstrap = vi.fn().mockResolvedValue({ stop: () => Promise.resolve() });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(registerDesignPillar('1.2.3', 3015, bootstrap)).resolves.toBeUndefined();
+    expect(bootstrap).not.toHaveBeenCalled();
   });
 
   it('says which pillar failed and does not swallow the cause', async () => {
     const cause = new Error('ECONNREFUSED registry-api:3001');
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    await registerDesignPillar('1.2.3', 'http://design-api:3015', vi.fn().mockRejectedValue(cause));
+    await registerDesignPillar('1.2.3', 3015, vi.fn().mockRejectedValue(cause));
 
     expect(logged).toHaveBeenCalledWith(expect.stringContaining('[design-api]'), cause);
   });
