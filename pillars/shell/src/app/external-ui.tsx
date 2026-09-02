@@ -1,3 +1,5 @@
+import { lazy, Suspense, type ComponentType } from 'react';
+
 /**
  * External-pillar UI loading (Option A).
  *
@@ -21,11 +23,8 @@
  * bundled: it is a runtime dynamic `import()` of a URL, native to ES modules
  * and Vite. ADR-002 stands — the in-repo FE is still one static SPA.
  */
-import { lazy, Suspense, type ComponentType } from 'react';
-
+import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
-
-import { iconMap } from './nav/icon-map';
 
 import type { RouteObject } from 'react-router';
 

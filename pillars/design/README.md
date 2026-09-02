@@ -41,6 +41,16 @@ The chrome (sidebar, dock) and the surface are two documents: the surface render
 
 The dock's theme tool switches exactly what the product can switch: light or dark, and one of the six `.app-*` accents from the theme layer. The tokens sheet at `/design/tokens` reads the resolved value of every colour token under the theme on the canvas.
 
+## Product chrome
+
+A screen on its own answers "does this layout work". A screen inside the chrome it ships in answers "does it work _here_" — with the top bar taking 56px, the rail 64, the page nav 200, and each of them appearing and vanishing at a breakpoint. Both are worth asking, so the chrome is an axis on the viewport tool rather than a setting: **No frame** or **POPS web**.
+
+The frame renders inside the canvas iframe, so the chrome collapses at the _simulated_ width, not the browser's. Breakpoints match the shell's `RootLayout`: rail and page nav from 1024, rail alone from 768, neither below.
+
+`src/frames/web/` is a facsimile, and says so — importing the shell's own `RootLayout` would reach past `@pops/app-*` into shell internals (ISO-R2) and drag the boot registry, the overlay hosts and the search stack in with it. What is _not_ a facsimile is the data: the rail and the page nav are drawn from each app package's real `navConfig`, read through its `./design` entry, so a nav item added to an app appears here with no second edit. `design-no-cross-internal` in `.dependency-cruiser.cjs` holds the playground to that one edge. Retiring the facsimile for an extracted chrome lib is POPS-2783.
+
+That `./design` entry is also how a screen composes a **real** component rather than a look-alike: `pillars/finance/app/src/design.ts` publishes `ImportWarningBanner`, and `src/screens/finance/import-warnings.tsx` reviews the shipping component with fixture warnings. The bar for adding to an app's `design.ts` is that the component takes its whole world through props — no query, no store, no client.
+
 ## Comments
 
 Press `i` on the playground and click anything: a comment is pinned to that element and a session can read it, act on it and reply. This is how a design review reaches the code that renders it.

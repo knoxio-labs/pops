@@ -9,32 +9,11 @@ import { Navigate } from 'react-router';
 
 import type { RouteObject } from 'react-router';
 
-import type { IconName } from '@pops/navigation';
-
 const AiUsagePage = lazy(() =>
   import('./pages/AiUsagePage').then((m) => ({ default: m.AiUsagePage }))
 );
 
-/** Local type mirror for compile-time safety (shell owns the canonical types). */
-interface AppNavConfigShape {
-  id: string;
-  label: string;
-  labelKey: string;
-  icon: IconName;
-  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
-  basePath: string;
-  items: { path: string; label: string; labelKey: string; icon: IconName }[];
-}
-
-export const navConfig = {
-  id: 'ai',
-  label: 'AI',
-  labelKey: 'ai',
-  icon: 'Bot',
-  color: 'violet',
-  basePath: '/ai',
-  items: [{ path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'BarChart3' }],
-} satisfies AppNavConfigShape;
+export { navConfig } from './nav';
 
 export const routes: RouteObject[] = [
   { index: true, element: <AiUsagePage /> },

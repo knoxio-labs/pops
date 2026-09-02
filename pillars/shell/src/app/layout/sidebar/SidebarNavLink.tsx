@@ -1,7 +1,8 @@
-import { iconMap } from '@/app/nav/icon-map';
 import { findActiveItem } from '@/app/nav/path-utils';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+
+import { iconMap } from '@pops/navigation';
 
 import type { AppNavConfig, AppNavItem } from '@/app/nav/registry';
 

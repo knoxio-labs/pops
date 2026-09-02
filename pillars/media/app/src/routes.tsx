@@ -9,8 +9,6 @@ import { Navigate } from 'react-router';
 
 import type { RouteObject } from 'react-router';
 
-import type { IconName } from '@pops/navigation';
-
 const LibraryPage = lazy(() =>
   import('./pages/LibraryPage').then((m) => ({ default: m.LibraryPage }))
 );
@@ -87,35 +85,8 @@ const TierListPage = lazy(() =>
     default: m.TierListPage,
   }))
 );
-/** Local type mirror for compile-time safety (shell owns the canonical types). */
-interface AppNavConfigShape {
-  id: string;
-  label: string;
-  labelKey: string;
-  icon: IconName;
-  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
-  basePath: string;
-  items: { path: string; label: string; labelKey: string; icon: IconName }[];
-}
 
-export const navConfig = {
-  id: 'media',
-  label: 'Media',
-  labelKey: 'media',
-  icon: 'Film',
-  color: 'indigo',
-  basePath: '/media',
-  items: [
-    { path: '', label: 'Library', labelKey: 'media.library', icon: 'Library' },
-    { path: '/watchlist', label: 'Watchlist', labelKey: 'media.watchlist', icon: 'Bookmark' },
-    { path: '/history', label: 'History', labelKey: 'media.history', icon: 'Clock' },
-    { path: '/discover', label: 'Discover', labelKey: 'media.discover', icon: 'Compass' },
-    { path: '/rankings', label: 'Rankings', labelKey: 'media.rankings', icon: 'Trophy' },
-    { path: '/search', label: 'Search', labelKey: 'media.search', icon: 'Search' },
-    { path: '/compare', label: 'Compare', labelKey: 'media.compare', icon: 'ArrowLeftRight' },
-    { path: '/tier-list', label: 'Tier List', labelKey: 'media.tierList', icon: 'Layers' },
-  ],
-} satisfies AppNavConfigShape;
+export { navConfig } from './nav';
 
 export const routes: RouteObject[] = [
   { index: true, element: <LibraryPage /> },

@@ -1,8 +1,9 @@
-// CI guardrail against silent nav drift: missing icon mappings would otherwise
-// render a fallback letter instead of failing the build.
 import { describe, expect, it } from 'vitest';
 
-import { iconMap } from './icon-map';
+// CI guardrail against silent nav drift: missing icon mappings would otherwise
+// render a fallback letter instead of failing the build.
+import { iconMap } from '@pops/navigation';
+
 import { registeredApps } from './registry';
 
 describe('nav registry', () => {

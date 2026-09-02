@@ -118,13 +118,16 @@ describe('parseRouteComponents', () => {
     expect(parseRouteComponents(source).get('tags')).toBe('TagsPage');
   });
 
-  it("resolves every nav item of the real food app's routes.tsx", () => {
+  it('resolves every nav item of the real food app against its real route table', () => {
     // The gate silently checked nothing here: all nine nav items were skipped
-    // as unresolvable. Pinned against the real file, not a fixture, because a
-    // fixture cannot notice the tree drifting back into an unparsed shape.
-    const source = readFileSync(join(repoRoot, 'pillars/food/app/src/routes.tsx'), 'utf8');
-    const navItems = parseNavConfigItems(source);
-    const components = parseRouteComponents(source);
+    // as unresolvable. Pinned against the real files, not fixtures, because a
+    // fixture cannot notice the tree drifting back into an unparsed shape —
+    // including the nav moving out of routes.tsx into nav.ts, which is what
+    // the two reads below are.
+    const routes = readFileSync(join(repoRoot, 'pillars/food/app/src/routes.tsx'), 'utf8');
+    const nav = readFileSync(join(repoRoot, 'pillars/food/app/src/nav.ts'), 'utf8');
+    const navItems = parseNavConfigItems(nav);
+    const components = parseRouteComponents(routes);
     expect(navItems).toHaveLength(9);
     expect(navItems.filter((item) => components.has(item.path))).toHaveLength(9);
   });

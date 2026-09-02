@@ -30,7 +30,15 @@ export type {
   SearchResultsPanelProps,
 } from './SearchResultsPanel';
 export { SearchResultsPanel } from './SearchResultsPanel';
-export type { AppContext, AppContextEntity, AppName, IconName } from './types';
+export { iconMap } from './icon-map';
+export type {
+  AppContext,
+  AppContextEntity,
+  AppName,
+  AppNavConfig,
+  AppNavItem,
+  IconName,
+} from './types';
 export { DEFAULT_APP_CONTEXT } from './types';
 export type { SearchHitData } from './uri-resolver';
 export { resolveUri } from './uri-resolver';
