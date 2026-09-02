@@ -35,6 +35,7 @@ jobs:
           - { image: pops-mcp, file: pillars/mcp/Dockerfile }
           - { image: pops-orchestrator, file: pillars/orchestrator/Dockerfile }
           - { image: pops-docs, file: pillars/docs/Dockerfile }
+          - { image: pops-design, file: pillars/design/Dockerfile }
     steps:
       - uses: actions/checkout@v7
 

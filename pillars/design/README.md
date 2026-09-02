@@ -56,4 +56,6 @@ pnpm --filter @pops/design test         # registry, address and theme units + a 
 
 ## Image
 
+`infra/docker-compose.yml` runs the image as `pops-design` on the frontend network, and the shell's nginx proxies `/design/` to it, so it sits behind the same Cloudflare Access the shell does. `.github/workflows/publish-images.yml` publishes it with the other frontend images.
+
 `Dockerfile` builds the bundle in a `node:24-alpine` stage and serves it from `nginx:1.31.3-alpine` with `nginx/default.conf`. The bundle is built with `base: /design/`, and the conf serves the same tree at `/` (what the shell's proxy forwards after stripping the prefix) and at `/design/` (a direct hit on the container), with `index.html` forced to revalidate so a rebuilt image is seen.
