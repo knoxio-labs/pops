@@ -1,14 +1,3 @@
-import { openDesignDb } from '../db/index.js';
-import { createDesignApiApp } from './app.js';
-import {
-  resolvePort,
-  resolveSelfBaseUrl,
-  resolveSqlitePath,
-  resolveVersion,
-  shouldSelfRegister,
-} from './boot-env.js';
-import { registerDesignPillar } from './register.js';
-
 /**
  * Entry point for the design pillar's comment API.
  *
@@ -29,7 +18,16 @@ import { registerDesignPillar } from './register.js';
  * and a pillar answering `/health` over an unmigrated or unwritable file
  * would pass its container healthcheck and fail every comment.
  */
-import type { PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import { openDesignDb } from '../db/index.js';
+import { createDesignApiApp } from './app.js';
+import {
+  resolvePort,
+  resolveSelfBaseUrl,
+  resolveSqlitePath,
+  resolveVersion,
+  shouldSelfRegister,
+} from './boot-env.js';
+import { registerDesignPillar } from './register.js';
 
 const port = resolvePort();
 const version = resolveVersion();
@@ -38,7 +36,7 @@ const designDb = openDesignDb(sqlitePath);
 console.warn(`[design-api] SQLite at ${sqlitePath}`);
 
 const app = createDesignApiApp({ db: designDb.db, version });
-let pillarHandle: PillarBootstrapHandle | undefined;
+let pillarHandle: Awaited<ReturnType<typeof registerDesignPillar>>;
 
 const server = app.listen(port, () => {
   console.warn(`[design-api] Listening on port ${port}`);
