@@ -99,8 +99,9 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 | `purchases`    | 3013 | purchase documents, line items, transaction links           | data pillar; ADR-042                               |
 | `bfm`          | 3014 | devices, pairing codes, refresh tokens (Backend-for-Mobile) | data pillar; the only backend the iPhone app dials |
 | `shell`        | 5568 | React SPA host                                              | UI pillar; Vite + nginx, **not** the default 5173  |
+| `design`       | 5569 | design playground: screens, experiments, variants, states   | UI pillar; Vite + nginx, served at `/design/`      |
 
-The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
+The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, `docs`, and `design` own no DB.
 
 **Pillar kinds (ADR-035):** a pillar is any service registered with `registry` that exposes `/manifest.json`. **Data** pillars own a domain DB; **bridge** pillars adapt external systems; **UI** pillars host frontend SPAs (`pops-shell` registers as `id: 'shell'`).
 

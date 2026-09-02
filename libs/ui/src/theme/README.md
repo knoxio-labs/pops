@@ -2,9 +2,9 @@
 
 The token contract every `@pops/ui` component styles against, and the only stylesheet the React frontend (shell + pillar apps) uses. Tailwind v4 configured in CSS — there is no `tailwind.config.ts`. The one other stylesheet in the repo, `pillars/docs/src/styles.css`, is standalone: its own hardcoded palette, no connection to this layer.
 
-## It is imported exactly once
+## It is imported once per bundle
 
-`pillars/shell/src/main.tsx` does `import '@pops/ui/theme'`; Storybook's `.storybook/preview.tsx` does the same for its own surface. Pillar apps must not import it again — they compile into the shell's single Vite/Tailwind build and inherit it.
+`pillars/shell/src/main.tsx` does `import '@pops/ui/theme'`; Storybook's `.storybook/preview.tsx` and the design playground's `pillars/design/src/main.tsx` do the same for their own bundles. Pillar apps must not import it again — they compile into the shell's single Vite/Tailwind build and inherit it.
 
 Which files Tailwind scans is governed by the `@source` globs at the top of `globals.css` and guarded by `scripts/check-tailwind-source-coverage.mjs`; read that script's header before touching either.
 

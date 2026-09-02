@@ -1,0 +1,31 @@
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+# The playground's workspace closure is `@pops/ui` and the compiled libs
+# beneath it, so `libs/` must be in the context as well as `pillars/`.
+# Copying both whole and letting `--filter "@pops/design..."` scope the
+# install is the same trade the shell's Dockerfile makes: no hand-listed
+# COPY blocks to drift, and the builder stage is discarded anyway.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY libs/ ./libs/
+COPY pillars/ ./pillars/
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    corepack enable && pnpm install --frozen-lockfile --filter "@pops/design..."
+
+# Compiled libs first (pnpm no-ops the source-only ones), then the playground.
+RUN pnpm --filter "@pops/design^..." build
+
+WORKDIR /app/pillars/design
+RUN pnpm build
+
+# ── Production image ──────────────────────────────────────────────
+FROM nginx:1.31.3-alpine
+COPY --from=builder /app/pillars/design/dist /usr/share/nginx/html
+COPY pillars/design/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -q --spider http://127.0.0.1:80/healthz || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

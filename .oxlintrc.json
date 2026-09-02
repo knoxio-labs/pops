@@ -253,6 +253,7 @@
     {
       "files": [
         "pillars/shell/src/**/*.{ts,tsx}",
+        "pillars/design/src/**/*.{ts,tsx}",
         "libs/ui/src/**/*.{ts,tsx}",
         "pillars/*/app/src/**/*.{ts,tsx}",
         "libs/overlay-*/src/**/*.{ts,tsx}",
@@ -265,6 +266,7 @@
     {
       "files": [
         "pillars/shell/src/**/*.{ts,tsx}",
+        "pillars/design/src/**/*.{ts,tsx}",
         "libs/ui/src/**/*.{ts,tsx}",
         "pillars/*/app/src/**/*.{ts,tsx}",
         "libs/overlay-*/src/**/*.{ts,tsx}",

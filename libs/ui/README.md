@@ -7,7 +7,8 @@ The component library every POPS frontend renders through. `src/primitives/` wra
 Every frontend surface in the repo:
 
 - `pillars/{finance,media,food,inventory,cerebrum,ai,lists}/app` — all page and section UI.
-- `pillars/shell` — chrome and layout, plus the only production `import '@pops/ui/theme'`.
+- `pillars/shell` — chrome and layout, plus the production `import '@pops/ui/theme'`.
+- `pillars/design` — the design playground's chrome and every screen designed in it; its own bundle, so it imports the theme too.
 - `libs/navigation` — `Button` + `Input` in the search field and mobile search overlay.
 - `libs/overlay-ego` — the chat panel chrome.
 

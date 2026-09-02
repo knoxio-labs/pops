@@ -1,0 +1,7 @@
+name: Import review density
+question: Does the review step read better as a dense table, a card grid, or the current row list?
+status: active
+screen: finance/import-review
+variants:
+  table: Dense table
+  cards: Card grid
