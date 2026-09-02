@@ -119,16 +119,40 @@ jobs:
         with:
           node-version: "24"
 
+      # The design playground's design surface — screens, experiments and
+      # fixtures under `pillars/design/src` — is the one diff this review does
+      # not read (AGENTS.md, "The design playground"): a design iteration is
+      # reviewed by looking at it, and the plumbing around it is not exempt.
+      # `review-findings-gate.yml` asks the same script the same question, so
+      # the two cannot disagree about which PRs will never get a comment. The
+      # script is fail-closed: an empty or unfetchable file list reviews.
+      - name: Scope — is this diff design-surface only?
+        if: steps.debounce.outputs.skip == 'false'
+        id: scope
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          node scripts/ci/design-surface-only.mjs --self-test
+          if gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' \
+               | node scripts/ci/design-surface-only.mjs; then
+            echo "Design-surface-only diff: the review is skipped by design (AGENTS.md)."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # Same preflight convention as `agent-review.yml`'s guard self-tests, and
       # for the same reason: every failure mode below this line renders as a
       # clean review. A reviewer whose state block has stopped parsing posts
       # "No open findings" forever and nothing goes red.
       - name: Reviewer self-test (prove the bookkeeping still works)
-        if: steps.debounce.outputs.skip == 'false'
+        if: steps.scope.outputs.proceed == 'true'
         run: node scripts/ci/pr-review.mjs --self-test
 
       - name: Fetch the existing review comment
-        if: steps.debounce.outputs.skip == 'false'
+        if: steps.scope.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
@@ -183,7 +207,7 @@ jobs:
           fi
 
       - name: Plan the review
-        if: steps.debounce.outputs.skip == 'false'
+        if: steps.scope.outputs.proceed == 'true'
         id: plan
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
@@ -204,7 +228,7 @@ jobs:
           echo "Review mode: $mode"
 
       - name: Run the review
-        if: steps.debounce.outputs.skip == 'false' && steps.plan.outputs.mode != 'empty'
+        if: steps.scope.outputs.proceed == 'true' && steps.plan.outputs.mode != 'empty'
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MODEL: ${{ vars.PR_REVIEW_MODEL || 'sonnet' }}
@@ -239,7 +263,7 @@ jobs:
           fi
 
       - name: Publish the review
-        if: steps.debounce.outputs.skip == 'false' && steps.plan.outputs.mode != 'empty'
+        if: steps.scope.outputs.proceed == 'true' && steps.plan.outputs.mode != 'empty'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD: ${{ github.event.pull_request.head.sha }}

@@ -164,8 +164,36 @@ jobs:
                "budget on a comment that structurally cannot appear."
           exit 1
 
-      - name: Check the reviewer's own findings
+      # `pr-review.yml` skips a diff confined to the design playground's
+      # design surface (screens, experiments, fixtures — AGENTS.md, "The
+      # design playground"), so no sticky comment will ever appear for it and
+      # polling would only spend the wait budget before failing a PR that is
+      # exempt by design. Same script, same answer, in both workflows; the
+      # script is fail-closed, so anything it cannot prove goes to the poll.
+      - name: Scope — is this diff design-surface only?
         if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+        id: scope
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          node scripts/ci/design-surface-only.mjs --self-test
+          if gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' \
+               | node scripts/ci/design-surface-only.mjs; then
+            echo "surface=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "surface=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Design surface only — the review is skipped by design, nothing to wait for
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && steps.scope.outputs.surface == 'true'
+        run: |
+          echo "Every changed path is under the design surface, so pr-review.yml" \
+               "does not run and no findings can exist. Passing without polling."
+
+      - name: Check the reviewer's own findings
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && steps.scope.outputs.surface != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}

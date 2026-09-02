@@ -38,6 +38,15 @@ GitHub Copilot no longer reviews this repository and is not coming back. Do not 
 - **Do not manufacture findings, and do not spiral.** `No open findings` is the normal, preferred outcome — the reviewer is told an empty list beats a padded one. If a re-review returns only new `LOW`s on code it already passed, that is churn, not signal: merge. Reviewing the reviewer's nitpicks is not work.
 - Do NOT suggest "request a re-review" or "ping a human" — neither happens.
 
+### The design playground (`pillars/design`)
+
+Design a screen before implementing it. `pillars/design` is the playground: a UI pillar that renders on the product's own tokens and `@pops/ui`, with experiments, variants and named states — its README is the HOW. Its **design surface** is exactly three directories: `pillars/design/src/screens`, `pillars/design/src/experiments` and `pillars/design/src/fixtures`. `scripts/ci/design-surface-only.mjs` is that list as code.
+
+- **A PR confined to the design surface skips the LLM review, the findings gate's wait, and the test mandate.** Its gate is lint, format, typecheck and build (the pillar's `unit-quality` row) plus the required deterministic checks. A design iteration is reviewed by looking at it.
+- **Everything else in the pillar is plumbing** — the chrome, the registry, the frames, the image, the API — and gets the ordinary treatment: review, tests, the lot. A PR that touches one surface file and one plumbing file is a plumbing PR.
+- The surface still answers to the frontend rules: tokens only, Lucide only, 44px touch targets, no raw palette colours. The guards scan it like any other pillar.
+- Fixtures are fictional and typed. A screen never imports a pillar contract, a generated client or a data package; it composes `@pops/ui` and, through a declared subpath, an app's exported components.
+
 ### Security (Do Not Violate)
 
 - **Never read `.env` contents** — reference file paths only, never inline token values.
