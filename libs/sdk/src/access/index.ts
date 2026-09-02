@@ -10,7 +10,9 @@ export {
   DEFAULT_CACHE_TTL_MS,
   readCloudflareAccessConfig,
   verifyCloudflareAccessJwt,
+  verifyCloudflareAccessPrincipal,
   type CloudflareAccessIdentity,
+  type CloudflareAccessPrincipal,
   type CloudflareAccessVerifier,
   type CloudflareAccessVerifierOptions,
 } from './cloudflare-jwt.js';

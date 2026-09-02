@@ -12,6 +12,7 @@ import {
   encodeTheme,
   type ThemeMode,
 } from './theme';
+import { useCommentMode } from './use-comment-mode';
 import { FULL, type Viewport } from './viewport';
 
 const CHROME_MODE_KEY = 'pops-design-chrome-mode';
@@ -34,6 +35,7 @@ export function AppShell() {
   const [sidebar, setSidebar] = useStoredString(SIDEBAR_KEY, 'open');
   const [themeRaw, setThemeRaw] = useStoredString(CANVAS_THEME_KEY, encodeTheme(DEFAULT_THEME));
   const [viewport, setViewport] = useState<Viewport>(FULL);
+  const comments = useCommentMode();
   const theme = decodeTheme(themeRaw);
 
   return (
@@ -49,6 +51,7 @@ export function AppShell() {
         <Canvas
           theme={theme}
           viewport={viewport}
+          comments={comments}
           onResize={(w, h) => setViewport({ kind: 'fixed', label: 'Custom', w, h })}
         />
       </main>
@@ -56,6 +59,11 @@ export function AppShell() {
         catalog={catalog}
         theme={theme}
         viewport={viewport}
+        comments={{
+          active: comments.active,
+          openCount: comments.openCount,
+          onToggle: comments.toggle,
+        }}
         onThemeSelect={(next) => setThemeRaw(encodeTheme(next))}
         onViewportSelect={setViewport}
       />

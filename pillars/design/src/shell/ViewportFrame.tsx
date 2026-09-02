@@ -10,6 +10,7 @@ import {
 } from './viewport';
 
 import type { CanvasTheme } from './theme';
+import type { CommentMode } from './use-comment-mode';
 
 const HANDLES = [
   { corner: 'nw', className: '-top-1.5 -left-1.5 cursor-nwse-resize' },
@@ -28,20 +29,37 @@ interface ViewportFrameProps {
   /** Shell route, `pathname + search`, router-relative. */
   route: string;
   theme: CanvasTheme;
+  comments: CommentMode;
   onRouteChange: (route: string) => void;
   onResize: (w: number, h: number) => void;
 }
 
-/** Keeps the frame on the shell's route and theme: reload on route, message on theme. */
+/**
+ * Keeps the frame on the shell's route, theme and comment mode: reload on
+ * route, message on the other two.
+ *
+ * Comment mode is re-sent on every `ready` alongside the theme, because a
+ * route change reloads the frame document — without it, navigating with the
+ * overlay open would leave the dock lit and the surface inert.
+ */
 function useFrameSync(
   iframeRef: RefObject<HTMLIFrameElement | null>,
-  { route, theme, onRouteChange }: Pick<ViewportFrameProps, 'route' | 'theme' | 'onRouteChange'>
+  {
+    route,
+    theme,
+    comments,
+    onRouteChange,
+  }: Pick<ViewportFrameProps, 'route' | 'theme' | 'comments' | 'onRouteChange'>
 ): void {
   const frameRouteRef = useRef(route);
   // The theme is read at document load only; later changes go over postMessage,
   // so the reload effect reads it through a ref rather than depending on it.
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const commentsActiveRef = useRef(comments.active);
+  commentsActiveRef.current = comments.active;
+
+  const { exit, setOpenCount } = comments;
 
   const post = useCallback(
     (message: ShellToFrame) => {
@@ -58,15 +76,24 @@ function useFrameSync(
           frameRouteRef.current = message.route;
           onRouteChange(message.route);
         }
-        if (message.kind === 'ready') post({ kind: 'theme', theme: themeRef.current });
+        if (message.kind === 'ready') {
+          post({ kind: 'theme', theme: themeRef.current });
+          post({ kind: 'comments', active: commentsActiveRef.current });
+        }
+        if (message.kind === 'comment-count') setOpenCount(message.open);
+        if (message.kind === 'comments-exit') exit();
       },
-      [onRouteChange, post]
+      [exit, onRouteChange, post, setOpenCount]
     )
   );
 
   useEffect(() => {
     post({ kind: 'theme', theme });
   }, [post, theme]);
+
+  useEffect(() => {
+    post({ kind: 'comments', active: comments.active });
+  }, [comments.active, post]);
 
   useEffect(() => {
     if (route !== frameRouteRef.current) {
@@ -135,6 +162,7 @@ export function ViewportFrame({
   viewport,
   route,
   theme,
+  comments,
   onRouteChange,
   onResize,
 }: ViewportFrameProps) {
@@ -142,7 +170,7 @@ export function ViewportFrame({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialSrc = useRef(frameSrc(route, theme));
   const avail = useAvail(containerRef);
-  useFrameSync(iframeRef, { route, theme, onRouteChange });
+  useFrameSync(iframeRef, { route, theme, comments, onRouteChange });
 
   // Unsandboxed by design: the frame is this same app, and it needs its own
   // origin for the postMessage handshake and for storage. A sandbox that

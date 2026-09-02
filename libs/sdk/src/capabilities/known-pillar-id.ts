@@ -17,7 +17,9 @@
  * of PRD-055, extracting the AI-ops backend (observability, providers,
  * budgets, alerts, the cross-pillar telemetry ingest) out of it.
  * The `registry` pillar (formerly `core`) is the platform registry /
- * discovery / settings host.
+ * discovery / settings host. `design` is the odd one: a UI pillar that owns a
+ * database anyway, because the playground's comment threads have to live
+ * somewhere and the playground is where they are written.
  *
  * Kept static rather than derived from the live registry snapshot (the
  * nginx generator's static mode is a build-time artifact with no registry
@@ -38,6 +40,7 @@ export const PILLARS = [
   'ai',
   'purchases',
   'bfm',
+  'design',
 ] as const;
 
 /**

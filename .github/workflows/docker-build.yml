@@ -6,6 +6,7 @@ on:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
       - "**/Dockerfile"
+      - "**/Dockerfile.*"
       - "pillars/*/nginx.conf"
       - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
@@ -20,6 +21,7 @@ on:
       - "infra/docker*/**"
       - "infra/docker-compose*.yml"
       - "**/Dockerfile"
+      - "**/Dockerfile.*"
       - "pillars/*/nginx.conf"
       - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
@@ -94,6 +96,7 @@ jobs:
           filters: |
             docker:
               - '**/Dockerfile'
+              - '**/Dockerfile.*'
               - 'pillars/*/nginx.conf'
               - 'pillars/*/nginx/**'
               - 'infra/docker*/**'
@@ -166,6 +169,13 @@ jobs:
         # Discovered from disk rather than a static list, so adding or
         # removing a pillar needs no edit here. An empty list is how a PR
         # with no Docker-relevant changes skips the builds entirely.
+        #
+        # `Dockerfile.*` as well as `Dockerfile`: a pillar may ship more than
+        # one image. `pillars/design` is the first — a static nginx image for
+        # the playground and `Dockerfile.api` for the comment API it writes
+        # to, since one image cannot be both. A variant image is built and
+        # smoked exactly like a primary one; nothing else here treats them
+        # differently.
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ] && \
@@ -174,7 +184,7 @@ jobs:
             echo 'dockerfiles=[]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          found=$(find pillars -maxdepth 2 -name Dockerfile | sort |
+          found=$(find pillars -maxdepth 2 \( -name Dockerfile -o -name 'Dockerfile.*' \) | sort |
             jq -R -s -c 'split("\n") | map(select(length > 0))')
           echo "found ${found}"
           echo "dockerfiles=${found}" >> "$GITHUB_OUTPUT"

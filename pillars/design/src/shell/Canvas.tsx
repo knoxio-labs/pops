@@ -6,6 +6,7 @@ import { parseAddress } from './address';
 import { ViewportFrame } from './ViewportFrame';
 
 import type { CanvasTheme } from './theme';
+import type { CommentMode } from './use-comment-mode';
 import type { Viewport } from './viewport';
 
 const TOKENS_ROUTE = '/tokens';
@@ -24,10 +25,12 @@ export function isCanvasRoute(pathname: string): boolean {
 export function Canvas({
   theme,
   viewport,
+  comments,
   onResize,
 }: {
   theme: CanvasTheme;
   viewport: Viewport;
+  comments: CommentMode;
   onResize: (w: number, h: number) => void;
 }) {
   const location = useLocation();
@@ -50,6 +53,7 @@ export function Canvas({
       viewport={viewport}
       route={route}
       theme={theme}
+      comments={comments}
       onRouteChange={onRouteChange}
       onResize={onResize}
     />

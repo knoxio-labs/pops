@@ -90,6 +90,7 @@ export const PILLAR_UPSTREAMS: Record<BuildPillarId, { host: string; port: numbe
   contacts: { host: 'contacts-api', port: 3010 },
   purchases: { host: 'purchases-api', port: 3013 },
   bfm: { host: 'bfm-api', port: 3014 },
+  design: { host: 'design-api', port: 3015 },
 };
 
 const PILLAR_UPSTREAMS_BY_ID: ReadonlyMap<string, { host: string; port: number }> = new Map(
@@ -122,6 +123,7 @@ export const PILLAR_RENDER_ORDER: readonly BuildPillarId[] = [
   'contacts',
   'purchases',
   'bfm',
+  'design',
 ];
 
 export { DEFAULT_REGISTRY_URL };

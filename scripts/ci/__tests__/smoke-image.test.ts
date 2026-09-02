@@ -32,8 +32,44 @@ function pillarsWith(...entries: readonly string[]): string[] {
     .filter((id) => entries.every((path) => existsSync(join(repoRoot, 'pillars', id, path))));
 }
 
-function readDockerfile(pillarId: string): string {
-  return readFileSync(join(repoRoot, 'pillars', pillarId, 'Dockerfile'), 'utf8');
+/**
+ * Every image the tree ships, as a repo-relative Dockerfile path.
+ *
+ * A pillar is not one image: `pillars/design` ships a static nginx image for
+ * the playground and `Dockerfile.api` for the comment API it writes to, since
+ * one image cannot be both. Keying these assertions on the pillar id would
+ * hold the wrong file to each contract — and would leave the second image
+ * checked by nothing. Matches the discovery in `docker-build.yml`.
+ */
+function pillarImages(): string[] {
+  return pillarsWith('Dockerfile').flatMap((id) =>
+    readdirSync(join(repoRoot, 'pillars', id))
+      .filter((name) => name === 'Dockerfile' || name.startsWith('Dockerfile.'))
+      .sort()
+      .map((name) => `pillars/${id}/${name}`)
+  );
+}
+
+function readDockerfile(dockerfilePath: string): string {
+  return readFileSync(join(repoRoot, dockerfilePath), 'utf8');
+}
+
+/** The `/data/...` volumes production compose mounts onto one image, read-write. */
+function productionMounts(dockerfilePath: string): string[] {
+  return dataMountsForDockerfile(productionCompose, dockerfilePath);
+}
+
+/**
+ * Images that own a database, derived from what production actually mounts
+ * onto them rather than from whether their pillar ships migrations.
+ *
+ * The two agreed while every pillar shipped exactly one image. They stop
+ * agreeing the moment a pillar ships two: `pillars/design` ships migrations
+ * and its static image mounts nothing, so the migrations rule would demand a
+ * `/data/sqlite` mount point of an nginx image that never opens a database.
+ */
+function databaseImages(): string[] {
+  return pillarImages().filter((path) => productionMounts(path).includes('/data/sqlite'));
 }
 
 interface WorkspacePackage {
@@ -100,11 +136,13 @@ function selectedWorkspacePackages(
   return selected;
 }
 
-/** Pillar ids whose image installs better-sqlite3, derived rather than listed. */
-function pillarsInstallingBetterSqlite3(): string[] {
+/** Images that install better-sqlite3, derived rather than listed. */
+function imagesInstallingBetterSqlite3(): string[] {
   const members = workspaceMembers();
-  return pillarsWith('Dockerfile', 'package.json').filter((id) => {
-    const name = readPackageJson(join(repoRoot, 'pillars', id, 'package.json')).name;
+  return pillarImages().filter((path) => {
+    const manifest = join(repoRoot, dirname(path), 'package.json');
+    if (!existsSync(manifest)) return false;
+    const name = readPackageJson(manifest).name;
     if (name === undefined) return false;
     return [...selectedWorkspacePackages(name, members)].some((selected) => {
       const pkg = members.get(selected);
@@ -548,14 +586,20 @@ describe('collectStreams', () => {
 });
 
 describe('planSmoke — every pillar Dockerfile on disk', () => {
-  const pillars = pillarsWith('Dockerfile');
+  const images = pillarImages();
 
   it('finds Dockerfiles to check (the discovery itself is not silently empty)', () => {
-    expect(pillars.length).toBeGreaterThan(0);
+    expect(images.length).toBeGreaterThan(0);
   });
 
-  it.each(pillars)('pillars/%s/Dockerfile yields a usable smoke plan', (id) => {
-    const plan = planSmoke(readDockerfile(id));
+  it('discovers a pillar’s second image, not just its primary one', () => {
+    // Guards the discovery itself: keyed on the pillar id, every assertion
+    // below would silently skip whichever image is not named `Dockerfile`.
+    expect(images).toContain('pillars/design/Dockerfile.api');
+  });
+
+  it.each(images)('%s yields a usable smoke plan', (path) => {
+    const plan = planSmoke(readDockerfile(path));
     expect(plan.port).toBeGreaterThan(0);
     expect(plan.healthPath.startsWith('/')).toBe(true);
   });
@@ -566,8 +610,8 @@ describe('the deploy step every Node pillar image depends on', () => {
   // `@pops/*` symlinks that escape /app/deploy, so the image builds clean and
   // the container dies on its first import. The runtime smoke is the real
   // gate; this is the fast, docker-free half that names the fix.
-  it.each(pillarsWith('Dockerfile'))('pillars/%s does not use `pnpm deploy --legacy`', (id) => {
-    const deployLines = readDockerfile(id)
+  it.each(pillarImages())('%s does not use `pnpm deploy --legacy`', (path) => {
+    const deployLines = readDockerfile(path)
       .split('\n')
       .filter((line) => /^\s*RUN\s.*\bpnpm\b.*\bdeploy\b/u.test(line));
     for (const line of deployLines) {
@@ -589,24 +633,29 @@ describe('the fresh-volume contract, for every pillar image that owns a database
   //
   // "Owns a database" is derived from shipping migrations rather than listed,
   // so a new pillar is held to the contract the moment its migrations land.
-  const dbPillars = pillarsWith('Dockerfile', 'migrations');
+  const dbImages = databaseImages();
 
-  it('finds database-owning pillars (the derivation itself is not silently empty)', () => {
-    expect(dbPillars.length).toBeGreaterThan(0);
+  it('finds database-owning images (the derivation itself is not silently empty)', () => {
+    expect(dbImages.length).toBeGreaterThan(0);
   });
 
-  it.each(dbPillars)('pillars/%s creates its data mount point in the runtime stage', (id) => {
-    expect(runtimeStage(readDockerfile(id))).toMatch(/mkdir\s+-p\s+[^\n]*\/data\/sqlite/u);
+  it('holds a pillar’s API image to the contract and not its static one', () => {
+    expect(dbImages).toContain('pillars/design/Dockerfile.api');
+    expect(dbImages).not.toContain('pillars/design/Dockerfile');
   });
 
-  it.each(dbPillars)('pillars/%s hands /data to the runtime user, not root', (id) => {
-    expect(runtimeStage(readDockerfile(id))).toMatch(/chown\s+-R\s+\S+\s+\/data\b/u);
+  it.each(dbImages)('%s creates its data mount point in the runtime stage', (path) => {
+    expect(runtimeStage(readDockerfile(path))).toMatch(/mkdir\s+-p\s+[^\n]*\/data\/sqlite/u);
   });
 
-  it.each(dbPillars)('pillars/%s defaults its database onto that mount point', (id) => {
+  it.each(dbImages)('%s hands /data to the runtime user, not root', (path) => {
+    expect(runtimeStage(readDockerfile(path))).toMatch(/chown\s+-R\s+\S+\s+\/data\b/u);
+  });
+
+  it.each(dbImages)('%s defaults its database onto that mount point', (path) => {
     // Without this the image only boots when a deployer supplies a path: the
     // in-code default is ./data, and /app is root-owned.
-    expect(runtimeStage(readDockerfile(id))).toMatch(
+    expect(runtimeStage(readDockerfile(path))).toMatch(
       /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
     );
   });
@@ -688,12 +737,12 @@ describe('the tsconfigs each image compiles against, for every pillar Dockerfile
   // out. That is how `documents`, `mcp` and `orchestrator` reached main
   // unbuildable. Derived from the manifests each Dockerfile copies, so a
   // pillar is covered without being listed.
-  const cases = pillarsWith('Dockerfile').flatMap((id) => {
-    const dockerfile = readDockerfile(id);
+  const cases = pillarImages().flatMap((path) => {
+    const dockerfile = readDockerfile(path);
     const copied = copiedSources(dockerfile);
     return workspaceDirsBuiltBy(dockerfile).flatMap((dir) =>
       tsconfigsBuildScriptNeeds(readPackageJson(join(repoRoot, dir, 'package.json'))).map(
-        (tsconfig) => ({ id, dir, tsconfig, copied })
+        (tsconfig) => ({ id: path, dir, tsconfig, copied })
       )
     );
   });
@@ -775,13 +824,8 @@ describe('what production mounts and what the image creates, for every pillar Do
   // nothing onto is either a volume someone forgot to declare — state written
   // into the container layer and lost on the next redeploy — or a `mkdir` for
   // a mount that no longer exists.
-  const pillars = pillarsWith('Dockerfile');
-
-  it.each(pillars)('pillars/%s creates exactly what compose mounts onto it', (id) => {
-    const dockerfilePath = `pillars/${id}/Dockerfile`;
-    expect(runtimeDataDirs(readDockerfile(id))).toEqual(
-      dataMountsForDockerfile(productionCompose, dockerfilePath)
-    );
+  it.each(pillarImages())('%s creates exactly what compose mounts onto it', (path) => {
+    expect(runtimeDataDirs(readDockerfile(path))).toEqual(productionMounts(path));
   });
 });
 
@@ -790,28 +834,31 @@ describe('the mount set derived from production compose', () => {
   // a schema mismatch or a renamed compose key would leave every assertion
   // above vacuously true, and the smoke would report success on a mount it
   // never touched.
-  const derived = new Map(
-    pillarsWith('Dockerfile').map((id) => [
-      id,
-      dataMountsForDockerfile(productionCompose, `pillars/${id}/Dockerfile`),
-    ])
-  );
+  const derived = new Map(pillarImages().map((path) => [path, productionMounts(path)]));
 
+  /**
+   * The backward direction of the derivation above: a pillar that ships
+   * migrations must have SOME image mounting a database, even though which of
+   * its images that is no longer follows from the pillar id.
+   */
   it('covers every pillar that owns a database', () => {
     for (const id of pillarsWith('Dockerfile', 'migrations')) {
-      expect(derived.get(id)).toContain('/data/sqlite');
+      const mounts = pillarImages()
+        .filter((path) => path.startsWith(`pillars/${id}/`))
+        .flatMap((path) => derived.get(path) ?? []);
+      expect(mounts).toContain('/data/sqlite');
     }
   });
 
   it('reaches the lazily-written second volumes, which no health probe proves', () => {
-    expect(derived.get('media')).toContain('/data/media/images');
-    expect(derived.get('food')).toContain('/data/food/ingest');
-    expect(derived.get('cerebrum')).toContain('/data/cerebrum/engrams');
+    expect(derived.get('pillars/media/Dockerfile')).toContain('/data/media/images');
+    expect(derived.get('pillars/food/Dockerfile')).toContain('/data/food/ingest');
+    expect(derived.get('pillars/cerebrum/Dockerfile')).toContain('/data/cerebrum/engrams');
   });
 
-  it('mounts nothing on the pillars that own no state', () => {
-    for (const id of ['docs', 'shell', 'mcp', 'documents', 'orchestrator']) {
-      expect(derived.get(id)).toEqual([]);
+  it('mounts nothing on the images that own no state', () => {
+    for (const id of ['docs', 'shell', 'mcp', 'documents', 'orchestrator', 'design']) {
+      expect(derived.get(`pillars/${id}/Dockerfile`)).toEqual([]);
     }
   });
 
@@ -859,37 +906,39 @@ describe('the native-build fallback, for every pillar image that installs better
   // each Dockerfile installs `--filter "@pops/<id>..."`, whose selection is the
   // transitive workspace closure. That is why `shell` is in here despite owning
   // no database — its closure reaches pillars that do.
-  const nativePillars = pillarsInstallingBetterSqlite3();
+  const nativeImages = imagesInstallingBetterSqlite3();
 
   it('finds better-sqlite3 images (the derivation itself is not silently empty)', () => {
-    expect(nativePillars.length).toBeGreaterThan(0);
+    expect(nativeImages.length).toBeGreaterThan(0);
   });
 
   it('derives shell too, whose closure pulls in database pillars it does not own', () => {
     // Guards the derivation itself: a naive "ships migrations" rule — the one
     // the fresh-volume contract above can afford — would miss this image.
-    expect(nativePillars).toContain('shell');
+    expect(nativeImages).toContain('pillars/shell/Dockerfile');
     expect(existsSync(join(repoRoot, 'pillars', 'shell', 'migrations'))).toBe(false);
   });
 
-  it.each(nativePillars)('pillars/%s installs a node-gyp toolchain to build with', (id) => {
+  it.each(nativeImages)('%s installs a node-gyp toolchain to build with', (path) => {
     expect(
-      lineIndexMatching(builderStages(readDockerfile(id)), installsNodeGypToolchain)
+      lineIndexMatching(builderStages(readDockerfile(path)), installsNodeGypToolchain)
     ).toBeGreaterThanOrEqual(0);
   });
 
-  it.each(nativePillars)('pillars/%s installs it before the install that needs it', (id) => {
-    const builder = builderStages(readDockerfile(id));
+  it.each(nativeImages)('%s installs it before the install that needs it', (path) => {
+    const builder = builderStages(readDockerfile(path));
     const toolchain = lineIndexMatching(builder, installsNodeGypToolchain);
     const install = lineIndexMatching(builder, (line) => /\bpnpm install\b/u.test(line));
     expect(install).toBeGreaterThan(toolchain);
   });
 
-  it.each(nativePillars)('pillars/%s keeps the toolchain out of the shipped image', (id) => {
+  it.each(nativeImages)('%s keeps the toolchain out of the shipped image', (path) => {
     // The whole size argument for this rests on the toolchain never leaving the
     // builder. A runtime stage that grew a compiler would pass every assertion
     // above and quietly add a few hundred MB to what deployers pull.
-    expect(lineIndexMatching(runtimeStage(readDockerfile(id)), installsNodeGypToolchain)).toBe(-1);
+    expect(lineIndexMatching(runtimeStage(readDockerfile(path)), installsNodeGypToolchain)).toBe(
+      -1
+    );
   });
 });
 

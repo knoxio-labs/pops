@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "design-feedback": {
+      "command": "node",
+      "args": ["scripts/design-feedback-mcp.mjs"]
+    }
+  }
+}

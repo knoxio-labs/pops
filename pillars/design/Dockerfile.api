@@ -1,0 +1,96 @@
+# The comment API's image — the SECOND image this pillar ships.
+#
+# `Dockerfile` next to this one builds the playground itself: a static bundle
+# served by nginx, which cannot also run a Node process. The overlay needs a
+# writable store behind it, so the pillar ships two images rather than one:
+# `pops-design` serves the surface, `pops-design-api` serves `/api`.
+#
+# Both are discovered by `.github/workflows/docker-build.yml`, which globs
+# `Dockerfile` and `Dockerfile.*` under `pillars/*/` precisely so a variant
+# image is built and smoked like any other.
+#
+# The build shape is the collapsed-pillar one (pillars/bfm/Dockerfile): scope
+# the install and build to the `@pops/design` subgraph so unrelated pillars
+# never enter this image's context. Adding a workspace dependency to
+# pillars/design/package.json without adding it to Phase 1 and Phase 2 below
+# breaks this image and nothing else — no local check catches it, only the
+# Docker Build CI job.
+
+FROM node:24-slim AS builder
+WORKDIR /app
+
+# better-sqlite3 installs as `prebuild-install || node-gyp rebuild`, and this
+# base has neither Python nor a compiler — so a failure to FETCH the prebuilt
+# binary would take the build down with an error naming neither cause nor fix.
+# The prebuild stays the fast path; this only makes the fallback real. Builder
+# stage only: the runtime image is a separate FROM and gets none of it.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+
+# Phase 1: package.json of @pops/design + its transitive @pops/* deps.
+COPY pillars/design/package.json ./pillars/design/
+COPY libs/locales/package.json ./libs/locales/
+COPY libs/sdk/package.json ./libs/sdk/
+COPY libs/types/package.json ./libs/types/
+COPY libs/ui/package.json ./libs/ui/
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    corepack enable && pnpm install --frozen-lockfile --filter "@pops/design..."
+
+# Phase 2: source for the transitive @pops/* deps + the pillar itself.
+COPY libs/locales ./libs/locales
+COPY libs/sdk/src ./libs/sdk/src
+COPY libs/sdk/tsconfig.json ./libs/sdk/tsconfig.json
+COPY libs/sdk/tsconfig.build.json ./libs/sdk/tsconfig.build.json
+COPY libs/types/src ./libs/types/src
+COPY libs/types/tsconfig.json ./libs/types/tsconfig.json
+COPY libs/types/tsconfig.build.json ./libs/types/tsconfig.build.json
+COPY libs/ui ./libs/ui
+# `migrations/` is not optional: openDesignDb resolves the journal relative to
+# its own module, so a missing folder is a boot crash rather than a pillar
+# that starts un-migrated.
+COPY pillars/design/src ./pillars/design/src
+COPY pillars/design/migrations ./pillars/design/migrations
+COPY pillars/design/tsconfig.json ./pillars/design/tsconfig.json
+COPY pillars/design/tsconfig.build.json ./pillars/design/tsconfig.build.json
+
+# Phase 3: compiled deps in pnpm topology order, then the API's own project.
+# `tsconfig.build.json` compiles `src/api` and `src/db` only — the playground's
+# React source is the other image's business and never enters this one's dist.
+RUN pnpm --filter "@pops/design^..." build
+RUN pnpm --filter @pops/design exec tsc -b tsconfig.build.json
+
+# Standalone deployment with the workspace @pops/* packages INJECTED rather
+# than linked back at the workspace. `--legacy` writes relative links that
+# escape the deploy directory: nothing fails at build time and the container
+# dies on ERR_MODULE_NOT_FOUND at its first import. See pillars/bfm/Dockerfile.
+RUN pnpm --filter @pops/design --config.inject-workspace-packages=true deploy --prod /app/deploy
+
+FROM node:24-slim
+WORKDIR /app
+
+# The mount point for the pillar's own volume, created here and owned by the
+# runtime user. Docker seeds an EMPTY named volume from the image's contents at
+# that path, ownership included — so this line is what makes `pops-design-data`
+# writable on its first ever mount. Without it the volume arrives root-owned
+# and the pillar dies on SQLITE_CANTOPEN.
+RUN mkdir -p /data/sqlite && chown -R node:node /data
+
+# The image's own database default, so it boots with no environment at all.
+# `SQLITE_PATH` is the lower-precedence path resolveSqlitePath reads, so
+# compose's DESIGN_SQLITE_PATH still wins; on its own it lands on
+# /data/sqlite/design.db.
+ENV SQLITE_PATH=/data/sqlite/pops.db
+
+COPY --from=builder --chown=node:node /app/deploy ./
+COPY --from=builder --chown=node:node /app/pillars/design/dist ./dist
+COPY --from=builder --chown=node:node /app/pillars/design/migrations ./migrations
+
+ARG BUILD_VERSION=dev
+ENV BUILD_VERSION=$BUILD_VERSION
+
+EXPOSE 3015
+USER node
+CMD ["node", "dist/api/server.js"]
