@@ -34,11 +34,19 @@ let pillarHandle: Awaited<ReturnType<typeof registerDesignPillar>>;
 
 const server = app.listen(port, () => {
   console.warn(`[design-api] Listening on port ${port}`);
-  if (shouldSelfRegister()) void register();
+  // `registerDesignPillar` resolves rather than rejects, on every path it
+  // knows about. The `.catch` is the backstop for the ones it does not: this
+  // promise is not awaited by anything, so a rejection escaping it would be
+  // unhandled and would kill a process that is already serving comments.
+  if (shouldSelfRegister()) void register().catch(onRegistrationCrash);
 });
 
 async function register(): Promise<void> {
   pillarHandle = await registerDesignPillar(version, port);
+}
+
+function onRegistrationCrash(err: unknown): void {
+  console.error('[design-api] Registration crashed; serving unregistered', err);
 }
 
 let shuttingDown = false;
