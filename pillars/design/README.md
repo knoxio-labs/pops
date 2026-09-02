@@ -51,6 +51,16 @@ The frame renders inside the canvas iframe, so the chrome collapses at the _simu
 
 That `./design` entry is also how a screen composes a **real** component rather than a look-alike: `pillars/finance/app/src/design.ts` publishes `ImportWarningBanner`, and `src/screens/finance/import-warnings.tsx` reviews the shipping component with fixture warnings. The bar for adding to an app's `design.ts` is that the component takes its whole world through props — no query, no store, no client.
 
+### The iPhone frame
+
+**iPhone** on the same axis draws a 393×852 device — bezel, status bar, home indicator, and the safe-area custom properties a screen inside it can read.
+
+Its colours are not invented. `scripts/design-ios-tokens.mjs` reads every colorset in `clients/ios/Packages/DesignSystem/Sources/DesignSystem/Resources/Colors.xcassets` and writes `src/frames/ios/tokens.css` — light values on `:root`, dark under `.dark`, which is the class the theme layer already sets. It lives at the repo root because a pillar may not read `clients/` (ADR-043); run it with `mise run design:ios-tokens`. The sheet is checked in, and `scripts/ci/check-ios-design-tokens.mjs` regenerates and diffs, so a colorset edit that skips the generator fails CI rather than shipping a frame that lies about the app.
+
+The type scale in `src/frames/ios/type-scale.css` is hand-mapped from `PopsFont.swift` at Apple's default (Large) Dynamic Type size, because the Swift side names text styles and a text style has no point size until the system resolves one. **Dynamic Type is therefore not modelled**: every size is fixed, so the frame cannot show a screen at accessibility sizes, which is where iOS layouts usually break. That still needs a device.
+
+`src/frames/ios/primitives.tsx` holds facsimiles named after the Swift ones — `PopsCard`, `PopsRow`, `PopsButton`, `PopsActionBar`, `StateView` — so a screen designed here can be handed over in one sentence. They share no code with the app and can drift; the colours and the type scale are the parts that cannot. Rasterising real SwiftUI screens beside the facsimile is POPS-2784.
+
 ## Comments
 
 Press `i` on the playground and click anything: a comment is pinned to that element and a session can read it, act on it and reply. This is how a design review reaches the code that renders it.

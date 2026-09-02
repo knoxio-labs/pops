@@ -1,0 +1,35 @@
+/*
+ * GENERATED — do not edit.
+ *
+ * Written by scripts/design-ios-tokens.mjs from
+ * clients/ios/Packages/DesignSystem/Sources/DesignSystem/Resources/Colors.xcassets.
+ * Run `mise run design:ios-tokens` after changing a colorset; CI regenerates
+ * this file and diffs it.
+ *
+ * Both appearances come from the catalogue. A colorset with no dark entry
+ * repeats its light value, which is what iOS resolves.
+ */
+
+:root {
+  --ios-accent: #0b5fd0;
+  --ios-background: #ffffff;
+  --ios-destructive: #c4291c;
+  --ios-foreground: #000000;
+  --ios-muted-foreground: #66666a;
+  --ios-separator: #c6c6c8;
+  --ios-success: #16702f;
+  --ios-surface: #f2f2f7;
+  --ios-warning: #8a5a00;
+}
+
+.dark {
+  --ios-accent: #4c9aff;
+  --ios-background: #000000;
+  --ios-destructive: #ff6961;
+  --ios-foreground: #ffffff;
+  --ios-muted-foreground: #98989f;
+  --ios-separator: #38383a;
+  --ios-success: #43c463;
+  --ios-surface: #1c1c1e;
+  --ios-warning: #e3a62f;
+}

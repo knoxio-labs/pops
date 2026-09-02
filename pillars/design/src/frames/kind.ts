@@ -10,13 +10,14 @@
  * The frame renders inside the canvas iframe, not around it, so the chrome
  * collapses at the simulated width rather than the browser's.
  */
-export type FrameKind = 'none' | 'web';
+export type FrameKind = 'none' | 'web' | 'ios';
 
-export const FRAME_KINDS: readonly FrameKind[] = ['none', 'web'];
+export const FRAME_KINDS: readonly FrameKind[] = ['none', 'web', 'ios'];
 
 const LABELS: Record<FrameKind, string> = {
   none: 'No frame',
   web: 'POPS web',
+  ios: 'iPhone',
 };
 
 export function frameLabel(kind: FrameKind): string {
