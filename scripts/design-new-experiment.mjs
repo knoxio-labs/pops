@@ -27,6 +27,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { stringify } from 'yaml';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
@@ -94,11 +96,13 @@ export function parseArgs(argv) {
  * @returns {string}
  */
 export function renderExperimentYaml(options) {
-  const lines = [`name: ${options.name ?? options.id}`];
-  if (options.question !== undefined) lines.push(`question: ${options.question}`);
-  lines.push('status: active', `screen: ${options.screen ?? ''}`, 'variants:');
-  for (const variant of options.variants) lines.push(`  ${variant}: ${variant}`);
-  return `${lines.join('\n')}\n`;
+  /** @type {Record<string, unknown>} */
+  const data = { name: options.name ?? options.id };
+  if (options.question !== undefined) data.question = options.question;
+  data.status = 'active';
+  data.screen = options.screen ?? '';
+  data.variants = Object.fromEntries(options.variants.map((variant) => [variant, variant]));
+  return stringify(data);
 }
 
 /**
