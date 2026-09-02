@@ -4,6 +4,8 @@
  */
 import { dirname, join } from 'node:path';
 
+import { resolveSelfBaseUrl as resolveFleetSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+
 /** The port the API listens on. Next free slot after bfm's 3014. */
 export const DEFAULT_PORT = 3015;
 
@@ -22,6 +24,31 @@ export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
 export function resolveVersion(env: NodeJS.ProcessEnv = process.env): string {
   const version = env['BUILD_VERSION'];
   return version === undefined || version.trim() === '' ? 'dev' : version;
+}
+
+/**
+ * Whether to register with the `registry` pillar on boot.
+ *
+ * Off by default and on in the fleet, exactly like every other pillar: a
+ * developer running the API against a local SQLite file has no registry to
+ * talk to, and a failed registration there would be noise rather than news.
+ */
+export function shouldSelfRegister(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env['POPS_REGISTRY_ENABLED'] === 'true';
+}
+
+/**
+ * The URL the registry should hand callers for this pillar — and, through the
+ * shell's dynamic nginx render, the upstream its `/design-api/` block proxies
+ * to when the pillar is not one of the curated ones.
+ */
+export function resolveSelfBaseUrl(port: number, env: NodeJS.ProcessEnv = process.env): string {
+  return resolveFleetSelfBaseUrl({
+    envVar: 'DESIGN_SELF_BASE_URL',
+    port,
+    processLabel: 'design-api',
+    env,
+  });
 }
 
 /**

@@ -57,6 +57,7 @@ const EXPECTED_BUILDERS = [
   'ai:buildAiManifest',
   'bfm:buildBfmManifest',
   'cerebrum:buildCerebrumManifest',
+  'design:buildDesignManifest',
   'documents:buildDocumentsManifest',
   'finance:buildFinanceManifest',
   'food:buildFoodManifest',

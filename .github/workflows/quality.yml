@@ -451,6 +451,26 @@ jobs:
       - name: The generated sheet matches the catalogue
         run: node scripts/ci/check-ios-design-tokens.mjs
 
+  pillar-registration:
+    name: Every pillar registers on boot
+    # The shell renders its production nginx conf from the live registry and
+    # emits one `/<id>-api/` block per *registered* pillar. So a pillar that
+    # never calls `bootstrapPillar` has no route on the running host, however
+    # complete `pillars/shell/nginx.conf` looks and however green the conf's
+    # drift test is — which is exactly how the design pillar shipped a dead
+    # `/design-api/` (POPS-2793). This guard reads each curated pillar's
+    # server source for a boot registration call. Source only, no deps.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a pillar that stops registering)
+        run: node scripts/ci/check-pillar-registration.mjs --self-test
+      - name: Every curated pillar registers on boot
+        run: node scripts/ci/check-pillar-registration.mjs
+
   icon-only-buttons:
     name: Icon-only buttons carry aria-label
     # libs/ui/README.md "Action Icon Standards": a compact (icon-only) action
