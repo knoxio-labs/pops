@@ -27,7 +27,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { stringify } from 'yaml';
+import { parse, stringify } from 'yaml';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -176,14 +176,26 @@ export function planScaffold(options, tree) {
  * The screen an existing experiment explores, read back out of its
  * `experiment.yaml` so adding a variant needs only the experiment's id.
  *
+ * Parsed rather than pattern-matched: the writer quotes whatever needs it, so
+ * a regex over the raw text reads the quotes back as part of the value, and a
+ * `screen` nested under another key would match a line it does not own.
+ *
  * @param {{ readExperimentYaml?: () => string | undefined }} tree
  * @returns {string | undefined}
  */
 function readExperimentScreen(tree) {
   const source = tree.readExperimentYaml?.();
   if (source === undefined) return undefined;
-  const match = /^screen:\s*(\S+)\s*$/mu.exec(source);
-  return match?.[1];
+  /** @type {unknown} */
+  let document;
+  try {
+    document = parse(source);
+  } catch {
+    return undefined;
+  }
+  if (typeof document !== 'object' || document === null) return undefined;
+  const screen = /** @type {Record<string, unknown>} */ (document)['screen'];
+  return typeof screen === 'string' && screen !== '' ? screen : undefined;
 }
 
 function treeReader(/** @type {string} */ id) {

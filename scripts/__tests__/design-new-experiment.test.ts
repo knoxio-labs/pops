@@ -104,6 +104,44 @@ describe('planScaffold', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('reads the screen back through the parser, not out of the quotes around it', () => {
+    const result = plan(
+      { id: 'density', variants: ['grid'] },
+      {
+        ...EXISTING,
+        readExperimentYaml: () => 'name: D\nstatus: active\nscreen: "finance/import-review"\n',
+      }
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.keys(result.files)).toContain(
+      'pillars/design/src/experiments/density/variants/grid/screens/finance/import-review.tsx'
+    );
+  });
+
+  it('does not mistake a nested screen key for the experiment’s own', () => {
+    const result = plan(
+      { id: 'density', variants: ['grid'] },
+      {
+        ...EXISTING,
+        readExperimentYaml: () => 'name: D\nstatus: active\nnotes:\n  screen: finance/wrong\n',
+      }
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toMatch(/cannot tell which screen/);
+  });
+
+  it('refuses when the yaml does not parse rather than crashing', () => {
+    const result = plan(
+      { id: 'density', variants: ['grid'] },
+      { ...EXISTING, readExperimentYaml: () => 'name: [unclosed\nscreen: finance/import-review\n' }
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toMatch(/cannot tell which screen/);
+  });
+
   it('refuses when it cannot tell which screen an existing experiment explores', () => {
     const result = plan(
       { id: 'density', variants: ['grid'] },
