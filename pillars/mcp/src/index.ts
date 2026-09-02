@@ -1,18 +1,6 @@
-import { readFileSync } from 'node:fs';
-
 import { config } from 'dotenv';
 
 config();
-
-// Docker secret pattern: read POPS_API_KEY from file when _FILE variant is set
-const keyFile = process.env['POPS_API_KEY_FILE'];
-if (keyFile && !process.env['POPS_API_KEY']) {
-  try {
-    process.env['POPS_API_KEY'] = readFileSync(keyFile, 'utf-8').trim();
-  } catch {
-    console.warn(`[pops-mcp] Could not read POPS_API_KEY_FILE at ${keyFile}`);
-  }
-}
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -20,6 +8,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import express, { type Express } from 'express';
 
 import { inboundAuth } from './auth.js';
+import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -116,7 +105,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/ready', (_req, res) => {
-  const apiKeyConfigured = Boolean(process.env['POPS_API_KEY']);
+  const apiKeyConfigured = resolveServiceAccountKey() !== undefined;
   res.status(apiKeyConfigured ? 200 : 503).json({
     status: apiKeyConfigured ? 'ready' : 'degraded',
     apiKeyConfigured,
@@ -142,8 +131,12 @@ export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
   return port;
 }
 
-// Only start listening when run directly (not in tests)
+// Only start listening when run directly (not in tests). The key is resolved
+// BEFORE listening and is fatal when absent (POPS-2760): every tool proxies a
+// pillar, so a keyless process would bind the port, pass its healthcheck and
+// fail every call.
 if (process.env['NODE_ENV'] !== 'test') {
+  requireServiceAccountKey();
   const port = resolvePort();
   app.listen(port, '0.0.0.0', () => {
     console.warn(`[pops-mcp] HTTP MCP server on port ${port} (${allTools.length} tools)`);
