@@ -46,14 +46,24 @@ const server = app.listen(port, () => {
 });
 
 async function register(): Promise<void> {
-  // No `app` here on purpose. `bootstrapPillar` would mount its own `/health`
-  // on top of the one `createDesignApiApp` already serves — and mount it after
-  // the identity middleware, where this pillar deliberately keeps `/health` in
-  // front so an unauthenticated container healthcheck can reach it.
-  pillarHandle = await bootstrapPillar({
-    manifest: buildDesignManifest(version),
-    baseUrl: resolveSelfBaseUrl(port),
-  });
+  try {
+    // No `app` here on purpose. `bootstrapPillar` would mount its own `/health`
+    // on top of the one `createDesignApiApp` already serves — and mount it after
+    // the identity middleware, where this pillar deliberately keeps `/health` in
+    // front so an unauthenticated container healthcheck can reach it.
+    pillarHandle = await bootstrapPillar({
+      manifest: buildDesignManifest(version),
+      baseUrl: resolveSelfBaseUrl(port),
+    });
+  } catch (err) {
+    // Loud, but not fatal. The server is already listening and answering, and
+    // an unhandled rejection here would take that down: a registry that is
+    // slow to come up would turn into a crash loop of a pillar whose comment
+    // threads were serving fine. The cost of staying up unregistered is a
+    // missing `/design-api/` block until the next boot — the same state this
+    // pillar shipped in, and the reason the guard exists.
+    console.error('[design-api] Registration failed; serving unregistered', err);
+  }
 }
 
 let shuttingDown = false;
