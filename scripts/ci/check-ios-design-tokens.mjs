@@ -27,6 +27,7 @@ import {
   renderTokensCss,
   repoRoot,
   TOKENS_PATH,
+  XCASSETS_DIR,
 } from '../design-ios-tokens.mjs';
 
 /**
@@ -48,13 +49,27 @@ export function firstDifference(expected, actual) {
   return 'no line differs (trailing bytes only)';
 }
 
-function check() {
+/**
+ * @param {() => string} generateFn Defaults to `generate`; overridable so the
+ *   self-test can drive the "the catalogue itself is broken" path without
+ *   touching the filesystem.
+ */
+function check(generateFn = generate) {
   const target = join(repoRoot, TOKENS_PATH);
   if (!existsSync(target)) {
     console.error(`✗ ${TOKENS_PATH} does not exist. Run \`mise run design:ios-tokens\`.`);
     return false;
   }
-  const expected = generate();
+  let expected;
+  try {
+    expected = generateFn();
+  } catch (error) {
+    console.error(
+      `✗ could not regenerate ${TOKENS_PATH} from the asset catalogue: ${String(error)}\n` +
+        `  Fix the catalogue at ${XCASSETS_DIR} and re-run.`
+    );
+    return false;
+  }
   const actual = readFileSync(target, 'utf8');
   if (expected === actual) {
     const count = expected.split('\n').filter((line) => line.startsWith('  --ios-')).length / 2;
@@ -123,6 +138,19 @@ function selfTest() {
   const namesADarkLine = firstDifference(before, afterDark).includes('--ios-accent');
   const realTreeMatches = check();
 
+  const survivesMalformedCatalogue = (() => {
+    let threw = false;
+    let result = true;
+    try {
+      result = check(() => {
+        throw new Error('no universal (light) colour');
+      });
+    } catch {
+      threw = true;
+    }
+    return !threw && !result;
+  })();
+
   const allOk =
     reportsLightChange &&
     reportsDarkChange &&
@@ -130,7 +158,8 @@ function selfTest() {
     identicalPasses &&
     namesTheLine &&
     namesADarkLine &&
-    realTreeMatches;
+    realTreeMatches &&
+    survivesMalformedCatalogue;
   if (!allOk) {
     console.error('self-test FAILED');
     console.error(`  reports a changed light value:   ${reportsLightChange}`);
@@ -140,6 +169,7 @@ function selfTest() {
     console.error(`  names the differing line:        ${namesTheLine}`);
     console.error(`  names the token in a dark diff:  ${namesADarkLine}`);
     console.error(`  the real tree matches:           ${realTreeMatches}`);
+    console.error(`  survives a malformed catalogue:  ${survivesMalformedCatalogue}`);
     return false;
   }
   console.log(
