@@ -75,6 +75,9 @@ export function ImportReview({ rows }: { rows: ImportRow[] }) {
 
 export const states: ScreenStates = {
   empty: () => <ImportReview rows={[]} />,
+  'needs-decision': () => (
+    <ImportReview rows={importRows.filter((row) => row.status !== 'matched')} />
+  ),
   'all-matched': () => (
     <ImportReview rows={importRows.map((row) => ({ ...row, status: 'matched' }))} />
   ),
