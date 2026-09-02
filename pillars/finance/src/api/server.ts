@@ -12,7 +12,11 @@
  * SIGTERM triggers `pillarHandle.stop()` so the heartbeat clears and the
  * registry sees an explicit deregister.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openFinanceDb } from '../db/index.js';
@@ -127,10 +131,11 @@ function shutdown(signal: NodeJS.Signals): void {
   reconcileOutboxHandle.stop();
   reconcileEntityOrphansHandle.stop();
   reconcilePairedTransfersHandle.stop();
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      financeDb.raw.close();
-    });
+  void shutdownPillar({
+    label: 'finance-api',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
+    closeDb: () => financeDb.raw.close(),
   });
 }
 

@@ -1,4 +1,8 @@
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 /**
@@ -92,10 +96,11 @@ function shutdown(signal: NodeJS.Signals): void {
   console.warn(`[core-api] Shutting down (${signal})`);
   stopHeartbeatTicker();
   stopEvictionTicker();
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      coreDb.raw.close();
-    });
+  void shutdownPillar({
+    label: 'core-api',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
+    closeDb: () => coreDb.raw.close(),
   });
 }
 

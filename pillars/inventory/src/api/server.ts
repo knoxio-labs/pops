@@ -13,7 +13,11 @@
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openInventoryDb } from '../db/index.js';
@@ -97,10 +101,11 @@ function shutdown(signal: NodeJS.Signals): void {
   shuttingDown = true;
   console.warn(`[inventory-api] Shutting down (${signal})`);
   reconcileUriWorker.stop();
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      inventoryDb.raw.close();
-    });
+  void shutdownPillar({
+    label: 'inventory-api',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
+    closeDb: () => inventoryDb.raw.close(),
   });
 }
 

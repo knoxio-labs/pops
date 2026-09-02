@@ -13,7 +13,11 @@
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openMediaDb } from '../db/index.js';
@@ -98,21 +102,25 @@ function shutdown(signal: NodeJS.Signals): void {
   console.warn(`[media-api] Shutting down (${signal})`);
   plexScheduler.stop();
   rotationScheduler.stopForShutdown();
-  void rotationScheduler
-    .waitForCycleEnd(ROTATION_DRAIN_TIMEOUT_MS)
-    .then((drained) => {
-      if (!drained) {
-        console.warn(
-          `[media-api] rotation cycle did not settle within ${ROTATION_DRAIN_TIMEOUT_MS}ms; closing anyway`
-        );
-      }
-      return pillarHandle?.stop();
-    })
-    .finally(() => {
-      server.close(() => {
-        mediaDb.raw.close();
-      });
-    });
+  void shutdownPillar({
+    label: 'media-api',
+    steps: [
+      {
+        name: 'rotation-drain',
+        run: async () => {
+          const drained = await rotationScheduler.waitForCycleEnd(ROTATION_DRAIN_TIMEOUT_MS);
+          if (!drained) {
+            console.warn(
+              `[media-api] rotation cycle did not settle within ${ROTATION_DRAIN_TIMEOUT_MS}ms; closing anyway`
+            );
+          }
+        },
+      },
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+    ],
+    server,
+    closeDb: () => mediaDb.raw.close(),
+  });
 }
 
 process.on('SIGTERM', shutdown);

@@ -18,6 +18,8 @@
  * and a pillar answering `/health` over an unmigrated or unwritable file
  * would pass its container healthcheck and fail every comment.
  */
+import { shutdownPillar } from '@pops/pillar-sdk/bootstrap';
+
 import { openDesignDb } from '../db/index.js';
 import { createDesignApiApp } from './app.js';
 import { resolvePort, resolveSqlitePath, resolveVersion, shouldSelfRegister } from './boot-env.js';
@@ -58,10 +60,11 @@ function shutdown(signal: NodeJS.Signals): void {
   // its way out, then close: the database closes only once the last request
   // has been answered, and closing at all is what checkpoints the WAL, so the
   // next boot opens a clean file rather than replaying one.
-  void (pillarHandle?.stop() ?? Promise.resolve()).finally(() => {
-    server.close(() => {
-      designDb.raw.close();
-    });
+  void shutdownPillar({
+    label: 'design-api',
+    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    server,
+    closeDb: () => designDb.raw.close(),
   });
 }
 

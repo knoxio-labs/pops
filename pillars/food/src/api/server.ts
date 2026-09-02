@@ -1,4 +1,8 @@
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 /**
@@ -60,13 +64,15 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[food-api] Shutting down (${signal})`);
-  void (pillarHandle?.stop() ?? Promise.resolve())
-    .finally(() => closeFoodIngestQueue())
-    .finally(() => {
-      server.close(() => {
-        foodDb.raw.close();
-      });
-    });
+  void shutdownPillar({
+    label: 'food-api',
+    steps: [
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+      { name: 'ingest-queue', run: () => closeFoodIngestQueue() },
+    ],
+    server,
+    closeDb: () => foodDb.raw.close(),
+  });
 }
 
 process.on('SIGTERM', shutdown);

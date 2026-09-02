@@ -10,7 +10,11 @@
  * stop the schedulers and their queues, deregister, then close the HTTP server
  * and DB.
  */
-import { bootstrapPillar, type PillarBootstrapHandle } from '@pops/pillar-sdk/bootstrap';
+import {
+  bootstrapPillar,
+  shutdownPillar,
+  type PillarBootstrapHandle,
+} from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openAiDb } from '../db/index.js';
@@ -65,15 +69,16 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[ai-api] Shutting down (${signal})`);
-  void schedulers
-    .stop()
-    .then(() => closeAiMaintenanceQueues())
-    .then(() => pillarHandle?.stop())
-    .finally(() => {
-      server.close(() => {
-        aiDb.raw.close();
-      });
-    });
+  void shutdownPillar({
+    label: 'ai-api',
+    steps: [
+      { name: 'schedulers', run: () => schedulers.stop() },
+      { name: 'maintenance-queues', run: () => closeAiMaintenanceQueues() },
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+    ],
+    server,
+    closeDb: () => aiDb.raw.close(),
+  });
 }
 
 process.on('SIGTERM', shutdown);
