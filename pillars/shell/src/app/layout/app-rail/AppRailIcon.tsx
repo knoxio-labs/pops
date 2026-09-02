@@ -1,8 +1,8 @@
-import { iconMap } from '@/app/nav/icon-map';
 import { matchesAtBoundary } from '@/app/nav/path-utils';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
+import { iconMap } from '@pops/navigation';
 import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 import type { AppNavConfig } from '@/app/nav/registry';

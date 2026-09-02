@@ -4,6 +4,7 @@ import { ThemeTool } from './ThemeTool';
 import { VariantTool } from './VariantTool';
 import { ViewportTool } from './ViewportTool';
 
+import type { FrameKind } from '../frames/kind';
 import type { Catalog } from '../registry';
 import type { CanvasTheme } from './theme';
 import type { Viewport } from './viewport';
@@ -17,16 +18,20 @@ export function Dock({
   catalog,
   theme,
   viewport,
+  frame,
   comments,
   onThemeSelect,
   onViewportSelect,
+  onFrameSelect,
 }: {
   catalog: Catalog;
   theme: CanvasTheme;
   viewport: Viewport;
+  frame: FrameKind;
   comments: { active: boolean; openCount: number; onToggle: () => void };
   onThemeSelect: (theme: CanvasTheme) => void;
   onViewportSelect: (viewport: Viewport) => void;
+  onFrameSelect: (frame: FrameKind) => void;
 }) {
   return (
     <div className="pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2">
@@ -34,7 +39,12 @@ export function Dock({
         <ThemeTool theme={theme} onSelect={onThemeSelect} />
         <VariantTool catalog={catalog} />
         <StateTool catalog={catalog} />
-        <ViewportTool viewport={viewport} onSelect={onViewportSelect} />
+        <ViewportTool
+          viewport={viewport}
+          frame={frame}
+          onSelect={onViewportSelect}
+          onFrameSelect={onFrameSelect}
+        />
         <CommentsTool
           active={comments.active}
           openCount={comments.openCount}

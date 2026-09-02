@@ -15,6 +15,14 @@
 # pillars/design/package.json without adding it to Phase 1 and Phase 2 below
 # breaks this image and nothing else — no local check catches it, only the
 # Docker Build CI job.
+#
+# That is why the playground's `@pops/app-*` packages are devDependencies of
+# this pillar rather than dependencies. They are read by the Vite build and
+# bundled; nothing in `src/api` or `src/db` imports one, and no pillar package
+# may depend on an app package (see the note in
+# pillars/purchases/src/api/__tests__/manifest.test.ts). As dependencies they
+# reached the `deploy --prod` below, which injects every workspace package it
+# finds and failed on a lockfile with no `file:` entry for them.
 
 FROM node:24-slim AS builder
 WORKDIR /app

@@ -52,9 +52,20 @@ module.exports = {
       name: 'pillar-no-cross-internal',
       severity: 'error',
       comment:
-        'ISO-R2 (supersedes no-cross-app-import): a pillar may consume another pillar ONLY through its published contract package (@pops/<other>, resolved via that package exports map). Reaching into pillars/<other>/src|app|db|migrations by filesystem path is a behind-the-contract reach that breaks black-box isolation + extraction. Same-pillar imports are fine. The shell is carved out because it composes every pillar app by design — see `shell-no-cross-internal`, which holds it to the same standard with that one edge allowed.',
-      from: { path: '^pillars/([^/]+)/', pathNot: '^pillars/shell/' },
+        'ISO-R2 (supersedes no-cross-app-import): a pillar may consume another pillar ONLY through its published contract package (@pops/<other>, resolved via that package exports map). Reaching into pillars/<other>/src|app|db|migrations by filesystem path is a behind-the-contract reach that breaks black-box isolation + extraction. Same-pillar imports are fine. The shell is carved out because it composes every pillar app by design — see `shell-no-cross-internal`, which holds it to the same standard with that one edge allowed; the design playground is carved out for the narrower reason in `design-no-cross-internal`.',
+      from: { path: '^pillars/([^/]+)/', pathNot: '^pillars/(shell|design)/' },
       to: { path: '^pillars/[^/]+/', pathNot: '^pillars/$1/' },
+    },
+    {
+      name: 'design-no-cross-internal',
+      severity: 'error',
+      comment:
+        "ISO-R2 (design): the design playground draws the POPS web chrome around a screen under review, and draws it from each app package's real navConfig rather than a copy — so it needs the same one edge the shell has, and no more. Allowed: an app package's entry (app/src/index.ts) and the surface it publishes to the playground (app/src/design.ts). Everything past those is the reach ISO-R2 forbids — another pillar's src|db|migrations, an app's pages, its generated client. Reaching for the shell's own RootLayout is the specific thing this rule exists to stop: the chrome is a facsimile until it is extracted into a lib (POPS-2783).",
+      from: { path: '^pillars/design/' },
+      to: {
+        path: '^pillars/[^/]+/',
+        pathNot: ['^pillars/design/', '^pillars/[^/]+/app/src/(index|design)\\.ts$'],
+      },
     },
     {
       name: 'shell-no-cross-internal',

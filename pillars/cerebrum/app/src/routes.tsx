@@ -8,8 +8,6 @@ import { lazy } from 'react';
 
 import type { RouteObject } from 'react-router';
 
-import type { IconName } from '@pops/navigation';
-
 const IngestPage = lazy(() =>
   import('./pages/IngestPage').then((m) => ({ default: m.IngestPage }))
 );
@@ -46,46 +44,7 @@ const DocumentsPage = lazy(() =>
 );
 const QueryPage = lazy(() => import('./pages/QueryPage').then((m) => ({ default: m.QueryPage })));
 
-/** Local type mirror for compile-time safety (shell owns the canonical types). */
-interface AppNavConfigShape {
-  id: string;
-  label: string;
-  labelKey: string;
-  icon: IconName;
-  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
-  basePath: string;
-  items: { path: string; label: string; labelKey: string; icon: IconName }[];
-}
-
-export const navConfig = {
-  id: 'cerebrum',
-  label: 'Cerebrum',
-  labelKey: 'cerebrum',
-  icon: 'BookOpen',
-  color: 'sky',
-  basePath: '/cerebrum',
-  items: [
-    { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'FileText' },
-    { path: '/engrams', label: 'Engrams', labelKey: 'cerebrum.engrams.nav', icon: 'Library' },
-    { path: '/query', label: 'Query', labelKey: 'cerebrum.query.nav', icon: 'Search' },
-    {
-      path: '/documents',
-      label: 'Documents',
-      labelKey: 'cerebrum.documents.nav',
-      icon: 'FileText',
-    },
-    { path: '/nudges', label: 'Nudges', labelKey: 'cerebrum.nudges', icon: 'Bell' },
-    {
-      path: '/proposals',
-      label: 'Proposals',
-      labelKey: 'cerebrum.proposals',
-      icon: 'GitPullRequest',
-    },
-    { path: '/glia', label: 'Glia', labelKey: 'cerebrum.glia.nav', icon: 'Activity' },
-    { path: '/reflex', label: 'Reflex', labelKey: 'cerebrum.reflex.nav', icon: 'Zap' },
-    { path: '/plexus', label: 'Plexus', labelKey: 'cerebrum.plexus.nav', icon: 'Plug' },
-  ],
-} satisfies AppNavConfigShape;
+export { navConfig } from './nav';
 
 export const routes: RouteObject[] = [
   { index: true, element: <IngestPage /> },

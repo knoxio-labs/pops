@@ -44,13 +44,14 @@ import {
 /**
  * Shared icon map — maps Lucide icon name strings to components.
  *
- * Used by AppRail, PageNav, and Sidebar to resolve icon names
- * from navConfig to actual Lucide React components.
+ * Lives beside `IconName` rather than in the shell because the shell is no
+ * longer the only chrome that renders a navConfig: the design playground's
+ * POPS web frame draws the same rail and page nav from the same configs, and
+ * a second copy of this map is a second thing to forget an icon in.
  *
- * Add new icons here AND add the name to IconName in
- * @pops/navigation/src/types.ts.
+ * Add new icons here AND add the name to `IconName` in `./types.ts`.
  */
-import type { IconName } from '@pops/navigation';
+import type { IconName } from './types';
 
 /**
  * Maps every IconName to its Lucide component. The `satisfies` clause

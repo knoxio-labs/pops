@@ -12,8 +12,6 @@ import { lazy } from 'react';
 
 import type { RouteObject } from 'react-router';
 
-import type { IconName } from '@pops/navigation';
-
 const ReconcileQueuePage = lazy(() =>
   import('./pages/ReconcileQueuePage').then((m) => ({ default: m.ReconcileQueuePage }))
 );
@@ -34,46 +32,7 @@ const ProductDictionaryPage = lazy(() =>
   import('./pages/ProductDictionaryPage').then((m) => ({ default: m.ProductDictionaryPage }))
 );
 
-/** Local type mirror for compile-time safety (shell owns the canonical types). */
-interface AppNavConfigShape {
-  id: string;
-  label: string;
-  labelKey: string;
-  icon: IconName;
-  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
-  basePath: string;
-  items: { path: string; label: string; labelKey: string; icon: IconName }[];
-}
-
-export const navConfig = {
-  id: 'purchases',
-  label: 'Purchases',
-  labelKey: 'purchases',
-  icon: 'Receipt',
-  color: 'rose',
-  basePath: '/purchases',
-  items: [
-    { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'Receipt' },
-    {
-      path: '/merchants',
-      label: 'Merchants',
-      labelKey: 'purchases.merchants',
-      icon: 'Building2',
-    },
-    {
-      path: '/receipts',
-      label: 'Receipts',
-      labelKey: 'purchases.receipts',
-      icon: 'FileText',
-    },
-    {
-      path: '/products',
-      label: 'Products',
-      labelKey: 'purchases.products',
-      icon: 'Package',
-    },
-  ],
-} satisfies AppNavConfigShape;
+export { navConfig } from './nav';
 
 /**
  * The order detail route carries no nav item, and that is the difference

@@ -1,5 +1,4 @@
-import { iconMap } from '@/app/nav/icon-map';
-
+import { iconMap } from '@pops/navigation';
 import { cn } from '@pops/ui';
 
 import type { SettingsManifest } from '@pops/types';

@@ -1,5 +1,4 @@
 import { useRegisteredApps } from '@/app/BootRegistryProvider';
-import { iconMap } from '@/app/nav/icon-map';
 import { findActiveApp, findActiveItem } from '@/app/nav/path-utils';
 /**
  * Page navigation panel.
@@ -10,6 +9,8 @@ import { findActiveApp, findActiveItem } from '@/app/nav/path-utils';
  */
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router';
+
+import { iconMap } from '@pops/navigation';
 
 export function PageNav() {
   const { t } = useTranslation('navigation');

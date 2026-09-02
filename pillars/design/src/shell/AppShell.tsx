@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { decodeFrame } from '../frames/kind';
 import { catalog } from '../registry';
 import { Canvas } from './Canvas';
 import { Dock } from './Dock';
@@ -17,6 +18,7 @@ import { FULL, type Viewport } from './viewport';
 
 const CHROME_MODE_KEY = 'pops-design-chrome-mode';
 const CANVAS_THEME_KEY = 'pops-design-canvas-theme';
+const CANVAS_FRAME_KEY = 'pops-design-canvas-frame';
 const SIDEBAR_KEY = 'pops-design-sidebar';
 
 /** The chrome follows its own light/dark preference, independent of the canvas. */
@@ -35,8 +37,10 @@ export function AppShell() {
   const [sidebar, setSidebar] = useStoredString(SIDEBAR_KEY, 'open');
   const [themeRaw, setThemeRaw] = useStoredString(CANVAS_THEME_KEY, encodeTheme(DEFAULT_THEME));
   const [viewport, setViewport] = useState<Viewport>(FULL);
+  const [frameRaw, setFrameRaw] = useStoredString(CANVAS_FRAME_KEY, 'none');
   const comments = useCommentMode();
   const theme = decodeTheme(themeRaw);
+  const frame = decodeFrame(frameRaw);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -51,6 +55,7 @@ export function AppShell() {
         <Canvas
           theme={theme}
           viewport={viewport}
+          frame={frame}
           comments={comments}
           onResize={(w, h) => setViewport({ kind: 'fixed', label: 'Custom', w, h })}
         />
@@ -59,6 +64,7 @@ export function AppShell() {
         catalog={catalog}
         theme={theme}
         viewport={viewport}
+        frame={frame}
         comments={{
           active: comments.active,
           openCount: comments.openCount,
@@ -66,6 +72,7 @@ export function AppShell() {
         }}
         onThemeSelect={(next) => setThemeRaw(encodeTheme(next))}
         onViewportSelect={setViewport}
+        onFrameSelect={setFrameRaw}
       />
     </div>
   );

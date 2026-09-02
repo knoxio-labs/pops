@@ -1164,6 +1164,36 @@ importers:
       '@babel/types':
         specifier: ^7.29.7
         version: 7.29.8
+      '@pops/app-ai':
+        specifier: workspace:*
+        version: link:../ai/app
+      '@pops/app-bfm':
+        specifier: workspace:*
+        version: link:../bfm/app
+      '@pops/app-cerebrum':
+        specifier: workspace:*
+        version: link:../cerebrum/app
+      '@pops/app-finance':
+        specifier: workspace:*
+        version: link:../finance/app
+      '@pops/app-food':
+        specifier: workspace:*
+        version: link:../food/app
+      '@pops/app-inventory':
+        specifier: workspace:*
+        version: link:../inventory/app
+      '@pops/app-lists':
+        specifier: workspace:*
+        version: link:../lists/app
+      '@pops/app-media':
+        specifier: workspace:*
+        version: link:../media/app
+      '@pops/app-purchases':
+        specifier: workspace:*
+        version: link:../purchases/app
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../libs/navigation
       '@testing-library/jest-dom':
         specifier: ^7.0.0
         version: 7.0.0(@testing-library/dom@10.4.1)

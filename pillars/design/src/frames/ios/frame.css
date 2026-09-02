@@ -1,0 +1,35 @@
+/*
+ * The device itself: fixed metrics for an iPhone 15/16 at the default
+ * orientation, in logical points.
+ *
+ * In CSS rather than inline styles because they are constants of the device,
+ * not props of the component — and because the safe areas have to be readable
+ * by a screen *inside* the frame, which means they have to be custom
+ * properties on an ancestor either way.
+ */
+
+.ios-device {
+  --ios-safe-area-inset-top: 59px;
+  --ios-safe-area-inset-bottom: 34px;
+
+  width: 393px;
+  height: 852px;
+  background: var(--ios-background);
+  color: var(--ios-foreground);
+}
+
+.ios-device-content {
+  height: 100%;
+  overflow-y: auto;
+  padding-top: var(--ios-safe-area-inset-top);
+  padding-bottom: var(--ios-safe-area-inset-bottom);
+}
+
+.ios-status-bar {
+  height: var(--ios-safe-area-inset-top);
+  color: var(--ios-foreground);
+}
+
+.ios-home-indicator {
+  height: var(--ios-safe-area-inset-bottom);
+}

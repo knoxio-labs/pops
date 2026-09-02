@@ -1,3 +1,4 @@
+import { decodeFrame, type FrameKind } from '../frames/kind';
 import { decodeTheme, encodeTheme, type CanvasTheme } from './theme';
 
 export type Viewport =
@@ -59,27 +60,32 @@ export type FrameToShell =
 
 export type ShellToFrame =
   | { kind: 'theme'; theme: CanvasTheme }
-  | { kind: 'comments'; active: boolean };
+  | { kind: 'comments'; active: boolean }
+  | { kind: 'frame'; frame: FrameKind };
 
 export const FRAME_PREFIX = '/frame';
 const THEME_PARAM = 'theme';
+const FRAME_PARAM = 'frame';
 
 /**
  * The frame URL for a shell route (`pathname + search`, router-relative),
- * carrying the initial theme as a query parameter. Later theme changes go
- * over postMessage so the frame never reloads for them.
+ * carrying the initial theme and product chrome as query parameters. Later
+ * changes to either go over postMessage so the frame never reloads for them;
+ * the parameters are what a route change reloads *into*.
  */
-export function toFrameRoute(route: string, theme: CanvasTheme): string {
+export function toFrameRoute(route: string, theme: CanvasTheme, frame: FrameKind): string {
   const url = new URL(route, 'http://frame.invalid');
   url.searchParams.set(THEME_PARAM, encodeTheme(theme));
+  url.searchParams.set(FRAME_PARAM, frame);
   return `${FRAME_PREFIX}${url.pathname}${url.search}`;
 }
 
-/** The shell route a frame location corresponds to: prefix and theme param removed. */
+/** The shell route a frame location corresponds to: prefix and chrome params removed. */
 export function fromFrameRoute(pathname: string, search = ''): string {
   const path = pathname.startsWith(FRAME_PREFIX) ? pathname.slice(FRAME_PREFIX.length) : pathname;
   const params = new URLSearchParams(search);
   params.delete(THEME_PARAM);
+  params.delete(FRAME_PARAM);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -87,4 +93,9 @@ export function fromFrameRoute(pathname: string, search = ''): string {
 /** The theme a frame was opened with. */
 export function themeFromSearch(search: string): CanvasTheme {
   return decodeTheme(new URLSearchParams(search).get(THEME_PARAM));
+}
+
+/** The product chrome a frame was opened with. */
+export function frameFromSearch(search: string): FrameKind {
+  return decodeFrame(new URLSearchParams(search).get(FRAME_PARAM));
 }

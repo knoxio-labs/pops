@@ -9,6 +9,7 @@ import {
   type Viewport,
 } from './viewport';
 
+import type { FrameKind } from '../frames/kind';
 import type { CanvasTheme } from './theme';
 import type { CommentMode } from './use-comment-mode';
 
@@ -20,8 +21,8 @@ const HANDLES = [
 ];
 
 /** The document URL for a shell route: the router base plus the frame route. */
-function frameSrc(route: string, theme: CanvasTheme): string {
-  return `${import.meta.env.BASE_URL.replace(/\/$/u, '')}${toFrameRoute(route, theme)}`;
+function frameSrc(route: string, theme: CanvasTheme, frame: FrameKind): string {
+  return `${import.meta.env.BASE_URL.replace(/\/$/u, '')}${toFrameRoute(route, theme, frame)}`;
 }
 
 interface ViewportFrameProps {
@@ -29,14 +30,39 @@ interface ViewportFrameProps {
   /** Shell route, `pathname + search`, router-relative. */
   route: string;
   theme: CanvasTheme;
+  frame: FrameKind;
   comments: CommentMode;
   onRouteChange: (route: string) => void;
   onResize: (w: number, h: number) => void;
 }
 
+/** Everything the frame is told about rather than reloaded for. */
+interface FrameChrome {
+  theme: CanvasTheme;
+  commentsActive: boolean;
+  frame: FrameKind;
+}
+
+/** Push each chrome setting down as it changes. */
+function usePushChrome(post: (message: ShellToFrame) => void, chrome: FrameChrome): void {
+  const { theme, commentsActive, frame } = chrome;
+
+  useEffect(() => {
+    post({ kind: 'theme', theme });
+  }, [post, theme]);
+
+  useEffect(() => {
+    post({ kind: 'comments', active: commentsActive });
+  }, [commentsActive, post]);
+
+  useEffect(() => {
+    post({ kind: 'frame', frame });
+  }, [frame, post]);
+}
+
 /**
- * Keeps the frame on the shell's route, theme and comment mode: reload on
- * route, message on the other two.
+ * Keeps the frame on the shell's route, theme, comment mode and product
+ * chrome: reload on route, message on the rest.
  *
  * Comment mode is re-sent on every `ready` alongside the theme, because a
  * route change reloads the frame document — without it, navigating with the
@@ -47,15 +73,18 @@ function useFrameSync(
   {
     route,
     theme,
+    frame,
     comments,
     onRouteChange,
-  }: Pick<ViewportFrameProps, 'route' | 'theme' | 'comments' | 'onRouteChange'>
+  }: Pick<ViewportFrameProps, 'route' | 'theme' | 'frame' | 'comments' | 'onRouteChange'>
 ): void {
   const frameRouteRef = useRef(route);
   // The theme is read at document load only; later changes go over postMessage,
   // so the reload effect reads it through a ref rather than depending on it.
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const frameRef = useRef(frame);
+  frameRef.current = frame;
   const commentsActiveRef = useRef(comments.active);
   commentsActiveRef.current = comments.active;
 
@@ -79,6 +108,7 @@ function useFrameSync(
         if (message.kind === 'ready') {
           post({ kind: 'theme', theme: themeRef.current });
           post({ kind: 'comments', active: commentsActiveRef.current });
+          post({ kind: 'frame', frame: frameRef.current });
         }
         if (message.kind === 'comment-count') setOpenCount(message.open);
         if (message.kind === 'comments-exit') exit();
@@ -87,18 +117,14 @@ function useFrameSync(
     )
   );
 
-  useEffect(() => {
-    post({ kind: 'theme', theme });
-  }, [post, theme]);
-
-  useEffect(() => {
-    post({ kind: 'comments', active: comments.active });
-  }, [comments.active, post]);
+  usePushChrome(post, { theme, commentsActive: comments.active, frame });
 
   useEffect(() => {
     if (route !== frameRouteRef.current) {
       frameRouteRef.current = route;
-      iframeRef.current?.contentWindow?.location.replace(frameSrc(route, themeRef.current));
+      iframeRef.current?.contentWindow?.location.replace(
+        frameSrc(route, themeRef.current, frameRef.current)
+      );
     }
   }, [iframeRef, route]);
 }
@@ -162,15 +188,16 @@ export function ViewportFrame({
   viewport,
   route,
   theme,
+  frame,
   comments,
   onRouteChange,
   onResize,
 }: ViewportFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const initialSrc = useRef(frameSrc(route, theme));
+  const initialSrc = useRef(frameSrc(route, theme, frame));
   const avail = useAvail(containerRef);
-  useFrameSync(iframeRef, { route, theme, comments, onRouteChange });
+  useFrameSync(iframeRef, { route, theme, frame, comments, onRouteChange });
 
   // Unsandboxed by design: the frame is this same app, and it needs its own
   // origin for the postMessage handshake and for storage. A sandbox that

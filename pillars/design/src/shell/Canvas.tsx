@@ -5,6 +5,7 @@ import { Overview } from '../pages/Overview';
 import { parseAddress } from './address';
 import { ViewportFrame } from './ViewportFrame';
 
+import type { FrameKind } from '../frames/kind';
 import type { CanvasTheme } from './theme';
 import type { CommentMode } from './use-comment-mode';
 import type { Viewport } from './viewport';
@@ -25,11 +26,13 @@ export function isCanvasRoute(pathname: string): boolean {
 export function Canvas({
   theme,
   viewport,
+  frame,
   comments,
   onResize,
 }: {
   theme: CanvasTheme;
   viewport: Viewport;
+  frame: FrameKind;
   comments: CommentMode;
   onResize: (w: number, h: number) => void;
 }) {
@@ -53,6 +56,7 @@ export function Canvas({
       viewport={viewport}
       route={route}
       theme={theme}
+      frame={frame}
       comments={comments}
       onRouteChange={onRouteChange}
       onResize={onResize}

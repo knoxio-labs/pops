@@ -74,9 +74,10 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/check-tailwind-source-coverage.mjs`        | `quality.yml` → `tailwind-source-coverage`                                      | CSS `@source` globs, source file paths                         |
 | `scripts/check-escape-hatches.mjs`                  | `quality.yml` → `escape-hatches`                                                | TS/TSX source, JSON baseline                                   |
 | `scripts/check-touch-targets.mjs`                   | `quality.yml` → `touch-targets`                                                 | TS/TSX source, JSON baseline                                   |
-| `scripts/check-title-icon-consistency.mjs`          | `quality.yml` → `title-icon-consistency`                                        | Per-app `routes.tsx`, page source                              |
+| `scripts/check-title-icon-consistency.mjs`          | `quality.yml` → `title-icon-consistency`                                        | Per-app `routes.tsx` and `nav.ts`, page source                 |
 | `scripts/ci/check-control-characters.mjs`           | `quality.yml` → `control-characters`                                            | Every tracked file, raw bytes                                  |
 | `scripts/ci/check-design-tokens.mjs`                | `quality.yml` → `design-tokens`                                                 | Frontend TS/TSX/CSS source, class strings                      |
+| `scripts/ci/check-ios-design-tokens.mjs`            | `quality.yml` → `ios-design-tokens`                                             | `Colors.xcassets` JSON, the generated CSS sheet                |
 | `scripts/ci/check-icon-only-buttons.mjs`            | `quality.yml` → `icon-only-buttons`                                             | TSX source                                                     |
 | `scripts/ci/check-icon-dynamic-import.mjs`          | `quality.yml` → `icon-dynamic-import`                                           | TS/TSX source, dynamic `import()`/`require()` call sites       |
 | `scripts/ci/check-composite-references.mjs`         | `quality.yml` → `composite-references`                                          | `tsconfig.build.json`, pillar source via `import-scan.mjs`     |

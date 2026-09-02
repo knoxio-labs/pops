@@ -362,18 +362,22 @@ export function resolvePageHeaderIconUsage(source) {
  */
 
 /**
- * Analyze one app's `routes.tsx` source against a page-file reader, reporting
- * both the violations and how much the gate actually saw — a gate that
- * silently resolves nothing must be able to say so (ADR-045).
+ * Analyze one app's route table against a page-file reader, reporting both
+ * the violations and how much the gate actually saw — a gate that silently
+ * resolves nothing must be able to say so (ADR-045).
  * @param {string} appId
  * @param {string} routesSource
  * @param {(path: string) => string | undefined} readPage Given the page's
  *   import path (as written in the lazy import, e.g. `./pages/X`), returns
  *   that file's source, or undefined if it cannot be read.
+ * @param {string} [navSource] The app's `nav.ts`, where `navConfig` lives.
+ *   Defaults to the routes source, which is where it lived before the design
+ *   playground needed to read a nav without pulling the page table in with
+ *   it — an app that still declares both in one file parses unchanged.
  * @returns {AppReport}
  */
-export function reportApp(appId, routesSource, readPage) {
-  const navItems = parseNavConfigItems(routesSource);
+export function reportApp(appId, routesSource, readPage, navSource = routesSource) {
+  const navItems = parseNavConfigItems(navSource);
   const routeComponents = parseRouteComponents(routesSource);
   const lazyImports = parseLazyImports(routesSource);
 
@@ -437,10 +441,11 @@ export function reportApp(appId, routesSource, readPage) {
  * @param {string} appId
  * @param {string} routesSource
  * @param {(path: string) => string | undefined} readPage
+ * @param {string} [navSource]
  * @returns {Violation[]}
  */
-export function analyzeApp(appId, routesSource, readPage) {
-  return reportApp(appId, routesSource, readPage).violations;
+export function analyzeApp(appId, routesSource, readPage, navSource = routesSource) {
+  return reportApp(appId, routesSource, readPage, navSource).violations;
 }
 
 /**
@@ -451,13 +456,20 @@ export function analyzeApp(appId, routesSource, readPage) {
 function reportAppFile(appId, routesFile) {
   const routesSource = readFileSync(routesFile, 'utf8');
   const appSrcDir = dirname(routesFile);
-  return reportApp(appId, routesSource, (importPath) => {
-    for (const ext of ['.tsx', '.ts']) {
-      const candidate = join(appSrcDir, `${importPath}${ext}`);
-      if (existsSync(candidate)) return readFileSync(candidate, 'utf8');
-    }
-    return undefined;
-  });
+  const navFile = join(appSrcDir, 'nav.ts');
+  const navSource = existsSync(navFile) ? readFileSync(navFile, 'utf8') : routesSource;
+  return reportApp(
+    appId,
+    routesSource,
+    (importPath) => {
+      for (const ext of ['.tsx', '.ts']) {
+        const candidate = join(appSrcDir, `${importPath}${ext}`);
+        if (existsSync(candidate)) return readFileSync(candidate, 'utf8');
+      }
+      return undefined;
+    },
+    navSource
+  );
 }
 
 /** Every `pillars/<id>/app/src/routes.tsx` that exists on disk. */

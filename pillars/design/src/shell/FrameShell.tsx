@@ -2,8 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { CommentsOverlay } from '../comments/CommentsOverlay';
+import { FrameChrome } from '../frames/FrameChrome';
+import { parseAddress } from './address';
 import { applyThemeToDocument, encodeTheme, type CanvasTheme } from './theme';
-import { fromFrameRoute, themeFromSearch, type FrameToShell, type ShellToFrame } from './viewport';
+import {
+  frameFromSearch,
+  fromFrameRoute,
+  themeFromSearch,
+  type FrameToShell,
+  type ShellToFrame,
+} from './viewport';
+
+import type { FrameKind } from '../frames/kind';
 
 function post(message: FrameToShell): void {
   window.parent.postMessage(message, window.location.origin);
@@ -20,7 +30,9 @@ export function FrameShell() {
   const location = useLocation();
   const [theme, setTheme] = useState<CanvasTheme>(() => themeFromSearch(window.location.search));
   const [commentsActive, setCommentsActive] = useState(false);
+  const [frame, setFrame] = useState<FrameKind>(() => frameFromSearch(window.location.search));
   const route = fromFrameRoute(location.pathname, location.search);
+  const address = parseAddress(route.split('?')[0] ?? route);
 
   useEffect(() => {
     applyThemeToDocument(document, themeFromSearch(window.location.search));
@@ -32,6 +44,7 @@ export function FrameShell() {
         setTheme(data.theme);
       }
       if (data.kind === 'comments') setCommentsActive(data.active);
+      if (data.kind === 'frame') setFrame(data.frame);
     };
     window.addEventListener('message', onMessage);
     post({ kind: 'ready' });
@@ -48,7 +61,9 @@ export function FrameShell() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Outlet />
+      <FrameChrome kind={frame} area={address?.area} slug={address?.slug}>
+        <Outlet />
+      </FrameChrome>
       <CommentsOverlay
         active={commentsActive}
         route={route}

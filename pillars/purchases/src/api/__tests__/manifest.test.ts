@@ -72,10 +72,22 @@ describe('buildPurchasesManifest', () => {
   describe('nav + pages mirror the app (no silent drift)', () => {
     const appRoutesPath = fileURLToPath(new URL('../../../app/src/routes.tsx', import.meta.url));
     const appRoutesSource = readFileSync(appRoutesPath, 'utf8');
+    // `navConfig` moved out of `routes.tsx` into its own module so that reading
+    // the nav does not pull the route table's lazy page imports with it. Both
+    // files are read here, and every error below names the one it was reading:
+    // a matcher that has stopped seeing a file must say which file.
+    const appNavPath = fileURLToPath(new URL('../../../app/src/nav.ts', import.meta.url));
+    const appNavSource = readFileSync(appNavPath, 'utf8');
 
-    function sliceBalanced(source: string, openIndex: number, open: string, close: string): string {
+    function sliceBalanced(
+      where: string,
+      source: string,
+      openIndex: number,
+      bracket: { open: string; close: string }
+    ): string {
+      const { open, close } = bracket;
       if (source[openIndex] !== open) {
-        throw new Error(`expected "${open}" at index ${openIndex} in ${appRoutesPath}`);
+        throw new Error(`expected "${open}" at index ${openIndex} in ${where}`);
       }
       let depth = 0;
       for (let i = openIndex; i < source.length; i++) {
@@ -85,39 +97,46 @@ describe('buildPurchasesManifest', () => {
           if (depth === 0) return source.slice(openIndex, i + 1);
         }
       }
-      throw new Error(
-        `unbalanced "${open}${close}" starting at index ${openIndex} in ${appRoutesPath}`
-      );
+      throw new Error(`unbalanced "${open}${close}" starting at index ${openIndex} in ${where}`);
     }
 
     function extractAssignedBracket(
+      where: string,
       source: string,
       declaration: string,
       bracket: '{' | '['
     ): string {
       const declStart = source.indexOf(declaration);
       if (declStart === -1) {
-        throw new Error(`could not find "${declaration}" in ${appRoutesPath}`);
+        throw new Error(`could not find "${declaration}" in ${where}`);
       }
       // A -1 here cannot be passed on: `indexOf` clamps a negative
       // `fromIndex` to 0, so the next search would silently restart at the
       // top of the file and return a plausible block from the wrong place.
       const eqIndex = source.indexOf('=', declStart);
       if (eqIndex === -1) {
-        throw new Error(`"${declaration}" in ${appRoutesPath} is not an assignment`);
+        throw new Error(`"${declaration}" in ${where} is not an assignment`);
       }
       const openIndex = source.indexOf(bracket, eqIndex);
       const close = bracket === '{' ? '}' : ']';
-      return sliceBalanced(source, openIndex, bracket, close);
+      return sliceBalanced(where, source, openIndex, { open: bracket, close });
     }
 
     function navItemsBlock(source: string): string {
-      const navConfigObject = extractAssignedBracket(source, 'export const navConfig', '{');
+      const navConfigObject = extractAssignedBracket(
+        appNavPath,
+        source,
+        'export const navConfig',
+        '{'
+      );
       const itemsIndex = navConfigObject.indexOf('items:');
       if (itemsIndex === -1) {
-        throw new Error(`navConfig in ${appRoutesPath} declares no "items:"`);
+        throw new Error(`navConfig in ${appNavPath} declares no "items:"`);
       }
-      return sliceBalanced(navConfigObject, navConfigObject.indexOf('[', itemsIndex), '[', ']');
+      return sliceBalanced(appNavPath, navConfigObject, navConfigObject.indexOf('[', itemsIndex), {
+        open: '[',
+        close: ']',
+      });
     }
 
     // A discovery floor, per ADR-045: an extractor that matched nothing has
@@ -126,7 +145,7 @@ describe('buildPurchasesManifest', () => {
     // and the app declares none", which points at drift that does not exist.
     function requireFound<T>(found: T[], what: string): T[] {
       if (found.length === 0) {
-        throw new Error(`extracted no ${what} from ${appRoutesPath}`);
+        throw new Error(`extracted no ${what} from ${appRoutesPath} / ${appNavPath}`);
       }
       return found;
     }
@@ -134,7 +153,7 @@ describe('buildPurchasesManifest', () => {
     function itemField(object: string, key: string): string {
       const match = new RegExp(`${key}:\\s*'([^']*)'`).exec(object);
       if (match?.[1] === undefined) {
-        throw new Error(`nav item in ${appRoutesPath} declares no "${key}"`);
+        throw new Error(`nav item in ${appNavPath} declares no "${key}"`);
       }
       return match[1];
     }
@@ -152,7 +171,7 @@ describe('buildPurchasesManifest', () => {
       const items: { path: string; label: string; labelKey: string }[] = [];
       for (let i = 0; i < block.length; i++) {
         if (block[i] !== '{') continue;
-        const object = sliceBalanced(block, i, '{', '}');
+        const object = sliceBalanced(appNavPath, block, i, { open: '{', close: '}' });
         items.push({
           path: itemField(object, 'path'),
           label: itemField(object, 'label'),
@@ -178,8 +197,13 @@ describe('buildPurchasesManifest', () => {
     }
 
     it('carries every app nav item across the wire, in rail order', () => {
-      const routesBlock = extractAssignedBracket(appRoutesSource, 'export const routes', '[');
-      const appNavItems = navItems(navItemsBlock(appRoutesSource));
+      const routesBlock = extractAssignedBracket(
+        appRoutesPath,
+        appRoutesSource,
+        'export const routes',
+        '['
+      );
+      const appNavItems = navItems(navItemsBlock(appNavSource));
       const appRoutePaths = reachableRoutePaths(routesBlock);
 
       // Guards the extraction rather than the manifest: if these two
@@ -216,11 +240,12 @@ describe('buildPurchasesManifest', () => {
     // answer confidently is worse than one that refuses.
     it('throws rather than returning a wrong block when the source stops matching', () => {
       expect(() =>
-        extractAssignedBracket('const other = [1];', 'export const routes', '[')
+        extractAssignedBracket(appRoutesPath, 'const other = [1];', 'export const routes', '[')
       ).toThrow(/could not find/);
 
       expect(() =>
         extractAssignedBracket(
+          appRoutesPath,
           'const other = [1];\nexport const routes',
           'export const routes',
           '['
@@ -229,6 +254,7 @@ describe('buildPurchasesManifest', () => {
 
       expect(() =>
         extractAssignedBracket(
+          appRoutesPath,
           'const other = [1];\nexport const routes = undefined;',
           'export const routes',
           '['

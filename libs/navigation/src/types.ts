@@ -19,9 +19,9 @@ export type AppName = 'finance' | 'food' | 'lists' | 'media' | 'inventory' | 'ai
 
 /**
  * Union of all valid Lucide icon names used across the POPS app rail and
- * page navigation. The shell's iconMap must provide a component for every
- * member of this union (enforced via `satisfies Record<IconName, LucideIcon>`
- * in apps/pops-shell/src/app/nav/icon-map.ts).
+ * page navigation. `iconMap` must provide a component for every member of
+ * this union (enforced via `satisfies Record<IconName, LucideIcon>` in
+ * `./icon-map.ts`).
  *
  * Add a name here AND add the corresponding import + entry in icon-map.ts.
  */
@@ -65,6 +65,45 @@ export type IconName =
   | 'Trophy'
   | 'Utensils'
   | 'Zap';
+
+/**
+ * One page inside an app, as its `navConfig` declares it.
+ */
+export interface AppNavItem {
+  /** Relative to basePath. Empty string '' for the index/default page. */
+  path: string;
+  label: string;
+  /** i18n key in the `navigation` namespace (e.g. `finance.dashboard`). */
+  labelKey: string;
+  /** Lucide icon component name — must be a member of IconName. */
+  icon: IconName;
+}
+
+/**
+ * An app package's navigation declaration: what the rail shows for it and
+ * which pages its page nav lists.
+ *
+ * Lives here rather than in the shell because it is the contract between an
+ * `@pops/app-*` package and whatever chrome draws it — the shell in
+ * production, the design playground's POPS web frame when a screen is being
+ * reviewed. Neither chrome owns the shape.
+ */
+export interface AppNavConfig {
+  /** Unique app identifier (e.g. 'finance', 'media', 'inventory'). */
+  id: string;
+  /** Display name shown in the app rail tooltip and page nav header. */
+  label: string;
+  /** i18n key in the `navigation` namespace (e.g. `finance`). */
+  labelKey: string;
+  /** Lucide icon component name for the app rail — must be a member of IconName. */
+  icon: IconName;
+  /** Optional theme color for this app (e.g. 'emerald', 'indigo'). */
+  color?: 'emerald' | 'indigo' | 'amber' | 'rose' | 'sky' | 'violet';
+  /** Root path for this app (e.g. '/finance'). */
+  basePath: string;
+  /** Pages within this app. */
+  items: AppNavItem[];
+}
 
 /** An entity the user is currently viewing (e.g. a specific movie or transaction). */
 export interface AppContextEntity {
