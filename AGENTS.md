@@ -48,6 +48,7 @@ Design a screen before implementing it. `pillars/design` is the playground: a UI
 - The surface still answers to the frontend rules: tokens only, Lucide only, 44px touch targets, no raw palette colours. The guards scan it like any other pillar.
 - Fixtures are fictional and typed. A screen never imports a pillar contract, a generated client or a data package; it composes `@pops/ui` and, through a declared subpath, an app's exported components.
 - **Comments close the loop.** Press `i` on the playground and pin a comment on any element; a session reads it through the `design-feedback` MCP server in `.mcp.json`, applies it at the anchored file and line, replies, and sets the thread's status. The overlay hides itself when the comment API is unreachable, which is the normal state of a checkout with no service token.
+- **The loop is a set of skills**, one operation each, under `.claude/skills/design-*`: open an experiment, add a variant, decide it, archive it, apply a comment, wait for the next one, promote a decided design to a Huly issue. `.claude/` is outside the design-surface exemption, so a change to one is reviewed like any other code. Two rules they rest on: nothing is ever copied from the playground into an app — `design-promote` writes the issue an implementing PR starts from — and a session records a design decision, it never takes one.
 
 ### Security (Do Not Violate)
 

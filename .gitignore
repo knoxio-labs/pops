@@ -62,7 +62,13 @@ ai_entity_cache.json
 .vscode/
 .idea/
 .obsidian/
-.claude/
+
+# Local Claude Code state — settings, worktrees, task locks. `.claude/*` rather
+# than `.claude/` so the one thing in here that IS repo content can be
+# un-ignored: git does not descend into an excluded directory, so a negation
+# under a bare `.claude/` would never be reached.
+.claude/*
+!.claude/skills/
 
 # Logs
 *.log
