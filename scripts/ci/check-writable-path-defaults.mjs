@@ -1065,6 +1065,9 @@ function selfTest() {
     console.error(`  folds line continuations:            ${foldingOk}`);
     console.error(`  reports an unparseable source:       ${catchesUnparseable}`);
     console.error(`  app rule sees an absolute default:   ${appRuleSeesAbsolute}`);
+    console.error(`  passes when one image guards it:     ${passesWhenOneImageGuards}`);
+    console.error(`  fails when no image guards it:       ${failsWhenNoImageGuards}`);
+    console.error(`  leaves a single image's reason bare: ${singleImageReasonIsUnprefixed}`);
     console.error(`  ignores VITE_ client variables:      ${ignoresViteVars}`);
     console.error(`  counts resolvers it has seen:        ${countsResolversSeen}`);
     console.error(`  fails an empty Dockerfile:           ${catchesEmptyDockerfile}`);

@@ -127,6 +127,14 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (urlPath: string) => urlPath.replace(/^\/bfm-api/, ''),
       },
+      // The design playground's comment API. The shell itself never calls it —
+      // the playground does — but nginx routes the prefix, and the drift test
+      // holds this file to routing every prefix nginx does.
+      '/design-api': {
+        target: 'http://localhost:3015',
+        changeOrigin: true,
+        rewrite: (urlPath: string) => urlPath.replace(/^\/design-api/, ''),
+      },
       // The orchestrator (ADR-029, epic 06) federates search over the pillars
       // and serves `POST /search` at root. The shell's global search panel
       // (`@pops/navigation` useSearchInputData) posts to `/orchestrator-api/search`;
