@@ -12,7 +12,7 @@ The tool surface — 43 tools over the `inventory`, `finance`, `contacts`, `medi
 ## Prerequisites
 
 1. **Target pillars reachable** — the gateway is a REST client, not a standalone data source. Inventory, finance, contacts, media, cerebrum, purchases, and the registry must be running.
-2. **A service-account key** — supplied via `POPS_INTERNAL_API_KEY` / `POPS_API_KEY` / `POPS_API_KEY_FILE` (the compose secret `pops_api_key`).
+2. **A service-account key** — supplied via `POPS_API_KEY_FILE` (the compose secret `pops_api_key`, what production sets), `POPS_INTERNAL_API_KEY`, or the legacy `POPS_API_KEY`. Boot fails when none of them yields a key: every tool proxies a pillar, so a keyless server can answer nothing.
 
 ## Running locally (dev)
 
@@ -77,4 +77,14 @@ curl http://localhost:3011/ready
 # {"status":"ready","apiKeyConfigured":true,"tools":38}
 ```
 
-`/ready` checks `POPS_API_KEY` only. With just `POPS_INTERNAL_API_KEY` set it reports `503` / `degraded` while tool calls still work, since `resolveApiKey()` in `src/pillar-client.ts` accepts either variable.
+`/health` is liveness and makes no upstream calls, so it answers `ok` even with no
+service-account key. `/ready` is the key-aware one: it calls
+`resolveServiceAccountKey()` (`src/service-account-key.ts`), which reads
+`POPS_API_KEY_FILE`, then `POPS_INTERNAL_API_KEY`, then `POPS_API_KEY` — so any of
+the three reports `ready`, and only a keyless server reports `503` / `degraded`.
+
+The Docker healthcheck probes `/ready`. It used to probe `/health`, which meant a
+container that could not read its mounted secret stayed green while every tool call
+failed (POPS-2760). A keyless process no longer reaches that state anyway:
+`requireServiceAccountKey()` runs before `app.listen` and exits the process when no
+source produces a key.
