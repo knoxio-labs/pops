@@ -73,7 +73,8 @@ describe('frame route encoding', () => {
 
   it('reads the chrome a frame was opened with, and treats anything else as none', () => {
     expect(frameFromSearch('?frame=web')).toBe('web');
-    expect(frameFromSearch('?frame=ios')).toBe('none');
+    expect(frameFromSearch('?frame=ios')).toBe('ios');
+    expect(frameFromSearch('?frame=android')).toBe('none');
     expect(frameFromSearch('')).toBe('none');
   });
 });
