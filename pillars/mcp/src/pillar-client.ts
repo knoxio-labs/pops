@@ -95,7 +95,10 @@ function ensureConfigured(): void {
   const resolved = resolveApiKey();
   if (resolved === undefined) {
     throw new Error(
-      '[pops-mcp] no service-account key in environment: set POPS_INTERNAL_API_KEY (or legacy POPS_API_KEY) before calling pillar tools.'
+      '[pops-mcp] no service-account key in environment: set POPS_API_KEY_FILE to a mounted ' +
+        'secret (what production compose sets), or POPS_INTERNAL_API_KEY / POPS_API_KEY ' +
+        'directly. Boot should already have failed on this — reaching it here means the key ' +
+        'was cleared after startup.'
     );
   }
   // Silent auth-source misconfig (CF087) is hard to debug in production — log

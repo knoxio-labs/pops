@@ -1226,13 +1226,19 @@ services:
     depends_on:
       registry-api:
         condition: service_started
+    # Probes /ready, not /health: /health is deliberately upstream-free and
+    # returns ok unconditionally, so a container that resolved no
+    # service-account key used to sit green while every tool call failed
+    # (POPS-2760). /ready reports 503 without a key and makes no upstream
+    # calls, so it does not reintroduce the cold-start coupling POPS-357
+    # removed.
     healthcheck:
       test:
         [
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3011/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://localhost:3011/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

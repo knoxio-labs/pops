@@ -62,9 +62,22 @@ describe('ComposeServiceSchema', () => {
         image: 'ghcr.io/knoxio-labs/pops-fixture:main',
         ports: ['3000:3000'],
         depends_on: ['redis'],
-        healthcheck: { test: ['CMD', 'true'] },
       })
     ).toEqual({});
+  });
+
+  it('keeps healthcheck, which the pops-mcp readiness-probe guard reads', () => {
+    const service = { healthcheck: { test: ['CMD', 'true'] } };
+    expect(ComposeServiceSchema.parse(service)).toEqual(service);
+  });
+
+  it('keeps the string form of a healthcheck test', () => {
+    const service = { healthcheck: { test: 'curl -f http://localhost:3011/ready' } };
+    expect(ComposeServiceSchema.parse(service)).toEqual(service);
+  });
+
+  it('rejects a healthcheck test that is neither a string nor a list', () => {
+    expect(() => ComposeServiceSchema.parse({ healthcheck: { test: 42 } })).toThrow();
   });
 
   it('accepts the string form of build, which names the context alone', () => {

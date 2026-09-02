@@ -51,10 +51,20 @@ export const ComposeSecretEntrySchema = z.union([
  */
 
 /**
- * A Compose service: `build`, `volumes`, `secrets` and `environment` — every field a
- * scripts/ci guard has needed out of `infra/docker-compose.yml` so far.
- * Nullable because `some-service:` with no value is valid Compose (typically
- * paired with a YAML anchor elsewhere), not a shape to reject.
+ * A service's `healthcheck:`. Only `test` is read — the probe itself is what a
+ * guard asserts on; `interval`/`timeout`/`retries` are tuning. `test` takes
+ * Compose's string form or its `['CMD', ...]` / `['CMD-SHELL', ...]` list form.
+ */
+export const ComposeHealthcheckSchema = z.object({
+  test: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+/**
+ * A Compose service: `build`, `volumes`, `secrets`, `environment` and
+ * `healthcheck` — every field a scripts/ci guard has needed out of
+ * `infra/docker-compose.yml` so far. Nullable because `some-service:` with no
+ * value is valid Compose (typically paired with a YAML anchor elsewhere), not
+ * a shape to reject.
  */
 export const ComposeServiceSchema = z
   .object({
@@ -62,6 +72,7 @@ export const ComposeServiceSchema = z
     volumes: z.array(ComposeVolumeEntrySchema).optional(),
     secrets: z.array(ComposeSecretEntrySchema).optional(),
     environment: z.record(z.string(), z.unknown()).optional(),
+    healthcheck: ComposeHealthcheckSchema.optional(),
   })
   .nullable();
 
