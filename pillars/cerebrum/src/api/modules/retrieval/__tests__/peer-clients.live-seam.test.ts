@@ -188,7 +188,7 @@ async function createFinanceTransaction(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       description,
-      account: 'Live seam test account',
+      account: 'Amex',
       amount: -12.5,
       date: '2026-08-01',
       type: 'purchase',
