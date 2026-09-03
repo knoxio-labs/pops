@@ -99,3 +99,43 @@ backend reads have moved over incrementally.
   real behaviour change for the transaction-write and import-commit paths,
   not just the migration, and is called out for confirmation in the
   implementing PR rather than assumed.
+
+## Addendum: gift-card secret storage (POPS-2772)
+
+`gift-card`-kind accounts (added to `ACCOUNT_KINDS` by this ADR, given real
+storage by POPS-2772) needed somewhere to hold a card's number and PIN —
+recoverable, since the whole point is showing them to a human later, not a
+one-way hash.
+
+Two questions needed a decision: how the encryption key is sourced, and
+whether the number and PIN are one encrypted field or two.
+
+**Key sourcing.** `pillars/media/src/api/clients/plex/crypto.ts` establishes
+a precedent for AES-256-GCM-plus-`scrypt` in this codebase, but its key can
+fall back to a seed it generates itself and persists to `plex_settings` —
+acceptable there because a Plex token is a re-issuable device credential; a
+regenerated key just means re-authenticating with Plex. A gift card number is
+exactly the kind of thing this feature exists to let a human recover, so a
+self-regenerating key would make an already-written secret permanently
+unrecoverable the moment the key was lost or rotated without warning.
+Rejected in favour of requiring an operator-supplied key from the same
+file-then-env source every other secret in this pillar already uses
+(`src/api/secret-source.ts`) — `FINANCE_GIFT_CARD_ENCRYPTION_KEY_FILE` in
+production, `FINANCE_GIFT_CARD_ENCRYPTION_KEY` locally — with no fallback: a
+write or a reveal attempted with no key configured throws
+`GiftCardEncryptionKeyMissingError` rather than storing the secret in the
+clear or returning a decryption failure with no actionable message.
+
+**One field vs two.** The number and PIN are always written and revealed
+together — there is no product need to recover one without the other — so
+they are serialized as one JSON object (`{ number, pin }`), encrypted once,
+and stored in a single `secret_ref` column, rather than two independently
+encrypted columns. One ciphertext is one less place for the two to drift out
+of sync, and the reveal endpoint always needs both anyway. The exact
+serialization (base64 `iv (12 bytes) | tag (16 bytes) | ciphertext`) is
+documented in `src/db/services/gift-card-crypto.ts`.
+
+`account_gift_card_details.last_four` is stored in the clear alongside the
+encrypted blob specifically so a masked read (`GET`) never has to decrypt
+anything at all — the one column a list/detail view needs is available
+without touching the key.

@@ -98,6 +98,15 @@ export type {
   UpdateAccountInput,
 } from './services/accounts.js';
 
+export * as giftCardDetailsService from './services/gift-card-details.js';
+
+export type {
+  GiftCardDetailsRow,
+  WriteGiftCardDetailsInput,
+  RevealedGiftCardSecret,
+  ExpiringGiftCard,
+} from './services/gift-card-details.js';
+
 export * as institutionsService from './services/institutions.js';
 
 export type { InstitutionRow, CreateInstitutionInput } from './services/institutions.js';

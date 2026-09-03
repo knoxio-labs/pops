@@ -225,6 +225,55 @@ export class UnresolvedAccountNameError extends Error {
   }
 }
 
+/**
+ * A gift-card-only write (or read) targeted an account whose current `kind`
+ * is not `gift-card`. Checked at the service layer against the account's
+ * live `kind` rather than a SQL constraint, because `accounts.kind` can
+ * change after gift-card details were written (nothing stops a subsequent
+ * `PATCH /accounts/:id` from retyping it) and SQLite can't express "this
+ * FK's target row must have `kind = X`".
+ */
+export class AccountKindMismatchError extends Error {
+  override readonly name = 'AccountKindMismatchError' as const;
+  readonly id: string;
+  readonly actualKind: string;
+  readonly expectedKind: string;
+
+  constructor(id: string, actualKind: string, expectedKind: string) {
+    super(`Account '${id}' is kind '${actualKind}', not '${expectedKind}'`);
+    this.id = id;
+    this.actualKind = actualKind;
+    this.expectedKind = expectedKind;
+  }
+}
+
+export class GiftCardDetailsNotFoundError extends Error {
+  override readonly name = 'GiftCardDetailsNotFoundError' as const;
+  readonly accountId: string;
+
+  constructor(accountId: string) {
+    super(`Gift card details for account '${accountId}' not found`);
+    this.accountId = accountId;
+  }
+}
+
+/**
+ * A gift-card secret write or reveal was attempted with no encryption key
+ * configured. Thrown rather than falling back to storing/returning the
+ * secret unencrypted — see `services/gift-card-crypto.ts`.
+ */
+export class GiftCardEncryptionKeyMissingError extends Error {
+  override readonly name = 'GiftCardEncryptionKeyMissingError' as const;
+
+  constructor() {
+    super(
+      'No gift card encryption key configured — set FINANCE_GIFT_CARD_ENCRYPTION_KEY_FILE ' +
+        '(production) or FINANCE_GIFT_CARD_ENCRYPTION_KEY (local dev) before writing or ' +
+        'revealing a gift card secret'
+    );
+  }
+}
+
 export class TransactionCorrectionNotFoundError extends Error {
   override readonly name = 'TransactionCorrectionNotFoundError' as const;
   readonly id: string;

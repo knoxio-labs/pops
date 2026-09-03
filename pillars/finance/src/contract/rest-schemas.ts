@@ -65,9 +65,11 @@ export const ERR_RESPONSES_WITH_412 = {
 
 /**
  * Error responses for routes that can additionally fail with 422 Unprocessable
- * Entity (the accounts `create` route, for a reserved `kind` with no
- * behaviour defined yet). Spread alongside {@link ERR_RESPONSES} where an
- * `UnprocessableEntityError` is reachable.
+ * Entity: an account create/update naming a reserved `kind` with no behaviour
+ * defined yet, or an operation targeting a resource that exists but is the
+ * wrong shape for it (the gift-card-details routes, gated on
+ * `accounts.kind === 'gift-card'`). Spread alongside {@link ERR_RESPONSES}
+ * where an `UnprocessableEntityError` is reachable.
  */
 export const ERR_RESPONSES_WITH_422 = {
   ...ERR_RESPONSES,

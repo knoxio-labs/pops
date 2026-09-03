@@ -52,12 +52,14 @@ export class ConflictError extends HttpError {
 
 /**
  * 422 Unprocessable Entity — the request is well-formed and passes schema
- * validation, but names something the domain refuses to act on (e.g. an
- * account `kind` reserved for future use, see `ReservedAccountKindError`).
+ * validation, but names something the domain refuses to act on: an account
+ * `kind` reserved for future use (`ReservedAccountKindError`), or an
+ * operation that's semantically invalid for the resource it targets (e.g.
+ * writing gift-card details onto an account that isn't `kind: 'gift-card'`).
  */
 export class UnprocessableEntityError extends HttpError {
-  constructor(message: string) {
-    super(422, message, undefined, 'common.unprocessable');
+  constructor(message: string, messageKey = 'common.unprocessable') {
+    super(422, message, undefined, messageKey);
     this.name = 'UnprocessableEntityError';
   }
 }
