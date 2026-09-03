@@ -1,9 +1,15 @@
 import { type AccountKind, ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { institutionsById } from '@/fixtures/institutions';
+import {
+  ACCOUNT_SORT_OPTIONS,
+  type AccountSort,
+  isAccountSort,
+  sortAccounts,
+} from '@/kit/account-list-sort';
 import { Archive, Landmark, Plus, Search, SearchX } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, cn, EmptyState, TextInput } from '@pops/ui';
+import { Button, ComboboxSelect, cn, EmptyState, TextInput } from '@pops/ui';
 
 import type { Account } from '@/fixtures/accounts';
 
@@ -28,10 +34,12 @@ export interface AccountListFilters {
   toggleKind: (kind: AccountKind) => void;
   showArchived: boolean;
   toggleArchived: () => void;
+  sort: AccountSort;
+  setSort: (sort: AccountSort) => void;
   clear: () => void;
   /** The kinds present in the data, in vocabulary order. */
   presentKinds: AccountKind[];
-  /** The accounts to render, filtered and in display order. */
+  /** The accounts to render, filtered and in the chosen sort. */
   visible: Account[];
   archivedCount: number;
   /** Whether a search or kind filter is narrowing the list. */
@@ -59,15 +67,22 @@ function describe(total: number, shown: number, archived: number, narrowed: bool
   return `${total - archived} active · ${archived} archived`;
 }
 
-/** Owns the query, the selected kinds and the archived reveal, and applies all three. */
+/**
+ * Owns the query, the selected kinds, the archived reveal and the sort, and
+ * applies all four. Sort defaults to `kind-balance` rather than any stored
+ * position on the account — manual drag ordering was dropped in favour of
+ * this dropdown, so nothing here reads `Account.order` as a display order.
+ */
 export function useAccountListFilters(accounts: Account[], initialQuery = ''): AccountListFilters {
   const [query, setQuery] = useState(initialQuery);
   const [kinds, setKinds] = useState<AccountKind[]>([]);
   const [showArchived, setShowArchived] = useState(false);
+  const [sort, setSort] = useState<AccountSort>('kind-balance');
   const narrowed = query.trim() !== '' || kinds.length > 0;
-  const visible = accounts
-    .filter((a) => (showArchived || !a.archived) && matches(a, query, kinds))
-    .toSorted((a, b) => a.order - b.order);
+  const visible = sortAccounts(
+    accounts.filter((a) => (showArchived || !a.archived) && matches(a, query, kinds)),
+    sort
+  );
   return {
     query,
     setQuery,
@@ -76,6 +91,8 @@ export function useAccountListFilters(accounts: Account[], initialQuery = ''): A
       setKinds((prev) => (prev.includes(kind) ? prev.filter((k) => k !== kind) : [...prev, kind])),
     showArchived,
     toggleArchived: () => setShowArchived((prev) => !prev),
+    sort,
+    setSort,
     clear: () => {
       setQuery('');
       setKinds([]);
@@ -120,7 +137,12 @@ function KindChip({
   );
 }
 
-/** The control row: search, one toggle per kind present, and the archived reveal. */
+const SORT_OPTIONS = ACCOUNT_SORT_OPTIONS.map((option) => ({
+  value: option.value,
+  label: option.label,
+}));
+
+/** The control row: search, one toggle per kind present, the sort, and the archived reveal. */
 export function AccountListControls({ filters }: { filters: AccountListFilters }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -142,20 +164,32 @@ export function AccountListControls({ filters }: { filters: AccountListFilters }
           onToggle={() => filters.toggleKind(kind)}
         />
       ))}
-      {filters.archivedCount > 0 && (
-        <Button
-          variant="outline"
+      <div className="ml-auto flex items-center gap-2">
+        <ComboboxSelect
+          options={SORT_OPTIONS}
+          value={filters.sort}
+          onChange={(value) => {
+            const next = Array.isArray(value) ? value[0] : value;
+            if (next !== undefined && isAccountSort(next)) filters.setSort(next);
+          }}
           size="sm"
-          prefix={<Archive className="h-4 w-4" />}
-          aria-pressed={filters.showArchived}
-          onClick={filters.toggleArchived}
-          className={cn('ml-auto', filters.showArchived && SELECTED_CHIP)}
-        >
-          {filters.showArchived
-            ? `Hide ${filters.archivedCount} archived`
-            : `Show ${filters.archivedCount} archived`}
-        </Button>
-      )}
+          className="w-44"
+        />
+        {filters.archivedCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            prefix={<Archive className="h-4 w-4" />}
+            aria-pressed={filters.showArchived}
+            onClick={filters.toggleArchived}
+            className={cn(filters.showArchived && SELECTED_CHIP)}
+          >
+            {filters.showArchived
+              ? `Hide ${filters.archivedCount} archived`
+              : `Show ${filters.archivedCount} archived`}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

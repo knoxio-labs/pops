@@ -10,7 +10,7 @@ import {
 } from '@/kit/account-list-controls';
 import { balanceTone } from '@/kit/ledger-tone';
 import { AccountAvatar } from '@/screens/finance/account-chip';
-import { GripVertical, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { Badge, Button, Card, cn, PageHeader } from '@pops/ui';
 
@@ -72,11 +72,7 @@ function CardHead({ account }: { account: Account }) {
 
 function AccountTile({ account }: { account: Account }) {
   return (
-    <div className="group relative h-full">
-      <GripVertical
-        className="absolute top-4 right-4 z-10 h-4 w-4 cursor-grab text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/50"
-        aria-label="Reorder"
-      />
+    <div className="relative h-full">
       <a
         href={`#/accounts/${account.id}`}
         className="block h-full rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
