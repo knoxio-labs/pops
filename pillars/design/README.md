@@ -73,7 +73,7 @@ An anchor resolves in three steps, best first. `source-plugin.ts` stamps every h
 
 The overlay renders inside the canvas iframe rather than over it, because anchoring is a hit test against the surface's own document and an overlay in the chrome would have to undo the frame's scale and offset to run one. The shell and the frame exchange two messages for it: comment mode down, the open-thread count up.
 
-Threads live in `src/db`, behind the Express API in `src/api`. Identity is Cloudflare Access: a human session in production, the tunnel's operator when no Access team is configured, and a **service token** for the two headless callers — the Vite dev proxy and `scripts/design-feedback-mcp.mjs`, the MCP server a session reads threads through. A service-token JWT carries `common_name` and no email at all, which is why `libs/sdk/src/access/cloudflare-jwt.ts` grew a principal that is not a person.
+Threads live in `src/db`, behind the Express API in `src/api`. Identity is Cloudflare Access in production: a human session, or a **service token** for the two headless callers — the Vite dev proxy and `scripts/design-feedback-mcp.mjs`, the MCP server a session reads threads through. A service-token JWT carries `common_name` and no email at all, which is why `libs/sdk/src/access/cloudflare-jwt.ts` grew a principal that is not a person. Outside production the API resolves every caller to a fixed dev user instead and skips Access entirely — a locally-run API needs no credentials, which is what makes the loop below work on a plain checkout.
 
 A thread is `open`, then `applied`, `rejected` or `outdated`. Reopening one clears the resolution, so "when was this closed" never reads a stale timestamp.
 
@@ -85,7 +85,9 @@ registers has no route on the running host, however complete
 `pillars/shell/nginx.conf` looks and however green that file's drift test is.
 `scripts/ci/check-pillar-registration.mjs` holds every pillar to it (POPS-2793).
 
-Nothing above is needed to use the playground. With no `POPS_DESIGN_FEEDBACK_URL` in the repo-root `.env` there is no dev proxy, the overlay's identity call fails, and comment mode hides itself. See `.env.example`.
+Comments work entirely on a developer's own machine, with no `.env` and no deployed API: `pnpm --filter @pops/design dev:all` starts the playground and a local `design-api` together, writing threads to `./data/design.db` (gitignored). The dev proxy defaults `/design-api` to that local API, which trusts any caller outside production, and `scripts/design-feedback-mcp.mjs` defaults to the same address — so a session reads the same threads a reviewer just left in the browser, with no credentials anywhere. If the API is not running, the proxy simply fails to connect, the overlay's identity call fails, and comment mode hides itself exactly as it would with anything else misconfigured.
+
+Setting `POPS_DESIGN_FEEDBACK_URL` (and the Cloudflare Access service token pair) in the repo-root `.env` points both the dev proxy and the MCP server at a DEPLOYED API instead — opt into that when the review needs to be reachable by someone other than you. See `.env.example`.
 
 ## The working loop
 
@@ -118,8 +120,9 @@ records a choice, it does not take one.
 ## Commands
 
 ```bash
-pnpm --filter @pops/design dev          # Vite on http://localhost:5569/design/
-pnpm --filter @pops/design dev:api      # the comment API on http://localhost:3015
+pnpm --filter @pops/design dev:all      # the playground AND its comment API together — the local comment loop
+pnpm --filter @pops/design dev          # just Vite, on http://localhost:5569/design/
+pnpm --filter @pops/design dev:api      # just the comment API, on http://localhost:3015
 pnpm --filter @pops/design build        # tsc -b → dist/api + dist/db, vite → dist/web
 pnpm --filter @pops/design typecheck
 pnpm --filter @pops/design test         # the playground's units and render smoke, plus the API and its store

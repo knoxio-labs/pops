@@ -14,9 +14,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { findTarget } from './anchors';
 import { createThread, replyToThread, setThreadStatus, type Thread } from './api';
 import { Composer } from './Composer';
+import { HoverHighlight } from './HoverHighlight';
 import { Panel } from './Panel';
 import { Pin } from './Pin';
 import { placePins } from './pin-positions';
+import { useHoverTarget } from './use-hover-target';
 import { useThreads } from './useThreads';
 
 import type { Anchor } from './anchors-types';
@@ -129,6 +131,7 @@ export function CommentsOverlay({
 
   useOpenCountReport(threads, available, onOpenCountChange);
   usePinning(enabled, setPending);
+  const hover = useHoverTarget(enabled && pending === null);
 
   useEffect(() => {
     if (!active) setPending(null);
@@ -157,6 +160,7 @@ export function CommentsOverlay({
 
   return (
     <>
+      {hover ? <HoverHighlight rect={hover} /> : null}
       <Pins
         threads={threads}
         reflow={reflow}

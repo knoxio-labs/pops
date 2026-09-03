@@ -12,19 +12,27 @@ function callable(env: Record<string, string>): Client {
 }
 
 describe('createClient', () => {
-  it('refuses to build without a configured deployment', () => {
-    expect(createClient({ CF_ACCESS_CLIENT_ID: 'a', CF_ACCESS_CLIENT_SECRET: 'b' })).toEqual({
-      error: expect.stringContaining('POPS_DESIGN_FEEDBACK_URL'),
-    });
+  it('defaults to the local design-api when POPS_DESIGN_FEEDBACK_URL is unset', () => {
+    expect(createClient({})).toHaveProperty('call');
   });
 
-  it('refuses to build without both halves of the service token', () => {
+  it('needs no service token for the local default, even with none configured', () => {
+    expect(createClient({})).not.toHaveProperty('error');
+  });
+
+  it('refuses to build against a remote deployment without both halves of the service token', () => {
     expect(
       createClient({ POPS_DESIGN_FEEDBACK_URL: 'https://x.test', CF_ACCESS_CLIENT_ID: 'a' })
     ).toEqual({ error: expect.stringContaining('service token') });
   });
 
-  it('builds a caller when everything is present', () => {
+  it('refuses to build against a remote deployment with no token at all', () => {
+    expect(createClient({ POPS_DESIGN_FEEDBACK_URL: 'https://x.test' })).toEqual({
+      error: expect.stringContaining('service token'),
+    });
+  });
+
+  it('builds a caller against a remote deployment when everything is present', () => {
     expect(
       createClient({
         POPS_DESIGN_FEEDBACK_URL: 'https://x.test',
@@ -32,6 +40,31 @@ describe('createClient', () => {
         CF_ACCESS_CLIENT_SECRET: 'b',
       })
     ).toHaveProperty('call');
+  });
+
+  it('lets an explicit POPS_DESIGN_FEEDBACK_URL win over the local default', async () => {
+    const seen: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => {
+      seen.push(String(url));
+      return new Response('{}', { status: 200 });
+    }) as typeof globalThis.fetch;
+    try {
+      await callable({
+        POPS_DESIGN_FEEDBACK_URL: 'https://x.test',
+        CF_ACCESS_CLIENT_ID: 'a',
+        CF_ACCESS_CLIENT_SECRET: 'b',
+      }).call('/threads');
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(seen[0]).toBe('https://x.test/threads');
+  });
+
+  it('needs no token for an explicit localhost deployment either', () => {
+    expect(createClient({ POPS_DESIGN_FEEDBACK_URL: 'http://127.0.0.1:3015' })).toHaveProperty(
+      'call'
+    );
   });
 
   /**
