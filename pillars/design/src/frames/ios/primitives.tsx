@@ -107,6 +107,51 @@ export function PopsActionBar({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * `PopsGlassButton`: a floating hero action in Apple's Liquid Glass material
+ * — translucent, blurred, with a specular highlight along its top edge — for
+ * the one action a screen exists to drive, in place of a full-width action
+ * bar. There is no Swift facsimile to name this after yet: the DesignSystem
+ * package has no glass primitive, so this screen is the first design to ask
+ * for one (POPS-2823 tracks building it natively).
+ *
+ * Fixed to the phone itself, not the scrolling content, via the
+ * `translateZ(0)` on `.ios-device` — it stays put while the screen scrolls
+ * under it, the way a real floating action button would.
+ */
+export function PopsGlassButton({
+  children,
+  label,
+  onClick,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="fixed z-10 flex min-h-12 items-center gap-2 rounded-full px-5 backdrop-blur-xl transition-transform active:scale-95"
+      style={{
+        right: 16,
+        bottom: 'calc(var(--ios-safe-area-inset-bottom) + 16px)',
+        background: `linear-gradient(155deg,
+          color-mix(in srgb, var(--ios-accent) 65%, transparent) 0%,
+          color-mix(in srgb, var(--ios-accent) 78%, transparent) 60%,
+          color-mix(in srgb, var(--ios-accent) 88%, transparent) 100%)`,
+        color: 'var(--ios-background)',
+        border: '1px solid color-mix(in srgb, white 40%, transparent)',
+        boxShadow:
+          '0 10px 30px rgba(0, 0, 0, 0.28), inset 0 1px 0 color-mix(in srgb, white 55%, transparent)',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** `StateView`: the shared body of the loading, empty and error screens. */
 export function StateView({
   message,

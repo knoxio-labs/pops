@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from '@pops/ui';
 
-function usePicker(initialQuery = '') {
+export function usePicker(initialQuery = '') {
   const [open, setOpen] = useState(initialQuery.length > 0);
   const [query, setQuery] = useState(initialQuery);
   const close = () => {
@@ -35,7 +35,7 @@ function usePicker(initialQuery = '') {
 type PickerState = ReturnType<typeof usePicker>;
 
 /** The Popover/Command shell a search-and-create picker renders. */
-function PickerPopover({
+export function PickerPopover({
   ariaLabel,
   trigger,
   state,
@@ -97,7 +97,7 @@ export function InstitutionMark({ institution }: { institution: Institution }) {
   );
 }
 
-function CreateRow({ label, onSelect }: { label: string; onSelect: () => void }) {
+export function CreateRow({ label, onSelect }: { label: string; onSelect: () => void }) {
   return (
     <CommandGroup forceMount>
       <CommandItem forceMount value={`create:${label}`} onSelect={onSelect}>

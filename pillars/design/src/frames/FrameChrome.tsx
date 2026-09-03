@@ -20,7 +20,13 @@ export function FrameChrome({
   slug: string | undefined;
   children: ReactNode;
 }) {
-  if (kind === 'ios') return <IPhoneFrame>{children}</IPhoneFrame>;
+  if (kind === 'ios') {
+    return (
+      <IPhoneFrame area={area} slug={slug}>
+        {children}
+      </IPhoneFrame>
+    );
+  }
   if (kind === 'web') {
     return (
       <WebFrame area={area} slug={slug}>
