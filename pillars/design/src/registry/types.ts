@@ -61,8 +61,3 @@ export interface Catalog {
   /** Contract violations. Never fatal: the rest of the catalog still renders. */
   errors: string[];
 }
-
-/** Every distinct area, in first-appearance order of the sorted screen list. */
-export function areasOf(screens: readonly ScreenEntry[]): string[] {
-  return [...new Set(screens.map((s) => s.area))];
-}
