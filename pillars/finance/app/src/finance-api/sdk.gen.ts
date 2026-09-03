@@ -100,6 +100,15 @@ import type {
   EntityUsageListData,
   EntityUsageListErrors,
   EntityUsageListResponses,
+  GiftCardDetailsGetData,
+  GiftCardDetailsGetErrors,
+  GiftCardDetailsGetResponses,
+  GiftCardDetailsRevealData,
+  GiftCardDetailsRevealErrors,
+  GiftCardDetailsRevealResponses,
+  GiftCardDetailsWriteData,
+  GiftCardDetailsWriteErrors,
+  GiftCardDetailsWriteResponses,
   ImportsApplyChangeSetAndReevaluateData,
   ImportsApplyChangeSetAndReevaluateErrors,
   ImportsApplyChangeSetAndReevaluateResponses,
@@ -326,6 +335,56 @@ export const accountsUpdate = <ThrowOnError extends boolean = false>(
 ): RequestResult<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError> =>
   (options.client ?? client).patch<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError>({
     url: '/accounts/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Masked read of a gift card account’s details — never the number/PIN
+ */
+export const giftCardDetailsGet = <ThrowOnError extends boolean = false>(
+  options: Options<GiftCardDetailsGetData, ThrowOnError>
+): RequestResult<GiftCardDetailsGetResponses, GiftCardDetailsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    GiftCardDetailsGetResponses,
+    GiftCardDetailsGetErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/gift-card-details', ...options });
+
+/**
+ * Create or replace a gift card account’s encrypted number/PIN
+ */
+export const giftCardDetailsWrite = <ThrowOnError extends boolean = false>(
+  options: Options<GiftCardDetailsWriteData, ThrowOnError>
+): RequestResult<GiftCardDetailsWriteResponses, GiftCardDetailsWriteErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    GiftCardDetailsWriteResponses,
+    GiftCardDetailsWriteErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/gift-card-details',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Decrypt and return the plaintext number/PIN once; audited
+ */
+export const giftCardDetailsReveal = <ThrowOnError extends boolean = false>(
+  options: Options<GiftCardDetailsRevealData, ThrowOnError>
+): RequestResult<GiftCardDetailsRevealResponses, GiftCardDetailsRevealErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    GiftCardDetailsRevealResponses,
+    GiftCardDetailsRevealErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/gift-card-details/reveal',
     ...options,
     headers: {
       'Content-Type': 'application/json',

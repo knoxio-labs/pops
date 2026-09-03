@@ -35,6 +35,10 @@ import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { Account } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
 import type { Currency } from '../modules/currencies-types.js';
+import type {
+  GiftCardDetails,
+  RevealedGiftCardSecretResponse,
+} from '../modules/gift-card-details-types.js';
 import type { ImportProgress } from '../modules/imports/index.js';
 import type {
   CommitResult,
@@ -442,6 +446,18 @@ export function makeClient(app: Express) {
         call<{ data: Account; message: string }>((r) => r.delete(`/accounts/${id}`)),
       reorder: (body: { accounts: { id: string; displayOrder: number }[] }) =>
         call<{ data: Account[]; message: string }>((r) => r.post('/accounts/reorder').send(body)),
+    },
+    giftCardDetails: {
+      get: (accountId: string) =>
+        call<{ data: GiftCardDetails }>((r) => r.get(`/accounts/${accountId}/gift-card-details`)),
+      write: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: GiftCardDetails; message: string }>((r) =>
+          r.put(`/accounts/${accountId}/gift-card-details`).send(body)
+        ),
+      reveal: (accountId: string) =>
+        call<{ data: RevealedGiftCardSecretResponse; message: string }>((r) =>
+          r.post(`/accounts/${accountId}/gift-card-details/reveal`).send({})
+        ),
     },
     transactions: {
       list: (query: TransactionQuery = {}) =>

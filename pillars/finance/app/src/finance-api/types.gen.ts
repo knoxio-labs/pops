@@ -494,6 +494,210 @@ export type AccountsUpdateResponses = {
 
 export type AccountsUpdateResponse = AccountsUpdateResponses[keyof AccountsUpdateResponses];
 
+export type GiftCardDetailsGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/gift-card-details';
+};
+
+export type GiftCardDetailsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type GiftCardDetailsGetError = GiftCardDetailsGetErrors[keyof GiftCardDetailsGetErrors];
+
+export type GiftCardDetailsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      expiresOn: string | null;
+      issuerEntityId: string | null;
+      lastFour: string;
+    };
+  };
+};
+
+export type GiftCardDetailsGetResponse =
+  GiftCardDetailsGetResponses[keyof GiftCardDetailsGetResponses];
+
+export type GiftCardDetailsWriteData = {
+  /**
+   * Body
+   */
+  body?: {
+    expiresOn?: string | null;
+    issuerEntityId?: string | null;
+    number: string;
+    pin: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/gift-card-details';
+};
+
+export type GiftCardDetailsWriteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type GiftCardDetailsWriteError =
+  GiftCardDetailsWriteErrors[keyof GiftCardDetailsWriteErrors];
+
+export type GiftCardDetailsWriteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      expiresOn: string | null;
+      issuerEntityId: string | null;
+      lastFour: string;
+    };
+    message: string;
+  };
+};
+
+export type GiftCardDetailsWriteResponse =
+  GiftCardDetailsWriteResponses[keyof GiftCardDetailsWriteResponses];
+
+export type GiftCardDetailsRevealData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/gift-card-details/reveal';
+};
+
+export type GiftCardDetailsRevealErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type GiftCardDetailsRevealError =
+  GiftCardDetailsRevealErrors[keyof GiftCardDetailsRevealErrors];
+
+export type GiftCardDetailsRevealResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      number: string;
+      pin: string;
+    };
+    message: string;
+  };
+};
+
+export type GiftCardDetailsRevealResponse =
+  GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;
