@@ -16,7 +16,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ACCOUNT_KINDS } from './account-kind.js';
-import { ERR_RESPONSES } from './rest-schemas.js';
+import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 const c = initContract();
 
@@ -55,12 +55,37 @@ const UpdateAccountBody = z.object({
 
 const AccountMutation = z.object({ data: AccountSchema, message: z.string() });
 
+const AccountQuery = z.object({
+  search: z.string().optional(),
+  kind: z.enum(ACCOUNT_KINDS).optional(),
+  archived: z.enum(['true', 'false']).optional(),
+  limit: LimitQuery,
+  offset: OffsetQuery,
+});
+
+const ReorderAccountsBody = z.object({
+  accounts: z
+    .array(z.object({ id: z.string(), displayOrder: z.number().int() }))
+    .min(1, 'At least one account is required'),
+});
+
 export const financeAccountsContract = c.router({
   list: {
     method: 'GET',
     path: '/accounts',
-    responses: { 200: z.object({ data: z.array(AccountSchema) }) },
-    summary: 'List every account, archived included, ordered by display order then name',
+    query: AccountQuery,
+    responses: {
+      200: z.object({
+        data: z.array(AccountSchema),
+        pagination: z.object({
+          total: z.number(),
+          limit: z.number(),
+          offset: z.number(),
+          hasMore: z.boolean(),
+        }),
+      }),
+    },
+    summary: 'List accounts with optional search / kind / archived filters and pagination',
   },
   get: {
     method: 'GET',
@@ -73,16 +98,28 @@ export const financeAccountsContract = c.router({
     method: 'POST',
     path: '/accounts',
     body: CreateAccountBody,
-    responses: { 201: AccountMutation, ...ERR_RESPONSES },
-    summary: 'Create a new account',
+    responses: { 201: AccountMutation, ...ERR_RESPONSES_WITH_422 },
+    summary: 'Create a new account; rejects a reserved kind with 422',
+  },
+  reorder: {
+    method: 'POST',
+    path: '/accounts/reorder',
+    body: ReorderAccountsBody,
+    responses: {
+      200: z.object({ data: z.array(AccountSchema), message: z.string() }),
+      ...ERR_RESPONSES,
+    },
+    summary:
+      'Batch-update display order for a set of accounts atomically; an unknown id 404s the whole batch',
   },
   update: {
     method: 'PATCH',
     path: '/accounts/:id',
     pathParams: z.object({ id: z.string() }),
     body: UpdateAccountBody,
-    responses: { 200: AccountMutation, ...ERR_RESPONSES },
-    summary: 'Update an account, including unarchiving it by clearing archivedAt',
+    responses: { 200: AccountMutation, ...ERR_RESPONSES_WITH_422 },
+    summary:
+      'Update an account, including unarchiving it by clearing archivedAt; rejects patching kind into a reserved value with 422',
   },
   delete: {
     method: 'DELETE',

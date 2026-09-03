@@ -381,6 +381,14 @@ export interface EntityUsageQuery {
   offset?: number;
 }
 
+export interface AccountQuery {
+  search?: string;
+  kind?: string;
+  archived?: 'true' | 'false';
+  limit?: number;
+  offset?: number;
+}
+
 export function makeClient(app: Express) {
   const call = <T>(build: (r: Agent) => supertest.Test): Promise<T> => withServer<T>(app, build);
   return {
@@ -423,7 +431,8 @@ export function makeClient(app: Express) {
       delete: (id: string) => call<{ message: string }>((r) => r.delete(`/institutions/${id}`)),
     },
     accounts: {
-      list: () => call<{ data: Account[] }>((r) => r.get('/accounts')),
+      list: (query: AccountQuery = {}) =>
+        call<{ data: Account[]; pagination: Pagination }>((r) => r.get('/accounts').query(query)),
       get: (id: string) => call<{ data: Account }>((r) => r.get(`/accounts/${id}`)),
       create: (body: Record<string, unknown>) =>
         call<{ data: Account; message: string }>((r) => r.post('/accounts').send(body)),
@@ -431,6 +440,8 @@ export function makeClient(app: Express) {
         call<{ data: Account; message: string }>((r) => r.patch(`/accounts/${id}`).send(data)),
       delete: (id: string) =>
         call<{ data: Account; message: string }>((r) => r.delete(`/accounts/${id}`)),
+      reorder: (body: { accounts: { id: string; displayOrder: number }[] }) =>
+        call<{ data: Account[]; message: string }>((r) => r.post('/accounts/reorder').send(body)),
     },
     transactions: {
       list: (query: TransactionQuery = {}) =>

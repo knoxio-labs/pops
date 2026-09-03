@@ -118,6 +118,109 @@ describe('accounts — happy paths', () => {
   });
 });
 
+describe('accounts — list query filters', () => {
+  it('filters by search substring, case-insensitively', async () => {
+    await client().accounts.create({ name: 'Travel Wallet', kind: 'cash', currency: 'AUD' });
+    await client().accounts.create({ name: 'Savings A', kind: 'savings', currency: 'AUD' });
+
+    const { data } = await client().accounts.list({ search: 'wallet' });
+    expect(data.map((a) => a.name)).toEqual(['Travel Wallet']);
+  });
+
+  it('filters by exact kind', async () => {
+    await client().accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD' });
+
+    const { data } = await client().accounts.list({ kind: 'cash' });
+    expect(data.map((a) => a.name)).toEqual(['Wallet']);
+  });
+
+  it('filters to archived-only or active-only, and returns both when omitted', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    await client().accounts.delete(created.data.id);
+
+    const archivedOnly = await client().accounts.list({ archived: 'true' });
+    expect(archivedOnly.data.map((a) => a.id)).toEqual([created.data.id]);
+
+    const activeOnly = await client().accounts.list({ archived: 'false' });
+    expect(activeOnly.data.map((a) => a.id)).not.toContain(created.data.id);
+
+    const all = await client().accounts.list();
+    expect(all.data.map((a) => a.id)).toContain(created.data.id);
+  });
+
+  it('paginates with limit/offset and reports the true total', async () => {
+    const page1 = await client().accounts.list({ limit: 1, offset: 0 });
+    expect(page1.data).toHaveLength(1);
+    expect(page1.pagination).toMatchObject({ total: 2, limit: 1, offset: 0, hasMore: true });
+
+    const page2 = await client().accounts.list({ limit: 1, offset: 1 });
+    expect(page2.data).toHaveLength(1);
+    expect(page2.pagination).toMatchObject({ total: 2, limit: 1, offset: 1, hasMore: false });
+    expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
+  });
+});
+
+describe('accounts — reserved kinds', () => {
+  it.each(['shared', 'loan', 'novated-lease', 'crypto', 'other'] as const)(
+    '422s creating kind %s',
+    async (kind) => {
+      await expect(
+        client().accounts.create({ name: 'Reserved', kind, currency: 'AUD' })
+      ).rejects.toMatchObject({ status: 422 });
+    }
+  );
+
+  it('still allows creating a day-one kind', async () => {
+    await expect(
+      client().accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD' })
+    ).resolves.toMatchObject({ data: { kind: 'cash' } });
+  });
+});
+
+describe('accounts — reorder', () => {
+  it('applies every entry in the batch atomically', async () => {
+    const a = await client().accounts.create({ name: 'Alpha', kind: 'cash', currency: 'AUD' });
+    const b = await client().accounts.create({ name: 'Beta', kind: 'savings', currency: 'AUD' });
+
+    const reordered = await client().accounts.reorder({
+      accounts: [
+        { id: a.data.id, displayOrder: 5 },
+        { id: b.data.id, displayOrder: 1 },
+      ],
+    });
+
+    expect(reordered.data.find((r) => r.id === a.data.id)?.displayOrder).toBe(5);
+    expect(reordered.data.find((r) => r.id === b.data.id)?.displayOrder).toBe(1);
+
+    const fetchedA = await client().accounts.get(a.data.id);
+    expect(fetchedA.data.displayOrder).toBe(5);
+  });
+
+  it('404s the whole batch and leaves display order untouched when one id is unknown', async () => {
+    const a = await client().accounts.create({ name: 'Alpha', kind: 'cash', currency: 'AUD' });
+    const b = await client().accounts.create({ name: 'Beta', kind: 'savings', currency: 'AUD' });
+
+    await expect(
+      client().accounts.reorder({
+        accounts: [
+          { id: a.data.id, displayOrder: 5 },
+          { id: 'missing-id', displayOrder: 1 },
+          { id: b.data.id, displayOrder: 2 },
+        ],
+      })
+    ).rejects.toMatchObject({ status: 404 });
+
+    const fetchedA = await client().accounts.get(a.data.id);
+    const fetchedB = await client().accounts.get(b.data.id);
+    expect(fetchedA.data.displayOrder).toBe(0);
+    expect(fetchedB.data.displayOrder).toBe(0);
+  });
+});
+
 describe('accounts — error mapping', () => {
   it('409s a duplicate name', async () => {
     await client().accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD' });

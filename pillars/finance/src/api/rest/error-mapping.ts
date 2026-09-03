@@ -58,7 +58,7 @@ export function createRequestValidationErrorHandler() {
   };
 }
 
-export type ErrorStatus = 400 | 404 | 409 | 412;
+export type ErrorStatus = 400 | 404 | 409 | 412 | 422;
 
 export interface MappedHttpError {
   status: ErrorStatus;
@@ -66,7 +66,7 @@ export interface MappedHttpError {
 }
 
 function isMappedStatus(status: number): status is ErrorStatus {
-  return status === 400 || status === 404 || status === 409 || status === 412;
+  return status === 400 || status === 404 || status === 409 || status === 412 || status === 422;
 }
 
 export function mapHttpError(err: unknown): MappedHttpError | null {

@@ -8,12 +8,14 @@ import {
   AccountCashCurrencyConflictError,
   AccountNameConflictError,
   AccountNotFoundError,
+  ReservedAccountKindError,
 } from '../errors.js';
 import {
   archiveAccount,
   createAccount,
   getAccount,
   listAccounts,
+  reorderAccounts,
   updateAccount,
 } from '../services/accounts.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
@@ -24,19 +26,64 @@ function freshDb(): FinanceDb {
   return freshMigratedFinanceDb().db;
 }
 
+const DEFAULT_PAGE = { limit: 50, offset: 0 };
+
 describe('listAccounts', () => {
   it('starts with the two migration-seeded accounts, ordered by displayOrder then name', () => {
     const db = freshDb();
-    const names = listAccounts(db).map((a) => a.name);
-    expect(names).toEqual(['ANZ Credit Card', 'Amex']);
+    const { rows, total } = listAccounts(db, DEFAULT_PAGE);
+    expect(rows.map((a) => a.name)).toEqual(['ANZ Credit Card', 'Amex']);
+    expect(total).toBe(2);
   });
 
   it('places a later create after the seeded rows at the same displayOrder, sorted by name', () => {
     const db = freshDb();
     createAccount(db, { name: 'Zzz Cash', kind: 'cash', currency: 'AUD' });
 
-    const names = listAccounts(db).map((a) => a.name);
-    expect(names).toEqual(['ANZ Credit Card', 'Amex', 'Zzz Cash']);
+    const { rows } = listAccounts(db, DEFAULT_PAGE);
+    expect(rows.map((a) => a.name)).toEqual(['ANZ Credit Card', 'Amex', 'Zzz Cash']);
+  });
+
+  it('filters by search substring, case-insensitively', () => {
+    const db = freshDb();
+    createAccount(db, { name: 'Travel Wallet', kind: 'cash', currency: 'AUD' });
+
+    const { rows, total } = listAccounts(db, { ...DEFAULT_PAGE, search: 'wallet' });
+    expect(total).toBe(1);
+    expect(rows.map((a) => a.name)).toEqual(['Travel Wallet']);
+  });
+
+  it('filters by exact kind', () => {
+    const db = freshDb();
+    createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+
+    const { rows, total } = listAccounts(db, { ...DEFAULT_PAGE, kind: 'cash' });
+    expect(total).toBe(1);
+    expect(rows[0]?.name).toBe('Wallet');
+  });
+
+  it('filters to archived-only or active-only accounts', () => {
+    const db = freshDb();
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    archiveAccount(db, created.id);
+
+    const archivedOnly = listAccounts(db, { ...DEFAULT_PAGE, archived: true });
+    expect(archivedOnly.rows.map((a) => a.id)).toEqual([created.id]);
+
+    const activeOnly = listAccounts(db, { ...DEFAULT_PAGE, archived: false });
+    expect(activeOnly.rows.map((a) => a.id)).not.toContain(created.id);
+    expect(activeOnly.total).toBe(2);
+  });
+
+  it('paginates with limit/offset while reporting the true total', () => {
+    const db = freshDb();
+    const page1 = listAccounts(db, { limit: 1, offset: 0 });
+    expect(page1.rows).toHaveLength(1);
+    expect(page1.total).toBe(2);
+
+    const page2 = listAccounts(db, { limit: 1, offset: 1 });
+    expect(page2.rows).toHaveLength(1);
+    expect(page2.rows[0]?.name).not.toBe(page1.rows[0]?.name);
   });
 });
 
@@ -100,6 +147,26 @@ describe('createAccount', () => {
       ).not.toThrow();
     });
   });
+
+  describe('reserved kinds', () => {
+    it.each(['shared', 'loan', 'novated-lease', 'crypto', 'other'] as const)(
+      'rejects kind %s with ReservedAccountKindError',
+      (kind) => {
+        expect(() => createAccount(db, { name: 'Reserved', kind, currency: 'AUD' })).toThrow(
+          ReservedAccountKindError
+        );
+      }
+    );
+
+    it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card', 'person'] as const)(
+      'still allows day-one kind %s',
+      (kind, index) => {
+        expect(() =>
+          createAccount(db, { name: `Day one ${index}`, kind, currency: 'AUD' })
+        ).not.toThrow();
+      }
+    );
+  });
 });
 
 describe('updateAccount', () => {
@@ -114,6 +181,14 @@ describe('updateAccount', () => {
 
     expect(updated.displayOrder).toBe(5);
     expect(updated.name).toBe('Wallet');
+  });
+
+  it('rejects patching kind into a reserved value, same as create', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    expect(() => updateAccount(db, created.id, { kind: 'crypto' })).toThrow(
+      ReservedAccountKindError
+    );
+    expect(getAccount(db, created.id).kind).toBe('cash');
   });
 
   it('throws AccountNotFoundError for a missing id', () => {
@@ -178,5 +253,43 @@ describe('archiveAccount', () => {
     archiveAccount(db, created.id);
 
     expect(() => getAccount(db, created.id)).not.toThrow();
+  });
+});
+
+describe('reorderAccounts', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('applies every entry in the batch', () => {
+    const a = createAccount(db, { name: 'Alpha', kind: 'cash', currency: 'AUD' });
+    const b = createAccount(db, { name: 'Beta', kind: 'savings', currency: 'AUD' });
+
+    const result = reorderAccounts(db, [
+      { id: a.id, displayOrder: 5 },
+      { id: b.id, displayOrder: 1 },
+    ]);
+
+    expect(result.find((r) => r.id === a.id)?.displayOrder).toBe(5);
+    expect(result.find((r) => r.id === b.id)?.displayOrder).toBe(1);
+    expect(getAccount(db, a.id).displayOrder).toBe(5);
+    expect(getAccount(db, b.id).displayOrder).toBe(1);
+  });
+
+  it('rejects the whole batch and leaves display_order untouched when one id is unknown', () => {
+    const a = createAccount(db, { name: 'Alpha', kind: 'cash', currency: 'AUD' });
+    const b = createAccount(db, { name: 'Beta', kind: 'savings', currency: 'AUD' });
+
+    expect(() =>
+      reorderAccounts(db, [
+        { id: a.id, displayOrder: 5 },
+        { id: 'missing-id', displayOrder: 1 },
+        { id: b.id, displayOrder: 2 },
+      ])
+    ).toThrow(AccountNotFoundError);
+
+    expect(getAccount(db, a.id).displayOrder).toBe(0);
+    expect(getAccount(db, b.id).displayOrder).toBe(0);
   });
 });

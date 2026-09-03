@@ -9,12 +9,14 @@
  * hides an account from active views without touching what already points
  * at it, and is reversible by patching `archivedAt` back to `null`.
  */
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, like } from 'drizzle-orm';
 
+import { DAY_ONE_ACCOUNT_KINDS } from '../../contract/account-kind.js';
 import {
   AccountCashCurrencyConflictError,
   AccountNameConflictError,
   AccountNotFoundError,
+  ReservedAccountKindError,
 } from '../errors.js';
 import { accounts } from '../schema.js';
 import { isAccountCashCurrencyConflict, isAccountNameConflict } from './account-conflict.js';
@@ -46,15 +48,64 @@ export interface UpdateAccountInput {
   archivedAt?: string | null;
 }
 
+/** Filters + pagination accepted by `listAccounts`. */
+export interface ListAccountsOptions {
+  search?: string | undefined;
+  kind?: AccountKind | undefined;
+  archived?: boolean | undefined;
+  limit: number;
+  offset: number;
+}
+
+/** Result of a paginated `listAccounts` call. */
+export interface AccountListResult {
+  rows: AccountRow[];
+  total: number;
+}
+
+/** One `{ id, displayOrder }` pair accepted by `reorderAccounts`. */
+export interface AccountReorderEntry {
+  id: string;
+  displayOrder: number;
+}
+
 function translateWriteConflict(err: unknown, name: string, currency: string): never {
   if (isAccountNameConflict(err)) throw new AccountNameConflictError(name);
   if (isAccountCashCurrencyConflict(err)) throw new AccountCashCurrencyConflictError(currency);
   throw err;
 }
 
-/** List every account, ordered by `displayOrder` then name. */
-export function listAccounts(db: FinanceDb): AccountRow[] {
-  return db.select().from(accounts).orderBy(asc(accounts.displayOrder), asc(accounts.name)).all();
+function isDayOneAccountKind(kind: AccountKind): boolean {
+  return (DAY_ONE_ACCOUNT_KINDS as readonly AccountKind[]).includes(kind);
+}
+
+/**
+ * List accounts matching the given filters, ordered by `displayOrder` then
+ * name, with a total count for pagination.
+ *
+ * `search` matches `name` case-insensitively (SQLite `LIKE`'s default ASCII
+ * case-folding), `kind` is an exact match, and `archived` restricts to only
+ * archived (`true`) or only active (`false`) rows — omitted returns both.
+ */
+export function listAccounts(db: FinanceDb, opts: ListAccountsOptions): AccountListResult {
+  const conditions = [];
+  if (opts.search) conditions.push(like(accounts.name, `%${opts.search}%`));
+  if (opts.kind) conditions.push(eq(accounts.kind, opts.kind));
+  if (opts.archived === true) conditions.push(isNotNull(accounts.archivedAt));
+  if (opts.archived === false) conditions.push(isNull(accounts.archivedAt));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = db
+    .select()
+    .from(accounts)
+    .where(where)
+    .orderBy(asc(accounts.displayOrder), asc(accounts.name))
+    .limit(opts.limit)
+    .offset(opts.offset)
+    .all();
+
+  const countRow = db.select({ total: count() }).from(accounts).where(where).all()[0];
+  return { rows, total: countRow?.total ?? 0 };
 }
 
 /** Get a single account by id. Throws `AccountNotFoundError` if missing. */
@@ -70,9 +121,13 @@ export function getAccount(db: FinanceDb, id: string): AccountRow {
  * a second `cash` account in a currency that already has one — both mapped
  * from the SQLite constraint violation rather than pre-checked, since an
  * account is short-lived, low-cardinality data where the race is not worth a
- * read-then-write.
+ * read-then-write. Throws `ReservedAccountKindError` for a kind outside
+ * `DAY_ONE_ACCOUNT_KINDS` — those kinds exist in the enum but have no ledger
+ * behaviour defined yet, so nothing can act on an account created with one.
  */
 export function createAccount(db: FinanceDb, input: CreateAccountInput): AccountRow {
+  if (!isDayOneAccountKind(input.kind)) throw new ReservedAccountKindError(input.kind);
+
   const id = crypto.randomUUID();
   try {
     db.insert(accounts)
@@ -110,10 +165,15 @@ function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts
  *
  * A patch that would collide with an existing account's name, or move a
  * second account into `(cash, currency)`, maps to the same conflict errors
- * `createAccount` throws, using the post-patch values.
+ * `createAccount` throws, using the post-patch values. Patching `kind` into
+ * a reserved value throws `ReservedAccountKindError`, same as create — a
+ * reserved kind has no ledger behaviour whether it arrives via POST or PATCH.
  */
 export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInput): AccountRow {
   const current = getAccount(db, id);
+  if (input.kind !== undefined && !isDayOneAccountKind(input.kind)) {
+    throw new ReservedAccountKindError(input.kind);
+  }
 
   const updates = buildAccountUpdates(input);
   if (Object.keys(updates).length > 0) {
@@ -145,4 +205,43 @@ export function archiveAccount(db: FinanceDb, id: string): AccountRow {
     .where(eq(accounts.id, id))
     .run();
   return getAccount(db, id);
+}
+
+/**
+ * Batch-update `displayOrder` for a set of accounts atomically. Throws
+ * `AccountNotFoundError` naming the first unknown id if any entry's id does
+ * not exist, without writing any of the batch — every read and write runs
+ * inside one `db.transaction`, so a thrown error rolls the whole thing back
+ * rather than leaving a partially-reordered set of rows.
+ */
+export function reorderAccounts(
+  db: FinanceDb,
+  entries: readonly AccountReorderEntry[]
+): AccountRow[] {
+  return db.transaction((tx) => {
+    const ids = entries.map((entry) => entry.id);
+    const found = tx
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(inArray(accounts.id, ids))
+      .all();
+    const foundIds = new Set(found.map((row) => row.id));
+    for (const id of ids) {
+      if (!foundIds.has(id)) throw new AccountNotFoundError(id);
+    }
+
+    const now = new Date().toISOString();
+    for (const entry of entries) {
+      tx.update(accounts)
+        .set({ displayOrder: entry.displayOrder, updatedAt: now })
+        .where(eq(accounts.id, entry.id))
+        .run();
+    }
+
+    return ids.map((id) => {
+      const row = tx.select().from(accounts).where(eq(accounts.id, id)).get();
+      if (!row) throw new AccountNotFoundError(id);
+      return row;
+    });
+  });
 }

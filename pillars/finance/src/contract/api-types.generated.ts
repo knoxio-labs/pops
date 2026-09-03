@@ -10,11 +10,28 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List every account, archived included, ordered by display order then name */
+    /** List accounts with optional search / kind / archived filters and pagination */
     get: operations['accounts.list'];
     put?: never;
-    /** Create a new account */
+    /** Create a new account; rejects a reserved kind with 422 */
     post: operations['accounts.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/reorder': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Batch-update display order for a set of accounts atomically; an unknown id 404s the whole batch */
+    post: operations['accounts.reorder'];
     delete?: never;
     options?: never;
     head?: never;
@@ -36,7 +53,7 @@ export interface paths {
     delete: operations['accounts.delete'];
     options?: never;
     head?: never;
-    /** Update an account, including unarchiving it by clearing archivedAt */
+    /** Update an account, including unarchiving it by clearing archivedAt; rejects patching kind into a reserved value with 422 */
     patch: operations['accounts.update'];
     trace?: never;
   };
@@ -1023,7 +1040,24 @@ export type $defs = Record<string, never>;
 export interface operations {
   'accounts.list': {
     parameters: {
-      query?: never;
+      query?: {
+        search?: string;
+        kind?:
+          | 'checking'
+          | 'savings'
+          | 'credit-card'
+          | 'cash'
+          | 'gift-card'
+          | 'person'
+          | 'shared'
+          | 'loan'
+          | 'novated-lease'
+          | 'crypto'
+          | 'other';
+        archived?: 'true' | 'false';
+        limit?: number;
+        offset?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1061,6 +1095,12 @@ export interface operations {
               name: string;
               updatedAt: string;
             }[];
+            pagination: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
           };
         };
       };
@@ -1130,6 +1170,114 @@ export interface operations {
               name: string;
               updatedAt: string;
             };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.reorder': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          accounts: {
+            displayOrder: number;
+            id: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            }[];
             message: string;
           };
         };
@@ -1452,6 +1600,19 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
         headers: {
           [name: string]: unknown;
         };

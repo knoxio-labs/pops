@@ -62,3 +62,14 @@ export const ERR_RESPONSES_WITH_412 = {
   ...ERR_RESPONSES,
   412: ErrorBodySchema,
 } as const;
+
+/**
+ * Error responses for routes that can additionally fail with 422 Unprocessable
+ * Entity (the accounts `create` route, for a reserved `kind` with no
+ * behaviour defined yet). Spread alongside {@link ERR_RESPONSES} where an
+ * `UnprocessableEntityError` is reachable.
+ */
+export const ERR_RESPONSES_WITH_422 = {
+  ...ERR_RESPONSES,
+  422: ErrorBodySchema,
+} as const;
