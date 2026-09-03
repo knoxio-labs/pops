@@ -5,41 +5,32 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from 'vite';
 
 import { sourcePlugin } from './source-plugin';
+import { resolveDesignApiProxyConfig } from './src/dev-proxy';
 
 const SRC = path.resolve(import.meta.dirname, './src');
 const REPO_ROOT = path.resolve(import.meta.dirname, '../..');
 
 /**
- * Local dev reaches a DEPLOYED comment API through this proxy, with the
- * Cloudflare Access service token from the repo-root `.env` attached
- * server-side so it never reaches the browser.
+ * Local dev reaches the comment API through this proxy. With no
+ * `POPS_DESIGN_FEEDBACK_URL` in the repo-root `.env` it targets a
+ * locally-running `design-api` (`pnpm --filter @pops/design dev:api`), which
+ * trusts any caller outside production — no credentials needed. If that API
+ * is not running, the proxy simply fails to connect, the overlay's identity
+ * call fails the same way it always has, and comment mode hides itself.
  *
- * No token means no proxy: `/design-api` then 404s, the overlay's identity
- * call fails, and comment mode hides itself. That is the intended state of a
- * plain checkout — the playground itself needs none of this.
- *
- * Point `POPS_DESIGN_FEEDBACK_URL` at a locally-running `design-api` instead
- * to work against your own database; a localhost target ignores the headers.
+ * Set `POPS_DESIGN_FEEDBACK_URL` to work against a DEPLOYED API instead; the
+ * Cloudflare Access service token from `.env` is then attached server-side so
+ * it never reaches the browser.
  */
-function commentsProxy(mode: string): Record<string, ProxyOptions> | undefined {
+function commentsProxy(mode: string): Record<string, ProxyOptions> {
   const env = loadEnv(mode, REPO_ROOT, '');
-  const target = env['POPS_DESIGN_FEEDBACK_URL'];
-  if (target === undefined || target === '') return undefined;
-  const clientId = env['CF_ACCESS_CLIENT_ID'];
-  const clientSecret = env['CF_ACCESS_CLIENT_SECRET'];
+  const { target, headers } = resolveDesignApiProxyConfig(env);
   return {
     '/design-api': {
       target,
       changeOrigin: true,
       rewrite: (requestPath) => requestPath.replace(/^\/design-api/u, ''),
-      ...(clientId === undefined || clientSecret === undefined
-        ? {}
-        : {
-            headers: {
-              'CF-Access-Client-Id': clientId,
-              'CF-Access-Client-Secret': clientSecret,
-            },
-          }),
+      ...(headers === undefined ? {} : { headers }),
     },
   };
 }

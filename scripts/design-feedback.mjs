@@ -14,6 +14,18 @@ import { readFileSync } from 'node:fs';
 const ENV_PATH = new URL('../.env', import.meta.url);
 
 /**
+ * Where a locally-run `design-api` listens (`pillars/design/src/api/boot-env.ts`
+ * `DEFAULT_PORT`). Kept in sync by hand — this file runs as plain Node with
+ * no loader for the TypeScript source, so it cannot import the constant.
+ */
+const LOCAL_DESIGN_API_URL = 'http://127.0.0.1:3015';
+
+/** Whether `base` is a loopback address — the local API trusts any caller. */
+function isLocalBase(base) {
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/u.test(base);
+}
+
+/**
  * Read `.env` well enough for the three values this needs. Not a full dotenv
  * parser: no interpolation, no multi-line values, no `export` prefix — a
  * value that needs any of those belongs in the environment instead.
@@ -45,13 +57,12 @@ export function loadDotenv() {
  * @returns {{ error: string } | { call: (path: string, init?: RequestInit) => Promise<unknown> }}
  */
 export function createClient(env = loadDotenv()) {
-  const base = (env.POPS_DESIGN_FEEDBACK_URL ?? '').replace(/\/$/u, '');
-  if (base === '') {
-    return { error: 'POPS_DESIGN_FEEDBACK_URL is not set — see .env.example' };
-  }
+  const rawBase = env.POPS_DESIGN_FEEDBACK_URL ?? '';
+  const base = (rawBase.trim() === '' ? LOCAL_DESIGN_API_URL : rawBase).replace(/\/$/u, '');
+  const local = isLocalBase(base);
   const id = env.CF_ACCESS_CLIENT_ID;
   const secret = env.CF_ACCESS_CLIENT_SECRET;
-  if (!id || !secret) {
+  if (!local && (!id || !secret)) {
     return {
       error:
         'No Cloudflare Access service token — set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in .env',
@@ -63,8 +74,10 @@ export function createClient(env = loadDotenv()) {
       // also allowed to be an array of pairs, and spreading one of those into
       // an object yields numeric keys and no headers at all.
       const headers = new Headers(init.headers);
-      headers.set('CF-Access-Client-Id', id);
-      headers.set('CF-Access-Client-Secret', secret);
+      if (id && secret) {
+        headers.set('CF-Access-Client-Id', id);
+        headers.set('CF-Access-Client-Secret', secret);
+      }
       if (!headers.has('content-type')) headers.set('content-type', 'application/json');
       const response = await fetch(`${base}${path}`, { ...init, headers });
       const text = await response.text();
