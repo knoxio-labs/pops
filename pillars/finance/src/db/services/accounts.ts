@@ -165,13 +165,15 @@ function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts
  *
  * A patch that would collide with an existing account's name, or move a
  * second account into `(cash, currency)`, maps to the same conflict errors
- * `createAccount` throws, using the post-patch values. Patching `kind` into
- * a reserved value throws `ReservedAccountKindError`, same as create — a
- * reserved kind has no ledger behaviour whether it arrives via POST or PATCH.
+ * `createAccount` throws, using the post-patch values. Transitioning `kind`
+ * into a reserved value throws `ReservedAccountKindError`, same as create —
+ * but re-sending an account's own current (possibly already-reserved) kind
+ * unchanged is not a transition and never throws, so an account created
+ * before this restriction shipped can still be patched on unrelated fields.
  */
 export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInput): AccountRow {
   const current = getAccount(db, id);
-  if (input.kind !== undefined && !isDayOneAccountKind(input.kind)) {
+  if (input.kind !== undefined && input.kind !== current.kind && !isDayOneAccountKind(input.kind)) {
     throw new ReservedAccountKindError(input.kind);
   }
 

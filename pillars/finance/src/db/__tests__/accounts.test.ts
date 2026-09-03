@@ -10,6 +10,7 @@ import {
   AccountNotFoundError,
   ReservedAccountKindError,
 } from '../errors.js';
+import { accounts } from '../schema.js';
 import {
   archiveAccount,
   createAccount,
@@ -189,6 +190,23 @@ describe('updateAccount', () => {
       ReservedAccountKindError
     );
     expect(getAccount(db, created.id).kind).toBe('cash');
+  });
+
+  it('allows patching unrelated fields on an account that already has a reserved kind', () => {
+    // Simulates a row created before ReservedAccountKindError shipped —
+    // createAccount itself can no longer produce one, so insert directly.
+    const id = crypto.randomUUID();
+    db.insert(accounts)
+      .values({ id, name: 'Legacy crypto', kind: 'crypto', currency: 'AUD' })
+      .run();
+
+    const updated = updateAccount(db, id, { displayOrder: 3 });
+    expect(updated.kind).toBe('crypto');
+    expect(updated.displayOrder).toBe(3);
+
+    const reaffirmed = updateAccount(db, id, { kind: 'crypto', displayOrder: 4 });
+    expect(reaffirmed.kind).toBe('crypto');
+    expect(reaffirmed.displayOrder).toBe(4);
   });
 
   it('throws AccountNotFoundError for a missing id', () => {
