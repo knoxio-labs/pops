@@ -34,6 +34,8 @@ interface ViewportFrameProps {
   comments: CommentMode;
   onRouteChange: (route: string) => void;
   onResize: (w: number, h: number) => void;
+  /** A press landed on the surface — see `FrameToShell`'s `pointerdown`. */
+  onSurfacePointerDown: () => void;
 }
 
 /** Everything the frame is told about rather than reloaded for. */
@@ -76,7 +78,11 @@ function useFrameSync(
     frame,
     comments,
     onRouteChange,
-  }: Pick<ViewportFrameProps, 'route' | 'theme' | 'frame' | 'comments' | 'onRouteChange'>
+    onSurfacePointerDown,
+  }: Pick<
+    ViewportFrameProps,
+    'route' | 'theme' | 'frame' | 'comments' | 'onRouteChange' | 'onSurfacePointerDown'
+  >
 ): void {
   const frameRouteRef = useRef(route);
   // The theme is read at document load only; later changes go over postMessage,
@@ -112,8 +118,9 @@ function useFrameSync(
         }
         if (message.kind === 'comment-count') setOpenCount(message.open);
         if (message.kind === 'comments-exit') exit();
+        if (message.kind === 'pointerdown') onSurfacePointerDown();
       },
-      [exit, onRouteChange, post, setOpenCount]
+      [exit, onRouteChange, onSurfacePointerDown, post, setOpenCount]
     )
   );
 
@@ -192,12 +199,20 @@ export function ViewportFrame({
   comments,
   onRouteChange,
   onResize,
+  onSurfacePointerDown,
 }: ViewportFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialSrc = useRef(frameSrc(route, theme, frame));
   const avail = useAvail(containerRef);
-  useFrameSync(iframeRef, { route, theme, frame, comments, onRouteChange });
+  useFrameSync(iframeRef, {
+    route,
+    theme,
+    frame,
+    comments,
+    onRouteChange,
+    onSurfacePointerDown,
+  });
 
   // Unsandboxed by design: the frame is this same app, and it needs its own
   // origin for the postMessage handshake and for storage. A sandbox that

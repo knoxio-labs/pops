@@ -10,9 +10,11 @@
  * The frame renders inside the canvas iframe, not around it, so the chrome
  * collapses at the simulated width rather than the browser's.
  */
-export type FrameKind = 'none' | 'web' | 'ios';
+/** The one list. `FrameKind` derives from it, and so does the schema that
+ *  validates a screen's declared default. */
+export const FRAME_KINDS = ['none', 'web', 'ios'] as const;
 
-export const FRAME_KINDS: readonly FrameKind[] = ['none', 'web', 'ios'];
+export type FrameKind = (typeof FRAME_KINDS)[number];
 
 const LABELS: Record<FrameKind, string> = {
   none: 'No frame',

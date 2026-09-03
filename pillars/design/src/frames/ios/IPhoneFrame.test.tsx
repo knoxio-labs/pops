@@ -22,14 +22,14 @@ describe('IPhoneFrame', () => {
 
   it('is selected by the ios frame kind, and only by it', () => {
     const { container, rerender } = render(
-      <FrameChrome kind="ios" area="bfm" slug="receipt-detail">
+      <FrameChrome kind="ios" area="mobile" slug="receipt-detail">
         <p>surface</p>
       </FrameChrome>
     );
     expect(container.querySelector('.ios-device')).not.toBeNull();
 
     rerender(
-      <FrameChrome kind="none" area="bfm" slug="receipt-detail">
+      <FrameChrome kind="none" area="mobile" slug="receipt-detail">
         <p>surface</p>
       </FrameChrome>
     );

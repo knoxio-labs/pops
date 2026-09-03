@@ -54,6 +54,7 @@ function parseScreenModule(
     order: meta.data.order ?? Number.MAX_SAFE_INTEGER,
     component: mod.default,
     flowButtons: meta.data.flowButtons,
+    frame: meta.data.frame,
     states: parseStates(mod.states, path, errors),
     experiments: [],
   };

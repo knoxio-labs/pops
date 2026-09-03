@@ -56,7 +56,12 @@ export type FrameToShell =
   | { kind: 'route'; route: string }
   | { kind: 'ready' }
   | { kind: 'comment-count'; open: number }
-  | { kind: 'comments-exit' };
+  | { kind: 'comments-exit' }
+  // A pointer went down on the surface. The canvas is an iframe, so that
+  // press produces no event in the shell's document at all — which is why a
+  // dock popover stayed open when you clicked "outside" it onto the design.
+  // Radix cannot see across the boundary; this message is the crossing.
+  | { kind: 'pointerdown' };
 
 export type ShellToFrame =
   | { kind: 'theme'; theme: CanvasTheme }

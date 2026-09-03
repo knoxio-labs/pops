@@ -1,8 +1,23 @@
+import { createContext, useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { Button, cn, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
 
 import type { ReactNode } from 'react';
+
+/**
+ * A counter the dock bumps to close whatever it has open.
+ *
+ * Radix dismisses a popover on a pointer press outside it, but the canvas is
+ * an iframe: a press on the design produces no event in this document, so
+ * "outside" never happens for the largest target on screen. The frame reports
+ * the press up instead, and the dock turns it into a bump of this token.
+ */
+const DismissToken = createContext(0);
+
+export function DockDismiss({ token, children }: { token: number; children: ReactNode }) {
+  return <DismissToken.Provider value={token}>{children}</DismissToken.Provider>;
+}
 
 /**
  * The shared shapes of the dock's tools, so the four of them cannot drift:
@@ -25,8 +40,13 @@ export function DockTool({
   children: ReactNode;
   width?: string;
 }) {
+  const token = useContext(DismissToken);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(false);
+  }, [token]);
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"

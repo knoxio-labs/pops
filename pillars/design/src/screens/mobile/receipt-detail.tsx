@@ -2,7 +2,7 @@ import { PopsActionBar, PopsButton, PopsCard, PopsRow, StateView } from '@/frame
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
-export const meta: ScreenMeta = { title: 'Receipt detail', order: 1 };
+export const meta: ScreenMeta = { title: 'Receipt detail', order: 1, frame: 'ios' };
 
 const LINES = [
   { title: 'Oat milk, 1L', subtitle: '2 × €1.79', amount: '€3.58' },
@@ -11,8 +11,8 @@ const LINES = [
 ];
 
 /**
- * An iOS screen built from the facsimile primitives, to be reviewed inside the
- * iPhone frame. Switch the dock's frame axis to **iPhone**.
+ * An iOS screen built from the facsimile primitives. `meta.frame` opens it in
+ * the iPhone directly — the dock's frame axis can still take it out.
  */
 export default function ReceiptDetail() {
   return (

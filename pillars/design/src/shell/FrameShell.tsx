@@ -46,9 +46,17 @@ export function FrameShell() {
       if (data.kind === 'comments') setCommentsActive(data.active);
       if (data.kind === 'frame') setFrame(data.frame);
     };
+    // Capture, so it reports the press whatever the surface does with it —
+    // including a handler that stops propagation. The shell uses it to
+    // dismiss its own popovers, which cannot see a click inside this frame.
+    const onPointerDown = () => post({ kind: 'pointerdown' });
     window.addEventListener('message', onMessage);
+    document.addEventListener('pointerdown', onPointerDown, { capture: true });
     post({ kind: 'ready' });
-    return () => window.removeEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      document.removeEventListener('pointerdown', onPointerDown, { capture: true });
+    };
   }, []);
 
   useEffect(() => {

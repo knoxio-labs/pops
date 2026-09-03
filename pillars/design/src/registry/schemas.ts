@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { FRAME_KINDS } from '../frames/kind';
+
 import type { ComponentType } from 'react';
 
 import type { ScreenMeta } from '../contract';
@@ -17,12 +19,17 @@ export const experimentYamlSchema = z.object({
   chosen: z.string().optional(),
   decided: z.string().optional(),
   rationale: z.string().optional(),
+  /** Product chrome for every variant of this experiment, when the question
+   *  is about a surface that only makes sense inside one. A variant screen's
+   *  own `meta.frame` still wins. */
+  frame: z.enum(FRAME_KINDS).optional(),
 });
 
 export const screenMetaSchema: z.ZodType<ScreenMeta> = z.object({
   title: z.string().min(1),
   order: z.number().optional(),
   flowButtons: z.boolean().optional(),
+  frame: z.enum(FRAME_KINDS).optional(),
 });
 
 /**
