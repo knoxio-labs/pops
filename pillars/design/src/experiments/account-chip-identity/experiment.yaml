@@ -1,0 +1,7 @@
+name: Account chip identity
+question: Does an account read faster led by its kind icon, or by the
+  institution it belongs to?
+status: active
+screen: finance/account-chip
+variants:
+  institution: Institution-led
