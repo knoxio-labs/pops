@@ -47,13 +47,17 @@ A screen on its own answers "does this layout work". A screen inside the chrome 
 
 The frame renders inside the canvas iframe, so the chrome collapses at the _simulated_ width, not the browser's. Breakpoints match the shell's `RootLayout`: rail and page nav from 1024, rail alone from 768, neither below.
 
+A screen can name the chrome it is designed for — `meta.frame` on a screen, `frame:` in an `experiment.yaml` — and arriving at it applies that. It is a default, not a lock: pick another frame and the choice holds for as long as you stay on that surface. A screen that says nothing keeps whatever frame you last chose, which is not the same as asking for none. Resolution is `src/shell/declared-frame.ts`; it happens during render rather than in an effect, because the iframe's initial `src` carries the frame and a frame decided after mount would load the surface bare first.
+
 `src/frames/web/` is a facsimile, and says so — importing the shell's own `RootLayout` would reach past `@pops/app-*` into shell internals (ISO-R2) and drag the boot registry, the overlay hosts and the search stack in with it. What is _not_ a facsimile is the data: the rail and the page nav are drawn from each app package's real `navConfig`, read through its `./design` entry, so a nav item added to an app appears here with no second edit. `design-no-cross-internal` in `.dependency-cruiser.cjs` holds the playground to that one edge. Retiring the facsimile for an extracted chrome lib is POPS-2783.
 
 That `./design` entry is also how a screen composes a **real** component rather than a look-alike: `pillars/finance/app/src/design.ts` publishes `ImportWarningBanner`, and `src/screens/finance/import-warnings.tsx` reviews the shipping component with fixture warnings. The bar for adding to an app's `design.ts` is that the component takes its whole world through props — no query, no store, no client.
 
 ### The iPhone frame
 
-**iPhone** on the same axis draws a 393×852 device — bezel, status bar, home indicator, and the safe-area custom properties a screen inside it can read.
+**iPhone** on the same axis draws a 393×852 device — bezel, status bar, home indicator, and the safe-area custom properties a screen inside it can read. Screens under `src/screens/mobile/` declare `frame: 'ios'`, so they open in the phone rather than needing the dock first.
+
+The dock's **App accent** does nothing on this frame, and that is the truth rather than a gap: the primitives paint from `--ios-*`, and `Colors.xcassets` holds one `popsAccent`, so the app has exactly one accent. Giving the app a real accent axis — and the playground one for free — is POPS-2798.
 
 Its colours are not invented. `scripts/design-ios-tokens.mjs` reads every colorset in `clients/ios/Packages/DesignSystem/Sources/DesignSystem/Resources/Colors.xcassets` and writes `src/frames/ios/tokens.css` — light values on `:root`, dark under `.dark`, which is the class the theme layer already sets. It lives at the repo root because a pillar may not read `clients/` (ADR-043); run it with `mise run design:ios-tokens`. The sheet is checked in, and `scripts/ci/check-ios-design-tokens.mjs` regenerates and diffs, so a colorset edit that skips the generator fails CI rather than shipping a frame that lies about the app.
 

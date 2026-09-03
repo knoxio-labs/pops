@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router';
 
-import { decodeFrame } from '../frames/kind';
 import { catalog } from '../registry';
+import { parseAddress } from './address';
 import { Canvas } from './Canvas';
 import { Dock } from './Dock';
 import { Sidebar } from './Sidebar';
@@ -13,12 +14,12 @@ import {
   encodeTheme,
   type ThemeMode,
 } from './theme';
+import { useCanvasFrame } from './use-canvas-frame';
 import { useCommentMode } from './use-comment-mode';
 import { FULL, type Viewport } from './viewport';
 
 const CHROME_MODE_KEY = 'pops-design-chrome-mode';
 const CANVAS_THEME_KEY = 'pops-design-canvas-theme';
-const CANVAS_FRAME_KEY = 'pops-design-canvas-frame';
 const SIDEBAR_KEY = 'pops-design-sidebar';
 
 /** The chrome follows its own light/dark preference, independent of the canvas. */
@@ -37,10 +38,18 @@ export function AppShell() {
   const [sidebar, setSidebar] = useStoredString(SIDEBAR_KEY, 'open');
   const [themeRaw, setThemeRaw] = useStoredString(CANVAS_THEME_KEY, encodeTheme(DEFAULT_THEME));
   const [viewport, setViewport] = useState<Viewport>(FULL);
-  const [frameRaw, setFrameRaw] = useStoredString(CANVAS_FRAME_KEY, 'none');
+  const [dismissToken, setDismissToken] = useState(0);
   const comments = useCommentMode();
   const theme = decodeTheme(themeRaw);
-  const frame = decodeFrame(frameRaw);
+  const location = useLocation();
+  const address = parseAddress(location.pathname, location.search);
+  const [frame, onFrameSelect] = useCanvasFrame(catalog, address);
+
+  // A press on the design is a press outside the dock; the shell's document
+  // never sees it, because the canvas is an iframe.
+  const onSurfacePointerDown = useCallback(() => {
+    setDismissToken((token) => token + 1);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -58,6 +67,7 @@ export function AppShell() {
           frame={frame}
           comments={comments}
           onResize={(w, h) => setViewport({ kind: 'fixed', label: 'Custom', w, h })}
+          onSurfacePointerDown={onSurfacePointerDown}
         />
       </main>
       <Dock
@@ -65,6 +75,7 @@ export function AppShell() {
         theme={theme}
         viewport={viewport}
         frame={frame}
+        dismissToken={dismissToken}
         comments={{
           active: comments.active,
           openCount: comments.openCount,
@@ -72,7 +83,7 @@ export function AppShell() {
         }}
         onThemeSelect={(next) => setThemeRaw(encodeTheme(next))}
         onViewportSelect={setViewport}
-        onFrameSelect={setFrameRaw}
+        onFrameSelect={onFrameSelect}
       />
     </div>
   );

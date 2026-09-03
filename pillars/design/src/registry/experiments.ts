@@ -86,6 +86,7 @@ export function discoverExperiments(
       screen: parsed.screen,
       chosen: parsed.chosen,
       rationale: parsed.rationale,
+      frame: parsed.frame,
       variants,
     });
   }

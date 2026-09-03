@@ -6,6 +6,8 @@
  */
 import type { ComponentType } from 'react';
 
+import type { FrameKind } from './frames/kind';
+
 export interface ScreenMeta {
   /** Sidebar label. */
   title: string;
@@ -17,6 +19,14 @@ export interface ScreenMeta {
    * navigation. A flow hides the bar if any of its steps opts out.
    */
   flowButtons?: boolean;
+  /**
+   * The product chrome this screen is designed for, applied when you navigate
+   * to it — so an iOS screen opens in the phone rather than in whatever frame
+   * the last screen left behind. It is a default, not a lock: change the frame
+   * afterwards and the choice holds until you navigate somewhere that declares
+   * its own. A screen that says nothing keeps the current frame.
+   */
+  frame?: FrameKind;
 }
 
 /**

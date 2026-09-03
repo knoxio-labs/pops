@@ -29,12 +29,14 @@ export function Canvas({
   frame,
   comments,
   onResize,
+  onSurfacePointerDown,
 }: {
   theme: CanvasTheme;
   viewport: Viewport;
   frame: FrameKind;
   comments: CommentMode;
   onResize: (w: number, h: number) => void;
+  onSurfacePointerDown: () => void;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,6 +62,7 @@ export function Canvas({
       comments={comments}
       onRouteChange={onRouteChange}
       onResize={onResize}
+      onSurfacePointerDown={onSurfacePointerDown}
     />
   );
 }

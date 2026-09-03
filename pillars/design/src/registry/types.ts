@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 
+import type { FrameKind } from '../frames/kind';
+
 /**
  * A screen is either a file (a leaf with a `component`) or a folder (a flow
  * with ordered `steps`) — never both. A flow is one level deep: each step is
@@ -18,6 +20,8 @@ export interface ScreenEntry {
   steps?: ScreenEntry[];
   /** On a flow: the aggregate of its steps; on a step: its own `meta.flowButtons`. */
   flowButtons?: boolean;
+  /** The product chrome this screen declares as its default. */
+  frame?: FrameKind;
   states?: Record<string, ComponentType>;
   /** Experiments whose declared screen is this one (main screens only). */
   experiments: ExperimentEntry[];
@@ -41,6 +45,8 @@ export interface ExperimentEntry {
   screen: string;
   chosen?: string;
   rationale?: string;
+  /** Product chrome for this experiment's variants, unless a screen overrides it. */
+  frame?: FrameKind;
   variants: VariantEntry[];
 }
 

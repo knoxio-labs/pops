@@ -70,6 +70,12 @@ ai_entity_cache.json
 .claude/*
 !.claude/skills/
 
+# Local state from other agent tooling, same reason. Nothing in either is repo
+# content today; if that changes, un-ignore the specific path the way
+# `.claude/skills/` is, rather than dropping the rule.
+.agents/
+.codex/
+
 # Logs
 *.log
 *.jsonl
