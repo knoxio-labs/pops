@@ -1,6 +1,8 @@
 import { decodeFrame, type FrameKind } from '../frames/kind';
 import { decodeTheme, encodeTheme, type CanvasTheme } from './theme';
 
+import type { CommentShortcut } from './use-comment-mode';
+
 export type Viewport =
   | { kind: 'full' }
   | { kind: 'fixed'; label: string; w: number; h: number }
@@ -61,7 +63,11 @@ export type FrameToShell =
   // press produces no event in the shell's document at all — which is why a
   // dock popover stayed open when you clicked "outside" it onto the design.
   // Radix cannot see across the boundary; this message is the crossing.
-  | { kind: 'pointerdown' };
+  | { kind: 'pointerdown' }
+  // The comment shortcut fired inside the surface's own document. Once a
+  // click has moved focus into the iframe, the shell's `keydown` listener
+  // never sees `i` or `Escape` again — this message is that crossing too.
+  | { kind: 'comment-shortcut'; action: CommentShortcut };
 
 export type ShellToFrame =
   | { kind: 'theme'; theme: CanvasTheme }

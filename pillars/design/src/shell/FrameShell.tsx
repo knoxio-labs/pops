@@ -5,6 +5,7 @@ import { CommentsOverlay } from '../comments/CommentsOverlay';
 import { FrameChrome } from '../frames/FrameChrome';
 import { parseAddress } from './address';
 import { applyThemeToDocument, encodeTheme, type CanvasTheme } from './theme';
+import { commentShortcut } from './use-comment-mode';
 import {
   frameFromSearch,
   fromFrameRoute,
@@ -50,12 +51,22 @@ export function FrameShell() {
     // including a handler that stops propagation. The shell uses it to
     // dismiss its own popovers, which cannot see a click inside this frame.
     const onPointerDown = () => post({ kind: 'pointerdown' });
+    // The surface is where focus lands the moment the user clicks it — which
+    // is exactly the moment before they want to comment — so `i` and `Escape`
+    // must work from here too. The shell's own listener never fires once
+    // focus is inside this document.
+    const onKeyDown = (event: KeyboardEvent) => {
+      const action = commentShortcut(event);
+      if (action) post({ kind: 'comment-shortcut', action });
+    };
     window.addEventListener('message', onMessage);
     document.addEventListener('pointerdown', onPointerDown, { capture: true });
+    document.addEventListener('keydown', onKeyDown);
     post({ kind: 'ready' });
     return () => {
       window.removeEventListener('message', onMessage);
       document.removeEventListener('pointerdown', onPointerDown, { capture: true });
+      document.removeEventListener('keydown', onKeyDown);
     };
   }, []);
 

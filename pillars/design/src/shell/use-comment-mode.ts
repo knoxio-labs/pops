@@ -16,6 +16,21 @@ function isTyping(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+export type CommentShortcut = 'toggle' | 'exit';
+
+/**
+ * The comment-mode action a keydown represents, or null if the shell leaves
+ * it alone. Shared by the shell's own listener and the frame's forwarded
+ * keydowns (see `FrameToShell`'s `comment-shortcut`) so the typing/modifier
+ * guard is not maintained twice.
+ */
+export function commentShortcut(event: KeyboardEvent): CommentShortcut | null {
+  if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return null;
+  if (event.key === TOGGLE_KEY) return 'toggle';
+  if (event.key === 'Escape') return 'exit';
+  return null;
+}
+
 export interface CommentMode {
   active: boolean;
   openCount: number;
@@ -33,9 +48,9 @@ export function useCommentMode(): CommentMode {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
-      if (event.key === TOGGLE_KEY) toggle();
-      if (event.key === 'Escape') exit();
+      const action = commentShortcut(event);
+      if (action === 'toggle') toggle();
+      if (action === 'exit') exit();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);

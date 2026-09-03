@@ -1,13 +1,7 @@
-import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useRef, type ReactNode, type RefObject } from 'react';
 
-import { useAvail, useCornerDrag, useFrameMessages } from './frame-hooks';
-import {
-  frameSize,
-  toFrameRoute,
-  type FrameToShell,
-  type ShellToFrame,
-  type Viewport,
-} from './viewport';
+import { frameSrc, useAvail, useCornerDrag, useFrameSync } from './frame-hooks';
+import { frameSize, type Viewport } from './viewport';
 
 import type { FrameKind } from '../frames/kind';
 import type { CanvasTheme } from './theme';
@@ -20,11 +14,6 @@ const HANDLES = [
   { corner: 'se', className: '-bottom-1.5 -right-1.5 cursor-nwse-resize' },
 ];
 
-/** The document URL for a shell route: the router base plus the frame route. */
-function frameSrc(route: string, theme: CanvasTheme, frame: FrameKind): string {
-  return `${import.meta.env.BASE_URL.replace(/\/$/u, '')}${toFrameRoute(route, theme, frame)}`;
-}
-
 interface ViewportFrameProps {
   viewport: Viewport;
   /** Shell route, `pathname + search`, router-relative. */
@@ -36,104 +25,6 @@ interface ViewportFrameProps {
   onResize: (w: number, h: number) => void;
   /** A press landed on the surface — see `FrameToShell`'s `pointerdown`. */
   onSurfacePointerDown: () => void;
-}
-
-/** Everything the frame is told about rather than reloaded for. */
-interface FrameChrome {
-  theme: CanvasTheme;
-  commentsActive: boolean;
-  frame: FrameKind;
-}
-
-/** Push each chrome setting down as it changes. */
-function usePushChrome(post: (message: ShellToFrame) => void, chrome: FrameChrome): void {
-  const { theme, commentsActive, frame } = chrome;
-
-  useEffect(() => {
-    post({ kind: 'theme', theme });
-  }, [post, theme]);
-
-  useEffect(() => {
-    post({ kind: 'comments', active: commentsActive });
-  }, [commentsActive, post]);
-
-  useEffect(() => {
-    post({ kind: 'frame', frame });
-  }, [frame, post]);
-}
-
-/**
- * Keeps the frame on the shell's route, theme, comment mode and product
- * chrome: reload on route, message on the rest.
- *
- * Comment mode is re-sent on every `ready` alongside the theme, because a
- * route change reloads the frame document — without it, navigating with the
- * overlay open would leave the dock lit and the surface inert.
- */
-function useFrameSync(
-  iframeRef: RefObject<HTMLIFrameElement | null>,
-  {
-    route,
-    theme,
-    frame,
-    comments,
-    onRouteChange,
-    onSurfacePointerDown,
-  }: Pick<
-    ViewportFrameProps,
-    'route' | 'theme' | 'frame' | 'comments' | 'onRouteChange' | 'onSurfacePointerDown'
-  >
-): void {
-  const frameRouteRef = useRef(route);
-  // The theme is read at document load only; later changes go over postMessage,
-  // so the reload effect reads it through a ref rather than depending on it.
-  const themeRef = useRef(theme);
-  themeRef.current = theme;
-  const frameRef = useRef(frame);
-  frameRef.current = frame;
-  const commentsActiveRef = useRef(comments.active);
-  commentsActiveRef.current = comments.active;
-
-  const { exit, setOpenCount } = comments;
-
-  const post = useCallback(
-    (message: ShellToFrame) => {
-      iframeRef.current?.contentWindow?.postMessage(message, window.location.origin);
-    },
-    [iframeRef]
-  );
-
-  useFrameMessages(
-    iframeRef,
-    useCallback(
-      (message: FrameToShell) => {
-        if (message.kind === 'route') {
-          frameRouteRef.current = message.route;
-          onRouteChange(message.route);
-        }
-        if (message.kind === 'ready') {
-          post({ kind: 'theme', theme: themeRef.current });
-          post({ kind: 'comments', active: commentsActiveRef.current });
-          post({ kind: 'frame', frame: frameRef.current });
-        }
-        if (message.kind === 'comment-count') setOpenCount(message.open);
-        if (message.kind === 'comments-exit') exit();
-        if (message.kind === 'pointerdown') onSurfacePointerDown();
-      },
-      [exit, onRouteChange, onSurfacePointerDown, post, setOpenCount]
-    )
-  );
-
-  usePushChrome(post, { theme, commentsActive: comments.active, frame });
-
-  useEffect(() => {
-    if (route !== frameRouteRef.current) {
-      frameRouteRef.current = route;
-      iframeRef.current?.contentWindow?.location.replace(
-        frameSrc(route, themeRef.current, frameRef.current)
-      );
-    }
-  }, [iframeRef, route]);
 }
 
 /** A frame at a simulated size, scaled to fit the canvas, with corner handles for a custom size. */
