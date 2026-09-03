@@ -1,4 +1,4 @@
-import { type AccountKind, ACCOUNT_KINDS, sideNoun } from '@/fixtures/account-kinds';
+import { type AccountKind, ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account, accounts as allAccounts } from '@/fixtures/accounts';
 import { formatBalance } from '@/fixtures/currencies';
 import { institutionsById } from '@/fixtures/institutions';
@@ -8,6 +8,7 @@ import {
   NoMatchingAccounts,
   useAccountListFilters,
 } from '@/kit/account-list-controls';
+import { balanceTone } from '@/kit/ledger-tone';
 import { AccountAvatar } from '@/screens/finance/account-chip';
 import { GripVertical, Plus } from 'lucide-react';
 
@@ -27,35 +28,32 @@ function subtitle(account: Account): string {
 function asOfLabel(account: Account): string {
   if (!account.balanceAsOf) return '';
   const date = new Date(`${account.balanceAsOf}T00:00:00`);
-  return ` · as of ${date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+  return `as of ${date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
 }
 
-function balanceMeaning(account: Account): { note: string; tone: string } {
-  const { side } = ACCOUNT_KINDS[account.kind];
-  if (side === 'either') {
-    const owing = account.balance < 0;
-    return {
-      note: owing ? 'you owe' : 'owed to you',
-      tone: owing ? 'text-destructive' : 'text-foreground',
-    };
-  }
-  const owed = side === 'liability' && account.balance > 0;
-  return { note: sideNoun(side), tone: owed ? 'text-destructive' : 'text-foreground' };
+/**
+ * A person ledger is the one balance whose sign does not say enough on its
+ * own: red says you are down, not who you are down to. Every other kind reads
+ * off the number and its colour, so it gets no direction word.
+ */
+function ledgerNote(account: Account): string {
+  if (account.kind !== 'person') return '';
+  if (account.balance === 0) return 'settled up';
+  return account.balance < 0 ? 'you owe' : 'owed to you';
+}
+
+function subline(account: Account): string {
+  return [ledgerNote(account), asOfLabel(account)].filter(Boolean).join(' · ');
 }
 
 function Balance({ account }: { account: Account }) {
-  const { side } = ACCOUNT_KINDS[account.kind];
-  const meaning = balanceMeaning(account);
-  const amount = side === 'either' ? Math.abs(account.balance) : account.balance;
+  const note = subline(account);
   return (
     <span className="block shrink-0 text-right">
-      <span className={cn('block text-base font-semibold tabular-nums', meaning.tone)}>
-        {formatBalance(amount, account.currency)}
+      <span className={cn('block text-base font-semibold tabular-nums', balanceTone(account))}>
+        {formatBalance(account.balance, account.currency)}
       </span>
-      <span className="block text-xs text-muted-foreground">
-        {meaning.note}
-        {asOfLabel(account)}
-      </span>
+      {note !== '' && <span className="block text-xs text-muted-foreground">{note}</span>}
     </span>
   );
 }
@@ -106,7 +104,6 @@ function KindSection({ kind, accounts }: { kind: AccountKind; accounts: Account[
       <h2 className="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         <Icon className="h-3.5 w-3.5" aria-hidden />
         {meta.label}
-        <span className="font-normal normal-case">· {sideNoun(meta.side)}</span>
       </h2>
       <div className="space-y-2">
         {accounts.map((account) => (

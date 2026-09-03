@@ -3,6 +3,9 @@ import { ProgressBar, Sparkline } from '@/kit/sparkline';
 
 import { Badge } from '@pops/ui';
 
+import { Empty, Stat } from './atoms';
+import { cardModules } from './credit-card';
+
 import type { AccountInsight, BalancePoint } from '@/fixtures/account-insights';
 import type { Account } from '@/fixtures/accounts';
 
@@ -23,20 +26,6 @@ interface Amortisation {
   path: number[];
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
-function Empty({ children }: { children: string }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
-}
-
 function shiftMonth(month: string, count: number): Date {
   const [year, index] = month.split('-');
   return new Date(Number(year), Number(index) - 1 + count, 1);
@@ -53,15 +42,6 @@ function monthLabel(date: Date): string {
 function years(months: number): string {
   const whole = Math.floor(months / 12);
   return whole === 0 ? `${months} months` : `${whole} yr ${months % 12} mo`;
-}
-
-function daysTo(iso: string): number {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
-}
-
-function countdown(days: number): string {
-  if (days < 0) return `${Math.abs(days)} days ago`;
-  return days === 0 ? 'today' : `in ${days} days`;
 }
 
 /**
@@ -89,15 +69,13 @@ function amortise(balance: number, annualRatePct: number, repayment: number): Am
   return { months: path.length - 1, totalInterest: Math.round(totalInterest), path };
 }
 
+/** The series `amortise` returns is an amount owed; the arc is ledger-signed, so it is negated. */
 function arcOf(history: BalancePoint[], path: number[], from: string): BalancePoint[] {
-  const owed = (balance: number, i: number) => ({
+  const projected = (owed: number, i: number) => ({
     month: isoMonth(shiftMonth(from, i + 1)),
-    balance,
+    balance: -owed,
   });
-  return [
-    ...history.map((p) => ({ month: p.month, balance: Math.abs(p.balance) })),
-    ...path.slice(1).map(owed),
-  ];
+  return [...history, ...path.slice(1).map(projected)];
 }
 
 function LoanArc({ account, insight }: BodyProps) {
@@ -180,56 +158,12 @@ function ExtraRepayment({ account, insight }: BodyProps) {
   );
 }
 
-function CardCycle({ account, insight }: BodyProps) {
-  const card = insight.card;
-  if (!card) return <Empty>No statement cycle recorded for this card.</Empty>;
-  const money = (n: number) => formatBalance(n, account.currency);
-  const due = daysTo(card.dueOn);
-  const change = card.cycleSpend - card.previousCycleSpend;
-  const closes = `Closes ${countdown(daysTo(card.closesOn))}`;
-  const against = `${change > 0 ? 'Up' : 'Down'} ${money(Math.abs(change))} on last cycle's ${money(card.previousCycleSpend)}`;
-  return (
-    <div className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <Stat label="Owed" value={money(Math.abs(account.balance))} hint={closes} />
-        <Badge variant={due <= 7 ? 'destructive' : 'secondary'}>Due {countdown(due)}</Badge>
-      </div>
-      <Stat label="Spent this cycle" value={money(card.cycleSpend)} />
-      <p className={change > 0 ? 'text-sm text-destructive' : 'text-sm text-primary'}>{against}</p>
-    </div>
-  );
-}
-
-function CardUtilisation({ account, insight }: BodyProps) {
-  const card = insight.card;
-  if (!card) return <Empty>No credit limit recorded, so utilisation cannot be shown.</Empty>;
-  const money = (n: number) => formatBalance(n, account.currency);
-  const left = Math.max(card.creditLimit - Math.abs(account.balance), 0);
-  const fraction = Math.abs(account.balance) / card.creditLimit;
-  return (
-    <div className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <p className="text-lg font-semibold tabular-nums">{Math.round(fraction * 100)}%</p>
-        <span className="text-xs text-muted-foreground">of {money(card.creditLimit)}</span>
-      </div>
-      <ProgressBar
-        fraction={fraction}
-        className={fraction > 0.3 ? 'bg-destructive' : 'bg-primary'}
-      />
-      <Stat label="Available" value={money(left)} />
-    </div>
-  );
-}
-
-/** The dashboards for the kinds whose balance is money owed. */
+/** The dashboards for the kinds whose balance is money owed, and so always negative. */
 export const liabilityModules: InsightModules = {
   loan: [
     { id: 'loan-arc', title: 'Balance and payoff', span: 2, Body: LoanArc },
     { id: 'loan-next-repayment', title: 'Next repayment', Body: NextRepayment },
     { id: 'loan-extra-repayment', title: 'Paying extra', Body: ExtraRepayment },
   ],
-  'credit-card': [
-    { id: 'card-cycle', title: 'This cycle', Body: CardCycle },
-    { id: 'card-utilisation', title: 'Utilisation', Body: CardUtilisation },
-  ],
+  'credit-card': cardModules,
 };

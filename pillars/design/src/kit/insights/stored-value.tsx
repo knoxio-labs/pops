@@ -75,10 +75,14 @@ function GiftCardBody({ account, insight }: { account: Account; insight: Account
   );
 }
 
-function personSentence(who: string, owed: number, currency: string): string {
+/**
+ * The one reading a sign cannot carry on its own: which way the debt runs.
+ * The amount is not repeated here — the headline balance above already states
+ * it, signed.
+ */
+function personSentence(who: string, owed: number): string {
   if (owed === 0) return `Settled up with ${who}`;
-  if (owed > 0) return `${who} owes you ${formatBalance(owed, currency)}`;
-  return `You owe ${who} ${formatBalance(Math.abs(owed), currency)}`;
+  return owed > 0 ? `${who} owes you` : `You owe ${who}`;
 }
 
 function largestMove(history: BalancePoint[], currency: string): string | null {
@@ -102,7 +106,7 @@ function PersonBody({ account, insight }: { account: Account; insight: AccountIn
   const move = largestMove(insight.history, account.currency);
   return (
     <div className="space-y-3">
-      <p className="text-sm">{personSentence(who, owed, account.currency)}</p>
+      <p className="text-sm">{personSentence(who, owed)}</p>
       {move && <p className="text-xs text-muted-foreground">Biggest single move: {move}</p>}
       {owed !== 0 && (
         <Button variant="outline" size="sm">

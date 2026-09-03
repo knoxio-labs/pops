@@ -3,23 +3,11 @@ import { ProgressBar } from '@/kit/sparkline';
 
 import { Badge, Button } from '@pops/ui';
 
+import { Empty, Stat } from './atoms';
+
 import type { BalancePoint } from '@/fixtures/account-insights';
 
 import type { InsightModules } from './contract';
-
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
-function Empty({ children }: { children: string }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
-}
 
 function monthLabel(month: string, ahead = 0): string {
   const date = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1 + ahead, 1);

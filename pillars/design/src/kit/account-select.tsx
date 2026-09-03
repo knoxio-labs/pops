@@ -2,6 +2,7 @@ import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
 import { formatBalance } from '@/fixtures/currencies';
 import { institutionsById } from '@/fixtures/institutions';
+import { balanceTone } from '@/kit/ledger-tone';
 import { AccountAvatar } from '@/screens/finance/account-chip';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
@@ -61,7 +62,7 @@ function AccountOption({ account, selected }: { account: Account; selected: bool
           Archived
         </Badge>
       )}
-      <span className="ml-2 shrink-0 self-start text-xs text-muted-foreground tabular-nums">
+      <span className={cn('ml-2 shrink-0 self-start text-xs tabular-nums', balanceTone(account))}>
         {formatBalance(account.balance, account.currency)}
       </span>
     </>

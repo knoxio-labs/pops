@@ -1,16 +1,15 @@
 import { insightsByAccountId } from '@/fixtures/account-insights';
-import { ACCOUNT_KINDS, sideNoun } from '@/fixtures/account-kinds';
+import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
 import { formatBalance } from '@/fixtures/currencies';
 import { importRows } from '@/fixtures/import-review';
-import { institutionsById } from '@/fixtures/institutions';
+import { DashboardHeader } from '@/kit/account-dashboard-header';
 import { modulesFor } from '@/kit/insights';
+import { balanceTone } from '@/kit/ledger-tone';
 import { Sparkline } from '@/kit/sparkline';
-import { AccountAvatar } from '@/screens/finance/account-chip';
-import { Archive, FileUp, HandCoins, Pencil, Plus } from 'lucide-react';
+import { Archive } from 'lucide-react';
 
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -34,17 +33,20 @@ const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
 /**
- * The sentence over the headline number. A liability's positive balance is
- * money owed and a person ledger's sign says which way the debt runs, so the
- * number is never shown without the reading that makes it mean something.
+ * The line over the headline number. It names what the account is, not what
+ * its sign means — the number carries that itself. The person ledger is the
+ * exception: a minus sign cannot say who is owed, so that one keeps a sentence
+ * naming the contact.
  */
 function balanceCaption(account: Account): string {
   const kind = ACCOUNT_KINDS[account.kind];
   const who = account.contact ?? account.name;
-  if (account.kind === 'person') return account.balance >= 0 ? `${who} owes you` : `You owe ${who}`;
+  if (account.kind === 'person') {
+    if (account.balance === 0) return `Settled up with ${who}`;
+    return account.balance > 0 ? `${who} owes you` : `You owe ${who}`;
+  }
   if (kind.storedValue) return 'Remaining stored value';
-  if (kind.side === 'liability') return 'Owed on this account';
-  return `Balance ${sideNoun(kind.side)}`;
+  return `${kind.label} balance`;
 }
 
 function asOfLine(account: Account): string {
@@ -56,67 +58,20 @@ function asOfLine(account: Account): string {
 }
 
 /**
- * A rising line means opposite things on the two sides of the ledger: savings
- * growing is good news and a loan growing is not, so the tone follows the
- * direction the balance moved read against the account's own side. A person
- * ledger has no favourable direction and stays neutral.
+ * Where the balance has travelled over the series, said plainly. The sparkline
+ * it captions is drawn in the balance's own tone, so a loan climbing toward
+ * zero stays red — it is a negative number getting less negative, and it is
+ * still debt.
  */
-function trend(account: Account, history: BalancePoint[]) {
-  const side = ACCOUNT_KINDS[account.kind].side;
+function trendLine(account: Account, history: BalancePoint[]): string {
   const change = (history.at(-1)?.balance ?? 0) - (history.at(0)?.balance ?? 0);
   const direction = change >= 0 ? 'Up' : 'Down';
-  const line = `${direction} ${formatBalance(Math.abs(change), account.currency)} over 12 months`;
-  if (side === 'either' || change === 0) return { tone: 'text-muted-foreground', line };
-  const favourable = side === 'liability' ? change < 0 : change > 0;
-  return { tone: favourable ? 'text-primary' : 'text-destructive', line };
-}
-
-function DashboardHeader({ account }: { account: Account }) {
-  const where = institutionsById.get(account.institutionId ?? '')?.name ?? 'No institution';
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className={cn('flex items-center gap-3', account.archived && 'opacity-70')}>
-        <AccountAvatar account={account} size="md" />
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold">{account.name}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">{where}</span>
-            <Badge variant="secondary">{ACCOUNT_KINDS[account.kind].label}</Badge>
-            <Badge variant="outline">{account.currency}</Badge>
-            {account.archived && <Badge variant="outline">Archived</Badge>}
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" asChild>
-          <a href={`#/imports/new?account=${account.id}`}>
-            <FileUp className="h-4 w-4" />
-            Import transactions
-          </a>
-        </Button>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4" />
-          Add transaction
-        </Button>
-        {account.kind === 'person' && (
-          <Button variant="outline" size="sm">
-            <HandCoins className="h-4 w-4" />
-            Settle up
-          </Button>
-        )}
-        <Button variant="ghost" size="sm">
-          <Pencil className="h-4 w-4" />
-          Edit account
-        </Button>
-      </div>
-    </div>
-  );
+  return `${direction} ${formatBalance(Math.abs(change), account.currency)} over 12 months`;
 }
 
 function BalanceCard({ account, insight }: { account: Account; insight?: AccountInsight }) {
-  const shown = account.kind === 'person' ? Math.abs(account.balance) : account.balance;
   const history = insight?.history ?? [];
-  const { tone, line } = trend(account, history);
+  const tone = balanceTone(account);
   return (
     <Card>
       <CardContent className="grid gap-6 pt-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -124,8 +79,8 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
             {balanceCaption(account)}
           </p>
-          <p className="text-4xl font-semibold tabular-nums">
-            {formatBalance(shown, account.currency)}
+          <p className={cn('text-4xl font-semibold tabular-nums', tone)}>
+            {formatBalance(account.balance, account.currency)}
           </p>
           <p className="text-xs text-muted-foreground">
             {asOfLine(account)} · {account.transactionCount.toLocaleString('en-AU')} transactions
@@ -134,7 +89,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
         {history.length > 1 && (
           <div className="space-y-1">
             <Sparkline points={history} className={tone} />
-            <p className="text-xs text-muted-foreground">{line}</p>
+            <p className="text-xs text-muted-foreground">{trendLine(account, history)}</p>
           </div>
         )}
       </CardContent>
@@ -214,7 +169,8 @@ export function AccountDashboard({ account }: { account: Account }) {
       {account.archived && (
         <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           <Archive className="h-4 w-4" />
-          Archived. Its transactions still count; it is hidden from pickers and totals.
+          Archived, not deleted — its transactions still reference it, so it stays out of pickers
+          and totals until it is unarchived.
         </div>
       )}
       <DashboardHeader account={account} />
