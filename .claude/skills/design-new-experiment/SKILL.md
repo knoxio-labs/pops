@@ -16,7 +16,7 @@ alternatives would actually be built differently.
    "does the review step read better as a dense table or a card grid" — not
    "improve import review".
 3. Check the screen has no active experiment already: at most one is allowed
-   per screen and the registry rejects a second. `rg 'screen: <area>/<slug>'
+   per screen and the registry rejects a second. `rg 'screen: <screen-id>'
 pillars/design/src/experiments/*/experiment.yaml`.
 4. Decide the variants. Two is usually right. A variant that differs only in a
    value (a padding, a colour) is a tweak, not a variant — make it a state or
@@ -26,7 +26,7 @@ pillars/design/src/experiments/*/experiment.yaml`.
 
 ```bash
 node scripts/design-new-experiment.mjs <id> \
-  --screen <area>/<slug> \
+  --screen <screen-id> \
   --name "Display name" \
   --question "The question, as a sentence." \
   --variant <a> --variant <b>

@@ -18,11 +18,13 @@ describe('experimentYamlSchema', () => {
     expect(experimentYamlSchema.safeParse({ ...base, name: '' }).success).toBe(false);
   });
 
-  it('requires screen to be <area>/<slug>', () => {
+  it('requires screen to name a path with an area, at any depth', () => {
     expect(experimentYamlSchema.safeParse({ ...base, screen: 'import-review' }).success).toBe(
       false
     );
-    expect(experimentYamlSchema.safeParse({ ...base, screen: 'a/b/c' }).success).toBe(false);
+    expect(experimentYamlSchema.safeParse({ ...base, screen: 'a/b' }).success).toBe(true);
+    expect(experimentYamlSchema.safeParse({ ...base, screen: 'a/b/c' }).success).toBe(true);
+    expect(experimentYamlSchema.safeParse({ ...base, screen: 'a//c' }).success).toBe(false);
   });
 
   it('accepts only the three lifecycle statuses', () => {

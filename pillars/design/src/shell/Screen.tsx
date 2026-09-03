@@ -1,7 +1,7 @@
 import { Navigate, useParams, useSearchParams } from 'react-router';
 
 import { catalog } from '../registry';
-import { buildAddress, type Address } from './address';
+import { buildAddress, screenIdOf, type Address } from './address';
 import { Flow } from './Flow';
 import { resolveScreens } from './surface';
 import { FRAME_PREFIX } from './viewport';
@@ -25,6 +25,9 @@ function Note({ children }: { children: string }) {
  * (main or variant), the screen, the step and the state from the URL, and
  * renders it. Every "not found" is a note, never a crash — a half-written
  * screen must not take the canvas down.
+ *
+ * The screen path arrives as a splat, because a screen sits as deep as its
+ * groups nest and a fixed set of route params could not reach it.
  */
 export function Screen() {
   const params = useParams();
@@ -33,14 +36,13 @@ export function Screen() {
   const address: Address = {
     experimentId: params.experimentId,
     variantId: params.variantId,
-    area: params.area ?? '',
-    slug: params.slug ?? '',
-    stepId: params.stepId,
+    path: (params['*'] ?? '').split('/').filter(Boolean),
+    stepId: searchParams.get('step') ?? undefined,
   };
 
   const screens = resolveScreens(catalog, address.experimentId, address.variantId);
   if (!screens) return <Note>Variant not found.</Note>;
-  const screen = screens.find((s) => s.id === `${address.area}/${address.slug}`);
+  const screen = screens.find((s) => s.id === screenIdOf(address));
   if (!screen) return <Note>Screen not found.</Note>;
 
   if (screen.steps) {
@@ -49,7 +51,7 @@ export function Screen() {
     const first = screen.steps[0];
     if (!address.stepId) {
       if (!first) return <Note>Flow has no steps.</Note>;
-      return <Navigate replace to={hrefForStep(first.id)} />;
+      return <Navigate replace to={hrefForStep(first.slug)} />;
     }
     return <Flow flow={screen} stepId={address.stepId} state={state} hrefForStep={hrefForStep} />;
   }

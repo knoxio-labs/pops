@@ -12,7 +12,9 @@ Three directories under `src/` are the surface a designer edits. Nothing in them
 
 ```
 src/screens/<area>/<screen>.tsx           a screen: default export + `meta`, optional `states`
-src/screens/<area>/<flow>/<step>.tsx      a folder is a flow of ordered steps, one level deep
+src/screens/<area>/<group…>/<screen>.tsx  folders nest the sidebar, as deep as you like
+src/screens/<area>/<flow>/flow.yaml       …unless the folder declares itself a flow of steps
+src/screens/<area>/<flow>/<step>.tsx      a step of that flow, one level deep
 src/experiments/<id>/experiment.yaml      the question, its status, the screen it is about
 src/experiments/<id>/variants/<v>/screens/<area>/<screen>.tsx
                                           a variant's screens override main by path
@@ -23,17 +25,21 @@ A screen exports what `src/contract.ts` describes: a default component, a `meta`
 
 An experiment is a question about one screen. Its variants are the competing answers; each variant's screens overlay main by relative path, so flipping a variant always shows a complete app. At most one active experiment sits on a screen. Deciding one is a merge (the chosen variant's screens are copied into main and `chosen` and `rationale` are recorded); `archived` closes it without a decision. Both leave the sidebar; the overview still lists them.
 
-Areas are the first directory under `screens/` and group the sidebar. Use the pillar id the screen belongs to (`finance`, `media`) or a cross-cutting name (`shell`, `ios`).
+Areas are the first directory under `screens/` and head the sidebar. Use the pillar id the screen belongs to (`finance`, `media`) or a cross-cutting name (`shell`, `ios`).
+
+Every directory below the area is a **group**: it nests the sidebar and the screen's id, and means nothing else — `finance/accounts/account-form` sits under Finance → Accounts, and groups nest as deep as the subject does. The one exception is a folder holding a `flow.yaml`, which makes it a **flow** of ordered steps instead; the marker carries the flow's title, because a folder has no file to carry one. A flow is still one level deep, and a group may not also be a screen file — `accounts.tsx` beside `accounts/` is a contract error, because one id would name two things.
 
 ## The address
 
 Every reviewable surface has one URL, built and parsed by `src/shell/address.ts`:
 
 ```
-/design/[x/<experiment>/<variant>/]s/<area>/<screen>[/<step>][?state=<state>][#<anchor>]
+/design/[x/<experiment>/<variant>/]s/<area>/<group…>/<screen>[?step=<step>][&state=<state>][#<anchor>]
 ```
 
-No `x/…` segment means main. `/<step>` appears only when the screen is a flow. `?state=` selects a named state. Switching one coordinate keeps the others where the target has them and drops to the nearest valid parent where it does not.
+No `x/…` segment means main. The screen path is the screen's id, however deep its groups go. `?step=` appears only when the screen is a flow, and `?state=` selects a named state. Switching one coordinate keeps the others where the target has them and drops to the nearest valid parent where it does not.
+
+The step is a query parameter rather than a trailing segment for one reason: with a screen path of no fixed length, a trailing segment could not be told from a deeper screen without consulting the registry, and `address.ts` is pure string ↔ coordinates so that routing, the comment anchors and the MCP server agree on an address without loading the catalog.
 
 ## The canvas is always a frame
 

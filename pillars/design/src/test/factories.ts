@@ -7,9 +7,11 @@ import type { Catalog, ExperimentEntry, ScreenEntry, VariantEntry } from '../reg
  * suites stay aligned with the types they exercise.
  */
 export function makeScreen(overrides: Partial<ScreenEntry> & { id: string }): ScreenEntry {
-  const [area = '', slug = ''] = overrides.id.split('/');
+  const segments = overrides.id.split('/');
+  const slug = segments.at(-1) ?? '';
   return {
-    area,
+    area: segments[0] ?? '',
+    groups: segments.slice(1, -1),
     slug,
     title: slug,
     order: 0,

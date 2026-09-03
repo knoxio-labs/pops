@@ -37,9 +37,10 @@ describe('parseArgs', () => {
     expect(args(['density', '--variant', 'Table']).kind).toBe('error');
   });
 
-  it('rejects a --screen that is not <area>/<slug>', () => {
+  it('rejects a --screen with no area, and accepts one nested in groups', () => {
     expect(args(['density', '--screen', 'ab', '--variant', 'x']).kind).toBe('error');
-    expect(args(['density', '--screen', 'a/b/c', '--variant', 'x']).kind).toBe('error');
+    expect(args(['density', '--screen', 'a/b/c', '--variant', 'x']).kind).toBe('scaffold');
+    expect(args(['density', '--screen', 'a//c', '--variant', 'x']).kind).toBe('error');
   });
 
   it('rejects a flag with no value rather than swallowing the next flag', () => {

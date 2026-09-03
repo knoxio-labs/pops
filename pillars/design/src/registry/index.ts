@@ -1,5 +1,6 @@
 export { buildCatalog, catalog } from './catalog';
-export { areasOf } from './types';
+export { buildScreenTree } from './tree';
+export type { GroupNode, Placed, TreeNode } from './tree';
 export type {
   Catalog,
   ExperimentEntry,

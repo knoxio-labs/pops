@@ -28,7 +28,7 @@ The body needs, in this order:
 2. **What was rejected** — the other variants, one line each. An implementer
    who does not know what was tried re-tries it.
 3. **The screens** — every screen id the chosen variant defines, with its
-   playground address (`/x/<experiment>/<chosen>/s/<area>/<slug>`) so the
+   playground address (`/x/<experiment>/<chosen>/s/<screen-id>`) so the
    reviewer can open the thing being described.
 4. **The states** — every named state in the chosen variant. States are where
    an implementation quietly diverges: `empty` and `error` are the ones that

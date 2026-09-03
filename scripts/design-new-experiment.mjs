@@ -10,7 +10,7 @@
  * a `screen` that resolves, a variant per subdirectory.
  *
  * Usage:
- *   node scripts/design-new-experiment.mjs <id> --screen <area>/<slug> \
+ *   node scripts/design-new-experiment.mjs <id> --screen <area>/…/<slug> \
  *     --name "Display name" --question "..." --variant a --variant b
  *   node scripts/design-new-experiment.mjs <id> --variant <variantId>   add to an existing one
  *
@@ -36,7 +36,7 @@ export const EXPERIMENTS_DIR = 'pillars/design/src/experiments';
 export const SCREENS_DIR = 'pillars/design/src/screens';
 
 const ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const SCREEN_RE = /^[^/\s]+\/[^/\s]+$/u;
+const SCREEN_RE = /^[^/\s]+(?:\/[^/\s]+)+$/u;
 
 /**
  * @typedef {object} Options
@@ -82,7 +82,7 @@ export function parseArgs(argv) {
     return { kind: 'error', message: `variant id must be kebab-case: ${badVariant}` };
   }
   if (options.screen !== undefined && !SCREEN_RE.test(options.screen)) {
-    return { kind: 'error', message: `--screen must be <area>/<slug>: ${options.screen}` };
+    return { kind: 'error', message: `--screen must be <area>/…/<slug>: ${options.screen}` };
   }
   return { kind: 'scaffold', options: { ...options, id } };
 }
@@ -116,7 +116,7 @@ export function renderExperimentYaml(options) {
  */
 export function renderVariantScreen(screenId, mainSource) {
   if (mainSource !== undefined) return mainSource;
-  const title = screenId.split('/')[1] ?? screenId;
+  const title = screenId.split('/').at(-1) ?? screenId;
   return `import type { ScreenMeta } from '@/contract';
 
 export const meta: ScreenMeta = { title: '${title}' };
@@ -145,7 +145,7 @@ export function planScaffold(options, tree) {
   const files = {};
   if (!tree.experimentExists) {
     if (screen === undefined) {
-      return { ok: false, reason: 'a new experiment needs --screen <area>/<slug>' };
+      return { ok: false, reason: 'a new experiment needs --screen <area>/…/<slug>' };
     }
     files[`${EXPERIMENTS_DIR}/${options.id}/experiment.yaml`] = renderExperimentYaml(options);
   } else if (options.screen !== undefined) {

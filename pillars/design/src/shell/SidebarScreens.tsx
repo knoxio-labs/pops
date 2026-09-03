@@ -1,12 +1,21 @@
-import { NavLink } from 'react-router';
+import { Link, NavLink } from 'react-router';
 
 import { cn } from '@pops/ui';
 
-import { areasOf } from '../registry';
-import { buildAddress } from './address';
+import { buildScreenTree } from '../registry';
+import { buildAddress, pathOf, type Address } from './address';
 import { useSurfaceCoords } from './use-surface-coords';
 
-import type { Catalog, ExperimentEntry, ScreenEntry } from '../registry';
+import type { ReactNode } from 'react';
+
+import type {
+  Catalog,
+  ExperimentEntry,
+  GroupNode,
+  Placed,
+  ScreenEntry,
+  TreeNode,
+} from '../registry';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -16,27 +25,32 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
   );
 
-interface Node {
-  screenId: string;
+/** A screen's place in the tree: the main screen if there is one, its active experiments, or both. */
+interface Node extends Placed {
+  id: string;
+  order: number;
   title: string;
   screen?: ScreenEntry;
   experiments: ExperimentEntry[];
 }
 
-function splitId(screenId: string): { area: string; slug: string } {
-  const [area = '', slug = ''] = screenId.split('/');
-  return { area, slug };
+/** "account-form" → "Account form" — a group folder has no file to carry a title. */
+function prettify(name: string): string {
+  const spaced = name.replace(/-/gu, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
 /**
- * The tree: main screens under their area, each listing its active
- * experiments inline. An experiment whose screen exists only in its own
- * variants becomes a node of its own. Decided and archived experiments
- * render nowhere — they are history, and the overview lists them.
+ * The tree: main screens under their area and whatever groups nest them, each
+ * listing its active experiments inline. An experiment whose screen exists
+ * only in its own variants becomes a node of its own, in the place its id
+ * puts it. Decided and archived experiments render nowhere — they are
+ * history, and the overview lists them.
  */
-function nodesByArea(catalog: Catalog): Map<string, Node[]> {
+function nodesOf(catalog: Catalog): Node[] {
   const nodes: Node[] = catalog.screens.map((screen) => ({
-    screenId: screen.id,
+    id: screen.id,
+    order: screen.order,
     title: screen.title,
     screen,
     experiments: screen.experiments.filter((e) => e.status === 'active'),
@@ -44,26 +58,47 @@ function nodesByArea(catalog: Catalog): Map<string, Node[]> {
   const mainIds = new Set(catalog.screens.map((s) => s.id));
   for (const exp of catalog.experiments) {
     if (exp.status !== 'active' || mainIds.has(exp.screen)) continue;
-    nodes.push({ screenId: exp.screen, title: splitId(exp.screen).slug, experiments: [exp] });
+    nodes.push({
+      id: exp.screen,
+      order: Number.MAX_SAFE_INTEGER,
+      title: prettify(pathOf(exp.screen).at(-1) ?? exp.screen),
+      experiments: [exp],
+    });
   }
-  const byArea = new Map<string, Node[]>();
-  for (const area of areasOf(catalog.screens)) byArea.set(area, []);
-  for (const node of nodes) {
-    const area = splitId(node.screenId).area;
-    byArea.set(area, [...(byArea.get(area) ?? []), node]);
-  }
-  return byArea;
+  return nodes;
 }
 
-function FlowSteps({ base, steps }: { base: string; steps: ScreenEntry[] }) {
+/** Every nested level indents inside the same rule, so depth reads at a glance. */
+function Nested({ children }: { children: ReactNode }) {
+  return <div className="mt-0.5 ml-3 border-l border-border pl-2">{children}</div>;
+}
+
+/**
+ * Steps of one flow. Every step shares the flow's path and differs only in
+ * `?step=`, which `NavLink` does not look at — so which one is current is
+ * passed in rather than left to the router, or they would all light up.
+ */
+function FlowSteps({
+  address,
+  steps,
+  activeStepId,
+}: {
+  address: Address;
+  steps: ScreenEntry[];
+  activeStepId: string | undefined;
+}) {
   return (
-    <div className="mt-0.5 ml-3 border-l border-border pl-2">
+    <Nested>
       {steps.map((step) => (
-        <NavLink key={step.id} to={`${base}/${step.id}`} className={linkClass}>
+        <Link
+          key={step.id}
+          to={buildAddress({ ...address, stepId: step.slug })}
+          className={linkClass({ isActive: step.slug === activeStepId })}
+        >
           {step.title}
-        </NavLink>
+        </Link>
       ))}
-    </div>
+    </Nested>
   );
 }
 
@@ -72,62 +107,62 @@ function VariantSwitch({
   exp,
   hasMain,
   activeVariantId,
+  activeStepId,
 }: {
   exp: ExperimentEntry;
   hasMain: boolean;
   activeVariantId: string | undefined;
+  activeStepId: string | undefined;
 }) {
-  const coords = splitId(exp.screen);
+  const path = pathOf(exp.screen);
   return (
-    <div className="mt-1 ml-3 border-l border-border pl-2">
+    <Nested>
       <p className="px-3 py-1 text-xs font-medium" title={exp.question}>
         {exp.name}
       </p>
       {hasMain ? (
-        <NavLink end to={buildAddress(coords)} className={linkClass}>
+        <NavLink end to={buildAddress({ path })} className={linkClass}>
           Main
         </NavLink>
       ) : null}
       {exp.variants.map((variant) => {
-        const base = buildAddress({ ...coords, experimentId: exp.id, variantId: variant.id });
+        const address = { path, experimentId: exp.id, variantId: variant.id };
         const realisation = variant.screens.find((s) => s.id === exp.screen);
         const active = activeVariantId === variant.id;
         return (
           <div key={variant.id}>
-            <NavLink to={base} className={linkClass}>
+            <NavLink to={buildAddress(address)} className={linkClass}>
               {variant.name}
             </NavLink>
             {active && realisation?.steps ? (
-              <FlowSteps base={base} steps={realisation.steps} />
+              <FlowSteps address={address} steps={realisation.steps} activeStepId={activeStepId} />
             ) : null}
           </div>
         );
       })}
-    </div>
+    </Nested>
   );
 }
 
-function ScreenNode({
-  node,
-  activeMainId,
-  activeDesign,
-}: {
-  node: Node;
-  activeMainId: string | undefined;
-  activeDesign: { experimentId?: string; variantId?: string } | undefined;
-}) {
-  const base = buildAddress(splitId(node.screenId));
+interface Active {
+  mainId: string | undefined;
+  stepId: string | undefined;
+  design: { experimentId?: string; variantId?: string } | undefined;
+}
+
+function ScreenNode({ node, active }: { node: Node; active: Active }) {
+  const address: Address = { path: pathOf(node.id) };
   return (
     <div>
       {node.screen ? (
-        <NavLink end to={base} className={linkClass}>
+        <NavLink end to={buildAddress(address)} className={linkClass}>
           {node.title}
         </NavLink>
       ) : (
         <p className="px-3 py-2 text-sm text-muted-foreground italic">{node.title}</p>
       )}
-      {node.screen?.steps && activeMainId === node.screenId ? (
-        <FlowSteps base={base} steps={node.screen.steps} />
+      {node.screen?.steps && active.mainId === node.id ? (
+        <FlowSteps address={address} steps={node.screen.steps} activeStepId={active.stepId} />
       ) : null}
       {node.experiments.map((exp) => (
         <VariantSwitch
@@ -135,36 +170,59 @@ function ScreenNode({
           exp={exp}
           hasMain={node.screen !== undefined}
           activeVariantId={
-            activeDesign?.experimentId === exp.id ? activeDesign.variantId : undefined
+            active.design?.experimentId === exp.id ? active.design.variantId : undefined
           }
+          activeStepId={active.stepId}
         />
       ))}
     </div>
   );
 }
 
+function Branch({ nodes, active }: { nodes: TreeNode<Node>[]; active: Active }) {
+  return (
+    <>
+      {nodes.map((child) =>
+        child.kind === 'group' ? (
+          <Group key={child.group.path.join('/')} group={child.group} active={active} />
+        ) : (
+          <ScreenNode key={child.item.id} node={child.item} active={active} />
+        )
+      )}
+    </>
+  );
+}
+
+/** A group below the area: its name, then everything under it, indented. */
+function Group({ group, active }: { group: GroupNode<Node>; active: Active }) {
+  return (
+    <div className="mt-1">
+      <p className="px-3 py-1 text-xs font-medium text-foreground">{prettify(group.name)}</p>
+      <Nested>
+        <Branch nodes={group.children} active={active} />
+      </Nested>
+    </div>
+  );
+}
+
 export function SidebarScreens({ catalog }: { catalog: Catalog }) {
   const coords = useSurfaceCoords();
-  const activeMainId = coords && !coords.experimentId ? coords.screenId : undefined;
-  const activeDesign = coords?.experimentId
-    ? { experimentId: coords.experimentId, variantId: coords.variantId }
-    : undefined;
+  const active: Active = {
+    mainId: coords && !coords.experimentId ? coords.screenId : undefined,
+    stepId: coords?.stepId,
+    design: coords?.experimentId
+      ? { experimentId: coords.experimentId, variantId: coords.variantId }
+      : undefined,
+  };
 
   return (
     <nav aria-label="Screens" className="space-y-4">
-      {[...nodesByArea(catalog)].map(([area, nodes]) => (
-        <div key={area}>
+      {buildScreenTree(nodesOf(catalog)).map((area) => (
+        <div key={area.name}>
           <p className="mb-1 px-3 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
-            {area}
+            {area.name}
           </p>
-          {nodes.map((node) => (
-            <ScreenNode
-              key={node.screenId}
-              node={node}
-              activeMainId={activeMainId}
-              activeDesign={activeDesign}
-            />
-          ))}
+          <Branch nodes={area.children} active={active} />
         </div>
       ))}
     </nav>

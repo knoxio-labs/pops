@@ -9,14 +9,16 @@ import type { Catalog } from './types';
  * sit to be discovered; nothing is registered anywhere. The globs are literal
  * strings on purpose — Vite resolves them at build time, and a variable would
  * defeat that.
+ *
+ * Screens are matched at any depth: the folders above a screen file group the
+ * sidebar, and a folder is a flow of steps only when it holds a `flow.yaml`.
  */
-const screenLeaves = import.meta.glob<Record<string, unknown>>('../screens/*/*.tsx', {
+const screenModules = import.meta.glob<Record<string, unknown>>('../screens/**/*.tsx', {
   eager: true,
 });
-const screenSteps = import.meta.glob<Record<string, unknown>>('../screens/*/*/*.tsx', {
-  eager: true,
-});
-const screenTooDeep = import.meta.glob<Record<string, unknown>>('../screens/*/*/*/*.tsx', {
+const screenFlows = import.meta.glob<string>('../screens/**/flow.yaml', {
+  query: '?raw',
+  import: 'default',
   eager: true,
 });
 const experimentYamls = import.meta.glob<string>('../experiments/*/experiment.yaml', {
@@ -24,35 +26,26 @@ const experimentYamls = import.meta.glob<string>('../experiments/*/experiment.ya
   import: 'default',
   eager: true,
 });
-const variantLeaves = import.meta.glob<Record<string, unknown>>(
-  '../experiments/*/variants/*/screens/*/*.tsx',
+const variantModules = import.meta.glob<Record<string, unknown>>(
+  '../experiments/*/variants/*/screens/**/*.tsx',
   { eager: true }
 );
-const variantSteps = import.meta.glob<Record<string, unknown>>(
-  '../experiments/*/variants/*/screens/*/*/*.tsx',
-  { eager: true }
-);
-const variantTooDeep = import.meta.glob<Record<string, unknown>>(
-  '../experiments/*/variants/*/screens/*/*/*/*.tsx',
-  { eager: true }
-);
+const variantFlows = import.meta.glob<string>('../experiments/*/variants/*/screens/**/flow.yaml', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 
 export function buildCatalog(): Catalog {
   const errors: string[] = [];
   const screens = collectScreens({
-    leafModules: screenLeaves,
-    flowModules: screenSteps,
-    deepModules: screenTooDeep,
+    modules: screenModules,
+    flowMarkers: screenFlows,
     prefix: 'screens/',
     errors,
   });
   const experiments = discoverExperiments(
-    {
-      yamls: experimentYamls,
-      leafModules: variantLeaves,
-      flowModules: variantSteps,
-      deepModules: variantTooDeep,
-    },
+    { yamls: experimentYamls, modules: variantModules, flowMarkers: variantFlows },
     errors
   );
   linkExperimentsToScreens(screens, experiments, errors);

@@ -32,7 +32,7 @@ function Stepper({
       {steps.map((step, i) => (
         <Link
           key={step.id}
-          to={hrefForStep(step.id)}
+          to={hrefForStep(step.slug)}
           aria-current={i === index ? 'step' : undefined}
           className="flex items-center gap-2 text-sm"
         >
@@ -72,7 +72,7 @@ export function Flow({
   const steps = flow.steps ?? [];
   const index = Math.max(
     0,
-    steps.findIndex((s) => s.id === stepId)
+    steps.findIndex((s) => s.slug === stepId)
   );
   const ActiveStep = stepRender(steps[index], state);
   if (!ActiveStep) return <p className="p-8 text-muted-foreground">Step not found.</p>;
@@ -80,7 +80,7 @@ export function Flow({
   const prev = steps[index - 1];
   const next = steps[index + 1];
   const go = (target: ScreenEntry | undefined) =>
-    target ? () => void navigate(hrefForStep(target.id)) : undefined;
+    target ? () => void navigate(hrefForStep(target.slug)) : undefined;
 
   return (
     <div className="flex min-h-screen flex-col">
