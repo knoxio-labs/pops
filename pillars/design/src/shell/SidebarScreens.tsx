@@ -40,6 +40,46 @@ function prettify(name: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+interface Cluster {
+  key: string;
+  grouped: boolean;
+  nodes: Node[];
+}
+
+/** "Accounts" and "Account" are the same leading word for grouping purposes. */
+function leadingWordKey(title: string): string {
+  const word = (title.split(' ')[0] ?? '').toLowerCase();
+  return word.length > 1 && word.endsWith('s') ? word.slice(0, -1) : word;
+}
+
+/**
+ * Screens whose title shares a leading word — "Import", "Import review",
+ * "Import warnings"; "Accounts", "Account form", "Account picker" — belong to
+ * the same corner of the app and read as one long flat list otherwise. The
+ * grouping is the title itself, not a taxonomy layered on top of it: nothing
+ * is reclassified, a shared first word just keeps its screens visually
+ * together and gives them a shared band. A word only one screen uses (an
+ * area's odd one out, like "Transaction form" on its own) stays ungrouped —
+ * a cluster of one is not a cluster.
+ */
+function clusterNodes(nodes: Node[]): Cluster[] {
+  const order: string[] = [];
+  const byKey = new Map<string, Node[]>();
+  for (const node of nodes) {
+    const key = leadingWordKey(node.title);
+    const existing = byKey.get(key);
+    if (existing) existing.push(node);
+    else {
+      byKey.set(key, [node]);
+      order.push(key);
+    }
+  }
+  return order.map((key) => {
+    const members = byKey.get(key) ?? [];
+    return { key, grouped: members.length > 1, nodes: members };
+  });
+}
+
 /**
  * The tree: main screens under their area and whatever groups nest them, each
  * listing its active experiments inline. An experiment whose screen exists
@@ -179,14 +219,46 @@ function ScreenNode({ node, active }: { node: Node; active: Active }) {
   );
 }
 
+type Segment =
+  | { kind: 'group'; group: GroupNode<Node> }
+  | { kind: 'cluster'; cluster: Cluster };
+
+/** Groups break a run of clustered items — a group already carries its own
+ *  label, so it never joins a cluster and never gets clustered against. */
+function toSegments(nodes: TreeNode<Node>[]): Segment[] {
+  const segments: Segment[] = [];
+  let pending: Node[] = [];
+  const flush = (): void => {
+    for (const cluster of clusterNodes(pending)) segments.push({ kind: 'cluster', cluster });
+    pending = [];
+  };
+  for (const node of nodes) {
+    if (node.kind === 'group') {
+      flush();
+      segments.push({ kind: 'group', group: node.group });
+    } else {
+      pending.push(node.item);
+    }
+  }
+  flush();
+  return segments;
+}
+
 function Branch({ nodes, active }: { nodes: TreeNode<Node>[]; active: Active }) {
   return (
     <>
-      {nodes.map((child) =>
-        child.kind === 'group' ? (
-          <Group key={child.group.path.join('/')} group={child.group} active={active} />
+      {toSegments(nodes).map((segment) =>
+        segment.kind === 'group' ? (
+          <Group key={segment.group.path.join('/')} group={segment.group} active={active} />
         ) : (
-          <ScreenNode key={child.item.id} node={child.item} active={active} />
+          <div
+            key={segment.cluster.key}
+            className={segment.cluster.grouped ? 'rounded-lg bg-muted/40 py-1' : undefined}
+          >
+            {segment.cluster.nodes.map((node) => (
+              <ScreenNode key={node.id} node={node} active={active} />
+            ))}
+          </div>
         )
       )}
     </>
@@ -218,8 +290,8 @@ export function SidebarScreens({ catalog }: { catalog: Catalog }) {
   return (
     <nav aria-label="Screens" className="space-y-4">
       {buildScreenTree(nodesOf(catalog)).map((area) => (
-        <div key={area.name}>
-          <p className="mb-1 px-3 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
+        <div key={area.name} className="space-y-1.5">
+          <p className="px-3 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
             {area.name}
           </p>
           <Branch nodes={area.children} active={active} />
