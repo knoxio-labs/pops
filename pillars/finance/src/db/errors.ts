@@ -172,6 +172,24 @@ export class AccountNameConflictError extends Error {
 }
 
 /**
+ * An account was created with a kind not in `DAY_ONE_ACCOUNT_KINDS` — the
+ * kind exists in `ACCOUNT_KINDS` (so it type-checks and can be stored on
+ * rows written some other way) but has no ledger behaviour defined yet
+ * (see `ACCOUNT_KIND_BEHAVIOURS`'s `RESERVED_PLACEHOLDER` entries), so
+ * accepting it as a create input would silently produce an account nothing
+ * can act on correctly.
+ */
+export class ReservedAccountKindError extends Error {
+  override readonly name = 'ReservedAccountKindError' as const;
+  readonly kind: string;
+
+  constructor(kind: string) {
+    super(`Account kind '${kind}' is reserved and has no behaviour defined yet`);
+    this.kind = kind;
+  }
+}
+
+/**
  * A second `cash` account was created (or updated into) a currency that
  * already has one — `idx_accounts_kind_currency_cash` scopes uniqueness to
  * `kind = 'cash'` because two cash accounts in the same currency are

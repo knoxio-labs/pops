@@ -89,7 +89,14 @@ export type { CurrencyRow, CreateCurrencyInput } from './services/currencies.js'
 
 export * as accountsService from './services/accounts.js';
 
-export type { AccountRow, CreateAccountInput, UpdateAccountInput } from './services/accounts.js';
+export type {
+  AccountListResult,
+  AccountReorderEntry,
+  AccountRow,
+  CreateAccountInput,
+  ListAccountsOptions,
+  UpdateAccountInput,
+} from './services/accounts.js';
 
 export * as institutionsService from './services/institutions.js';
 

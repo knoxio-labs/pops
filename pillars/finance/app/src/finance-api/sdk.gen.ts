@@ -15,6 +15,9 @@ import type {
   AccountsGetResponses,
   AccountsListData,
   AccountsListResponses,
+  AccountsReorderData,
+  AccountsReorderErrors,
+  AccountsReorderResponses,
   AccountsUpdateData,
   AccountsUpdateErrors,
   AccountsUpdateResponses,
@@ -249,7 +252,7 @@ export type Options<
 };
 
 /**
- * List every account, archived included, ordered by display order then name
+ * List accounts with optional search / kind / archived filters and pagination
  */
 export const accountsList = <ThrowOnError extends boolean = false>(
   options?: Options<AccountsListData, ThrowOnError>
@@ -260,13 +263,28 @@ export const accountsList = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Create a new account
+ * Create a new account; rejects a reserved kind with 422
  */
 export const accountsCreate = <ThrowOnError extends boolean = false>(
   options?: Options<AccountsCreateData, ThrowOnError>
 ): RequestResult<AccountsCreateResponses, AccountsCreateErrors, ThrowOnError> =>
   (options?.client ?? client).post<AccountsCreateResponses, AccountsCreateErrors, ThrowOnError>({
     url: '/accounts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Batch-update display order for a set of accounts atomically; an unknown id 404s the whole batch
+ */
+export const accountsReorder = <ThrowOnError extends boolean = false>(
+  options?: Options<AccountsReorderData, ThrowOnError>
+): RequestResult<AccountsReorderResponses, AccountsReorderErrors, ThrowOnError> =>
+  (options?.client ?? client).post<AccountsReorderResponses, AccountsReorderErrors, ThrowOnError>({
+    url: '/accounts/reorder',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -301,7 +319,7 @@ export const accountsGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Update an account, including unarchiving it by clearing archivedAt
+ * Update an account, including unarchiving it by clearing archivedAt; rejects patching kind into a reserved value with 422
  */
 export const accountsUpdate = <ThrowOnError extends boolean = false>(
   options: Options<AccountsUpdateData, ThrowOnError>

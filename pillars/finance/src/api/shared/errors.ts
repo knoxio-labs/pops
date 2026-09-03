@@ -51,6 +51,18 @@ export class ConflictError extends HttpError {
 }
 
 /**
+ * 422 Unprocessable Entity — the request is well-formed and passes schema
+ * validation, but names something the domain refuses to act on (e.g. an
+ * account `kind` reserved for future use, see `ReservedAccountKindError`).
+ */
+export class UnprocessableEntityError extends HttpError {
+  constructor(message: string) {
+    super(422, message, undefined, 'common.unprocessable');
+    this.name = 'UnprocessableEntityError';
+  }
+}
+
+/**
  * 412 Precondition Failed — the targeted import session exists but is not in a
  * state the requested operation can act on (still processing, no result, or
  * the wrong result type).

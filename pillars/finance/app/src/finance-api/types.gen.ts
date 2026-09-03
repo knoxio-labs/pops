@@ -7,7 +7,24 @@ export type ClientOptions = {
 export type AccountsListData = {
   body?: never;
   path?: never;
-  query?: never;
+  query?: {
+    search?: string;
+    kind?:
+      | 'checking'
+      | 'savings'
+      | 'credit-card'
+      | 'cash'
+      | 'gift-card'
+      | 'person'
+      | 'shared'
+      | 'loan'
+      | 'novated-lease'
+      | 'crypto'
+      | 'other';
+    archived?: 'true' | 'false';
+    limit?: number;
+    offset?: number;
+  };
   url: '/accounts';
 };
 
@@ -39,6 +56,12 @@ export type AccountsListResponses = {
       name: string;
       updatedAt: string;
     }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
   };
 };
 
@@ -97,6 +120,14 @@ export type AccountsCreateErrors = {
     message: string;
     messageKey?: string;
   };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
 };
 
 export type AccountsCreateError = AccountsCreateErrors[keyof AccountsCreateErrors];
@@ -134,6 +165,84 @@ export type AccountsCreateResponses = {
 };
 
 export type AccountsCreateResponse = AccountsCreateResponses[keyof AccountsCreateResponses];
+
+export type AccountsReorderData = {
+  /**
+   * Body
+   */
+  body?: {
+    accounts: Array<{
+      displayOrder: number;
+      id: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/accounts/reorder';
+};
+
+export type AccountsReorderErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsReorderError = AccountsReorderErrors[keyof AccountsReorderErrors];
+
+export type AccountsReorderResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    }>;
+    message: string;
+  };
+};
+
+export type AccountsReorderResponse = AccountsReorderResponses[keyof AccountsReorderResponses];
 
 export type AccountsDeleteData = {
   /**
@@ -335,6 +444,14 @@ export type AccountsUpdateErrors = {
    * 409
    */
   409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
     code?: string;
     message: string;
     messageKey?: string;
