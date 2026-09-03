@@ -36,5 +36,13 @@ export const accounts = sqliteTable(
     // schema introspection only; the actual DDL lives in
     // `migrations/0083_accounts.sql`.
     index('idx_accounts_kind_currency_cash').on(table.kind, table.currency),
+    // One `person` account per contact per currency (POPS-2771). A plain
+    // (not partial) UNIQUE index: SQLite treats every NULL `entity_id` as
+    // distinct from every other for uniqueness purposes, so the many
+    // non-`person` accounts (which always carry `entity_id = null`) never
+    // collide with each other here, and neither do two `person` accounts
+    // both transiently pending outbox resolution — see
+    // `migrations/0084_person_account_entity_currency.sql`.
+    index('idx_accounts_entity_currency').on(table.entityId, table.currency),
   ]
 );

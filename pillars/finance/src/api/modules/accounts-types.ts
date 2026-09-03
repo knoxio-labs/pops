@@ -4,7 +4,12 @@
  * the row → response projection and its TS shape.
  */
 import type { AccountKind } from '../../contract/account-kind.js';
-import type { AccountRow, CreateAccountInput, UpdateAccountInput } from '../../db/index.js';
+import type {
+  AccountEntityDisplay,
+  AccountRow,
+  CreateAccountInput,
+  UpdateAccountInput,
+} from '../../db/index.js';
 
 /** API response shape (camelCase). */
 export interface Account {
@@ -16,6 +21,11 @@ export interface Account {
   archivedAt: string | null;
   displayOrder: number;
   entityId: string | null;
+  /** The contact's display name resolved live from contacts (POPS-2771);
+   * `accounts.name` with `entityDisplayNameStale: true` when contacts
+   * couldn't be reached to refresh it. `null` for a non-`person` account. */
+  entityDisplayName: string | null;
+  entityDisplayNameStale: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,8 +51,9 @@ export interface UpdateAccountBody {
   archivedAt?: string | null;
 }
 
-/** Map a SQLite row to the API response shape. */
-export function toAccount(row: AccountRow): Account {
+/** Map a SQLite row (plus its resolved contact display, from
+ * `resolveAccountEntityDisplays`) to the API response shape. */
+export function toAccount(row: AccountRow, entityDisplay: AccountEntityDisplay): Account {
   return {
     id: row.id,
     name: row.name,
@@ -52,6 +63,8 @@ export function toAccount(row: AccountRow): Account {
     archivedAt: row.archivedAt,
     displayOrder: row.displayOrder,
     entityId: row.entityId,
+    entityDisplayName: entityDisplay.entityDisplayName,
+    entityDisplayNameStale: entityDisplay.entityDisplayNameStale,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -12,7 +12,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
-import { makeContactsFake } from './contacts-fake.js';
+import { ContactsPermanentError } from '../contacts/client.js';
+import { startReconcileContactsOutboxWorker } from '../cron/reconcile-contacts-outbox.js';
+import { makeContactsFake, type ContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
@@ -28,13 +30,13 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function client() {
+function client(contacts: ContactsFake = makeContactsFake()) {
   return makeClient(
     createFinanceApiApp({
       financeDb,
       version: '0.0.1-test',
       selfBaseUrl: 'http://localhost:3004',
-      contacts: makeContactsFake(),
+      contacts,
     })
   );
 }
@@ -266,5 +268,149 @@ describe('accounts — error mapping', () => {
 
   it('404s archiving a missing account', async () => {
     await expect(client().accounts.delete('missing-id')).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('accounts — person accounts (POPS-2771)', () => {
+  it('a non-person account is unaffected — no contacts call, entityId stays null', async () => {
+    const contacts = makeContactsFake();
+    contacts.createOrFetchByName = () => {
+      throw new Error('should not be called for a non-person account');
+    };
+    await expect(
+      client(contacts).accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD' })
+    ).resolves.toMatchObject({ data: { kind: 'cash', entityId: null } });
+  });
+
+  it('contacts up: resolves the contact and links entityId synchronously', async () => {
+    const contacts = makeContactsFake();
+    const created = await client(contacts).accounts.create({
+      name: 'Alice',
+      kind: 'person',
+      currency: 'AUD',
+    });
+
+    expect(created.data.entityId).not.toBeNull();
+    expect(created.data.entityDisplayName).toBe('Alice');
+    expect(created.data.entityDisplayNameStale).toBe(false);
+    expect(contacts.entities.map((e) => e.name)).toContain('Alice');
+  });
+
+  it('contacts down: the account is created immediately with entityId null, queued in the outbox', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const created = await client(contacts).accounts.create({
+      name: 'Bob',
+      kind: 'person',
+      currency: 'AUD',
+    });
+
+    expect(created.data.entityId).toBeNull();
+    // Degrades to the stored name with no staleness flag — nothing has been
+    // resolved yet, this isn't a refresh failure.
+    expect(created.data.entityDisplayName).toBe('Bob');
+    expect(created.data.entityDisplayNameStale).toBe(false);
+
+    const fetched = await client(contacts).accounts.get(created.data.id);
+    expect(fetched.data.entityId).toBeNull();
+  });
+
+  it('drain resolves the pending create once contacts recovers', async () => {
+    const contacts = makeContactsFake({ unavailable: true });
+    const created = await client(contacts).accounts.create({
+      name: 'Carol',
+      kind: 'person',
+      currency: 'AUD',
+    });
+    expect(created.data.entityId).toBeNull();
+
+    contacts.setUnavailable(false);
+    const handle = startReconcileContactsOutboxWorker({
+      db: financeDb.db,
+      contacts,
+      intervalMs: 1_000_000,
+    });
+    await handle.runOnce();
+    handle.stop();
+
+    const resolved = await client(contacts).accounts.get(created.data.id);
+    expect(resolved.data.entityId).not.toBeNull();
+    expect(resolved.data.entityDisplayName).toBe('Carol');
+    expect(resolved.data.entityDisplayNameStale).toBe(false);
+  });
+
+  it('409s a second person account for the same contact and currency', async () => {
+    const contacts = makeContactsFake();
+    const first = await client(contacts).accounts.create({
+      name: 'Dana',
+      kind: 'person',
+      currency: 'AUD',
+    });
+    expect(first.data.entityId).not.toBeNull();
+
+    await expect(
+      client(contacts).accounts.create({
+        name: 'Dana Again',
+        kind: 'person',
+        currency: 'AUD',
+        entityId: first.data.entityId,
+      })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('allows the same contact in a different currency', async () => {
+    const contacts = makeContactsFake();
+    const first = await client(contacts).accounts.create({
+      name: 'Erin',
+      kind: 'person',
+      currency: 'AUD',
+    });
+
+    await expect(
+      client(contacts).accounts.create({
+        name: 'Erin USD',
+        kind: 'person',
+        currency: 'USD',
+        entityId: first.data.entityId,
+      })
+    ).resolves.toMatchObject({ data: { currency: 'USD' } });
+  });
+
+  it('422s a non-person account carrying an entityId', async () => {
+    await expect(
+      client().accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD', entityId: 'e-1' })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('422s a person account with a name that fails to resolve for a PERMANENT reason', async () => {
+    const contacts = makeContactsFake();
+    contacts.createOrFetchByName = () => {
+      throw new ContactsPermanentError('bad-request');
+    };
+    await expect(
+      client(contacts).accounts.create({ name: 'Frank', kind: 'person', currency: 'AUD' })
+    ).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('list resolves entityDisplayName live and marks it stale when contacts is down', async () => {
+    const contacts = makeContactsFake();
+    const created = await client(contacts).accounts.create({
+      name: 'Gail',
+      kind: 'person',
+      currency: 'AUD',
+    });
+    // Contacts renames the contact after the account was created.
+    const entity = contacts.entities.find((e) => e.id === created.data.entityId);
+    if (entity) entity.name = 'Gail Renamed';
+
+    const up = await client(contacts).accounts.list({ kind: 'person' });
+    const upRow = up.data.find((a) => a.id === created.data.id);
+    expect(upRow?.entityDisplayName).toBe('Gail Renamed');
+    expect(upRow?.entityDisplayNameStale).toBe(false);
+
+    contacts.setUnavailable(true);
+    const down = await client(contacts).accounts.list({ kind: 'person' });
+    const downRow = down.data.find((a) => a.id === created.data.id);
+    expect(downRow?.entityDisplayName).toBe('Gail');
+    expect(downRow?.entityDisplayNameStale).toBe(true);
   });
 });

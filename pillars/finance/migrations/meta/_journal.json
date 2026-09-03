@@ -253,6 +253,13 @@
       "when": 1781913600029,
       "tag": "0084_gift_card_details",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1781913600030,
+      "tag": "0085_person_account_entity_currency",
+      "breakpoints": true
     }
   ]
 }

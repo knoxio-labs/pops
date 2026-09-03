@@ -11,6 +11,14 @@
  * referenced by every transaction it ever carried, so removing the row would
  * either cascade-delete history or dangle a foreign key. Archiving is
  * reversible through `update` by patching `archivedAt` back to `null`.
+ *
+ * A `person` account's `entityId` names the contacts entity it is a
+ * receivable/payable ledger for (POPS-2771) — required eventually, though
+ * transiently null while `entity_precreate_outbox` resolves a name-only
+ * create against a down contacts pillar. `entityDisplayName` /
+ * `entityDisplayNameStale` are read-only response fields: the contact's
+ * current name resolved live from contacts, degrading to the account's own
+ * stored `name` (marked stale) when contacts can't be reached.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -30,6 +38,8 @@ export const AccountSchema = z.object({
   archivedAt: z.string().nullable(),
   displayOrder: z.number().int(),
   entityId: z.string().nullable(),
+  entityDisplayName: z.string().nullable(),
+  entityDisplayNameStale: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

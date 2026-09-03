@@ -125,6 +125,13 @@ export interface ContactsClient {
    */
   fetchEntityDefaultTags(entityId: string): Promise<string[]>;
   /**
+   * A single contact's display name, for the accounts read side (`person`
+   * accounts, POPS-2771). `null` when contacts is down or the id is unknown
+   * — the caller degrades to the account's own stored `name` with a stale
+   * marker rather than treating this as an error.
+   */
+  fetchEntityDisplayName(entityId: string): Promise<string | null>;
+  /**
    * Resolve a contact for `name`, creating it only when absent. Fetches by
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
@@ -207,6 +214,22 @@ function warnDegraded(operation: string, result: CallResult<unknown>): void {
   );
 }
 
+/**
+ * Fetch a single contact by id, shared by `fetchEntityDefaultTags` and
+ * `fetchEntityDisplayName` — both need the same contact and degrade the same
+ * way (`null` for no handle, an unknown id, or a degraded result), differing
+ * only in which field of it they read.
+ */
+async function fetchOneEntity(
+  handle: PillarHandle<ContactsRouter> | null,
+  entityId: string
+): Promise<ContactEntity | null> {
+  if (handle === null) return null;
+  const result = await handle.entities.get({ id: entityId });
+  if (!isOk(result) && result.kind !== 'not-found') warnDegraded('entities.get', result);
+  return isOk(result) ? result.value.data : null;
+}
+
 async function pageThroughEntities(
   handle: PillarHandle<ContactsRouter> | null,
   query: { search?: string; type?: string },
@@ -266,14 +289,11 @@ export function createContactsClient(
     },
 
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {
-      const handle = handleFactory();
-      if (handle === null) return [];
-      const result = await handle.entities.get({ id: entityId });
-      if (!isOk(result)) {
-        if (result.kind !== 'not-found') warnDegraded('entities.get', result);
-        return [];
-      }
-      return result.value.data.defaultTags;
+      return (await fetchOneEntity(handleFactory(), entityId))?.defaultTags ?? [];
+    },
+
+    async fetchEntityDisplayName(entityId: string): Promise<string | null> {
+      return (await fetchOneEntity(handleFactory(), entityId))?.name ?? null;
     },
 
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {

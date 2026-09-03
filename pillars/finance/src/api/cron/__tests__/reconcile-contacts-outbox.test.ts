@@ -14,6 +14,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  accountsService,
   entityPrecreateOutboxService,
   importsService,
   openFinanceDb,
@@ -512,5 +513,117 @@ describe('recordAttemptFailure concurrency guard', () => {
     expect(row.status).toBe('failed');
     expect(row.attempts).toBe(1);
     expect(row.last_error).toBe('boom');
+  });
+});
+
+describe('startReconcileContactsOutboxWorker — pending person accounts (POPS-2771)', () => {
+  function seedPendingPersonAccount(name: string, currency = 'AUD'): string {
+    const account = accountsService.createAccount(
+      opened.db,
+      { name, kind: 'person', currency },
+      { allowPendingEntity: true }
+    );
+    expect(account.entityId).toBeNull();
+    return account.id;
+  }
+
+  /**
+   * `createAccount`'s `allowPendingEntity` path names the outbox row after
+   * the account's own (globally-unique) name, so two accounts can never
+   * share an outbox `name` through the public API alone. This helper
+   * overwrites the outbox row's `name` after the fact, to exercise the case
+   * two DIFFERENTLY-named accounts both happen to resolve to the same real
+   * contact (e.g. one by exact name, one by an alias the fake doesn't model,
+   * or simply because contacts already held that contact under a name
+   * neither account literally repeats).
+   */
+  function seedPendingPersonAccountResolvingAs(
+    accountName: string,
+    outboxName: string,
+    currency = 'AUD'
+  ): string {
+    const id = seedPendingPersonAccount(accountName, currency);
+    opened.raw
+      .prepare('UPDATE entity_precreate_outbox SET name = ? WHERE account_id = ?')
+      .run(outboxName, id);
+    return id;
+  }
+
+  it('drains a pending person account create: contacts up resolves entityId', async () => {
+    const accountId = seedPendingPersonAccount('Alice');
+    const contacts = makeContactsFake();
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+    });
+    const stats = await handle.runOnce();
+    handle.stop();
+
+    expect(stats.resolved).toBe(1);
+    const realId = contacts.entities.find((e) => e.name === 'Alice')?.id;
+    expect(realId).toBeDefined();
+    expect(accountsService.getAccount(opened.db, accountId).entityId).toBe(realId);
+  });
+
+  it('contacts still down: the account stays pending, entityId stays null', async () => {
+    const accountId = seedPendingPersonAccount('Bob');
+    const contacts = makeContactsFake({ unavailable: true });
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+    });
+    const stats = await handle.runOnce();
+    handle.stop();
+
+    expect(stats.resolved).toBe(0);
+    expect(accountsService.getAccount(opened.db, accountId).entityId).toBeNull();
+  });
+
+  /**
+   * Two DIFFERENTLY-named person accounts (account names are globally
+   * unique, so they can never literally match) both resolve to the SAME real
+   * contact + currency — exactly the scenario the ticket's uniqueness index
+   * exists for. The first resolution wins; the second is a genuine
+   * (entityId, currency) collision the outbox cannot retry its way out of,
+   * so it dead-letters rather than looping forever.
+   */
+  it('dead-letters the second of two pending person accounts that resolve to the same (entityId, currency)', async () => {
+    const firstId = seedPendingPersonAccountResolvingAs('Carol A', 'Carol');
+    const secondId = seedPendingPersonAccountResolvingAs('Carol B', 'Carol');
+    const contacts = makeContactsFake();
+
+    const handle = startReconcileContactsOutboxWorker({
+      db: opened.db,
+      contacts,
+      intervalMs: 1_000_000,
+      maxAttempts: 50,
+    });
+    // As in the placeholder-based tests above, the worker's own immediate
+    // on-start pass races with this explicit `runOnce` — either one (or a
+    // split between them) can end up resolving/dead-lettering the two rows,
+    // so assert on the settled DB state rather than this call's own stats.
+    await handle.runOnce();
+    handle.stop();
+
+    const realId = contacts.entities.find((e) => e.name === 'Carol')?.id;
+    const firstAccount = accountsService.getAccount(opened.db, firstId);
+    const secondAccount = accountsService.getAccount(opened.db, secondId);
+    // Exactly one of the two resolved (order between them isn't guaranteed).
+    const resolvedAccount = firstAccount.entityId !== null ? firstAccount : secondAccount;
+    const stillPendingAccount = firstAccount.entityId !== null ? secondAccount : firstAccount;
+    expect(resolvedAccount.entityId).toBe(realId);
+    expect(stillPendingAccount.entityId).toBeNull();
+
+    const outboxRows = opened.raw
+      .prepare(
+        "SELECT status, permanent_failure FROM entity_precreate_outbox WHERE account_id = ? AND status = 'failed'"
+      )
+      .all(stillPendingAccount.id) as { status: string; permanent_failure: number }[];
+    expect(outboxRows).toHaveLength(1);
+    expect(outboxRows[0]?.permanent_failure).toBe(1);
   });
 });

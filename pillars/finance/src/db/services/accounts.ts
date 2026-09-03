@@ -12,14 +12,13 @@
 import { and, asc, count, eq, inArray, isNotNull, isNull, like } from 'drizzle-orm';
 
 import { DAY_ONE_ACCOUNT_KINDS } from '../../contract/account-kind.js';
-import {
-  AccountCashCurrencyConflictError,
-  AccountNameConflictError,
-  AccountNotFoundError,
-  ReservedAccountKindError,
-} from '../errors.js';
+import { AccountNotFoundError, ReservedAccountKindError } from '../errors.js';
 import { accounts } from '../schema.js';
-import { isAccountCashCurrencyConflict, isAccountNameConflict } from './account-conflict.js';
+import {
+  translateWriteConflict,
+  validatePersonEntityInvariant,
+} from './account-entity-invariant.js';
+import * as entityPrecreateOutboxService from './entity-precreate-outbox.js';
 
 import type { AccountKind } from '../../contract/account-kind.js';
 import type { FinanceDb } from './internal.js';
@@ -69,10 +68,20 @@ export interface AccountReorderEntry {
   displayOrder: number;
 }
 
-function translateWriteConflict(err: unknown, name: string, currency: string): never {
-  if (isAccountNameConflict(err)) throw new AccountNameConflictError(name);
-  if (isAccountCashCurrencyConflict(err)) throw new AccountCashCurrencyConflictError(currency);
-  throw err;
+/** Options accepted by `createAccount` beyond the row's own fields. */
+export interface CreateAccountOptions {
+  /**
+   * Escape hatch for the one legitimate case where a `person` account is
+   * inserted with `entityId = null`: the caller already tried to resolve the
+   * contact via `contacts.createOrFetchByName` and got a TRANSIENT failure
+   * (contacts unreachable), so the account is created now and an
+   * `entity_precreate_outbox` row is queued in the same transaction for
+   * `reconcile-contacts-outbox.ts` to fill in later. Never set this from
+   * request input directly — it exists only for the orchestration layer that
+   * already tried and failed to resolve a real `entityId` (see
+   * `api/modules/accounts/resolve-person-account-entity.ts`).
+   */
+  allowPendingEntity?: boolean;
 }
 
 function isDayOneAccountKind(kind: AccountKind): boolean {
@@ -115,34 +124,67 @@ export function getAccount(db: FinanceDb, id: string): AccountRow {
   return row;
 }
 
+function insertAccountRow(db: FinanceDb, id: string, input: CreateAccountInput): void {
+  db.insert(accounts)
+    .values({
+      id,
+      name: input.name,
+      institutionId: input.institutionId ?? null,
+      kind: input.kind,
+      currency: input.currency,
+      displayOrder: input.displayOrder ?? 0,
+      entityId: input.entityId ?? null,
+    })
+    .run();
+}
+
 /**
  * Create a new account. Throws `AccountNameConflictError` for a
- * case-insensitive duplicate name, or `AccountCashCurrencyConflictError` for
- * a second `cash` account in a currency that already has one — both mapped
- * from the SQLite constraint violation rather than pre-checked, since an
- * account is short-lived, low-cardinality data where the race is not worth a
+ * case-insensitive duplicate name, `AccountCashCurrencyConflictError` for a
+ * second `cash` account in a currency that already has one, or
+ * `PersonAccountEntityConflictError` for a second `person` account keyed to
+ * the same contact in the same currency — all three mapped from the SQLite
+ * constraint violation rather than pre-checked, since an account is
+ * short-lived, low-cardinality data where the race is not worth a
  * read-then-write. Throws `ReservedAccountKindError` for a kind outside
  * `DAY_ONE_ACCOUNT_KINDS` — those kinds exist in the enum but have no ledger
  * behaviour defined yet, so nothing can act on an account created with one.
+ *
+ * Throws `PersonAccountRequiresEntityError` for a `person` account with no
+ * `entityId` (unless `options.allowPendingEntity`), and
+ * `NonPersonAccountHasEntityError` for any other kind carrying one
+ * (POPS-2771). With `allowPendingEntity` the insert and the
+ * `entity_precreate_outbox` enqueue happen in one transaction, so a crash
+ * between the two can never leave a pending `person` account with no outbox
+ * row to resolve it.
  */
-export function createAccount(db: FinanceDb, input: CreateAccountInput): AccountRow {
+export function createAccount(
+  db: FinanceDb,
+  input: CreateAccountInput,
+  options: CreateAccountOptions = {}
+): AccountRow {
   if (!isDayOneAccountKind(input.kind)) throw new ReservedAccountKindError(input.kind);
+  const entityId = input.entityId ?? null;
+  const allowPendingEntity = options.allowPendingEntity ?? false;
+  validatePersonEntityInvariant(input.kind, entityId, allowPendingEntity);
 
   const id = crypto.randomUUID();
   try {
-    db.insert(accounts)
-      .values({
-        id,
-        name: input.name,
-        institutionId: input.institutionId ?? null,
-        kind: input.kind,
-        currency: input.currency,
-        displayOrder: input.displayOrder ?? 0,
-        entityId: input.entityId ?? null,
-      })
-      .run();
+    if (allowPendingEntity && entityId === null) {
+      db.transaction((tx) => {
+        insertAccountRow(tx, id, input);
+        entityPrecreateOutboxService.enqueue(tx, {
+          id: crypto.randomUUID(),
+          name: input.name,
+          type: 'person',
+          accountId: id,
+        });
+      });
+    } else {
+      insertAccountRow(db, id, input);
+    }
   } catch (err) {
-    translateWriteConflict(err, input.name, input.currency);
+    translateWriteConflict(err, { name: input.name, currency: input.currency, entityId });
   }
   return getAccount(db, id);
 }
@@ -163,19 +205,31 @@ function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts
  * Patch an account. Throws `AccountNotFoundError` if missing. No-op writes
  * (empty `input`) still re-read the row but skip the UPDATE.
  *
- * A patch that would collide with an existing account's name, or move a
- * second account into `(cash, currency)`, maps to the same conflict errors
+ * A patch that would collide with an existing account's name, move a second
+ * account into `(cash, currency)`, or key a second `person` account to a
+ * contact + currency already claimed, maps to the same conflict errors
  * `createAccount` throws, using the post-patch values. Transitioning `kind`
  * into a reserved value throws `ReservedAccountKindError`, same as create —
  * but re-sending an account's own current (possibly already-reserved) kind
  * unchanged is not a transition and never throws, so an account created
  * before this restriction shipped can still be patched on unrelated fields.
+ *
+ * Patching the effective `(kind, entityId)` pair out of POPS-2771's
+ * invariant throws `PersonAccountRequiresEntityError` (turning `kind` into
+ * `person` with no `entityId` already set or supplied — `updateAccount` never
+ * auto-resolves one from a name, unlike `createAccount`) or
+ * `NonPersonAccountHasEntityError` (setting `entityId` on, or leaving it on
+ * while turning `kind` away from, `person`).
  */
 export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInput): AccountRow {
   const current = getAccount(db, id);
   if (input.kind !== undefined && input.kind !== current.kind && !isDayOneAccountKind(input.kind)) {
     throw new ReservedAccountKindError(input.kind);
   }
+  const effectiveKind = input.kind ?? current.kind;
+  const effectiveEntityId =
+    input.entityId !== undefined ? (input.entityId ?? null) : current.entityId;
+  validatePersonEntityInvariant(effectiveKind, effectiveEntityId, false);
 
   const updates = buildAccountUpdates(input);
   if (Object.keys(updates).length > 0) {
@@ -186,7 +240,11 @@ export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInp
     try {
       db.update(accounts).set(updates).where(eq(accounts.id, id)).run();
     } catch (err) {
-      translateWriteConflict(err, effectiveName, effectiveCurrency);
+      translateWriteConflict(err, {
+        name: effectiveName,
+        currency: effectiveCurrency,
+        entityId: effectiveEntityId,
+      });
     }
   }
 

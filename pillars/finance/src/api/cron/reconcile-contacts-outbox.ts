@@ -25,6 +25,15 @@
  * every other dead-lettered row is requeued once at boot, on the reasoning
  * that a restart is the operator attention the dead-letter was asking for.
  *
+ * A row can wait on one of two different records (POPS-2771): most rows
+ * carry a `pending:contact:{uuid}` placeholder as their own `id`, written
+ * into `transactions` / `transaction_corrections` / `transaction_tag_rules`
+ * `entity_id` columns and rewritten in place once resolved
+ * (`reassignEntityId`). A `person` account instead keeps `entity_id`
+ * genuinely NULL while pending — there is no placeholder to search for — so
+ * its row carries `accountId` and gets a direct fill-in
+ * (`resolvePendingPersonAccountEntity`) instead.
+ *
  * A recursive `setTimeout` arms the next tick only after the current one
  * resolves — mirrors `reconcile-cross-pillar.ts` (also trivial to drive with
  * `vi.useFakeTimers()` in tests) — fan-out per tick is sequential rather than
@@ -33,14 +42,9 @@
  * pillar that just came back up.
  */
 import { entityPrecreateOutboxService, type FinanceDb } from '../../db/index.js';
-import {
-  ContactsPermanentError,
-  ContactsUnavailableError,
-  type ContactsClient,
-} from '../contacts/client.js';
-import { NO_CREDENTIAL_REASON } from '../pillars/outbound.js';
+import { resolveOne } from './resolve-outbox-row.js';
 
-import type { EntityPrecreateOutboxRow } from '../../db/index.js';
+import type { ContactsClient } from '../contacts/client.js';
 
 /** Retry cadence: frequent enough to heal a short contacts outage quickly,
  * without hammering a pillar that's still recovering. */
@@ -87,89 +91,6 @@ export interface ReconcileContactsOutboxHandle {
 
 function emptyStats(): ReconcileOutboxTickStats {
   return { resolved: 0, stillPending: 0, failed: 0, deferred: 0 };
-}
-
-/**
- * True when the failure is this process holding no service-account key, as
- * opposed to contacts being unreachable. Nothing was sent, so the row must not
- * be charged an attempt for it (POPS-2690).
- */
-function isMissingCredential(err: unknown): boolean {
-  return err instanceof ContactsUnavailableError && err.detail === NO_CREDENTIAL_REASON;
-}
-
-/** Outcome of one {@link resolveOne} attempt, feeding the per-tick stats. */
-type ResolveOneOutcome = 'resolved' | 'pending' | 'failed' | 'deferred';
-
-interface ResolveOneContext {
-  db: FinanceDb;
-  contacts: ContactsClient;
-  row: EntityPrecreateOutboxRow;
-  now: Date;
-  maxAttempts: number;
-  logger: ReconcileWorkerLogger | undefined;
-}
-
-/**
- * Attempt to resolve one outbox row against contacts. Returns `'resolved'`
- * when the row resolved (reassignment + `markResolved` committed
- * atomically), `'pending'` when it's still under the attempt cap and will be
- * retried next tick, `'failed'` when this attempt just tipped it over
- * `maxAttempts` and it has been dead-lettered instead, or `'deferred'` when
- * there was no credential to call contacts with and the row was left as it is.
- */
-async function resolveOne(ctx: ResolveOneContext): Promise<ResolveOneOutcome> {
-  const { db, contacts, row, now, maxAttempts, logger } = ctx;
-  try {
-    const { id: realEntityId } = await contacts.createOrFetchByName(row.name, row.type);
-    const counts = db.transaction((tx) => {
-      const reassigned = entityPrecreateOutboxService.reassignEntityId(tx, row.id, realEntityId);
-      entityPrecreateOutboxService.markResolved(tx, row.id, realEntityId, now.toISOString());
-      return reassigned;
-    });
-    logger?.info?.('finance contacts outbox resolved', {
-      id: row.id,
-      name: row.name,
-      entityId: realEntityId,
-      ...counts,
-    });
-    return 'resolved';
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (isMissingCredential(err)) {
-      entityPrecreateOutboxService.recordAttemptDeferred(db, row.id, {
-        nowIso: now.toISOString(),
-        error: message,
-      });
-      return 'deferred';
-    }
-    // A permanent refusal is contacts' verdict on this request, not a bad
-    // moment: the same call will be rejected identically forever, so it
-    // dead-letters here rather than after 50 identical rejections — and stays
-    // dead-lettered across the boot requeue.
-    const permanent = err instanceof ContactsPermanentError;
-    const outcome = entityPrecreateOutboxService.recordAttemptFailure(db, row.id, {
-      nowIso: now.toISOString(),
-      error: message,
-      maxAttempts,
-      permanent,
-    });
-    if (outcome === 'failed') {
-      logger?.warn?.(
-        permanent
-          ? 'finance contacts outbox row dead-lettered — contacts refused it, retrying cannot help'
-          : 'finance contacts outbox row dead-lettered — giving up after max attempts',
-        { id: row.id, name: row.name, maxAttempts, permanent, error: message }
-      );
-      return 'failed';
-    }
-    logger?.warn?.('finance contacts outbox still pending', {
-      id: row.id,
-      name: row.name,
-      error: message,
-    });
-    return 'pending';
-  }
 }
 
 /** Everything one pass needs, plus the worker-scoped report-once sink. */

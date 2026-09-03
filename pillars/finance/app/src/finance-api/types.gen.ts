@@ -38,6 +38,8 @@ export type AccountsListResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;
@@ -142,6 +144,8 @@ export type AccountsCreateResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;
@@ -220,6 +224,8 @@ export type AccountsReorderResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;
@@ -297,6 +303,8 @@ export type AccountsDeleteResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;
@@ -369,6 +377,8 @@ export type AccountsGetResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;
@@ -470,6 +480,8 @@ export type AccountsUpdateResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
       institutionId: string | null;

@@ -49,18 +49,31 @@ export type EntityPrecreateOutboxRow = typeof entityPrecreateOutbox.$inferSelect
  */
 export const DEFAULT_MAX_RECONCILE_ATTEMPTS = 50;
 
-/** Queue a pending contact pre-create. `id` is the placeholder written to
- * `entity_id` columns (see {@link buildPendingContactId}) and doubles as this
- * row's primary key. */
+/**
+ * Queue a pending contact pre-create. For the transaction-side flow, `id` is
+ * the placeholder written to `entity_id` columns (see
+ * {@link buildPendingContactId}) and doubles as this row's primary key. For
+ * the `person` account flow (POPS-2771), `id` is just this row's own primary
+ * key — the account's `entity_id` stays genuinely NULL while pending, and
+ * `accountId` names the account row the reconciler must fill in once contacts
+ * resolves the name.
+ */
 export interface EnqueuePendingContactInput {
   id: string;
   name: string;
   type: EntityType;
+  /** Set for the `person` account flow — see {@link EnqueuePendingContactInput}'s doc. */
+  accountId?: string | null;
 }
 
 export function enqueue(db: FinanceDb, input: EnqueuePendingContactInput): void {
   db.insert(entityPrecreateOutbox)
-    .values({ id: input.id, name: input.name, type: input.type })
+    .values({
+      id: input.id,
+      name: input.name,
+      type: input.type,
+      accountId: input.accountId ?? null,
+    })
     .run();
 }
 

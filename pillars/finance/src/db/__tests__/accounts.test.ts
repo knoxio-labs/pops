@@ -8,9 +8,13 @@ import {
   AccountCashCurrencyConflictError,
   AccountNameConflictError,
   AccountNotFoundError,
+  NonPersonAccountHasEntityError,
+  PersonAccountEntityConflictError,
+  PersonAccountRequiresEntityError,
   ReservedAccountKindError,
 } from '../errors.js';
 import { accounts } from '../schema.js';
+import { resolvePendingPersonAccountEntity } from '../services/account-entity-resolution.js';
 import {
   archiveAccount,
   createAccount,
@@ -159,7 +163,7 @@ describe('createAccount', () => {
       }
     );
 
-    it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card', 'person'] as const)(
+    it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card'] as const)(
       'still allows day-one kind %s',
       (kind, index) => {
         expect(() =>
@@ -167,6 +171,19 @@ describe('createAccount', () => {
         ).not.toThrow();
       }
     );
+
+    // `person` needs an `entityId` (POPS-2771) — see the dedicated
+    // `person account entity invariant` suite below for its own coverage.
+    it('still allows day-one kind person, given an entityId', () => {
+      expect(() =>
+        createAccount(db, {
+          name: 'Day one person',
+          kind: 'person',
+          currency: 'AUD',
+          entityId: 'e-1',
+        })
+      ).not.toThrow();
+    });
   });
 });
 
@@ -309,5 +326,176 @@ describe('reorderAccounts', () => {
 
     expect(getAccount(db, a.id).displayOrder).toBe(0);
     expect(getAccount(db, b.id).displayOrder).toBe(0);
+  });
+});
+
+describe('person account entity invariant (POPS-2771)', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('rejects a person account with no entityId and no allowPendingEntity', () => {
+    expect(() => createAccount(db, { name: 'Alice', kind: 'person', currency: 'AUD' })).toThrow(
+      PersonAccountRequiresEntityError
+    );
+  });
+
+  it('accepts a person account with an entityId', () => {
+    const created = createAccount(db, {
+      name: 'Alice',
+      kind: 'person',
+      currency: 'AUD',
+      entityId: 'entity-alice',
+    });
+    expect(created.entityId).toBe('entity-alice');
+  });
+
+  it('creates the account with a null entityId when allowPendingEntity is set', () => {
+    const created = createAccount(
+      db,
+      { name: 'Alice', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    expect(created.entityId).toBeNull();
+  });
+
+  it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card'] as const)(
+    'rejects a non-person account (%s) carrying an entityId',
+    (kind) => {
+      expect(() =>
+        createAccount(db, { name: 'Not a person', kind, currency: 'AUD', entityId: 'entity-x' })
+      ).toThrow(NonPersonAccountHasEntityError);
+    }
+  );
+
+  it('rejects a second person account for the same (entityId, currency) pair', () => {
+    createAccount(db, {
+      name: 'Alice',
+      kind: 'person',
+      currency: 'AUD',
+      entityId: 'entity-alice',
+    });
+
+    expect(() =>
+      createAccount(db, {
+        name: 'Alice again',
+        kind: 'person',
+        currency: 'AUD',
+        entityId: 'entity-alice',
+      })
+    ).toThrow(PersonAccountEntityConflictError);
+  });
+
+  it('allows the same contact to hold person accounts in two different currencies', () => {
+    createAccount(db, {
+      name: 'Alice AUD',
+      kind: 'person',
+      currency: 'AUD',
+      entityId: 'entity-alice',
+    });
+    expect(() =>
+      createAccount(db, {
+        name: 'Alice USD',
+        kind: 'person',
+        currency: 'USD',
+        entityId: 'entity-alice',
+      })
+    ).not.toThrow();
+  });
+
+  it('allows two different pending (entityId = null) person accounts to coexist', () => {
+    createAccount(
+      db,
+      { name: 'Alice', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    expect(() =>
+      createAccount(
+        db,
+        { name: 'Bob', kind: 'person', currency: 'AUD' },
+        { allowPendingEntity: true }
+      )
+    ).not.toThrow();
+  });
+
+  it('updateAccount rejects turning kind into person with no entityId set or supplied', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    expect(() => updateAccount(db, created.id, { kind: 'person' })).toThrow(
+      PersonAccountRequiresEntityError
+    );
+  });
+
+  it('updateAccount rejects setting an entityId on a non-person account', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    expect(() => updateAccount(db, created.id, { entityId: 'entity-x' })).toThrow(
+      NonPersonAccountHasEntityError
+    );
+  });
+
+  it('updateAccount allows turning kind into person when entityId is supplied in the same patch', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    const updated = updateAccount(db, created.id, { kind: 'person', entityId: 'entity-x' });
+    expect(updated.kind).toBe('person');
+    expect(updated.entityId).toBe('entity-x');
+  });
+});
+
+describe('resolvePendingPersonAccountEntity', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('fills in a pending person account entityId', () => {
+    const created = createAccount(
+      db,
+      { name: 'Alice', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    expect(created.entityId).toBeNull();
+
+    const resolved = resolvePendingPersonAccountEntity(db, created.id, 'entity-alice');
+    expect(resolved.entityId).toBe('entity-alice');
+  });
+
+  it('is idempotent — a second call against an already-resolved row is a no-op', () => {
+    const created = createAccount(
+      db,
+      { name: 'Alice', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    resolvePendingPersonAccountEntity(db, created.id, 'entity-alice');
+
+    expect(() =>
+      resolvePendingPersonAccountEntity(db, created.id, 'entity-someone-else')
+    ).not.toThrow();
+    expect(getAccount(db, created.id).entityId).toBe('entity-alice');
+  });
+
+  it('throws AccountNotFoundError for an unknown account id', () => {
+    expect(() => resolvePendingPersonAccountEntity(db, 'missing-id', 'entity-alice')).toThrow(
+      AccountNotFoundError
+    );
+  });
+
+  it('throws PersonAccountEntityConflictError when two pending accounts resolve to the same (entityId, currency)', () => {
+    const first = createAccount(
+      db,
+      { name: 'Alice A', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    const second = createAccount(
+      db,
+      { name: 'Alice B', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+
+    resolvePendingPersonAccountEntity(db, first.id, 'entity-alice');
+    expect(() => resolvePendingPersonAccountEntity(db, second.id, 'entity-alice')).toThrow(
+      PersonAccountEntityConflictError
+    );
+    // The losing row keeps its NULL entityId rather than landing a bad write.
+    expect(getAccount(db, second.id).entityId).toBeNull();
   });
 });
