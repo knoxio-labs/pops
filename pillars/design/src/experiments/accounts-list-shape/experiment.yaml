@@ -1,0 +1,7 @@
+name: Accounts list shape
+question: Does the accounts list read better as a flat table in display order,
+  or as cards grouped by kind?
+status: active
+screen: finance/accounts
+variants:
+  grouped: Cards grouped by kind
