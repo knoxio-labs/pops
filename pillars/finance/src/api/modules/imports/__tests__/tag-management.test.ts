@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
+import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import { loadKnownTags } from '../tag-management.js';
 
 import type { MigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
@@ -23,10 +24,16 @@ function seedTransaction(harness: MigratedFinanceDb, id: string, tags: readonly 
   harness.raw
     .prepare(
       `INSERT INTO transactions
-         (id, description, account, amount_cents, date, type, tags, checksum, last_edited_time)
-       VALUES (?, ?, 'Everyday', -1000, '2026-01-01', 'purchase', ?, ?, '2026-01-01T00:00:00Z')`
+         (id, description, account, account_id, amount_cents, date, type, tags, checksum, last_edited_time)
+       VALUES (?, ?, 'Everyday', ?, -1000, '2026-01-01', 'purchase', ?, ?, '2026-01-01T00:00:00Z')`
     )
-    .run(id, `MERCHANT ${id}`, JSON.stringify(tags), `checksum-${id}`);
+    .run(
+      id,
+      `MERCHANT ${id}`,
+      seededAccountId(harness.db, 'Amex'),
+      JSON.stringify(tags),
+      `checksum-${id}`
+    );
 }
 
 function setUsage(harness: MigratedFinanceDb, tag: string, count: number): void {

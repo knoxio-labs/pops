@@ -100,10 +100,21 @@ describe('openFinanceDb', () => {
 
       // The entity_id FK on transactions/corrections/tag-rules is gone — a row
       // referencing a non-local (contacts) entity id now inserts cleanly.
-      for (const table of ['transactions', 'transaction_corrections', 'transaction_tag_rules']) {
+      for (const table of ['transaction_corrections', 'transaction_tag_rules']) {
         const fks = raw.prepare(`PRAGMA foreign_key_list(${table})`).all();
         expect(fks).toEqual([]);
       }
+
+      // transactions itself keeps only the 0083 account_id → accounts FK —
+      // no trace of the dropped entity_id FK.
+      const transactionsFks = raw.prepare('PRAGMA foreign_key_list(transactions)').all() as {
+        from: string;
+        table: string;
+      }[];
+      expect(transactionsFks.find((fk) => fk.from === 'entity_id')).toBeUndefined();
+      expect(transactionsFks).toEqual([
+        expect.objectContaining({ from: 'account_id', table: 'accounts' }),
+      ]);
     } finally {
       raw.close();
     }

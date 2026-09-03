@@ -11,6 +11,7 @@ import {
   findUnreachableTransactionTagRules,
 } from '../services/transaction-tag-rules-audit.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
+import { seededAccountId } from './seeded-account.js';
 
 import type { MigratedFinanceDb } from './migrated-db.js';
 
@@ -49,10 +50,10 @@ function seedRule(
 function seedTransaction(harness: TestHarness, description: string): void {
   harness.raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, amount_cents, date, type, last_edited_time)
-       VALUES (?, ?, 'amex', -1000, '2026-01-01', 'purchase', '2026-01-01T00:00:00.000Z')`
+      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, last_edited_time)
+       VALUES (?, ?, 'amex', ?, -1000, '2026-01-01', 'purchase', '2026-01-01T00:00:00.000Z')`
     )
-    .run(crypto.randomUUID(), description);
+    .run(crypto.randomUUID(), description, seededAccountId(harness.db, 'Amex'));
 }
 
 describe('findDuplicateTransactionTagRules', () => {

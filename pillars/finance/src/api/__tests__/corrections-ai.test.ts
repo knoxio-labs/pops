@@ -214,7 +214,7 @@ describe('corrections.proposeChangeSet', () => {
     __setClaudeCompleterForTests(completerReturning({}));
     transactionsService.createTransaction(financeDb.db, {
       description: 'WOOLWORTHS METRO',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -1200,
       date: '2026-01-01',
     });

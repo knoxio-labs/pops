@@ -14,6 +14,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import {
   openFinanceDb,
   transactions,
@@ -44,6 +45,7 @@ function insertTransaction(description: string): void {
     .values({
       description,
       account: 'Amex',
+      accountId: seededAccountId(db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',
       type: 'purchase',

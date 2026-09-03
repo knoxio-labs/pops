@@ -225,6 +225,27 @@
       "when": 1781913600025,
       "tag": "0080_retype_rule_shadowed_rows",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1781913600026,
+      "tag": "0081_currencies",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1781913600027,
+      "tag": "0082_institutions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1781913600028,
+      "tag": "0083_accounts",
+      "breakpoints": true
     }
   ]
 }

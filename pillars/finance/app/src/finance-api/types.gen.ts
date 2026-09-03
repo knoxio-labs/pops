@@ -4,6 +4,379 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type AccountsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/accounts';
+};
+
+export type AccountsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    }>;
+  };
+};
+
+export type AccountsListResponse = AccountsListResponses[keyof AccountsListResponses];
+
+export type AccountsCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    currency: string;
+    displayOrder?: number;
+    entityId?: string | null;
+    institutionId?: string | null;
+    kind:
+      | 'checking'
+      | 'savings'
+      | 'credit-card'
+      | 'cash'
+      | 'gift-card'
+      | 'person'
+      | 'shared'
+      | 'loan'
+      | 'novated-lease'
+      | 'crypto'
+      | 'other';
+    name: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/accounts';
+};
+
+export type AccountsCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsCreateError = AccountsCreateErrors[keyof AccountsCreateErrors];
+
+export type AccountsCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountsCreateResponse = AccountsCreateResponses[keyof AccountsCreateResponses];
+
+export type AccountsDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}';
+};
+
+export type AccountsDeleteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsDeleteError = AccountsDeleteErrors[keyof AccountsDeleteErrors];
+
+export type AccountsDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountsDeleteResponse = AccountsDeleteResponses[keyof AccountsDeleteResponses];
+
+export type AccountsGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}';
+};
+
+export type AccountsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsGetError = AccountsGetErrors[keyof AccountsGetErrors];
+
+export type AccountsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    };
+  };
+};
+
+export type AccountsGetResponse = AccountsGetResponses[keyof AccountsGetResponses];
+
+export type AccountsUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    archivedAt?: string | null;
+    currency?: string;
+    displayOrder?: number;
+    entityId?: string | null;
+    institutionId?: string | null;
+    kind?:
+      | 'checking'
+      | 'savings'
+      | 'credit-card'
+      | 'cash'
+      | 'gift-card'
+      | 'person'
+      | 'shared'
+      | 'loan'
+      | 'novated-lease'
+      | 'crypto'
+      | 'other';
+    name?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}';
+};
+
+export type AccountsUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsUpdateError = AccountsUpdateErrors[keyof AccountsUpdateErrors];
+
+export type AccountsUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountsUpdateResponse = AccountsUpdateResponses[keyof AccountsUpdateResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;
@@ -2269,6 +2642,149 @@ export type CorrectionsApplyExistingResponses = {
 export type CorrectionsApplyExistingResponse =
   CorrectionsApplyExistingResponses[keyof CorrectionsApplyExistingResponses];
 
+export type CurrenciesListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/currencies';
+};
+
+export type CurrenciesListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      code: string;
+      createdAt: string;
+      decimals: number;
+      kind: 'fiat' | 'points';
+      name: string;
+      symbol: string | null;
+    }>;
+  };
+};
+
+export type CurrenciesListResponse = CurrenciesListResponses[keyof CurrenciesListResponses];
+
+export type CurrenciesCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    code: string;
+    decimals: number;
+    kind: 'fiat' | 'points';
+    name: string;
+    symbol?: string | null;
+  };
+  path?: never;
+  query?: never;
+  url: '/currencies';
+};
+
+export type CurrenciesCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CurrenciesCreateError = CurrenciesCreateErrors[keyof CurrenciesCreateErrors];
+
+export type CurrenciesCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      code: string;
+      createdAt: string;
+      decimals: number;
+      kind: 'fiat' | 'points';
+      name: string;
+      symbol: string | null;
+    };
+    message: string;
+  };
+};
+
+export type CurrenciesCreateResponse = CurrenciesCreateResponses[keyof CurrenciesCreateResponses];
+
+export type CurrenciesDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    code: string;
+  };
+  query?: never;
+  url: '/currencies/{code}';
+};
+
+export type CurrenciesDeleteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CurrenciesDeleteError = CurrenciesDeleteErrors[keyof CurrenciesDeleteErrors];
+
+export type CurrenciesDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type CurrenciesDeleteResponse = CurrenciesDeleteResponses[keyof CurrenciesDeleteResponses];
+
 export type EntityUsageListData = {
   body?: never;
   path?: never;
@@ -3804,6 +4320,149 @@ export type ImportsReevaluateWithPendingRulesResponses = {
 export type ImportsReevaluateWithPendingRulesResponse =
   ImportsReevaluateWithPendingRulesResponses[keyof ImportsReevaluateWithPendingRulesResponses];
 
+export type InstitutionsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/institutions';
+};
+
+export type InstitutionsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    }>;
+  };
+};
+
+export type InstitutionsListResponse = InstitutionsListResponses[keyof InstitutionsListResponses];
+
+export type InstitutionsCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    colour: string;
+    logoAssetId?: string | null;
+    name: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/institutions';
+};
+
+export type InstitutionsCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsCreateError = InstitutionsCreateErrors[keyof InstitutionsCreateErrors];
+
+export type InstitutionsCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type InstitutionsCreateResponse =
+  InstitutionsCreateResponses[keyof InstitutionsCreateResponses];
+
+export type InstitutionsDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/institutions/{id}';
+};
+
+export type InstitutionsDeleteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsDeleteError = InstitutionsDeleteErrors[keyof InstitutionsDeleteErrors];
+
+export type InstitutionsDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type InstitutionsDeleteResponse =
+  InstitutionsDeleteResponses[keyof InstitutionsDeleteResponses];
+
 export type SearchSearchData = {
   /**
    * Body
@@ -5319,6 +5978,7 @@ export type TransactionsListResponses = {
   200: {
     data: Array<{
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;
@@ -5427,6 +6087,7 @@ export type TransactionsCreateResponses = {
   201: {
     data: {
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;
@@ -5512,6 +6173,7 @@ export type TransactionsRestoreData = {
    */
   body?: {
     account: string;
+    accountId: string;
     amount: number;
     checksum: string | null;
     country: string | null;
@@ -5595,6 +6257,7 @@ export type TransactionsRestoreResponses = {
   201: {
     data: {
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;
@@ -5707,6 +6370,7 @@ export type TransactionsDeleteResponses = {
     message: string;
     snapshot: {
       account: string;
+      accountId: string;
       amount: number;
       checksum: string | null;
       country: string | null;
@@ -5800,6 +6464,7 @@ export type TransactionsGetResponses = {
   200: {
     data: {
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;
@@ -5902,6 +6567,7 @@ export type TransactionsUpdateResponses = {
   200: {
     data: {
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;
@@ -5987,6 +6653,7 @@ export type TransactionsUnlinkTransferResponses = {
   200: {
     data: {
       account: string;
+      accountId: string;
       amount: number;
       country: string | null;
       date: string;

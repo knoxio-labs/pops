@@ -201,19 +201,19 @@ describe('corrections — previewMatches', () => {
     const db = financeDb.db;
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -800,
       date: '2026-01-03',
     });
@@ -247,7 +247,7 @@ describe('corrections — ruleMatchPreview', () => {
     for (let i = 1; i <= 3; i += 1) {
       transactionsService.createTransaction(db, {
         description: `WOOLWORTHS ${i}00 SYDNEY`,
-        account: 'checking',
+        account: 'Amex',
         amountCents: -i * 100,
         date: `2026-01-0${i}`,
         checksum: `chk-${i}`,
@@ -255,7 +255,7 @@ describe('corrections — ruleMatchPreview', () => {
     }
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -800,
       date: '2026-01-09',
     });

@@ -83,6 +83,18 @@ export type {
   ListBudgetsOptions,
 } from './services/budgets.js';
 
+export * as currenciesService from './services/currencies.js';
+
+export type { CurrencyRow, CreateCurrencyInput } from './services/currencies.js';
+
+export * as accountsService from './services/accounts.js';
+
+export type { AccountRow, CreateAccountInput, UpdateAccountInput } from './services/accounts.js';
+
+export * as institutionsService from './services/institutions.js';
+
+export type { InstitutionRow, CreateInstitutionInput } from './services/institutions.js';
+
 export * as transactionCorrectionsService from './services/transaction-corrections.js';
 
 export {

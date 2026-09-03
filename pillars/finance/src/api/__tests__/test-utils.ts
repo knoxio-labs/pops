@@ -32,13 +32,16 @@ import type { AddressInfo } from 'node:net';
 import type { Express } from 'express';
 
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
+import type { Account } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
+import type { Currency } from '../modules/currencies-types.js';
 import type { ImportProgress } from '../modules/imports/index.js';
 import type {
   CommitResult,
   CreateEntityOutput,
   ProcessImportOutput,
 } from '../modules/imports/types.js';
+import type { Institution } from '../modules/institutions-types.js';
 import type { SuggestedTag } from '../modules/tag-suggester/index.js';
 import type { Transaction } from '../modules/transactions-types.js';
 import type { WishListItem } from '../modules/wishlist-types.js';
@@ -406,6 +409,28 @@ export function makeClient(app: Express) {
       update: (id: string, data: Record<string, unknown>) =>
         call<{ data: Budget; message: string }>((r) => r.patch(`/budgets/${id}`).send(data)),
       delete: (id: string) => call<{ message: string }>((r) => r.delete(`/budgets/${id}`)),
+    },
+    currencies: {
+      list: () => call<{ data: Currency[] }>((r) => r.get('/currencies')),
+      create: (body: Record<string, unknown>) =>
+        call<{ data: Currency; message: string }>((r) => r.post('/currencies').send(body)),
+      delete: (code: string) => call<{ message: string }>((r) => r.delete(`/currencies/${code}`)),
+    },
+    institutions: {
+      list: () => call<{ data: Institution[] }>((r) => r.get('/institutions')),
+      create: (body: Record<string, unknown>) =>
+        call<{ data: Institution; message: string }>((r) => r.post('/institutions').send(body)),
+      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/institutions/${id}`)),
+    },
+    accounts: {
+      list: () => call<{ data: Account[] }>((r) => r.get('/accounts')),
+      get: (id: string) => call<{ data: Account }>((r) => r.get(`/accounts/${id}`)),
+      create: (body: Record<string, unknown>) =>
+        call<{ data: Account; message: string }>((r) => r.post('/accounts').send(body)),
+      update: (id: string, data: Record<string, unknown>) =>
+        call<{ data: Account; message: string }>((r) => r.patch(`/accounts/${id}`).send(data)),
+      delete: (id: string) =>
+        call<{ data: Account; message: string }>((r) => r.delete(`/accounts/${id}`)),
     },
     transactions: {
       list: (query: TransactionQuery = {}) =>

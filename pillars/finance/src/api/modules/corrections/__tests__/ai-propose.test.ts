@@ -9,6 +9,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
+import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import { transactions } from '../../../../db/schema/transactions.js';
 import { proposeChangeSetFromCorrectionSignal } from '../ai-propose.js';
 
@@ -24,7 +25,8 @@ function insertTransaction(db: FinanceDb, id: string, description: string): void
     .values({
       id,
       description,
-      account: 'Up',
+      account: 'Amex',
+      accountId: seededAccountId(db, 'Amex'),
       amountCents: 1000,
       date: '2026-01-01',
       type: 'purchase',

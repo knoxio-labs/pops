@@ -52,7 +52,7 @@ function client(contacts: ContactsFake) {
 function seedTxn(entityId: string, description: string, date: string): void {
   transactionsService.createTransaction(financeDb.db, {
     description,
-    account: 'checking',
+    account: 'Amex',
     amountCents: -1000,
     date,
     entityId,

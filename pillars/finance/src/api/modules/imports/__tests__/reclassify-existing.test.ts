@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import {
   openFinanceDb,
   transactionCorrections,
@@ -58,6 +59,7 @@ function seedTxn(input: SeedTxn): string {
       id,
       description: input.description,
       account: 'amex',
+      accountId: seededAccountId(db, 'amex'),
       amountCents: -1250,
       date: '2026-01-01',
       type: input.type,

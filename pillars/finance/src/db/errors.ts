@@ -78,6 +78,135 @@ export class BudgetConflictError extends Error {
   }
 }
 
+export class CurrencyNotFoundError extends Error {
+  override readonly name = 'CurrencyNotFoundError' as const;
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Currency '${code}' not found`);
+    this.code = code;
+  }
+}
+
+export class CurrencyConflictError extends Error {
+  override readonly name = 'CurrencyConflictError' as const;
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Currency '${code}' already exists`);
+    this.code = code;
+  }
+}
+
+/**
+ * A currency cannot be deleted because some other table's `currency` FK
+ * references it — `accounts.currency` (POPS-2767) is the first such table.
+ * `currenciesService.isCurrencyInUse` scans for it generically, so this stays
+ * accurate as further tables gain a `currency` column.
+ */
+export class CurrencyInUseError extends Error {
+  override readonly name = 'CurrencyInUseError' as const;
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Currency '${code}' is in use and cannot be deleted`);
+    this.code = code;
+  }
+}
+
+export class InstitutionNotFoundError extends Error {
+  override readonly name = 'InstitutionNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Institution '${id}' not found`);
+    this.id = id;
+  }
+}
+
+export class InstitutionConflictError extends Error {
+  override readonly name = 'InstitutionConflictError' as const;
+  readonly institutionName: string;
+
+  constructor(institutionName: string) {
+    super(`Institution '${institutionName}' already exists`);
+    this.institutionName = institutionName;
+  }
+}
+
+/**
+ * An institution cannot be deleted because some other table's
+ * `institution_id` FK references it — `accounts.institution_id` (POPS-2767)
+ * is the first such table. `institutionsService.isInstitutionInUse` scans for
+ * it generically, so this stays accurate as further tables gain an
+ * `institution_id` column.
+ */
+export class InstitutionInUseError extends Error {
+  override readonly name = 'InstitutionInUseError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Institution '${id}' is in use and cannot be deleted`);
+    this.id = id;
+  }
+}
+
+export class AccountNotFoundError extends Error {
+  override readonly name = 'AccountNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Account '${id}' not found`);
+    this.id = id;
+  }
+}
+
+export class AccountNameConflictError extends Error {
+  override readonly name = 'AccountNameConflictError' as const;
+  readonly accountName: string;
+
+  constructor(accountName: string) {
+    super(`Account '${accountName}' already exists`);
+    this.accountName = accountName;
+  }
+}
+
+/**
+ * A second `cash` account was created (or updated into) a currency that
+ * already has one — `idx_accounts_kind_currency_cash` scopes uniqueness to
+ * `kind = 'cash'` because two cash accounts in the same currency are
+ * indistinguishable (both are just "the currency's physical cash"), unlike
+ * two `credit-card` accounts, which are legitimately different cards.
+ */
+export class AccountCashCurrencyConflictError extends Error {
+  override readonly name = 'AccountCashCurrencyConflictError' as const;
+  readonly currency: string;
+
+  constructor(currency: string) {
+    super(`A cash account in currency '${currency}' already exists`);
+    this.currency = currency;
+  }
+}
+
+/**
+ * A transaction write named an `account` string (POPS-2767's free-text
+ * column, kept for one more ticket) that matches no `accounts.name` — the
+ * same fail-loud rule `0083_accounts.sql`'s backfill enforces for historical
+ * rows, applied to new writes so `account` and `account_id` never drift
+ * apart. Not a member of the `Account*` family above (those are keyed by id,
+ * not by the free-text name a caller supplied) because the caller here never
+ * named an account id at all.
+ */
+export class UnresolvedAccountNameError extends Error {
+  override readonly name = 'UnresolvedAccountNameError' as const;
+  readonly accountName: string;
+
+  constructor(accountName: string) {
+    super(`No account named '${accountName}' — create it before writing a transaction against it`);
+    this.accountName = accountName;
+  }
+}
+
 export class TransactionCorrectionNotFoundError extends Error {
   override readonly name = 'TransactionCorrectionNotFoundError' as const;
   readonly id: string;

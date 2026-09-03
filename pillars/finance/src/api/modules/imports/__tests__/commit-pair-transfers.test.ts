@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
+import { createAccount } from '../../../../db/services/accounts.js';
 import {
   createTransaction,
   getTransaction,
@@ -23,7 +24,10 @@ const ENABLED = 'FINANCE_TRANSFER_PAIR_ENABLED';
 const WINDOW = 'FINANCE_TRANSFER_PAIR_WINDOW_DAYS';
 
 function freshDb(): FinanceDb {
-  return freshMigratedFinanceDb().db;
+  const db = freshMigratedFinanceDb().db;
+  createAccount(db, { name: 'Bendigo', kind: 'checking', currency: 'AUD' });
+  createAccount(db, { name: 'ING', kind: 'checking', currency: 'AUD' });
+  return db;
 }
 
 function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {

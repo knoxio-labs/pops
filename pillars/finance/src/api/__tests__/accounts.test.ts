@@ -1,0 +1,167 @@
+/**
+ * Integration tests for the `accounts.*` REST surface (POPS-2767). Covers
+ * the full CRUD surface: create/list/get round-tripping, the name and
+ * cash-currency 409 conflict mappings, update (including unarchive via
+ * `archivedAt: null`), and delete-as-archive.
+ */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { createFinanceApiApp } from '../app.js';
+import { makeContactsFake } from './contacts-fake.js';
+import { makeClient } from './test-utils.js';
+
+let tmpDir: string;
+let financeDb: OpenedFinanceDb;
+
+beforeEach(() => {
+  tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-accounts-test-'));
+  financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+});
+
+afterEach(() => {
+  financeDb.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
+});
+
+function client() {
+  return makeClient(
+    createFinanceApiApp({
+      financeDb,
+      version: '0.0.1-test',
+      selfBaseUrl: 'http://localhost:3004',
+      contacts: makeContactsFake(),
+    })
+  );
+}
+
+describe('accounts — happy paths', () => {
+  it('starts with the two migration-seeded accounts', async () => {
+    const { data } = await client().accounts.list();
+    expect(data.map((a) => a.name).toSorted()).toEqual(['ANZ Credit Card', 'Amex']);
+  });
+
+  it('creates an account and round-trips it through list and get', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    expect(created.data).toMatchObject({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+      institutionId: null,
+      archivedAt: null,
+    });
+    expect(created.message).toBe('Account created');
+
+    const { data } = await client().accounts.list();
+    expect(data.map((a) => a.name)).toContain('Wallet');
+
+    const fetched = await client().accounts.get(created.data.id);
+    expect(fetched.data.id).toBe(created.data.id);
+  });
+
+  it('links a new account to an institution', async () => {
+    const institution = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
+    const created = await client().accounts.create({
+      name: 'Westpac Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: institution.data.id,
+    });
+    expect(created.data.institutionId).toBe(institution.data.id);
+  });
+
+  it('updates an account', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    const updated = await client().accounts.update(created.data.id, { displayOrder: 3 });
+    expect(updated.data.displayOrder).toBe(3);
+    expect(updated.message).toBe('Account updated');
+  });
+
+  it('archives an account on delete, and it still appears in list', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+
+    const archived = await client().accounts.delete(created.data.id);
+    expect(archived.data.archivedAt).not.toBeNull();
+    expect(archived.message).toBe('Account archived');
+
+    const { data } = await client().accounts.list();
+    const found = data.find((a) => a.id === created.data.id);
+    expect(found?.archivedAt).not.toBeNull();
+  });
+
+  it('unarchives by patching archivedAt back to null', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    await client().accounts.delete(created.data.id);
+
+    const restored = await client().accounts.update(created.data.id, { archivedAt: null });
+    expect(restored.data.archivedAt).toBeNull();
+  });
+});
+
+describe('accounts — error mapping', () => {
+  it('409s a duplicate name', async () => {
+    await client().accounts.create({ name: 'Wallet', kind: 'cash', currency: 'AUD' });
+
+    await expect(
+      client().accounts.create({ name: 'Wallet', kind: 'savings', currency: 'AUD' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('409s a second cash account in the same currency', async () => {
+    await client().accounts.create({ name: 'Wallet AUD', kind: 'cash', currency: 'AUD' });
+
+    await expect(
+      client().accounts.create({ name: 'Wallet AUD 2', kind: 'cash', currency: 'AUD' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('400s an unknown kind', async () => {
+    await expect(
+      client().accounts.create({ name: 'Wallet', kind: 'bitcoin-wallet', currency: 'AUD' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('400s a missing name', async () => {
+    await expect(client().accounts.create({ kind: 'cash', currency: 'AUD' })).rejects.toMatchObject(
+      {
+        status: 400,
+      }
+    );
+  });
+
+  it('404s getting a missing account', async () => {
+    await expect(client().accounts.get('missing-id')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('404s updating a missing account', async () => {
+    await expect(client().accounts.update('missing-id', { displayOrder: 1 })).rejects.toMatchObject(
+      {
+        status: 404,
+      }
+    );
+  });
+
+  it('404s archiving a missing account', async () => {
+    await expect(client().accounts.delete('missing-id')).rejects.toMatchObject({ status: 404 });
+  });
+});

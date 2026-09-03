@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seededAccountId } from '../../../db/__tests__/seeded-account.js';
 import {
   openFinanceDb,
   transactions,
@@ -60,6 +61,7 @@ function seedTxn(entityId: string, entityName: string): void {
     .values({
       description: `txn-${entityId}`,
       account: 'Amex',
+      accountId: seededAccountId(opened.db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',
       type: 'purchase',

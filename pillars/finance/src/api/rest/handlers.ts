@@ -10,10 +10,13 @@ import { initServer } from '@ts-rest/express';
 import { financeContract } from '../../contract/rest.js';
 import { type OpenedFinanceDb } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
+import { makeAccountsHandlers } from './accounts-handlers.js';
 import { makeBudgetsHandlers } from './budgets-handlers.js';
 import { makeCorrectionsHandlers } from './corrections-handlers.js';
+import { makeCurrenciesHandlers } from './currencies-handlers.js';
 import { makeEntityUsageHandlers } from './entity-usage-handlers.js';
 import { makeImportsHandlers } from './imports-handlers.js';
+import { makeInstitutionsHandlers } from './institutions-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeTagRulesHandlers } from './tag-rules-handlers.js';
@@ -30,6 +33,9 @@ export function makeFinanceRestHandlers(deps: {
   return server.router(financeContract, {
     wishlist: makeWishlistHandlers(db),
     budgets: makeBudgetsHandlers(db),
+    currencies: makeCurrenciesHandlers(db),
+    institutions: makeInstitutionsHandlers(db),
+    accounts: makeAccountsHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),
     tagRules: makeTagRulesHandlers(db),
     corrections: makeCorrectionsHandlers(db),

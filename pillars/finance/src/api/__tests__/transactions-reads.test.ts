@@ -41,7 +41,7 @@ function client(contacts: ContactsFake = makeContactsFake()) {
 
 const tx = (over: Record<string, unknown>) => ({
   description: 'WOOLWORTHS METRO',
-  account: 'Everyday',
+  account: 'Amex',
   amount: -10,
   date: '2026-01-01',
   type: 'purchase',

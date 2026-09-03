@@ -403,19 +403,19 @@ describe('tagRules — matchPreview', () => {
     const db = financeDb.db;
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO CBD',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES 5678',
-      account: 'checking',
+      account: 'Amex',
       amountCents: -2000,
       date: '2026-01-03',
     });

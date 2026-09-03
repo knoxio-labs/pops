@@ -57,7 +57,7 @@ describe('search — transactions adapter', () => {
   it('returns a transaction hit carrying the canonical type and the legacy uri shape', async () => {
     const created = await client().transactions.create({
       description: 'Coffee',
-      account: 'cash',
+      account: 'Amex',
       amount: -5,
       date: '2026-01-01',
       type: 'purchase',
@@ -77,7 +77,7 @@ describe('search — transactions adapter', () => {
   it('passes the new types through the wire instead of collapsing them to expense (#3757)', async () => {
     await client().transactions.create({
       description: 'Refunded jacket',
-      account: 'cash',
+      account: 'Amex',
       amount: 80,
       date: '2026-01-01',
       type: 'refund',
@@ -91,21 +91,21 @@ describe('search — transactions adapter', () => {
   it('ranks exact > prefix > contains across transaction descriptions', async () => {
     await client().transactions.create({
       description: 'Pay',
-      account: 'a',
+      account: 'Amex',
       amount: 1,
       date: '2026-01-01',
       type: 'income',
     });
     await client().transactions.create({
       description: 'Payment',
-      account: 'a',
+      account: 'Amex',
       amount: 1,
       date: '2026-01-01',
       type: 'income',
     });
     await client().transactions.create({
       description: 'Repayment',
-      account: 'a',
+      account: 'Amex',
       amount: 1,
       date: '2026-01-01',
       type: 'income',
@@ -156,7 +156,7 @@ describe('search — aggregation & empty query', () => {
   it('aggregates hits from all three finance adapters under one endpoint', async () => {
     await client().transactions.create({
       description: 'Travel fund',
-      account: 'a',
+      account: 'Amex',
       amount: 1,
       date: '2026-01-01',
       type: 'purchase',
@@ -173,7 +173,7 @@ describe('search — aggregation & empty query', () => {
   it('returns an empty list for an empty or whitespace query', async () => {
     await client().transactions.create({
       description: 'Anything',
-      account: 'a',
+      account: 'Amex',
       amount: 1,
       date: '2026-01-01',
       type: 'purchase',
@@ -194,14 +194,14 @@ describe('search — query.filters', () => {
   it('narrows transactions by type, excluding a same-text match of a different type', async () => {
     await client().transactions.create({
       description: 'Widget purchase',
-      account: 'a',
+      account: 'Amex',
       amount: -10,
       date: '2026-01-01',
       type: 'purchase',
     });
     await client().transactions.create({
       description: 'Widget refund',
-      account: 'a',
+      account: 'Amex',
       amount: 10,
       date: '2026-01-02',
       type: 'refund',
@@ -218,7 +218,7 @@ describe('search — query.filters', () => {
   it('narrows transactions by entityId', async () => {
     await client().transactions.create({
       description: 'Coffee run',
-      account: 'a',
+      account: 'Amex',
       amount: -5,
       date: '2026-01-01',
       type: 'purchase',
@@ -226,7 +226,7 @@ describe('search — query.filters', () => {
     });
     await client().transactions.create({
       description: 'Coffee beans',
-      account: 'a',
+      account: 'Amex',
       amount: -12,
       date: '2026-01-02',
       type: 'purchase',
@@ -247,14 +247,14 @@ describe('search — query.filters', () => {
   it('narrows transactions by a date lower bound', async () => {
     await client().transactions.create({
       description: 'Rent January',
-      account: 'a',
+      account: 'Amex',
       amount: -100,
       date: '2026-01-01',
       type: 'purchase',
     });
     await client().transactions.create({
       description: 'Rent February',
-      account: 'a',
+      account: 'Amex',
       amount: -100,
       date: '2026-02-01',
       type: 'purchase',
@@ -271,14 +271,14 @@ describe('search — query.filters', () => {
   it('narrows transactions by a date upper bound', async () => {
     await client().transactions.create({
       description: 'Rent January',
-      account: 'a',
+      account: 'Amex',
       amount: -100,
       date: '2026-01-01',
       type: 'purchase',
     });
     await client().transactions.create({
       description: 'Rent February',
-      account: 'a',
+      account: 'Amex',
       amount: -100,
       date: '2026-02-01',
       type: 'purchase',
@@ -297,7 +297,7 @@ describe('search — query.filters', () => {
     await client().budgets.create({ category: 'Travel savings', period: 'Yearly' });
     await client().transactions.create({
       description: 'Travel gear',
-      account: 'a',
+      account: 'Amex',
       amount: -10,
       date: '2026-01-01',
       type: 'purchase',
@@ -385,7 +385,7 @@ describe('search — query.filters', () => {
   it('an empty filter list behaves exactly like no filters', async () => {
     await client().transactions.create({
       description: 'Unfiltered widget',
-      account: 'a',
+      account: 'Amex',
       amount: -1,
       date: '2026-01-01',
       type: 'purchase',

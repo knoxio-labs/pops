@@ -13,6 +13,12 @@ export const transactions = sqliteTable(
     notionId: text('notion_id').unique(),
     description: text('description').notNull(),
     account: text('account').notNull(),
+    /**
+     * FK to `accounts.id`. Added alongside `account` (POPS-2767) — the
+     * free-text column stays until POPS-2770 drops it once backend reads
+     * have moved over.
+     */
+    accountId: text('account_id').notNull(),
     /** Signed amount in integer cents (#3665, CF041) — never a float dollar value. */
     amountCents: integer('amount_cents').notNull(),
     date: text('date').notNull(),
@@ -70,6 +76,7 @@ export const transactions = sqliteTable(
   (table) => [
     index('idx_transactions_date').on(table.date),
     index('idx_transactions_account').on(table.account),
+    index('idx_transactions_account_id').on(table.accountId),
     index('idx_transactions_entity').on(table.entityId),
     index('idx_transactions_last_edited').on(table.lastEditedTime),
     index('idx_transactions_notion_id').on(table.notionId),

@@ -17,6 +17,7 @@ import {
   withSpend,
 } from '../services/budgets.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
+import { seededAccountId } from './seeded-account.js';
 
 import type Database from 'better-sqlite3';
 
@@ -42,13 +43,14 @@ function seedTransaction(db: FinanceTestDb, input: SeedTransactionInput): void {
   const raw = db.$client;
   raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, amount_cents, date, type, tags, last_edited_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, tags, last_edited_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       crypto.randomUUID(),
       input.description,
       input.account ?? 'Test Account',
+      seededAccountId(db, 'Amex'),
       input.amountCents,
       input.date,
       input.type,

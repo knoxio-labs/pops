@@ -11,6 +11,7 @@ type Transaction = NonNullable<TransactionsListResponse['data']>[number];
 function makeTransaction(tags: string[]): Transaction {
   return {
     account: 'Everyday',
+    accountId: 'account-1',
     amount: -12.5,
     country: null,
     date: '2026-08-01',
