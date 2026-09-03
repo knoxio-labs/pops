@@ -22,10 +22,8 @@ createRoot(root).render(
       <Routes>
         <Route path="/frame" element={<FrameShell />}>
           <Route path="tokens" element={<TokensSheet />} />
-          <Route path="s/:area/:slug" element={<Screen />} />
-          <Route path="s/:area/:slug/:stepId" element={<Screen />} />
-          <Route path="x/:experimentId/:variantId/s/:area/:slug" element={<Screen />} />
-          <Route path="x/:experimentId/:variantId/s/:area/:slug/:stepId" element={<Screen />} />
+          <Route path="s/*" element={<Screen />} />
+          <Route path="x/:experimentId/:variantId/s/*" element={<Screen />} />
         </Route>
         <Route path="/*" element={<AppShell />} />
       </Routes>

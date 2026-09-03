@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildCatalog } from '../registry/catalog';
+import { makeScreen } from '../test/factories';
 import { parseAddress } from './address';
 import { declaredFrame, surfaceKeyOf } from './declared-frame';
 
@@ -8,16 +9,15 @@ import type { FrameKind } from '../frames/kind';
 import type { Catalog, ExperimentEntry, ScreenEntry } from '../registry';
 
 function screen(id: string, frame?: FrameKind, steps?: ScreenEntry[]): ScreenEntry {
-  const [area = '', slug = ''] = id.split('/');
-  return { id, area, slug, title: id, order: 1, frame, steps, experiments: [] };
+  return makeScreen({ id, title: id, order: 1, frame, steps, component: undefined });
 }
 
 function catalogOf(screens: ScreenEntry[], experiments: ExperimentEntry[] = []): Catalog {
   return { screens, experiments, errors: [] };
 }
 
-function frameAt(catalog: Catalog, path: string): FrameKind | undefined {
-  return declaredFrame(catalog, parseAddress(path));
+function frameAt(catalog: Catalog, path: string, search = ''): FrameKind | undefined {
+  return declaredFrame(catalog, parseAddress(path, search));
 }
 
 describe('declaredFrame', () => {
@@ -41,17 +41,17 @@ describe('declaredFrame', () => {
   });
 
   it('lets a flow step override the flow it belongs to', () => {
-    const step = { ...screen('mobile/onboarding/scan', 'none'), id: 'scan' };
+    const step = screen('mobile/onboarding/scan', 'none');
     const catalog = catalogOf([screen('mobile/onboarding', 'ios', [step])]);
     // The step is the surface on the canvas, and it declares `none` — which
     // is a declaration, not an absence, so it beats the flow's `ios`.
-    expect(frameAt(catalog, '/s/mobile/onboarding/scan')).toBe('none');
+    expect(frameAt(catalog, '/s/mobile/onboarding', '?step=scan')).toBe('none');
   });
 
   it('falls back to the flow for a step that declares nothing', () => {
-    const step = { ...screen('mobile/onboarding/scan'), id: 'scan' };
+    const step = screen('mobile/onboarding/scan');
     const catalog = catalogOf([screen('mobile/onboarding', 'ios', [step])]);
-    expect(frameAt(catalog, '/s/mobile/onboarding/scan')).toBe('ios');
+    expect(frameAt(catalog, '/s/mobile/onboarding', '?step=scan')).toBe('ios');
   });
 
   it('falls back to the experiment when its variant screen declares nothing', () => {
@@ -92,8 +92,8 @@ describe('surfaceKeyOf', () => {
   });
 
   it('is stable across a step change within one flow', () => {
-    expect(surfaceKeyOf(parseAddress('/s/mobile/onboarding/scan'))).toBe(
-      surfaceKeyOf(parseAddress('/s/mobile/onboarding/review'))
+    expect(surfaceKeyOf(parseAddress('/s/mobile/onboarding', '?step=scan'))).toBe(
+      surfaceKeyOf(parseAddress('/s/mobile/onboarding', '?step=review'))
     );
   });
 

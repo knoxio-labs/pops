@@ -11,7 +11,9 @@ import type { FrameKind } from './frames/kind';
 export interface ScreenMeta {
   /** Sidebar label. */
   title: string;
-  /** Sort key within the area; ties break on filename. */
+  /** Sort key among its siblings in the tree; ties break on filename. A group
+   *  or flow takes the lowest order beneath it, so ordering a screen orders
+   *  the folder it sits in. */
   order?: number;
   /**
    * Flow steps only: `false` drops the flow's bottom Back/Next bar (the top

@@ -3,16 +3,20 @@ import type { ComponentType } from 'react';
 import type { FrameKind } from '../frames/kind';
 
 /**
- * A screen is either a file (a leaf with a `component`) or a folder (a flow
- * with ordered `steps`) — never both. A flow is one level deep: each step is
- * itself a leaf. Exactly one of `component` / `steps` is set.
+ * A screen is either a file (a leaf with a `component`) or a flow folder (with
+ * ordered `steps`) — never both. A flow is one level deep: each step is itself
+ * a leaf. Exactly one of `component` / `steps` is set.
  *
- * `id` is `<area>/<slug>`: the area is the first directory under `screens/`
- * and groups the sidebar; the slug is the file (or flow folder) name.
+ * `id` is the screen's path under `screens/`, at any depth: the first segment
+ * is the `area` and heads the sidebar, the last is the `slug`, and anything
+ * between is `groups` — folders that nest the sidebar and mean nothing else.
+ * A folder is a group unless it declares itself a flow with a `flow.yaml`.
  */
 export interface ScreenEntry {
   id: string;
   area: string;
+  /** The folders between the area and the slug; empty for a screen sitting directly in its area. */
+  groups: string[];
   slug: string;
   title: string;
   order: number;

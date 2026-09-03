@@ -3,27 +3,27 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAddress,
   parseAddress,
+  pathOf,
   preserveCoordinates,
   screenIdOf,
   type Address,
 } from './address';
 
 const cases: Address[] = [
-  { area: 'finance', slug: 'import-review' },
-  { area: 'finance', slug: 'import-review', state: 'empty' },
-  { experimentId: 'density', variantId: 'table', area: 'finance', slug: 'import-review' },
+  { path: ['finance', 'import-review'] },
+  { path: ['finance', 'accounts', 'pickers', 'entity'] },
+  { path: ['finance', 'import-review'], state: 'empty' },
+  { experimentId: 'density', variantId: 'table', path: ['finance', 'import-review'] },
   {
     experimentId: 'density',
     variantId: 'table',
-    area: 'finance',
-    slug: 'import',
+    path: ['finance', 'import'],
     stepId: 'upload',
   },
   {
     experimentId: 'density',
     variantId: 'table',
-    area: 'finance',
-    slug: 'import',
+    path: ['finance', 'accounts', 'import'],
     stepId: 'upload',
     state: 'error',
   },
@@ -37,23 +37,29 @@ describe('buildAddress / parseAddress', () => {
   });
 
   it('builds the documented shapes', () => {
-    expect(buildAddress({ area: 'finance', slug: 'import-review' })).toBe(
-      '/s/finance/import-review'
+    expect(buildAddress({ path: ['finance', 'import-review'] })).toBe('/s/finance/import-review');
+    expect(buildAddress({ path: ['finance', 'accounts', 'form'] })).toBe(
+      '/s/finance/accounts/form'
     );
     expect(
       buildAddress({
         experimentId: 'density',
         variantId: 'table',
-        area: 'finance',
-        slug: 'import',
+        path: ['finance', 'import'],
         stepId: 'upload',
         state: 'error',
       })
-    ).toBe('/x/density/table/s/finance/import/upload?state=error');
+    ).toBe('/x/density/table/s/finance/import?step=upload&state=error');
+  });
+
+  it('reads a deep path as the screen rather than as a flow step', () => {
+    expect(parseAddress('/s/finance/accounts/form')?.path).toEqual(['finance', 'accounts', 'form']);
+    expect(parseAddress('/s/finance/accounts/form')?.stepId).toBeUndefined();
+    expect(parseAddress('/s/finance/import', '?step=upload')?.stepId).toBe('upload');
   });
 
   it('carries an anchor in the fragment', () => {
-    const address: Address = { area: 'a', slug: 'b', anchor: 'submit' };
+    const address: Address = { path: ['a', 'b'], anchor: 'submit' };
     expect(buildAddress(address)).toBe('/s/a/b#submit');
     expect(parseAddress('/s/a/b', '', '#submit')).toEqual(address);
   });
@@ -62,15 +68,17 @@ describe('buildAddress / parseAddress', () => {
     expect(parseAddress('/')).toBeNull();
     expect(parseAddress('/tokens')).toBeNull();
     expect(parseAddress('/s/only-one-segment')).toBeNull();
+    expect(parseAddress('/s/a//b')).toBeNull();
     expect(parseAddress('/frame/s/a/b')).toBeNull();
   });
 
-  it('derives the screen id from the address', () => {
-    expect(screenIdOf({ area: 'finance', slug: 'import-review' })).toBe('finance/import-review');
+  it('derives the screen id from the address, and back', () => {
+    expect(screenIdOf({ path: ['finance', 'accounts', 'form'] })).toBe('finance/accounts/form');
+    expect(pathOf('finance/accounts/form')).toEqual(['finance', 'accounts', 'form']);
   });
 });
 
-const at = (over: Partial<Address>): Address => ({ area: 'a', slug: 'b', ...over });
+const at = (over: Partial<Address>): Address => ({ path: ['a', 'b'], ...over });
 
 describe('preserveCoordinates', () => {
   it('drops the step when the target is a leaf', () => {

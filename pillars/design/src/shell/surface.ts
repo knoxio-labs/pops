@@ -5,6 +5,7 @@ export interface SurfaceCoords {
   experimentId?: string;
   variantId?: string;
   screenId?: string;
+  /** A flow step's own slug, as it appears in `?step=`. */
   stepId?: string;
 }
 
@@ -38,7 +39,7 @@ export function resolveSurface(catalog: Catalog, coords: SurfaceCoords): Surface
   const screen = screens?.find((s) => s.id === coords.screenId);
   if (!screen) return {};
   if (screen.steps) {
-    return { screen, step: screen.steps.find((s) => s.id === coords.stepId) ?? screen.steps[0] };
+    return { screen, step: screen.steps.find((s) => s.slug === coords.stepId) ?? screen.steps[0] };
   }
   return { screen };
 }
@@ -58,13 +59,13 @@ export function capabilitiesFor(
   const screen = resolveScreens(catalog, design.experimentId, design.variantId)?.find(
     (s) => s.id === screenId
   );
-  const steps = screen?.steps?.map((s) => s.id) ?? [];
+  const steps = screen?.steps?.map((s) => s.slug) ?? [];
   return {
     steps,
     statesFor: (stepId) => {
       if (!screen) return [];
       const target = screen.steps
-        ? (screen.steps.find((s) => s.id === stepId) ?? screen.steps[0])
+        ? (screen.steps.find((s) => s.slug === stepId) ?? screen.steps[0])
         : screen;
       return target?.states ? Object.keys(target.states) : [];
     },

@@ -1,4 +1,4 @@
-import { buildAddress, preserveCoordinates, type Address } from './address';
+import { buildAddress, pathOf, preserveCoordinates, type Address } from './address';
 import { capabilitiesFor } from './surface';
 
 import type { Catalog, ExperimentEntry, VariantEntry } from '../registry';
@@ -19,9 +19,8 @@ export interface Current {
   state?: string;
 }
 
-function split(screenId: string): Pick<Address, 'area' | 'slug'> {
-  const [area = '', slug = ''] = screenId.split('/');
-  return { area, slug };
+function split(screenId: string): Pick<Address, 'path'> {
+  return { path: pathOf(screenId) };
 }
 
 function variantTarget(catalog: Catalog, variant: VariantEntry, screenId: string): string {

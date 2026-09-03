@@ -9,12 +9,10 @@ type Modules = Record<string, Record<string, unknown>>;
 export interface ExperimentSources {
   /** `experiments/<id>/experiment.yaml`, raw text. */
   yamls: Record<string, string>;
-  /** `experiments/<id>/variants/<v>/screens/<area>/<slug>.tsx`. */
-  leafModules: Modules;
-  /** `experiments/<id>/variants/<v>/screens/<area>/<flow>/<step>.tsx`. */
-  flowModules: Modules;
-  /** One level deeper than a flow step — always an error. */
-  deepModules: Modules;
+  /** `experiments/<id>/variants/<v>/screens/<path…>.tsx`, at any depth. */
+  modules: Modules;
+  /** `experiments/<id>/variants/<v>/screens/<path…>/flow.yaml`, raw text. */
+  flowMarkers: Record<string, string>;
 }
 
 const EXPERIMENT_YAML_RE = /^experiments\/([^/]+)\/experiment\.yaml$/u;
@@ -23,11 +21,7 @@ const EXPERIMENT_YAML_RE = /^experiments\/([^/]+)\/experiment\.yaml$/u;
 function variantIdsOf(expId: string, sources: ExperimentSources): string[] {
   const re = new RegExp(`^experiments/${escapeRegExp(expId)}/variants/([^/]+)/`, 'u');
   const ids = new Set<string>();
-  for (const key of [
-    ...Object.keys(sources.leafModules),
-    ...Object.keys(sources.flowModules),
-    ...Object.keys(sources.deepModules),
-  ]) {
+  for (const key of [...Object.keys(sources.modules), ...Object.keys(sources.flowMarkers)]) {
     const id = srcRelative(key).match(re)?.[1];
     if (id) ids.add(id);
   }
@@ -44,9 +38,8 @@ function collectVariants(
     id: variantId,
     name: names?.[variantId] ?? variantId,
     screens: collectScreens({
-      leafModules: sources.leafModules,
-      flowModules: sources.flowModules,
-      deepModules: sources.deepModules,
+      modules: sources.modules,
+      flowMarkers: sources.flowMarkers,
       prefix: `experiments/${expId}/variants/${variantId}/screens/`,
       errors,
     }),

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { makeScreen } from '../test/factories';
 import { parseAddress } from './address';
 import { CANVAS_FRAME_KEY, useCanvasFrame } from './use-canvas-frame';
 
@@ -8,8 +9,7 @@ import type { FrameKind } from '../frames/kind';
 import type { Catalog, ScreenEntry } from '../registry';
 
 function screen(id: string, frame?: FrameKind): ScreenEntry {
-  const [area = '', slug = ''] = id.split('/');
-  return { id, area, slug, title: id, order: 1, frame, experiments: [] };
+  return makeScreen({ id, title: id, order: 1, frame });
 }
 
 const CATALOG: Catalog = {
