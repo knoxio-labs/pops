@@ -75,8 +75,10 @@ export function parseAddress(pathname: string, search = '', hash = ''): Address 
   };
 }
 
-/** What the target screen can honour: its step slugs (empty = leaf) and the
- *  state ids available at a given step (or on the screen itself). */
+/** What the target screen can honour: its step slugs — the single path
+ *  segment the address grammar carries, not the step's catalog-wide id
+ *  (empty = leaf) — and the state ids available at a given step (or on the
+ *  screen itself). */
 export interface Capabilities {
   steps: string[];
   statesFor: (stepId: string | undefined) => string[];

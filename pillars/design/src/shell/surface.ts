@@ -33,13 +33,22 @@ export interface Surface {
   step?: ScreenEntry;
 }
 
-/** Resolve the active screen and (for a flow) step from URL coordinates. */
+/**
+ * Resolve the active screen and (for a flow) step from URL coordinates.
+ * A step is matched by its `slug` — the single path segment the address
+ * grammar carries — never by its catalog-wide `id`. Naming no step at all
+ * defaults to the first one; naming one that does not exist resolves to no
+ * step, rather than silently standing in for a different one.
+ */
 export function resolveSurface(catalog: Catalog, coords: SurfaceCoords): Surface {
   const screens = resolveScreens(catalog, coords.experimentId, coords.variantId);
   const screen = screens?.find((s) => s.id === coords.screenId);
   if (!screen) return {};
   if (screen.steps) {
-    return { screen, step: screen.steps.find((s) => s.slug === coords.stepId) ?? screen.steps[0] };
+    const step = coords.stepId
+      ? screen.steps.find((s) => s.slug === coords.stepId)
+      : screen.steps[0];
+    return { screen, step };
   }
   return { screen };
 }
