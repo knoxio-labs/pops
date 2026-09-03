@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
+import { createAccount } from '../services/accounts.js';
 import {
   createTransaction,
   deleteTransaction,
@@ -17,8 +18,18 @@ import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
 
+/**
+ * These fixtures assert on the free-text `account` field itself (exact
+ * account names like 'Up' / 'Up Savings' / 'ANZ Visa'), so the names must
+ * survive rather than being swapped for the migration-seeded accounts —
+ * `createTransaction` still needs a real account row to resolve against.
+ */
 function freshDb(): FinanceDb {
-  return freshMigratedFinanceDb().db;
+  const db = freshMigratedFinanceDb().db;
+  for (const name of ['Up', 'Up Savings', 'ANZ Visa']) {
+    createAccount(db, { name, kind: 'checking', currency: 'AUD' });
+  }
+  return db;
 }
 
 describe('createTransaction', () => {

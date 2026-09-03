@@ -40,16 +40,21 @@ let seq = 0;
 function seedTransaction(raw: Database.Database, o: SeedOverrides): string {
   seq += 1;
   const id = o.id ?? `txn-${seq}`;
+  const accountId = raw
+    .prepare(`SELECT id FROM accounts WHERE name = ? COLLATE NOCASE`)
+    .get('Amex') as { id: string } | undefined;
+  if (!accountId) throw new Error("No seeded account named 'Amex' — did 0083_accounts.sql run?");
   raw
     .prepare(
       `INSERT INTO transactions (
-        id, description, account, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        id, description, account, account_id, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
       o.description,
       'Up Savings',
+      accountId.id,
       dollarsToCents(o.amount ?? -10),
       o.date ?? '2025-01-01',
       'Purchase',

@@ -3,6 +3,43 @@
  * Do not edit by hand — regenerate via `pnpm -F @pops/finance generate:api-types`.
  */
 export interface paths {
+  '/accounts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List every account, archived included, ordered by display order then name */
+    get: operations['accounts.list'];
+    put?: never;
+    /** Create a new account */
+    post: operations['accounts.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a single account */
+    get: operations['accounts.get'];
+    put?: never;
+    post?: never;
+    /** Archive an account (sets archivedAt); idempotent if already archived */
+    delete: operations['accounts.delete'];
+    options?: never;
+    head?: never;
+    /** Update an account, including unarchiving it by clearing archivedAt */
+    patch: operations['accounts.update'];
+    trace?: never;
+  };
   '/budgets': {
     parameters: {
       query?: never;
@@ -298,6 +335,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/currencies': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List every currency, fiat and points alike */
+    get: operations['currencies.list'];
+    put?: never;
+    /** Register a new currency (or points program) */
+    post: operations['currencies.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/currencies/{code}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a currency, refused while any table still references it */
+    delete: operations['currencies.delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/entity-usage': {
     parameters: {
       query?: never;
@@ -412,6 +484,41 @@ export interface paths {
     /** Re-evaluate the import session against merged (DB + pending) rules; no DB writes */
     post: operations['imports.reevaluateWithPendingRules'];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/institutions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List every institution */
+    get: operations['institutions.list'];
+    put?: never;
+    /** Register a new institution */
+    post: operations['institutions.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/institutions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete an institution, refused while any account still references it */
+    delete: operations['institutions.delete'];
     options?: never;
     head?: never;
     patch?: never;
@@ -914,6 +1021,450 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  'accounts.list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  'accounts.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          currency: string;
+          displayOrder?: number;
+          entityId?: string | null;
+          institutionId?: string | null;
+          /** @enum {string} */
+          kind:
+            | 'checking'
+            | 'savings'
+            | 'credit-card'
+            | 'cash'
+            | 'gift-card'
+            | 'person'
+            | 'shared'
+            | 'loan'
+            | 'novated-lease'
+            | 'crypto'
+            | 'other';
+          name: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.delete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.update': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          archivedAt?: string | null;
+          currency?: string;
+          displayOrder?: number;
+          entityId?: string | null;
+          institutionId?: string | null;
+          /** @enum {string} */
+          kind?:
+            | 'checking'
+            | 'savings'
+            | 'credit-card'
+            | 'cash'
+            | 'gift-card'
+            | 'person'
+            | 'shared'
+            | 'loan'
+            | 'novated-lease'
+            | 'crypto'
+            | 'other';
+          name?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'budgets.list': {
     parameters: {
       query?: {
@@ -3640,6 +4191,186 @@ export interface operations {
       };
     };
   };
+  'currencies.list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string;
+              createdAt: string;
+              decimals: number;
+              /** @enum {string} */
+              kind: 'fiat' | 'points';
+              name: string;
+              symbol: string | null;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  'currencies.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          code: string;
+          decimals: number;
+          /** @enum {string} */
+          kind: 'fiat' | 'points';
+          name: string;
+          symbol?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string;
+              createdAt: string;
+              decimals: number;
+              /** @enum {string} */
+              kind: 'fiat' | 'points';
+              name: string;
+              symbol: string | null;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'currencies.delete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'entityUsage.list': {
     parameters: {
       query?: {
@@ -5441,6 +6172,181 @@ export interface operations {
       };
       /** @description 412 */
       412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'institutions.list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              colour: string;
+              createdAt: string;
+              id: string;
+              logoAssetId: string | null;
+              name: string;
+              updatedAt: string;
+            }[];
+          };
+        };
+      };
+    };
+  };
+  'institutions.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          colour: string;
+          logoAssetId?: string | null;
+          name: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              colour: string;
+              createdAt: string;
+              id: string;
+              logoAssetId: string | null;
+              name: string;
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'institutions.delete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -7289,6 +8195,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;
@@ -7417,6 +8324,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;
@@ -7554,6 +8462,7 @@ export interface operations {
       content: {
         'application/json': {
           account: string;
+          accountId: string;
           amount: number;
           checksum: string | null;
           country: string | null;
@@ -7611,6 +8520,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;
@@ -7736,6 +8646,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;
@@ -7835,6 +8746,7 @@ export interface operations {
             message: string;
             snapshot: {
               account: string;
+              accountId: string;
               amount: number;
               checksum: string | null;
               country: string | null;
@@ -7972,6 +8884,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;
@@ -8071,6 +8984,7 @@ export interface operations {
           'application/json': {
             data: {
               account: string;
+              accountId: string;
               amount: number;
               country: string | null;
               date: string;

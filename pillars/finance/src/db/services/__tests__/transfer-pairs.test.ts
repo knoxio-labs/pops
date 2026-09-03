@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { freshMigratedFinanceDb } from '../../__tests__/migrated-db.js';
 import { TransactionNotFoundError } from '../../errors.js';
 import { transactions } from '../../schema.js';
+import { createAccount } from '../accounts.js';
 import {
   createTransaction,
   getTransaction,
@@ -19,7 +20,10 @@ import { findPairCandidates, linkTransferPair, unlinkTransferPair } from '../tra
 import type { FinanceDb } from '../internal.js';
 
 function freshDb(): FinanceDb {
-  return freshMigratedFinanceDb().db;
+  const db = freshMigratedFinanceDb().db;
+  createAccount(db, { name: 'Bendigo', kind: 'checking', currency: 'AUD' });
+  createAccount(db, { name: 'ING', kind: 'checking', currency: 'AUD' });
+  return db;
 }
 
 function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {

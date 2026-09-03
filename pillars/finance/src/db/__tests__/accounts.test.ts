@@ -1,0 +1,182 @@
+/**
+ * Invariant tests for the accounts service against an in-memory SQLite
+ * carrying the migrated finance schema — DB + service layer only.
+ */
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import {
+  AccountCashCurrencyConflictError,
+  AccountNameConflictError,
+  AccountNotFoundError,
+} from '../errors.js';
+import {
+  archiveAccount,
+  createAccount,
+  getAccount,
+  listAccounts,
+  updateAccount,
+} from '../services/accounts.js';
+import { freshMigratedFinanceDb } from './migrated-db.js';
+
+import type { FinanceDb } from '../services/internal.js';
+
+function freshDb(): FinanceDb {
+  return freshMigratedFinanceDb().db;
+}
+
+describe('listAccounts', () => {
+  it('starts with the two migration-seeded accounts, ordered by displayOrder then name', () => {
+    const db = freshDb();
+    const names = listAccounts(db).map((a) => a.name);
+    expect(names).toEqual(['ANZ Credit Card', 'Amex']);
+  });
+
+  it('places a later create after the seeded rows at the same displayOrder, sorted by name', () => {
+    const db = freshDb();
+    createAccount(db, { name: 'Zzz Cash', kind: 'cash', currency: 'AUD' });
+
+    const names = listAccounts(db).map((a) => a.name);
+    expect(names).toEqual(['ANZ Credit Card', 'Amex', 'Zzz Cash']);
+  });
+});
+
+describe('createAccount', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('inserts an account with no institution for a cash kind', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+
+    expect(created.name).toBe('Wallet');
+    expect(created.kind).toBe('cash');
+    expect(created.currency).toBe('AUD');
+    expect(created.institutionId).toBeNull();
+    expect(created.archivedAt).toBeNull();
+    expect(created.entityId).toBeNull();
+    expect(created.displayOrder).toBe(0);
+  });
+
+  it('round-trips through getAccount', () => {
+    const created = createAccount(db, { name: 'Savings A', kind: 'savings', currency: 'AUD' });
+    expect(getAccount(db, created.id).name).toBe('Savings A');
+  });
+
+  it('throws AccountNameConflictError for a duplicate name', () => {
+    createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    // A different kind/currency isolates this from the (kind, currency) cash
+    // conflict below — this asserts the name index specifically.
+    expect(() => createAccount(db, { name: 'Wallet', kind: 'savings', currency: 'AUD' })).toThrow(
+      AccountNameConflictError
+    );
+  });
+
+  it('throws AccountNameConflictError for the seeded "Amex" name, case-insensitively', () => {
+    expect(() => createAccount(db, { name: 'amex', kind: 'credit-card', currency: 'AUD' })).toThrow(
+      AccountNameConflictError
+    );
+  });
+
+  describe('the (kind=cash, currency) partial unique constraint', () => {
+    it('rejects a second cash account in the same currency', () => {
+      createAccount(db, { name: 'Wallet AUD', kind: 'cash', currency: 'AUD' });
+      expect(() =>
+        createAccount(db, { name: 'Wallet AUD 2', kind: 'cash', currency: 'AUD' })
+      ).toThrow(AccountCashCurrencyConflictError);
+    });
+
+    it('allows two cash accounts in different currencies', () => {
+      createAccount(db, { name: 'Wallet AUD', kind: 'cash', currency: 'AUD' });
+      expect(() =>
+        createAccount(db, { name: 'Wallet Points', kind: 'cash', currency: 'QFF' })
+      ).not.toThrow();
+    });
+
+    it('allows two non-cash accounts with the same kind and currency', () => {
+      createAccount(db, { name: 'Card A', kind: 'credit-card', currency: 'AUD' });
+      expect(() =>
+        createAccount(db, { name: 'Card B', kind: 'credit-card', currency: 'AUD' })
+      ).not.toThrow();
+    });
+  });
+});
+
+describe('updateAccount', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('patches the supplied fields and leaves the rest alone', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    const updated = updateAccount(db, created.id, { displayOrder: 5 });
+
+    expect(updated.displayOrder).toBe(5);
+    expect(updated.name).toBe('Wallet');
+  });
+
+  it('throws AccountNotFoundError for a missing id', () => {
+    expect(() => updateAccount(db, 'missing-id', { displayOrder: 1 })).toThrow(
+      AccountNotFoundError
+    );
+  });
+
+  it('throws AccountNameConflictError renaming into an existing name', () => {
+    createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    const other = createAccount(db, { name: 'Other', kind: 'savings', currency: 'AUD' });
+
+    expect(() => updateAccount(db, other.id, { name: 'wallet' })).toThrow(AccountNameConflictError);
+  });
+
+  it('throws AccountCashCurrencyConflictError moving a second account into (cash, AUD)', () => {
+    createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    const other = createAccount(db, { name: 'Card', kind: 'credit-card', currency: 'AUD' });
+
+    expect(() => updateAccount(db, other.id, { kind: 'cash' })).toThrow(
+      AccountCashCurrencyConflictError
+    );
+  });
+
+  it('unarchives by patching archivedAt back to null', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    archiveAccount(db, created.id);
+
+    const restored = updateAccount(db, created.id, { archivedAt: null });
+    expect(restored.archivedAt).toBeNull();
+  });
+});
+
+describe('archiveAccount', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('sets archivedAt on an active account', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    expect(created.archivedAt).toBeNull();
+
+    const archived = archiveAccount(db, created.id);
+    expect(archived.archivedAt).not.toBeNull();
+  });
+
+  it('is idempotent — archiving twice keeps the original timestamp', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    const first = archiveAccount(db, created.id);
+    const second = archiveAccount(db, created.id);
+
+    expect(second.archivedAt).toBe(first.archivedAt);
+  });
+
+  it('throws AccountNotFoundError for a missing id', () => {
+    expect(() => archiveAccount(db, 'missing-id')).toThrow(AccountNotFoundError);
+  });
+
+  it('does not remove the row — transactions can still reference it', () => {
+    const created = createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
+    archiveAccount(db, created.id);
+
+    expect(() => getAccount(db, created.id)).not.toThrow();
+  });
+});

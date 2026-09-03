@@ -172,12 +172,16 @@ function seedThroughBaseline(): void {
     )
     .run('e-woolworths', 'Woolworths');
 
+  // 0083 backfills `transactions.account_id` by matching this free-text
+  // `account` column against `accounts.name` exactly — a value that matches
+  // neither of 0083's two seeded accounts ("Amex", "ANZ Credit Card") makes
+  // that migration fail loudly by design, so these fixtures use a seeded name.
   for (const row of TRANSACTIONS) {
     raw
       .prepare(
         `INSERT INTO transactions
            (id, description, account, amount, date, type, tags, entity_id, notes, checksum, last_edited_time)
-         VALUES (?, ?, 'everyday', ?, ?, ?, ?, ?, ?, ?, '2026-01-20T00:00:00Z')`
+         VALUES (?, ?, 'Amex', ?, ?, ?, ?, ?, ?, ?, '2026-01-20T00:00:00Z')`
       )
       .run(
         row.id,
@@ -297,7 +301,7 @@ describe('applying the rest of the journal to a populated finance database', () 
       `SELECT id, description, date, account FROM transactions`
     );
     expect(stored.map((row) => [row.id, row.description, row.date, row.account])).toEqual(
-      TRANSACTIONS.map((row) => [row.id, row.description, row.date, 'everyday'])
+      TRANSACTIONS.map((row) => [row.id, row.description, row.date, 'Amex'])
     );
   });
 

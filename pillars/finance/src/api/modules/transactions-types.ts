@@ -26,6 +26,7 @@ export interface Transaction extends ForeignChargeFields {
   id: string;
   description: string;
   account: string;
+  accountId: string;
   amount: number;
   date: string;
   type: TransactionType;
@@ -49,6 +50,7 @@ export interface TransactionSnapshot extends ForeignChargeFields {
   notionId: string | null;
   description: string;
   account: string;
+  accountId: string;
   amount: number;
   date: string;
   type: TransactionType;
@@ -107,6 +109,7 @@ export function toTransaction(row: TransactionRow): Transaction {
     id: row.id,
     description: row.description,
     account: row.account,
+    accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,
     type: row.type,
@@ -129,6 +132,7 @@ export function toTransactionSnapshot(row: TransactionRow): TransactionSnapshot 
     notionId: row.notionId,
     description: row.description,
     account: row.account,
+    accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,
     type: row.type,
@@ -156,6 +160,7 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
     notionId: snapshot.notionId,
     description: snapshot.description,
     account: snapshot.account,
+    accountId: snapshot.accountId,
     amountCents: dollarsToCents(snapshot.amount),
     date: snapshot.date,
     type: snapshot.type,

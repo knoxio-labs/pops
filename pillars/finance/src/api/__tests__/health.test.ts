@@ -57,7 +57,7 @@ describe('GET /health', () => {
   it('reports a fresh, non-stale import right after a transaction is created', async () => {
     transactionsService.createTransaction(financeDb.db, {
       description: 'Groceries',
-      account: 'Up Everyday',
+      account: 'Amex',
       amountCents: 4200,
       date: '2026-07-01',
     });

@@ -16,6 +16,7 @@ import {
   resolveCommittedType,
 } from '../../../contract/transaction-classification.js';
 import { freshMigratedFinanceDb } from '../../__tests__/migrated-db.js';
+import { seededAccountId } from '../../__tests__/seeded-account.js';
 import { bulkComputeSpend, spendMapKey } from '../budget-spend.js';
 
 import type Database from 'better-sqlite3';
@@ -57,12 +58,13 @@ function seed(
 ): void {
   db.$client
     .prepare(
-      `INSERT INTO transactions (id, description, account, amount_cents, date, type, tags, last_edited_time)
-       VALUES (?, ?, 'Amex', ?, '2026-05-10', ?, ?, '2026-05-10T00:00:00Z')`
+      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, tags, last_edited_time)
+       VALUES (?, ?, 'Amex', ?, ?, '2026-05-10', ?, ?, '2026-05-10T00:00:00Z')`
     )
     .run(
       crypto.randomUUID(),
       input.description,
+      seededAccountId(db, 'Amex'),
       input.amountCents,
       input.type,
       JSON.stringify(input.tags)

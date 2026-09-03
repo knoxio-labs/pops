@@ -18,6 +18,7 @@ import {
   insertImportTransaction,
 } from '../services/imports.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
+import { seededAccountId } from './seeded-account.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
 import type { InsertImportTransactionInput } from '../services/imports.js';
@@ -54,6 +55,7 @@ function seedTransaction(
       id,
       description: input.description ?? 'seed txn',
       account: input.account ?? 'amex',
+      accountId: seededAccountId(db, input.account ?? 'amex'),
       amountCents: -1000,
       date: input.date ?? '2026-01-01',
       type: 'purchase',

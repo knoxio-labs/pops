@@ -4,6 +4,20 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  AccountsCreateData,
+  AccountsCreateErrors,
+  AccountsCreateResponses,
+  AccountsDeleteData,
+  AccountsDeleteErrors,
+  AccountsDeleteResponses,
+  AccountsGetData,
+  AccountsGetErrors,
+  AccountsGetResponses,
+  AccountsListData,
+  AccountsListResponses,
+  AccountsUpdateData,
+  AccountsUpdateErrors,
+  AccountsUpdateResponses,
   BudgetsCreateData,
   BudgetsCreateErrors,
   BudgetsCreateResponses,
@@ -72,6 +86,14 @@ import type {
   CorrectionsUpdateData,
   CorrectionsUpdateErrors,
   CorrectionsUpdateResponses,
+  CurrenciesCreateData,
+  CurrenciesCreateErrors,
+  CurrenciesCreateResponses,
+  CurrenciesDeleteData,
+  CurrenciesDeleteErrors,
+  CurrenciesDeleteResponses,
+  CurrenciesListData,
+  CurrenciesListResponses,
   EntityUsageListData,
   EntityUsageListErrors,
   EntityUsageListResponses,
@@ -93,6 +115,14 @@ import type {
   ImportsReevaluateWithPendingRulesData,
   ImportsReevaluateWithPendingRulesErrors,
   ImportsReevaluateWithPendingRulesResponses,
+  InstitutionsCreateData,
+  InstitutionsCreateErrors,
+  InstitutionsCreateResponses,
+  InstitutionsDeleteData,
+  InstitutionsDeleteErrors,
+  InstitutionsDeleteResponses,
+  InstitutionsListData,
+  InstitutionsListResponses,
   SearchSearchData,
   SearchSearchErrors,
   SearchSearchResponses,
@@ -217,6 +247,73 @@ export type Options<
    */
   meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * List every account, archived included, ordered by display order then name
+ */
+export const accountsList = <ThrowOnError extends boolean = false>(
+  options?: Options<AccountsListData, ThrowOnError>
+): RequestResult<AccountsListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<AccountsListResponses, unknown, ThrowOnError>({
+    url: '/accounts',
+    ...options,
+  });
+
+/**
+ * Create a new account
+ */
+export const accountsCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<AccountsCreateData, ThrowOnError>
+): RequestResult<AccountsCreateResponses, AccountsCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<AccountsCreateResponses, AccountsCreateErrors, ThrowOnError>({
+    url: '/accounts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Archive an account (sets archivedAt); idempotent if already archived
+ */
+export const accountsDelete = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsDeleteData, ThrowOnError>
+): RequestResult<AccountsDeleteResponses, AccountsDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<AccountsDeleteResponses, AccountsDeleteErrors, ThrowOnError>({
+    url: '/accounts/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get a single account
+ */
+export const accountsGet = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsGetData, ThrowOnError>
+): RequestResult<AccountsGetResponses, AccountsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<AccountsGetResponses, AccountsGetErrors, ThrowOnError>({
+    url: '/accounts/{id}',
+    ...options,
+  });
+
+/**
+ * Update an account, including unarchiving it by clearing archivedAt
+ */
+export const accountsUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsUpdateData, ThrowOnError>
+): RequestResult<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError>({
+    url: '/accounts/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * List budgets with optional search / period / active filters and pagination
@@ -652,6 +749,53 @@ export const correctionsApplyExisting = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List every currency, fiat and points alike
+ */
+export const currenciesList = <ThrowOnError extends boolean = false>(
+  options?: Options<CurrenciesListData, ThrowOnError>
+): RequestResult<CurrenciesListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<CurrenciesListResponses, unknown, ThrowOnError>({
+    url: '/currencies',
+    ...options,
+  });
+
+/**
+ * Register a new currency (or points program)
+ */
+export const currenciesCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<CurrenciesCreateData, ThrowOnError>
+): RequestResult<CurrenciesCreateResponses, CurrenciesCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<CurrenciesCreateResponses, CurrenciesCreateErrors, ThrowOnError>(
+    {
+      url: '/currencies',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    }
+  );
+
+/**
+ * Delete a currency, refused while any table still references it
+ */
+export const currenciesDelete = <ThrowOnError extends boolean = false>(
+  options: Options<CurrenciesDeleteData, ThrowOnError>
+): RequestResult<CurrenciesDeleteResponses, CurrenciesDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    CurrenciesDeleteResponses,
+    CurrenciesDeleteErrors,
+    ThrowOnError
+  >({
+    url: '/currencies/{code}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * List entities with per-entity transactionCount; orphanedOnly=true returns count===0
  */
 export const entityUsageList = <ThrowOnError extends boolean = false>(
@@ -774,6 +918,55 @@ export const importsReevaluateWithPendingRules = <ThrowOnError extends boolean =
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
+    },
+  });
+
+/**
+ * List every institution
+ */
+export const institutionsList = <ThrowOnError extends boolean = false>(
+  options?: Options<InstitutionsListData, ThrowOnError>
+): RequestResult<InstitutionsListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<InstitutionsListResponses, unknown, ThrowOnError>({
+    url: '/institutions',
+    ...options,
+  });
+
+/**
+ * Register a new institution
+ */
+export const institutionsCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<InstitutionsCreateData, ThrowOnError>
+): RequestResult<InstitutionsCreateResponses, InstitutionsCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    InstitutionsCreateResponses,
+    InstitutionsCreateErrors,
+    ThrowOnError
+  >({
+    url: '/institutions',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Delete an institution, refused while any account still references it
+ */
+export const institutionsDelete = <ThrowOnError extends boolean = false>(
+  options: Options<InstitutionsDeleteData, ThrowOnError>
+): RequestResult<InstitutionsDeleteResponses, InstitutionsDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    InstitutionsDeleteResponses,
+    InstitutionsDeleteErrors,
+    ThrowOnError
+  >({
+    url: '/institutions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
     },
   });
 

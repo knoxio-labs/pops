@@ -20,6 +20,7 @@ import {
   type LiveEntityDefaults,
   type OpenedFinanceDb,
 } from '../index.js';
+import { seededAccountId } from './seeded-account.js';
 
 let tmpDir: string;
 let opened: OpenedFinanceDb;
@@ -30,6 +31,7 @@ function txn(entityId: string | null, tags: string[]): void {
     .values({
       description: `txn-${entityId ?? 'none'}-${tags.join('|')}`,
       account: 'Amex',
+      accountId: seededAccountId(opened.db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',
       type: 'purchase',

@@ -265,13 +265,19 @@ describe('0064_money_integer_cents — via the drizzle migrator', () => {
     const path = join(tmpDir, 'finance.db');
 
     opened = openFinanceDb(path);
+    const accountId = (
+      opened.raw.prepare('SELECT id FROM accounts WHERE name = ? COLLATE NOCASE').get('Amex') as
+        | { id: string }
+        | undefined
+    )?.id;
+    if (!accountId) throw new Error("No seeded account named 'Amex' — did 0083_accounts.sql run?");
     const created = opened.raw
       .prepare(
         `INSERT INTO transactions
-           (id, description, account, amount_cents, date, type, last_edited_time)
-         VALUES ('txn-1', 'Coffee', 'Amex', 1999, '2026-01-01', 'Expense', '2026-01-01T00:00:00Z')`
+           (id, description, account, account_id, amount_cents, date, type, last_edited_time)
+         VALUES ('txn-1', 'Coffee', 'Amex', ?, 1999, '2026-01-01', 'Expense', '2026-01-01T00:00:00Z')`
       )
-      .run();
+      .run(accountId);
     expect(created.changes).toBe(1);
     opened.raw.close();
 

@@ -14,11 +14,14 @@ export { ENTITY_TYPES } from './entity-types.js';
 export { TRANSACTION_MATCH_TYPES } from './match-types.js';
 export type { TransactionMatchType } from './match-types.js';
 
+export { accounts } from './schema/accounts.js';
 export { aiUsage } from './schema/ai-usage.js';
 export { budgets } from './schema/budgets.js';
+export { currencies } from './schema/currencies.js';
 export { transactionCorrections } from './schema/corrections.js';
 export { entityPrecreateOutbox } from './schema/entity-precreate-outbox.js';
 export { importCommits } from './schema/import-commits.js';
+export { institutions } from './schema/institutions.js';
 export { tagRuleRejections } from './schema/tag-rule-rejections.js';
 export { tagVocabulary } from './schema/tag-vocabulary.js';
 export { settings } from './schema/settings.js';

@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { transactions } from '../schema/transactions.js';
 import { getLastImportInfo } from '../services/transactions-reads.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
+import { seededAccountId } from './seeded-account.js';
 
 import type { FinanceDb } from '../services/internal.js';
 
@@ -20,7 +21,8 @@ function insertTransaction(db: FinanceDb, id: string, lastEditedTime: string): v
     .values({
       id,
       description: 'x',
-      account: 'Up',
+      account: 'Amex',
+      accountId: seededAccountId(db, 'Amex'),
       amountCents: 100,
       date: '2025-01-01',
       type: 'purchase',

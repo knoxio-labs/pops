@@ -20,6 +20,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
+import { resolveAccountIdByName } from './account-lookup.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
 import type { TransactionType } from '../../contract/corrections-constants.js';
@@ -177,6 +178,7 @@ export function insertImportTransaction(
       id,
       description: input.description,
       account: input.account,
+      accountId: resolveAccountIdByName(db, input.account),
       amountCents: input.amountCents,
       date: input.date,
       type: input.type,

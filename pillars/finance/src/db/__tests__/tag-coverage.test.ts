@@ -24,6 +24,7 @@ import {
   type FacetExclusionReason,
   type OpenedFinanceDb,
 } from '../index.js';
+import { seededAccountId } from './seeded-account.js';
 
 let tmpDir: string;
 let opened: OpenedFinanceDb;
@@ -38,6 +39,7 @@ function txnWithRawTags(
     .values({
       description,
       account: 'Amex',
+      accountId: seededAccountId(opened.db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',
       type,

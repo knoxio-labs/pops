@@ -20,6 +20,7 @@ import { eq } from 'drizzle-orm';
 
 import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
+import { resolveAccountIdByName } from './account-lookup.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb, TransactionRow } from './internal.js';
@@ -94,6 +95,7 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
       id,
       description: input.description,
       account: input.account,
+      accountId: resolveAccountIdByName(db, input.account),
       amountCents: input.amountCents,
       date: input.date,
       type: input.type ?? 'purchase',
@@ -115,9 +117,16 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
 
 type TransactionUpdate = Partial<typeof transactions.$inferInsert>;
 
-function applyCoreFields(input: UpdateTransactionInput, updates: TransactionUpdate): void {
+function applyCoreFields(
+  db: FinanceDb,
+  input: UpdateTransactionInput,
+  updates: TransactionUpdate
+): void {
   if (input.description !== undefined) updates.description = input.description;
-  if (input.account !== undefined) updates.account = input.account;
+  if (input.account !== undefined) {
+    updates.account = input.account;
+    updates.accountId = resolveAccountIdByName(db, input.account);
+  }
   if (input.amountCents !== undefined) updates.amountCents = input.amountCents;
   if (input.date !== undefined) updates.date = input.date;
   if (input.type !== undefined) updates.type = input.type;
@@ -160,9 +169,9 @@ function touchesClassificationFields(input: UpdateTransactionInput): boolean {
   return CLASSIFICATION_PATCH_FIELDS.some((field) => input[field] !== undefined);
 }
 
-function buildTransactionUpdates(input: UpdateTransactionInput): TransactionUpdate {
+function buildTransactionUpdates(db: FinanceDb, input: UpdateTransactionInput): TransactionUpdate {
   const updates: TransactionUpdate = {};
-  applyCoreFields(input, updates);
+  applyCoreFields(db, input, updates);
   applyEntityFields(input, updates);
   applyLocationFields(input, updates);
   applyMetadataFields(input, updates);
@@ -185,7 +194,7 @@ export function updateTransaction(
 ): TransactionRow {
   getTransaction(db, id);
 
-  const updates = buildTransactionUpdates(input);
+  const updates = buildTransactionUpdates(db, input);
   if (Object.keys(updates).length > 0) {
     updates.lastEditedTime = new Date().toISOString();
     db.update(transactions).set(updates).where(eq(transactions.id, id)).run();

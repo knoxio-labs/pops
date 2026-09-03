@@ -10,7 +10,12 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, transferPairsService, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  accountsService,
+  openFinanceDb,
+  transferPairsService,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
@@ -18,9 +23,18 @@ import { makeClient } from './test-utils.js';
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
+/**
+ * These fixtures assert on the free-text `account` field itself (e.g.
+ * `account: 'Everyday'`), so the names must survive rather than being
+ * swapped for the migration-seeded accounts ('Amex' is already seeded) —
+ * `createTransaction` still needs a real account row to resolve against.
+ */
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-tx-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  for (const name of ['Everyday', 'Savings', 'Bendigo']) {
+    accountsService.createAccount(financeDb.db, { name, kind: 'checking', currency: 'AUD' });
+  }
 });
 
 afterEach(() => {

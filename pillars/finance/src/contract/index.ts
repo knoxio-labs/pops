@@ -62,6 +62,16 @@ export {
 } from './anz-pdf-statement.js';
 export { parseAmexRow, type AmexRowFields } from './amex-row.js';
 export { FX_CAPTURE_SOURCES, type FxCaptureSource } from './fx-capture.js';
+export { CURRENCY_KINDS, type CurrencyKind } from './currency-kind.js';
+export {
+  ACCOUNT_KINDS,
+  DAY_ONE_ACCOUNT_KINDS,
+  ACCOUNT_KIND_BEHAVIOURS,
+  getAccountKindBehaviour,
+  type AccountKind,
+  type AccountKindBehaviour,
+} from './account-kind.js';
+export { formatBalance, type CurrencyFormat } from './format-balance.js';
 export {
   buildImportDedupKey,
   buildImportDedupKeyFromStoredRow,

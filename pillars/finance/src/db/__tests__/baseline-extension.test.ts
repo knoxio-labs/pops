@@ -55,6 +55,15 @@ function listIndexes(raw: Database.Database, table: string): string[] {
   );
 }
 
+/** Look up a `0083_accounts.sql`-seeded account id for a raw `transactions` insert. */
+function seededAccountId(raw: Database.Database, name: string): string {
+  const row = raw.prepare('SELECT id FROM accounts WHERE name = ? COLLATE NOCASE').get(name) as
+    | { id: string }
+    | undefined;
+  if (!row) throw new Error(`No seeded account named '${name}' — did 0083_accounts.sql run?`);
+  return row.id;
+}
+
 describe('0054_finance_pillar_baseline_extension', () => {
   it('creates transactions, transaction_tag_rules, and tag_vocabulary on a fresh finance.db', () => {
     const path = join(tmpDir, 'finance.db');
@@ -127,13 +136,14 @@ describe('0054_finance_pillar_baseline_extension', () => {
       raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'txn-1',
           'Test charge',
           'Up Savings',
+          seededAccountId(raw, 'Amex'),
           1250,
           '2026-06-01',
           'Purchase',
@@ -207,13 +217,14 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'seed-1',
           'Seed row',
           'Up Savings',
+          seededAccountId(first.raw, 'Amex'),
           1,
           '2026-06-01',
           'Purchase',
@@ -244,13 +255,14 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'legacy-1',
           'Legacy charge',
           'Up Savings',
+          seededAccountId(first.raw, 'Amex'),
           1,
           '2026-06-01',
           'Purchase',
