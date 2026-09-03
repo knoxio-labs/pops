@@ -3736,6 +3736,9 @@
                         "account": {
                           "type": "string"
                         },
+                        "accountId": {
+                          "type": "string"
+                        },
                         "amount": {
                           "type": "number"
                         },
@@ -5020,6 +5023,9 @@
                               "account": {
                                 "type": "string"
                               },
+                              "accountId": {
+                                "type": "string"
+                              },
                               "amount": {
                                 "type": "number"
                               },
@@ -5047,6 +5053,7 @@
                               "id",
                               "description",
                               "account",
+                              "accountId",
                               "amount",
                               "date",
                               "entityName",
@@ -17255,6 +17262,13 @@
           },
           {
             "in": "query",
+            "name": "accountId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "startDate",
             "schema": {
               "type": "string"
@@ -17570,6 +17584,10 @@
                 "additionalProperties": false,
                 "properties": {
                   "account": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "accountId": {
                     "minLength": 1,
                     "type": "string"
                   },
@@ -18871,6 +18889,10 @@
                 "additionalProperties": false,
                 "properties": {
                   "account": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "accountId": {
                     "minLength": 1,
                     "type": "string"
                   },

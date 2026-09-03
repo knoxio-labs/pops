@@ -80,7 +80,6 @@ describe('processImportCore — correction rule set is fetched once per run (CF0
       db,
       contacts: makeContactsFake(),
       transactions,
-      account: 'Amex',
       importBatchId: 'batch-1',
     });
 
@@ -101,7 +100,6 @@ describe('processImportCore — correction rule set is fetched once per run (CF0
       db,
       contacts: makeContactsFake(),
       transactions,
-      account: 'Amex',
       importBatchId: 'batch-2',
     });
 

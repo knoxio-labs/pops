@@ -54,7 +54,6 @@ export interface ProcessCoreInput {
   db: FinanceDb;
   contacts: ContactsClient;
   transactions: ParsedTransaction[];
-  account: string;
   importBatchId: string;
   onProgress?: ImportProgressCallback;
 }

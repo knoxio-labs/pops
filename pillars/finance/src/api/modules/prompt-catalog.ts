@@ -1,5 +1,6 @@
-import { buildAnalyzePrompt, buildGeneratePrompt } from './corrections/ai-analyze.js';
+import { buildAnalyzePrompt } from './corrections/ai-analyze.js';
 import { buildInterpretPrompt } from './corrections/ai-feedback.js';
+import { buildGeneratePrompt } from './corrections/ai-generate-rules.js';
 import { buildRevisePrompt } from './corrections/ai-propose.js';
 import { CORRECTIONS_DEFAULT_MODEL } from './corrections/ai-runtime.js';
 /**
@@ -22,11 +23,8 @@ import { buildPrompt } from './imports/ai-categorizer-api.js';
 import { CATEGORIZER_DEFAULT_MODEL } from './imports/ai-categorizer.js';
 
 import type { ChangeSet } from '../../contract/rest-corrections.js';
-import type {
-  AcceptedCorrectionExample,
-  CorrectionInput,
-  GenerateRulesTransaction,
-} from './corrections/ai-analyze.js';
+import type { AcceptedCorrectionExample, CorrectionInput } from './corrections/ai-analyze.js';
+import type { GenerateRulesTransaction } from './corrections/ai-generate-rules.js';
 import type { ReviseArgs } from './corrections/ai-propose.js';
 import type { CorrectionSignal } from './corrections/ai-types.js';
 

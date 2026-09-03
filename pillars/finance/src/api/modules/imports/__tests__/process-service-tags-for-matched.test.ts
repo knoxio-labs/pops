@@ -57,7 +57,6 @@ async function run(transactions: ParsedTransaction[]) {
     db,
     contacts: CONTACTS,
     transactions,
-    account: 'ANZ Credit Card',
     importBatchId: 'batch-1',
   });
 }

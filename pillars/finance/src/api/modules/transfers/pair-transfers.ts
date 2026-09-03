@@ -9,11 +9,12 @@
  * caller's job (`linkTransferPair`); scheduling the passes that invoke it is the
  * commit-time phase and the reconcile worker.
  *
- * The engine stays OFF in production until #3608 ships real per-account values:
- * every CSV row is still written with `account: 'Amex'`, so the "different
- * account" predicate is meaningless (and dangerous) until then.
- * {@link isTransferPairEnabled} gates both trigger points and defaults to
- * disabled.
+ * The "different account" predicate compares `accountId` (POPS-2769) — real,
+ * per-institution accounts now exist, so this is an exact identity check
+ * rather than a comparison of free-text names. The engine itself stays OFF in
+ * production ({@link isTransferPairEnabled} gates both trigger points and
+ * defaults to disabled) pending a separate decision to enable it; this ticket
+ * does not flip that flag.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -23,7 +24,7 @@ const DEFAULT_WINDOW_DAYS = 3;
 export interface PairCandidate {
   id: string;
   amount: number;
-  account: string;
+  accountId: string;
   /** Calendar date, `YYYY-MM-DD`; `transactions.date` carries no time component. */
   date: string;
   relatedTransactionId: string | null;
@@ -100,7 +101,7 @@ export function findPairForTransaction(
       candidate.relatedTransactionId === null &&
       Math.abs(candidate.amount) === targetAbs &&
       Math.sign(candidate.amount) === -targetSign &&
-      candidate.account !== target.account &&
+      candidate.accountId !== target.accountId &&
       Math.abs(parseDay(candidate.date) - targetDay) <= windowMs
   );
 

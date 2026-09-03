@@ -94,7 +94,6 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
           contacts,
           sessionId,
           transactions: body.transactions,
-          account: body.account,
         }).catch((error) => {
           console.error(`[Import] Background processing failed: ${String(error)}`);
         });

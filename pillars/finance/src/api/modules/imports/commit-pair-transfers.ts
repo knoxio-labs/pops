@@ -5,10 +5,10 @@
  * all visible on the same open transaction.
  *
  * Gated OFF by default: when `FINANCE_TRANSFER_PAIR_ENABLED` is unset this is a
- * no-op that never touches the DB, so the commit path is unchanged in production
- * until #3608 ships real per-account values (every CSV row is still written with
- * `account: 'Amex'`, which would make the "different account" predicate
- * meaningless). It runs LAST in the commit — after correction rules and the
+ * no-op that never touches the DB. Real per-account identity now exists and the
+ * "different account" predicate correctly compares `accountId` (POPS-2769), but
+ * the flag stays off pending a separate decision to enable it — this is not
+ * that decision. It runs LAST in the commit — after correction rules and the
  * retroactive reclassify — so a rule-classified row is already stamped and is
  * skipped by the pairing engine, honouring "rules take precedence".
  */

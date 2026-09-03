@@ -86,6 +86,62 @@ describe('transactions — happy paths', () => {
   });
 });
 
+describe('transactions — accountId precedence (POPS-2769)', () => {
+  function everydayId(): string {
+    const { rows } = accountsService.listAccounts(financeDb.db, {
+      search: 'Everyday',
+      limit: 10,
+      offset: 0,
+    });
+    const id = rows[0]?.id;
+    if (!id) throw new Error('fixture account "Everyday" not found');
+    return id;
+  }
+
+  it('creates using accountId, validated against an agreeing account name', async () => {
+    const created = await client().transactions.create({
+      ...base,
+      account: 'everyday',
+      accountId: everydayId(),
+    });
+    expect(created.data.account).toBe('Everyday');
+    expect(created.data.accountId).toBe(everydayId());
+  });
+
+  it('rejects a create whose account name disagrees with its accountId', async () => {
+    await expect(
+      client().transactions.create({ ...base, account: 'Savings', accountId: everydayId() })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('404s a create naming an unknown accountId', async () => {
+    await expect(
+      client().transactions.create({ ...base, account: 'Everyday', accountId: 'does-not-exist' })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('patches using only accountId, with no account supplied', async () => {
+    const created = await client().transactions.create(base);
+    const savings = accountsService.listAccounts(financeDb.db, {
+      search: 'Savings',
+      limit: 10,
+      offset: 0,
+    }).rows[0];
+    if (!savings) throw new Error('fixture account "Savings" not found');
+
+    const updated = await client().transactions.update(created.data.id, { accountId: savings.id });
+    expect(updated.data.account).toBe('Savings');
+    expect(updated.data.accountId).toBe(savings.id);
+  });
+
+  it('rejects a patch whose account name disagrees with its accountId', async () => {
+    const created = await client().transactions.create(base);
+    await expect(
+      client().transactions.update(created.data.id, { account: 'Bendigo', accountId: everydayId() })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+});
+
 describe('transactions — unlink transfer', () => {
   it('symmetrically unlinks a paired transfer and reverts both legs by direction', async () => {
     const debit = await client().transactions.create({ ...base, amount: -50, account: 'Amex' });
@@ -163,6 +219,29 @@ describe('transactions — filters & pagination', () => {
 
     const income = await client().transactions.list({ type: 'income' });
     expect(income.data.map((t) => t.description)).toEqual(['Salary']);
+  });
+
+  it('filters by accountId, preferring it over a stale/absent account name', async () => {
+    const { rows } = accountsService.listAccounts(financeDb.db, {
+      search: 'Everyday',
+      limit: 10,
+      offset: 0,
+    });
+    const everydayId = rows[0]?.id;
+    expect(everydayId).toBeDefined();
+
+    const byId = await client().transactions.list({ accountId: everydayId });
+    expect(byId.pagination.total).toBe(2);
+    expect(byId.data.map((t) => t.description).toSorted()).toEqual(['Coffee', 'Rent']);
+
+    // Supplying a mismatched `account` name alongside a valid `accountId` does
+    // not change the result — `accountId` wins for filtering (no identity
+    // validation on reads, unlike writes).
+    const byIdWithWrongName = await client().transactions.list({
+      accountId: everydayId,
+      account: 'Savings',
+    });
+    expect(byIdWithWrongName.pagination.total).toBe(2);
   });
 
   it('paginates with limit/offset', async () => {

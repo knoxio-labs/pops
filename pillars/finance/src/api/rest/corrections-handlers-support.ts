@@ -111,6 +111,7 @@ export interface PreviewMatchTransactionView {
   id: string;
   description: string;
   account: string;
+  accountId: string;
   amount: number;
   date: string;
   entityName: string | null;
@@ -129,6 +130,7 @@ function previewMatchTransaction(row: TransactionRow): PreviewMatchTransactionVi
     id: row.id,
     description: row.description,
     account: row.account,
+    accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,
     entityName: row.entityName,

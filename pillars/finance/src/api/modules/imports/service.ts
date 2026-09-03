@@ -52,14 +52,13 @@ export interface ProcessImportWithProgressArgs {
   contacts: ContactsClient;
   sessionId: string;
   transactions: ParsedTransaction[];
-  account: string;
 }
 
 /** Run a process import with progress updates, then mark the session completed/failed. */
 export async function processImportWithProgress(
   args: ProcessImportWithProgressArgs
 ): Promise<void> {
-  const { db, contacts, sessionId, transactions, account } = args;
+  const { db, contacts, sessionId, transactions } = args;
   try {
     const {
       output: result,
@@ -69,7 +68,6 @@ export async function processImportWithProgress(
       db,
       contacts,
       transactions,
-      account,
       importBatchId: newImportBatchId(),
       onProgress: (update) => updateProgress(sessionId, update),
     });

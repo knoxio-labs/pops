@@ -46,6 +46,12 @@ export const GenerateRulesBody = z.object({
         entityName: z.string().nullable(),
         amount: z.number(),
         account: z.string(),
+        /**
+         * Preferred over `account` when both are supplied (POPS-2769) — the
+         * prompt uses the account's real name resolved via this id rather
+         * than trusting the caller-supplied `account` string verbatim.
+         */
+        accountId: z.string().optional(),
         currentTags: z.array(z.string()).optional().default([]),
       })
     )

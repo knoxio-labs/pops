@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { freshMigratedFinanceDb } from '../../__tests__/migrated-db.js';
 import { TransactionNotFoundError } from '../../errors.js';
 import { transactions } from '../../schema.js';
-import { createAccount } from '../accounts.js';
+import { createAccount, updateAccount } from '../accounts.js';
 import {
   createTransaction,
   getTransaction,
@@ -51,6 +51,24 @@ describe('findPairCandidates', () => {
   it('excludes a same-account row', () => {
     const target = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
     seed(db, { account: 'Amex', amountCents: 5000, date: '2026-07-01' });
+    expect(findPairCandidates(db, target, 3)).toEqual([]);
+  });
+
+  it('excludes two legs of the SAME account even though its name changed between the two writes (POPS-2769)', () => {
+    // Before the rename, `target.account` is still the old free-text name
+    // ('Amex') even though `target.accountId` already points at the renamed
+    // row — `createTransaction` stamps `account` from the caller's string at
+    // write time, not from a live join. A name-based `ne(account, account)`
+    // comparison would see 'Amex' !== 'Amex Legacy Renamed' and wrongly treat
+    // these as different accounts; the id-based comparison correctly excludes
+    // this pair because both legs share one `accountId`.
+    const target = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
+    updateAccount(db, target.accountId, { name: 'Amex Legacy Renamed' });
+    seed(db, {
+      account: 'Amex Legacy Renamed',
+      amountCents: 5000,
+      date: '2026-07-01',
+    });
     expect(findPairCandidates(db, target, 3)).toEqual([]);
   });
 

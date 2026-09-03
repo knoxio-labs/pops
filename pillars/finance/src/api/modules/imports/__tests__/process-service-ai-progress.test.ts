@@ -136,7 +136,6 @@ async function observeAiProgress(
       db,
       contacts: makeContactsFake(),
       transactions,
-      account: 'ANZ Credit Card',
       importBatchId: 'batch-ai',
       onProgress: (update) => {
         if (update.currentStep && steps.at(-1) !== update.currentStep)
