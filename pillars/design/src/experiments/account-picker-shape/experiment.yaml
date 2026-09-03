@@ -1,7 +1,13 @@
 name: Account picker shape
 question: With only a handful of accounts, does picking one want a searchable
   popover or an inline row of choices?
-status: active
+status: decided
 screen: finance/account-picker
 variants:
   inline: Inline row of accounts
+decided: 2026-09-03
+rationale: >-
+  The popover. The inline row costs three lines of chips per field and became
+  unusable in the review row's inline edit, which is the surface an account is
+  changed on most. No `chosen` is recorded because the incumbent won and the
+  registry only accepts a variant id there.

@@ -1,5 +1,7 @@
 import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account, accounts as allAccounts } from '@/fixtures/accounts';
+import { formatBalance } from '@/fixtures/currencies';
+import { institutionsById } from '@/fixtures/institutions';
 
 import {
   Badge,
@@ -8,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
   cn,
-  formatCents,
   PageHeader,
   Table,
   TableBody,
@@ -23,9 +24,12 @@ import type { ScreenMeta, ScreenStates } from '@/contract';
 export const meta: ScreenMeta = { title: 'Account chip', order: 4, frame: 'web' };
 
 /** Two letters of the institution, or of the account name when it has none. */
+function institutionName(account: Account): string | undefined {
+  return account.institutionId ? institutionsById.get(account.institutionId)?.name : undefined;
+}
+
 function monogram(account: Account): string {
-  const source = account.institution ?? account.name;
-  return source.slice(0, 2).toUpperCase();
+  return (institutionName(account) ?? account.name).slice(0, 2).toUpperCase();
 }
 
 /**
@@ -66,7 +70,7 @@ export function AccountChip({
       <span className="min-w-0">
         <span className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">
-            {account.institution ?? 'No institution'}
+            {institutionName(account) ?? 'No institution'}
           </span>
           {account.archived && (
             <Badge variant="outline" className="text-xs">
@@ -106,7 +110,7 @@ function TableSpecimen({ accounts }: { accounts: Account[] }) {
               <AccountChip account={account} />
             </TableCell>
             <TableCell className="text-right text-sm tabular-nums">
-              {formatCents(-8_432, account.currency)}
+              {formatBalance(-8_432, account.currency)}
             </TableCell>
           </TableRow>
         ))}

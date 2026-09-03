@@ -1,7 +1,15 @@
 name: Account chip identity
-question: Does an account read faster led by its kind icon, or by the
-  institution it belongs to?
-status: active
+question: Does an account read faster led by its kind icon, or by the institution
+  it belongs to?
+status: decided
 screen: finance/account-chip
 variants:
   institution: Institution-led
+chosen: institution
+decided: 2026-09-03
+rationale: >-
+  Institution-led, with the mark carrying the institution rather than a
+  monogram: the logo where one exists, initials on the brand colour where it
+  does not. The card-header size keeps main's arrangement — the account name
+  as the title, the institution beneath it — because leading with the
+  institution there made three ANZ accounts open with the same word.

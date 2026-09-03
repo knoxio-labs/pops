@@ -1,63 +1,100 @@
 import { type AccountKind, ACCOUNT_KINDS, sideNoun } from '@/fixtures/account-kinds';
 import { type Account, accounts as allAccounts } from '@/fixtures/accounts';
-import { Archive, GripVertical, Landmark, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { formatBalance } from '@/fixtures/currencies';
+import { institutionsById } from '@/fixtures/institutions';
+import {
+  AccountListControls,
+  NoAccountsYet,
+  NoMatchingAccounts,
+  useAccountListFilters,
+} from '@/kit/account-list-controls';
+import { AccountAvatar } from '@/screens/finance/account-chip';
+import { GripVertical, Plus } from 'lucide-react';
 
-import { Badge, Button, Card, cn, EmptyState, PageHeader } from '@pops/ui';
+import { Badge, Button, Card, cn, PageHeader } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Accounts', order: 2, frame: 'web' };
 
-function AccountIdentity({ account }: { account: Account }) {
+function subtitle(account: Account): string {
+  const institution = account.institutionId
+    ? institutionsById.get(account.institutionId)?.name
+    : undefined;
+  return institution ?? account.contact ?? ACCOUNT_KINDS[account.kind].label;
+}
+
+function asOfLabel(account: Account): string {
+  if (!account.balanceAsOf) return '';
+  const date = new Date(`${account.balanceAsOf}T00:00:00`);
+  return ` · as of ${date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+}
+
+function balanceMeaning(account: Account): { note: string; tone: string } {
+  const { side } = ACCOUNT_KINDS[account.kind];
+  if (side === 'either') {
+    const owing = account.balance < 0;
+    return {
+      note: owing ? 'you owe' : 'owed to you',
+      tone: owing ? 'text-destructive' : 'text-foreground',
+    };
+  }
+  const owed = side === 'liability' && account.balance > 0;
+  return { note: sideNoun(side), tone: owed ? 'text-destructive' : 'text-foreground' };
+}
+
+function Balance({ account }: { account: Account }) {
+  const { side } = ACCOUNT_KINDS[account.kind];
+  const meaning = balanceMeaning(account);
+  const amount = side === 'either' ? Math.abs(account.balance) : account.balance;
   return (
-    <span className="min-w-0 flex-1">
-      <span className="flex items-center gap-2">
-        <span className="truncate text-sm font-medium">{account.name}</span>
-        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-          {account.currency}
-        </span>
-        {account.archived && (
-          <Badge variant="outline" className="text-xs">
-            Archived
-          </Badge>
-        )}
+    <span className="block shrink-0 text-right">
+      <span className={cn('block text-base font-semibold tabular-nums', meaning.tone)}>
+        {formatBalance(amount, account.currency)}
       </span>
-      <span className="block truncate text-xs text-muted-foreground">
-        {account.institution ?? account.contact ?? 'No institution'}
-        {account.historyCompleteFrom ? ` · complete from ${account.historyCompleteFrom}` : ''}
+      <span className="block text-xs text-muted-foreground">
+        {meaning.note}
+        {asOfLabel(account)}
       </span>
     </span>
   );
 }
 
 function AccountCard({ account }: { account: Account }) {
-  const kind = ACCOUNT_KINDS[account.kind];
-  const Icon = kind.icon;
   return (
-    <Card
-      className={cn(
-        'group flex-row items-center gap-3 px-4 py-3',
-        account.archived && 'border-dashed opacity-60'
-      )}
-    >
+    <div className="group relative">
       <GripVertical
-        className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/50"
+        className="absolute top-1/2 left-2 z-10 h-4 w-4 -translate-y-1/2 cursor-grab text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/50"
         aria-label="Reorder"
       />
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-        <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
-      </span>
-      <AccountIdentity account={account} />
-      <span className="shrink-0 text-right">
-        <span className="block text-sm text-muted-foreground">
-          {kind.checkpointable ? 'No checkpoint yet' : 'Not checkpointed'}
-        </span>
-        <Button variant="ghost" size="sm" className="mt-1">
-          Edit
-        </Button>
-      </span>
-    </Card>
+      <a
+        href={`#/accounts/${account.id}`}
+        className="block rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <Card
+          className={cn(
+            'flex-row items-center gap-3 py-3 pr-4 pl-8 transition-colors hover:border-primary hover:bg-muted/50',
+            account.archived && 'border-dashed opacity-60'
+          )}
+        >
+          <AccountAvatar account={account} size="md" />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium">{account.name}</span>
+              {account.archived && (
+                <Badge variant="outline" className="text-xs">
+                  Archived
+                </Badge>
+              )}
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {subtitle(account)} · {account.transactionCount.toLocaleString('en-AU')} transactions
+            </span>
+          </span>
+          <Balance account={account} />
+        </Card>
+      </a>
+    </div>
   );
 }
 
@@ -80,87 +117,41 @@ function KindSection({ kind, accounts }: { kind: AccountKind; accounts: Account[
   );
 }
 
-function ArchivedToggle({
-  count,
-  showing,
-  onToggle,
-}: {
-  count: number;
-  showing: boolean;
-  onToggle: () => void;
-}) {
-  if (count === 0) return null;
-  return (
-    <Button
-      variant={showing ? 'default' : 'outline'}
-      size="sm"
-      prefix={<Archive className="h-4 w-4" />}
-      onClick={onToggle}
-    >
-      {showing ? `Hide ${count} archived` : `Show ${count} archived`}
-    </Button>
-  );
-}
-
-function NoAccountsYet() {
-  return (
-    <EmptyState
-      icon={Landmark}
-      title="No accounts yet"
-      description="Add the accounts you bank with. Every imported transaction is filed against one, so this comes before the first import."
-      action={<Button prefix={<Plus className="h-4 w-4" />}>Add your first account</Button>}
-    />
-  );
-}
-
-function useAccountsList(accounts: Account[]) {
-  const [showArchived, setShowArchived] = useState(false);
-  const archivedCount = accounts.filter((a) => a.archived).length;
-  return {
-    showArchived,
-    archivedCount,
-    toggle: () => setShowArchived((prev) => !prev),
-    description:
-      accounts.length === 0
-        ? 'Every transaction belongs to an account.'
-        : `${accounts.length - archivedCount} active · ${archivedCount} archived`,
-    visible: accounts
-      .filter((a) => showArchived || !a.archived)
-      .toSorted((a, b) => a.order - b.order),
-  };
-}
-
 /** The accounts management list as cards grouped by kind — display order sorts within a group. */
-export function AccountsPage({ accounts }: { accounts: Account[] }) {
-  const list = useAccountsList(accounts);
+export function AccountsPage({
+  accounts,
+  initialQuery,
+}: {
+  accounts: Account[];
+  initialQuery?: string;
+}) {
+  const filters = useAccountListFilters(accounts, initialQuery);
   const kinds = (Object.keys(ACCOUNT_KINDS) as AccountKind[]).filter((kind) =>
-    list.visible.some((a) => a.kind === kind)
+    filters.visible.some((a) => a.kind === kind)
   );
   return (
     <div className="space-y-6 p-6">
       <PageHeader
         title="Accounts"
-        description={list.description}
+        description={filters.description}
         actions={<Button prefix={<Plus className="h-4 w-4" />}>Add account</Button>}
       />
-      {accounts.length === 0 ? (
-        <NoAccountsYet />
-      ) : (
+      {accounts.length === 0 && <NoAccountsYet />}
+      {accounts.length > 0 && (
         <>
-          <ArchivedToggle
-            count={list.archivedCount}
-            showing={list.showArchived}
-            onToggle={list.toggle}
-          />
-          <div className="max-w-3xl space-y-6">
-            {kinds.map((kind) => (
-              <KindSection
-                key={kind}
-                kind={kind}
-                accounts={list.visible.filter((a) => a.kind === kind)}
-              />
-            ))}
-          </div>
+          <AccountListControls filters={filters} />
+          {filters.visible.length === 0 && <NoMatchingAccounts onClear={filters.clear} />}
+          {filters.visible.length > 0 && (
+            <div className="max-w-3xl space-y-6">
+              {kinds.map((kind) => (
+                <KindSection
+                  key={kind}
+                  kind={kind}
+                  accounts={filters.visible.filter((a) => a.kind === kind)}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -171,6 +162,7 @@ export const states: ScreenStates = {
   empty: () => <AccountsPage accounts={[]} />,
   'fresh-install': () => <AccountsPage accounts={allAccounts.slice(0, 1)} />,
   'no-archived': () => <AccountsPage accounts={allAccounts.filter((a) => !a.archived)} />,
+  'no-results': () => <AccountsPage accounts={allAccounts} initialQuery="westpac" />,
 };
 
 export default function AccountsScreen() {
