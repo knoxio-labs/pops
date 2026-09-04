@@ -36,10 +36,11 @@ function toAccountPayload(values: AccountFormValues) {
 /** Create/update mutations for the accounts form, including the gift-card-details follow-up write. */
 export function useAccountMutations(onSuccess: () => void) {
   const queryClient = useQueryClient();
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
-    void queryClient.invalidateQueries({ queryKey: ALL_ACCOUNTS_KEY });
-  };
+  const invalidate = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY }),
+      queryClient.invalidateQueries({ queryKey: ALL_ACCOUNTS_KEY }),
+    ]);
 
   const createMutation = useMutation({
     mutationFn: async (values: AccountFormValues) => {
