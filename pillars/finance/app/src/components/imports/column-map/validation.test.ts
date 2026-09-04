@@ -78,6 +78,7 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
     const expected = crypto
       .SHA256(
         buildImportDedupKey({
+          account: 'Amex',
           date: '2026-01-15',
           amount: -42.5,
           description: 'STARBUCKS STORE 1234',
@@ -86,11 +87,17 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
       )
       .toString();
     expect(parsed?.checksum).toBe(expected);
-    // Pinned digest shared with the backend migration test — proves the browser
-    // parser and the re-key migration agree byte-for-byte.
+    // Pinned digest shared with the contract-level unit test — proves the
+    // browser parser and the pure key builder agree byte-for-byte.
     expect(parsed?.checksum).toBe(
-      '7d245cd708a1e3d9ca94a1ba704da5451f17d06b357dd718504ff0f615502605'
+      '809520f1327bd7c8e17e0e7c2c979323af7c7dbe19c23b8d9172e9594406cbf4'
     );
+  });
+
+  it('scopes the checksum to the selected account (POPS-2773)', () => {
+    const amex = validateAllRows([baseRow], columnMap, 'Amex').parsedTransactions[0];
+    const anz = validateAllRows([baseRow], columnMap, 'ANZ Credit Card').parsedTransactions[0];
+    expect(amex?.checksum).not.toBe(anz?.checksum);
   });
 
   it('dedupes even when the CSV carries no reference column', () => {

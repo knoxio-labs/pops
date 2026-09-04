@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { buildImportDedupKeyFromStoredRow } from '../../contract/import-dedup.js';
+import { buildLegacyDedupKeyFromStoredRow } from '../../contract/import-dedup.js';
 import { registerFinanceSqlFunctions } from '../open-finance-db.js';
 
 /**
@@ -86,7 +86,7 @@ function seed(raw: Database.Database, row: SeedRow): void {
 function canonicalChecksum(
   row: Pick<SeedRow, 'date' | 'amount' | 'description' | 'rawRow'>
 ): string {
-  const key = buildImportDedupKeyFromStoredRow({
+  const key = buildLegacyDedupKeyFromStoredRow({
     date: row.date,
     amount: row.amount,
     description: row.description,

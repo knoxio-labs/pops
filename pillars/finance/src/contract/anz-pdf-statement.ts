@@ -105,7 +105,12 @@ function toTransaction(
   const { description, location, country, foreignCharge } = parseAnzDescription(rawDescription);
   if (!description) return undefined;
 
-  const dedupKey = buildImportDedupKey({ date, amount, description: rawDescription });
+  const dedupKey = buildImportDedupKey({
+    account: options.account,
+    date,
+    amount,
+    description: rawDescription,
+  });
   return {
     date,
     description,

@@ -20,7 +20,11 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
-import { buildImportDedupKeyFromStoredRow } from '../contract/import-dedup.js';
+import {
+  buildImportDedupKeyFromStoredRow,
+  buildLegacyDedupKeyFromStoredRow,
+} from '../contract/import-dedup.js';
+import { centsToDollars } from '../money.js';
 import { anzForeignChargeNoteField } from './anz-fx-note.js';
 import { rawRowForeignField } from './raw-row-foreign-charge.js';
 
@@ -80,11 +84,29 @@ export interface OpenedFinanceDb {
  * Register the finance pillar's custom SQLite functions on a raw connection.
  *
  * `finance_canonical_checksum(date, amount, description, raw_row)` recomputes a
- * transaction's canonical dedup checksum (see {@link buildImportDedupKeyFromStoredRow}).
- * It exists so migration `0059_recompute_canonical_checksum` can re-key every
+ * transaction's pre-account dedup checksum (see
+ * {@link buildLegacyDedupKeyFromStoredRow}). It exists ONLY so migration
+ * `0059_recompute_canonical_checksum` keeps producing byte-identical output
+ * when it replays on a fresh install — it MUST be registered before
+ * {@link migrate} runs. Its 4-argument signature is frozen: do not add
+ * `account` to it, or a fresh install replaying `0059` would call it with the
+ * wrong arity and abort. Its output is immediately superseded by `0087`'s
+ * recompute below, so nothing downstream of that migration depends on it.
+ *
+ * `finance_account_scoped_checksum(date, amount_cents, description, raw_row, account)`
+ * recomputes a transaction's CURRENT canonical dedup checksum (see
+ * {@link buildImportDedupKeyFromStoredRow}), scoped to the account (POPS-2773).
+ * It exists so migration `0087_scope_dedup_key_to_account` can re-key every
  * stored row from SQL — it MUST be registered before {@link migrate} runs, and
  * derives the identical key the browser parser hashes so an existing row and a
- * re-import of the same charge collide.
+ * re-import of the same charge, for the same account, collide. Its second
+ * argument is `transactions.amount_cents` (integer cents, the storage format
+ * since `0064`); it is converted back to the decimal-dollar amount the
+ * checksum has always been keyed on via {@link centsToDollars} — the browser
+ * parser never sees cents, so the key must not either. Its 5 arguments are
+ * read off a `(...args)` rest parameter and registered with `varargs: true`
+ * rather than 5 named parameters, to stay under this codebase's `max-params`
+ * lint limit; the handler throws if SQL ever calls it with the wrong count.
  *
  * `finance_anz_fx_note(notes, field)` reads one field back out of a legacy ANZ
  * foreign-charge note (see `anz-fx-note.ts`), returning NULL for any note it did
@@ -104,11 +126,31 @@ export function registerFinanceSqlFunctions(raw: Database.Database): void {
     'finance_canonical_checksum',
     { deterministic: true },
     (date: unknown, amount: unknown, description: unknown, rawRow: unknown): string => {
-      const key = buildImportDedupKeyFromStoredRow({
+      const key = buildLegacyDedupKeyFromStoredRow({
         date: typeof date === 'string' ? date : String(date ?? ''),
         amount: typeof amount === 'number' ? amount : Number(amount ?? 0),
         description: typeof description === 'string' ? description : String(description ?? ''),
         rawRow: typeof rawRow === 'string' ? rawRow : null,
+      });
+      return createHash('sha256').update(key).digest('hex');
+    }
+  );
+  raw.function(
+    'finance_account_scoped_checksum',
+    { deterministic: true, varargs: true },
+    (...args: unknown[]): string => {
+      if (args.length !== 5) {
+        throw new Error(`finance_account_scoped_checksum expects 5 arguments, got ${args.length}`);
+      }
+      const [date, amountCents, description, rawRow, account] = args;
+      const key = buildImportDedupKeyFromStoredRow({
+        date: typeof date === 'string' ? date : String(date ?? ''),
+        amount: centsToDollars(
+          typeof amountCents === 'number' ? amountCents : Number(amountCents ?? 0)
+        ),
+        description: typeof description === 'string' ? description : String(description ?? ''),
+        rawRow: typeof rawRow === 'string' ? rawRow : null,
+        account: typeof account === 'string' ? account : String(account ?? ''),
       });
       return createHash('sha256').update(key).digest('hex');
     }
