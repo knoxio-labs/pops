@@ -38,6 +38,12 @@ function readAsBase64(file: File): Promise<string> {
   });
 }
 
+/**
+ * @param onChanged Receives the institution row the server returned. It can
+ * fire long after the dialog that started the mutation has moved on to another
+ * institution — or closed — so the caller must reconcile the row's identity
+ * against whatever it is currently editing rather than applying it blindly.
+ */
 export function useInstitutionLogoMutations(onChanged: (institution: Institution) => void) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: INSTITUTIONS_KEY });

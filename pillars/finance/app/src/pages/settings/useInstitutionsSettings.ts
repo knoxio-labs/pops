@@ -1,6 +1,6 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
@@ -67,7 +67,18 @@ export function useInstitutionsSettings() {
     setDeletingId,
   });
 
-  const logo = useInstitutionLogoMutations(setEditing);
+  // A logo mutation outlives the dialog it was started from: the dialog's
+  // close-guard cannot prevent that, because `open` is derived from `editing`
+  // and `updateMutation.onSuccess` nulls `editing` directly, and because
+  // `uploadLogo` reads the file before it starts the mutation — so nothing is
+  // "pending" for the length of that read. Discard a result whose institution
+  // is no longer the one on screen, or it would retarget the open form at the
+  // institution the user has already navigated away from (POPS-2804).
+  const applyLogoChange = useCallback((institution: Institution) => {
+    setEditing((current) => (current?.id === institution.id ? institution : current));
+  }, []);
+
+  const logo = useInstitutionLogoMutations(applyLogoChange);
 
   const form = useForm<InstitutionFormValues>({
     resolver: standardSchemaResolver(InstitutionFormSchema),

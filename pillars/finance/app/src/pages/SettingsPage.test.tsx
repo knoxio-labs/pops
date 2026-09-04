@@ -59,7 +59,12 @@ function makeInstitution(overrides: Partial<Institution> = {}): Institution {
   };
 }
 
-const instA = makeInstitution({ id: 'inst-a', name: 'Alpha Bank', colour: '#111111' });
+const instA = makeInstitution({
+  id: 'inst-a',
+  name: 'Alpha Bank',
+  colour: '#111111',
+  logoAssetId: 'asset-a',
+});
 const instB = makeInstitution({ id: 'inst-b', name: 'Beta Bank', colour: '#222222' });
 
 function renderSection() {
@@ -75,6 +80,7 @@ function renderSection() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   institutionsListMock.mockResolvedValue({ data: { data: [instA, instB] }, error: undefined });
   institutionsUpdateMock.mockImplementation(
     async ({ path, body }: { path: { id: string }; body: { name: string; colour: string } }) => ({
@@ -143,5 +149,118 @@ describe('InstitutionsSection — logo upload race (POPS-2804)', () => {
     expect(institutionsUpdateMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ path: { id: 'inst-a' } })
     );
+  });
+
+  it('keeps the form on the institution the user switched to when a logo removal outlives the dialog, because the name/colour save closed it first', async () => {
+    const user = userEvent.setup();
+    let resolveUpdate!: (value: unknown) => void;
+    let resolveRemove!: (value: unknown) => void;
+    institutionsUpdateMock.mockImplementation(
+      () => new Promise((resolve) => (resolveUpdate = resolve))
+    );
+    institutionsRemoveLogoMock.mockImplementation(
+      () => new Promise((resolve) => (resolveRemove = resolve))
+    );
+
+    renderSection();
+    await screen.findByText('Alpha Bank');
+
+    await user.click(screen.getByRole('button', { name: 'Edit Alpha Bank' }));
+    await screen.findByDisplayValue('Alpha Bank');
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(institutionsUpdateMock).toHaveBeenCalledTimes(1));
+
+    // The logo controls are NOT gated on the name/colour mutation.
+    await user.click(screen.getByRole('button', { name: 'Remove logo' }));
+    await waitFor(() => expect(institutionsRemoveLogoMock).toHaveBeenCalledTimes(1));
+
+    // Update wins the race: its onSuccess sets editing to null, closing the
+    // dialog while the removal is still in flight. `open` is driven by
+    // `editing`, so the isSubmitting close-guard never runs.
+    resolveUpdate({ data: { data: instA, message: 'Institution updated' }, error: undefined });
+    await waitFor(() => expect(screen.queryByDisplayValue('Alpha Bank')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit Beta Bank' }));
+    const nameInput = await screen.findByDisplayValue('Beta Bank');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Beta Bank Renamed');
+
+    // Alpha's removal now resolves and calls setEditing(alpha).
+    resolveRemove({
+      data: { data: { ...instA, logoAssetId: null }, message: 'Logo removed' },
+      error: undefined,
+    });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled());
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(institutionsUpdateMock).toHaveBeenCalledTimes(2));
+    expect(institutionsUpdateMock).toHaveBeenLastCalledWith({
+      path: { id: 'inst-b' },
+      body: { name: 'Beta Bank Renamed', colour: instB.colour },
+    });
+  });
+
+  it("keeps the form on the institution the user switched to when the dialog is dismissed during the upload's file read, before the mutation is pending", async () => {
+    const user = userEvent.setup();
+    let finishRead!: () => void;
+    class HangingFileReader {
+      public result: string | null = null;
+      public error: DOMException | null = null;
+      public onload: (() => void) | null = null;
+      public onerror: (() => void) | null = null;
+      readAsDataURL() {
+        finishRead = () => {
+          this.result = 'data:image/png;base64,QUJD';
+          this.onload?.();
+        };
+      }
+    }
+    vi.stubGlobal('FileReader', HangingFileReader);
+
+    let resolveUpload!: (value: unknown) => void;
+    institutionsUploadLogoMock.mockImplementation(
+      () => new Promise((resolve) => (resolveUpload = resolve))
+    );
+
+    renderSection();
+    await screen.findByText('Alpha Bank');
+    await user.click(screen.getByRole('button', { name: 'Edit Alpha Bank' }));
+    await screen.findByDisplayValue('Alpha Bank');
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!fileInput) throw new Error('logo file input not found');
+    await user.upload(fileInput, new File(['x'], 'logo.png', { type: 'image/png' }));
+
+    // The file is still being read, so `uploadMutation.mutate` has not been
+    // called and nothing reads as pending — the close-guard is open here.
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    expect(cancelButton).not.toBeDisabled();
+    await user.click(cancelButton);
+    await waitFor(() => expect(screen.queryByDisplayValue('Alpha Bank')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit Beta Bank' }));
+    const nameInput = await screen.findByDisplayValue('Beta Bank');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Beta Bank Renamed');
+
+    finishRead();
+    await waitFor(() => expect(institutionsUploadLogoMock).toHaveBeenCalledTimes(1));
+    resolveUpload({ data: { data: instA, message: 'Logo uploaded' }, error: undefined });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled());
+    // Alpha carries a logo and Beta does not, so the remove control is a direct
+    // readout of which institution the open dialog is bound to. The form's own
+    // values are not — they survive a retarget untouched, which is the whole
+    // danger.
+    expect(screen.queryByRole('button', { name: 'Remove logo' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(institutionsUpdateMock).toHaveBeenCalledTimes(1));
+    expect(institutionsUpdateMock).toHaveBeenCalledWith({
+      path: { id: 'inst-b' },
+      body: { name: 'Beta Bank Renamed', colour: instB.colour },
+    });
   });
 });
