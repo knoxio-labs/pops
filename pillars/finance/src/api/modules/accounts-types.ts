@@ -6,6 +6,7 @@
 import type { AccountKind } from '../../contract/account-kind.js';
 import type {
   AccountEntityDisplay,
+  AccountMergePreview,
   AccountRow,
   CreateAccountInput,
   UpdateAccountInput,
@@ -92,5 +93,29 @@ export function toUpdateAccountInput(body: UpdateAccountBody): UpdateAccountInpu
     displayOrder: body.displayOrder,
     entityId: body.entityId,
     archivedAt: body.archivedAt,
+  };
+}
+
+/** API response shape for `POST /accounts/:id/merge/preview` (POPS-2812). */
+export interface AccountMergePreviewBody {
+  source: Account;
+  target: Account;
+  transactionCount: number;
+  resultingBalanceCents: number;
+  hasGiftCardDetailsConflict: boolean;
+}
+
+/** Map a merge preview (plus its two accounts' resolved contact displays) to the API response shape. */
+export function toAccountMergePreviewBody(
+  preview: AccountMergePreview,
+  sourceDisplay: AccountEntityDisplay,
+  targetDisplay: AccountEntityDisplay
+): AccountMergePreviewBody {
+  return {
+    source: toAccount(preview.source, sourceDisplay),
+    target: toAccount(preview.target, targetDisplay),
+    transactionCount: preview.transactionCount,
+    resultingBalanceCents: preview.resultingBalanceCents,
+    hasGiftCardDetailsConflict: preview.hasGiftCardDetailsConflict,
   };
 }

@@ -2,10 +2,13 @@
  * Handlers for the `accounts.*` sub-router. `translateAccountError` maps db
  * domain errors (`AccountNotFoundError`, `AccountNameConflictError`,
  * `ReservedAccountKindError`, `PersonAccountRequiresEntityError`,
- * `NonPersonAccountHasEntityError`, `PersonAccountEntityConflictError`) to
+ * `NonPersonAccountHasEntityError`, `PersonAccountEntityConflictError`, and
+ * the `AccountMerge*` refusal family from `db/services/merge-accounts.ts`) to
  * shared `HttpError` subclasses so
  * `runHttp` yields 404 / 409 / 422. `delete` archives rather than removing
- * the row (see `db/services/accounts.ts`).
+ * the row (see `db/services/accounts.ts`); `merge` is the one exception —
+ * it deletes the source account outright once its transactions are
+ * repointed (POPS-2812).
  *
  * `create` resolves a `person` account's contact BEFORE inserting the row
  * (POPS-2771): `resolvePersonAccountEntity` calls contacts, and its result
@@ -14,12 +17,19 @@
  * row's `entityDisplayName` afterwards via `resolveAccountEntityDisplays`.
  */
 import {
+  AccountMergeCurrencyMismatchError,
+  AccountMergeGiftCardDetailsConflictError,
+  AccountMergePendingResolutionError,
+  AccountMergeSameAccountError,
+  AccountMergeSignMismatchError,
   AccountNameConflictError,
   AccountNotFoundError,
   accountsService,
+  mergeAccounts,
   NonPersonAccountHasEntityError,
   PersonAccountEntityConflictError,
   PersonAccountRequiresEntityError,
+  previewAccountMerge,
   resolveAccountEntityDisplays,
   ReservedAccountKindError,
   type AccountRow,
@@ -28,6 +38,7 @@ import {
 import { type ContactsClient } from '../contacts/client.js';
 import {
   toAccount,
+  toAccountMergePreviewBody,
   toCreateAccountInput,
   toUpdateAccountInput,
   type Account,
@@ -46,15 +57,31 @@ type Req = ServerInferRequest<typeof financeAccountsContract>;
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 
+/**
+ * Domain errors that are always "well-formed request, semantically invalid
+ * target" — mapped to 422 with the error's own message verbatim, unlike
+ * `AccountNotFoundError`/`AccountNameConflictError`/
+ * `PersonAccountEntityConflictError` below, which each need bespoke handling
+ * (a supplied `id`, or a different status code).
+ */
+const UNPROCESSABLE_ACCOUNT_ERRORS = [
+  ReservedAccountKindError,
+  PersonAccountRequiresEntityError,
+  NonPersonAccountHasEntityError,
+  AccountMergeSameAccountError,
+  AccountMergeCurrencyMismatchError,
+  AccountMergeSignMismatchError,
+  AccountMergeGiftCardDetailsConflictError,
+  AccountMergePendingResolutionError,
+] as const;
+
 function translateAccountError(err: unknown, id?: string): never {
   if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', id ?? err.id);
   if (err instanceof AccountNameConflictError) throw new ConflictError(err.message);
   if (err instanceof PersonAccountEntityConflictError) throw new ConflictError(err.message);
-  if (err instanceof ReservedAccountKindError) throw new UnprocessableEntityError(err.message);
-  if (err instanceof PersonAccountRequiresEntityError)
+  if (err instanceof Error && UNPROCESSABLE_ACCOUNT_ERRORS.some((ctor) => err instanceof ctor)) {
     throw new UnprocessableEntityError(err.message);
-  if (err instanceof NonPersonAccountHasEntityError)
-    throw new UnprocessableEntityError(err.message);
+  }
   throw err;
 }
 
@@ -160,6 +187,42 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           return {
             status: 200 as const,
             body: { data: await toOneAccount(row, contacts), message: 'Account archived' },
+          };
+        } catch (err) {
+          translateAccountError(err, params.id);
+        }
+      }),
+
+    previewMerge: ({ params, body }: Req['previewMerge']) =>
+      runHttp(async () => {
+        try {
+          const preview = previewAccountMerge(db, params.id, body.targetId);
+          const displays = await resolveAccountEntityDisplays(contacts, [
+            preview.source,
+            preview.target,
+          ]);
+          return {
+            status: 200 as const,
+            body: {
+              data: toAccountMergePreviewBody(
+                preview,
+                displays.get(preview.source.id) ?? NOT_A_PERSON,
+                displays.get(preview.target.id) ?? NOT_A_PERSON
+              ),
+            },
+          };
+        } catch (err) {
+          translateAccountError(err, params.id);
+        }
+      }),
+
+    merge: ({ params, body }: Req['merge']) =>
+      runHttp(async () => {
+        try {
+          const row = mergeAccounts(db, params.id, body.targetId);
+          return {
+            status: 200 as const,
+            body: { data: await toOneAccount(row, contacts), message: 'Accounts merged' },
           };
         } catch (err) {
           translateAccountError(err, params.id);

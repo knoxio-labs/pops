@@ -99,6 +99,12 @@ export type {
   UpdateAccountInput,
 } from './services/accounts.js';
 
+export {
+  mergeAccounts,
+  previewAccountMerge,
+  type AccountMergePreview,
+} from './services/merge-accounts.js';
+
 export * as giftCardDetailsService from './services/gift-card-details.js';
 
 export type {

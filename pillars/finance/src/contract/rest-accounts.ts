@@ -19,6 +19,12 @@
  * `entityDisplayNameStale` are read-only response fields: the contact's
  * current name resolved live from contacts, degrading to the account's own
  * stored `name` (marked stale) when contacts can't be reached.
+ *
+ * `merge`/`previewMerge` (POPS-2812) fold `:id` (the source) into `targetId`:
+ * every transaction repoints onto `targetId` and the source row is deleted
+ * outright — the one exception to "accounts are never deleted" (POPS-2808),
+ * since by then nothing references it. Irreversible, so `previewMerge`
+ * exists to show the transaction count and resulting balance first.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -77,6 +83,17 @@ const ReorderAccountsBody = z.object({
   accounts: z
     .array(z.object({ id: z.string(), displayOrder: z.number().int() }))
     .min(1, 'At least one account is required'),
+});
+
+const MergeAccountBody = z.object({ targetId: z.string().min(1, 'targetId is required') });
+
+/** Shape served by `POST /accounts/:id/merge/preview` — see `mergeAccounts` (POPS-2812). */
+export const AccountMergePreviewSchema = z.object({
+  source: AccountSchema,
+  target: AccountSchema,
+  transactionCount: z.number().int(),
+  resultingBalanceCents: z.number().int(),
+  hasGiftCardDetailsConflict: z.boolean(),
 });
 
 export const financeAccountsContract = c.router({
@@ -138,5 +155,28 @@ export const financeAccountsContract = c.router({
     body: z.object({}).optional(),
     responses: { 200: AccountMutation, ...ERR_RESPONSES },
     summary: 'Archive an account (sets archivedAt); idempotent if already archived',
+  },
+  previewMerge: {
+    method: 'POST',
+    path: '/accounts/:id/merge/preview',
+    pathParams: z.object({ id: z.string() }),
+    body: MergeAccountBody,
+    responses: {
+      200: z.object({ data: AccountMergePreviewSchema }),
+      ...ERR_RESPONSES_WITH_422,
+    },
+    summary:
+      'Preview merging account :id (the source) into targetId, without writing anything; ' +
+      'rejects with 422 for a merge that cannot be meaningful (self, cross-currency, cross-sign-convention)',
+  },
+  merge: {
+    method: 'POST',
+    path: '/accounts/:id/merge',
+    pathParams: z.object({ id: z.string() }),
+    body: MergeAccountBody,
+    responses: { 200: AccountMutation, ...ERR_RESPONSES_WITH_422 },
+    summary:
+      'Merge account :id (the source) into targetId: repoint its transactions onto targetId ' +
+      'and delete it outright. Irreversible — the caller should show the preview first',
   },
 });
