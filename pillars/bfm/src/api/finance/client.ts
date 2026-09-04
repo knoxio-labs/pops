@@ -17,8 +17,11 @@ import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
 import {
+  FinanceAccountGetResponseSchema,
+  FinanceAccountListResponseSchema,
   FinanceTransactionGetResponseSchema,
   FinanceTransactionListResponseSchema,
+  toMobileAccount,
   toMobileTransaction,
   toMobileTransactionDetail,
 } from './wire.js';
@@ -26,6 +29,8 @@ import {
 import type { z } from 'zod';
 
 import type {
+  MobileAccount,
+  MobileAccountsPage,
   MobileTransactionDetail,
   MobileTransactionsPage,
 } from '../../contract/rest-schemas.js';
@@ -49,6 +54,14 @@ export type FinanceTransactionsRouter = {
   };
 };
 
+/** The subset of finance's router the mobile accounts screen calls. */
+export type FinanceAccountsRouter = {
+  accounts: {
+    list: (input: { limit?: number }) => Promise<unknown>;
+    get: (input: { id: string }) => Promise<unknown>;
+  };
+};
+
 export interface ListTransactionsRequest {
   /** Rows to return. The caller has already clamped this to the contract's cap. */
   readonly limit: number;
@@ -61,6 +74,49 @@ export interface MobileFinanceClient {
     request: ListTransactionsRequest
   ): Promise<GatewayOutcome<MobileTransactionsPage>>;
   getTransaction(id: string): Promise<GatewayOutcome<MobileTransactionDetail>>;
+  listAccounts(): Promise<GatewayOutcome<MobileAccountsPage>>;
+  getAccount(id: string): Promise<GatewayOutcome<MobileAccount>>;
+}
+
+/**
+ * Rows requested per {@link FinanceAccountsRouter.accounts.list} call — the
+ * contract's own cap, so one call gets every account without a second page.
+ */
+const ACCOUNT_LIST_LIMIT = 500;
+
+async function listAccounts(gateway: PillarGateway): Promise<GatewayOutcome<MobileAccountsPage>> {
+  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
+    handle.accounts.list({ limit: ACCOUNT_LIST_LIMIT })
+  );
+
+  const page = parseOrMismatch(
+    FINANCE_PILLAR_ID,
+    outcome,
+    FinanceAccountListResponseSchema,
+    'accounts.list'
+  );
+  if (!isGatewayOk(page)) return page;
+
+  return { kind: 'ok', value: { data: page.value.data.map(toMobileAccount) } };
+}
+
+async function getAccount(
+  gateway: PillarGateway,
+  id: string
+): Promise<GatewayOutcome<MobileAccount>> {
+  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
+    handle.accounts.get({ id })
+  );
+
+  const record = parseOrMismatch(
+    FINANCE_PILLAR_ID,
+    outcome,
+    FinanceAccountGetResponseSchema,
+    'accounts.get'
+  );
+  if (!isGatewayOk(record)) return record;
+
+  return { kind: 'ok', value: toMobileAccount(record.value.data) };
 }
 
 export function createMobileFinanceClient(gateway: PillarGateway): MobileFinanceClient {
@@ -106,6 +162,9 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
 
       return { kind: 'ok', value: toMobileTransactionDetail(record.value.data) };
     },
+
+    listAccounts: () => listAccounts(gateway),
+    getAccount: (id: string) => getAccount(gateway, id),
   };
 }
 

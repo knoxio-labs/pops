@@ -1257,7 +1257,7 @@ describe('against the live repo', () => {
     const bfmFinanceSites = sites.filter(
       (s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts'
     );
-    expect(bfmFinanceSites).toHaveLength(2);
+    expect(bfmFinanceSites).toHaveLength(4);
     expect(bfmFinanceSites.every((s) => s.producer === 'finance')).toBe(true);
   });
 

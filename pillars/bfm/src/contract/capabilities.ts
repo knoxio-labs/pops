@@ -41,6 +41,12 @@ export const MOBILE_CAPABILITIES = [
   'session.read',
   'finance.transactions.read',
   /**
+   * Read every account this device can see, active and archived alike — the
+   * accounts list and whatever a dashboard can build from today's fields
+   * (POPS-2848 tracks the rest, blocked on finance getting a balance).
+   */
+  'finance.accounts.read',
+  /**
    * Read an order and the page it sits on. Deliberately NOT implied by
    * {@link MOBILE_CAPABILITIES}' receipt-write entry: handing a phone the
    * ability to photograph a till slip is not the same as handing it a
@@ -84,6 +90,7 @@ export const MOBILE_SESSION_CAPABILITY: MobileCapability = 'session.read';
 export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string | null>> = {
   'session.read': null,
   'finance.transactions.read': 'finance.transactions',
+  'finance.accounts.read': 'finance.accounts',
   'purchases.read': 'purchases.purchase',
   /**
    * The same prefix the upload leans on, because both are purchases' own

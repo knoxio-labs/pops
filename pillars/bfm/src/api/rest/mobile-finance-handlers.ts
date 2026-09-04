@@ -67,5 +67,19 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
 
       return { status: 200 as const, body: outcome.value };
     },
+
+    listAccounts: async () => {
+      const outcome = await deps.finance.listAccounts();
+      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    getAccount: async ({ params }: Req['getAccount']) => {
+      const outcome = await deps.finance.getAccount(params.id);
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
   };
 }
