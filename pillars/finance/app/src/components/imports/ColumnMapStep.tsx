@@ -126,6 +126,7 @@ function useColumnMapState() {
     rows,
     columnMap,
     bankType,
+    accountId,
     setColumnMap,
     setParsedTransactions,
     nextStep,
@@ -147,10 +148,19 @@ function useColumnMapState() {
   );
 
   const handleNext = useCallback(() => {
+    // The Upload step's footer disables "Next" until an account is picked
+    // (POPS-2840), so `accountId` is always set by the time this step can
+    // even be reached. Guarded anyway rather than asserted, since a resumed
+    // session could in principle reach here with a store shape this step
+    // does not expect.
+    if (!accountId) {
+      setValidationErrors(['No account selected — go back and pick one before mapping columns.']);
+      return;
+    }
     setIsValidating(true);
     setValidationErrors([]);
     setTimeout(() => {
-      const validation = validateAllRows(rows, localColumnMap, bankType);
+      const validation = validateAllRows(rows, localColumnMap, bankType, accountId);
       if (!validation.valid) {
         setValidationErrors(validation.errors);
         setIsValidating(false);
@@ -160,7 +170,7 @@ function useColumnMapState() {
       setIsValidating(false);
       nextStep();
     }, 100);
-  }, [rows, localColumnMap, bankType, setParsedTransactions, nextStep]);
+  }, [rows, localColumnMap, bankType, accountId, setParsedTransactions, nextStep]);
 
   return {
     headers,

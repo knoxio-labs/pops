@@ -57,7 +57,7 @@ describe('extractReferenceValue', () => {
 
 describe('buildImportDedupKey', () => {
   const base = {
-    account: 'Amex',
+    accountId: 'acc-amex',
     date: '2026-01-15',
     amount: -42.5,
     description: 'STARBUCKS STORE 1234',
@@ -91,16 +91,25 @@ describe('buildImportDedupKey', () => {
     expect(buildImportDedupKey({ ...base, date: '2026-01-16' })).not.toBe(a);
     expect(buildImportDedupKey({ ...base, reference: 'REF-000' })).not.toBe(a);
     expect(buildImportDedupKey({ ...base, description: 'ALDI GROCERIES' })).not.toBe(a);
-    expect(buildImportDedupKey({ ...base, account: 'ANZ Credit Card' })).not.toBe(a);
+    expect(buildImportDedupKey({ ...base, accountId: 'acc-anz' })).not.toBe(a);
   });
 
-  it('scopes the key to the account (POPS-2773): identical rows on two accounts both commit', () => {
+  it('scopes the key to the real account id (POPS-2773, re-scoped by POPS-2852): identical rows on two accounts both commit', () => {
     // The same subscription billed to two cards on the same day is a
     // legitimate duplicate row across accounts, not a re-export of one charge —
     // each account must get its own dedup identity so both commit.
-    const amex = buildImportDedupKey({ ...base, account: 'Amex' });
-    const anz = buildImportDedupKey({ ...base, account: 'ANZ Credit Card' });
+    const amex = buildImportDedupKey({ ...base, accountId: 'acc-amex' });
+    const anz = buildImportDedupKey({ ...base, accountId: 'acc-anz' });
     expect(amex).not.toBe(anz);
+  });
+
+  it('scopes to the account id, not the bank dialect: two real accounts at the same bank differ', () => {
+    // The POPS-2773 fix scoped this key to the BankType dialect label
+    // (e.g. "ANZ Credit Card"), which two distinct real ANZ accounts share —
+    // so it never actually separated them. Keying on `accountId` does.
+    const anzPersonal = buildImportDedupKey({ ...base, accountId: 'acc-anz-personal' });
+    const anzJoint = buildImportDedupKey({ ...base, accountId: 'acc-anz-joint' });
+    expect(anzPersonal).not.toBe(anzJoint);
   });
 
   it('re-importing an existing file for the same account still dedupes', () => {
@@ -115,7 +124,7 @@ describe('buildImportDedupKey', () => {
     // Pinned against an independently computed digest; crypto-js in the browser
     // produces the same value (verified in the app-side validation test).
     expect(sha256(buildImportDedupKey(base))).toBe(
-      '809520f1327bd7c8e17e0e7c2c979323af7c7dbe19c23b8d9172e9594406cbf4'
+      '842b30b481c30e011f25e79a5a3cae463cb4bb50038eeba1e473d57eece5033f'
     );
   });
 
@@ -136,7 +145,7 @@ describe('buildImportDedupKeyFromStoredRow', () => {
       Address: '1 King St',
     });
     const fromStored = buildImportDedupKeyFromStoredRow({
-      account: 'Amex',
+      accountId: 'acc-amex',
       date: '2026-01-15',
       amount: -42.5,
       description: 'STARBUCKS STORE 1234',
@@ -144,7 +153,7 @@ describe('buildImportDedupKeyFromStoredRow', () => {
     });
     expect(fromStored).toBe(
       buildImportDedupKey({
-        account: 'Amex',
+        accountId: 'acc-amex',
         date: '2026-01-15',
         amount: -42.5,
         description: 'STARBUCKS STORE 1234',
@@ -155,7 +164,7 @@ describe('buildImportDedupKeyFromStoredRow', () => {
 
   it('re-keys two exports of one charge (differing Address) identically', () => {
     const common = {
-      account: 'Amex',
+      accountId: 'acc-amex',
       date: '2026-01-15',
       amount: -42.5,
       description: 'STARBUCKS STORE 1234',
@@ -178,21 +187,21 @@ describe('buildImportDedupKeyFromStoredRow', () => {
       description: 'STARBUCKS STORE 1234',
       rawRow: JSON.stringify({ Reference: 'REF-999' }),
     };
-    const amex = buildImportDedupKeyFromStoredRow({ ...common, account: 'Amex' });
-    const anz = buildImportDedupKeyFromStoredRow({ ...common, account: 'ANZ Credit Card' });
+    const amex = buildImportDedupKeyFromStoredRow({ ...common, accountId: 'acc-amex' });
+    const anz = buildImportDedupKeyFromStoredRow({ ...common, accountId: 'acc-anz' });
     expect(amex).not.toBe(anz);
   });
 
   it('tolerates null / malformed raw_row (reference becomes empty)', () => {
     const noRef = buildImportDedupKey({
-      account: 'Amex',
+      accountId: 'acc-amex',
       date: '2026-01-15',
       amount: -42.5,
       description: 'STARBUCKS STORE 1234',
     });
     expect(
       buildImportDedupKeyFromStoredRow({
-        account: 'Amex',
+        accountId: 'acc-amex',
         date: '2026-01-15',
         amount: -42.5,
         description: 'STARBUCKS STORE 1234',
@@ -201,7 +210,7 @@ describe('buildImportDedupKeyFromStoredRow', () => {
     ).toBe(noRef);
     expect(
       buildImportDedupKeyFromStoredRow({
-        account: 'Amex',
+        accountId: 'acc-amex',
         date: '2026-01-15',
         amount: -42.5,
         description: 'STARBUCKS STORE 1234',

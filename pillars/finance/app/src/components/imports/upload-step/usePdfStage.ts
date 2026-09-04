@@ -28,7 +28,7 @@ export function usePdfStage(
   setError: (message: string | null) => void,
   setIsProcessing: (busy: boolean) => void
 ): PdfStage {
-  const { setParsedTransactions, goToStep } = useImportStore();
+  const { accountId, setParsedTransactions, goToStep } = useImportStore();
   const [statement, setStatement] = useState<AnzPdfStatementImport | null>(null);
 
   const commit = useCallback(
@@ -49,9 +49,17 @@ export function usePdfStage(
       }
       setIsProcessing(true);
       setError(null);
+      // The account-step (POPS-2840) blocks reaching this stage without an
+      // accountId already picked, same invariant the CSV path's
+      // `ColumnMapStep` relies on.
+      if (!accountId) {
+        setIsProcessing(false);
+        setError('No account selected — go back and pick one before uploading a statement.');
+        return;
+      }
       // Finance cannot yet say what dates this account already holds, so the
       // overlap check does not run and the findings panel says so.
-      const decision = await readAnzPdfUpload(files, { known: false });
+      const decision = await readAnzPdfUpload(files, { known: false }, accountId);
       setIsProcessing(false);
       if (decision.kind === 'error') {
         setError(decision.message);
@@ -63,7 +71,7 @@ export function usePdfStage(
       }
       commit(decision.statement);
     },
-    [statement, commit, setError, setIsProcessing]
+    [statement, commit, setError, setIsProcessing, accountId]
   );
 
   return { statement, clear: useCallback(() => setStatement(null), []), run };

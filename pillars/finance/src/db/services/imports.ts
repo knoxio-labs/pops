@@ -20,7 +20,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
-import { resolveAccountIdByName } from './account-lookup.js';
+import { resolveImportAccountId } from './account-lookup.js';
 
 import type { ContactEntity } from '../../api/contacts/client.js';
 import type { TransactionType } from '../../contract/corrections-constants.js';
@@ -54,6 +54,13 @@ export interface EntityMaps {
 export interface InsertImportTransactionInput {
   description: string;
   account: string;
+  /**
+   * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
+   * this import. Preferred over `account` when supplied — see
+   * {@link resolveAccountIdentity}. Optional so a caller with no picker (a
+   * legacy client, or a fixture predating it) can still resolve by name.
+   */
+  accountId?: string;
   amountCents: number;
   date: string;
   type: TransactionType;
@@ -163,6 +170,15 @@ export function buildDefaultTagsByEntity(contacts: ContactEntity[]): Map<string,
  * reclassification of existing transactions) is cross-slice orchestration that
  * lives above the persistence layer; this primitive only writes the row.
  *
+ * `accountId` is resolved via {@link resolveImportAccountId} rather than
+ * name-matching `account` on its own (POPS-2852). Before the import wizard's
+ * account-step (POPS-2840) gave every row a real `accountId`, this had no
+ * choice but to name-match the bank/dialect label against `accounts.name`,
+ * which silently mis-resolved whenever two real accounts happened to share a
+ * dialect (two ANZ cards, say) or an account's real name did not literally
+ * match the dialect string. A caller with no `accountId` — a legacy client,
+ * or a fixture predating the picker — still resolves by name.
+ *
  * Throws `ImportTransactionPersistError` if the row is not readable after the
  * insert — a defensive check against silent SQLite write failures.
  */
@@ -178,7 +194,7 @@ export function insertImportTransaction(
       id,
       description: input.description,
       account: input.account,
-      accountId: resolveAccountIdByName(db, input.account),
+      accountId: resolveImportAccountId(db, input.account, input.accountId),
       amountCents: input.amountCents,
       date: input.date,
       type: input.type,

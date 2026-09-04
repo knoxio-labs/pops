@@ -4090,6 +4090,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
       };
       failed: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4153,6 +4154,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
       }>;
       matched: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4216,6 +4218,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
       }>;
       skipped: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4279,6 +4282,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
       }>;
       uncertain: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4471,6 +4475,7 @@ export type ImportsCommitImportData = {
     }>;
     transactions: Array<{
       account: string;
+      accountId?: string;
       amount: number;
       checksum: string;
       country?: string;
@@ -4631,6 +4636,7 @@ export type ImportsProcessImportData = {
     account: string;
     transactions: Array<{
       account: string;
+      accountId?: string;
       amount: number;
       checksum: string;
       country?: string;
@@ -4757,6 +4763,7 @@ export type ImportsGetImportProgressResponses = {
       };
       failed: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4820,6 +4827,7 @@ export type ImportsGetImportProgressResponses = {
       }>;
       matched: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4883,6 +4891,7 @@ export type ImportsGetImportProgressResponses = {
       }>;
       skipped: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -4946,6 +4955,7 @@ export type ImportsGetImportProgressResponses = {
       }>;
       uncertain: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -5159,6 +5169,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
       };
       failed: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -5222,6 +5233,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
       }>;
       matched: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -5285,6 +5297,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
       }>;
       skipped: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;
@@ -5348,6 +5361,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
       }>;
       uncertain: Array<{
         account: string;
+        accountId?: string;
         amount: number;
         checksum: string;
         country?: string;

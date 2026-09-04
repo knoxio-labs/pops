@@ -27,7 +27,7 @@ function amexRow(overrides: Record<string, string> = {}): Record<string, string>
 }
 
 function parseOne(row: Record<string, string>, columnMap = COLUMN_MAP) {
-  const result = validateAllRows([row], columnMap, 'Amex');
+  const result = validateAllRows([row], columnMap, 'Amex', 'acc-test');
   expect(result.errors).toEqual([]);
   return result.parsedTransactions[0];
 }

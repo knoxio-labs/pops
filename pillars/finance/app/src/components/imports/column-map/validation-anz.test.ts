@@ -23,26 +23,41 @@ const REPAYMENT = anzRow('23/07/2026', '500.00', 'PAYMENT THANKYOU 754244');
 
 describe('ANZ credit card — amount sign', () => {
   it('keeps a purchase negative rather than flipping it to income', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [PURCHASE],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
     expect(parsedTransactions[0]?.amount).toBe(-23.22);
   });
 
   it('keeps a card repayment positive', () => {
-    const { parsedTransactions } = validateAllRows([REPAYMENT], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [REPAYMENT],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
     expect(parsedTransactions[0]?.amount).toBe(500);
   });
 
   it('flips the sign for a debit-positive bank on the same input', () => {
     // Guards the convention itself: were the dialect ignored, both banks would
     // agree here and the ANZ assertions above would pass for the wrong reason.
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'Amex');
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'Amex', 'acc-test');
     expect(parsedTransactions[0]?.amount).toBe(23.22);
   });
 });
 
 describe('ANZ credit card — derived fields', () => {
   it('stores the merchant and suburb separately', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [PURCHASE],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
     expect(parsedTransactions[0]).toMatchObject({
       description: 'ALDI STORES - MARRICKV',
       location: 'Marrickville',
@@ -55,7 +70,7 @@ describe('ANZ credit card — derived fields', () => {
       '-148.63',
       'GITHUB  INC.              GITHUB.COM  100.00  USD 5.03 AUD'
     );
-    const { parsedTransactions } = validateAllRows([row], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows([row], columnMap, 'ANZ Credit Card', 'acc-test');
     expect(parsedTransactions[0]).toMatchObject({
       description: 'GITHUB INC.',
       location: 'Github.com',
@@ -68,13 +83,13 @@ describe('ANZ credit card — derived fields', () => {
 
   it('leaves location unset when the detail field is a merchant phone number', () => {
     const row = anzRow('31/07/2026', '-23.22', 'PP*HUMBLEBUNDL HUMBLEBUND 4029357733');
-    const { parsedTransactions } = validateAllRows([row], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows([row], columnMap, 'ANZ Credit Card', 'acc-test');
     expect(parsedTransactions[0]?.description).toBe('PP*HUMBLEBUNDL HUMBLEBUND');
     expect(parsedTransactions[0]?.location).toBeUndefined();
   });
 
   it('leaves a headed bank alone — its description is stored as exported', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'Amex');
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'Amex', 'acc-test');
     expect(parsedTransactions[0]?.description).toBe('ALDI STORES - MARRICKV    MARRICKVILLE');
     expect(parsedTransactions[0]?.location).toBeUndefined();
   });
@@ -91,22 +106,28 @@ describe('ANZ credit card — dedup identity', () => {
     const { parsedTransactions } = validateAllRows(
       [kensington, springfield],
       columnMap,
-      'ANZ Credit Card'
+      'ANZ Credit Card',
+      'acc-test'
     );
     expect(parsedTransactions[0]?.description).toBe(parsedTransactions[1]?.description);
     expect(parsedTransactions[0]?.checksum).not.toBe(parsedTransactions[1]?.checksum);
   });
 
   it('gives the same charge the same checksum across re-exports', () => {
-    const first = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
-    const second = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
+    const first = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card', 'acc-test');
+    const second = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card', 'acc-test');
     expect(first.parsedTransactions[0]?.checksum).toBe(second.parsedTransactions[0]?.checksum);
   });
 
   it('distinguishes two genuinely different charges on the same day', () => {
     const toll = anzRow('10/12/2025', '-40.20', 'TRANSPORT NSW ETOLL       PARRAMATTA');
     const coffee = anzRow('10/12/2025', '-40.20', 'SQ *THE WOOD ROASTER ESPR Marrickville');
-    const { parsedTransactions } = validateAllRows([toll, coffee], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [toll, coffee],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
     expect(parsedTransactions[0]?.checksum).not.toBe(parsedTransactions[1]?.checksum);
   });
 });
@@ -118,7 +139,12 @@ describe('ANZ credit card — dedup identity', () => {
  */
 describe('ANZ credit card — foreign-charge capture provenance', () => {
   it('declares the descriptor as the capture source on a domestic row', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [PURCHASE],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
 
     expect(parsedTransactions[0]?.foreignCurrency).toBeUndefined();
     expect(parsedTransactions[0]?.country).toBeUndefined();
@@ -132,14 +158,19 @@ describe('ANZ credit card — foreign-charge capture provenance', () => {
       'GITHUB  INC.              GITHUB.COM  100.00  USD 5.03 AUD'
     );
 
-    const { parsedTransactions } = validateAllRows([foreign], columnMap, 'ANZ Credit Card');
+    const { parsedTransactions } = validateAllRows(
+      [foreign],
+      columnMap,
+      'ANZ Credit Card',
+      'acc-test'
+    );
 
     expect(parsedTransactions[0]?.foreignCurrency).toBe('USD');
     expect(parsedTransactions[0]?.fxCaptureSource).toBe('anz-descriptor');
   });
 
   it('declares a bank whose export carries no foreign detail as unavailable', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ING');
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ING', 'acc-test');
 
     expect(parsedTransactions[0]?.fxCaptureSource).toBe('unavailable');
   });

@@ -129,6 +129,8 @@ describe('GET /openapi', () => {
     const mobilePaths = Object.keys(body.paths ?? {}).filter((path) => path.startsWith('/mobile'));
     expect(mobilePaths.toSorted()).toEqual([
       '/mobile/bootstrap',
+      '/mobile/finance/accounts',
+      '/mobile/finance/accounts/{id}',
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
       '/mobile/purchases',

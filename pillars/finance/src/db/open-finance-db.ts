@@ -94,12 +94,24 @@ export interface OpenedFinanceDb {
  * recompute below, so nothing downstream of that migration depends on it.
  *
  * `finance_account_scoped_checksum(date, amount_cents, description, raw_row, account)`
+ * recomputed the dedup checksum scoped to the bank/dialect label (POPS-2773).
+ * It exists ONLY so migration `0087_scope_dedup_key_to_account` keeps
+ * producing byte-identical output when it replays on a fresh install — it
+ * MUST be registered before {@link migrate} runs, and its 5-argument shape is
+ * frozen exactly like `finance_canonical_checksum` above: do not repoint it at
+ * `transactions.account_id`. Its output is immediately superseded by `0089`'s
+ * recompute below, so nothing downstream of that migration depends on it.
+ *
+ * `finance_account_id_scoped_checksum(date, amount_cents, description, raw_row, account_id)`
  * recomputes a transaction's CURRENT canonical dedup checksum (see
- * {@link buildImportDedupKeyFromStoredRow}), scoped to the account (POPS-2773).
- * It exists so migration `0087_scope_dedup_key_to_account` can re-key every
- * stored row from SQL — it MUST be registered before {@link migrate} runs, and
- * derives the identical key the browser parser hashes so an existing row and a
- * re-import of the same charge, for the same account, collide. Its second
+ * {@link buildImportDedupKeyFromStoredRow}), scoped to the real account id
+ * (POPS-2852, re-scoping POPS-2773's dialect-label key now that the wizard has
+ * a real `accountId` before parsing even starts — POPS-2840). It exists so
+ * migration `0089_scope_dedup_key_to_account_id` can re-key every stored row
+ * from SQL — it MUST be registered before {@link migrate} runs, and derives
+ * the identical key the browser parser hashes so an existing row and a
+ * re-import of the same charge, for the same account, collide, while two
+ * different real accounts sharing one bank dialect no longer do. Its second
  * argument is `transactions.amount_cents` (integer cents, the storage format
  * since `0064`); it is converted back to the decimal-dollar amount the
  * checksum has always been keyed on via {@link centsToDollars} — the browser
@@ -143,6 +155,13 @@ export function registerFinanceSqlFunctions(raw: Database.Database): void {
         throw new Error(`finance_account_scoped_checksum expects 5 arguments, got ${args.length}`);
       }
       const [date, amountCents, description, rawRow, account] = args;
+      // `buildImportDedupKeyFromStoredRow` now takes `accountId`, not `account` —
+      // renamed by POPS-2852 once the key itself moved to the real account id
+      // (see the module doc comment). This function is frozen at the OLD,
+      // dialect-scoped shape for `0087`'s replay, so it keeps feeding the same
+      // dialect-string value through under the new parameter name; it must not
+      // start reading `transactions.account_id` instead, or `0087`'s recompute
+      // would stop being byte-identical to what it always produced.
       const key = buildImportDedupKeyFromStoredRow({
         date: typeof date === 'string' ? date : String(date ?? ''),
         amount: centsToDollars(
@@ -150,7 +169,29 @@ export function registerFinanceSqlFunctions(raw: Database.Database): void {
         ),
         description: typeof description === 'string' ? description : String(description ?? ''),
         rawRow: typeof rawRow === 'string' ? rawRow : null,
-        account: typeof account === 'string' ? account : String(account ?? ''),
+        accountId: typeof account === 'string' ? account : String(account ?? ''),
+      });
+      return createHash('sha256').update(key).digest('hex');
+    }
+  );
+  raw.function(
+    'finance_account_id_scoped_checksum',
+    { deterministic: true, varargs: true },
+    (...args: unknown[]): string => {
+      if (args.length !== 5) {
+        throw new Error(
+          `finance_account_id_scoped_checksum expects 5 arguments, got ${args.length}`
+        );
+      }
+      const [date, amountCents, description, rawRow, accountId] = args;
+      const key = buildImportDedupKeyFromStoredRow({
+        date: typeof date === 'string' ? date : String(date ?? ''),
+        amount: centsToDollars(
+          typeof amountCents === 'number' ? amountCents : Number(amountCents ?? 0)
+        ),
+        description: typeof description === 'string' ? description : String(description ?? ''),
+        rawRow: typeof rawRow === 'string' ? rawRow : null,
+        accountId: typeof accountId === 'string' ? accountId : String(accountId ?? ''),
       });
       return createHash('sha256').update(key).digest('hex');
     }

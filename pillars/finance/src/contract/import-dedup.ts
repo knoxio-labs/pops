@@ -9,40 +9,43 @@
  * double-counting the charge. Deriving the key from canonical fields
  * collapses those exports to a single identity.
  *
- * `account` (POPS-2773) scopes that identity to the account the row was
- * imported for. Without it, two accounts could never legitimately hold an
- * identical row (the same subscription billed to two cards on the same day
- * collapses to one), and a bank that lands counterpart legs on the same
- * date/amount but a different account (e.g. an internal transfer) could
- * collide with the leg it is paired with. `account` here is the same
- * free-text bank/account name already carried on `transactions.account` and
- * selected during import (`BankType`, e.g. `"Amex"`) — not the `accounts.id`
- * UUID. The browser parser builds this key before an account is ever
- * resolved to an id (that resolution happens server-side, at commit, in
- * `resolveAccountIdByName`), so the key cannot depend on the id without a
- * network round trip from a pure client-side function. The free-text name is
- * a safe stand-in: `idx_accounts_name_nocase` enforces it 1:1 onto
- * `accounts.id`, and it is untouched by an account being renamed after the
- * fact, since `BankType` is a fixed set of literals independent of the
- * mutable `accounts.name` column.
+ * `accountId` scopes that identity to the REAL account the row was imported
+ * for. Without it, two accounts could never legitimately hold an identical
+ * row (the same subscription billed to two cards on the same day collapses
+ * to one), and a bank that lands counterpart legs on the same date/amount but
+ * a different account (e.g. an internal transfer) could collide with the leg
+ * it is paired with.
+ *
+ * POPS-2773 first scoped this key, but to the bank/dialect label
+ * (`BankType`, e.g. `"Amex"`) rather than the real `accounts.id` — the wizard
+ * had no real account at parse time, only the dialect picked to select a CSV
+ * parser, so the id was not available to this pure, network-free function.
+ * That was wrong the moment two real accounts could share one dialect (two
+ * ANZ cards): identical rows on both would incorrectly collide as
+ * duplicates. POPS-2840 gives the wizard a real `accountId` before parsing
+ * even starts (the account-step is now step 1), which is what let POPS-2852
+ * key this on the id directly instead.
  *
  * This module is the SINGLE source of truth for that key: the browser parser
  * (`column-map/validation.ts`) hashes it for new imports, and the re-key
- * migration (`migrations/0087_scope_dedup_key_to_account.sql`, via the
- * `finance_account_scoped_checksum` SQLite function) hashes it to re-derive
- * the checksum of every existing row. Both sides MUST agree byte-for-byte, so
- * the key-building logic lives here and nowhere else. It is pure (no crypto)
- * and browser-safe; each side applies its own SHA-256 (crypto-js in the
- * browser, `node:crypto` in the migration function), which produce identical
- * digests for identical input strings.
+ * migration (`migrations/0089_scope_dedup_key_to_account_id.sql`, via the
+ * `finance_account_id_scoped_checksum` SQLite function) hashes it to
+ * re-derive the checksum of every existing row from its stored `account_id`.
+ * Both sides MUST agree byte-for-byte, so the key-building logic lives here
+ * and nowhere else. It is pure (no crypto) and browser-safe; each side
+ * applies its own SHA-256 (crypto-js in the browser, `node:crypto` in the
+ * migration function), which produce identical digests for identical input
+ * strings.
  *
  * `buildLegacyDedupKeyFromStoredRow` is a frozen copy of the pre-account key
  * (date + amount + normalized description + reference, no account), kept
  * solely so migration `0059_recompute_canonical_checksum` — which calls it
  * via the still-registered 4-argument `finance_canonical_checksum` SQLite
  * function — continues to produce byte-identical output when it replays on a
- * fresh install. Its output is immediately superseded by `0087`'s recompute,
- * so it is never the current canonical key; do not use it for anything new.
+ * fresh install. Its output is immediately superseded by `0087`'s and then
+ * `0089`'s recompute, so it is never the current canonical key; do not use it
+ * for anything new. `0087`'s own dialect-scoped key is likewise frozen once
+ * `0089` supersedes it — nothing new should build that shape either.
  *
  * Dedup normalization is intentionally minimal (case + whitespace only) and
  * preserves digits and punctuation. It must NOT reuse the fuzzy entity-matching
@@ -105,8 +108,8 @@ export function extractReferenceValue(row: Record<string, unknown>): string {
 
 /** Canonical fields that identify an imported transaction for dedup. */
 export interface ImportDedupFields {
-  /** Free-text account/bank name the row was imported for (see module docs). */
-  account: string;
+  /** The real `accounts.id` the row was imported for (see module docs). */
+  accountId: string;
   date: string;
   amount: number;
   description: string;
@@ -116,7 +119,7 @@ export interface ImportDedupFields {
 /** Build the canonical dedup key from already-parsed transaction fields. */
 export function buildImportDedupKey(fields: ImportDedupFields): string {
   return [
-    fields.account,
+    fields.accountId,
     fields.date,
     String(fields.amount),
     normalizeDedupDescription(fields.description),
@@ -139,19 +142,19 @@ function parseReferenceFromRawRow(rawRow: string | null): string {
 
 /**
  * Build the canonical dedup key for a persisted transaction, extracting the
- * reference from its stored `raw_row` JSON. Used by the `0087` re-key
+ * reference from its stored `raw_row` JSON. Used by the `0089` re-key
  * migration to recompute checksums from the same fields a fresh import would
- * hash, now scoped to `account`.
+ * hash, now scoped to `accountId` (`transactions.account_id`).
  */
 export function buildImportDedupKeyFromStoredRow(input: {
-  account: string;
+  accountId: string;
   date: string;
   amount: number;
   description: string;
   rawRow: string | null;
 }): string {
   return buildImportDedupKey({
-    account: input.account,
+    accountId: input.accountId,
     date: input.date,
     amount: input.amount,
     description: input.description,

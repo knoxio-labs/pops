@@ -22,6 +22,7 @@ const sha256 = (value: string): string => createHash('sha256').update(value).dig
 
 const OPTIONS: AnzPdfStatementOptions = {
   account: 'ANZ Credit Card',
+  accountId: 'acc-anz-credit-card',
   hashDedupKey: sha256,
 };
 
@@ -130,7 +131,7 @@ describe('parseAnzPdfStatementText', () => {
       expect(kensington?.checksum).toBe(
         sha256(
           buildImportDedupKey({
-            account: 'ANZ Credit Card',
+            accountId: 'acc-anz-credit-card',
             date: '2025-04-22',
             amount: -20.4,
             description: KENSINGTON_DESCRIPTION,

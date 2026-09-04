@@ -6129,6 +6129,7 @@ export interface operations {
               };
               failed: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -6200,6 +6201,7 @@ export interface operations {
               }[];
               matched: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -6271,6 +6273,7 @@ export interface operations {
               }[];
               skipped: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -6342,6 +6345,7 @@ export interface operations {
               }[];
               uncertain: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -6628,6 +6632,7 @@ export interface operations {
           }[];
           transactions: {
             account: string;
+            accountId?: string;
             amount: number;
             checksum: string;
             country?: string;
@@ -6830,6 +6835,7 @@ export interface operations {
           account: string;
           transactions: {
             account: string;
+            accountId?: string;
             amount: number;
             checksum: string;
             country?: string;
@@ -6941,6 +6947,7 @@ export interface operations {
               };
               failed: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7012,6 +7019,7 @@ export interface operations {
               }[];
               matched: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7083,6 +7091,7 @@ export interface operations {
               }[];
               skipped: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7154,6 +7163,7 @@ export interface operations {
               }[];
               uncertain: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7397,6 +7407,7 @@ export interface operations {
               };
               failed: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7468,6 +7479,7 @@ export interface operations {
               }[];
               matched: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7539,6 +7551,7 @@ export interface operations {
               }[];
               skipped: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;
@@ -7610,6 +7623,7 @@ export interface operations {
               }[];
               uncertain: {
                 account: string;
+                accountId?: string;
                 amount: number;
                 checksum: string;
                 country?: string;

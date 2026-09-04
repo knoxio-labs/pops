@@ -23,7 +23,7 @@ backup story, since this data cannot be reconstructed once lost.
 
 ## Decision
 
-(a). A `logo_blobs` table (`pillars/finance/migrations/0089_logo_blobs.sql`)
+(a). A `logo_blobs` table (`pillars/finance/migrations/0090_logo_blobs.sql`)
 inside `finance.db`, storing raw bytes + `content_type` + `byte_length`. It
 needs zero new infrastructure: no volume, no Dockerfile change, no compose
 change, no CI gate change — the existing `sqlite-data` volume and

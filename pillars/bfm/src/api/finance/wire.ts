@@ -19,7 +19,11 @@ import { z } from 'zod';
 
 import { MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 
-import type { MobileTransaction, MobileTransactionDetail } from '../../contract/rest-schemas.js';
+import type {
+  MobileAccount,
+  MobileTransaction,
+  MobileTransactionDetail,
+} from '../../contract/rest-schemas.js';
 
 /**
  * The subset of finance's `TransactionSchema` the list row is built from.
@@ -93,5 +97,43 @@ export function toMobileTransactionDetail(row: FinanceTransactionDetail): Mobile
     notes: row.notes,
     relatedTransactionId: row.relatedTransactionId,
     lastEditedTime: row.lastEditedTime,
+  };
+}
+
+/**
+ * The subset of finance's `AccountSchema` bfm reads.
+ *
+ * No balance, no transaction count — finance's own wire schema has neither
+ * yet (POPS-2750). `kind` stays an open string for the same reason as
+ * {@link FinanceTransactionRowSchema.shape.type}.
+ */
+export const FinanceAccountRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  kind: z.string(),
+  currency: z.string(),
+  archivedAt: z.string().nullable(),
+  institutionId: z.string().nullable(),
+});
+
+export type FinanceAccountRow = z.infer<typeof FinanceAccountRowSchema>;
+
+export const FinanceAccountListResponseSchema = z.object({
+  data: z.array(FinanceAccountRowSchema),
+});
+
+export const FinanceAccountGetResponseSchema = z.object({
+  data: FinanceAccountRowSchema,
+});
+
+/** Finance record → mobile record. `archivedAt` collapses to a plain boolean. */
+export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    currency: row.currency,
+    archived: row.archivedAt !== null,
+    institutionId: row.institutionId,
   };
 }

@@ -232,6 +232,28 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'accounts.list',
+    path: '/accounts',
+    method: 'get',
+    // `limit` is set to the contract's own cap so one call gets the whole
+    // list — see `ACCOUNT_LIST_LIMIT`. Losing it would silently fall back to
+    // finance's smaller default page and the phone would never see the rest.
+    query: ['limit'],
+    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'accounts.get',
+    path: '/accounts/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'purchases',
     operationId: 'receipt.upload',
     path: '/receipts',
@@ -2530,9 +2552,9 @@ function selfTest() {
   );
   assert(
     sites.filter((s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts')
-      .length === 2,
+      .length === 4,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these two calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these four calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
     sites.filter((s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts').length === 2,

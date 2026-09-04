@@ -92,7 +92,7 @@ const REFUND: Row = {
 };
 
 async function importOne(bytes: Uint8Array, coverage: AccountCoverage = UNCHECKED) {
-  const result = await importAnzPdfStatements([pdfFile(bytes)], coverage);
+  const result = await importAnzPdfStatements([pdfFile(bytes)], coverage, 'acc-test');
   if (!result.ok) throw new Error(`expected a statement, got ${result.error.failure.outcome}`);
   return result.statement;
 }
@@ -125,7 +125,8 @@ describe('importAnzPdfStatements', () => {
   it('merges the statements of several files in the order given', async () => {
     const result = await importAnzPdfStatements(
       [pdfFile(statementPdf([GROCER]), 'jan.pdf'), pdfFile(statementPdf([REFUND]), 'feb.pdf')],
-      UNCHECKED
+      UNCHECKED,
+      'acc-test'
     );
     if (!result.ok) throw new Error('expected both files to read');
     expect(result.statement.plan.importable.map((t) => t.description)).toEqual([
@@ -186,7 +187,8 @@ describe('importAnzPdfStatements', () => {
   it('stops the batch at the first file it cannot read', async () => {
     const result = await importAnzPdfStatements(
       [pdfFile(passwordProtectedPdf(), 'locked.pdf'), pdfFile(statementPdf([GROCER]), 'ok.pdf')],
-      UNCHECKED
+      UNCHECKED,
+      'acc-test'
     );
     expect(result).toEqual({
       ok: false,
@@ -197,21 +199,29 @@ describe('importAnzPdfStatements', () => {
 
 describe('readAnzPdfUpload', () => {
   it('asks for a look before importing when the statement has findings', async () => {
-    const decision = await readAnzPdfUpload([pdfFile(statementPdf([GROCER]))], UNCHECKED);
+    const decision = await readAnzPdfUpload(
+      [pdfFile(statementPdf([GROCER]))],
+      UNCHECKED,
+      'acc-test'
+    );
     expect(decision.kind).toBe('review');
   });
 
   it('imports straight through when there is nothing to report', async () => {
-    const decision = await readAnzPdfUpload([pdfFile(statementPdf([GROCER]))], {
-      known: true,
-      interval: { from: '2020-01-01', to: '2020-12-31' },
-    });
+    const decision = await readAnzPdfUpload(
+      [pdfFile(statementPdf([GROCER]))],
+      {
+        known: true,
+        interval: { from: '2020-01-01', to: '2020-12-31' },
+      },
+      'acc-test'
+    );
     expect(decision.kind).toBe('import');
   });
 
   it('turns a refusal into a message rather than an empty import', async () => {
     const blank = monospacedTextPdf([[{ row: 0, column: 0, text: 'nothing to see' }]]);
-    const decision = await readAnzPdfUpload([pdfFile(blank)], UNCHECKED);
+    const decision = await readAnzPdfUpload([pdfFile(blank)], UNCHECKED, 'acc-test');
     expect(decision).toEqual({
       kind: 'error',
       message: describeImportRefusal('no-transactions-found'),
@@ -219,7 +229,11 @@ describe('readAnzPdfUpload', () => {
   });
 
   it('turns an unreadable file into a message naming the file', async () => {
-    const decision = await readAnzPdfUpload([pdfFile(imageOnlyPdf(), 'scan.pdf')], UNCHECKED);
+    const decision = await readAnzPdfUpload(
+      [pdfFile(imageOnlyPdf(), 'scan.pdf')],
+      UNCHECKED,
+      'acc-test'
+    );
     expect(decision.kind).toBe('error');
     if (decision.kind !== 'error') return;
     expect(decision.message).toContain('scan.pdf');

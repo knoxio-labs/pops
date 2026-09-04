@@ -90,6 +90,10 @@ function committedType(txn: ConfirmedRow, tags: string[]): TransactionType {
  * column default, and `type` resolved through {@link committedType} so a
  * gift-card purchase is stored as the transfer it is (POPS-2610) and an untyped
  * credit is refused rather than booked as spend (POPS-2754).
+ *
+ * `accountId` is passed through verbatim (possibly `undefined`) rather than
+ * resolved here — `insertImportTransaction` is where account identity
+ * resolution actually happens, via `resolveAccountIdentity` (POPS-2852).
  */
 export function transactionColumns(
   txn: ConfirmedRow,
@@ -100,6 +104,7 @@ export function transactionColumns(
   return {
     description: txn.description,
     account: txn.account,
+    accountId: txn.accountId,
     amountCents: dollarsToCents(txn.amount),
     date: txn.date,
     type: committedType(txn, tags),
