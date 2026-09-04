@@ -70,7 +70,7 @@ function UploadFileSection({
 
 function useUploadStep() {
   const { files, rows, bankType, accountId, setFiles, setBankType, nextStep } = useImportStore();
-  const { availableBanks } = useAccountFormats(accountId);
+  const { account, availableBanks } = useAccountFormats(accountId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formatMismatch, setFormatMismatch] = useState<string | null>(null);
@@ -130,6 +130,11 @@ function useUploadStep() {
     rows,
     bankType,
     accountId,
+    // Definitively known to have nothing to import, as opposed to "the
+    // account hasn't resolved yet" (`account` still undefined) — only the
+    // former should hide the file drop, or a still-loading account would
+    // flash the "nothing to import" gate before it has anything to say.
+    hasNoFormat: Boolean(account) && availableBanks.length === 0,
     isProcessing,
     error,
     formatMismatch,
@@ -147,6 +152,7 @@ export function UploadStep() {
     rows,
     bankType,
     accountId,
+    hasNoFormat,
     isProcessing,
     error,
     formatMismatch,
@@ -163,7 +169,7 @@ export function UploadStep() {
 
       <AccountAndFormatFields bankType={bankType} onBankChange={handleBankChange} />
 
-      {accountId && (
+      {accountId && !hasNoFormat && (
         <UploadFileSection
           files={files}
           rows={rows}
@@ -183,7 +189,9 @@ export function UploadStep() {
 
       <UploadFooter
         onNext={handleNext}
-        disabled={!accountId || (files.length === 0 && rows.length === 0) || isProcessing}
+        disabled={
+          !accountId || hasNoFormat || (files.length === 0 && rows.length === 0) || isProcessing
+        }
         isProcessing={isProcessing}
         pdfStatement={pdfStatement}
       />

@@ -196,6 +196,58 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
   });
 });
 
+describe('UploadStep — an account with no derivable import format (POPS-2854)', () => {
+  it('hides the file drop and keeps Next disabled instead of parsing under a stale bank', async () => {
+    // A cash account has no statement to export — `bankTypesForAccount`
+    // returns no formats for it, and `AccountAndFormatFields` shows the
+    // "Nothing to import" alert. The file drop and Next must agree with that
+    // rather than staying active under whatever `bankType` the store
+    // defaulted to.
+    accountsList.mockResolvedValueOnce({
+      data: {
+        data: [
+          {
+            id: 'acc-1',
+            name: 'Test Account',
+            institutionId: 'inst-anz',
+            kind: 'cash',
+            currency: 'AUD',
+            archivedAt: null,
+            displayOrder: 0,
+            entityId: null,
+            entityDisplayName: null,
+            entityDisplayNameStale: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+      },
+    });
+    institutionsList.mockResolvedValueOnce({
+      data: {
+        data: [
+          {
+            id: 'inst-anz',
+            name: 'ANZ',
+            colour: '#0072ac',
+            logoAssetId: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+
+    render(renderUploadStep());
+
+    expect(await screen.findByText('Nothing to import into Test Account')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Upload CSV or PDF files')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Upload CSV files')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
+});
+
 function selectFilesTakingPdf(files: File[]) {
   fireEvent.change(screen.getByLabelText('Upload CSV or PDF files'), { target: { files } });
 }
