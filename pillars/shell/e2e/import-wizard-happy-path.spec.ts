@@ -397,7 +397,7 @@ const accountsBody = {
     {
       id: 'acc-amex',
       name: 'Amex Everyday',
-      institutionId: null,
+      institutionId: 'inst-amex',
       kind: 'credit-card',
       currency: 'AUD',
       archivedAt: null,
@@ -412,7 +412,23 @@ const accountsBody = {
   pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
 };
 
-const institutionsBody = { data: [] };
+// Named 'Amex' to match `BANK_TYPE_BY_INSTITUTION_NAME` in
+// `account-step/import-formats.ts` — the Upload step derives the mocked
+// account's available bank dialects from this institution name, and an
+// unmatched name leaves it with zero formats (the "no format for account"
+// empty state, which never renders the file dropzone).
+const institutionsBody = {
+  data: [
+    {
+      id: 'inst-amex',
+      name: 'Amex',
+      colour: '#2563eb',
+      logoAssetId: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    },
+  ],
+};
 
 async function setupMocks(page: Page): Promise<void> {
   await page.route(
