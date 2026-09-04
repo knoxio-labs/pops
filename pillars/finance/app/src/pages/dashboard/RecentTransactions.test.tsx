@@ -20,7 +20,6 @@ vi.mock('../../finance-api/index.js', () => ({
 
 function makeTransaction(tags: string[]): Transaction {
   return {
-    account: 'Everyday',
     accountId: 'account-1',
     amount: -12.5,
     country: null,

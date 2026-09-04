@@ -47,13 +47,12 @@ function seedTransaction(raw: Database.Database, o: SeedOverrides): string {
   raw
     .prepare(
       `INSERT INTO transactions (
-        id, description, account, account_id, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        id, description, account_id, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
       o.description,
-      'Up Savings',
       accountId.id,
       dollarsToCents(o.amount ?? -10),
       o.date ?? '2025-01-01',

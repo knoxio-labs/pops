@@ -16,7 +16,7 @@ import { useAccountAndFormat } from './useAccountAndFormat';
 
 import type { AccountOption } from '@pops/ui';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 import type { AccountAndFormatState } from './useAccountAndFormat';
 
 function AddAccountHatch({ onAdd }: { onAdd: () => void }) {
@@ -90,11 +90,11 @@ function NoFormats({ account }: { account: AccountOption }) {
 
 function FormatSection({
   state,
-  bankType,
+  dialectId,
   onBankChange,
 }: {
   state: AccountAndFormatState;
-  bankType: BankType;
+  dialectId: BankDialectId;
   onBankChange: (value: string) => void;
 }) {
   if (!state.accountId) {
@@ -117,7 +117,7 @@ function FormatSection({
     <RadioInput
       label="Bank"
       options={options}
-      value={bankType}
+      value={dialectId}
       onValueChange={onBankChange}
       orientation="horizontal"
     />
@@ -148,10 +148,10 @@ function AccountSection({ state }: { state: AccountAndFormatState }) {
  * Accounts page uses, pre-selecting the new account on success.
  */
 export function AccountAndFormatFields({
-  bankType,
+  dialectId,
   onBankChange,
 }: {
-  bankType: BankType;
+  dialectId: BankDialectId;
   onBankChange: (value: string) => void;
 }) {
   const state = useAccountAndFormat();
@@ -168,7 +168,7 @@ export function AccountAndFormatFields({
   return (
     <div className="space-y-6">
       <AccountSection state={state} />
-      <FormatSection state={state} bankType={bankType} onBankChange={onBankChange} />
+      <FormatSection state={state} dialectId={dialectId} onBankChange={onBankChange} />
       <NewAccountDialog state={state} />
     </div>
   );

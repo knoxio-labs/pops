@@ -50,8 +50,8 @@ function seedRule(
 function seedTransaction(harness: TestHarness, description: string): void {
   harness.raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, last_edited_time)
-       VALUES (?, ?, 'amex', ?, -1000, '2026-01-01', 'purchase', '2026-01-01T00:00:00.000Z')`
+      `INSERT INTO transactions (id, description, account_id, amount_cents, date, type, last_edited_time)
+       VALUES (?, ?, ?, -1000, '2026-01-01', 'purchase', '2026-01-01T00:00:00.000Z')`
     )
     .run(crypto.randomUUID(), description, seededAccountId(harness.db, 'Amex'));
 }

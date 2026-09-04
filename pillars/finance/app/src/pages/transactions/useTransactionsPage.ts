@@ -22,22 +22,17 @@ import { useTransactionMutations } from './useTransactionMutations';
  * - amount: parsed via Number() — schema already validates finiteness
  * - entityId: '' → null (free-form selection cleared)
  * - entityName: looked up from the entities list when an id is selected
- * - accountName: looked up from the accounts list for the account picked by
- *   `accountId` — the server still requires the display-name `account`
- *   field alongside the id
  * - notes: '' → null (server contract is `string | null`)
  */
 export interface BuildPayloadArgs {
   values: TransactionFormValues;
   entityName: string | null;
-  accountName: string;
 }
 
-export function buildTransactionPayload({ values, entityName, accountName }: BuildPayloadArgs) {
+export function buildTransactionPayload({ values, entityName }: BuildPayloadArgs) {
   const entityId = values.entityId === '' ? null : values.entityId;
   return {
     description: values.description,
-    account: accountName,
     accountId: values.accountId,
     amount: Number(values.amount),
     date: values.date,
@@ -54,20 +49,12 @@ interface SubmitDeps {
   createMutation: Pick<ReturnType<typeof useTransactionMutations>['createMutation'], 'mutate'>;
   updateMutation: Pick<ReturnType<typeof useTransactionMutations>['updateMutation'], 'mutate'>;
   resolveEntityName: (entityId: string) => string | null;
-  resolveAccountName: (accountId: string) => string | null;
 }
 
 export function buildSubmit(deps: SubmitDeps) {
   return (values: TransactionFormValues) => {
     const entityName = values.entityId === '' ? null : deps.resolveEntityName(values.entityId);
-    // Falls back to the transaction's existing display name rather than a
-    // blank string when the accounts list hasn't resolved this id yet — the
-    // account picker only lets you choose an id that's already loaded, so an
-    // unresolvable id here means the accounts query is still in flight, not
-    // that the account has no name.
-    const accountName =
-      deps.resolveAccountName(values.accountId) ?? deps.editingTransaction?.account ?? '';
-    const payload = buildTransactionPayload({ values, entityName, accountName });
+    const payload = buildTransactionPayload({ values, entityName });
     if (deps.editingTransaction) {
       deps.updateMutation.mutate({ id: deps.editingTransaction.id, data: payload });
     } else {
@@ -121,10 +108,9 @@ function useDialogHandlers(deps: DialogHandlersDeps) {
 
 interface ResolversDeps {
   entitiesQuery: ReturnType<typeof useAllEntities>;
-  accountsQuery: ReturnType<typeof useAllAccounts>;
 }
 
-function useNameResolvers({ entitiesQuery, accountsQuery }: ResolversDeps) {
+function useNameResolvers({ entitiesQuery }: ResolversDeps) {
   const resolveEntityName = useCallback(
     (entityId: string): string | null => {
       const entity = entitiesQuery.data?.data.find((e) => e.id === entityId);
@@ -133,15 +119,7 @@ function useNameResolvers({ entitiesQuery, accountsQuery }: ResolversDeps) {
     [entitiesQuery.data]
   );
 
-  const resolveAccountName = useCallback(
-    (accountId: string): string | null => {
-      const account = accountsQuery.accounts?.find((a) => a.id === accountId);
-      return account?.name ?? null;
-    },
-    [accountsQuery.accounts]
-  );
-
-  return { resolveEntityName, resolveAccountName };
+  return { resolveEntityName };
 }
 
 function useTransactionsPageQueries() {
@@ -184,17 +162,13 @@ export function useTransactionsPage() {
     setIsDialogOpen,
   });
 
-  const { resolveEntityName, resolveAccountName } = useNameResolvers({
-    entitiesQuery,
-    accountsQuery,
-  });
+  const { resolveEntityName } = useNameResolvers({ entitiesQuery });
 
   const onSubmit = buildSubmit({
     editingTransaction,
     createMutation,
     updateMutation,
     resolveEntityName,
-    resolveAccountName,
   });
 
   return {

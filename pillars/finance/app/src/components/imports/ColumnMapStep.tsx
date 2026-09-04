@@ -125,7 +125,7 @@ function useColumnMapState() {
     headers,
     rows,
     columnMap,
-    bankType,
+    dialectId,
     accountId,
     setColumnMap,
     setParsedTransactions,
@@ -160,7 +160,7 @@ function useColumnMapState() {
     setIsValidating(true);
     setValidationErrors([]);
     setTimeout(() => {
-      const validation = validateAllRows(rows, localColumnMap, bankType, accountId);
+      const validation = validateAllRows(rows, localColumnMap, dialectId, accountId);
       if (!validation.valid) {
         setValidationErrors(validation.errors);
         setIsValidating(false);
@@ -170,7 +170,7 @@ function useColumnMapState() {
       setIsValidating(false);
       nextStep();
     }, 100);
-  }, [rows, localColumnMap, bankType, accountId, setParsedTransactions, nextStep]);
+  }, [rows, localColumnMap, dialectId, accountId, setParsedTransactions, nextStep]);
 
   return {
     headers,

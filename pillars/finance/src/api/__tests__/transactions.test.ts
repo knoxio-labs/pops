@@ -23,12 +23,6 @@ import { makeClient } from './test-utils.js';
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
-/**
- * These fixtures assert on the free-text `account` field itself (e.g.
- * `account: 'Everyday'`), so the names must survive rather than being
- * swapped for the migration-seeded accounts ('Amex' is already seeded) —
- * `createTransaction` still needs a real account row to resolve against.
- */
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-tx-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
@@ -53,22 +47,42 @@ function client() {
   );
 }
 
-const base = {
-  description: 'Coffee',
-  account: 'Everyday',
-  amount: -4.5,
-  date: '2026-01-02',
-  type: 'purchase',
-};
+/** Resolve one of the fixture accounts seeded in `beforeEach` by name. */
+function idFor(name: string): string {
+  const { rows } = accountsService.listAccounts(financeDb.db, {
+    search: name,
+    limit: 10,
+    offset: 0,
+  });
+  const id = rows.find((row) => row.name.toLowerCase() === name.toLowerCase())?.id;
+  if (!id) throw new Error(`fixture account "${name}" not found`);
+  return id;
+}
+
+function base(): {
+  description: string;
+  accountId: string;
+  amount: number;
+  date: string;
+  type: string;
+} {
+  return {
+    description: 'Coffee',
+    accountId: idFor('Everyday'),
+    amount: -4.5,
+    date: '2026-01-02',
+    type: 'purchase',
+  };
+}
 
 describe('transactions — happy paths', () => {
   it('creates with tags, parses them to an array on read, and lists', async () => {
-    const created = await client().transactions.create({ ...base, tags: ['food', 'coffee'] });
+    const created = await client().transactions.create({ ...base(), tags: ['food', 'coffee'] });
     expect(created.data.tags).toEqual(['food', 'coffee']);
     expect(created.data.amount).toBe(-4.5);
 
     const fetched = await client().transactions.get(created.data.id);
-    expect(fetched.data).toMatchObject({ description: 'Coffee', account: 'Everyday' });
+    expect(fetched.data).toMatchObject({ description: 'Coffee', accountId: idFor('Everyday') });
 
     const listed = await client().transactions.list();
     expect(listed.pagination.total).toBe(1);
@@ -76,7 +90,7 @@ describe('transactions — happy paths', () => {
   });
 
   it('updates fields', async () => {
-    const created = await client().transactions.create(base);
+    const created = await client().transactions.create(base());
     const updated = await client().transactions.update(created.data.id, {
       description: 'Latte',
       tags: ['coffee'],
@@ -86,66 +100,47 @@ describe('transactions — happy paths', () => {
   });
 });
 
-describe('transactions — accountId precedence (POPS-2769)', () => {
-  function everydayId(): string {
-    const { rows } = accountsService.listAccounts(financeDb.db, {
-      search: 'Everyday',
-      limit: 10,
-      offset: 0,
-    });
-    const id = rows[0]?.id;
-    if (!id) throw new Error('fixture account "Everyday" not found');
-    return id;
-  }
-
-  it('creates using accountId, validated against an agreeing account name', async () => {
-    const created = await client().transactions.create({
-      ...base,
-      account: 'everyday',
-      accountId: everydayId(),
-    });
-    expect(created.data.account).toBe('Everyday');
-    expect(created.data.accountId).toBe(everydayId());
-  });
-
-  it('rejects a create whose account name disagrees with its accountId', async () => {
-    await expect(
-      client().transactions.create({ ...base, account: 'Savings', accountId: everydayId() })
-    ).rejects.toMatchObject({ status: 400 });
+describe('transactions — accountId', () => {
+  it('creates against the supplied accountId', async () => {
+    const everydayId = idFor('Everyday');
+    const created = await client().transactions.create({ ...base(), accountId: everydayId });
+    expect(created.data.accountId).toBe(everydayId);
   });
 
   it('404s a create naming an unknown accountId', async () => {
     await expect(
-      client().transactions.create({ ...base, account: 'Everyday', accountId: 'does-not-exist' })
+      client().transactions.create({ ...base(), accountId: 'does-not-exist' })
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  it('patches using only accountId, with no account supplied', async () => {
-    const created = await client().transactions.create(base);
-    const savings = accountsService.listAccounts(financeDb.db, {
-      search: 'Savings',
-      limit: 10,
-      offset: 0,
-    }).rows[0];
-    if (!savings) throw new Error('fixture account "Savings" not found');
+  it('patches the accountId', async () => {
+    const created = await client().transactions.create(base());
+    const savingsId = idFor('Savings');
 
-    const updated = await client().transactions.update(created.data.id, { accountId: savings.id });
-    expect(updated.data.account).toBe('Savings');
-    expect(updated.data.accountId).toBe(savings.id);
+    const updated = await client().transactions.update(created.data.id, { accountId: savingsId });
+    expect(updated.data.accountId).toBe(savingsId);
   });
 
-  it('rejects a patch whose account name disagrees with its accountId', async () => {
-    const created = await client().transactions.create(base);
+  it('404s a patch naming an unknown accountId', async () => {
+    const created = await client().transactions.create(base());
     await expect(
-      client().transactions.update(created.data.id, { account: 'Bendigo', accountId: everydayId() })
-    ).rejects.toMatchObject({ status: 400 });
+      client().transactions.update(created.data.id, { accountId: 'does-not-exist' })
+    ).rejects.toMatchObject({ status: 404 });
   });
 });
 
 describe('transactions — unlink transfer', () => {
   it('symmetrically unlinks a paired transfer and reverts both legs by direction', async () => {
-    const debit = await client().transactions.create({ ...base, amount: -50, account: 'Amex' });
-    const credit = await client().transactions.create({ ...base, amount: 50, account: 'Bendigo' });
+    const debit = await client().transactions.create({
+      ...base(),
+      amount: -50,
+      accountId: idFor('Everyday'),
+    });
+    const credit = await client().transactions.create({
+      ...base(),
+      amount: 50,
+      accountId: idFor('Bendigo'),
+    });
     // Pairing is gated in prod, so arrange the linked state directly via the service.
     transferPairsService.linkTransferPair(financeDb.db, debit.data.id, credit.data.id);
 
@@ -167,7 +162,7 @@ describe('transactions — unlink transfer', () => {
 
 describe('transactions — delete / restore handshake', () => {
   it('delete returns a raw snapshot; restore re-creates; a second restore conflicts', async () => {
-    const created = await client().transactions.create({ ...base, tags: ['food'] });
+    const created = await client().transactions.create({ ...base(), tags: ['food'] });
     const id = created.data.id;
 
     const deleted = await client().transactions.delete(id);
@@ -190,58 +185,36 @@ describe('transactions — delete / restore handshake', () => {
 describe('transactions — filters & pagination', () => {
   beforeEach(async () => {
     await client().transactions.create({
-      ...base,
-      account: 'Everyday',
+      ...base(),
+      accountId: idFor('Everyday'),
       type: 'purchase',
       date: '2026-01-01',
     });
     await client().transactions.create({
-      ...base,
+      ...base(),
       description: 'Salary',
-      account: 'Savings',
+      accountId: idFor('Savings'),
       type: 'income',
       amount: 5000,
       date: '2026-02-01',
     });
     await client().transactions.create({
-      ...base,
+      ...base(),
       description: 'Rent',
-      account: 'Everyday',
+      accountId: idFor('Everyday'),
       type: 'purchase',
       amount: -1500,
       date: '2026-02-15',
     });
   });
 
-  it('filters by account and by type', async () => {
-    const everyday = await client().transactions.list({ account: 'Everyday' });
+  it('filters by accountId and by type', async () => {
+    const everyday = await client().transactions.list({ accountId: idFor('Everyday') });
     expect(everyday.pagination.total).toBe(2);
+    expect(everyday.data.map((t) => t.description).toSorted()).toEqual(['Coffee', 'Rent']);
 
     const income = await client().transactions.list({ type: 'income' });
     expect(income.data.map((t) => t.description)).toEqual(['Salary']);
-  });
-
-  it('filters by accountId, preferring it over a stale/absent account name', async () => {
-    const { rows } = accountsService.listAccounts(financeDb.db, {
-      search: 'Everyday',
-      limit: 10,
-      offset: 0,
-    });
-    const everydayId = rows[0]?.id;
-    expect(everydayId).toBeDefined();
-
-    const byId = await client().transactions.list({ accountId: everydayId });
-    expect(byId.pagination.total).toBe(2);
-    expect(byId.data.map((t) => t.description).toSorted()).toEqual(['Coffee', 'Rent']);
-
-    // Supplying a mismatched `account` name alongside a valid `accountId` does
-    // not change the result — `accountId` wins for filtering (no identity
-    // validation on reads, unlike writes).
-    const byIdWithWrongName = await client().transactions.list({
-      accountId: everydayId,
-      account: 'Savings',
-    });
-    expect(byIdWithWrongName.pagination.total).toBe(2);
   });
 
   it('paginates with limit/offset', async () => {

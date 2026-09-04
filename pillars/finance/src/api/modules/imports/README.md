@@ -56,6 +56,6 @@ Each carries a file-header comment explaining its own mechanics. Read the header
 
 ## Absent
 
-There is no per-bank parsing (POPS-29). The wizard maps CSV columns by hand for every source, and `parseDate` / `parseAmount` ignore the selected bank entirely. The bank selector is **not** inert, though: its value is stamped onto every row as `account` and persisted to `transactions.account` at commit, so changing it changes committed data.
+The bank/dialect selector is not an account identity — it only picks a CSV parser (`app/src/components/imports/bank-dialect.ts`). The wizard's account-step (POPS-2840) resolves the real `accountId` transactions commit against; the free-text account-name mirror this table once carried was dropped in POPS-2770.
 
 Related: `../corrections/`, `../tag-rules/`, `../tag-suggester/`, `../transfers/`, and the wizard UI at `pillars/finance/app/src/components/imports/`.

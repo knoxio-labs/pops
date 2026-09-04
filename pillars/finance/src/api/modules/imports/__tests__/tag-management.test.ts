@@ -24,8 +24,8 @@ function seedTransaction(harness: MigratedFinanceDb, id: string, tags: readonly 
   harness.raw
     .prepare(
       `INSERT INTO transactions
-         (id, description, account, account_id, amount_cents, date, type, tags, checksum, last_edited_time)
-       VALUES (?, ?, 'Everyday', ?, -1000, '2026-01-01', 'purchase', ?, ?, '2026-01-01T00:00:00Z')`
+         (id, description, account_id, amount_cents, date, type, tags, checksum, last_edited_time)
+       VALUES (?, ?, ?, -1000, '2026-01-01', 'purchase', ?, ?, '2026-01-01T00:00:00Z')`
     )
     .run(
       id,

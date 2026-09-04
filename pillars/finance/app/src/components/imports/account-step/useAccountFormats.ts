@@ -8,7 +8,7 @@ import { bankTypesForAccount } from './import-formats';
  * Shared between the account/format picker and the upload step itself, which
  * both need to know whether the currently picked account has anything to
  * import — the picker to render its radio list, the upload step to gate the
- * file drop and to steer `bankType` away from a dialect the account cannot
+ * file drop and to steer `dialectId` away from a dialect the account cannot
  * use. Reads `useAllAccounts` rather than the raw accounts endpoint because
  * the institution name — the only thing a dialect can be matched against — is
  * already resolved there.

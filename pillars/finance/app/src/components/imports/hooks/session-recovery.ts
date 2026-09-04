@@ -42,12 +42,12 @@ async function pollUntilComplete(sessionId: string): Promise<void> {
 }
 
 async function reprocessFromStore(): Promise<string> {
-  const { parsedTransactions, bankType, setProcessSessionId } = useImportStore.getState();
+  const { parsedTransactions, dialectId, setProcessSessionId } = useImportStore.getState();
   if (parsedTransactions.length === 0) {
     throw new Error('No parsed transactions available to recover the import session');
   }
   const { sessionId } = unwrap(
-    await importsProcessImport({ body: { transactions: parsedTransactions, account: bankType } })
+    await importsProcessImport({ body: { transactions: parsedTransactions, account: dialectId } })
   );
   setProcessSessionId(sessionId);
   await pollUntilComplete(sessionId);

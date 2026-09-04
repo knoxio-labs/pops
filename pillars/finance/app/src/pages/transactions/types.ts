@@ -10,16 +10,13 @@ export { TRANSACTION_TYPE_OPTIONS } from '../../lib/transaction-type';
  * The shape is form-friendly: amount, entityId and accountId are strings
  * (text inputs + EntitySelect/AccountSelect store strings). The
  * `useTransactionsPage` hook coerces these to the contract shape
- * (`amount: number`, `entityId: string | null`, `account`/`accountId`) on
- * submit.
+ * (`amount: number`, `entityId: string | null`) on submit.
  */
 
 /** Transaction record from the API list query (camelCase). */
 export interface Transaction {
   id: string;
   description: string;
-  /** Display name, kept for the API's still-required label field. */
-  account: string;
   accountId: string;
   amount: number;
   date: string;

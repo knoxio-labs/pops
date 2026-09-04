@@ -102,7 +102,7 @@ describe('0054_finance_pillar_baseline_extension', () => {
       expect(transactionsIndexes).toEqual(
         expect.arrayContaining([
           'idx_transactions_date',
-          'idx_transactions_account',
+          'idx_transactions_account_id',
           'idx_transactions_entity',
           'idx_transactions_last_edited',
           'idx_transactions_notion_id',
@@ -136,13 +136,12 @@ describe('0054_finance_pillar_baseline_extension', () => {
       raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'txn-1',
           'Test charge',
-          'Up Savings',
           seededAccountId(raw, 'Amex'),
           1250,
           '2026-06-01',
@@ -167,17 +166,17 @@ describe('0054_finance_pillar_baseline_extension', () => {
         .run('Custom Tag', 'user', 1);
 
       const txn = raw
-        .prepare('SELECT id, description, account, amount_cents FROM transactions WHERE id = ?')
+        .prepare('SELECT id, description, account_id, amount_cents FROM transactions WHERE id = ?')
         .get('txn-1') as {
         id: string;
         description: string;
-        account: string;
+        account_id: string;
         amount_cents: number;
       };
       expect(txn).toEqual({
         id: 'txn-1',
         description: 'Test charge',
-        account: 'Up Savings',
+        account_id: seededAccountId(raw, 'Amex'),
         amount_cents: 1250,
       });
 
@@ -217,13 +216,12 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'seed-1',
           'Seed row',
-          'Up Savings',
           seededAccountId(first.raw, 'Amex'),
           1,
           '2026-06-01',
@@ -255,13 +253,12 @@ describe('0054_finance_pillar_baseline_extension', () => {
       first.raw
         .prepare(
           `INSERT INTO transactions
-             (id, description, account, account_id, amount_cents, date, type, last_edited_time)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+             (id, description, account_id, amount_cents, date, type, last_edited_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           'legacy-1',
           'Legacy charge',
-          'Up Savings',
           seededAccountId(first.raw, 'Amex'),
           1,
           '2026-06-01',

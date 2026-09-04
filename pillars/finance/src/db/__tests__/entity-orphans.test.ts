@@ -33,7 +33,6 @@ function txn(entityId: string | null, entityName: string | null): void {
     .insert(transactions)
     .values({
       description: `txn-${entityId ?? 'none'}-${entityName ?? 'none'}`,
-      account: 'Amex',
       accountId: seededAccountId(opened.db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',

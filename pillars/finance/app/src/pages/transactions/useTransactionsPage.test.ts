@@ -44,7 +44,7 @@ vi.mock('sonner', () => ({
 }));
 
 import { TransactionFormSchema } from './types';
-import { buildSubmit, buildTransactionPayload, useTransactionsPage } from './useTransactionsPage';
+import { buildTransactionPayload, useTransactionsPage } from './useTransactionsPage';
 
 function makeValues(overrides: Partial<TransactionFormValues> = {}): TransactionFormValues {
   return {
@@ -72,7 +72,6 @@ function makeTransaction({ type, ...overrides }: TransactionOverrides = {}): Tra
     date: '2026-02-10',
     amount: -87.45,
     description: 'Woolworths Metro',
-    account: 'Credit Card',
     accountId: 'acc-credit',
     type: (type ?? 'purchase') as Transaction['type'],
     entityId: 'ent-1',
@@ -224,7 +223,6 @@ describe('buildTransactionPayload', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ amount: '-12.5' }),
       entityName: null,
-      accountName: 'Credit Card',
     });
     expect(payload.amount).toBe(-12.5);
   });
@@ -233,7 +231,6 @@ describe('buildTransactionPayload', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ entityId: '' }),
       entityName: 'Woolworths',
-      accountName: 'Credit Card',
     });
     expect(payload.entityId).toBeNull();
     expect(payload.entityName).toBeNull();
@@ -243,7 +240,6 @@ describe('buildTransactionPayload', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ entityId: 'ent-1' }),
       entityName: 'Woolworths',
-      accountName: 'Credit Card',
     });
     expect(payload.entityId).toBe('ent-1');
     expect(payload.entityName).toBe('Woolworths');
@@ -253,7 +249,6 @@ describe('buildTransactionPayload', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ notes: '' }),
       entityName: null,
-      accountName: 'Credit Card',
     });
     expect(payload.notes).toBeNull();
   });
@@ -262,18 +257,15 @@ describe('buildTransactionPayload', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ notes: 'A note' }),
       entityName: null,
-      accountName: 'Credit Card',
     });
     expect(payload.notes).toBe('A note');
   });
 
-  it('sends both the resolved display name and the id the user picked', () => {
+  it('passes the picked accountId straight through', () => {
     const payload = buildTransactionPayload({
       values: makeValues({ accountId: 'acc-debit' }),
       entityName: null,
-      accountName: 'Debit Card',
     });
-    expect(payload.account).toBe('Debit Card');
     expect(payload.accountId).toBe('acc-debit');
   });
 
@@ -288,12 +280,10 @@ describe('buildTransactionPayload', () => {
         tags: ['Groceries'],
       }),
       entityName: null,
-      accountName: 'Debit Card',
     });
     expect(payload).toEqual({
       date: '2026-04-26',
       description: 'Coles Local',
-      account: 'Debit Card',
       accountId: 'acc-debit',
       type: 'purchase',
       amount: -50,
@@ -302,65 +292,6 @@ describe('buildTransactionPayload', () => {
       entityName: null,
       notes: null,
     });
-  });
-});
-
-function mockMutation() {
-  return { mutate: vi.fn() };
-}
-
-describe('buildSubmit — account name fallback', () => {
-  it('uses the resolved account name when the accounts query has it', () => {
-    const updateMutation = mockMutation();
-    const submit = buildSubmit({
-      editingTransaction: makeTransaction({ account: 'Everyday Checking' }),
-      createMutation: mockMutation(),
-      updateMutation,
-      resolveEntityName: () => null,
-      resolveAccountName: () => 'Everyday Checking',
-    });
-
-    submit(makeValues());
-
-    expect(updateMutation.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ account: 'Everyday Checking' }) })
-    );
-  });
-
-  it('falls back to the transaction being edited’s existing account name rather than blanking it when the accounts query has not resolved the id yet', () => {
-    // POPS-2776 review-findings-gate finding: resolveAccountName returns null
-    // (not yet loaded / not found) while editing a transaction whose account
-    // id is otherwise valid — submitting must not silently blank the legacy
-    // display-name column.
-    const updateMutation = mockMutation();
-    const submit = buildSubmit({
-      editingTransaction: makeTransaction({ account: 'Everyday Checking' }),
-      createMutation: mockMutation(),
-      updateMutation,
-      resolveEntityName: () => null,
-      resolveAccountName: () => null,
-    });
-
-    submit(makeValues());
-
-    expect(updateMutation.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ account: 'Everyday Checking' }) })
-    );
-  });
-
-  it('falls back to an empty string when creating (no prior transaction) and the account cannot be resolved', () => {
-    const createMutation = mockMutation();
-    const submit = buildSubmit({
-      editingTransaction: null,
-      createMutation,
-      updateMutation: mockMutation(),
-      resolveEntityName: () => null,
-      resolveAccountName: () => null,
-    });
-
-    submit(makeValues());
-
-    expect(createMutation.mutate).toHaveBeenCalledWith(expect.objectContaining({ account: '' }));
   });
 });
 
@@ -468,7 +399,7 @@ describe('useTransactionsPage — onSubmit (create)', () => {
     );
   });
 
-  it('resolves the account display name from the accounts list for the id the user picked', async () => {
+  it('sends the accountId the user picked, unresolved', async () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useTransactionsPage(), { wrapper });
 
@@ -479,7 +410,7 @@ describe('useTransactionsPage — onSubmit (create)', () => {
 
     await waitFor(() =>
       expect(transactionsCreateMock).toHaveBeenCalledWith({
-        body: expect.objectContaining({ account: 'Debit Card', accountId: 'acc-debit' }),
+        body: expect.objectContaining({ accountId: 'acc-debit' }),
       })
     );
   });

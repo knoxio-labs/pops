@@ -1,4 +1,4 @@
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 
 /**
  * File types each bank's import takes.
@@ -8,7 +8,7 @@ import type { BankType } from '../../../store/import-store-types';
  * Offering PDF anywhere else would show a picker for a path that does not
  * exist.
  */
-export const BANK_ACCEPTED_TYPES: Record<BankType, string> = {
+export const BANK_ACCEPTED_TYPES: Record<BankDialectId, string> = {
   ANZ: '.csv',
   'ANZ Credit Card': '.csv,.pdf',
   Amex: '.csv',
@@ -22,9 +22,9 @@ export const BANK_OPTIONS = [
   { value: 'Amex', label: 'Amex', description: 'American Express' },
   { value: 'ING', label: 'ING', description: 'Savings, Everyday' },
   { value: 'Up', label: 'Up', description: 'Everyday, Round Up' },
-] satisfies Array<{ value: BankType; label: string; description: string }>;
+] satisfies Array<{ value: BankDialectId; label: string; description: string }>;
 
-export const BANK_HELP: Record<BankType, string> = {
+export const BANK_HELP: Record<BankDialectId, string> = {
   ANZ: 'Log in to ANZ Internet Banking, open your account, and export transactions as CSV.',
   'ANZ Credit Card':
     'Log in to ANZ Internet Banking, open your credit card, and export transactions as CSV. The export has no header row — that is expected.',
@@ -34,6 +34,6 @@ export const BANK_HELP: Record<BankType, string> = {
 };
 
 /** Whether this bank's import will read a PDF statement as well as a CSV export. */
-export function bankTakesPdf(bankType: BankType): boolean {
-  return BANK_ACCEPTED_TYPES[bankType].includes('.pdf');
+export function bankTakesPdf(dialectId: BankDialectId): boolean {
+  return BANK_ACCEPTED_TYPES[dialectId].includes('.pdf');
 }

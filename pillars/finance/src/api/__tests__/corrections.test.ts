@@ -17,10 +17,21 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, transactionsService, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  openFinanceDb,
+  resolveAccountIdByName,
+  transactionsService,
+  type FinanceDb,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
+
+/** 'Amex' is seeded by 0083_accounts.sql, so this only needs a lookup. */
+function seedAmexAccount(db: FinanceDb): string {
+  return resolveAccountIdByName(db, 'Amex');
+}
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
@@ -199,21 +210,22 @@ describe('corrections — findMatch', () => {
 describe('corrections — previewMatches', () => {
   it('returns the transactions a candidate (pattern, matchType) rule would match', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
-      account: 'Amex',
+      accountId: amexId,
       amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO',
-      account: 'Amex',
+      accountId: amexId,
       amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
-      account: 'Amex',
+      accountId: amexId,
       amountCents: -800,
       date: '2026-01-03',
     });
@@ -244,10 +256,11 @@ describe('corrections — previewMatches', () => {
 describe('corrections — ruleMatchPreview', () => {
   it('lists the full DB match set with a true total and pages with limit/offset', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     for (let i = 1; i <= 3; i += 1) {
       transactionsService.createTransaction(db, {
         description: `WOOLWORTHS ${i}00 SYDNEY`,
-        account: 'Amex',
+        accountId: amexId,
         amountCents: -i * 100,
         date: `2026-01-0${i}`,
         checksum: `chk-${i}`,
@@ -255,7 +268,7 @@ describe('corrections — ruleMatchPreview', () => {
     }
     transactionsService.createTransaction(db, {
       description: 'COLES EXPRESS',
-      account: 'Amex',
+      accountId: amexId,
       amountCents: -800,
       date: '2026-01-09',
     });
@@ -776,9 +789,10 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
 
   it('applies a confident rule to a matching non-manual transaction: entity + tags + provenance', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
-      account: 'amex',
+      accountId: amexId,
       amountCents: -3000,
       date: '2026-01-01',
     });
@@ -804,9 +818,10 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
 
   it('skips a transaction whose matchType is manual (CF017/#3623)', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
-      account: 'amex',
+      accountId: amexId,
       amountCents: -3000,
       date: '2026-01-01',
       entityId: 'ent-user-picked',
@@ -824,9 +839,10 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
 
   it('skips an uncertain (sub-threshold) rule match, applying nothing', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     transactionsService.createTransaction(db, {
       description: 'BIG W',
-      account: 'amex',
+      accountId: amexId,
       amountCents: -3000,
       date: '2026-01-01',
     });
@@ -845,9 +861,10 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
 
   it('dryRun computes the same match set without writing or bumping usage telemetry', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     const txn = transactionsService.createTransaction(db, {
       description: 'BIG W',
-      account: 'amex',
+      accountId: amexId,
       amountCents: -3000,
       date: '2026-01-01',
     });
@@ -866,9 +883,10 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
 
   it('a second real apply against the same rule is a no-op (idempotent)', async () => {
     const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
     transactionsService.createTransaction(db, {
       description: 'BIG W',
-      account: 'amex',
+      accountId: amexId,
       amountCents: -3000,
       date: '2026-01-01',
     });

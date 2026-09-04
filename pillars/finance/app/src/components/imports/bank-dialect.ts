@@ -2,7 +2,7 @@ import { parseAmexRow, parseAnzDescription } from '@pops/finance';
 
 import type { AnzForeignCharge, FxCaptureSource } from '@pops/finance';
 
-import type { BankType } from '../../store/import-store-types';
+import type { BankDialectId } from '../../store/import-store-types';
 
 /**
  * Per-bank CSV shape, for the parts of an export that the column mapper cannot
@@ -113,7 +113,7 @@ const AMEX: BankDialect = {
   fxCaptureSource: 'unavailable',
 };
 
-const DIALECTS: Readonly<Record<BankType, BankDialect>> = {
+const DIALECTS: Readonly<Record<BankDialectId, BankDialect>> = {
   ANZ: DEFAULT_DIALECT,
   'ANZ Credit Card': ANZ_CREDIT_CARD,
   Amex: AMEX,
@@ -121,6 +121,6 @@ const DIALECTS: Readonly<Record<BankType, BankDialect>> = {
   Up: DEFAULT_DIALECT,
 };
 
-export function bankDialect(bank: BankType): BankDialect {
+export function bankDialect(bank: BankDialectId): BankDialect {
   return DIALECTS[bank];
 }

@@ -25,7 +25,6 @@ import type {
 export interface Transaction extends ForeignChargeFields {
   id: string;
   description: string;
-  account: string;
   accountId: string;
   amount: number;
   date: string;
@@ -49,7 +48,6 @@ export interface TransactionSnapshot extends ForeignChargeFields {
   id: string;
   notionId: string | null;
   description: string;
-  account: string;
   accountId: string;
   amount: number;
   date: string;
@@ -72,8 +70,7 @@ export interface TransactionSnapshot extends ForeignChargeFields {
 /** Wire body accepted by `POST /transactions` (dollars `amount`). */
 export interface CreateTransactionBody {
   description: string;
-  account: string;
-  accountId?: string | undefined;
+  accountId: string;
   amount: number;
   date: string;
   type: TransactionType;
@@ -91,7 +88,6 @@ export interface CreateTransactionBody {
 /** Wire body accepted by `PATCH /transactions/:id` (dollars `amount`). */
 export interface UpdateTransactionBody {
   description?: string;
-  account?: string;
   accountId?: string;
   amount?: number;
   date?: string;
@@ -110,7 +106,6 @@ export function toTransaction(row: TransactionRow): Transaction {
   return {
     id: row.id,
     description: row.description,
-    account: row.account,
     accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,
@@ -133,7 +128,6 @@ export function toTransactionSnapshot(row: TransactionRow): TransactionSnapshot 
     id: row.id,
     notionId: row.notionId,
     description: row.description,
-    account: row.account,
     accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,
@@ -161,7 +155,6 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
     id: snapshot.id,
     notionId: snapshot.notionId,
     description: snapshot.description,
-    account: snapshot.account,
     accountId: snapshot.accountId,
     amountCents: dollarsToCents(snapshot.amount),
     date: snapshot.date,
@@ -187,7 +180,6 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
 export function toCreateTransactionInput(body: CreateTransactionBody): CreateTransactionInput {
   return {
     description: body.description,
-    account: body.account,
     accountId: body.accountId,
     amountCents: dollarsToCents(body.amount),
     date: body.date,
@@ -208,7 +200,6 @@ export function toCreateTransactionInput(body: CreateTransactionBody): CreateTra
 export function toUpdateTransactionInput(body: UpdateTransactionBody): UpdateTransactionInput {
   return {
     description: body.description,
-    account: body.account,
     accountId: body.accountId,
     amountCents: body.amount === undefined ? undefined : dollarsToCents(body.amount),
     date: body.date,

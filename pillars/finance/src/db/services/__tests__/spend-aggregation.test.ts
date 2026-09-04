@@ -58,8 +58,8 @@ function seed(
 ): void {
   db.$client
     .prepare(
-      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, tags, last_edited_time)
-       VALUES (?, ?, 'Amex', ?, ?, '2026-05-10', ?, ?, '2026-05-10T00:00:00Z')`
+      `INSERT INTO transactions (id, description, account_id, amount_cents, date, type, tags, last_edited_time)
+       VALUES (?, ?, ?, ?, '2026-05-10', ?, ?, '2026-05-10T00:00:00Z')`
     )
     .run(
       crypto.randomUUID(),

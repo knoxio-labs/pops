@@ -15,7 +15,7 @@ Eight steps that turn a bank CSV into committed transactions. Unlike the backend
 
 ## One run, several files
 
-A batch is one bank. Every file in it is stamped with the single `bankType` chosen on step 1, and `csv-merge.ts` refuses the batch — by file name, listing the offending columns — unless every file carries the same header set as the first. Column order is not part of that comparison; Papa Parse keys rows by header name.
+A batch is one bank. Every file in it is stamped with the single `dialectId` chosen on step 1, and `csv-merge.ts` refuses the batch — by file name, listing the offending columns — unless every file carries the same header set as the first. Column order is not part of that comparison; Papa Parse keys rows by header name.
 
 Consecutive statement exports repeat the days they share, so `mergeParsedFiles` drops the overlap. It compares whole rows rather than checksums, because only at merge time are the file boundaries still visible, and the distinction depends on them: a row repeated across two files is one transaction seen twice, while a row repeated inside one file is two genuine transactions — a bank will list two identical coffees bought on the same day, and they share a canonical checksum. So a row content is kept as many times as the file that lists it most. Nothing downstream deduplicates within a batch; `partitionByChecksum` on the server only compares against what is already committed.
 

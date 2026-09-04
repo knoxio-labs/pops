@@ -2,7 +2,7 @@ import { Button } from '@pops/ui';
 
 import { BANK_HELP, BANK_OPTIONS } from './bank-upload-config';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 import type { AnzPdfStatementImport } from '../pdf/anz-pdf-import';
 
 export function UploadStepHeader({ takesPdf }: { takesPdf: boolean }) {
@@ -22,12 +22,12 @@ export function UploadStepHeader({ takesPdf }: { takesPdf: boolean }) {
   );
 }
 
-export function BankExportHelp({ bankType }: { bankType: BankType }) {
-  const label = BANK_OPTIONS.find((bank) => bank.value === bankType)?.label ?? bankType;
+export function BankExportHelp({ dialectId }: { dialectId: BankDialectId }) {
+  const label = BANK_OPTIONS.find((bank) => bank.value === dialectId)?.label ?? dialectId;
   return (
     <div className="bg-info/5 border border-info/20 rounded-lg p-4">
       <h3 className="text-sm font-medium text-info mb-2">How to export from {label}</h3>
-      <p className="text-xs text-info">{BANK_HELP[bankType]}</p>
+      <p className="text-xs text-info">{BANK_HELP[dialectId]}</p>
     </div>
   );
 }

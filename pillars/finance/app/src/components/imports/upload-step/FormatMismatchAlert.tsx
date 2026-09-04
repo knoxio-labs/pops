@@ -4,7 +4,7 @@ import { Alert, AlertDescription, AlertTitle, Button } from '@pops/ui';
 
 import { BANK_OPTIONS } from './bank-upload-config';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 
 /**
  * Shown when the uploaded file's first row is a header but the chosen bank's
@@ -16,17 +16,17 @@ import type { BankType } from '../../../store/import-store-types';
  * nothing to "continue anyway" with.
  */
 export function FormatMismatchAlert({
-  bankType,
+  dialectId,
   headerRow,
   onChangeFormat,
   onChooseAnotherFile,
 }: {
-  bankType: BankType;
+  dialectId: BankDialectId;
   headerRow: string;
   onChangeFormat: () => void;
   onChooseAnotherFile: () => void;
 }) {
-  const label = BANK_OPTIONS.find((bank) => bank.value === bankType)?.label ?? bankType;
+  const label = BANK_OPTIONS.find((bank) => bank.value === dialectId)?.label ?? dialectId;
   return (
     <Alert variant="destructive">
       <FileWarning aria-hidden />

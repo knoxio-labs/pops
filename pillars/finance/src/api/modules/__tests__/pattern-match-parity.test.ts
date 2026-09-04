@@ -185,13 +185,12 @@ function seedTransaction(raw: Database.Database, description: string): void {
   raw
     .prepare(
       `INSERT INTO transactions (
-        id, description, account, account_id, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        id, description, account_id, amount_cents, date, type, checksum, entity_id, entity_name, last_edited_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       'txn-parity',
       description,
-      'Up Savings',
       accountId.id,
       dollarsToCents(-10),
       '2025-01-01',

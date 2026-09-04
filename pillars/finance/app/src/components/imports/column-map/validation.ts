@@ -7,7 +7,7 @@ import { extractLocation, parseAmount, parseDate, type ColumnMap } from './parse
 
 import type { AnzForeignCharge, FxCaptureSource, ParsedTransaction } from '@pops/finance';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 
 export interface ValidationResult {
   valid: boolean;
@@ -64,8 +64,8 @@ function describeRow(
 
 /** The wizard's account-step identity (POPS-2840/POPS-2852), bundled to keep `validateRow` under `max-params`. */
 interface AccountIdentity {
-  /** The bank/dialect label picked on step 1 — selects the CSV parser. */
-  account: BankType;
+  /** The dialect picked on step 1 — selects the CSV parser, not the account. */
+  dialectId: BankDialectId;
   /** The real `accounts.id` picked on the same step. */
   accountId: string;
 }
@@ -76,8 +76,8 @@ function validateRow(
   rowNum: number,
   identity: AccountIdentity
 ): RowValidation {
-  const { account, accountId } = identity;
-  const dialect = bankDialect(account);
+  const { dialectId, accountId } = identity;
+  const dialect = bankDialect(dialectId);
   const dateStr = row[columnMap.date];
   const parsedDate = parseDate(dateStr);
   if (!parsedDate) return { error: `Row ${rowNum}: Invalid date format "${dateStr}"` };
@@ -110,7 +110,7 @@ function validateRow(
       date: parsedDate,
       description,
       amount: parsedAmount,
-      account,
+      account: dialectId,
       accountId,
       location,
       country,
@@ -127,7 +127,7 @@ function validateRow(
 export function validateAllRows(
   rows: Record<string, string>[],
   columnMap: ColumnMap,
-  account: BankType,
+  dialectId: BankDialectId,
   accountId: string
 ): ValidationResult {
   const errors: string[] = [];
@@ -139,7 +139,7 @@ export function validateAllRows(
       parsedTransactions,
     };
   }
-  const identity: AccountIdentity = { account, accountId };
+  const identity: AccountIdentity = { dialectId, accountId };
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (!row) continue;

@@ -42,7 +42,7 @@ export const MATCH_TYPE_OPTIONS: ReadonlyArray<{ label: string; value: MatchType
 export interface RulePreviewMatch {
   id: string;
   description: string;
-  account: string;
+  accountId: string;
   amount: number;
   date: string;
   entityName: string | null;

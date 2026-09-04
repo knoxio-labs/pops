@@ -179,16 +179,36 @@ async function waitForRedisReady(url: string, timeoutMs: number): Promise<void> 
   );
 }
 
+async function createFinanceAccount(financeBaseUrl: string): Promise<string> {
+  // A distinct name: migration 0083_accounts.sql backfills a real "Amex"
+  // account into every fresh finance DB (the live production data this
+  // epic's cutover carried forward), so that name is already taken here.
+  const response = await fetch(`${financeBaseUrl}/accounts`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Live Seam Test Account',
+      institutionId: null,
+      kind: 'credit-card',
+      currency: 'AUD',
+    }),
+  });
+  expect(response.status).toBe(201);
+  const body = (await response.json()) as { data: { id: string } };
+  return body.data.id;
+}
+
 async function createFinanceTransaction(
   financeBaseUrl: string,
-  description: string
+  description: string,
+  accountId: string
 ): Promise<string> {
   const response = await fetch(`${financeBaseUrl}/transactions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       description,
-      account: 'Amex',
+      accountId,
       amount: -12.5,
       date: '2026-08-01',
       type: 'purchase',
@@ -251,9 +271,18 @@ describe('cerebrum -> finance live seam', () => {
     // warning is about a real deployment's transaction volume, not a test's
     // two rows) via finance's OWN real create endpoint, dialled directly
     // (not through the proxy) — seeding is setup, not the seam under test.
+    const seedAccountId = await createFinanceAccount(financeProcess.baseUrl);
     seededTransactionIds = [
-      await createFinanceTransaction(financeProcess.baseUrl, 'Live seam test transaction 1'),
-      await createFinanceTransaction(financeProcess.baseUrl, 'Live seam test transaction 2'),
+      await createFinanceTransaction(
+        financeProcess.baseUrl,
+        'Live seam test transaction 1',
+        seedAccountId
+      ),
+      await createFinanceTransaction(
+        financeProcess.baseUrl,
+        'Live seam test transaction 2',
+        seedAccountId
+      ),
     ];
 
     const cerebrumPort = await getFreePort();

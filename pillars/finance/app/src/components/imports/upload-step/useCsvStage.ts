@@ -5,7 +5,7 @@ import { bankDialect } from '../bank-dialect';
 import { mergeParsedFiles } from '../csv-merge';
 import { parseAllFiles } from '../csv-parse';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 
 export interface CsvStageCallbacks {
   setError: (message: string | null) => void;
@@ -16,7 +16,7 @@ export interface CsvStageCallbacks {
 /** Parsing uploaded CSV exports into the wizard's header/row state. */
 export function useCsvStage(
   files: File[],
-  bankType: BankType,
+  dialectId: BankDialectId,
   { setError, setFormatMismatch, setIsProcessing }: CsvStageCallbacks
 ): () => Promise<void> {
   const { setHeaders, setRows, nextStep } = useImportStore();
@@ -29,7 +29,7 @@ export function useCsvStage(
       error: parseError,
       formatMismatch,
       parsed,
-    } = await parseAllFiles(files, bankDialect(bankType));
+    } = await parseAllFiles(files, bankDialect(dialectId));
     if (formatMismatch) {
       setIsProcessing(false);
       setFormatMismatch(formatMismatch);
@@ -51,7 +51,7 @@ export function useCsvStage(
     nextStep();
   }, [
     files,
-    bankType,
+    dialectId,
     setHeaders,
     setRows,
     nextStep,

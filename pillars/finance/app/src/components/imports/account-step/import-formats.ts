@@ -1,6 +1,6 @@
 import type { AccountOption } from '@pops/ui';
 
-import type { BankType } from '../../../store/import-store-types';
+import type { BankDialectId } from '../../../store/import-store-types';
 
 /**
  * Kinds a statement is ever exported for. Cash, gift cards and person ledgers
@@ -20,7 +20,7 @@ const IMPORTABLE_KINDS: ReadonlyArray<AccountOption['kind']> = [
  * signal — matched loosely, because "ANZ" and "anz" name the same bank, and
  * every name this cannot recognise has no dialect written for it yet.
  */
-const BANK_TYPE_BY_INSTITUTION_NAME: Record<string, BankType> = {
+const BANK_TYPE_BY_INSTITUTION_NAME: Record<string, BankDialectId> = {
   anz: 'ANZ',
   amex: 'Amex',
   'american express': 'Amex',
@@ -37,7 +37,7 @@ const BANK_TYPE_BY_INSTITUTION_NAME: Record<string, BankType> = {
  */
 export function bankTypesForAccount(
   account: Pick<AccountOption, 'kind' | 'institution'>
-): BankType[] {
+): BankDialectId[] {
   if (!IMPORTABLE_KINDS.includes(account.kind)) return [];
   const name = account.institution?.name;
   if (!name) return [];

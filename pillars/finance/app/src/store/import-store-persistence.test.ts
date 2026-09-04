@@ -17,7 +17,7 @@ const PERSISTED_KEYS = [
   'sourceFileNames',
   'accountId',
   'accountName',
-  'bankType',
+  'dialectId',
   'headers',
   'rows',
   'columnMap',

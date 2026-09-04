@@ -208,7 +208,7 @@ describe('UploadStep — an account with no derivable import format (POPS-2854)'
     // A cash account has no statement to export — `bankTypesForAccount`
     // returns no formats for it, and `AccountAndFormatFields` shows the
     // "Nothing to import" alert. The file drop and Next must agree with that
-    // rather than staying active under whatever `bankType` the store
+    // rather than staying active under whatever `dialectId` the store
     // defaulted to.
     accountsList.mockResolvedValueOnce({
       data: {
@@ -261,7 +261,7 @@ function selectFilesTakingPdf(files: File[]) {
 
 describe('UploadStep — a file that does not match the chosen bank', () => {
   it('names the header row it found and blocks the import until it is resolved', async () => {
-    useImportStore.getState().setBankType('ANZ Credit Card');
+    useImportStore.getState().setDialectId('ANZ Credit Card');
     render(renderUploadStep());
 
     selectFilesTakingPdf([
@@ -276,7 +276,7 @@ describe('UploadStep — a file that does not match the chosen bank', () => {
   });
 
   it('clears the mismatch and the file when choosing another file instead', async () => {
-    useImportStore.getState().setBankType('ANZ Credit Card');
+    useImportStore.getState().setDialectId('ANZ Credit Card');
     render(renderUploadStep());
 
     selectFilesTakingPdf([

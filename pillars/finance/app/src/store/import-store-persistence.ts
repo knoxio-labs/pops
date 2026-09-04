@@ -17,7 +17,7 @@ export type PersistedImportState = Pick<
   | 'sourceFileNames'
   | 'accountId'
   | 'accountName'
-  | 'bankType'
+  | 'dialectId'
   | 'headers'
   | 'rows'
   | 'columnMap'
@@ -45,7 +45,7 @@ export function partializeImportState(state: ImportStore): PersistedImportState 
     sourceFileNames: state.sourceFileNames,
     accountId: state.accountId,
     accountName: state.accountName,
-    bankType: state.bankType,
+    dialectId: state.dialectId,
     headers: state.headers,
     rows: state.rows,
     columnMap: state.columnMap,

@@ -24,7 +24,7 @@ import { CATEGORIZER_DEFAULT_MODEL } from './imports/ai-categorizer.js';
 
 import type { ChangeSet } from '../../contract/rest-corrections.js';
 import type { AcceptedCorrectionExample, CorrectionInput } from './corrections/ai-analyze.js';
-import type { GenerateRulesTransaction } from './corrections/ai-generate-rules.js';
+import type { PromptTransaction } from './corrections/ai-generate-rules.js';
 import type { ReviseArgs } from './corrections/ai-propose.js';
 import type { CorrectionSignal } from './corrections/ai-types.js';
 
@@ -85,7 +85,7 @@ const SAMPLE_CORRECTION_INPUT: CorrectionInput = {
   amount: -45.2,
 };
 
-const SAMPLE_GENERATE_TXNS: GenerateRulesTransaction[] = [
+const SAMPLE_GENERATE_TXNS: PromptTransaction[] = [
   {
     description: 'WOOLWORTHS 2246 SYDNEY NSW AU',
     entityName: 'Woolworths',

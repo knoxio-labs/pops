@@ -10,17 +10,20 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { openFinanceDb, resolveAccountIdByName, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake, type ContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
+let amexAccountId: string;
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-txreads-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  // 'Amex' is already seeded by 0083_accounts.sql.
+  amexAccountId = resolveAccountIdByName(financeDb.db, 'Amex');
 });
 
 afterEach(() => {
@@ -41,7 +44,7 @@ function client(contacts: ContactsFake = makeContactsFake()) {
 
 const tx = (over: Record<string, unknown>) => ({
   description: 'WOOLWORTHS METRO',
-  account: 'Amex',
+  accountId: amexAccountId,
   amount: -10,
   date: '2026-01-01',
   type: 'purchase',

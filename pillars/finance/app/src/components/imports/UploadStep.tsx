@@ -13,7 +13,7 @@ import { BankExportHelp, UploadFooter, UploadStepHeader } from './upload-step/Up
 import { useCsvStage } from './upload-step/useCsvStage';
 import { usePdfStage } from './upload-step/usePdfStage';
 
-import type { BankType } from '../../store/import-store-types';
+import type { BankDialectId } from '../../store/import-store-types';
 
 const MIXED_UPLOAD_ERROR =
   'Select either CSV exports or PDF statements, not both. They are read differently and a period covered by both would import twice.';
@@ -21,7 +21,7 @@ const MIXED_UPLOAD_ERROR =
 function UploadFileSection({
   files,
   rows,
-  bankType,
+  dialectId,
   formatMismatch,
   pdfStatement,
   handleFilesSelect,
@@ -29,7 +29,7 @@ function UploadFileSection({
 }: {
   files: File[];
   rows: Record<string, string>[];
-  bankType: BankType;
+  dialectId: BankDialectId;
   formatMismatch: string | null;
   pdfStatement: ReturnType<typeof usePdfStage>['statement'];
   handleFilesSelect: (files: File[]) => void;
@@ -40,7 +40,7 @@ function UploadFileSection({
     <>
       <FileUpload
         onFilesSelect={handleFilesSelect}
-        acceptedTypes={BANK_ACCEPTED_TYPES[bankType]}
+        acceptedTypes={BANK_ACCEPTED_TYPES[dialectId]}
         maxSizeMB={25}
         maxTotalSizeMB={100}
         initialFiles={files}
@@ -48,7 +48,7 @@ function UploadFileSection({
 
       {formatMismatch && (
         <FormatMismatchAlert
-          bankType={bankType}
+          dialectId={dialectId}
           headerRow={formatMismatch}
           onChangeFormat={handleDismissMismatch}
           onChooseAnotherFile={() => handleFilesSelect([])}
@@ -63,30 +63,39 @@ function UploadFileSection({
         </div>
       )}
 
-      <BankExportHelp bankType={bankType} />
+      <BankExportHelp dialectId={dialectId} />
     </>
   );
 }
 
+/**
+ * The account is the source of truth for what `dialectId` may be — once its
+ * dialects are known, steer away from whatever the store carried over
+ * (another account's pick, or the store's static default) instead of parsing
+ * this account's file under a dialect it cannot produce.
+ */
+function useDialectSteering(
+  availableBanks: BankDialectId[],
+  dialectId: BankDialectId,
+  setDialectId: (value: BankDialectId) => void
+): void {
+  useEffect(() => {
+    const [first] = availableBanks;
+    if (first && !availableBanks.includes(dialectId)) {
+      setDialectId(first);
+    }
+  }, [availableBanks, dialectId, setDialectId]);
+}
+
 function useUploadStep() {
-  const { files, rows, bankType, accountId, setFiles, setBankType, nextStep } = useImportStore();
+  const { files, rows, dialectId, accountId, setFiles, setDialectId, nextStep } = useImportStore();
   const { account, availableBanks } = useAccountFormats(accountId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formatMismatch, setFormatMismatch] = useState<string | null>(null);
   const pdf = usePdfStage(setError, setIsProcessing);
-  const runCsv = useCsvStage(files, bankType, { setError, setFormatMismatch, setIsProcessing });
-
-  // The account is the source of truth for what `bankType` may be — once its
-  // dialects are known, steer away from whatever the store carried over
-  // (another account's pick, or the store's static default) instead of
-  // parsing this account's file under a dialect it cannot produce.
-  useEffect(() => {
-    const [first] = availableBanks;
-    if (first && !availableBanks.includes(bankType)) {
-      setBankType(first);
-    }
-  }, [availableBanks, bankType, setBankType]);
+  const runCsv = useCsvStage(files, dialectId, { setError, setFormatMismatch, setIsProcessing });
+  useDialectSteering(availableBanks, dialectId, setDialectId);
 
   const handleFilesSelect = useCallback(
     (selectedFiles: File[]) => {
@@ -100,10 +109,10 @@ function useUploadStep() {
 
   const handleBankChange = useCallback(
     (value: string) => {
-      setBankType(value as BankType);
+      setDialectId(value as BankDialectId);
       setFormatMismatch(null);
     },
-    [setBankType]
+    [setDialectId]
   );
 
   const handleDismissMismatch = useCallback(() => setFormatMismatch(null), []);
@@ -128,7 +137,7 @@ function useUploadStep() {
   return {
     files,
     rows,
-    bankType,
+    dialectId,
     accountId,
     // Definitively known to have nothing to import, as opposed to "the
     // account hasn't resolved yet" (`account` still undefined) — only the
@@ -150,7 +159,7 @@ export function UploadStep() {
   const {
     files,
     rows,
-    bankType,
+    dialectId,
     accountId,
     hasNoFormat,
     isProcessing,
@@ -165,15 +174,15 @@ export function UploadStep() {
 
   return (
     <div className="space-y-6">
-      <UploadStepHeader takesPdf={bankTakesPdf(bankType)} />
+      <UploadStepHeader takesPdf={bankTakesPdf(dialectId)} />
 
-      <AccountAndFormatFields bankType={bankType} onBankChange={handleBankChange} />
+      <AccountAndFormatFields dialectId={dialectId} onBankChange={handleBankChange} />
 
       {accountId && !hasNoFormat && (
         <UploadFileSection
           files={files}
           rows={rows}
-          bankType={bankType}
+          dialectId={dialectId}
           formatMismatch={formatMismatch}
           pdfStatement={pdfStatement}
           handleFilesSelect={handleFilesSelect}
