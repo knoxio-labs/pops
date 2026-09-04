@@ -13,7 +13,7 @@ import {
   TextInput,
 } from '@pops/ui';
 
-const CURRENCY_KIND_OPTIONS = [
+export const CURRENCY_KIND_OPTIONS = [
   { value: 'fiat', label: 'Fiat' },
   { value: 'points', label: 'Points' },
 ];
