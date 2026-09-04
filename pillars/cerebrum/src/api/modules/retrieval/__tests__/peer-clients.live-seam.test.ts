@@ -180,11 +180,14 @@ async function waitForRedisReady(url: string, timeoutMs: number): Promise<void> 
 }
 
 async function createFinanceAccount(financeBaseUrl: string): Promise<string> {
+  // A distinct name: migration 0083_accounts.sql backfills a real "Amex"
+  // account into every fresh finance DB (the live production data this
+  // epic's cutover carried forward), so that name is already taken here.
   const response = await fetch(`${financeBaseUrl}/accounts`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      name: 'Amex',
+      name: 'Live Seam Test Account',
       institutionId: null,
       kind: 'credit-card',
       currency: 'AUD',
