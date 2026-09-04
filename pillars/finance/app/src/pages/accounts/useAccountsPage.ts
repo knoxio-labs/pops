@@ -5,7 +5,12 @@ import { unwrap } from '../../finance-api-helpers.js';
 import { accountsList, currenciesList, institutionsList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
 import { mapAccountApiError } from './account-error-mapping';
-import { type Account, type AccountFormValues } from './types';
+import {
+  loanTermsFieldsDirty,
+  loanTermsPartiallyFilled,
+  type Account,
+  type AccountFormValues,
+} from './types';
 import { useAccountFormDialogState } from './useAccountFormDialogState';
 import { ACCOUNTS_KEY, toggleArchived, useAccountMutations } from './useAccountMutations';
 import { useCreateInstitution } from './useCreateInstitution';
@@ -65,8 +70,17 @@ export function useAccountsPage() {
         dialog.form.setError('giftCardPin', { message: 'PIN is required' });
       return;
     }
+    if (loanTermsPartiallyFilled(values)) {
+      toast.error('Fill in every loan term, or clear them all');
+      return;
+    }
     const mutation = dialog.editingAccount
-      ? updateMutation.mutateAsync({ id: dialog.editingAccount.id, values })
+      ? updateMutation.mutateAsync({
+          id: dialog.editingAccount.id,
+          values,
+          loanTermsDirty: loanTermsFieldsDirty(dialog.form.formState.dirtyFields),
+          dirtyFields: dialog.form.formState.dirtyFields,
+        })
       : createMutation.mutateAsync(values);
     mutation.catch((err: unknown) => {
       if (!mapAccountApiError(err, dialog.form)) {

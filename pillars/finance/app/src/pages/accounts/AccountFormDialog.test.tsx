@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,9 @@ const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
+const loanWriteTerms = vi.fn();
+const loanGetTerms = vi.fn();
+const loanListRateHistory = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
@@ -24,6 +27,10 @@ vi.mock('../../finance-api/index.js', () => ({
   giftCardDetailsGet: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
   giftCardDetailsReveal: vi.fn(),
+  loanWriteTerms: (...args: unknown[]) => loanWriteTerms(...args),
+  loanGetTerms: (...args: unknown[]) => loanGetTerms(...args),
+  loanListRateHistory: (...args: unknown[]) => loanListRateHistory(...args),
+  loanRecordRate: vi.fn(),
 }));
 
 function account(overrides: Partial<Account>): Account {
@@ -141,6 +148,60 @@ describe('AccountFormDialog — create', () => {
     expect(dialog.getByText(/looks up or creates a matching contact/)).toBeInTheDocument();
   });
 
+  it('writes loan terms after creating a new loan account with every term filled', async () => {
+    accountsCreate.mockResolvedValue({
+      data: { data: account({ id: 'new-loan', kind: 'loan' }), message: 'Account created' },
+      error: undefined,
+    });
+    loanWriteTerms.mockResolvedValue({
+      data: { data: { accountId: 'new-loan' }, message: 'Terms saved' },
+      error: undefined,
+    });
+    renderPage([]);
+    const dialog = await openCreateDialog();
+
+    await selectKind(dialog, 'Loan');
+    await userEvent.type(dialog.getByPlaceholderText('Everyday'), 'Home loan');
+    await pickCurrency(dialog, 'AUD — Australian Dollar');
+    fireEvent.change(dialog.getByLabelText('Original principal'), { target: { value: '500000' } });
+    fireEvent.change(dialog.getByLabelText('Annual rate'), { target: { value: '6.24' } });
+    fireEvent.change(dialog.getByLabelText('Term (months)'), { target: { value: '360' } });
+    fireEvent.change(dialog.getByLabelText('Monthly repayment'), { target: { value: '3100' } });
+    await userEvent.type(dialog.getByLabelText('Started on'), '2024-01-01');
+    await userEvent.type(dialog.getByLabelText('Terms effective from'), '2026-07-01');
+    await userEvent.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(loanWriteTerms).toHaveBeenCalled());
+    const [call] = loanWriteTerms.mock.calls[0] as [
+      { path: { id: string }; body: Record<string, unknown> },
+    ];
+    expect(call.path).toEqual({ id: 'new-loan' });
+    expect(call.body).toMatchObject({
+      originalPrincipal: 500_000,
+      annualRatePct: 6.24,
+      termMonths: 360,
+      monthlyRepayment: 3_100,
+      startedOn: '2024-01-01',
+      termsEffectiveFrom: '2026-07-01',
+    });
+  });
+
+  it('blocks submit with a toast when only some loan terms are filled', async () => {
+    renderPage([]);
+    const dialog = await openCreateDialog();
+
+    await selectKind(dialog, 'Loan');
+    await userEvent.type(dialog.getByPlaceholderText('Everyday'), 'Home loan');
+    await pickCurrency(dialog, 'AUD — Australian Dollar');
+    fireEvent.change(dialog.getByLabelText('Original principal'), { target: { value: '500000' } });
+    await userEvent.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    // The dialog stays open on a blocked submit — a successful one would close it.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(accountsCreate).not.toHaveBeenCalled();
+    expect(loanWriteTerms).not.toHaveBeenCalled();
+  });
+
   it('surfaces a duplicate-name 409 as an inline error on the Name field', async () => {
     accountsCreate.mockResolvedValue({
       data: undefined,
@@ -179,6 +240,119 @@ describe('AccountFormDialog — edit', () => {
     await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
     const [call] = accountsUpdate.mock.calls[0] as [{ path: { id: string } }];
     expect(call.path).toEqual({ id: 'a1' });
+  });
+
+  it('prefills existing loan terms and shows rate history for a loan account', async () => {
+    loanGetTerms.mockResolvedValue({
+      data: {
+        data: {
+          accountId: 'loan-1',
+          originalPrincipal: 500_000,
+          annualRatePct: 6.24,
+          termMonths: 360,
+          monthlyRepayment: 3_100,
+          startedOn: '2024-01-01',
+          termsEffectiveFrom: '2026-07-01',
+          source: 'manual',
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+      },
+      error: undefined,
+    });
+    loanListRateHistory.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'r1',
+            loanAccountId: 'loan-1',
+            annualRatePct: 6.24,
+            effectiveFrom: '2026-07-01',
+            source: 'manual',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    renderPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+
+    expect(await dialog.findByLabelText('Original principal')).toHaveValue(500_000);
+    expect(dialog.getByLabelText('Annual rate')).toHaveValue(6.24);
+    expect(await dialog.findByText('6.24%')).toBeInTheDocument();
+    expect(dialog.getByText('from 2026-07-01')).toBeInTheDocument();
+  });
+
+  /**
+   * Regression for the review-findings-gate HIGH finding on POPS-2846:
+   * `recordLoanRate` (the "Record rate change" action) never touches
+   * `loan_terms.terms_effective_from`, so once a rate change has been
+   * recorded, the terms row's `termsEffectiveFrom` the form prefills is
+   * earlier than the loan's actual latest rate. Resubmitting it
+   * unconditionally on every save of the edit dialog — even a save that only
+   * renames the account — used to hit the backend's `LoanRateNotLatestError`
+   * (simulated here via `loanWriteTerms` rejecting) after the rename had
+   * already committed, leaving the dialog stuck open on every subsequent
+   * save. Renaming without touching any loan-terms field must not call
+   * `loanWriteTerms` at all.
+   */
+  it('renames a loan account without resending its (possibly stale) loan-terms snapshot', async () => {
+    loanGetTerms.mockResolvedValue({
+      data: {
+        data: {
+          accountId: 'loan-1',
+          originalPrincipal: 500_000,
+          annualRatePct: 6.24,
+          termMonths: 360,
+          monthlyRepayment: 3_100,
+          startedOn: '2024-01-01',
+          termsEffectiveFrom: '2026-01-01',
+          source: 'manual',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: undefined,
+    });
+    loanListRateHistory.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'r2',
+            loanAccountId: 'loan-1',
+            annualRatePct: 6.5,
+            effectiveFrom: '2026-07-01',
+            source: 'manual',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    accountsUpdate.mockResolvedValue({
+      data: { data: account({ id: 'loan-1', name: 'Renamed', kind: 'loan' }), message: '' },
+      error: undefined,
+    });
+    // A stand-in for the backend's LoanRateNotLatestError: `termsEffectiveFrom`
+    // ('2026-01-01') is earlier than the rate history's latest ('2026-07-01').
+    // If the fix regresses and this gets called anyway, the update fails.
+    loanWriteTerms.mockRejectedValue(new Error('terms effective from is not the latest'));
+    renderPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+    await dialog.findByLabelText('Original principal');
+
+    await userEvent.clear(dialog.getByPlaceholderText('Everyday'));
+    await userEvent.type(dialog.getByPlaceholderText('Everyday'), 'Renamed');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
+    expect(loanWriteTerms).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('archives an active account by patching archivedAt to a timestamp', async () => {
