@@ -29,6 +29,7 @@ import type { TransactionLinkSummary } from './types';
 function transaction(id: string, description: string): Transaction {
   return {
     account: 'Up Everyday',
+    accountId: 'account-1',
     amount: -41.28,
     date: '2026-03-06',
     description,
@@ -74,6 +75,7 @@ function Harness({ transactions }: { transactions: Transaction[] }) {
   const columns = buildColumns({
     t,
     availableTags: [],
+    accounts: [],
     purchaseLinks: usePurchaseLinkSummaries(transactions),
     onTagSave: () => async () => undefined,
     onTagSuggest: () => async () => [],

@@ -3,13 +3,23 @@ import { Link } from 'react-router';
 
 import { Badge, Button, Card, SkeletonGrid } from '@pops/ui';
 
+import { AccountLabel } from '../../components/accounts/AccountLabel';
+import { useAllAccounts } from '../../components/accounts/hooks/useAllAccounts';
 import { hasTagValue } from '../../lib/tags';
+
+import type { AccountOption } from '@pops/ui';
 
 import type { TransactionsListResponse } from '../../finance-api/types.gen.js';
 
 type Transaction = NonNullable<TransactionsListResponse['data']>[number];
 
-function TransactionRow({ transaction }: { transaction: Transaction }) {
+function TransactionRow({
+  transaction,
+  accounts,
+}: {
+  transaction: Transaction;
+  accounts: AccountOption[] | undefined;
+}) {
   return (
     <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
       <div className="flex-1 min-w-0">
@@ -37,12 +47,9 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        <Badge
-          variant="outline"
-          className="hidden sm:inline-flex text-2xs uppercase tracking-wider px-1.5 py-0 text-muted-foreground font-normal"
-        >
-          {transaction.account}
-        </Badge>
+        <div className="hidden sm:inline-flex">
+          <AccountLabel accounts={accounts} account={transaction.accountId} size="compact" />
+        </div>
         <p
           className={`text-lg font-bold tabular-nums tracking-tight ${
             transaction.amount < 0 ? 'text-destructive' : 'text-success'
@@ -61,6 +68,7 @@ interface RecentTransactionsProps {
 }
 
 export function RecentTransactions({ transactions, isLoading }: RecentTransactionsProps) {
+  const { accounts } = useAllAccounts();
   if (isLoading) {
     return <SkeletonGrid count={3} itemHeight="h-16" cols="grid-cols-1" gap="gap-3" />;
   }
@@ -87,7 +95,7 @@ export function RecentTransactions({ transactions, isLoading }: RecentTransactio
     <Card className="overflow-hidden p-0">
       <div className="divide-y divide-border">
         {transactions.map((t) => (
-          <TransactionRow key={t.id} transaction={t} />
+          <TransactionRow key={t.id} transaction={t} accounts={accounts} />
         ))}
       </div>
     </Card>

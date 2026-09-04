@@ -83,6 +83,10 @@ export function FieldGrid({ transaction }: { transaction: ProcessedTransaction }
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
       <div className="text-sm">
         <span className="text-muted-foreground">Account:</span>{' '}
+        {/* Plain string, not the chip: this card renders inside the import review
+            list at dozens of call sites with no QueryClient in scope, and
+            ProcessedTransaction carries no accountId yet — left for POPS-2776's
+            follow-up ticket (the deferred import-wizard cutover). */}
         <span className="font-medium">{transaction.account}</span>
       </div>
       {transaction.location && (

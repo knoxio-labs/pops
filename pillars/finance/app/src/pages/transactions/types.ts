@@ -7,16 +7,20 @@ export { TRANSACTION_TYPE_OPTIONS } from '../../lib/transaction-type';
 /**
  * Form-level types for the transaction form dialog.
  *
- * The shape is form-friendly: amount and entityId are strings (text inputs +
- * EntitySelect store strings). The `useTransactionsPage` hook coerces these
- * to the contract shape (`amount: number`, `entityId: string | null`) on submit.
+ * The shape is form-friendly: amount, entityId and accountId are strings
+ * (text inputs + EntitySelect/AccountSelect store strings). The
+ * `useTransactionsPage` hook coerces these to the contract shape
+ * (`amount: number`, `entityId: string | null`, `account`/`accountId`) on
+ * submit.
  */
 
 /** Transaction record from the API list query (camelCase). */
 export interface Transaction {
   id: string;
   description: string;
+  /** Display name, kept for the API's still-required label field. */
   account: string;
+  accountId: string;
   amount: number;
   date: string;
   type: TransactionType;
@@ -43,7 +47,7 @@ export const TransactionFormSchema = z.object({
     .refine((v) => Number.isFinite(Number(v)), 'Amount must be a valid number')
     .refine((v) => Number(v) !== 0, 'Amount must be non-zero'),
   description: z.string().min(1, 'Description is required'),
-  account: z.string().min(1, 'Account is required'),
+  accountId: z.string().min(1, 'Account is required'),
   type: z.enum(TRANSACTION_TYPES),
   entityId: z.string(),
   tags: z.array(z.string()),
@@ -56,7 +60,7 @@ export const DEFAULT_TRANSACTION_VALUES: TransactionFormValues = {
   date: '',
   amount: '',
   description: '',
-  account: '',
+  accountId: '',
   type: 'purchase',
   entityId: '',
   tags: [],
