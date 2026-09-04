@@ -189,6 +189,12 @@ describe('institutions — merge (POPS-2844)', () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
+  it('404s, not 422s, merging a nonexistent id into itself', async () => {
+    await expect(
+      client().institutions.merge('missing-id', { targetId: 'missing-id' })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
   it('404s merging an unknown source id', async () => {
     const target = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
 

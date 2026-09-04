@@ -265,6 +265,13 @@ describe('mergeInstitutions', () => {
     expect(getAccount(db, account.id).institutionId).toBe(institution.id);
   });
 
+  it('throws InstitutionNotFoundError, not InstitutionMergeSameInstitutionError, for a self-merge of a nonexistent id', () => {
+    const db = freshDb();
+    expect(() => mergeInstitutions(db, 'missing-id', 'missing-id')).toThrow(
+      InstitutionNotFoundError
+    );
+  });
+
   it('throws InstitutionNotFoundError for an unknown source id', () => {
     const db = freshDb();
     const target = createInstitution(db, { name: 'ANZ Bank', colour: '#0033a0' });

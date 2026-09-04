@@ -177,9 +177,10 @@ export function mergeInstitutions(
   sourceId: string,
   targetId: string
 ): InstitutionRow {
-  if (sourceId === targetId) throw new InstitutionMergeSameInstitutionError(sourceId);
   getInstitution(db, sourceId);
   getInstitution(db, targetId);
+
+  if (sourceId === targetId) throw new InstitutionMergeSameInstitutionError(sourceId);
 
   db.transaction((tx) => {
     for (const quotedTable of tablesWithInstitutionIdColumn(tx)) {
