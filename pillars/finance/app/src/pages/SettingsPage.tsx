@@ -1,9 +1,20 @@
-import { Alert, Badge, Button, CRUDManagementSection, PageHeader, Skeleton } from '@pops/ui';
+import { GitMerge } from 'lucide-react';
+
+import {
+  Alert,
+  Badge,
+  Button,
+  CRUDManagementSection,
+  DropdownMenuItem,
+  PageHeader,
+  Skeleton,
+} from '@pops/ui';
 
 import { CurrencyEditDialog } from './settings/CurrencyEditDialog';
 import { DeleteCurrencyDialog } from './settings/DeleteCurrencyDialog';
 import { DeleteInstitutionDialog } from './settings/DeleteInstitutionDialog';
 import { InstitutionEditDialog } from './settings/InstitutionEditDialog';
+import { MergeInstitutionDialog } from './settings/MergeInstitutionDialog';
 import { SettingsRow } from './settings/SettingsRow';
 import { useCurrenciesSettings } from './settings/useCurrenciesSettings';
 import { useInstitutionsSettings } from './settings/useInstitutionsSettings';
@@ -26,10 +37,12 @@ function InstitutionRow({
   institution,
   onEdit,
   onDelete,
+  onMerge,
 }: {
   institution: Institution;
   onEdit: () => void;
   onDelete: () => void;
+  onMerge: () => void;
 }) {
   return (
     <SettingsRow
@@ -44,6 +57,11 @@ function InstitutionRow({
       subtitle={institution.colour}
       onEdit={onEdit}
       onDelete={onDelete}
+      extraMenuItems={
+        <DropdownMenuItem onClick={onMerge}>
+          <GitMerge /> Merge into…
+        </DropdownMenuItem>
+      }
     />
   );
 }
@@ -72,6 +90,7 @@ function InstitutionsSection() {
             institution={institution}
             onEdit={() => state.handleEdit(institution)}
             onDelete={() => state.setDeletingId(institution.id)}
+            onMerge={() => state.setMerging(institution)}
           />
         ))}
       </CRUDManagementSection>
@@ -87,6 +106,13 @@ function InstitutionsSection() {
         setDeletingId={state.setDeletingId}
         isDeleting={state.deleteMutation.isPending}
         onConfirm={(id) => state.deleteMutation.mutate(id)}
+      />
+      <MergeInstitutionDialog
+        merging={state.merging}
+        institutions={items}
+        onOpenChange={(v) => !v && state.setMerging(null)}
+        isSubmitting={state.mergeMutation.isPending}
+        onConfirm={state.onMerge}
       />
     </>
   );
@@ -168,9 +194,10 @@ function CurrenciesSection() {
 
 /**
  * Manage institutions and currencies after they've been created inline from
- * the account form (POPS-2810). Edit + delete only — creation stays on the
- * account form's pickers, and merging institutions / browsing an entity's
- * accounts before deleting are deferred (see the linked follow-up tickets).
+ * the account form (POPS-2810). Edit, delete, and merge (POPS-2844) —
+ * creation stays on the account form's pickers, and browsing an entity's
+ * accounts before deleting is still deferred (see the linked follow-up
+ * ticket).
  *
  * Row list in a `CRUDManagementSection`, not a searchable `DataTable`
  * (POPS-2843): these are short, rarely-edited reference lists — the design

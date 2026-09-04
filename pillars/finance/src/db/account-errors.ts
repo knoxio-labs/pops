@@ -96,6 +96,22 @@ export class InstitutionInUseError extends Error {
   }
 }
 
+/**
+ * A merge named the same institution as both source and target — there is
+ * nothing to repoint, and deleting it anyway would remove an institution the
+ * caller still expects to exist. Mirrors `AccountMergeSameAccountError`
+ * (`merge-account-errors.ts`, POPS-2812).
+ */
+export class InstitutionMergeSameInstitutionError extends Error {
+  override readonly name = 'InstitutionMergeSameInstitutionError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Institution '${id}' cannot be merged into itself`);
+    this.id = id;
+  }
+}
+
 export class AccountNotFoundError extends Error {
   override readonly name = 'AccountNotFoundError' as const;
   readonly id: string;

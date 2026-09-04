@@ -1,16 +1,17 @@
 /**
- * `institutions.*` sub-router — institution list/create/delete (POPS-2803).
+ * `institutions.*` sub-router — institution list/create/delete (POPS-2803),
+ * plus `merge` (POPS-2844) for reconciling near-duplicates (e.g. "ANZ" /
+ * "A.N.Z.") created before an institution picker existed.
  *
- * `accounts.institution_id` will foreign-key onto this table once POPS-2767
- * lands; until then this is a standalone growable list a client can read and
- * add to. `colour` is required (hex, for the initials fallback shown when an
+ * `accounts.institution_id` foreign-keys onto this table (POPS-2767).
+ * `colour` is required (hex, for the initials fallback shown when an
  * institution has no logo); `logoAssetId` is nullable — the upload flow that
  * populates it is POPS-2804, not yet built.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { ERR_RESPONSES, MessageSchema } from './rest-schemas.js';
+import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, MessageSchema } from './rest-schemas.js';
 
 const c = initContract();
 
@@ -38,6 +39,8 @@ const UpdateInstitutionBody = z.object({
 });
 
 const InstitutionMutation = z.object({ data: InstitutionSchema, message: z.string() });
+
+const MergeInstitutionBody = z.object({ targetId: z.string().min(1, 'targetId is required') });
 
 export const financeInstitutionsContract = c.router({
   list: {
@@ -68,5 +71,16 @@ export const financeInstitutionsContract = c.router({
     body: z.object({}).optional(),
     responses: { 200: MessageSchema, ...ERR_RESPONSES },
     summary: 'Delete an institution, refused while any account still references it',
+  },
+  merge: {
+    method: 'POST',
+    path: '/institutions/:id/merge',
+    pathParams: z.object({ id: z.string() }),
+    body: MergeInstitutionBody,
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES_WITH_422 },
+    summary:
+      'Merge institution :id (the source) into targetId: repoint every account onto targetId ' +
+      'and delete it outright. Rejects merging an institution into itself with 422. ' +
+      "The survivor keeps its own colour and logoAssetId — targetId's values win unqualified.",
   },
 });
