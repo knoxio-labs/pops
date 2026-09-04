@@ -84,6 +84,14 @@ export interface AnzPdfStatementOptions {
   /** Account name stored on every transaction, as the ledger names this card. */
   account: string;
   /**
+   * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
+   * this import — see `column-map/validation.ts`'s identical parameter. Used
+   * both to stamp `ParsedTransaction.accountId` and to scope the dedup key
+   * (POPS-2852), so two real ANZ credit-card accounts (this parser's only
+   * dialect) don't collide with each other's rows.
+   */
+  accountId: string;
+  /**
    * SHA-256 of the dedup key. Injected because this module, like
    * `import-dedup.ts`, stays crypto-free so it runs unchanged in the browser
    * and in Node; both sides hash the same key to the same digest.
@@ -106,7 +114,7 @@ function toTransaction(
   if (!description) return undefined;
 
   const dedupKey = buildImportDedupKey({
-    account: options.account,
+    accountId: options.accountId,
     date,
     amount,
     description: rawDescription,
@@ -116,6 +124,7 @@ function toTransaction(
     description,
     amount,
     account: options.account,
+    accountId: options.accountId,
     location,
     country,
     foreignAmountMinor: foreignCharge?.amountMinor,

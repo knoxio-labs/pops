@@ -84,4 +84,21 @@ describe('EditableFormFields AccountField picker branch', () => {
       expect.objectContaining({ account: 'Emergency Fund' })
     );
   });
+
+  it("also updates accountId to the newly picked account's id, not just its display name (POPS-2852)", async () => {
+    // A row edited to a different real account must actually commit against
+    // that account. Threading only the name through left `accountId` pinned
+    // to the import's own account, so the commit path (which resolves the id
+    // directly) silently ignored this edit.
+    const user = userEvent.setup();
+    useImportStore.getState().setAccount('acc-1', 'Everyday');
+    const { setEditedFields } = renderFields({ account: 'Everyday', accountId: 'acc-1' });
+
+    await user.click(await screen.findByRole('combobox', { name: 'Account' }));
+    await user.click(await screen.findByText('Emergency Fund'));
+
+    expect(setEditedFields).toHaveBeenCalledWith(
+      expect.objectContaining({ account: 'Emergency Fund', accountId: 'acc-2' })
+    );
+  });
 });

@@ -62,12 +62,21 @@ function describeRow(
   return { description: raw, location, fxCaptureSource: dialect.fxCaptureSource };
 }
 
+/** The wizard's account-step identity (POPS-2840/POPS-2852), bundled to keep `validateRow` under `max-params`. */
+interface AccountIdentity {
+  /** The bank/dialect label picked on step 1 — selects the CSV parser. */
+  account: BankType;
+  /** The real `accounts.id` picked on the same step. */
+  accountId: string;
+}
+
 function validateRow(
   row: Record<string, string>,
   columnMap: ColumnMap,
   rowNum: number,
-  account: BankType
+  identity: AccountIdentity
 ): RowValidation {
+  const { account, accountId } = identity;
   const dialect = bankDialect(account);
   const dateStr = row[columnMap.date];
   const parsedDate = parseDate(dateStr);
@@ -86,8 +95,11 @@ function validateRow(
   // field is the only thing separating two same-day, same-amount charges at
   // different branches of one merchant — collapsing them would silently drop a
   // real charge as a duplicate. See `import-dedup.ts`.
+  //
+  // Scoped to the real `accountId` (POPS-2852), not the bank dialect: two real
+  // accounts sharing one dialect (two ANZ cards) must not collide.
   const dedupKey = buildImportDedupKey({
-    account,
+    accountId,
     date: parsedDate,
     amount: parsedAmount,
     description: row[columnMap.description] ?? '',
@@ -99,6 +111,7 @@ function validateRow(
       description,
       amount: parsedAmount,
       account,
+      accountId,
       location,
       country,
       foreignAmountMinor: foreignCharge?.amountMinor,
@@ -114,7 +127,8 @@ function validateRow(
 export function validateAllRows(
   rows: Record<string, string>[],
   columnMap: ColumnMap,
-  account: BankType
+  account: BankType,
+  accountId: string
 ): ValidationResult {
   const errors: string[] = [];
   const parsedTransactions: ParsedTransaction[] = [];
@@ -125,10 +139,11 @@ export function validateAllRows(
       parsedTransactions,
     };
   }
+  const identity: AccountIdentity = { account, accountId };
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (!row) continue;
-    const result = validateRow(row, columnMap, i + 2, account);
+    const result = validateRow(row, columnMap, i + 2, identity);
     if (result.error) errors.push(result.error);
     else if (result.parsed) parsedTransactions.push(result.parsed);
   }

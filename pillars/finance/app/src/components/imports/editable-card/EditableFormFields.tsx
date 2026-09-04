@@ -54,13 +54,34 @@ function TextField({
  * is established for the import, or before the accounts list has loaded,
  * this falls back to the original free-text input rather than blocking edits
  * on a network round-trip.
+ *
+ * The picker's `onChange` threads BOTH the selected account's name and its id
+ * to the caller (POPS-2852) — a row parsed with the import's own `accountId`
+ * stamped on it (`column-map/validation.ts`) must have that id overwritten
+ * too when the row is repointed at a different real account here, or the
+ * commit path resolves the id directly and the edit silently has no effect on
+ * which account the row actually lands in, even though its displayed name
+ * changed.
  */
-function AccountField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function AccountField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string, accountId: string) => void;
+}) {
   const importAccountId = useImportStore((state) => state.accountId);
   const { accounts } = useAllAccounts();
 
   if (!importAccountId || !accounts) {
-    return <TextField id="account" label="Account" value={value} onChange={onChange} />;
+    return (
+      <TextField
+        id="account"
+        label="Account"
+        value={value}
+        onChange={(v) => onChange(v, importAccountId ?? '')}
+      />
+    );
   }
 
   const selected = accounts.find((account) => account.name === value);
@@ -70,7 +91,7 @@ function AccountField({ value, onChange }: { value: string; onChange: (value: st
       <AccountSelect
         accounts={accounts}
         value={selected?.id}
-        onChange={(_accountId, account) => onChange(account.name)}
+        onChange={(accountId, account) => onChange(account.name, accountId)}
         aria-label="Account"
       />
     </div>
@@ -104,7 +125,10 @@ export function EditableFormFields({ editedFields, setEditedFields }: FieldProps
         value={editedFields.date ?? ''}
         onChange={(v) => update('date', v)}
       />
-      <AccountField value={editedFields.account ?? ''} onChange={(v) => update('account', v)} />
+      <AccountField
+        value={editedFields.account ?? ''}
+        onChange={(v, accountId) => setEditedFields({ ...editedFields, account: v, accountId })}
+      />
       <TextField
         id="location"
         label="Location"

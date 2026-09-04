@@ -726,6 +726,36 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(list.data).toHaveLength(1);
   });
 
+  it('commits against the picked accountId end-to-end, not an account that name-matches the dialect label (POPS-2852)', async () => {
+    const c = client();
+    const pickedAccount = await c.accounts.create({
+      name: 'Amex Business',
+      kind: 'credit-card',
+      currency: 'AUD',
+    });
+
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'COMMIT WITH REAL ACCOUNT',
+          checksum: 'commit-accountid',
+          account: 'Amex',
+          accountId: pickedAccount.data.id,
+        }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare('SELECT account_id FROM transactions WHERE checksum = ?')
+      .get('commit-accountid') as { account_id: string };
+    expect(row.account_id).toBe(pickedAccount.data.id);
+
+    const nameMatched = await c.accounts.list({ search: 'Amex' });
+    const nameMatchedAmex = nameMatched.data.find((a) => a.name === 'Amex');
+    expect(nameMatchedAmex).toBeDefined();
+    expect(row.account_id).not.toBe(nameMatchedAmex?.id);
+  });
+
   it('commits a gift-card purchase as a transfer, keeping the descriptor tag (POPS-2610)', async () => {
     const c = client();
     await c.imports.commitImport({

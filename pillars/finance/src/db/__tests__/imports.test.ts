@@ -9,8 +9,9 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ImportTransactionPersistError } from '../errors.js';
+import { AccountNotFoundError, ImportTransactionPersistError } from '../errors.js';
 import { transactions } from '../schema.js';
+import { createAccount } from '../services/accounts.js';
 import {
   buildDefaultTagsByEntity,
   buildEntityMaps,
@@ -237,6 +238,71 @@ describe('insertImportTransaction', () => {
     insertImportTransaction(harness.db, { ...base, description: 'second' });
 
     expect(findExistingChecksums(harness.db, ['dup'])).toEqual(new Set(['dup']));
+  });
+
+  it('commits against the picked accountId, not an account that happens to name-match the dialect label (POPS-2852)', () => {
+    // Seed a SECOND account whose real name coincides with the seeded "Amex"
+    // account's dialect label ("amex", case-insensitively equal to the
+    // migration's seeded "Amex"). Before POPS-2852, `insertImportTransaction`
+    // name-matched `account` alone, so this row would have landed on the
+    // WRONG account — the one whose name happens to equal the dialect string —
+    // regardless of which account the wizard's user actually picked.
+    const pickedAccount = createAccount(harness.db, {
+      name: 'Amex Business',
+      kind: 'credit-card',
+      currency: 'AUD',
+    });
+    const nameMatchedAccountId = seededAccountId(harness.db, 'amex');
+    expect(nameMatchedAccountId).not.toBe(pickedAccount.id);
+
+    const row = insertImportTransaction(harness.db, {
+      description: 'Espresso',
+      account: 'amex',
+      accountId: pickedAccount.id,
+      amountCents: -450,
+      date: '2026-02-14',
+      type: 'purchase',
+      tags: [],
+      entityId: null,
+      entityName: null,
+      location: null,
+    });
+
+    expect(row.accountId).toBe(pickedAccount.id);
+    expect(row.accountId).not.toBe(nameMatchedAccountId);
+  });
+
+  it('falls back to name-matching `account` when no accountId is supplied (legacy caller)', () => {
+    const row = insertImportTransaction(harness.db, {
+      description: 'Espresso',
+      account: 'amex',
+      amountCents: -450,
+      date: '2026-02-14',
+      type: 'purchase',
+      tags: [],
+      entityId: null,
+      entityName: null,
+      location: null,
+    });
+
+    expect(row.accountId).toBe(seededAccountId(harness.db, 'amex'));
+  });
+
+  it('throws AccountNotFoundError for a stale/unknown accountId rather than silently name-matching', () => {
+    expect(() =>
+      insertImportTransaction(harness.db, {
+        description: 'Espresso',
+        account: 'amex',
+        accountId: 'not-a-real-account-id',
+        amountCents: -450,
+        date: '2026-02-14',
+        type: 'purchase',
+        tags: [],
+        entityId: null,
+        entityName: null,
+        location: null,
+      })
+    ).toThrow(AccountNotFoundError);
   });
 
   it('rolls back when used inside a transaction that aborts', () => {

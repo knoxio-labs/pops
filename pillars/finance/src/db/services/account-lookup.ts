@@ -76,3 +76,30 @@ export function resolveAccountIdentity(
   }
   throw new Error('resolveAccountIdentity requires account or accountId');
 }
+
+/**
+ * Resolve an IMPORT row's account id: prefer the wizard's picked `accountId`
+ * (POPS-2840) when present, validated with {@link getAccount} (throwing
+ * `AccountNotFoundError` for a stale/bad id); otherwise fall back to
+ * name-matching `account` exactly as {@link resolveAccountIdByName} always
+ * has, for a caller with no picker (a legacy client, or a fixture predating
+ * it).
+ *
+ * Deliberately NOT {@link resolveAccountIdentity}: that function's mismatch
+ * check assumes `account` is a claim about the real account's own name, which
+ * holds for a manually created/edited transaction but not for an import row.
+ * There, `account` is the bank/dialect label stamped at parse time (e.g.
+ * `"ANZ Credit Card"`, see `column-map/validation.ts`) — expected to disagree
+ * with the real account's name whenever that account isn't literally named
+ * after its dialect, which is the normal case, not a caller bug. Applying
+ * `resolveAccountIdentity`'s check here would throw `AccountIdentityMismatchError`
+ * on nearly every import row (POPS-2852).
+ */
+export function resolveImportAccountId(
+  db: FinanceDb,
+  account: string,
+  accountId: string | undefined
+): string {
+  if (accountId !== undefined) return getAccount(db, accountId).id;
+  return resolveAccountIdByName(db, account);
+}

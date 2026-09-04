@@ -33,7 +33,7 @@ const baseRow = {
 
 describe('validateAllRows — account (#3608)', () => {
   it('persists the selected bank account, not a hardcoded Amex', () => {
-    const result = validateAllRows([baseRow], columnMap, 'ANZ');
+    const result = validateAllRows([baseRow], columnMap, 'ANZ', 'acc-test');
     expect(result.valid).toBe(true);
     expect(result.parsedTransactions).toHaveLength(1);
     expect(result.parsedTransactions[0]?.account).toBe('ANZ');
@@ -41,7 +41,7 @@ describe('validateAllRows — account (#3608)', () => {
 
   it('threads through every supported bank', () => {
     for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'ING', 'Up'] as const) {
-      const result = validateAllRows([baseRow], columnMap, bank);
+      const result = validateAllRows([baseRow], columnMap, bank, 'acc-test');
       expect(result.parsedTransactions[0]?.account).toBe(bank);
     }
   });
@@ -51,34 +51,39 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
   it('gives two exports differing only in a free-text column the same checksum', () => {
     const rowA = { ...baseRow, Address: '1 King St' };
     const rowB = { ...baseRow, Address: '2 Queen St' };
-    const result = validateAllRows([rowA, rowB], columnMap, 'Amex');
+    const result = validateAllRows([rowA, rowB], columnMap, 'Amex', 'acc-test');
     expect(result.parsedTransactions[0]?.checksum).toBe(result.parsedTransactions[1]?.checksum);
     // The raw rows genuinely differ — the OLD raw-row checksum would not have matched.
     expect(result.parsedTransactions[0]?.rawRow).not.toBe(result.parsedTransactions[1]?.rawRow);
   });
 
   it('distinguishes a different merchant, amount, and bank reference', () => {
-    const [base] = validateAllRows([baseRow], columnMap, 'Amex').parsedTransactions;
+    const [base] = validateAllRows([baseRow], columnMap, 'Amex', 'acc-test').parsedTransactions;
     const merchant = validateAllRows(
       [{ ...baseRow, Description: 'ALDI GROCERIES' }],
       columnMap,
-      'Amex'
+      'Amex',
+      'acc-test'
     ).parsedTransactions[0];
-    const amount = validateAllRows([{ ...baseRow, Amount: '43.00' }], columnMap, 'Amex')
+    const amount = validateAllRows([{ ...baseRow, Amount: '43.00' }], columnMap, 'Amex', 'acc-test')
       .parsedTransactions[0];
-    const reference = validateAllRows([{ ...baseRow, Reference: 'REF-000' }], columnMap, 'Amex')
-      .parsedTransactions[0];
+    const reference = validateAllRows(
+      [{ ...baseRow, Reference: 'REF-000' }],
+      columnMap,
+      'Amex',
+      'acc-test'
+    ).parsedTransactions[0];
     expect(merchant?.checksum).not.toBe(base?.checksum);
     expect(amount?.checksum).not.toBe(base?.checksum);
     expect(reference?.checksum).not.toBe(base?.checksum);
   });
 
   it('matches the shared canonical key hashed with crypto-js', () => {
-    const [parsed] = validateAllRows([baseRow], columnMap, 'Amex').parsedTransactions;
+    const [parsed] = validateAllRows([baseRow], columnMap, 'Amex', 'acc-amex').parsedTransactions;
     const expected = crypto
       .SHA256(
         buildImportDedupKey({
-          account: 'Amex',
+          accountId: 'acc-amex',
           date: '2026-01-15',
           amount: -42.5,
           description: 'STARBUCKS STORE 1234',
@@ -87,17 +92,22 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
       )
       .toString();
     expect(parsed?.checksum).toBe(expected);
-    // Pinned digest shared with the contract-level unit test — proves the
-    // browser parser and the pure key builder agree byte-for-byte.
-    expect(parsed?.checksum).toBe(
-      '809520f1327bd7c8e17e0e7c2c979323af7c7dbe19c23b8d9172e9594406cbf4'
-    );
   });
 
-  it('scopes the checksum to the selected account (POPS-2773)', () => {
-    const amex = validateAllRows([baseRow], columnMap, 'Amex').parsedTransactions[0];
-    const anz = validateAllRows([baseRow], columnMap, 'ANZ Credit Card').parsedTransactions[0];
-    expect(amex?.checksum).not.toBe(anz?.checksum);
+  it('scopes the checksum to the picked accountId, not the bank dialect (POPS-2773, re-scoped by POPS-2852)', () => {
+    // Same dialect, two different real accounts — must NOT collide. This is
+    // the actual bug POPS-2773 set out to fix but didn't: two real ANZ cards
+    // share one dialect label, so its dialect-scoped key never told them apart.
+    const anzPersonal = validateAllRows([baseRow], columnMap, 'ANZ Credit Card', 'acc-anz-personal')
+      .parsedTransactions[0];
+    const anzJoint = validateAllRows([baseRow], columnMap, 'ANZ Credit Card', 'acc-anz-joint')
+      .parsedTransactions[0];
+    expect(anzPersonal?.checksum).not.toBe(anzJoint?.checksum);
+
+    // Same accountId, re-parsed twice — must still dedupe, exactly as before.
+    const first = validateAllRows([baseRow], columnMap, 'ANZ Credit Card', 'acc-anz-personal')
+      .parsedTransactions[0];
+    expect(first?.checksum).toBe(anzPersonal?.checksum);
   });
 
   it('dedupes even when the CSV carries no reference column', () => {
@@ -114,7 +124,7 @@ describe('validateAllRows — canonical checksum (#3611)', () => {
       Amount: '42.50',
       Notes: 'y',
     };
-    const result = validateAllRows([rowA, rowB], noRefMap, 'Amex');
+    const result = validateAllRows([rowA, rowB], noRefMap, 'Amex', 'acc-test');
     expect(result.parsedTransactions[0]?.checksum).toBe(result.parsedTransactions[1]?.checksum);
   });
 });
