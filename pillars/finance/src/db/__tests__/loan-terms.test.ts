@@ -17,6 +17,7 @@ import {
 } from '../errors.js';
 import { createAccount } from '../services/accounts.js';
 import {
+  getLoanRateAsOfDate,
   getLoanTerms,
   listLoanRateHistory,
   recordLoanRate,
@@ -217,6 +218,50 @@ describe('recordLoanRate', () => {
         source: 'manual',
       })
     ).toThrow(AccountKindMismatchError);
+  });
+});
+
+describe('getLoanRateAsOfDate (POPS-2830)', () => {
+  it('picks the rate in force on a date between two rate changes', () => {
+    const db = freshDb();
+    const account = makeLoanAccount(db);
+    writeLoanTerms(db, account.id, TERMS);
+    recordLoanRate(db, account.id, {
+      annualRatePct: 6.25,
+      effectiveFrom: '2025-01-01',
+      source: 'manual',
+    });
+    recordLoanRate(db, account.id, {
+      annualRatePct: 6.75,
+      effectiveFrom: '2025-07-01',
+      source: 'imported',
+    });
+
+    expect(getLoanRateAsOfDate(db, account.id, '2025-03-15')).toBe(6.25);
+    expect(getLoanRateAsOfDate(db, account.id, '2025-07-01')).toBe(6.75);
+    expect(getLoanRateAsOfDate(db, account.id, '2026-01-01')).toBe(6.75);
+  });
+
+  it('falls back to the earliest recorded rate for a date before any history', () => {
+    const db = freshDb();
+    const account = makeLoanAccount(db);
+    writeLoanTerms(db, account.id, TERMS);
+
+    expect(getLoanRateAsOfDate(db, account.id, '2020-01-01')).toBe(5.49);
+  });
+
+  it('throws LoanTermsNotFoundError when the loan has no rate history at all', () => {
+    const db = freshDb();
+    const account = makeLoanAccount(db);
+
+    expect(() => getLoanRateAsOfDate(db, account.id, '2025-01-01')).toThrow(LoanTermsNotFoundError);
+  });
+
+  it('throws AccountKindMismatchError for a non-loan account', () => {
+    const db = freshDb();
+    const cash = createAccount(db, { name: 'Wallet 2', kind: 'cash', currency: 'AUD' });
+
+    expect(() => getLoanRateAsOfDate(db, cash.id, '2025-01-01')).toThrow(AccountKindMismatchError);
   });
 });
 

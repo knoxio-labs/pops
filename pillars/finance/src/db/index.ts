@@ -109,6 +109,10 @@ export {
   type AccountMergePreview,
 } from './services/merge-accounts.js';
 
+export { getAccountBalanceBefore } from './services/account-balance.js';
+
+export { resolveAccountIdByName } from './services/account-lookup.js';
+
 export * as giftCardDetailsService from './services/gift-card-details.js';
 
 export type {

@@ -116,6 +116,16 @@ export function listUnpairedTransactionIds(db: FinanceDb): string[] {
  * rule-classified row — `findPairCandidates` already filters these out, this is
  * the writer's own second line of defence.
  *
+ * Also refuses if either row is `type: 'fee'` (POPS-2830). A loan repayment's
+ * interest leg (`fee`/`fee:interest`, synthesised at import — see
+ * `commit-loan-split.ts`) is not classified by a rule, so the check above does
+ * not protect it, yet it must never be reclassified `transfer` just because it
+ * happens to share an exact-opposite amount with some unrelated row within the
+ * pairing window. `findPairCandidates` has no equivalent prefilter for this —
+ * unlike `match_rule_id`, `type` is exactly what a legitimate pair rewrites, so
+ * the fee case can only be caught here, on the specific value `fee`, not by
+ * excluding candidates on `type` in general.
+ *
  * Idempotent: if either row already carries a `related_transaction_id`, nothing
  * is written and it returns `false`, so neither trigger re-links an existing
  * pair. Linking a row to itself is likewise a no-op `false`.
@@ -132,7 +142,7 @@ export function listUnpairedTransactionIds(db: FinanceDb): string[] {
  * multi-writer caller.
  *
  * @throws TransactionNotFoundError if either id is missing.
- * @returns `true` when both sides were linked, `false` otherwise (already linked, rule-classified, equal ids, or a lost race).
+ * @returns `true` when both sides were linked, `false` otherwise (already linked, rule-classified, a `fee` leg, equal ids, or a lost race).
  */
 export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boolean {
   if (idA === idB) return false;
@@ -142,6 +152,7 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
     if (!rowA) throw new TransactionNotFoundError(idA);
     if (!rowB) throw new TransactionNotFoundError(idB);
     if (rowA.matchRuleId !== null || rowB.matchRuleId !== null) return false;
+    if (rowA.type === 'fee' || rowB.type === 'fee') return false;
     if (rowA.relatedTransactionId !== null || rowB.relatedTransactionId !== null) return false;
 
     const now = new Date().toISOString();
