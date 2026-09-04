@@ -7,6 +7,7 @@ import { AccountInstitutionField } from './AccountInstitutionField';
 import { AccountKindField } from './AccountKindField';
 import { CurrencySelect } from './CurrencySelect';
 import { GiftCardFields } from './GiftCardFields';
+import { LoanFields } from './LoanFields';
 import { type Account, type AccountFormValues } from './types';
 
 import type { CurrenciesListResponses } from '../../finance-api/index.js';
@@ -67,6 +68,7 @@ export function AccountFormFields({
         </Hint>
       )}
       {kind === 'gift-card' && <GiftCardFields form={form} accountId={account?.id} />}
+      {kind === 'loan' && <LoanFields form={form} accountId={account?.id} />}
     </div>
   );
 }

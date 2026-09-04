@@ -1,3 +1,4 @@
+import { insightsByAccountId } from '@/fixtures/account-insights';
 import { type AccountKind, ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account, accounts as allAccounts } from '@/fixtures/accounts';
 import {
@@ -9,6 +10,7 @@ import {
 import { KIND_OPTIONS, useAccountFormState } from '@/kit/account-form-state';
 import { CurrencySelect } from '@/kit/currency-select';
 import { InstitutionMark } from '@/kit/institution-select';
+import { LoanTermsSection } from '@/kit/loan-terms-section';
 import { type ReactNode } from 'react';
 
 import {
@@ -93,6 +95,9 @@ function FormFields({
         </Hint>
       )}
       {f.kind === 'gift-card' && <GiftCardSection account={account} />}
+      {f.kind === 'loan' && (
+        <LoanTermsSection account={account} insight={account && insightsByAccountId[account.id]} />
+      )}
     </div>
   );
 }
@@ -137,6 +142,8 @@ const byId = (id: string) => allAccounts.find((a) => a.id === id);
 export const states: ScreenStates = {
   'edit-credit-card': () => <AccountForm account={byId('a2')} />,
   'gift-card': () => <AccountForm account={byId('a6')} />,
+  loan: () => <AccountForm account={byId('a11')} />,
+  'new-loan': () => <AccountForm initialKind="loan" />,
   person: () => <AccountForm account={byId('a7')} />,
   'second-cash': () => <AccountForm initialKind="cash" />,
   'points-currency': () => <AccountForm initialKind="other" initialCurrency="MR" />,

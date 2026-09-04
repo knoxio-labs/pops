@@ -8,11 +8,13 @@ import { useAccountMutations } from './useAccountMutations';
 
 const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
+const loanWriteTerms = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
   giftCardDetailsWrite: vi.fn(),
+  loanWriteTerms: (...args: unknown[]) => loanWriteTerms(...args),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -34,6 +36,68 @@ beforeEach(() => {
   accountsUpdate.mockResolvedValue({
     data: { data: { id: 'acc-1', name: 'Renamed', archivedAt: null }, message: 'Updated' },
     error: undefined,
+  });
+  loanWriteTerms.mockResolvedValue({
+    data: { data: { accountId: 'acc-new' }, message: 'Terms saved' },
+    error: undefined,
+  });
+});
+
+const COMPLETE_LOAN_VALUES = {
+  ...DEFAULT_ACCOUNT_FORM_VALUES,
+  kind: 'loan' as const,
+  loanOriginalPrincipal: 500_000,
+  loanAnnualRatePct: 6.24,
+  loanTermMonths: 360,
+  loanMonthlyRepayment: 3_100,
+  loanStartedOn: '2024-01-01',
+  loanTermsEffectiveFrom: '2026-07-01',
+};
+
+describe('useAccountMutations loan terms follow-up', () => {
+  it('writes loan terms and invalidates the per-account loan-terms cache on create', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.createMutation.mutateAsync(COMPLETE_LOAN_VALUES);
+
+    expect(loanWriteTerms).toHaveBeenCalledWith({
+      path: { id: 'acc-new' },
+      body: {
+        originalPrincipal: 500_000,
+        annualRatePct: 6.24,
+        termMonths: 360,
+        monthlyRepayment: 3_100,
+        startedOn: '2024-01-01',
+        termsEffectiveFrom: '2026-07-01',
+      },
+    });
+    await waitFor(() =>
+      expect(wrapper.client.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['finance', 'accounts', 'acc-new', 'loan-terms'],
+      })
+    );
+  });
+
+  it('does not write loan terms for a loan account with none entered', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.createMutation.mutateAsync({
+      ...DEFAULT_ACCOUNT_FORM_VALUES,
+      kind: 'loan',
+    });
+
+    expect(loanWriteTerms).not.toHaveBeenCalled();
+  });
+
+  it('never writes loan terms for a non-loan account, even with stray loan field values', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.createMutation.mutateAsync({
+      ...COMPLETE_LOAN_VALUES,
+      kind: 'checking',
+    });
+
+    expect(loanWriteTerms).not.toHaveBeenCalled();
   });
 });
 

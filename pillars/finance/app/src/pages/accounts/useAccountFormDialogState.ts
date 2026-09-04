@@ -25,13 +25,11 @@ export function useAccountFormDialogState() {
   const handleEdit = (account: Account) => {
     setEditingAccount(account);
     form.reset({
+      ...DEFAULT_ACCOUNT_FORM_VALUES,
       name: account.name,
       kind: account.kind,
       institutionId: account.institutionId,
       currency: account.currency,
-      giftCardNumber: '',
-      giftCardPin: '',
-      giftCardExpiresOn: '',
     });
     setIsDialogOpen(true);
   };

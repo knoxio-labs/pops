@@ -5,7 +5,7 @@ import { unwrap } from '../../finance-api-helpers.js';
 import { accountsList, currenciesList, institutionsList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
 import { mapAccountApiError } from './account-error-mapping';
-import { type Account, type AccountFormValues } from './types';
+import { loanTermsPartiallyFilled, type Account, type AccountFormValues } from './types';
 import { useAccountFormDialogState } from './useAccountFormDialogState';
 import { ACCOUNTS_KEY, toggleArchived, useAccountMutations } from './useAccountMutations';
 import { useCreateInstitution } from './useCreateInstitution';
@@ -63,6 +63,10 @@ export function useAccountsPage() {
         dialog.form.setError('giftCardNumber', { message: 'Card number is required' });
       if (values.giftCardPin === '')
         dialog.form.setError('giftCardPin', { message: 'PIN is required' });
+      return;
+    }
+    if (loanTermsPartiallyFilled(values)) {
+      toast.error('Fill in every loan term, or clear them all');
       return;
     }
     const mutation = dialog.editingAccount
