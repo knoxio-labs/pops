@@ -31,6 +31,13 @@ const CreateCurrencyBody = z.object({
   kind: z.enum(CURRENCY_KINDS),
 });
 
+const UpdateCurrencyBody = z.object({
+  name: z.string().min(1, 'Name cannot be empty').optional(),
+  symbol: z.string().nullable().optional(),
+  decimals: z.number().int().nonnegative('Decimals must not be negative').optional(),
+  kind: z.enum(CURRENCY_KINDS).optional(),
+});
+
 const CurrencyMutation = z.object({ data: CurrencySchema, message: z.string() });
 
 export const financeCurrenciesContract = c.router({
@@ -46,6 +53,15 @@ export const financeCurrenciesContract = c.router({
     body: CreateCurrencyBody,
     responses: { 201: CurrencyMutation, ...ERR_RESPONSES },
     summary: 'Register a new currency (or points program)',
+  },
+  update: {
+    method: 'PATCH',
+    path: '/currencies/:code',
+    pathParams: z.object({ code: z.string() }),
+    body: UpdateCurrencyBody,
+    responses: { 200: CurrencyMutation, ...ERR_RESPONSES },
+    summary:
+      'Edit a currency; changing decimals is refused with 409 while any account references it',
   },
   delete: {
     method: 'DELETE',

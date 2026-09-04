@@ -48,5 +48,6 @@ export const navConfig = {
       labelKey: 'finance.promptTemplates',
       icon: 'FileText',
     },
+    { path: '/settings', label: 'Settings', labelKey: 'finance.settings', icon: 'Settings' },
   ],
 } satisfies AppNavConfigShape;

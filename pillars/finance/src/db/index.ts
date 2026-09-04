@@ -85,7 +85,11 @@ export type {
 
 export * as currenciesService from './services/currencies.js';
 
-export type { CurrencyRow, CreateCurrencyInput } from './services/currencies.js';
+export type {
+  CurrencyRow,
+  CreateCurrencyInput,
+  UpdateCurrencyInput,
+} from './services/currencies.js';
 
 export * as accountsService from './services/accounts.js';
 
@@ -135,7 +139,11 @@ export type { AccountEntityDisplay } from './services/account-entity-display.js'
 
 export * as institutionsService from './services/institutions.js';
 
-export type { InstitutionRow, CreateInstitutionInput } from './services/institutions.js';
+export type {
+  InstitutionRow,
+  CreateInstitutionInput,
+  UpdateInstitutionInput,
+} from './services/institutions.js';
 
 export * as transactionCorrectionsService from './services/transaction-corrections.js';
 

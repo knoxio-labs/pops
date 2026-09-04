@@ -58,6 +58,18 @@ describe('institutions — happy paths', () => {
     expect(data.map((i) => i.name)).toContain('Westpac');
   });
 
+  it("updates an institution's name and colour", async () => {
+    const created = await client().institutions.create({ name: 'Westpac', colour: '#007dba' });
+
+    const updated = await client().institutions.update(created.data.id, {
+      name: 'Westpac Bank',
+      colour: '#000000',
+    });
+
+    expect(updated.data).toMatchObject({ name: 'Westpac Bank', colour: '#000000' });
+    expect(updated.message).toBe('Institution updated');
+  });
+
   it('deletes an institution that nothing references', async () => {
     const created = await client().institutions.create({ name: 'Westpac', colour: '#007dba' });
 
@@ -108,6 +120,21 @@ describe('institutions — error mapping', () => {
     await expect(
       client().institutions.create({ name: 'Westpac', colour: '#zzzzzz' })
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('404s updating an institution that does not exist', async () => {
+    await expect(client().institutions.update('missing-id', { name: 'X' })).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('409s updating an institution to a name that already exists, case-insensitively', async () => {
+    await client().institutions.create({ name: 'Westpac', colour: '#007dba' });
+    const other = await client().institutions.create({ name: 'CBA', colour: '#facc15' });
+
+    await expect(
+      client().institutions.update(other.data.id, { name: 'westpac' })
+    ).rejects.toMatchObject({ status: 409 });
   });
 
   it('404s deleting an institution that does not exist', async () => {

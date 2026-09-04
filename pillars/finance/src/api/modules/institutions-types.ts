@@ -3,7 +3,11 @@
  * in the REST contract (`src/contract/rest-institutions.ts`); this file
  * keeps only the row → response projection and its TS shape.
  */
-import type { CreateInstitutionInput, InstitutionRow } from '../../db/index.js';
+import type {
+  CreateInstitutionInput,
+  InstitutionRow,
+  UpdateInstitutionInput,
+} from '../../db/index.js';
 
 /** API response shape (camelCase). */
 export interface Institution {
@@ -20,6 +24,12 @@ export interface CreateInstitutionBody {
   name: string;
   colour: string;
   logoAssetId?: string | null;
+}
+
+/** Wire body accepted by `PATCH /institutions/:id`. */
+export interface UpdateInstitutionBody {
+  name?: string;
+  colour?: string;
 }
 
 /** Map a SQLite row to the API response shape. */
@@ -40,5 +50,13 @@ export function toCreateInstitutionInput(body: CreateInstitutionBody): CreateIns
     name: body.name,
     colour: body.colour,
     logoAssetId: body.logoAssetId ?? null,
+  };
+}
+
+/** Map an update request body to the persistence layer's input shape. */
+export function toUpdateInstitutionInput(body: UpdateInstitutionBody): UpdateInstitutionInput {
+  return {
+    name: body.name,
+    colour: body.colour,
   };
 }

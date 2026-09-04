@@ -6,11 +6,16 @@
  */
 import {
   CurrencyConflictError,
+  CurrencyDecimalsInUseError,
   CurrencyInUseError,
   CurrencyNotFoundError,
 } from '../../db/errors.js';
 import { currenciesService, type FinanceDb } from '../../db/index.js';
-import { toCreateCurrencyInput, toCurrency } from '../modules/currencies-types.js';
+import {
+  toCreateCurrencyInput,
+  toCurrency,
+  toUpdateCurrencyInput,
+} from '../modules/currencies-types.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
@@ -24,6 +29,7 @@ function translateCurrencyError(err: unknown, code?: string): never {
   if (err instanceof CurrencyNotFoundError) throw new NotFoundError('Currency', code ?? err.code);
   if (err instanceof CurrencyConflictError) throw new ConflictError(err.message);
   if (err instanceof CurrencyInUseError) throw new ConflictError(err.message);
+  if (err instanceof CurrencyDecimalsInUseError) throw new ConflictError(err.message);
   throw err;
 }
 
@@ -45,6 +51,23 @@ export function makeCurrenciesHandlers(db: FinanceDb) {
           };
         } catch (err) {
           translateCurrencyError(err);
+        }
+      }),
+
+    update: ({ params, body }: Req['update']) =>
+      runHttp(() => {
+        try {
+          const row = currenciesService.updateCurrency(
+            db,
+            params.code,
+            toUpdateCurrencyInput(body)
+          );
+          return {
+            status: 200 as const,
+            body: { data: toCurrency(row), message: 'Currency updated' },
+          };
+        } catch (err) {
+          translateCurrencyError(err, params.code);
         }
       }),
 

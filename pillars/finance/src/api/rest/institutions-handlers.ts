@@ -10,7 +10,11 @@ import {
   InstitutionNotFoundError,
 } from '../../db/errors.js';
 import { institutionsService, type FinanceDb } from '../../db/index.js';
-import { toCreateInstitutionInput, toInstitution } from '../modules/institutions-types.js';
+import {
+  toCreateInstitutionInput,
+  toInstitution,
+  toUpdateInstitutionInput,
+} from '../modules/institutions-types.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
@@ -45,6 +49,23 @@ export function makeInstitutionsHandlers(db: FinanceDb) {
           };
         } catch (err) {
           translateInstitutionError(err);
+        }
+      }),
+
+    update: ({ params, body }: Req['update']) =>
+      runHttp(() => {
+        try {
+          const row = institutionsService.updateInstitution(
+            db,
+            params.id,
+            toUpdateInstitutionInput(body)
+          );
+          return {
+            status: 200 as const,
+            body: { data: toInstitution(row), message: 'Institution updated' },
+          };
+        } catch (err) {
+          translateInstitutionError(err, params.id);
         }
       }),
 

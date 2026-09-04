@@ -3822,6 +3822,71 @@ export type CurrenciesDeleteResponses = {
 
 export type CurrenciesDeleteResponse = CurrenciesDeleteResponses[keyof CurrenciesDeleteResponses];
 
+export type CurrenciesUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    decimals?: number;
+    kind?: 'fiat' | 'points';
+    name?: string;
+    symbol?: string | null;
+  };
+  path: {
+    code: string;
+  };
+  query?: never;
+  url: '/currencies/{code}';
+};
+
+export type CurrenciesUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CurrenciesUpdateError = CurrenciesUpdateErrors[keyof CurrenciesUpdateErrors];
+
+export type CurrenciesUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string;
+      createdAt: string;
+      decimals: number;
+      kind: 'fiat' | 'points';
+      name: string;
+      symbol: string | null;
+    };
+    message: string;
+  };
+};
+
+export type CurrenciesUpdateResponse = CurrenciesUpdateResponses[keyof CurrenciesUpdateResponses];
+
 export type EntityUsageListData = {
   body?: never;
   path?: never;
@@ -5499,6 +5564,70 @@ export type InstitutionsDeleteResponses = {
 
 export type InstitutionsDeleteResponse =
   InstitutionsDeleteResponses[keyof InstitutionsDeleteResponses];
+
+export type InstitutionsUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    colour?: string;
+    name?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/institutions/{id}';
+};
+
+export type InstitutionsUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsUpdateError = InstitutionsUpdateErrors[keyof InstitutionsUpdateErrors];
+
+export type InstitutionsUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type InstitutionsUpdateResponse =
+  InstitutionsUpdateResponses[keyof InstitutionsUpdateResponses];
 
 export type SearchSearchData = {
   /**

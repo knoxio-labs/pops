@@ -32,6 +32,11 @@ const CreateInstitutionBody = z.object({
   logoAssetId: z.string().nullable().optional(),
 });
 
+const UpdateInstitutionBody = z.object({
+  name: z.string().min(1, 'Name cannot be empty').optional(),
+  colour: z.string().regex(HEX_COLOUR, 'Colour must be a hex value like #rrggbb').optional(),
+});
+
 const InstitutionMutation = z.object({ data: InstitutionSchema, message: z.string() });
 
 export const financeInstitutionsContract = c.router({
@@ -47,6 +52,14 @@ export const financeInstitutionsContract = c.router({
     body: CreateInstitutionBody,
     responses: { 201: InstitutionMutation, ...ERR_RESPONSES },
     summary: 'Register a new institution',
+  },
+  update: {
+    method: 'PATCH',
+    path: '/institutions/:id',
+    pathParams: z.object({ id: z.string() }),
+    body: UpdateInstitutionBody,
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES },
+    summary: 'Rename an institution and/or change its colour',
   },
   delete: {
     method: 'DELETE',
