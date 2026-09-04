@@ -48,7 +48,7 @@ beforeEach(() => {
   institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
 });
 
-describe('EditableFormFields account field', () => {
+describe('EditableFormFields AccountField picker branch', () => {
   it('falls back to a free-text input when the import has no account yet', () => {
     renderFields({ account: 'Some Bank' });
 

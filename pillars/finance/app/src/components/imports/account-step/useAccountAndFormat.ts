@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
@@ -18,6 +18,7 @@ import { useAllAccounts } from '../../accounts/hooks/useAllAccounts';
  * the new account on the wizard's store rather than just closing the dialog.
  */
 export function useAccountAndFormat() {
+  const queryClient = useQueryClient();
   const { accounts, isLoading: accountsLoading } = useAllAccounts();
   const institutionsQuery = useQuery({
     queryKey: ['finance', 'institutions', 'list'],
@@ -42,6 +43,11 @@ export function useAccountAndFormat() {
       .mutateAsync(values)
       .then((created) => {
         setAccount(created.data.id, created.data.name);
+        // `useAccountMutations`'s own invalidation only covers the accounts
+        // page's own key; `useAllAccounts` — what this picker (and
+        // `EditableFormFields`'s `AccountField`) reads from — is keyed
+        // separately and needs its own bust so the new account shows up here.
+        void queryClient.invalidateQueries({ queryKey: ['finance', 'accounts', 'list'] });
         dialog.closeDialog();
       })
       .catch((err: unknown) => {
