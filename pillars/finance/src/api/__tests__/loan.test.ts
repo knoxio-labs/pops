@@ -290,6 +290,17 @@ describe('loan offset links', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
+  it('422s a link where the offset account is the loan account itself', async () => {
+    const loanId = await createLoanAccount();
+
+    await expect(
+      client().loan.linkOffsetAccount(loanId, {
+        offsetAccountId: loanId,
+        linkedFrom: '2024-03-01',
+      })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
   it('404s an unlink of a link id belonging to a different loan', async () => {
     const loanId = await createLoanAccount('Home Loan');
     const otherLoanId = await createLoanAccount('Car Loan');

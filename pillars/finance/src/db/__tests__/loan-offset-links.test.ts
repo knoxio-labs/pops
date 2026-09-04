@@ -13,6 +13,7 @@ import {
   AccountNotFoundError,
   LoanOffsetLinkConflictError,
   LoanOffsetLinkNotFoundError,
+  LoanOffsetLinkSelfLinkError,
 } from '../errors.js';
 import { createAccount } from '../services/accounts.js';
 import {
@@ -101,6 +102,15 @@ describe('linkOffsetAccount', () => {
     expect(() =>
       linkOffsetAccount(db, loan.id, { offsetAccountId: 'nope', linkedFrom: '2024-03-01' })
     ).toThrow(AccountNotFoundError);
+  });
+
+  it('throws LoanOffsetLinkSelfLinkError when the offset account is the loan itself', () => {
+    const db = freshDb();
+    const loan = makeLoanAccount(db);
+
+    expect(() =>
+      linkOffsetAccount(db, loan.id, { offsetAccountId: loan.id, linkedFrom: '2024-03-01' })
+    ).toThrow(LoanOffsetLinkSelfLinkError);
   });
 });
 

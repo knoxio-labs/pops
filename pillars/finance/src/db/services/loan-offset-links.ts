@@ -18,6 +18,7 @@ import {
   AccountNotFoundError,
   LoanOffsetLinkConflictError,
   LoanOffsetLinkNotFoundError,
+  LoanOffsetLinkSelfLinkError,
 } from '../errors.js';
 import { accounts, loanOffsetLinks } from '../schema.js';
 
@@ -74,6 +75,7 @@ export function listOffsetLinks(
 /**
  * Link an offset account to a loan. Throws `AccountNotFoundError` for either
  * side, `AccountKindMismatchError` if the loan side is not `kind: 'loan'`,
+ * `LoanOffsetLinkSelfLinkError` if the offset account IS the loan account,
  * and `LoanOffsetLinkConflictError` if the pair already has an active link.
  *
  * The conflict is pre-checked rather than mapped from the partial unique
@@ -88,6 +90,9 @@ export function linkOffsetAccount(
 ): LoanOffsetLinkRow {
   requireLoanAccount(db, loanAccountId);
   requireAccountExists(db, input.offsetAccountId);
+  if (input.offsetAccountId === loanAccountId) {
+    throw new LoanOffsetLinkSelfLinkError(loanAccountId);
+  }
 
   const active = db
     .select()

@@ -13,6 +13,7 @@ import {
   AccountNotFoundError,
   LoanOffsetLinkConflictError,
   LoanOffsetLinkNotFoundError,
+  LoanOffsetLinkSelfLinkError,
   LoanRateNotLatestError,
   LoanTermsNotFoundError,
   loanOffsetLinksService,
@@ -43,6 +44,7 @@ function translateLoanError(err: unknown, id: string): never {
     throw new NotFoundError('Loan offset link', err.id);
   }
   if (err instanceof LoanOffsetLinkConflictError) throw new ConflictError(err.message);
+  if (err instanceof LoanOffsetLinkSelfLinkError) throw new UnprocessableEntityError(err.message);
   throw err;
 }
 
