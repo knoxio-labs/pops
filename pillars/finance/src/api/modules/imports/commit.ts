@@ -72,6 +72,7 @@ import {
   enqueueOutboxCandidatesPhase,
   preCreatePendingContacts,
 } from './commit-contacts-precreate.js';
+import { expandLoanRepaymentRow } from './commit-loan-split.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
 import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
 import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
@@ -161,9 +162,15 @@ function writeTransactionsPhase(
   for (const txn of payload.transactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
     try {
-      const row = importsService.insertImportTransaction(tx, transactionColumns(txn, entityId));
-      imported++;
-      insertedIds.push(row.id);
+      // A loan repayment expands to its interest + principal legs here
+      // (POPS-2830); every other row is its own single-element array, so the
+      // insert loop below doesn't need to know the split happened at all.
+      const rows = expandLoanRepaymentRow(tx, transactionColumns(txn, entityId));
+      for (const columns of rows) {
+        const row = importsService.insertImportTransaction(tx, columns);
+        imported++;
+        insertedIds.push(row.id);
+      }
       tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
