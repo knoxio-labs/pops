@@ -122,7 +122,7 @@ function Subtotals({ accounts }: { accounts: Account[] }) {
         </span>
       ))}
       <span className="text-xs text-muted-foreground">
-        Held minus owed, per currency — points aren't counted, and nothing is converted.
+        Held minus owed, per currency — points are not counted, and nothing is converted.
       </span>
     </div>
   );
