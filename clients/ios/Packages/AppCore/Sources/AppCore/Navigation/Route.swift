@@ -13,4 +13,6 @@
 public enum Route: Hashable, Sendable {
     case transactionList
     case transactionDetail(id: Transaction.ID)
+    case accountsList
+    case accountDetail(id: Account.ID)
 }

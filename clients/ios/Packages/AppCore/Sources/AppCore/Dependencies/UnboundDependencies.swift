@@ -29,3 +29,13 @@ internal struct UnboundPurchasesRepository: PurchasesRepository {
         throw RepositoryError.dependencyNotBound
     }
 }
+
+internal struct UnboundAccountsRepository: AccountsRepository {
+    func accounts() async throws -> [Account] {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func accountDetail(id: Account.ID) async throws -> AccountDetail? {
+        throw RepositoryError.dependencyNotBound
+    }
+}

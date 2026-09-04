@@ -68,6 +68,12 @@ public struct TransactionsFlowView: View {
                     dependencies: flow.dependencies
                 )
             )
+        case .accountsList, .accountDetail:
+            // Unreachable: this feature never pushes an accounts route, and
+            // `ModuleBoundaryTests`'s "no feature imports another feature"
+            // keeps it from ever being able to build one to push. Resolved
+            // anyway for the reason `.transactionList` above is.
+            EmptyView()
         }
     }
 }
