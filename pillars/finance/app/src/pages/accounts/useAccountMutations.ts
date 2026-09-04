@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { ALL_ACCOUNTS_KEY } from '../../components/accounts/hooks/useAllAccounts';
 import { unwrap } from '../../finance-api-helpers.js';
 import { accountsCreate, accountsUpdate, giftCardDetailsWrite } from '../../finance-api/index.js';
 import { hasInstitution, type AccountFormValues } from './types';
@@ -35,7 +36,10 @@ function toAccountPayload(values: AccountFormValues) {
 /** Create/update mutations for the accounts form, including the gift-card-details follow-up write. */
 export function useAccountMutations(onSuccess: () => void) {
   const queryClient = useQueryClient();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ACCOUNTS_KEY });
+    void queryClient.invalidateQueries({ queryKey: ALL_ACCOUNTS_KEY });
+  };
 
   const createMutation = useMutation({
     mutationFn: async (values: AccountFormValues) => {

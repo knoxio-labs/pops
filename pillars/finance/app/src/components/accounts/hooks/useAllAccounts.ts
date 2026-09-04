@@ -10,6 +10,9 @@ import type { AccountOption } from '@pops/ui';
 /** `LimitQuery`'s max (`rest-schemas.ts`) — the largest single page the API allows. */
 const ACCOUNTS_LIST_LIMIT = 500;
 
+/** Exported so mutations that change accounts (`useAccountMutations`) can invalidate this cache too. */
+export const ALL_ACCOUNTS_KEY = ['finance', 'accounts', 'list'] as const;
+
 /**
  * Every account, joined with its institution, for a picker that has no
  * pagination of its own. `accounts.list` caps a page at 500; a household's
@@ -22,7 +25,7 @@ const ACCOUNTS_LIST_LIMIT = 500;
  */
 export function useAllAccounts() {
   const accountsQuery = useQuery({
-    queryKey: ['finance', 'accounts', 'list'],
+    queryKey: ALL_ACCOUNTS_KEY,
     queryFn: async () => unwrap(await accountsList({ query: { limit: ACCOUNTS_LIST_LIMIT } })),
   });
   const institutionsQuery = useQuery({

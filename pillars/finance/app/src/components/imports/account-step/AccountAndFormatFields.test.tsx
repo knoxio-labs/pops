@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useImportStore } from '../../../store/importStore';
@@ -118,5 +119,87 @@ describe('AccountAndFormatFields', () => {
     await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-new'));
     expect(useImportStore.getState().accountName).toBe('Bendigo Everyday');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows the newly created account in the picker, not just on the store', async () => {
+    const user = userEvent.setup();
+    accountsCreate.mockResolvedValue({
+      data: { data: account({ id: 'acc-new', name: 'Bendigo Everyday' }), message: 'Created' },
+      error: undefined,
+    });
+    renderFields([account({})]);
+
+    await user.click(await screen.findByRole('button', { name: /add the account/i }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.type(dialog.getByPlaceholderText('Everyday'), 'Bendigo Everyday');
+    await user.click(dialog.getByRole('combobox', { name: 'Currency' }));
+    await user.click(await screen.findByText('AUD — Australian Dollar'));
+
+    // The picker's own list query resolves to both accounts once the create
+    // settles and invalidates it — not just the original one from mount.
+    accountsList.mockResolvedValue({
+      data: {
+        data: [account({}), account({ id: 'acc-new', name: 'Bendigo Everyday' })],
+        pagination: { total: 2, limit: 500, offset: 0, hasMore: false },
+      },
+      error: undefined,
+    });
+    await user.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    // The picker resolves the now-selected id against its own accounts list —
+    // if that list is never invalidated, the id lookup misses and the trigger
+    // falls back to the unselected placeholder instead of the account's name.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(
+      await screen.findByRole('combobox', { name: 'Account to import into' })
+    ).toHaveTextContent('Bendigo Everyday');
+  });
+
+  it('toasts an unmapped create failure instead of swallowing it', async () => {
+    const user = userEvent.setup();
+    accountsCreate.mockResolvedValue({
+      data: undefined,
+      error: { message: 'finance API request failed: not permitted (HTTP 403)' },
+      response: { status: 403 },
+    });
+    renderFields([account({})]);
+
+    await user.click(await screen.findByRole('button', { name: /add the account/i }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.type(dialog.getByPlaceholderText('Everyday'), 'Bendigo Everyday');
+    await user.click(dialog.getByRole('combobox', { name: 'Currency' }));
+    await user.click(await screen.findByText('AUD — Australian Dollar'));
+    await user.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'finance API request failed: not permitted (HTTP 403)'
+      )
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(useImportStore.getState().accountId).toBeNull();
+  });
+
+  it('routes a duplicate-name create failure onto the name field instead of a toast', async () => {
+    const user = userEvent.setup();
+    accountsCreate.mockResolvedValue({
+      data: undefined,
+      error: { message: "Account 'Bendigo Everyday' already exists" },
+      response: { status: 409 },
+    });
+    renderFields([account({})]);
+
+    await user.click(await screen.findByRole('button', { name: /add the account/i }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.type(dialog.getByPlaceholderText('Everyday'), 'Bendigo Everyday');
+    await user.click(dialog.getByRole('combobox', { name: 'Currency' }));
+    await user.click(await screen.findByText('AUD — Australian Dollar'));
+    await user.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    expect(
+      await dialog.findByText("Account 'Bendigo Everyday' already exists")
+    ).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
