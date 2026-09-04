@@ -18,6 +18,7 @@ import { makeEntityUsageHandlers } from './entity-usage-handlers.js';
 import { makeGiftCardDetailsHandlers } from './gift-card-details-handlers.js';
 import { makeImportsHandlers } from './imports-handlers.js';
 import { makeInstitutionsHandlers } from './institutions-handlers.js';
+import { makeLoanHandlers } from './loan-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeTagRulesHandlers } from './tag-rules-handlers.js';
@@ -38,6 +39,7 @@ export function makeFinanceRestHandlers(deps: {
     institutions: makeInstitutionsHandlers(db),
     accounts: makeAccountsHandlers(db, deps.contacts),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
+    loan: makeLoanHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),
     tagRules: makeTagRulesHandlers(db),
     corrections: makeCorrectionsHandlers(db),

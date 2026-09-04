@@ -167,7 +167,7 @@ describe('accounts — list query filters', () => {
 });
 
 describe('accounts — reserved kinds', () => {
-  it.each(['shared', 'loan', 'novated-lease', 'crypto', 'other'] as const)(
+  it.each(['shared', 'novated-lease', 'crypto', 'other'] as const)(
     '422s creating kind %s',
     async (kind) => {
       await expect(

@@ -60,6 +60,26 @@ describe('getAccountKindBehaviour — day-one kinds', () => {
     });
   });
 
+  it('loan is a liability with an external balance and is not stored value', () => {
+    expect(getAccountKindBehaviour('loan')).toEqual({
+      signConvention: 'liability',
+      hasExternalBalance: true,
+      isStoredValue: false,
+    });
+  });
+
+  it('loan is a day-one kind, not a reserved one (POPS-2829)', () => {
+    expect(DAY_ONE_ACCOUNT_KINDS).toContain('loan');
+    expect(getAccountKindBehaviour('loan')).not.toEqual(getAccountKindBehaviour('shared'));
+  });
+
+  it('credit-card and loan are the only liability kinds', () => {
+    const liabilityKinds = ACCOUNT_KINDS.filter(
+      (kind) => getAccountKindBehaviour(kind).signConvention === 'liability'
+    );
+    expect(liabilityKinds.toSorted()).toEqual(['credit-card', 'loan']);
+  });
+
   it('gift-card is the only kind where isStoredValue is true', () => {
     for (const kind of ACCOUNT_KINDS) {
       expect(getAccountKindBehaviour(kind).isStoredValue).toBe(kind === 'gift-card');
@@ -74,7 +94,7 @@ describe('getAccountKindBehaviour — reserved kinds', () => {
 
   it('covers every reserved kind the day-one set does not', () => {
     expect(reservedKinds.toSorted()).toEqual(
-      ['crypto', 'loan', 'novated-lease', 'other', 'shared'].toSorted()
+      ['crypto', 'novated-lease', 'other', 'shared'].toSorted()
     );
   });
 

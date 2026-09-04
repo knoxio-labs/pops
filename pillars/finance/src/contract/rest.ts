@@ -2,7 +2,7 @@
  * REST contract for the finance pillar — ts-rest single source of truth.
  *
  * Composes the domain sub-routers (wishlist, budgets, accounts,
- * giftCardDetails, currencies, institutions, transactions, tagRules,
+ * giftCardDetails, loan, currencies, institutions, transactions, tagRules,
  * corrections, imports) into the public wire surface.
  * `generateOpenApi(financeContract, …)` projects this to
  * `openapi/finance.openapi.json`; `openapi-typescript` then projects the
@@ -21,6 +21,7 @@ import { financeEntityUsageContract } from './rest-entity-usage.js';
 import { financeGiftCardDetailsContract } from './rest-gift-card-details.js';
 import { financeImportsContract } from './rest-imports.js';
 import { financeInstitutionsContract } from './rest-institutions.js';
+import { financeLoanContract } from './rest-loan.js';
 import { financeSearchContract } from './rest-search.js';
 import { financeSettingsContract } from './rest-settings.js';
 import { financeTagRulesContract } from './rest-tag-rules.js';
@@ -37,6 +38,7 @@ export const financeContract = c.router(
     institutions: financeInstitutionsContract,
     accounts: financeAccountsContract,
     giftCardDetails: financeGiftCardDetailsContract,
+    loan: financeLoanContract,
     transactions: financeTransactionsContract,
     tagRules: financeTagRulesContract,
     corrections: financeCorrectionsContract,

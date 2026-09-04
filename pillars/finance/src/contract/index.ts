@@ -71,6 +71,12 @@ export {
   type AccountKind,
   type AccountKindBehaviour,
 } from './account-kind.js';
+export {
+  LOAN_RATE_SOURCES,
+  LOAN_TERMS_SOURCES,
+  type LoanRateSource,
+  type LoanTermsSource,
+} from './loan.js';
 export { formatBalance, type CurrencyFormat } from './format-balance.js';
 export {
   buildImportDedupKey,
