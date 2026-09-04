@@ -87,6 +87,7 @@ function validateRow(
   // different branches of one merchant — collapsing them would silently drop a
   // real charge as a duplicate. See `import-dedup.ts`.
   const dedupKey = buildImportDedupKey({
+    account,
     date: parsedDate,
     amount: parsedAmount,
     description: row[columnMap.description] ?? '',

@@ -267,6 +267,13 @@
       "when": 1781913600031,
       "tag": "0086_drop_cash_currency_uniqueness",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1781913600032,
+      "tag": "0087_scope_dedup_key_to_account",
+      "breakpoints": true
     }
   ]
 }

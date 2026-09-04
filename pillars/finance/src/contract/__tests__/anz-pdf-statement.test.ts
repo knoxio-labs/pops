@@ -130,6 +130,7 @@ describe('parseAnzPdfStatementText', () => {
       expect(kensington?.checksum).toBe(
         sha256(
           buildImportDedupKey({
+            account: 'ANZ Credit Card',
             date: '2025-04-22',
             amount: -20.4,
             description: KENSINGTON_DESCRIPTION,
