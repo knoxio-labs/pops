@@ -76,6 +76,7 @@ export {
 } from './primitives/select';
 
 // Composite components
+export * from './components/account-shared/account-kinds';
 export * from './components/account-shared/types';
 export * from './components/AccountChip';
 export * from './components/AccountSelect';
