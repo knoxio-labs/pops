@@ -26,8 +26,6 @@ internal enum AccountsCopy {
     }
 
     internal static let pickerTitle = "Account"
-    internal static let pickerDone = "Done"
-    internal static let pickerCancel = "Cancel"
 
     internal static let loadingDetail = "Loading account…"
     internal static let detailNotFound = "This account no longer exists."

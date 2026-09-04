@@ -59,6 +59,8 @@ packages:
     path: Packages/FeaturePurchases
   FeatureTransactions:
     path: Packages/FeatureTransactions
+  FeatureAccounts:
+    path: Packages/FeatureAccounts
 
 targets:
   Pops:
@@ -116,6 +118,7 @@ targets:
         - package: FeatureReceiptCapture/FeatureReceiptCaptureTests
         - package: FeaturePurchases/FeaturePurchasesTests
         - package: FeatureTransactions/FeatureTransactionsTests
+        - package: FeatureAccounts/FeatureAccountsTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,
     # so doing so would silently win over the developer's own value.
