@@ -51,16 +51,22 @@ export function buildTransactionPayload({ values, entityName, accountName }: Bui
 
 interface SubmitDeps {
   editingTransaction: Transaction | null;
-  createMutation: ReturnType<typeof useTransactionMutations>['createMutation'];
-  updateMutation: ReturnType<typeof useTransactionMutations>['updateMutation'];
+  createMutation: Pick<ReturnType<typeof useTransactionMutations>['createMutation'], 'mutate'>;
+  updateMutation: Pick<ReturnType<typeof useTransactionMutations>['updateMutation'], 'mutate'>;
   resolveEntityName: (entityId: string) => string | null;
-  resolveAccountName: (accountId: string) => string;
+  resolveAccountName: (accountId: string) => string | null;
 }
 
-function buildSubmit(deps: SubmitDeps) {
+export function buildSubmit(deps: SubmitDeps) {
   return (values: TransactionFormValues) => {
     const entityName = values.entityId === '' ? null : deps.resolveEntityName(values.entityId);
-    const accountName = deps.resolveAccountName(values.accountId);
+    // Falls back to the transaction's existing display name rather than a
+    // blank string when the accounts list hasn't resolved this id yet — the
+    // account picker only lets you choose an id that's already loaded, so an
+    // unresolvable id here means the accounts query is still in flight, not
+    // that the account has no name.
+    const accountName =
+      deps.resolveAccountName(values.accountId) ?? deps.editingTransaction?.account ?? '';
     const payload = buildTransactionPayload({ values, entityName, accountName });
     if (deps.editingTransaction) {
       deps.updateMutation.mutate({ id: deps.editingTransaction.id, data: payload });
@@ -128,9 +134,9 @@ function useNameResolvers({ entitiesQuery, accountsQuery }: ResolversDeps) {
   );
 
   const resolveAccountName = useCallback(
-    (accountId: string): string => {
+    (accountId: string): string | null => {
       const account = accountsQuery.accounts?.find((a) => a.id === accountId);
-      return account?.name ?? '';
+      return account?.name ?? null;
     },
     [accountsQuery.accounts]
   );
@@ -208,6 +214,6 @@ export function useTransactionsPage() {
     handleAdd,
     handleEdit,
     onSubmit,
-    isSubmitting: createMutation.isPending || updateMutation.isPending,
+    isSubmitting: createMutation.isPending || updateMutation.isPending || accountsQuery.isLoading,
   };
 }

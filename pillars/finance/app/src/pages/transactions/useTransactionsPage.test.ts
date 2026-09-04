@@ -44,7 +44,7 @@ vi.mock('sonner', () => ({
 }));
 
 import { TransactionFormSchema } from './types';
-import { buildTransactionPayload, useTransactionsPage } from './useTransactionsPage';
+import { buildSubmit, buildTransactionPayload, useTransactionsPage } from './useTransactionsPage';
 
 function makeValues(overrides: Partial<TransactionFormValues> = {}): TransactionFormValues {
   return {
@@ -302,6 +302,65 @@ describe('buildTransactionPayload', () => {
       entityName: null,
       notes: null,
     });
+  });
+});
+
+function mockMutation() {
+  return { mutate: vi.fn() };
+}
+
+describe('buildSubmit — account name fallback', () => {
+  it('uses the resolved account name when the accounts query has it', () => {
+    const updateMutation = mockMutation();
+    const submit = buildSubmit({
+      editingTransaction: makeTransaction({ account: 'Everyday Checking' }),
+      createMutation: mockMutation(),
+      updateMutation,
+      resolveEntityName: () => null,
+      resolveAccountName: () => 'Everyday Checking',
+    });
+
+    submit(makeValues());
+
+    expect(updateMutation.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ account: 'Everyday Checking' }) })
+    );
+  });
+
+  it('falls back to the transaction being edited’s existing account name rather than blanking it when the accounts query has not resolved the id yet', () => {
+    // POPS-2776 review-findings-gate finding: resolveAccountName returns null
+    // (not yet loaded / not found) while editing a transaction whose account
+    // id is otherwise valid — submitting must not silently blank the legacy
+    // display-name column.
+    const updateMutation = mockMutation();
+    const submit = buildSubmit({
+      editingTransaction: makeTransaction({ account: 'Everyday Checking' }),
+      createMutation: mockMutation(),
+      updateMutation,
+      resolveEntityName: () => null,
+      resolveAccountName: () => null,
+    });
+
+    submit(makeValues());
+
+    expect(updateMutation.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ account: 'Everyday Checking' }) })
+    );
+  });
+
+  it('falls back to an empty string when creating (no prior transaction) and the account cannot be resolved', () => {
+    const createMutation = mockMutation();
+    const submit = buildSubmit({
+      editingTransaction: null,
+      createMutation,
+      updateMutation: mockMutation(),
+      resolveEntityName: () => null,
+      resolveAccountName: () => null,
+    });
+
+    submit(makeValues());
+
+    expect(createMutation.mutate).toHaveBeenCalledWith(expect.objectContaining({ account: '' }));
   });
 });
 
