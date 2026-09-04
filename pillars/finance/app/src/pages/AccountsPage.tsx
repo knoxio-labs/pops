@@ -64,6 +64,8 @@ export function AccountsPage() {
         onCreateInstitution={state.createInstitution}
         isSubmitting={state.isSubmitting}
         onSubmit={state.onSubmit}
+        onArchiveToggle={state.onArchiveToggle}
+        isArchiving={state.isArchiving}
       />
     </div>
   );

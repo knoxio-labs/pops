@@ -5,9 +5,9 @@ import { unwrap } from '../../finance-api-helpers.js';
 import { accountsList, currenciesList, institutionsList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
 import { mapAccountApiError } from './account-error-mapping';
-import { type AccountFormValues } from './types';
+import { type Account, type AccountFormValues } from './types';
 import { useAccountFormDialogState } from './useAccountFormDialogState';
-import { ACCOUNTS_KEY, useAccountMutations } from './useAccountMutations';
+import { ACCOUNTS_KEY, toggleArchived, useAccountMutations } from './useAccountMutations';
 import { useCreateInstitution } from './useCreateInstitution';
 
 /** Every account, institution and currency — see `useAllAccounts`'s reasoning for why one page is the whole set. */
@@ -48,8 +48,14 @@ export function requiresGiftCardSecrets(
 export function useAccountsPage() {
   const { accounts, institutions, currencies } = useAccountsData();
   const dialog = useAccountFormDialogState();
-  const { createMutation, updateMutation } = useAccountMutations(dialog.closeDialog);
+  const { createMutation, updateMutation, archiveMutation } = useAccountMutations(
+    dialog.closeDialog
+  );
   const createInstitution = useCreateInstitution(dialog.form);
+
+  const onArchiveToggle = (account: Account) => {
+    archiveMutation.mutate({ id: account.id, archivedAt: toggleArchived(account) });
+  };
 
   const onSubmit = (values: AccountFormValues) => {
     if (requiresGiftCardSecrets(values, dialog.editingAccount?.kind === 'gift-card')) {
@@ -77,5 +83,7 @@ export function useAccountsPage() {
     onSubmit,
     createInstitution,
     isSubmitting: createMutation.isPending || updateMutation.isPending,
+    onArchiveToggle,
+    isArchiving: archiveMutation.isPending,
   };
 }
