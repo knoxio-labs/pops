@@ -66,7 +66,7 @@ function InstitutionRow({
   );
 }
 
-function InstitutionsSection() {
+export function InstitutionsSection() {
   const state = useInstitutionsSettings();
   const { query } = state;
 
@@ -98,8 +98,15 @@ function InstitutionsSection() {
         open={!!state.editing}
         onOpenChange={(v) => !v && state.setEditing(null)}
         form={state.form}
-        isSubmitting={state.updateMutation.isPending}
+        isSubmitting={
+          state.updateMutation.isPending || state.logo.uploadIsPending || state.logo.removeIsPending
+        }
         onSubmit={state.onSubmit}
+        editing={state.editing}
+        uploadLogo={state.logo.uploadLogo}
+        removeLogo={state.logo.removeLogo}
+        logoUploadIsPending={state.logo.uploadIsPending}
+        logoRemoveIsPending={state.logo.removeIsPending}
       />
       <DeleteInstitutionDialog
         deletingId={state.deletingId}

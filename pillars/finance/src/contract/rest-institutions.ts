@@ -1,12 +1,13 @@
 /**
  * `institutions.*` sub-router — institution list/create/delete (POPS-2803),
  * plus `merge` (POPS-2844) for reconciling near-duplicates (e.g. "ANZ" /
- * "A.N.Z.") created before an institution picker existed.
+ * "A.N.Z.") created before an institution picker existed, and
+ * `uploadLogo`/`removeLogo` (POPS-2804).
  *
  * `accounts.institution_id` foreign-keys onto this table (POPS-2767).
  * `colour` is required (hex, for the initials fallback shown when an
- * institution has no logo); `logoAssetId` is nullable — the upload flow that
- * populates it is POPS-2804, not yet built.
+ * institution has no logo); `logoAssetId` is nullable, and is written only by
+ * the logo routes below — never by `update`.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -41,6 +42,13 @@ const UpdateInstitutionBody = z.object({
 const InstitutionMutation = z.object({ data: InstitutionSchema, message: z.string() });
 
 const MergeInstitutionBody = z.object({ targetId: z.string().min(1, 'targetId is required') });
+
+/** Kept in sync with `LOGO_ALLOWED_CONTENT_TYPES` in `src/api/modules/logo-upload.ts`. */
+const UploadLogoBody = z.object({
+  contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  /** Base64-encoded image bytes. The handler decodes this to a Buffer. */
+  contentBase64: z.string().min(1, 'Logo content is required'),
+});
 
 export const financeInstitutionsContract = c.router({
   list: {
@@ -82,5 +90,21 @@ export const financeInstitutionsContract = c.router({
       'Merge institution :id (the source) into targetId: repoint every account onto targetId ' +
       'and delete it outright. Rejects merging an institution into itself with 422. ' +
       "The survivor keeps its own colour and logoAssetId — targetId's values win unqualified.",
+  },
+  uploadLogo: {
+    method: 'POST',
+    path: '/institutions/:id/logo',
+    pathParams: z.object({ id: z.string() }),
+    body: UploadLogoBody,
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES },
+    summary: 'Upload (or replace) an institution logo (base64, 2 MiB cap, PNG/JPEG/WEBP only)',
+  },
+  removeLogo: {
+    method: 'DELETE',
+    path: '/institutions/:id/logo',
+    pathParams: z.object({ id: z.string() }),
+    body: z.object({}).optional(),
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES },
+    summary: 'Remove an institution logo, falling back to the initials mark',
   },
 });

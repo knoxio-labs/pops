@@ -5643,6 +5643,135 @@ export type InstitutionsUpdateResponses = {
 export type InstitutionsUpdateResponse =
   InstitutionsUpdateResponses[keyof InstitutionsUpdateResponses];
 
+export type InstitutionsRemoveLogoData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/institutions/{id}/logo';
+};
+
+export type InstitutionsRemoveLogoErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsRemoveLogoError =
+  InstitutionsRemoveLogoErrors[keyof InstitutionsRemoveLogoErrors];
+
+export type InstitutionsRemoveLogoResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type InstitutionsRemoveLogoResponse =
+  InstitutionsRemoveLogoResponses[keyof InstitutionsRemoveLogoResponses];
+
+export type InstitutionsUploadLogoData = {
+  /**
+   * Body
+   */
+  body?: {
+    contentBase64: string;
+    contentType: 'image/png' | 'image/jpeg' | 'image/webp';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/institutions/{id}/logo';
+};
+
+export type InstitutionsUploadLogoErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsUploadLogoError =
+  InstitutionsUploadLogoErrors[keyof InstitutionsUploadLogoErrors];
+
+export type InstitutionsUploadLogoResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type InstitutionsUploadLogoResponse =
+  InstitutionsUploadLogoResponses[keyof InstitutionsUploadLogoResponses];
+
 export type InstitutionsMergeData = {
   /**
    * Body

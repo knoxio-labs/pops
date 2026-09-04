@@ -310,4 +310,55 @@ describe('loan repayment split at import', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ type: 'loan', amountCents: -5_000_000 });
   });
+
+  it('resolves the loan account by accountId, not by the dialect account label (POPS-2830/POPS-2852)', async () => {
+    const { db } = freshMigratedFinanceDb();
+    seedLoanAccount(db);
+    const homeLoan = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.description, 'Initial drawdown'))
+      .get();
+    if (!homeLoan) throw new Error('seedLoanAccount fixture lost its drawdown row');
+    const homeLoanAccountId = homeLoan.accountId;
+
+    // A second, unrelated account that happens to be named after the bank's
+    // dialect label the statement carries in `account` — exactly the
+    // situation `resolveAccountIdByName` would resolve to instead of the
+    // wizard-picked `accountId`, corrupting the split against the wrong
+    // account's balance/rate.
+    createAccount(db, { name: 'ANZ Home Loan', kind: 'checking', currency: 'AUD' });
+
+    const payload: CommitPayload = {
+      entities: [],
+      changeSets: [],
+      tagRuleChangeSets: [],
+      transactions: [
+        {
+          date: '2026-07-01',
+          description: 'Loan repayment',
+          amount: 1500,
+          account: 'ANZ Home Loan',
+          accountId: homeLoanAccountId,
+          rawRow: '{}',
+          checksum: REPAYMENT_CHECKSUM,
+          transactionType: 'transfer',
+        },
+      ],
+    };
+
+    const result = await commitImport(db, noContacts(), payload);
+
+    expect(result.failedDetails).toEqual([]);
+    expect(result.transactionsImported).toBe(2);
+
+    const rows = repaymentRows(db);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.accountId === homeLoanAccountId)).toBe(true);
+
+    const fee = rows.find((row) => row.type === 'fee');
+    const transfer = rows.find((row) => row.type === 'transfer');
+    expect(fee).toMatchObject({ amountCents: 50_000, tags: JSON.stringify(['fee:interest']) });
+    expect(transfer).toMatchObject({ amountCents: 100_000 });
+  });
 });

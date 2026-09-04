@@ -106,6 +106,26 @@ export function updateInstitution(
 }
 
 /**
+ * Point (or clear) an institution's `logoAssetId`. Split out from
+ * {@link updateInstitution} because it is written by the upload/removal
+ * orchestration in `src/api/modules/logo-upload.ts`, not by the settings
+ * PATCH form — `UpdateInstitutionInput` deliberately has no `logoAssetId`
+ * field so a plain rename/recolour PATCH can never accidentally touch it.
+ */
+export function setInstitutionLogoAssetId(
+  db: FinanceDb,
+  id: string,
+  logoAssetId: string | null
+): InstitutionRow {
+  getInstitution(db, id);
+  db.update(institutions)
+    .set({ logoAssetId, updatedAt: new Date().toISOString() })
+    .where(eq(institutions.id, id))
+    .run();
+  return getInstitution(db, id);
+}
+
+/**
  * Every user table carrying a column literally named `institution_id`,
  * quoted for interpolation into raw SQL. Shared by {@link isInstitutionInUse}
  * (read) and {@link mergeInstitutions} (write) so both stay accurate as more

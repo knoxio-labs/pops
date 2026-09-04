@@ -445,6 +445,12 @@ export function makeClient(app: Express) {
         call<{ data: Institution; message: string }>((r) =>
           r.post(`/institutions/${id}/merge`).send(body)
         ),
+      uploadLogo: (id: string, body: { contentType: string; contentBase64: string }) =>
+        call<{ data: Institution; message: string }>((r) =>
+          r.post(`/institutions/${id}/logo`).send(body)
+        ),
+      removeLogo: (id: string) =>
+        call<{ data: Institution; message: string }>((r) => r.delete(`/institutions/${id}/logo`)),
     },
     accounts: {
       list: (query: AccountQuery = {}) =>

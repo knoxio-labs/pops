@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { type UseFormReturn } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import {
   Button,
@@ -12,7 +13,8 @@ import {
   TextInput,
 } from '@pops/ui';
 
-import { type InstitutionFormValues } from './types';
+import { InstitutionLogoField } from './InstitutionLogoField';
+import { type Institution, type InstitutionFormValues } from './types';
 
 interface InstitutionEditDialogProps {
   open: boolean;
@@ -20,6 +22,12 @@ interface InstitutionEditDialogProps {
   form: UseFormReturn<InstitutionFormValues>;
   isSubmitting: boolean;
   onSubmit: (values: InstitutionFormValues) => void;
+  /** The institution being edited — `null` only while the dialog is closing. */
+  editing: Institution | null;
+  uploadLogo: (institutionId: string, file: File) => void;
+  removeLogo: (institutionId: string) => void;
+  logoUploadIsPending: boolean;
+  logoRemoveIsPending: boolean;
 }
 
 function FormFields({ form }: { form: UseFormReturn<InstitutionFormValues> }) {
@@ -54,7 +62,18 @@ function FormFields({ form }: { form: UseFormReturn<InstitutionFormValues> }) {
 }
 
 export function InstitutionEditDialog(props: InstitutionEditDialogProps) {
-  const { open, onOpenChange, form, isSubmitting, onSubmit } = props;
+  const {
+    open,
+    onOpenChange,
+    form,
+    isSubmitting,
+    onSubmit,
+    editing,
+    uploadLogo,
+    removeLogo,
+    logoUploadIsPending,
+    logoRemoveIsPending,
+  } = props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-(--size-dialog-sm)">
@@ -65,6 +84,16 @@ export function InstitutionEditDialog(props: InstitutionEditDialogProps) {
               Rename this institution or change its colour
             </DialogDescription>
           </DialogHeader>
+          {editing && (
+            <InstitutionLogoField
+              institution={editing}
+              uploadLogo={uploadLogo}
+              removeLogo={removeLogo}
+              uploadIsPending={logoUploadIsPending}
+              removeIsPending={logoRemoveIsPending}
+              onError={(message) => toast.error(message)}
+            />
+          )}
           <FormFields form={form} />
           <DialogFooter>
             <Button

@@ -147,9 +147,15 @@ import type {
   InstitutionsMergeData,
   InstitutionsMergeErrors,
   InstitutionsMergeResponses,
+  InstitutionsRemoveLogoData,
+  InstitutionsRemoveLogoErrors,
+  InstitutionsRemoveLogoResponses,
   InstitutionsUpdateData,
   InstitutionsUpdateErrors,
   InstitutionsUpdateResponses,
+  InstitutionsUploadLogoData,
+  InstitutionsUploadLogoErrors,
+  InstitutionsUploadLogoResponses,
   LoanGetTermsData,
   LoanGetTermsErrors,
   LoanGetTermsResponses,
@@ -1249,6 +1255,44 @@ export const institutionsUpdate = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/institutions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Remove an institution logo, falling back to the initials mark
+ */
+export const institutionsRemoveLogo = <ThrowOnError extends boolean = false>(
+  options: Options<InstitutionsRemoveLogoData, ThrowOnError>
+): RequestResult<InstitutionsRemoveLogoResponses, InstitutionsRemoveLogoErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    InstitutionsRemoveLogoResponses,
+    InstitutionsRemoveLogoErrors,
+    ThrowOnError
+  >({
+    url: '/institutions/{id}/logo',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Upload (or replace) an institution logo (base64, 2 MiB cap, PNG/JPEG/WEBP only)
+ */
+export const institutionsUploadLogo = <ThrowOnError extends boolean = false>(
+  options: Options<InstitutionsUploadLogoData, ThrowOnError>
+): RequestResult<InstitutionsUploadLogoResponses, InstitutionsUploadLogoErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    InstitutionsUploadLogoResponses,
+    InstitutionsUploadLogoErrors,
+    ThrowOnError
+  >({
+    url: '/institutions/{id}/logo',
     ...options,
     headers: {
       'Content-Type': 'application/json',

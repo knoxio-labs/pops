@@ -52,10 +52,18 @@ describe('toAccountOptions', () => {
     expect(option?.institution).toBeUndefined();
   });
 
-  it('never resolves a logo, since institutions.logoAssetId has no serving endpoint yet', () => {
+  it('resolves logoAssetId to the raw serving route', () => {
     const [option] = toAccountOptions(
       [account({ institutionId: 'anz' })],
       [institution({ logoAssetId: 'asset-1' })]
+    );
+    expect(option?.institution?.logoUrl).toBe('/finance-api/logos/asset-1');
+  });
+
+  it('leaves logoUrl unset when the institution has no logoAssetId', () => {
+    const [option] = toAccountOptions(
+      [account({ institutionId: 'anz' })],
+      [institution({ logoAssetId: null })]
     );
     expect(option?.institution?.logoUrl).toBeUndefined();
   });

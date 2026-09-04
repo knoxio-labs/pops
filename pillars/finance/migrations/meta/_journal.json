@@ -288,6 +288,13 @@
       "when": 1781913600034,
       "tag": "0089_scope_dedup_key_to_account_id",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1781913600035,
+      "tag": "0090_logo_blobs",
+      "breakpoints": true
     }
   ]
 }
