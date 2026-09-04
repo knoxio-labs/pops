@@ -1,10 +1,20 @@
-import { Plus, Wallet } from 'lucide-react';
+import { CircleSlash, Plus, Wallet } from 'lucide-react';
 
-import { AccountSelect, Button, EmptyState, RadioInput } from '@pops/ui';
+import {
+  AccountSelect,
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  EmptyState,
+  RadioInput,
+} from '@pops/ui';
 
 import { AccountFormDialog } from '../../../pages/accounts/AccountFormDialog';
 import { BANK_OPTIONS } from '../upload-step/bank-upload-config';
 import { useAccountAndFormat } from './useAccountAndFormat';
+
+import type { AccountOption } from '@pops/ui';
 
 import type { BankType } from '../../../store/import-store-types';
 import type { AccountAndFormatState } from './useAccountAndFormat';
@@ -61,6 +71,23 @@ function NewAccountDialog({ state }: { state: AccountAndFormatState }) {
   );
 }
 
+/** Shown when the picked account's institution/kind combination has no dialect to read (POPS-2854). */
+function NoFormats({ account }: { account: AccountOption }) {
+  return (
+    <Alert>
+      <CircleSlash aria-hidden />
+      <AlertTitle>Nothing to import into {account.name}</AlertTitle>
+      <AlertDescription>
+        <p>
+          POPS has no parser for this account. A cash or gift-card balance has no statement to
+          export, and an institution nobody has written a parser for has nothing POPS can read yet.
+        </p>
+        <p>Record these transactions by hand, or pick another account.</p>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 function FormatSection({
   state,
   bankType,
@@ -77,10 +104,19 @@ function FormatSection({
       </p>
     );
   }
+  // The account list and the institution list resolve at different times;
+  // until the picked account itself is resolvable, there is nothing to judge
+  // formats against yet, so this renders neither the empty state nor a radio
+  // list with nothing in it.
+  if (!state.account) return null;
+  if (state.availableBanks.length === 0) {
+    return <NoFormats account={state.account} />;
+  }
+  const options = BANK_OPTIONS.filter((option) => state.availableBanks.includes(option.value));
   return (
     <RadioInput
       label="Bank"
-      options={BANK_OPTIONS}
+      options={options}
       value={bankType}
       onValueChange={onBankChange}
       orientation="horizontal"

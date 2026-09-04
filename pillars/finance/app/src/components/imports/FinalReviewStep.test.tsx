@@ -75,6 +75,7 @@ function makeStoreState(overrides: Partial<typeof storeState> = {}) {
       failed: [],
       skipped: [],
     },
+    accountName: 'ANZ Everyday',
     commitResult: null,
     prevStep: mockPrevStep,
     nextStep: mockNextStep,
@@ -170,6 +171,38 @@ describe('FinalReviewStep', () => {
     // Should NOT show internal bucket names
     expect(screen.queryByText('Uncertain:')).toBeNull();
     expect(screen.queryByText('Failed:')).toBeNull();
+  });
+
+  it('names the account duplicates were matched against, only when some were skipped (POPS-2820)', () => {
+    storeState = makeStoreState({
+      confirmedTransactions: Array.from({ length: 3 }, (_, i) => ({ id: `t${i}` })),
+      processedTransactions: {
+        matched: [{ id: 'm1' }],
+        uncertain: [],
+        failed: [],
+        skipped: [{ id: 's1' }, { id: 's2' }],
+      },
+      accountName: 'ANZ Everyday',
+    });
+    render(renderStep());
+    expect(
+      screen.getByText(/matched against this account only, not the rest of your ledger/)
+    ).toBeDefined();
+    expect(screen.getByText(/ANZ Everyday/)).toBeDefined();
+  });
+
+  it('omits the duplicate-scoping note when nothing was skipped', () => {
+    storeState = makeStoreState({
+      confirmedTransactions: [{ id: 't0' }],
+      processedTransactions: {
+        matched: [{ id: 'm1' }],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+    });
+    render(renderStep());
+    expect(screen.queryByText(/matched against this account only/)).toBeNull();
   });
 
   it('shows tag assignment count', () => {

@@ -2,22 +2,26 @@
 
 Eight steps that turn a bank CSV into committed transactions. Unlike the backend modules it drives, almost none of this directory carries file-level docs, so this is the orientation.
 
-| #   | Step    | What happens                                                                                                                             |
-| --- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Upload  | Pick one or more files and a bank. The bank does not select a parser, but it **is** stamped onto every row as `account`.                 |
-| 2   | Map     | Map CSV columns to date / description / amount / location; parse client-side into `ParsedTransaction[]` with a SHA-256 checksum per row. |
-| 3   | Process | `POST /imports/process` — dedup by checksum, then classify. Long-running, so the step polls `GET /imports/progress`.                     |
-| 4   | Review  | Resolve `uncertain` rows: assign entities, correct matches, trigger correction proposals.                                                |
-| 5   | Tags    | Review suggested tags per entity group or per transaction.                                                                               |
-| 6   | Rules   | Confirm the tag-rule ChangeSets this import would create.                                                                                |
-| 7   | Commit  | `POST /imports/commit` — writes the transactions and applies every buffered ChangeSet.                                                   |
-| 8   | Summary | Counts for what was committed.                                                                                                           |
+| #   | Step    | What happens                                                                                                                                                                                                                  |
+| --- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Upload  | Pick the account first, then the bank dialect that account's institution/kind can offer (POPS-2820/2854), then the file(s). The dialect does not select a parser directly, but it **is** stamped onto every row as `account`. |
+| 2   | Map     | Map CSV columns to date / description / amount / location; parse client-side into `ParsedTransaction[]` with a SHA-256 checksum per row.                                                                                      |
+| 3   | Process | `POST /imports/process` — dedup by checksum, then classify. Long-running, so the step polls `GET /imports/progress`.                                                                                                          |
+| 4   | Review  | Resolve `uncertain` rows: assign entities, correct matches, trigger correction proposals.                                                                                                                                     |
+| 5   | Tags    | Review suggested tags per entity group or per transaction.                                                                                                                                                                    |
+| 6   | Rules   | Confirm the tag-rule ChangeSets this import would create.                                                                                                                                                                     |
+| 7   | Commit  | `POST /imports/commit` — writes the transactions and applies every buffered ChangeSet.                                                                                                                                        |
+| 8   | Summary | Counts for what was committed.                                                                                                                                                                                                |
 
 ## One run, several files
 
 A batch is one bank. Every file in it is stamped with the single `bankType` chosen on step 1, and `csv-merge.ts` refuses the batch — by file name, listing the offending columns — unless every file carries the same header set as the first. Column order is not part of that comparison; Papa Parse keys rows by header name.
 
 Consecutive statement exports repeat the days they share, so `mergeParsedFiles` drops the overlap. It compares whole rows rather than checksums, because only at merge time are the file boundaries still visible, and the distinction depends on them: a row repeated across two files is one transaction seen twice, while a row repeated inside one file is two genuine transactions — a bank will list two identical coffees bought on the same day, and they share a canonical checksum. So a row content is kept as many times as the file that lists it most. Nothing downstream deduplicates within a batch; `partitionByChecksum` on the server only compares against what is already committed.
+
+## Account first, then format
+
+`account-step/import-formats.ts` derives the bank dialects a picked account can offer from its institution name and kind — not a static list of every dialect POPS knows. An account whose kind has no statement (cash, gift card) or whose institution has no parser written for it offers none, and the step says so instead of falling back to an unrelated bank list. The checksum dedup key (`@pops/finance`'s `import-dedup.ts`) is scoped to the real `accountId`, so a duplicate skipped on commit is always a duplicate _of that account_ — never a collision with an identical-looking charge on a different one.
 
 ## Local-first is the whole design
 
