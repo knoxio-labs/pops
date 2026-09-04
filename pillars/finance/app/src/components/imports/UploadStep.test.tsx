@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Papa from 'papaparse';
 import { type ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,12 +18,18 @@ import { UploadStep } from './UploadStep';
 const accountsList = vi.fn();
 const institutionsList = vi.fn();
 const currenciesList = vi.fn();
+const accountsCreate = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
   institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
+  accountsCreate: (...args: unknown[]) => accountsCreate(...args),
+  institutionsCreate: vi.fn(),
+  giftCardDetailsWrite: vi.fn(),
 }));
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 function renderUploadStep(): ReactElement {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -282,5 +289,68 @@ describe('UploadStep — a file that does not match the chosen bank', () => {
 
     expect(screen.queryByText('This does not look like ANZ Credit Card')).not.toBeInTheDocument();
     expect(useImportStore.getState().files).toEqual([]);
+  });
+});
+
+describe('UploadStep — creating an account mid-import (POPS-2820)', () => {
+  it('keeps the already-chosen file selected once the new account is created', async () => {
+    // Same shape as the "no derivable format" fixture, but a real ANZ
+    // checking account so the format radio (and therefore the file drop) is
+    // on screen before the account switch happens.
+    const anzAccount = {
+      id: 'acc-1',
+      name: 'Test Account',
+      institutionId: 'inst-anz',
+      kind: 'checking' as const,
+      currency: 'AUD',
+      archivedAt: null,
+      displayOrder: 0,
+      entityId: null,
+      entityDisplayName: null,
+      entityDisplayNameStale: false,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const anzInstitution = {
+      id: 'inst-anz',
+      name: 'ANZ',
+      colour: '#0072ac',
+      logoAssetId: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    accountsList.mockResolvedValue({
+      data: { data: [anzAccount], pagination: { total: 1, limit: 500, offset: 0, hasMore: false } },
+    });
+    institutionsList.mockResolvedValue({ data: { data: [anzInstitution] } });
+    currenciesList.mockResolvedValue({
+      data: {
+        data: [{ code: 'AUD', name: 'Australian Dollar', symbol: '$', decimals: 2, kind: 'fiat' }],
+      },
+    });
+    accountsCreate.mockResolvedValue({
+      data: {
+        data: { ...anzAccount, id: 'acc-new', name: 'Bendigo Everyday' },
+        message: 'Created',
+      },
+      error: undefined,
+    });
+
+    const user = userEvent.setup();
+    render(renderUploadStep());
+
+    const file = csvFile('jan.csv', JAN);
+    selectFiles([file]);
+    expect(useImportStore.getState().files).toEqual([file]);
+
+    await user.click(await screen.findByRole('button', { name: /add the account/i }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.type(dialog.getByPlaceholderText('Everyday'), 'Bendigo Everyday');
+    await user.click(dialog.getByRole('combobox', { name: 'Currency' }));
+    await user.click(await screen.findByText('AUD — Australian Dollar'));
+    await user.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-new'));
+    expect(useImportStore.getState().files).toEqual([file]);
   });
 });
