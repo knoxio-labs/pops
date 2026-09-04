@@ -158,7 +158,8 @@
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: PreviewReceiptCaptureRepository(
                     answer: answer, neverAnswers: neverAnswers),
-                purchases: AppDependencies.unbound.purchases
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
             )
         )
     }

@@ -35,4 +35,14 @@ internal struct RouterTests {
 
         #expect(router.stackPath.wrappedValue == [.transactionList])
     }
+
+    @Test("accounts routes push and pop the same as any other route")
+    func accountsRoutes() {
+        let router = Router()
+
+        router.send(.push(.accountsList))
+        router.send(.push(.accountDetail(id: "acc-1")))
+
+        #expect(router.path == [.accountsList, .accountDetail(id: "acc-1")])
+    }
 }

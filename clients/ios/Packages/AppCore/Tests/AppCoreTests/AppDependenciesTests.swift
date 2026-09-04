@@ -36,4 +36,24 @@ internal struct AppDependenciesTests {
 
         #expect(page.transactions.count == 1)
     }
+
+    @Test("an unbound accounts repository fails rather than trapping")
+    func unboundAccountsFail() async {
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await AppDependencies.unbound.accounts.accounts()
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await AppDependencies.unbound.accounts.accountDetail(id: "acc-1")
+        }
+    }
+
+    @Test("a bound accounts container hands back what it was given")
+    func boundAccountsContainerResolves() async throws {
+        let repository = InMemoryAccountsRepository(rows: Account.fakes(count: 2))
+        let dependencies = AppDependencies.fake(accounts: repository)
+
+        let accounts = try await dependencies.accounts.accounts()
+
+        #expect(accounts.count == 2)
+    }
 }

@@ -116,7 +116,8 @@
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
-                purchases: AppDependencies.unbound.purchases
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
             ),
             router: Router()
         )
@@ -138,7 +139,8 @@
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
-                purchases: AppDependencies.unbound.purchases
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
             )
         )
     }
@@ -163,7 +165,8 @@
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
-                purchases: AppDependencies.unbound.purchases
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
             ),
             router: Router()
         )

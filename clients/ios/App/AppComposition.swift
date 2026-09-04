@@ -79,7 +79,8 @@ internal final class AppComposition {
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
             reachability: AppDependencies.unbound.reachability,
             receiptCapture: AppDependencies.unbound.receiptCapture,
-            purchases: AppDependencies.unbound.purchases
+            purchases: AppDependencies.unbound.purchases,
+            accounts: AppDependencies.unbound.accounts
         )
         shell = AppShellModel(
             session: session,
@@ -100,7 +101,12 @@ internal final class AppComposition {
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
             reachability: shell,
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
-            purchases: BFMPurchasesRepository(client: authenticated(device))
+            purchases: BFMPurchasesRepository(client: authenticated(device)),
+            // The BFM has no `/mobile` accounts route yet, so there is nothing
+            // for a `BFMAccountsRepository` to call — left unbound rather than
+            // invented against an endpoint that does not exist. Binding this
+            // is follow-up work once the gateway route and its codegen exist.
+            accounts: AppDependencies.unbound.accounts
         )
         bound = (device, dependencies)
         return dependencies

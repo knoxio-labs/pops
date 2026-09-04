@@ -45,7 +45,8 @@
                 pairing: PreviewPairingService(failure: failing),
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
-                purchases: AppDependencies.unbound.purchases
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
             ),
             camera: PreviewCamera(access: camera),
             device: SystemDeviceDescription(),

@@ -130,6 +130,63 @@ extension Transaction {
     }
 }
 
+extension Account {
+    /// An account whose fields a test can ignore. Every value is overridable,
+    /// so a test names only the field it is actually about.
+    public static func fake(
+        id: String = "acc-1",
+        name: String = "Fake Everyday",
+        kind: AccountKind = .checking,
+        balance: MoneyAmount = MoneyAmount(minorUnits: 100_000, currencyCode: "AUD"),
+        archived: Bool = false,
+        institutionName: String? = "Fake Bank",
+        contact: String? = nil,
+        balanceAsOf: Date? = Date(timeIntervalSince1970: 0),
+        expiresOn: Date? = nil,
+        transactionCount: Int = 12
+    ) -> Account {
+        Account(
+            id: id,
+            name: name,
+            kind: kind,
+            balance: balance,
+            archived: archived,
+            institutionName: institutionName,
+            contact: contact,
+            balanceAsOf: balanceAsOf,
+            expiresOn: expiresOn,
+            transactionCount: transactionCount
+        )
+    }
+
+    /// `count` accounts with distinct ids.
+    public static func fakes(count: Int) -> [Account] {
+        (0..<count).map { Account.fake(id: "acc-\($0)", name: "Fake account \($0)") }
+    }
+}
+
+extension AccountDetail {
+    /// The fuller record, with every field overridable so a test names only the
+    /// one it is about.
+    public static func fake(
+        account: Account = .fake(),
+        history: [AccountBalancePoint] = [],
+        card: AccountCardCycle? = nil,
+        points: AccountPointsPlan? = nil,
+        originalValueMinorUnits: Int? = nil,
+        recentTransactions: [Transaction] = []
+    ) -> AccountDetail {
+        AccountDetail(
+            account: account,
+            history: history,
+            card: card,
+            points: points,
+            originalValueMinorUnits: originalValueMinorUnits,
+            recentTransactions: recentTransactions
+        )
+    }
+}
+
 extension TransactionDetail {
     /// The fuller record, with every field overridable so a test names only the
     /// one it is about.
