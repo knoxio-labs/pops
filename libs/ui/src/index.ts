@@ -76,6 +76,9 @@ export {
 } from './primitives/select';
 
 // Composite components
+export * from './components/account-shared/types';
+export * from './components/AccountChip';
+export * from './components/AccountSelect';
 export * from './components/Autocomplete';
 export * from './components/Button';
 export * from './components/CheckboxInput';
