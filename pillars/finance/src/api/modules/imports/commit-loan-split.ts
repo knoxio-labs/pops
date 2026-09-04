@@ -25,7 +25,7 @@ import {
   getAccountBalanceBefore,
   LoanTermsNotFoundError,
   loanTermsService,
-  resolveAccountIdByName,
+  resolveImportAccountId,
   type FinanceDb,
 } from '../../../db/index.js';
 import { ValidationError } from '../../shared/errors.js';
@@ -78,7 +78,7 @@ function loanSplitContext(
  * stable across re-imports and never colliding with a real bank checksum.
  */
 export function expandLoanRepaymentRow(db: FinanceDb, columns: Columns): Columns[] {
-  const accountId = resolveAccountIdByName(db, columns.account);
+  const accountId = resolveImportAccountId(db, columns.account, columns.accountId);
   const isLoanAccount = accountsService.getAccount(db, accountId).kind === 'loan';
 
   assertNotLoanTypedCredit(columns, isLoanAccount);
