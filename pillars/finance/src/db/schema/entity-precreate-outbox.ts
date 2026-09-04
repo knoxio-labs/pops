@@ -24,6 +24,16 @@ export const entityPrecreateOutbox = sqliteTable(
     lastAttemptAt: text('last_attempt_at'),
     lastError: text('last_error'),
     resolvedEntityId: text('resolved_entity_id'),
+    /**
+     * Set only when this row resolves a pending `person` account's
+     * `entity_id` (POPS-2771), rather than a `pending:contact:{uuid}`
+     * placeholder swept out of `transactions` / `transaction_corrections` /
+     * `transaction_tag_rules`. A `person` account keeps `entity_id` genuinely
+     * NULL while pending (see `db/schema/accounts.ts`'s uniqueness note), so
+     * there is no placeholder value to search for — the reconciler needs this
+     * id to know which account row to fill in.
+     */
+    accountId: text('account_id'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

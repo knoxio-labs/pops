@@ -1111,6 +1111,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;
@@ -1186,6 +1188,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;
@@ -1294,6 +1298,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;
@@ -1381,6 +1387,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;
@@ -1472,6 +1480,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;
@@ -1584,6 +1594,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
               institutionId: string | null;

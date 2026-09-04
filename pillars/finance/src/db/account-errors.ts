@@ -174,6 +174,58 @@ export class AccountKindMismatchError extends Error {
   }
 }
 
+/**
+ * A `person` account was created or updated with no `entityId` and no
+ * `allowPendingEntity` escape hatch — a receivable/payable ledger with no
+ * contact behind it has nothing to key the balance to (POPS-2771). The one
+ * legitimate case where a `person` account briefly has a null `entityId` is
+ * the outbox-pending path (`createAccount`'s `allowPendingEntity` option),
+ * which this error never fires for.
+ */
+export class PersonAccountRequiresEntityError extends Error {
+  override readonly name = 'PersonAccountRequiresEntityError' as const;
+
+  constructor() {
+    super("A 'person' account requires an entityId (or a name to resolve one from)");
+  }
+}
+
+/**
+ * A non-`person` account was created or updated with an `entityId` set.
+ * `entityId` exists only to key a `person` account's receivable/payable
+ * balance to a contact; every other kind has no such relationship to record.
+ */
+export class NonPersonAccountHasEntityError extends Error {
+  override readonly name = 'NonPersonAccountHasEntityError' as const;
+  readonly kind: string;
+
+  constructor(kind: string) {
+    super(`Account kind '${kind}' is not 'person' and cannot carry an entityId`);
+    this.kind = kind;
+  }
+}
+
+/**
+ * A `person` account's `(entityId, currency)` pair collided with an existing
+ * account — `idx_accounts_entity_currency` enforces one `person` account per
+ * contact per currency (POPS-2771). Raised both synchronously (a direct
+ * create/update naming an already-claimed `entityId`) and by the outbox
+ * reconciler (two accounts pending resolution both resolve to the same real
+ * contact + currency) — the latter is not retryable, since contacts will
+ * resolve the same name to the same id every time.
+ */
+export class PersonAccountEntityConflictError extends Error {
+  override readonly name = 'PersonAccountEntityConflictError' as const;
+  readonly entityId: string;
+  readonly currency: string;
+
+  constructor(entityId: string, currency: string) {
+    super(`A 'person' account for entity '${entityId}' in currency '${currency}' already exists`);
+    this.entityId = entityId;
+    this.currency = currency;
+  }
+}
+
 export class GiftCardDetailsNotFoundError extends Error {
   override readonly name = 'GiftCardDetailsNotFoundError' as const;
   readonly accountId: string;

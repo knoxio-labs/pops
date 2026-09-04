@@ -36,7 +36,7 @@ export function makeFinanceRestHandlers(deps: {
     budgets: makeBudgetsHandlers(db),
     currencies: makeCurrenciesHandlers(db),
     institutions: makeInstitutionsHandlers(db),
-    accounts: makeAccountsHandlers(db),
+    accounts: makeAccountsHandlers(db, deps.contacts),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),
     tagRules: makeTagRulesHandlers(db),

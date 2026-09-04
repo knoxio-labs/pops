@@ -94,6 +94,7 @@ export type {
   AccountReorderEntry,
   AccountRow,
   CreateAccountInput,
+  CreateAccountOptions,
   ListAccountsOptions,
   UpdateAccountInput,
 } from './services/accounts.js';
@@ -106,6 +107,12 @@ export type {
   RevealedGiftCardSecret,
   ExpiringGiftCard,
 } from './services/gift-card-details.js';
+
+export { resolvePendingPersonAccountEntity } from './services/account-entity-resolution.js';
+
+export { resolveAccountEntityDisplays } from './services/account-entity-display.js';
+
+export type { AccountEntityDisplay } from './services/account-entity-display.js';
 
 export * as institutionsService from './services/institutions.js';
 

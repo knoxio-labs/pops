@@ -98,6 +98,10 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
       if (unavailable) return [];
       return entities.find((e) => e.id === entityId)?.defaultTags ?? [];
     },
+    async fetchEntityDisplayName(entityId: string): Promise<string | null> {
+      if (unavailable) return null;
+      return entities.find((e) => e.id === entityId)?.name ?? null;
+    },
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       created.push({ name, type });
       if (unavailable) throw new ContactsUnavailableError(unavailableDetail);

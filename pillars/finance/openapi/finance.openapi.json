@@ -94,6 +94,13 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "entityDisplayName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityDisplayNameStale": {
+                            "type": "boolean"
+                          },
                           "entityId": {
                             "nullable": true,
                             "type": "string"
@@ -137,6 +144,8 @@
                           "archivedAt",
                           "displayOrder",
                           "entityId",
+                          "entityDisplayName",
+                          "entityDisplayNameStale",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -254,6 +263,13 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "entityDisplayName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "entityDisplayNameStale": {
+                          "type": "boolean"
+                        },
                         "entityId": {
                           "nullable": true,
                           "type": "string"
@@ -297,6 +313,8 @@
                         "archivedAt",
                         "displayOrder",
                         "entityId",
+                        "entityDisplayName",
+                        "entityDisplayNameStale",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -473,6 +491,13 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "entityDisplayName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "entityDisplayNameStale": {
+                            "type": "boolean"
+                          },
                           "entityId": {
                             "nullable": true,
                             "type": "string"
@@ -516,6 +541,8 @@
                           "archivedAt",
                           "displayOrder",
                           "entityId",
+                          "entityDisplayName",
+                          "entityDisplayNameStale",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -658,6 +685,13 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "entityDisplayName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "entityDisplayNameStale": {
+                          "type": "boolean"
+                        },
                         "entityId": {
                           "nullable": true,
                           "type": "string"
@@ -701,6 +735,8 @@
                         "archivedAt",
                         "displayOrder",
                         "entityId",
+                        "entityDisplayName",
+                        "entityDisplayNameStale",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -827,6 +863,13 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "entityDisplayName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "entityDisplayNameStale": {
+                          "type": "boolean"
+                        },
                         "entityId": {
                           "nullable": true,
                           "type": "string"
@@ -870,6 +913,8 @@
                         "archivedAt",
                         "displayOrder",
                         "entityId",
+                        "entityDisplayName",
+                        "entityDisplayNameStale",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1047,6 +1092,13 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "entityDisplayName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "entityDisplayNameStale": {
+                          "type": "boolean"
+                        },
                         "entityId": {
                           "nullable": true,
                           "type": "string"
@@ -1090,6 +1142,8 @@
                         "archivedAt",
                         "displayOrder",
                         "entityId",
+                        "entityDisplayName",
+                        "entityDisplayNameStale",
                         "createdAt",
                         "updatedAt"
                       ],
