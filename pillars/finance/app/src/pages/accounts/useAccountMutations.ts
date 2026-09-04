@@ -5,6 +5,8 @@ import { unwrap } from '../../finance-api-helpers.js';
 import { accountsCreate, accountsUpdate, giftCardDetailsWrite } from '../../finance-api/index.js';
 import { hasInstitution, type AccountFormValues } from './types';
 
+import type { Account } from './types';
+
 export const ACCOUNTS_KEY = ['finance', 'accounts', 'page'] as const;
 
 async function writeGiftCardDetails(accountId: string, values: AccountFormValues) {
@@ -61,5 +63,19 @@ export function useAccountMutations(onSuccess: () => void) {
     },
     onSettled: invalidate,
   });
-  return { createMutation, updateMutation };
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archivedAt }: { id: string; archivedAt: string | null }) =>
+      unwrap(await accountsUpdate({ path: { id }, body: { archivedAt } })),
+    onSuccess: (_, variables) => {
+      toast.success(variables.archivedAt !== null ? 'Account archived' : 'Account unarchived');
+      onSuccess();
+    },
+    onSettled: invalidate,
+  });
+  return { createMutation, updateMutation, archiveMutation };
+}
+
+/** Toggle an account's `archivedAt`, stamping the current time to archive or clearing it to unarchive. */
+export function toggleArchived(account: Pick<Account, 'archivedAt'>): string | null {
+  return account.archivedAt !== null ? null : new Date().toISOString();
 }

@@ -180,4 +180,46 @@ describe('AccountFormDialog — edit', () => {
     const [call] = accountsUpdate.mock.calls[0] as [{ path: { id: string } }];
     expect(call.path).toEqual({ id: 'a1' });
   });
+
+  it('archives an active account by patching archivedAt to a timestamp', async () => {
+    accountsUpdate.mockResolvedValue({
+      data: { data: account({ id: 'a1', archivedAt: '2026-02-01T00:00:00.000Z' }), message: '' },
+      error: undefined,
+    });
+    renderPage([account({ id: 'a1', name: 'Everyday', archivedAt: null })]);
+
+    await userEvent.click(await screen.findByText('Everyday'));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.queryByText(/Archived, not deleted/)).not.toBeInTheDocument();
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Archive account' }));
+
+    await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
+    const [call] = accountsUpdate.mock.calls[0] as [
+      { path: { id: string }; body: { archivedAt: string | null } },
+    ];
+    expect(call.path).toEqual({ id: 'a1' });
+    expect(call.body.archivedAt).toEqual(expect.any(String));
+  });
+
+  it('offers unarchive and explains what survived for an already-archived account', async () => {
+    accountsUpdate.mockResolvedValue({
+      data: { data: account({ id: 'a1', archivedAt: null }), message: '' },
+      error: undefined,
+    });
+    renderPage([
+      account({ id: 'a1', name: 'Old savings', archivedAt: '2026-01-01T00:00:00.000Z' }),
+    ]);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Show 1 archived/ }));
+    await userEvent.click(await screen.findByText('Old savings'));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText(/Archived, not deleted/)).toBeInTheDocument();
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Unarchive account' }));
+
+    await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
+    const [call] = accountsUpdate.mock.calls[0] as [{ body: { archivedAt: string | null } }];
+    expect(call.body.archivedAt).toBeNull();
+  });
 });
