@@ -99,6 +99,40 @@ describe('useAccountMutations loan terms follow-up', () => {
 
     expect(loanWriteTerms).not.toHaveBeenCalled();
   });
+
+  it('writes loan terms on update when the caller marks them dirty (the default)', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.updateMutation.mutateAsync({ id: 'acc-1', values: COMPLETE_LOAN_VALUES });
+
+    expect(loanWriteTerms).toHaveBeenCalledWith({
+      path: { id: 'acc-1' },
+      body: expect.objectContaining({ termsEffectiveFrom: '2026-07-01' }),
+    });
+  });
+
+  /**
+   * Regression for the review-findings-gate HIGH finding on POPS-2846: once a
+   * rate change has been recorded (via `recordLoanRate`, which never touches
+   * `loan_terms.terms_effective_from`), the form's `loanTermsEffectiveFrom`
+   * snapshot is earlier than the loan's actual latest rate. Resubmitting it
+   * unconditionally on every save — even one that only renames the account —
+   * gets rejected by the backend's `LoanRateNotLatestError`, after the rename
+   * has already committed. `loanTermsDirty: false` (what `useAccountsPage`
+   * passes when no loan field was touched this session) must skip the
+   * `writeLoanTerms` call entirely rather than resend the stale snapshot.
+   */
+  it('does not write loan terms on update when the caller marks them clean, even though every field is filled', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.updateMutation.mutateAsync({
+      id: 'acc-1',
+      values: COMPLETE_LOAN_VALUES,
+      loanTermsDirty: false,
+    });
+
+    expect(loanWriteTerms).not.toHaveBeenCalled();
+  });
 });
 
 /**

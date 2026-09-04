@@ -286,6 +286,75 @@ describe('AccountFormDialog — edit', () => {
     expect(dialog.getByText('from 2026-07-01')).toBeInTheDocument();
   });
 
+  /**
+   * Regression for the review-findings-gate HIGH finding on POPS-2846:
+   * `recordLoanRate` (the "Record rate change" action) never touches
+   * `loan_terms.terms_effective_from`, so once a rate change has been
+   * recorded, the terms row's `termsEffectiveFrom` the form prefills is
+   * earlier than the loan's actual latest rate. Resubmitting it
+   * unconditionally on every save of the edit dialog — even a save that only
+   * renames the account — used to hit the backend's `LoanRateNotLatestError`
+   * (simulated here via `loanWriteTerms` rejecting) after the rename had
+   * already committed, leaving the dialog stuck open on every subsequent
+   * save. Renaming without touching any loan-terms field must not call
+   * `loanWriteTerms` at all.
+   */
+  it('renames a loan account without resending its (possibly stale) loan-terms snapshot', async () => {
+    loanGetTerms.mockResolvedValue({
+      data: {
+        data: {
+          accountId: 'loan-1',
+          originalPrincipal: 500_000,
+          annualRatePct: 6.24,
+          termMonths: 360,
+          monthlyRepayment: 3_100,
+          startedOn: '2024-01-01',
+          termsEffectiveFrom: '2026-01-01',
+          source: 'manual',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: undefined,
+    });
+    loanListRateHistory.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'r2',
+            loanAccountId: 'loan-1',
+            annualRatePct: 6.5,
+            effectiveFrom: '2026-07-01',
+            source: 'manual',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    accountsUpdate.mockResolvedValue({
+      data: { data: account({ id: 'loan-1', name: 'Renamed', kind: 'loan' }), message: '' },
+      error: undefined,
+    });
+    // A stand-in for the backend's LoanRateNotLatestError: `termsEffectiveFrom`
+    // ('2026-01-01') is earlier than the rate history's latest ('2026-07-01').
+    // If the fix regresses and this gets called anyway, the update fails.
+    loanWriteTerms.mockRejectedValue(new Error('terms effective from is not the latest'));
+    renderPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+    await dialog.findByLabelText('Original principal');
+
+    await userEvent.clear(dialog.getByPlaceholderText('Everyday'));
+    await userEvent.type(dialog.getByPlaceholderText('Everyday'), 'Renamed');
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
+    expect(loanWriteTerms).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('archives an active account by patching archivedAt to a timestamp', async () => {
     accountsUpdate.mockResolvedValue({
       data: { data: account({ id: 'a1', archivedAt: '2026-02-01T00:00:00.000Z' }), message: '' },

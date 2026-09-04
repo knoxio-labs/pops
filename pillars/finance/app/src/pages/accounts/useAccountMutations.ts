@@ -91,12 +91,27 @@ export function useAccountMutations(onSuccess: () => void) {
     onSettled: (data) => invalidate(data?.data.id),
   });
   const updateMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: AccountFormValues }) => {
+    mutationFn: async ({
+      id,
+      values,
+      loanTermsDirty = true,
+    }: {
+      id: string;
+      values: AccountFormValues;
+      /**
+       * Whether the caller's form actually touched a loan-terms field this
+       * session — see `loanTermsFieldsDirty`. Defaults to `true` so a caller
+       * that doesn't track dirtiness gets today's always-write behaviour;
+       * `useAccountsPage` passes the real value to avoid resubmitting a
+       * stale `loanTermsEffectiveFrom` snapshot on an unrelated-field edit.
+       */
+      loanTermsDirty?: boolean;
+    }) => {
       const updated = unwrap(
         await accountsUpdate({ path: { id }, body: toAccountPayload(values) })
       );
       if (values.kind === 'gift-card') await writeGiftCardDetails(id, values);
-      if (values.kind === 'loan') await writeLoanTerms(id, values);
+      if (values.kind === 'loan' && loanTermsDirty) await writeLoanTerms(id, values);
       return updated;
     },
     onSuccess: () => {

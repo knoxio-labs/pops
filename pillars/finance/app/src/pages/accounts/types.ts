@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { ACCOUNT_KINDS, DAY_ONE_ACCOUNT_KINDS } from '@pops/finance';
 
+import type { FieldNamesMarkedBoolean } from 'react-hook-form';
+
 import type { AccountsListResponses, InstitutionsListResponses } from '../../finance-api/index.js';
 
 export type Account = AccountsListResponses[200]['data'][number];
@@ -81,6 +83,26 @@ export function loanTermsPartiallyFilled(values: AccountFormValues): boolean {
   if (values.kind !== 'loan') return false;
   const filled = LOAN_TERMS_FIELDS.filter((field) => isLoanFieldFilled(values, field));
   return filled.length > 0 && filled.length < LOAN_TERMS_FIELDS.length;
+}
+
+/**
+ * True once the user has actually edited a loan-terms field in this dialog
+ * session, as opposed to `LoanFields`' effect merely prefilling it from the
+ * server (that effect calls `setValue` without `shouldDirty`, so it never
+ * marks a field dirty).
+ *
+ * This distinguishes "the user wants these terms saved" from "these terms
+ * are just along for the ride on an edit to something else" — the latter
+ * must not re-submit the loan-terms snapshot the form opened with, because
+ * that snapshot's `loanTermsEffectiveFrom` can already be stale: a rate
+ * recorded via "Record rate change" (in a prior session, or in this one)
+ * moves the loan's latest rate forward without touching the form, and
+ * resubmitting the old date then fails as not-the-latest.
+ */
+export function loanTermsFieldsDirty(
+  dirtyFields: FieldNamesMarkedBoolean<AccountFormValues>
+): boolean {
+  return LOAN_TERMS_FIELDS.some((field) => Boolean(dirtyFields[field]));
 }
 
 /** Kinds with no issuing institution — `rest-accounts.ts`: null for cash and person accounts. */

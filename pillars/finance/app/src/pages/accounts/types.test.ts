@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ACCOUNT_FORM_VALUES,
   hasCompleteLoanTermsInput,
+  loanTermsFieldsDirty,
   loanTermsPartiallyFilled,
 } from './types';
 
@@ -79,6 +80,33 @@ describe('loanTermsPartiallyFilled', () => {
         kind: 'loan',
         loanOriginalPrincipal: 500_000,
         loanAnnualRatePct: 6.24,
+      })
+    ).toBe(true);
+  });
+});
+
+describe('loanTermsFieldsDirty', () => {
+  it('is false when no field is dirty', () => {
+    expect(loanTermsFieldsDirty({})).toBe(false);
+  });
+
+  it('is false when only unrelated fields (name, currency) are dirty', () => {
+    expect(loanTermsFieldsDirty({ name: true, currency: true })).toBe(false);
+  });
+
+  it('is true when a single loan-terms field is dirty', () => {
+    expect(loanTermsFieldsDirty({ loanAnnualRatePct: true })).toBe(true);
+  });
+
+  it('is true when every loan-terms field is dirty', () => {
+    expect(
+      loanTermsFieldsDirty({
+        loanOriginalPrincipal: true,
+        loanAnnualRatePct: true,
+        loanTermMonths: true,
+        loanMonthlyRepayment: true,
+        loanStartedOn: true,
+        loanTermsEffectiveFrom: true,
       })
     ).toBe(true);
   });
