@@ -10,6 +10,7 @@ import {
 import { KIND_OPTIONS, useAccountFormState } from '@/kit/account-form-state';
 import { CurrencySelect } from '@/kit/currency-select';
 import { InstitutionMark } from '@/kit/institution-select';
+import { LoanOffsetLinksSection } from '@/kit/loan-offset-links-section';
 import { LoanTermsSection } from '@/kit/loan-terms-section';
 import { type ReactNode } from 'react';
 
@@ -40,6 +41,28 @@ function AccountMark({ kind, counterparty }: { kind: AccountKind; counterparty?:
 }
 
 type FormState = ReturnType<typeof useAccountFormState>;
+
+function KindSpecificFields({ f, account }: { f: FormState; account?: Account }) {
+  return (
+    <>
+      {f.kind === 'cash' && (
+        <Hint>
+          Cash can have more than one account per currency — a wallet and a piggy bank both work.
+        </Hint>
+      )}
+      {f.kind === 'gift-card' && <GiftCardSection account={account} />}
+      {f.kind === 'loan' && (
+        <>
+          <LoanTermsSection
+            account={account}
+            insight={account && insightsByAccountId[account.id]}
+          />
+          <LoanOffsetLinksSection account={account} />
+        </>
+      )}
+    </>
+  );
+}
 
 function FormFields({
   f,
@@ -89,15 +112,7 @@ function FormFields({
         onCreate={f.createCurrency}
         initialCreateQuery={currencyCreateQuery}
       />
-      {f.kind === 'cash' && (
-        <Hint>
-          Cash can have more than one account per currency — a wallet and a piggy bank both work.
-        </Hint>
-      )}
-      {f.kind === 'gift-card' && <GiftCardSection account={account} />}
-      {f.kind === 'loan' && (
-        <LoanTermsSection account={account} insight={account && insightsByAccountId[account.id]} />
-      )}
+      <KindSpecificFields f={f} account={account} />
     </div>
   );
 }
@@ -144,6 +159,7 @@ export const states: ScreenStates = {
   'gift-card': () => <AccountForm account={byId('a6')} />,
   loan: () => <AccountForm account={byId('a11')} />,
   'new-loan': () => <AccountForm initialKind="loan" />,
+  'loan-no-offsets': () => <AccountForm account={byId('a12')} />,
   person: () => <AccountForm account={byId('a7')} />,
   'second-cash': () => <AccountForm initialKind="cash" />,
   'points-currency': () => <AccountForm initialKind="other" initialCurrency="MR" />,

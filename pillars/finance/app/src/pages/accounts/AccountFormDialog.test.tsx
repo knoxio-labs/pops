@@ -16,6 +16,9 @@ const accountsUpdate = vi.fn();
 const loanWriteTerms = vi.fn();
 const loanGetTerms = vi.fn();
 const loanListRateHistory = vi.fn();
+const loanListOffsetLinks = vi.fn();
+const loanLinkOffsetAccount = vi.fn();
+const loanUnlinkOffsetAccount = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
@@ -31,6 +34,9 @@ vi.mock('../../finance-api/index.js', () => ({
   loanGetTerms: (...args: unknown[]) => loanGetTerms(...args),
   loanListRateHistory: (...args: unknown[]) => loanListRateHistory(...args),
   loanRecordRate: vi.fn(),
+  loanListOffsetLinks: (...args: unknown[]) => loanListOffsetLinks(...args),
+  loanLinkOffsetAccount: (...args: unknown[]) => loanLinkOffsetAccount(...args),
+  loanUnlinkOffsetAccount: (...args: unknown[]) => loanUnlinkOffsetAccount(...args),
 }));
 
 function account(overrides: Partial<Account>): Account {
@@ -353,6 +359,142 @@ describe('AccountFormDialog — edit', () => {
     await waitFor(() => expect(accountsUpdate).toHaveBeenCalled());
     expect(loanWriteTerms).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('shows a loan’s offset links, closed ones distinctly, and unlinks the active one', async () => {
+    loanGetTerms.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });
+    loanListOffsetLinks.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'off-1',
+            loanAccountId: 'loan-1',
+            offsetAccountId: 'checking-1',
+            linkedFrom: '2024-01-01',
+            unlinkedAt: '2024-06-01',
+            createdAt: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'off-2',
+            loanAccountId: 'loan-1',
+            offsetAccountId: 'checking-1',
+            linkedFrom: '2024-07-01',
+            unlinkedAt: null,
+            createdAt: '2024-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    loanUnlinkOffsetAccount.mockResolvedValue({
+      data: {
+        data: {
+          id: 'off-2',
+          loanAccountId: 'loan-1',
+          offsetAccountId: 'checking-1',
+          linkedFrom: '2024-07-01',
+          unlinkedAt: '2026-01-01',
+          createdAt: '2024-07-01T00:00:00.000Z',
+        },
+        message: 'Offset account unlinked',
+      },
+      error: undefined,
+    });
+    renderPage([
+      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+    ]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+
+    expect(await dialog.findByText('Closed')).toBeInTheDocument();
+    const unlinkButton = await dialog.findByRole('button', { name: 'Unlink' });
+
+    await userEvent.click(unlinkButton);
+
+    await waitFor(() =>
+      expect(loanUnlinkOffsetAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ path: { id: 'loan-1', linkId: 'off-2' } })
+      )
+    );
+  });
+
+  it('shows an error message when unlinking an offset account fails', async () => {
+    loanGetTerms.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });
+    loanListOffsetLinks.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'off-2',
+            loanAccountId: 'loan-1',
+            offsetAccountId: 'checking-1',
+            linkedFrom: '2024-07-01',
+            unlinkedAt: null,
+            createdAt: '2024-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    loanUnlinkOffsetAccount.mockRejectedValue(new Error('offset link is already closed'));
+    renderPage([
+      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+    ]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+    await userEvent.click(await dialog.findByRole('button', { name: 'Unlink' }));
+
+    expect(await dialog.findByText('offset link is already closed')).toBeInTheDocument();
+  });
+
+  it('excludes the loan account itself from the offset-account picker and links the one chosen', async () => {
+    loanGetTerms.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });
+    loanListOffsetLinks.mockResolvedValue({ data: { data: [] }, error: undefined });
+    loanLinkOffsetAccount.mockResolvedValue({
+      data: {
+        data: {
+          id: 'off-3',
+          loanAccountId: 'loan-1',
+          offsetAccountId: 'checking-1',
+          linkedFrom: '2026-02-01',
+          unlinkedAt: null,
+          createdAt: '2026-02-01T00:00:00.000Z',
+        },
+        message: 'Offset account linked',
+      },
+      error: undefined,
+    });
+    renderPage([
+      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+    ]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+    await userEvent.click(await dialog.findByRole('button', { name: 'Link offset account' }));
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Offset account' }));
+
+    expect(await screen.findByRole('option', { name: /Everyday/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Home loan/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('option', { name: /Everyday/ }));
+    await userEvent.type(dialog.getByLabelText('Linked from'), '2026-02-01');
+    await userEvent.click(dialog.getByRole('button', { name: 'Link account' }));
+
+    await waitFor(() =>
+      expect(loanLinkOffsetAccount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: { id: 'loan-1' },
+          body: { offsetAccountId: 'checking-1', linkedFrom: '2026-02-01' },
+        })
+      )
+    );
   });
 
   it('archives an active account by patching archivedAt to a timestamp', async () => {

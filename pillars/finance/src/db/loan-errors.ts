@@ -82,3 +82,17 @@ export class LoanOffsetLinkConflictError extends Error {
     this.offsetAccountId = offsetAccountId;
   }
 }
+
+/**
+ * A loan account cannot offset itself (POPS-2829/POPS-2863). Balance
+ * offsetting only makes sense between two distinct accounts.
+ */
+export class LoanOffsetLinkSelfLinkError extends Error {
+  override readonly name = 'LoanOffsetLinkSelfLinkError' as const;
+  readonly loanAccountId: string;
+
+  constructor(loanAccountId: string) {
+    super(`Account '${loanAccountId}' cannot be its own offset account`);
+    this.loanAccountId = loanAccountId;
+  }
+}

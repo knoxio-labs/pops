@@ -70,9 +70,9 @@ function RecordRateForm({ onCancel, onSave }: { onCancel: () => void; onSave: ()
 
 /**
  * Terms and rate history for a `loan`-kind account (POPS-2846), fixture-backed
- * like `GiftCardSection`. Offset-link management is a separate ticket — the
- * self-link question it raises (a loan offsetting itself) is a real API
- * decision, not a design one, so it stays out of this section.
+ * like `GiftCardSection`. Offset-link management lives in
+ * `LoanOffsetLinksSection` (POPS-2863), rendered alongside this one rather
+ * than folded in — it has its own picker and its own list.
  */
 export function LoanTermsSection({
   account,
