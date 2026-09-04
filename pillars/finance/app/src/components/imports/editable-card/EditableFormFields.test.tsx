@@ -56,6 +56,26 @@ describe('EditableFormFields AccountField picker branch', () => {
     expect(screen.queryByRole('combobox', { name: 'Account' })).not.toBeInTheDocument();
   });
 
+  it('keeps accountId undefined when typing in the free-text fallback on a resumed session with no importAccountId (POPS-2852)', async () => {
+    // A persisted import-in-progress from before POPS-2852 has no `accountId`
+    // in its store. Typing into the free-text fallback must leave the row's
+    // `accountId` undefined so `resolveImportAccountId` falls back to
+    // name-matching, rather than stamping '' — which both fails
+    // `ParsedTransactionSchema`'s `min(1)` at the API boundary and, if it got
+    // past that, would make `resolveImportAccountId` treat '' as a real id
+    // and throw `AccountNotFoundError`.
+    const user = userEvent.setup();
+    const { setEditedFields } = renderFields({ account: 'Some Bank' });
+
+    await user.type(screen.getByLabelText('Account'), 'x');
+
+    expect(setEditedFields).toHaveBeenCalled();
+    const lastCall = setEditedFields.mock.calls.at(-1)?.[0];
+    expect(lastCall).toMatchObject({ account: 'Some Bankx' });
+    expect(lastCall).not.toHaveProperty('accountId', '');
+    expect(lastCall.accountId).toBeUndefined();
+  });
+
   it('renders the account picker once the import has a real account, pre-selecting a match by name', async () => {
     useImportStore.getState().setAccount('acc-1', 'Everyday');
     renderFields({ account: 'Everyday' });

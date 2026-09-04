@@ -68,7 +68,7 @@ function AccountField({
   onChange,
 }: {
   value: string;
-  onChange: (value: string, accountId: string) => void;
+  onChange: (value: string, accountId: string | undefined) => void;
 }) {
   const importAccountId = useImportStore((state) => state.accountId);
   const { accounts } = useAllAccounts();
@@ -79,7 +79,7 @@ function AccountField({
         id="account"
         label="Account"
         value={value}
-        onChange={(v) => onChange(v, importAccountId ?? '')}
+        onChange={(v) => onChange(v, importAccountId ?? undefined)}
       />
     );
   }
