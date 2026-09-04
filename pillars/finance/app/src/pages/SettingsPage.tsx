@@ -81,6 +81,11 @@ function InstitutionsSection() {
         form={state.form}
         isSubmitting={state.updateMutation.isPending}
         onSubmit={state.onSubmit}
+        editing={state.editing}
+        uploadLogo={state.logo.uploadLogo}
+        removeLogo={state.logo.removeLogo}
+        logoUploadIsPending={state.logo.uploadIsPending}
+        logoRemoveIsPending={state.logo.removeIsPending}
       />
       <DeleteInstitutionDialog
         deletingId={state.deletingId}

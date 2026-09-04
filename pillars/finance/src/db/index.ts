@@ -145,6 +145,10 @@ export type {
   UpdateInstitutionInput,
 } from './services/institutions.js';
 
+export * as logoBlobsService from './services/logo-blobs.js';
+
+export type { LogoBlobRow, CreateLogoBlobInput } from './services/logo-blobs.js';
+
 export * as transactionCorrectionsService from './services/transaction-corrections.js';
 
 export {

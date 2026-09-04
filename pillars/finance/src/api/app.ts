@@ -26,6 +26,7 @@ import { type FinanceApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makeFinanceRestHandlers } from './rest/handlers.js';
+import { makeServeLogo } from './rest/serve-logo.js';
 import { createUpBankWebhookRouter } from './webhooks/up-bank.js';
 
 /**
@@ -92,6 +93,12 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
       deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
     )
   );
+
+  // Binary logo serving — a plain Express route, not ts-rest (it streams raw
+  // bytes, not JSON). Registered after the scope gate above so it runs
+  // through the exact same middleware as every contract route, and before
+  // the contract endpoints below, matching food's `serveHeroImage` ordering.
+  app.get('/logos/:id', makeServeLogo(deps.financeDb.db));
 
   createExpressEndpoints(financeContract, makeFinanceRestHandlers(deps), app, {
     // ts-rest answers a schema mismatch itself, ahead of any handler, with its

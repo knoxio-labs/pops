@@ -96,6 +96,17 @@ export class InstitutionInUseError extends Error {
   }
 }
 
+/** No `logo_blobs` row for the given id — the logo was never uploaded, or was already removed. */
+export class LogoBlobNotFoundError extends Error {
+  override readonly name = 'LogoBlobNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Logo blob '${id}' not found`);
+    this.id = id;
+  }
+}
+
 export class AccountNotFoundError extends Error {
   override readonly name = 'AccountNotFoundError' as const;
   readonly id: string;

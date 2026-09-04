@@ -15,6 +15,7 @@ import {
   toInstitution,
   toUpdateInstitutionInput,
 } from '../modules/institutions-types.js';
+import { removeInstitutionLogo, uploadInstitutionLogo } from '../modules/logo-upload.js';
 import { ConflictError, NotFoundError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
@@ -74,6 +75,36 @@ export function makeInstitutionsHandlers(db: FinanceDb) {
         try {
           institutionsService.deleteInstitution(db, params.id);
           return { status: 200 as const, body: { message: 'Institution deleted' } };
+        } catch (err) {
+          translateInstitutionError(err, params.id);
+        }
+      }),
+
+    uploadLogo: ({ params, body }: Req['uploadLogo']) =>
+      runHttp(() => {
+        try {
+          const row = uploadInstitutionLogo(db, {
+            institutionId: params.id,
+            contentType: body.contentType,
+            data: Buffer.from(body.contentBase64, 'base64'),
+          });
+          return {
+            status: 200 as const,
+            body: { data: toInstitution(row), message: 'Logo uploaded' },
+          };
+        } catch (err) {
+          translateInstitutionError(err, params.id);
+        }
+      }),
+
+    removeLogo: ({ params }: Req['removeLogo']) =>
+      runHttp(() => {
+        try {
+          const row = removeInstitutionLogo(db, params.id);
+          return {
+            status: 200 as const,
+            body: { data: toInstitution(row), message: 'Logo removed' },
+          };
         } catch (err) {
           translateInstitutionError(err, params.id);
         }

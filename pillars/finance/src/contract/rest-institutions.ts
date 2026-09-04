@@ -39,6 +39,13 @@ const UpdateInstitutionBody = z.object({
 
 const InstitutionMutation = z.object({ data: InstitutionSchema, message: z.string() });
 
+/** Kept in sync with `LOGO_ALLOWED_CONTENT_TYPES` in `src/api/modules/logo-upload.ts`. */
+const UploadLogoBody = z.object({
+  contentType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  /** Base64-encoded image bytes. The handler decodes this to a Buffer. */
+  contentBase64: z.string().min(1, 'Logo content is required'),
+});
+
 export const financeInstitutionsContract = c.router({
   list: {
     method: 'GET',
@@ -68,5 +75,21 @@ export const financeInstitutionsContract = c.router({
     body: z.object({}).optional(),
     responses: { 200: MessageSchema, ...ERR_RESPONSES },
     summary: 'Delete an institution, refused while any account still references it',
+  },
+  uploadLogo: {
+    method: 'POST',
+    path: '/institutions/:id/logo',
+    pathParams: z.object({ id: z.string() }),
+    body: UploadLogoBody,
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES },
+    summary: 'Upload (or replace) an institution logo (base64, 2 MiB cap, PNG/JPEG/WEBP only)',
+  },
+  removeLogo: {
+    method: 'DELETE',
+    path: '/institutions/:id/logo',
+    pathParams: z.object({ id: z.string() }),
+    body: z.object({}).optional(),
+    responses: { 200: InstitutionMutation, ...ERR_RESPONSES },
+    summary: 'Remove an institution logo, falling back to the initials mark',
   },
 });

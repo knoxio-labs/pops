@@ -11,6 +11,7 @@ import {
   institutionsUpdate,
 } from '../../finance-api/index.js';
 import { type Institution, InstitutionFormSchema, type InstitutionFormValues } from './types';
+import { useInstitutionLogoMutations } from './useInstitutionLogoMutations.js';
 
 const INSTITUTIONS_KEY = ['finance', 'institutions', 'list'];
 
@@ -66,6 +67,8 @@ export function useInstitutionsSettings() {
     setDeletingId,
   });
 
+  const logo = useInstitutionLogoMutations(setEditing);
+
   const form = useForm<InstitutionFormValues>({
     resolver: standardSchemaResolver(InstitutionFormSchema),
     defaultValues: DEFAULT_FORM_VALUES,
@@ -92,5 +95,6 @@ export function useInstitutionsSettings() {
     onSubmit,
     updateMutation,
     deleteMutation,
+    logo,
   };
 }
