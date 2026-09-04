@@ -28,6 +28,31 @@ const sampleProcessed = (): {
   skipped: [],
 });
 
+describe('importStore — account', () => {
+  beforeEach(() => {
+    useImportStore.getState().reset();
+  });
+
+  it('starts with no account picked', () => {
+    const state = useImportStore.getState();
+    expect(state.accountId).toBeNull();
+    expect(state.accountName).toBe('');
+  });
+
+  it('setAccount records both the id and the display name', () => {
+    useImportStore.getState().setAccount('acc-1', 'ANZ Everyday');
+    const state = useImportStore.getState();
+    expect(state.accountId).toBe('acc-1');
+    expect(state.accountName).toBe('ANZ Everyday');
+  });
+
+  it('setAccount does not reset downstream data — picking an account is a prerequisite, not a restart', () => {
+    useImportStore.getState().setParsedTransactions([makeTxn('a')]);
+    useImportStore.getState().setAccount('acc-1', 'ANZ Everyday');
+    expect(useImportStore.getState().parsedTransactions).toHaveLength(1);
+  });
+});
+
 describe('importStore — parsed/processed fingerprint', () => {
   beforeEach(() => {
     useImportStore.getState().reset();

@@ -6,8 +6,10 @@
  * assert is the wiring: which screen appears, what the store ends up holding,
  * and that nothing is imported before the findings have been shown.
  */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { type ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useImportStore } from '../../store/importStore';
 import { monospacedTextPdf, passwordProtectedPdf } from './pdf/synthetic-pdf.test-helpers';
@@ -15,8 +17,26 @@ import { UploadStep } from './UploadStep';
 
 import type { PlacedText } from './pdf/synthetic-pdf.test-helpers';
 
+// These tests are about the PDF-statement branch, not the account picker
+// (POPS-2840) — see UploadStep.test.tsx for the same rationale.
+vi.mock('../../finance-api/index.js', () => ({
+  accountsList: async () => ({ data: { data: [], pagination: { total: 0 } } }),
+  institutionsList: async () => ({ data: { data: [] } }),
+  currenciesList: async () => ({ data: { data: [] } }),
+}));
+
+function renderUploadStep(): ReactElement {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UploadStep />
+    </QueryClientProvider>
+  );
+}
+
 beforeEach(() => {
   useImportStore.getState().reset();
+  useImportStore.getState().setAccount('acc-1', 'Test ANZ Credit Card');
   useImportStore.getState().setBankType('ANZ Credit Card');
 });
 
@@ -50,19 +70,19 @@ function clickPrimary() {
 
 describe('UploadStep — ANZ credit-card PDF statements', () => {
   it('offers PDF alongside CSV only for the credit card', () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
     expect(screen.getByLabelText('Upload CSV or PDF files')).toHaveAttribute('accept', '.csv,.pdf');
   });
 
   it('does not offer PDF for a bank with no PDF reader behind it', () => {
     useImportStore.getState().setBankType('Amex');
-    render(<UploadStep />);
+    render(renderUploadStep());
     expect(screen.getByLabelText('Upload CSV files')).toHaveAttribute('accept', '.csv');
   });
 
   it('rejects a PDF dropped on a bank that only takes CSV', () => {
     useImportStore.getState().setBankType('ING');
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     fireEvent.change(screen.getByLabelText('Upload CSV files'), {
       target: { files: [pdfFile(statementBytes())] },
@@ -72,7 +92,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
   });
 
   it('shows what it found and imports nothing until that is confirmed', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([pdfFile(statementBytes())]);
     clickPrimary();
 
@@ -83,7 +103,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
   });
 
   it('imports on the second press, straight to the processing step', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([pdfFile(statementBytes())]);
     clickPrimary();
 
@@ -112,7 +132,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
       [...row(2, 'ALDI STORES - MARRICKV', '42.10', '1,234.56'), ...brokenRow],
     ]);
 
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([pdfFile(bytes)]);
     clickPrimary();
 
@@ -123,7 +143,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
   });
 
   it('refuses to read a batch that mixes the two formats', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([
       new File(['Date,Amount\n'], 'export.csv', { type: 'text/csv' }),
       pdfFile(statementBytes()),
@@ -135,7 +155,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
   });
 
   it('says what to do about a locked statement instead of failing blankly', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([pdfFile(passwordProtectedPdf(), 'locked.pdf')]);
     clickPrimary();
 
@@ -145,7 +165,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
 
   it('names a PDF that is a scan rather than importing nothing from it', async () => {
     const scanned = monospacedTextPdf([[]]);
-    render(<UploadStep />);
+    render(renderUploadStep());
     selectFiles([pdfFile(scanned, 'scan.pdf')]);
     clickPrimary();
 

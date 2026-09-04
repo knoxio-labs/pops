@@ -28,6 +28,7 @@ export function buildSetters(set: StoreSet) {
           ? { files, sourceFileNames }
           : { ...downstreamReset, files, sourceFileNames };
       }),
+    setAccount: (accountId: string, accountName: string) => set({ accountId, accountName }),
     setBankType: (bankType: ImportStore['bankType']) => set({ bankType }),
     setHeaders: (headers: string[]) => set({ headers }),
     setRows: (rows: Record<string, string>[]) => set({ rows }),

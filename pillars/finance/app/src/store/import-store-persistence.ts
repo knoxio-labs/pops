@@ -8,13 +8,15 @@ import type { ImportStore } from './import-store-types';
 
 export const IMPORT_PERSIST_KEY = 'pops-finance-import-wizard';
 /** Bump on ANY change to the persisted shape — a version mismatch silently discards the stored copy. */
-export const IMPORT_PERSIST_VERSION = 3;
+export const IMPORT_PERSIST_VERSION = 4;
 export const IMPORT_PERSIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type PersistedImportState = Pick<
   ImportStore,
   | 'currentStep'
   | 'sourceFileNames'
+  | 'accountId'
+  | 'accountName'
   | 'bankType'
   | 'headers'
   | 'rows'
@@ -41,6 +43,8 @@ export function partializeImportState(state: ImportStore): PersistedImportState 
   return {
     currentStep: state.currentStep,
     sourceFileNames: state.sourceFileNames,
+    accountId: state.accountId,
+    accountName: state.accountName,
     bankType: state.bankType,
     headers: state.headers,
     rows: state.rows,

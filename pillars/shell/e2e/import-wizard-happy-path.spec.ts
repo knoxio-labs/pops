@@ -32,6 +32,12 @@
  *   POST /finance-api/imports/commit               → { data:{ transactionsImported:2 … }, message }
  *   GET  /contacts-api/entities                    → { data:[], pagination }
  *   GET  /finance-api/transactions/available-tags  → { tags:[] }
+ *   GET  /finance-api/accounts                     → { data:[…1 account…], pagination }
+ *   GET  /finance-api/institutions                 → { data:[] }
+ *
+ * The last two are POPS-2840: the Upload step now opens on a real account
+ * picker (`useAllAccounts`) before the file dropzone appears at all, so the
+ * walk below picks the one mocked account before touching the file input.
  *
  * Crash detection is wired via beforeEach/afterEach so the test also
  * verifies the wizard doesn't throw uncaught errors during the full flow.
@@ -259,6 +265,56 @@ const EntitiesListResponseSchema = z
   })
   .strict();
 
+/**
+ * `GET /finance-api/accounts` — hand-mirrored from `rest-accounts.ts`'s
+ * `AccountSchema` / `financeAccountsContract.list` response, for the same
+ * cross-pillar-import reason the other per-spec schemas above are hand-mirrored
+ * rather than imported.
+ */
+const AccountsListResponseSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          institutionId: z.string().nullable(),
+          kind: z.string(),
+          currency: z.string(),
+          archivedAt: z.string().nullable(),
+          displayOrder: z.number().int(),
+          entityId: z.string().nullable(),
+          entityDisplayName: z.string().nullable(),
+          entityDisplayNameStale: z.boolean(),
+          createdAt: z.string(),
+          updatedAt: z.string(),
+        })
+        .strict()
+    ),
+    pagination: z
+      .object({ total: z.number(), limit: z.number(), offset: z.number(), hasMore: z.boolean() })
+      .strict(),
+  })
+  .strict();
+
+/** `GET /finance-api/institutions` — mirrors `rest-institutions.ts`'s `InstitutionSchema`. */
+const InstitutionsListResponseSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          colour: z.string(),
+          logoAssetId: z.string().nullable(),
+          createdAt: z.string(),
+          updatedAt: z.string(),
+        })
+        .strict()
+    ),
+  })
+  .strict();
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -335,6 +391,29 @@ const emptyEntitiesBody = {
   pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
 };
 
+/** The one account the Upload step's account picker offers. */
+const accountsBody = {
+  data: [
+    {
+      id: 'acc-amex',
+      name: 'Amex Everyday',
+      institutionId: null,
+      kind: 'credit-card',
+      currency: 'AUD',
+      archivedAt: null,
+      displayOrder: 0,
+      entityId: null,
+      entityDisplayName: null,
+      entityDisplayNameStale: false,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    },
+  ],
+  pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+};
+
+const institutionsBody = { data: [] };
+
 async function setupMocks(page: Page): Promise<void> {
   await page.route(
     '**/finance-api/imports/process',
@@ -361,6 +440,20 @@ async function setupMocks(page: Page): Promise<void> {
     '**/finance-api/transactions/available-tags',
     fulfilWith(200, AvailableTagsResponseSchema, { tags: [] }, 'transactions.availableTags')
   );
+  await page.route(
+    '**/finance-api/accounts?**',
+    fulfilWith(200, AccountsListResponseSchema, accountsBody, 'accounts.list')
+  );
+  await page.route(
+    '**/finance-api/institutions',
+    fulfilWith(200, InstitutionsListResponseSchema, institutionsBody, 'institutions.list')
+  );
+}
+
+/** Picks the one mocked account so the Upload step's file dropzone appears. */
+async function pickAccount(page: Page): Promise<void> {
+  await page.getByRole('combobox', { name: 'Account to import into' }).click();
+  await page.getByText('Amex Everyday').click();
 }
 
 const csvContent = `Date,Description,Amount
@@ -383,6 +476,7 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     await stubShellBoot(page);
     await page.goto('/finance/import');
     await expect(page.getByRole('heading', { name: 'Upload CSV' })).toBeVisible();
+    await pickAccount(page);
   });
 
   test.afterEach(async ({ page }) => {

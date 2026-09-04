@@ -1,12 +1,35 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Papa from 'papaparse';
+import { type ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useImportStore } from '../../store/importStore';
 import { UploadStep } from './UploadStep';
 
+// These tests are about parsing/merging behaviour, not the account picker
+// (POPS-2840) — accounts/institutions/currencies are mocked to empty lists so
+// `AccountAndFormatFields` never makes a real network call, and every test
+// pre-selects an account directly on the store so the file-parsing UI it now
+// gates stays reachable.
+vi.mock('../../finance-api/index.js', () => ({
+  accountsList: async () => ({ data: { data: [], pagination: { total: 0 } } }),
+  institutionsList: async () => ({ data: { data: [] } }),
+  currenciesList: async () => ({ data: { data: [] } }),
+}));
+
+function renderUploadStep(): ReactElement {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UploadStep />
+    </QueryClientProvider>
+  );
+}
+
 beforeEach(() => {
   useImportStore.getState().reset();
+  useImportStore.getState().setAccount('acc-1', 'Test Account');
 });
 
 afterEach(() => {
@@ -19,7 +42,7 @@ describe('UploadStep — resumed run without a re-attached file', () => {
     useImportStore.getState().setHeaders(['Date', 'Amount']);
     useImportStore.getState().setRows([{ Date: '01/01/2026', Amount: '-10.00' }]);
 
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     expect(
       screen.getByText(
@@ -36,7 +59,7 @@ describe('UploadStep — resumed run without a re-attached file', () => {
   });
 
   it('keeps Next disabled and shows no resume notice with neither file nor rows', () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
     expect(screen.queryByText(/re-attached after resuming/)).not.toBeInTheDocument();
@@ -60,7 +83,7 @@ const FEB = 'Date,Description,Amount\n31/01/2026,Coffee,-4.50\n02/02/2026,Rent,-
 
 describe('UploadStep — merging several CSVs', () => {
   it('merges same-schema files into one row list and advances', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     selectFiles([csvFile('jan.csv', JAN), csvFile('feb.csv', FEB)]);
     clickNext();
@@ -74,7 +97,7 @@ describe('UploadStep — merging several CSVs', () => {
   });
 
   it('refuses to advance and names the file whose columns differ', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     selectFiles([
       csvFile('jan.csv', JAN),
@@ -90,7 +113,7 @@ describe('UploadStep — merging several CSVs', () => {
   });
 
   it('reports which file failed to parse rather than failing anonymously', async () => {
-    render(<UploadStep />);
+    render(renderUploadStep());
 
     selectFiles([csvFile('jan.csv', JAN), csvFile('empty.csv', 'Date,Description,Amount\n')]);
     clickNext();
@@ -109,7 +132,7 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
         (_unused, index) => `01/07/2026,-${(index + 1).toFixed(2)},MERCHANT ${index + 1},,,,,`
       ).join('\r\n') + '\r\n';
 
-    const { container } = render(<UploadStep />);
+    const { container } = render(renderUploadStep());
 
     // 'ANZ' is the headed dialect; the file is a headerless credit-card export.
     const anz = container.querySelector('[role="radio"][value="ANZ"]');

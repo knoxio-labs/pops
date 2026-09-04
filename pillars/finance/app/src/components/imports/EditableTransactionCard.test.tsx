@@ -1,7 +1,10 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { type ReactElement } from 'react';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useImportStore } from '../../store/importStore';
 import { EditableTransactionCard } from './EditableTransactionCard';
 
 import type { ProcessedTransaction } from '@pops/finance';
@@ -16,6 +19,16 @@ beforeAll(() => {
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
   Element.prototype.scrollIntoView = vi.fn();
 });
+
+beforeEach(() => {
+  useImportStore.getState().reset();
+});
+
+/** No account established on the import — `AccountField` falls back to free text. */
+function renderCard(ui: ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 function makeTx(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransaction {
   return {
@@ -50,7 +63,7 @@ describe('EditableTransactionCard entity selection', () => {
     const onSave = vi.fn();
     const transaction = makeTx();
 
-    render(
+    renderCard(
       <EditableTransactionCard
         transaction={transaction}
         onSave={onSave}
@@ -79,7 +92,7 @@ describe('EditableTransactionCard entity selection', () => {
       entity: { entityId: 'ent-1', entityName: 'Woolworths', matchType: 'exact' },
     });
 
-    render(
+    renderCard(
       <EditableTransactionCard
         transaction={transaction}
         onSave={onSave}
