@@ -421,6 +421,37 @@ describe('AccountFormDialog — edit', () => {
     );
   });
 
+  it('shows an error message when unlinking an offset account fails', async () => {
+    loanGetTerms.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });
+    loanListOffsetLinks.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'off-2',
+            loanAccountId: 'loan-1',
+            offsetAccountId: 'checking-1',
+            linkedFrom: '2024-07-01',
+            unlinkedAt: null,
+            createdAt: '2024-07-01T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+    loanUnlinkOffsetAccount.mockRejectedValue(new Error('offset link is already closed'));
+    renderPage([
+      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+    ]);
+
+    await userEvent.click(await screen.findByText('Home loan'));
+    const dialog = within(screen.getByRole('dialog'));
+    await userEvent.click(await dialog.findByRole('button', { name: 'Unlink' }));
+
+    expect(await dialog.findByText('offset link is already closed')).toBeInTheDocument();
+  });
+
   it('excludes the loan account itself from the offset-account picker and links the one chosen', async () => {
     loanGetTerms.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
     loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });

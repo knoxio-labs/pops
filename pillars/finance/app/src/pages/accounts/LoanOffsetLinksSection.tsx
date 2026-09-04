@@ -203,6 +203,11 @@ export function LoanOffsetLinksSection({ accountId }: { accountId: string }) {
           ))}
         </div>
       )}
+      {unlink.isError && (
+        <p className="text-xs text-destructive">
+          {unlink.error instanceof Error ? unlink.error.message : 'Failed to unlink the account'}
+        </p>
+      )}
     </fieldset>
   );
 }
