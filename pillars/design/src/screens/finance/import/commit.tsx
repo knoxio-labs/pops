@@ -1,144 +1,223 @@
-import { CheckCircle2, CopyCheck, Info } from 'lucide-react';
+import {
+  confirmedTxns,
+  droppedRows,
+  importTxns,
+  ruleProposals,
+  type RuleProposalFixture,
+} from '@/fixtures/import-transactions';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 import {
   Alert,
   AlertDescription,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertTitle,
+  Badge,
   Button,
-  Card,
-  CardContent,
-  EmptyState,
   PageHeader,
 } from '@pops/ui';
 
-import { accountById, choiceOf, type ImportChoice } from './context';
+import { choiceOf, type ImportChoice } from './context';
 import { ImportContextStrip } from './upload';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
-export const meta: ScreenMeta = { title: 'Commit', order: 4, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Commit', order: 8, frame: 'web' };
 
-interface Tally {
-  parsed: number;
-  duplicates: number;
-  /** Transactions already filed against this account before the import. */
-  prior: number;
-  range: string;
+type RulesApplied = { add: number; edit: number; disable: number; remove: number };
+type TxnBreakdown = { imported: number; duplicates: number; dropped: number };
+
+interface PendingSummary {
+  entities: string[];
+  rulesApplied: RulesApplied;
+  tagRules: RuleProposalFixture[];
+  txnBreakdown: TxnBreakdown;
+  tagAssignment: { tagged: number; total: number };
 }
 
-function Figure({ value, label }: { value: string; label: string }) {
-  return (
-    <Card className="flex-1">
-      <CardContent className="px-4 py-3">
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </CardContent>
-    </Card>
-  );
-}
+const totalOpsOf = (r: RulesApplied) => r.add + r.edit + r.disable + r.remove;
+const totalTxnsOf = (b: TxnBreakdown) => b.imported + b.duplicates + b.dropped;
+const isEmptySummary = (s: PendingSummary) =>
+  s.entities.length === 0 &&
+  totalOpsOf(s.rulesApplied) === 0 &&
+  s.tagRules.length === 0 &&
+  totalTxnsOf(s.txnBreakdown) === 0 &&
+  s.tagAssignment.tagged === 0;
 
-function Figures({ tally }: { tally: Tally }) {
-  return (
-    <div className="flex flex-wrap gap-3">
-      <Figure value={String(tally.parsed)} label="rows in the file" />
-      <Figure value={String(tally.parsed - tally.duplicates)} label="new transactions" />
-      <Figure value={String(tally.duplicates)} label="duplicates skipped" />
+type SectionProps = { title: string; count: number; children: React.ReactNode };
+
+const Section = ({ title, count, children }: SectionProps) =>
+  count === 0 ? null : (
+    <div className="rounded-lg border border-border">
+      <div className="px-4 py-3 font-medium">
+        {title} <span className="font-normal text-muted-foreground">({count})</span>
+      </div>
+      <div className="border-t border-border px-4 py-3">{children}</div>
     </div>
   );
-}
 
-/**
- * Why the duplicate count is what it is. The dedup key is scoped to the
- * account (POPS-2773), so the same charge appearing on a second account is
- * two transactions and not a duplicate — a number that used to be global and
- * now is not has to say which it is.
- */
-function DedupNote({ choice, tally }: { choice: ImportChoice; tally: Tally }) {
-  if (tally.prior === 0) {
-    return (
-      <Alert>
-        <Info aria-hidden />
-        <AlertTitle>First import for {choice.account.name}</AlertTitle>
-        <AlertDescription>
-          There is nothing on this account to compare against, so every row is new. Duplicates start
-          being skipped from the next import.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+const EntitiesSection = ({ entities }: { entities: string[] }) => (
+  <Section title="New Entities" count={entities.length}>
+    <div className="flex flex-wrap gap-2">
+      {entities.map((name) => (
+        <Badge key={name} variant="secondary">
+          {name}
+        </Badge>
+      ))}
+    </div>
+  </Section>
+);
+
+const ClassificationRulesSection = ({ rulesApplied: r }: { rulesApplied: RulesApplied }) => (
+  <Section title="Classification Rule Changes" count={totalOpsOf(r)}>
+    <p className="text-sm text-muted-foreground">
+      {r.add} to add, {r.edit} to edit, {r.disable} to disable, {r.remove} to remove.
+    </p>
+  </Section>
+);
+
+const TagRulesSection = ({ proposals }: { proposals: RuleProposalFixture[] }) => (
+  <Section title="Tag Rule Changes" count={proposals.length}>
+    <ul className="space-y-1">
+      {proposals.map((p) => (
+        <li key={p.id} className="text-sm">
+          <span className="font-mono text-xs text-muted-foreground">{p.pattern}</span> →{' '}
+          {p.tags.join(', ')}
+        </li>
+      ))}
+    </ul>
+  </Section>
+);
+
+const TransactionsSection = ({ breakdown: b }: { breakdown: TxnBreakdown }) => (
+  <Section title="Transactions to Import" count={totalTxnsOf(b)}>
+    <p className="text-sm text-muted-foreground">
+      {b.imported} imported, {b.duplicates} skipped as duplicates, {b.dropped} dropped as untyped.
+    </p>
+  </Section>
+);
+
+const TagAssignmentsSection = ({ tagged, total }: { tagged: number; total: number }) => (
+  <Section title="Tag Assignments" count={tagged}>
+    <p className="text-sm text-muted-foreground">
+      {tagged} tag{tagged === 1 ? '' : 's'} will be applied across {total} transaction
+      {total === 1 ? '' : 's'}.
+    </p>
+  </Section>
+);
+
+type ConfirmDialogProps = { open: boolean; committing: boolean; summary: PendingSummary };
+
+function ConfirmDialog({ open, committing, summary }: ConfirmDialogProps) {
+  const entityCount = summary.entities.length;
+  const ruleCount = totalOpsOf(summary.rulesApplied) + summary.tagRules.length;
+  const txnCount = summary.txnBreakdown.imported;
   return (
-    <Alert>
-      <CopyCheck aria-hidden />
-      <AlertTitle>
-        {tally.duplicates} already on {choice.account.name}
-      </AlertTitle>
-      <AlertDescription>
-        Matched against the {tally.prior.toLocaleString('en-AU')} transactions already filed against
-        this account — and only this one. The same charge on another account is a separate
-        transaction, not a duplicate.
-      </AlertDescription>
-    </Alert>
+    <AlertDialog open={open}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Commit this import?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will create {entityCount} {entityCount === 1 ? 'entity' : 'entities'}, apply{' '}
+            {ruleCount} classification {ruleCount === 1 ? 'rule change' : 'rule changes'}, and
+            import {txnCount} {txnCount === 1 ? 'transaction' : 'transactions'}. This cannot be
+            undone from here.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={committing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction disabled={committing}>
+            {committing ? 'Committing...' : 'Approve & Commit All'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
-function Step({ choice, tally }: { choice: ImportChoice; tally: Tally }) {
-  const fresh = tally.parsed - tally.duplicates;
+interface StepProps {
+  choice: ImportChoice;
+  summary: PendingSummary;
+  confirmOpen?: boolean;
+  committing?: boolean;
+  error?: string;
+}
+
+function Step({ choice, summary, confirmOpen = false, committing = false, error }: StepProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <PageHeader
-        title="Commit the import"
-        description={`${tally.range} · nothing is written until you commit.`}
-        actions={<Button disabled={fresh === 0}>Commit {fresh} transactions</Button>}
+        title="Final Review"
+        description="Review all pending changes before committing. Navigate back to make edits."
       />
       <ImportContextStrip choice={choice} editable={false} />
-      <Figures tally={tally} />
-      <DedupNote choice={choice} tally={tally} />
-      {fresh === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Every row in this file is already on {choice.account.name}. There is nothing to commit —
-          go back if you meant to import a different export.
-        </p>
+      <div className="space-y-4">
+        <EntitiesSection entities={summary.entities} />
+        <ClassificationRulesSection rulesApplied={summary.rulesApplied} />
+        <TagRulesSection proposals={summary.tagRules} />
+        <TransactionsSection breakdown={summary.txnBreakdown} />
+        <TagAssignmentsSection {...summary.tagAssignment} />
+        {isEmptySummary(summary) && (
+          <p className="py-6 text-sm text-muted-foreground">No pending changes to review.</p>
+        )}
+      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle aria-hidden />
+          <AlertTitle>Commit failed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+      <div className="flex justify-between pt-4">
+        <Button variant="outline" disabled={committing}>
+          Back
+        </Button>
+        <Button disabled={committing}>
+          {committing && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
+          {committing ? 'Committing...' : 'Approve & Commit All'}
+        </Button>
+      </div>
+      <ConfirmDialog open={confirmOpen} committing={committing} summary={summary} />
     </div>
   );
 }
 
 const AMEX = choiceOf('a2', 'amex-csv');
 
-const DEFAULT_TALLY: Tally = {
-  parsed: 8,
-  duplicates: 2,
-  prior: 499,
-  range: '24 Aug – 28 Aug 2026',
+const DROPPED = droppedRows(importTxns).length;
+const DUPES = importTxns.filter((t) => t.bucket === 'skipped').length;
+const TAGGED = confirmedTxns.filter((t) => t.suggestedTags.length > 0).length;
+
+const PENDING: PendingSummary = {
+  entities: ['The Grounds of Alexandria', 'Amazon'],
+  rulesApplied: { add: 2, edit: 1, disable: 0, remove: 0 },
+  tagRules: ruleProposals,
+  txnBreakdown: { imported: confirmedTxns.length - DROPPED, duplicates: DUPES, dropped: DROPPED },
+  tagAssignment: { tagged: TAGGED, total: confirmedTxns.length },
 };
 
-const FIRST: ImportChoice = {
-  ...choiceOf('a4', 'anz-csv'),
-  account: { ...accountById('a4'), transactionCount: 0 },
+const NOTHING_PENDING: PendingSummary = {
+  entities: [],
+  rulesApplied: { add: 0, edit: 0, disable: 0, remove: 0 },
+  tagRules: [],
+  txnBreakdown: { imported: 0, duplicates: 0, dropped: 0 },
+  tagAssignment: { tagged: 0, total: 0 },
 };
 
 export default function ImportCommitStep() {
-  return <Step choice={AMEX} tally={DEFAULT_TALLY} />;
+  return <Step choice={AMEX} summary={PENDING} />;
 }
 
 export const states: ScreenStates = {
-  'first-import': () => (
-    <Step
-      choice={FIRST}
-      tally={{ parsed: 214, duplicates: 0, prior: 0, range: '1 Jul 2024 – 28 Aug 2026' }}
-    />
-  ),
-  'all-duplicates': () => (
-    <Step choice={AMEX} tally={{ ...DEFAULT_TALLY, duplicates: DEFAULT_TALLY.parsed }} />
-  ),
-  committed: () => (
-    <div className="mx-auto max-w-2xl p-6">
-      <EmptyState
-        icon={CheckCircle2}
-        title="6 transactions added to Amex"
-        description="2 rows were already there and were skipped. The import is on the account's history if you need to undo it."
-        action={<Button variant="outline">Open Amex</Button>}
-      />
-    </div>
-  ),
+  'nothing-pending': () => <Step choice={AMEX} summary={NOTHING_PENDING} />,
+  'confirm-dialog-open': () => <Step choice={AMEX} summary={PENDING} confirmOpen />,
+  committing: () => <Step choice={AMEX} summary={PENDING} committing />,
+  'commit-failed': () => <Step choice={AMEX} summary={PENDING} error="Network request failed." />,
 };
