@@ -105,6 +105,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
     txnBreakdown,
     tagAssignmentCount,
     taggedTxnCount,
+    accountName,
   } = props;
   const isEmpty =
     pendingEntities.length === 0 &&
@@ -120,7 +121,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
         pendingTagRuleChangeSets={pendingTagRuleChangeSets}
         totalTagRuleOps={totalTagRuleOps}
       />
-      <TransactionsSection txnBreakdown={txnBreakdown} />
+      <TransactionsSection txnBreakdown={txnBreakdown} accountName={accountName} />
       <TagAssignmentsSection
         tagAssignmentCount={tagAssignmentCount}
         taggedTxnCount={taggedTxnCount}
