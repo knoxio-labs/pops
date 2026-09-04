@@ -8,9 +8,14 @@ import type { EntityMatchType, ImportTxn, OverriddenRule } from '@/fixtures/impo
 const AUTO_MATCH_TYPES: readonly EntityMatchType[] = ['alias', 'exact', 'prefix', 'contains'];
 
 /** Below this, the AI-matched badge calls out low confidence rather than just reporting a number. */
-const LOW_AI_CONFIDENCE_THRESHOLD = 0.7;
+export const LOW_AI_CONFIDENCE_THRESHOLD = 0.7;
 
-function aiMatchedTitle(confidence: number | undefined): string {
+/** Whether a match type was resolved deterministically, without an AI guess or a learned rule. */
+export function isAutoMatchedType(matchType: EntityMatchType | undefined): boolean {
+  return matchType !== undefined && AUTO_MATCH_TYPES.includes(matchType);
+}
+
+export function aiMatchedTitle(confidence: number | undefined): string {
   if (confidence === undefined) return 'Entity resolved by AI (no reported confidence)';
   const pct = Math.round(confidence * 100);
   return confidence < LOW_AI_CONFIDENCE_THRESHOLD
@@ -33,7 +38,7 @@ function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
   );
 }
 
-function ruleMatchedTitle(ruleProvenance: ImportTxn['ruleProvenance']): string {
+export function ruleMatchedTitle(ruleProvenance: ImportTxn['ruleProvenance']): string {
   if (!ruleProvenance) return 'Rule matched';
   return [
     'Rule matched',
@@ -109,7 +114,7 @@ function OverriddenRulesPopover({ rules }: { rules: OverriddenRule[] }) {
  */
 function TxnBadges({ txn }: { txn: ImportTxn }) {
   const matchType = txn.entity?.matchType;
-  const isAutoMatched = matchType !== undefined && AUTO_MATCH_TYPES.includes(matchType);
+  const isAutoMatched = isAutoMatchedType(matchType);
   const isAiMatched = matchType === 'ai';
   const isRuleMatched = Boolean(txn.ruleProvenance) || matchType === 'learned';
   const overriddenRules = txn.overriddenRules ?? [];
