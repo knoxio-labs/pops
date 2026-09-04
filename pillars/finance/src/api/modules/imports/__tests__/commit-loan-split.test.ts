@@ -176,6 +176,69 @@ describe('loan repayment split at import', () => {
     expect(repaymentRows(db)).toHaveLength(0);
   });
 
+  it('computes each leg from the running balance in date order even when the batch arrives newest-first', async () => {
+    const { db } = freshMigratedFinanceDb();
+    seedLoanAccount(db);
+
+    // A bank statement exported newest-first: the later-dated repayment
+    // appears BEFORE the earlier-dated one in `transactions`. Without a
+    // chronological sort ahead of the insert loop, `getAccountBalanceBefore`
+    // would compute the 2026-08-01 leg's balance before the 2026-07-01
+    // repayment has been inserted, missing it entirely.
+    const payload: CommitPayload = {
+      entities: [],
+      changeSets: [],
+      tagRuleChangeSets: [],
+      transactions: [
+        {
+          date: '2026-08-01',
+          description: 'Loan repayment (later)',
+          amount: 1500,
+          account: 'Home Loan',
+          rawRow: '{}',
+          checksum: 'chk-loan-repayment-later',
+          transactionType: 'transfer',
+        },
+        {
+          date: '2026-07-01',
+          description: 'Loan repayment (earlier)',
+          amount: 1500,
+          account: 'Home Loan',
+          rawRow: '{}',
+          checksum: 'chk-loan-repayment-earlier',
+          transactionType: 'transfer',
+        },
+      ],
+    };
+
+    const result = await commitImport(db, noContacts(), payload);
+
+    expect(result.failedDetails).toEqual([]);
+    expect(result.transactionsImported).toBe(4);
+
+    const earlierFee = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.checksum, 'chk-loan-repayment-earlier:loan-interest-split'))
+      .get();
+    const laterFee = db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.checksum, 'chk-loan-repayment-later:loan-interest-split'))
+      .get();
+
+    // Earlier leg: balance before 2026-07-01 is only the $100,000 drawdown —
+    // unaffected by ordering either way, since the later-dated repayment can
+    // never fall before it chronologically.
+    expect(earlierFee?.amountCents).toBe(50_000);
+
+    // Later leg: balance before 2026-08-01 must include the earlier
+    // repayment's $1,000 already paid down ($100,000 - $1,000 = $99,000 owing),
+    // so interest is 6% × $99,000 / 12 = $495.00 — NOT the buggy $500.00 that
+    // results from missing the earlier-dated row.
+    expect(laterFee?.amountCents).toBe(49_250);
+  });
+
   it('leaves a negative-amount loan-typed drawdown against a loan account untouched (not a repayment)', async () => {
     const { db } = freshMigratedFinanceDb();
     seedLoanAccount(db);

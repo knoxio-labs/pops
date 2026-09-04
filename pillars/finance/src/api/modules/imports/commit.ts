@@ -159,7 +159,20 @@ function writeTransactionsPhase(
   const failedDetails: FailedTransactionDetail[] = [];
   const insertedIds: string[] = [];
 
-  for (const txn of payload.transactions) {
+  // The loan split (`expandLoanRepaymentRow`) computes each repayment's
+  // interest leg from `getAccountBalanceBefore`, which only sees rows already
+  // inserted earlier in this loop. A batch is not guaranteed to arrive in
+  // date order — a bank statement exported newest-first is a common CSV
+  // layout — so an out-of-order batch would let a later-processed-but-
+  // earlier-dated repayment be missing from an earlier-processed-but-later-
+  // dated repayment's balance lookup, understating the balance the interest
+  // is computed against. Sorting the whole batch chronologically before the
+  // insert loop fixes that for every account at once; nothing downstream of
+  // this loop (dedup-checksum collection, transfer pairing) depends on the
+  // original payload order.
+  const orderedTransactions = payload.transactions.toSorted((a, b) => a.date.localeCompare(b.date));
+
+  for (const txn of orderedTransactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
     try {
       // A loan repayment expands to its interest + principal legs here
