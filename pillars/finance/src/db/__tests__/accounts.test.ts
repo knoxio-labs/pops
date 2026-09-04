@@ -5,7 +5,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  AccountCashCurrencyConflictError,
   AccountNameConflictError,
   AccountNotFoundError,
   NonPersonAccountHasEntityError,
@@ -130,12 +129,12 @@ describe('createAccount', () => {
     );
   });
 
-  describe('the (kind=cash, currency) partial unique constraint', () => {
-    it('rejects a second cash account in the same currency', () => {
+  describe('cash accounts sharing a currency (POPS-2775)', () => {
+    it('allows a second cash account in the same currency', () => {
       createAccount(db, { name: 'Wallet AUD', kind: 'cash', currency: 'AUD' });
       expect(() =>
         createAccount(db, { name: 'Wallet AUD 2', kind: 'cash', currency: 'AUD' })
-      ).toThrow(AccountCashCurrencyConflictError);
+      ).not.toThrow();
     });
 
     it('allows two cash accounts in different currencies', () => {
@@ -239,13 +238,11 @@ describe('updateAccount', () => {
     expect(() => updateAccount(db, other.id, { name: 'wallet' })).toThrow(AccountNameConflictError);
   });
 
-  it('throws AccountCashCurrencyConflictError moving a second account into (cash, AUD)', () => {
+  it('allows moving a second account into (cash, AUD)', () => {
     createAccount(db, { name: 'Wallet', kind: 'cash', currency: 'AUD' });
     const other = createAccount(db, { name: 'Card', kind: 'credit-card', currency: 'AUD' });
 
-    expect(() => updateAccount(db, other.id, { kind: 'cash' })).toThrow(
-      AccountCashCurrencyConflictError
-    );
+    expect(() => updateAccount(db, other.id, { kind: 'cash' })).not.toThrow();
   });
 
   it('unarchives by patching archivedAt back to null', () => {

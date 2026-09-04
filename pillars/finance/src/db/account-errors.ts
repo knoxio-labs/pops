@@ -117,23 +117,6 @@ export class ReservedAccountKindError extends Error {
 }
 
 /**
- * A second `cash` account was created (or updated into) a currency that
- * already has one — `idx_accounts_kind_currency_cash` scopes uniqueness to
- * `kind = 'cash'` because two cash accounts in the same currency are
- * indistinguishable (both are just "the currency's physical cash"), unlike
- * two `credit-card` accounts, which are legitimately different cards.
- */
-export class AccountCashCurrencyConflictError extends Error {
-  override readonly name = 'AccountCashCurrencyConflictError' as const;
-  readonly currency: string;
-
-  constructor(currency: string) {
-    super(`A cash account in currency '${currency}' already exists`);
-    this.currency = currency;
-  }
-}
-
-/**
  * A transaction write named an `account` string (POPS-2767's free-text
  * column, kept for one more ticket) that matches no `accounts.name` — the
  * same fail-loud rule `0083_accounts.sql`'s backfill enforces for historical

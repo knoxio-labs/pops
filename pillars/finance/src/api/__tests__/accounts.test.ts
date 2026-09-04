@@ -1,8 +1,8 @@
 /**
  * Integration tests for the `accounts.*` REST surface (POPS-2767). Covers
- * the full CRUD surface: create/list/get round-tripping, the name and
- * cash-currency 409 conflict mappings, update (including unarchive via
- * `archivedAt: null`), and delete-as-archive.
+ * the full CRUD surface: create/list/get round-tripping, the name 409
+ * conflict mapping, update (including unarchive via `archivedAt: null`),
+ * and delete-as-archive.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -232,12 +232,12 @@ describe('accounts — error mapping', () => {
     ).rejects.toMatchObject({ status: 409 });
   });
 
-  it('409s a second cash account in the same currency', async () => {
+  it('allows a second cash account in the same currency (POPS-2775)', async () => {
     await client().accounts.create({ name: 'Wallet AUD', kind: 'cash', currency: 'AUD' });
 
     await expect(
       client().accounts.create({ name: 'Wallet AUD 2', kind: 'cash', currency: 'AUD' })
-    ).rejects.toMatchObject({ status: 409 });
+    ).resolves.toMatchObject({ data: { kind: 'cash', currency: 'AUD' } });
   });
 
   it('400s an unknown kind', async () => {

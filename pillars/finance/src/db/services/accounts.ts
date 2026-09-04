@@ -141,11 +141,10 @@ function insertAccountRow(db: FinanceDb, id: string, input: CreateAccountInput):
 
 /**
  * Create a new account. Throws `AccountNameConflictError` for a
- * case-insensitive duplicate name, `AccountCashCurrencyConflictError` for a
- * second `cash` account in a currency that already has one, or
- * `PersonAccountEntityConflictError` for a second `person` account keyed to
- * the same contact in the same currency — all three mapped from the SQLite
- * constraint violation rather than pre-checked, since an account is
+ * case-insensitive duplicate name, or `PersonAccountEntityConflictError` for
+ * a second `person` account keyed to the same contact in the same currency —
+ * both mapped from the SQLite constraint violation rather than pre-checked,
+ * since an account is
  * short-lived, low-cardinality data where the race is not worth a
  * read-then-write. Throws `ReservedAccountKindError` for a kind outside
  * `DAY_ONE_ACCOUNT_KINDS` — those kinds exist in the enum but have no ledger

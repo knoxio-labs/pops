@@ -11,28 +11,22 @@
  * `accountsService.createAccount`'s `CreateAccountOptions`).
  */
 import {
-  AccountCashCurrencyConflictError,
   AccountNameConflictError,
   NonPersonAccountHasEntityError,
   PersonAccountEntityConflictError,
   PersonAccountRequiresEntityError,
 } from '../errors.js';
-import {
-  isAccountCashCurrencyConflict,
-  isAccountEntityCurrencyConflict,
-  isAccountNameConflict,
-} from './account-conflict.js';
+import { isAccountEntityCurrencyConflict, isAccountNameConflict } from './account-conflict.js';
 
 import type { AccountKind } from '../../contract/account-kind.js';
 
 /** Throws the matching domain error for a write's SQLite constraint
- * violation, or rethrows `err` unchanged if none of the three match. */
+ * violation, or rethrows `err` unchanged if none of the two match. */
 export function translateWriteConflict(
   err: unknown,
   ctx: { name: string; currency: string; entityId: string | null }
 ): never {
   if (isAccountNameConflict(err)) throw new AccountNameConflictError(ctx.name);
-  if (isAccountCashCurrencyConflict(err)) throw new AccountCashCurrencyConflictError(ctx.currency);
   if (ctx.entityId !== null && isAccountEntityCurrencyConflict(err)) {
     throw new PersonAccountEntityConflictError(ctx.entityId, ctx.currency);
   }
