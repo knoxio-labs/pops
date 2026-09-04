@@ -11,17 +11,17 @@ import { BankExportHelp, UploadFooter, UploadStepHeader } from './upload-step/Up
 import { useCsvStage } from './upload-step/useCsvStage';
 import { usePdfStage } from './upload-step/usePdfStage';
 
-import type { BankType } from '../../store/import-store-types';
+import type { BankDialectId } from '../../store/import-store-types';
 
 const MIXED_UPLOAD_ERROR =
   'Select either CSV exports or PDF statements, not both. They are read differently and a period covered by both would import twice.';
 
 function useUploadStep() {
-  const { files, rows, bankType, accountId, setFiles, setBankType, nextStep } = useImportStore();
+  const { files, rows, dialectId, accountId, setFiles, setDialectId, nextStep } = useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pdf = usePdfStage(setError, setIsProcessing);
-  const runCsv = useCsvStage(files, bankType, setError, setIsProcessing);
+  const runCsv = useCsvStage(files, dialectId, setError, setIsProcessing);
 
   const handleFilesSelect = useCallback(
     (selectedFiles: File[]) => {
@@ -34,9 +34,9 @@ function useUploadStep() {
 
   const handleBankChange = useCallback(
     (value: string) => {
-      setBankType(value as BankType);
+      setDialectId(value as BankDialectId);
     },
-    [setBankType]
+    [setDialectId]
   );
 
   const handleNext = useCallback(async () => {
@@ -59,7 +59,7 @@ function useUploadStep() {
   return {
     files,
     rows,
-    bankType,
+    dialectId,
     accountId,
     isProcessing,
     error,
@@ -74,7 +74,7 @@ export function UploadStep() {
   const {
     files,
     rows,
-    bankType,
+    dialectId,
     accountId,
     isProcessing,
     error,
@@ -87,15 +87,15 @@ export function UploadStep() {
 
   return (
     <div className="space-y-6">
-      <UploadStepHeader takesPdf={bankTakesPdf(bankType)} />
+      <UploadStepHeader takesPdf={bankTakesPdf(dialectId)} />
 
-      <AccountAndFormatFields bankType={bankType} onBankChange={handleBankChange} />
+      <AccountAndFormatFields dialectId={dialectId} onBankChange={handleBankChange} />
 
       {accountId && (
         <>
           <FileUpload
             onFilesSelect={handleFilesSelect}
-            acceptedTypes={BANK_ACCEPTED_TYPES[bankType]}
+            acceptedTypes={BANK_ACCEPTED_TYPES[dialectId]}
             maxSizeMB={25}
             maxTotalSizeMB={100}
             initialFiles={files}
@@ -111,7 +111,7 @@ export function UploadStep() {
             </div>
           )}
 
-          <BankExportHelp bankType={bankType} />
+          <BankExportHelp dialectId={dialectId} />
         </>
       )}
 

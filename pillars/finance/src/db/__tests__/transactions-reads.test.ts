@@ -21,7 +21,6 @@ function insertTransaction(db: FinanceDb, id: string, lastEditedTime: string): v
     .values({
       id,
       description: 'x',
-      account: 'Amex',
       accountId: seededAccountId(db, 'Amex'),
       amountCents: 100,
       date: '2025-01-01',

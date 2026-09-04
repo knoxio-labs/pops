@@ -69,7 +69,7 @@ describe('recoverImportSession', () => {
   it('re-processes the persisted parsed transactions, polls to completion, and stores the new session id', async () => {
     vi.useFakeTimers();
     const parsed = makeParsed('a');
-    useImportStore.getState().setBankType('ING');
+    useImportStore.getState().setDialectId('ING');
     useImportStore.getState().setParsedTransactions([parsed]);
     processMock.mockResolvedValue({ data: { sessionId: 'recovered-1' }, error: undefined });
     progressMock

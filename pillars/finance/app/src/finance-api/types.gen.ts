@@ -2172,8 +2172,7 @@ export type CorrectionsGenerateRulesData = {
    */
   body?: {
     transactions: Array<{
-      account: string;
-      accountId?: string;
+      accountId: string;
       amount: number;
       currentTags: Array<string>;
       description: string;
@@ -2649,7 +2648,6 @@ export type CorrectionsPreviewMatchesResponses = {
   200: {
     data: {
       matches: Array<{
-        account: string;
         accountId: string;
         amount: number;
         date: string;
@@ -7293,7 +7291,6 @@ export type TransactionsListData = {
   path?: never;
   query?: {
     search?: string;
-    account?: string;
     accountId?: string;
     startDate?: string;
     endDate?: string;
@@ -7358,7 +7355,6 @@ export type TransactionsListResponses = {
    */
   200: {
     data: Array<{
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;
@@ -7403,8 +7399,7 @@ export type TransactionsCreateData = {
    * Body
    */
   body?: {
-    account: string;
-    accountId?: string;
+    accountId: string;
     amount: number;
     checksum?: string;
     country?: string | null;
@@ -7468,7 +7463,6 @@ export type TransactionsCreateResponses = {
    */
   201: {
     data: {
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;
@@ -7554,7 +7548,6 @@ export type TransactionsRestoreData = {
    * Body
    */
   body?: {
-    account: string;
     accountId: string;
     amount: number;
     checksum: string | null;
@@ -7638,7 +7631,6 @@ export type TransactionsRestoreResponses = {
    */
   201: {
     data: {
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;
@@ -7751,7 +7743,6 @@ export type TransactionsDeleteResponses = {
   200: {
     message: string;
     snapshot: {
-      account: string;
       accountId: string;
       amount: number;
       checksum: string | null;
@@ -7845,7 +7836,6 @@ export type TransactionsGetResponses = {
    */
   200: {
     data: {
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;
@@ -7884,7 +7874,6 @@ export type TransactionsUpdateData = {
    * Body
    */
   body?: {
-    account?: string;
     accountId?: string;
     amount?: number;
     country?: string | null;
@@ -7949,7 +7938,6 @@ export type TransactionsUpdateResponses = {
    */
   200: {
     data: {
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;
@@ -8035,7 +8023,6 @@ export type TransactionsUnlinkTransferResponses = {
    */
   200: {
     data: {
-      account: string;
       accountId: string;
       amount: number;
       country: string | null;

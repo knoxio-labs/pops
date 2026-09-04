@@ -19,7 +19,7 @@ function makeMatch(overrides: Partial<RulePreviewMatch> = {}): RulePreviewMatch 
   return {
     id: 'txn-1',
     description: 'WOOLWORTHS 1234',
-    account: 'a1',
+    accountId: 'a1',
     amount: -12.5,
     date: '2026-04-01',
     entityName: null,
@@ -82,7 +82,7 @@ describe('RulePreviewPanel — account resolution', () => {
       error: undefined,
     });
 
-    renderPanel(makeResult([makeMatch({ account: 'a1' })]));
+    renderPanel(makeResult([makeMatch({ accountId: 'a1' })]));
 
     expect(await screen.findByText('Up Everyday')).toBeInTheDocument();
   });
@@ -90,7 +90,7 @@ describe('RulePreviewPanel — account resolution', () => {
   it('falls back to the raw account id while the accounts list is still loading', () => {
     mockAccountsList.mockReturnValue(new Promise(() => {}));
 
-    renderPanel(makeResult([makeMatch({ account: 'a1' })]));
+    renderPanel(makeResult([makeMatch({ accountId: 'a1' })]));
 
     expect(screen.getByText('a1')).toBeInTheDocument();
   });

@@ -23,25 +23,20 @@ export interface GenerateRulesTransaction {
   description: string;
   entityName: string | null;
   amount: number;
-  account: string;
-  /**
-   * Preferred over `account` when both are supplied (POPS-2769) — resolved
-   * via `getAccount` for the prompt text rather than trusting the
-   * caller-supplied `account` string verbatim. Silently falls back to
-   * `account` if the id does not resolve, since this is a display nicety for
-   * an AI prompt, not a write that must fail loudly.
-   */
-  accountId?: string | undefined;
+  accountId: string;
   currentTags: string[];
 }
 
-/** The account name to show the AI for one transaction — see `GenerateRulesTransaction.accountId`. */
+/**
+ * The account name to show the AI for one transaction. Falls back to a
+ * placeholder rather than throwing — this is a display nicety for an AI
+ * prompt, not a write that must fail loudly on a stale id.
+ */
 function resolveAccountNameForPrompt(db: FinanceDb, txn: GenerateRulesTransaction): string {
-  if (txn.accountId === undefined) return txn.account;
   try {
     return accountsService.getAccount(db, txn.accountId).name;
   } catch {
-    return txn.account;
+    return 'unknown account';
   }
 }
 
@@ -54,8 +49,13 @@ function loadAvailableTags(db: FinanceDb): string[] {
   return [...seen].toSorted();
 }
 
+/** A `GenerateRulesTransaction` with its `accountId` resolved to a display name for the prompt. */
+export type PromptTransaction = Omit<GenerateRulesTransaction, 'accountId'> & {
+  account: string;
+};
+
 export function buildGeneratePrompt(
-  txns: GenerateRulesTransaction[],
+  txns: PromptTransaction[],
   availableTags: string[],
   examples: AcceptedCorrectionExample[] = []
 ): string {
@@ -112,7 +112,13 @@ export async function generateRules(
   db: FinanceDb,
   txns: GenerateRulesTransaction[]
 ): Promise<ProposedRule[]> {
-  const resolvedTxns = txns.map((t) => ({ ...t, account: resolveAccountNameForPrompt(db, t) }));
+  const resolvedTxns: PromptTransaction[] = txns.map((t) => ({
+    description: t.description,
+    entityName: t.entityName,
+    amount: t.amount,
+    currentTags: t.currentTags,
+    account: resolveAccountNameForPrompt(db, t),
+  }));
   const text = await getClaudeCompleter()({
     prompt: buildGeneratePrompt(
       resolvedTxns,

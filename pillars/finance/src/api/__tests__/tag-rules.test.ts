@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   openFinanceDb,
+  resolveAccountIdByName,
   tagRuleRejectionsService,
   transactions,
   transactionsService,
@@ -31,10 +32,13 @@ import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
+let amexAccountId: string;
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-tagrules-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  // 'Amex' is already seeded by 0083_accounts.sql.
+  amexAccountId = resolveAccountIdByName(financeDb.db, 'Amex');
 });
 
 afterEach(() => {
@@ -403,19 +407,19 @@ describe('tagRules — matchPreview', () => {
     const db = financeDb.db;
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS 1234 SYDNEY',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: -5000,
       date: '2026-01-01',
     });
     transactionsService.createTransaction(db, {
       description: 'WOOLWORTHS METRO CBD',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: -1200,
       date: '2026-01-02',
     });
     transactionsService.createTransaction(db, {
       description: 'COLES 5678',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: -2000,
       date: '2026-01-03',
     });
@@ -500,7 +504,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags: ['friday'],
@@ -532,7 +536,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags: [],
@@ -553,7 +557,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
     });
@@ -568,14 +572,14 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     const ownEntityTxn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       entityId: 'ent-darlo',
     });
     const otherEntityTxn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       entityId: 'ent-other',
@@ -613,7 +617,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags: [],
@@ -638,7 +642,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     const txn = transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags: [],
@@ -660,7 +664,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const db = financeDb.db;
     transactionsService.createTransaction(db, {
       description: 'DARLO BAR SYDNEY',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags: [],
@@ -709,7 +713,7 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
   function seedTxn(tags: string[]): string {
     return transactionsService.createTransaction(financeDb.db, {
       description: 'LUCKY CAT DARLINGHURST',
-      account: 'amex',
+      accountId: amexAccountId,
       amountCents: -4500,
       date: '2026-01-01',
       tags,

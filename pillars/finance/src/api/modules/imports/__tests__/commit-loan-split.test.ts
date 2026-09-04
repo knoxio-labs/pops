@@ -42,7 +42,7 @@ function seedLoanAccount(db: FinanceDb): void {
   });
   createTransaction(db, {
     description: 'Initial drawdown',
-    account: 'Home Loan',
+    accountId: account.id,
     amountCents: -10_000_000,
     date: '2024-01-01',
     type: 'loan',

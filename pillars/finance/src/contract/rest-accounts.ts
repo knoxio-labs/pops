@@ -1,8 +1,8 @@
 /**
  * `accounts.*` sub-router — full account CRUD (POPS-2767).
  *
- * `transactions.account_id` foreign-keys onto this table; the free-text
- * `transactions.account` column stays until POPS-2770. `institutionId` and
+ * `transactions.account_id` foreign-keys onto this table — the sole account
+ * identity a transaction carries. `institutionId` and
  * `currency` are nullable/required FKs onto `institutions` (POPS-2803) and
  * `currencies` (POPS-2802) respectively — `institutionId` is null for `cash`
  * and `person` accounts, which have no issuing institution.

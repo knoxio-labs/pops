@@ -297,11 +297,12 @@ describe('applying the rest of the journal to a populated finance database', () 
   });
 
   it('keeps every non-money column intact', () => {
-    const stored = rows<{ id: string; description: string; date: string; account: string }>(
-      `SELECT id, description, date, account FROM transactions`
+    const amexId = rows<{ id: string }>(`SELECT id FROM accounts WHERE name = 'Amex'`)[0]?.id;
+    const stored = rows<{ id: string; description: string; date: string; account_id: string }>(
+      `SELECT id, description, date, account_id FROM transactions`
     );
-    expect(stored.map((row) => [row.id, row.description, row.date, row.account])).toEqual(
-      TRANSACTIONS.map((row) => [row.id, row.description, row.date, 'Amex'])
+    expect(stored.map((row) => [row.id, row.description, row.date, row.account_id])).toEqual(
+      TRANSACTIONS.map((row) => [row.id, row.description, row.date, amexId])
     );
   });
 

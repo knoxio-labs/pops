@@ -3888,8 +3888,7 @@ export interface operations {
       content: {
         'application/json': {
           transactions: {
-            account: string;
-            accountId?: string;
+            accountId: string;
             amount: number;
             /** @default [] */
             currentTags: string[];
@@ -4421,7 +4420,6 @@ export interface operations {
           'application/json': {
             data: {
               matches: {
-                account: string;
                 accountId: string;
                 amount: number;
                 date: string;
@@ -10074,7 +10072,6 @@ export interface operations {
     parameters: {
       query?: {
         search?: string;
-        account?: string;
         accountId?: string;
         startDate?: string;
         endDate?: string;
@@ -10111,7 +10108,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;
@@ -10203,8 +10199,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          account: string;
-          accountId?: string;
+          accountId: string;
           amount: number;
           checksum?: string;
           country?: string | null;
@@ -10241,7 +10236,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;
@@ -10379,7 +10373,6 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          account: string;
           accountId: string;
           amount: number;
           checksum: string | null;
@@ -10437,7 +10430,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;
@@ -10563,7 +10555,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;
@@ -10663,7 +10654,6 @@ export interface operations {
           'application/json': {
             message: string;
             snapshot: {
-              account: string;
               accountId: string;
               amount: number;
               checksum: string | null;
@@ -10767,7 +10757,6 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          account?: string;
           accountId?: string;
           amount?: number;
           country?: string | null;
@@ -10802,7 +10791,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;
@@ -10902,7 +10890,6 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              account: string;
               accountId: string;
               amount: number;
               country: string | null;

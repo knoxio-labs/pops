@@ -37,7 +37,7 @@ function renderUploadStep(): ReactElement {
 beforeEach(() => {
   useImportStore.getState().reset();
   useImportStore.getState().setAccount('acc-1', 'Test ANZ Credit Card');
-  useImportStore.getState().setBankType('ANZ Credit Card');
+  useImportStore.getState().setDialectId('ANZ Credit Card');
 });
 
 function row(line: number, merchant: string, amount: string, balance: string): PlacedText[] {
@@ -75,13 +75,13 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
   });
 
   it('does not offer PDF for a bank with no PDF reader behind it', () => {
-    useImportStore.getState().setBankType('Amex');
+    useImportStore.getState().setDialectId('Amex');
     render(renderUploadStep());
     expect(screen.getByLabelText('Upload CSV files')).toHaveAttribute('accept', '.csv');
   });
 
   it('rejects a PDF dropped on a bank that only takes CSV', () => {
-    useImportStore.getState().setBankType('ING');
+    useImportStore.getState().setDialectId('ING');
     render(renderUploadStep());
 
     fireEvent.change(screen.getByLabelText('Upload CSV files'), {

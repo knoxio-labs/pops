@@ -8,7 +8,14 @@ import type {
   TagRuleChangeSet,
 } from '@pops/finance';
 
-export type BankType = 'ANZ' | 'ANZ Credit Card' | 'Amex' | 'ING' | 'Up';
+/**
+ * Which CSV dialect to parse the upload with (see `bank-dialect.ts`) — a
+ * label picked on the Upload step to select a parser, not a claim about
+ * which real account (`accountId`) the rows belong to. Two accounts at the
+ * same bank share one dialect (two ANZ credit cards, say), so this value
+ * must never be used to identify or resolve an account.
+ */
+export type BankDialectId = 'ANZ' | 'ANZ Credit Card' | 'Amex' | 'ING' | 'Up';
 export type { ChangeSet };
 export type EntityType = 'company' | 'person' | 'government' | 'bank';
 
@@ -67,7 +74,7 @@ export interface ImportStore {
   accountId: string | null;
   /** Kept alongside `accountId` so the picked account survives a persisted-state reload without a refetch. */
   accountName: string;
-  bankType: BankType;
+  dialectId: BankDialectId;
   headers: string[];
   rows: Record<string, string>[];
   columnMap: {
@@ -96,7 +103,7 @@ export interface ImportStore {
 
   setFiles: (files: File[]) => void;
   setAccount: (accountId: string, accountName: string) => void;
-  setBankType: (bankType: BankType) => void;
+  setDialectId: (dialectId: BankDialectId) => void;
   setHeaders: (headers: string[]) => void;
   setRows: (rows: Record<string, string>[]) => void;
   setColumnMap: (columnMap: ImportStore['columnMap']) => void;
@@ -139,7 +146,7 @@ export const initialState = {
   sourceFileNames: [],
   accountId: null,
   accountName: '',
-  bankType: 'Amex' as BankType,
+  dialectId: 'Amex' as BankDialectId,
   headers: [],
   rows: [],
   columnMap: { date: '', description: '', amount: '' },

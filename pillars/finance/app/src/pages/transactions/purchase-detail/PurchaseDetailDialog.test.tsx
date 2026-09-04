@@ -22,7 +22,6 @@ import type { Transaction } from '../types';
 import type { LinkedCharge, LinkedPurchase } from './types';
 
 const TRANSACTION: Transaction = {
-  account: 'Up Everyday',
   accountId: 'account-1',
   amount: -41.28,
   date: '2026-03-06',

@@ -37,7 +37,6 @@ function freshDb(): FinanceDb {
 function addTransaction(db: FinanceDb, accountId: string, amountCents: number): void {
   createTransaction(db, {
     description: 'test txn',
-    account: getAccount(db, accountId).name,
     accountId,
     amountCents,
     date: '2026-01-01',

@@ -5,14 +5,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  AccountIdentityMismatchError,
   AccountNotFoundError,
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
-  UnresolvedAccountNameError,
 } from '../errors.js';
 import { resolveAccountIdByName as resolveIdByName } from '../services/account-lookup.js';
-import { createAccount, getAccount } from '../services/accounts.js';
+import { createAccount } from '../services/accounts.js';
 import {
   createTransaction,
   deleteTransaction,
@@ -26,10 +24,9 @@ import { freshMigratedFinanceDb } from './migrated-db.js';
 import type { FinanceDb } from '../services/internal.js';
 
 /**
- * These fixtures assert on the free-text `account` field itself (exact
- * account names like 'Up' / 'Up Savings' / 'ANZ Visa'), so the names must
- * survive rather than being swapped for the migration-seeded accounts —
- * `createTransaction` still needs a real account row to resolve against.
+ * `createTransaction` needs a real account row to resolve `accountId`
+ * against, so these fixtures seed known accounts rather than relying on the
+ * migration-seeded ones.
  */
 function freshDb(): FinanceDb {
   const db = freshMigratedFinanceDb().db;
@@ -46,9 +43,10 @@ describe('createTransaction', () => {
   });
 
   it('inserts a row with the supplied fields and a generated UUID', () => {
+    const upSavingsId = resolveIdByName(db, 'Up Savings');
     const created = createTransaction(db, {
       description: 'Groceries',
-      account: 'Up Savings',
+      accountId: upSavingsId,
       amountCents: 5000,
       date: '2025-06-15',
       type: 'purchase',
@@ -56,7 +54,7 @@ describe('createTransaction', () => {
 
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(created.description).toBe('Groceries');
-    expect(created.account).toBe('Up Savings');
+    expect(created.accountId).toBe(upSavingsId);
     expect(created.amountCents).toBe(5000);
     expect(created.date).toBe('2025-06-15');
     expect(created.type).toBe('purchase');
@@ -67,7 +65,7 @@ describe('createTransaction', () => {
   it('defaults type to purchase when omitted', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -77,7 +75,7 @@ describe('createTransaction', () => {
   it('serialises tags as a JSON string', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
       tags: ['Groceries', 'Online'],
@@ -88,7 +86,7 @@ describe('createTransaction', () => {
   it('defaults optional reference fields to null', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -105,7 +103,7 @@ describe('createTransaction', () => {
   it('persists every supplied optional field', () => {
     const created = createTransaction(db, {
       description: 'Woolworths Groceries',
-      account: 'Up Savings',
+      accountId: resolveIdByName(db, 'Up Savings'),
       amountCents: 15075,
       date: '2025-06-15',
       type: 'purchase',
@@ -129,45 +127,11 @@ describe('createTransaction', () => {
     expect(created.checksum).toBe('abc123');
     expect(created.rawRow).toBe('15/06/2025,Woolworths,150.75');
   });
-});
-
-describe('createTransaction — accountId precedence (POPS-2769)', () => {
-  let db: FinanceDb;
-  beforeEach(() => {
-    db = freshDb();
-  });
-
-  it('accepts accountId alongside an agreeing account (case-insensitive) and stores both', () => {
-    const account = getAccount(db, resolveIdByName(db, 'Up Savings'));
-    const created = createTransaction(db, {
-      description: 'Groceries',
-      account: 'up savings',
-      accountId: account.id,
-      amountCents: 5000,
-      date: '2025-06-15',
-    });
-    expect(created.accountId).toBe(account.id);
-    expect(created.account).toBe('Up Savings');
-  });
-
-  it('rejects a create whose account name disagrees with its accountId', () => {
-    const upId = resolveIdByName(db, 'Up');
-    expect(() =>
-      createTransaction(db, {
-        description: 'Groceries',
-        account: 'ANZ Visa',
-        accountId: upId,
-        amountCents: 5000,
-        date: '2025-06-15',
-      })
-    ).toThrow(AccountIdentityMismatchError);
-  });
 
   it('throws AccountNotFoundError for an unknown accountId', () => {
     expect(() =>
       createTransaction(db, {
         description: 'Groceries',
-        account: 'Up',
         accountId: 'does-not-exist',
         amountCents: 5000,
         date: '2025-06-15',
@@ -185,7 +149,7 @@ describe('getTransaction', () => {
   it('returns the persisted row by id', () => {
     const created = createTransaction(db, {
       description: 'X',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
       date: '2025-06-15',
     });
@@ -210,11 +174,16 @@ describe('getTransaction', () => {
 
 describe('listTransactions', () => {
   let db: FinanceDb;
+  let upSavingsId: string;
+  let anzVisaId: string;
+
   beforeEach(() => {
     db = freshDb();
+    upSavingsId = resolveIdByName(db, 'Up Savings');
+    anzVisaId = resolveIdByName(db, 'ANZ Visa');
     createTransaction(db, {
       description: 'Woolworths Groceries',
-      account: 'Up Savings',
+      accountId: upSavingsId,
       amountCents: 5000,
       date: '2025-06-15',
       type: 'purchase',
@@ -223,7 +192,7 @@ describe('listTransactions', () => {
     });
     createTransaction(db, {
       description: 'Coles Groceries',
-      account: 'ANZ Visa',
+      accountId: anzVisaId,
       amountCents: 3000,
       date: '2025-06-14',
       type: 'purchase',
@@ -232,7 +201,7 @@ describe('listTransactions', () => {
     });
     createTransaction(db, {
       description: 'Fuel Station',
-      account: 'Up Savings',
+      accountId: upSavingsId,
       amountCents: 6000,
       date: '2025-06-13',
       type: 'purchase',
@@ -240,7 +209,7 @@ describe('listTransactions', () => {
     });
     createTransaction(db, {
       description: 'Salary',
-      account: 'Up Savings',
+      accountId: upSavingsId,
       amountCents: 500000,
       date: '2025-05-30',
       type: 'income',
@@ -264,8 +233,8 @@ describe('listTransactions', () => {
     expect(result.rows[0]?.description).toBe('Woolworths Groceries');
   });
 
-  it('filters by exact account', () => {
-    const result = listTransactions(db, { account: 'ANZ Visa' }, 50, 0);
+  it('filters by exact accountId', () => {
+    const result = listTransactions(db, { accountId: anzVisaId }, 50, 0);
     expect(result.total).toBe(1);
     expect(result.rows[0]?.description).toBe('Coles Groceries');
   });
@@ -317,7 +286,7 @@ describe('listTransactions', () => {
   it('combines multiple filters as AND', () => {
     const result = listTransactions(
       db,
-      { account: 'Up Savings', type: 'purchase', tag: 'Transport' },
+      { accountId: upSavingsId, type: 'purchase', tag: 'Transport' },
       50,
       0
     );
@@ -338,7 +307,7 @@ describe('listTransactions', () => {
   });
 
   it('returns an empty result with total=0 for an unmatched filter', () => {
-    const result = listTransactions(db, { account: 'nope' }, 50, 0);
+    const result = listTransactions(db, { accountId: 'nope' }, 50, 0);
     expect(result.total).toBe(0);
     expect(result.rows).toEqual([]);
   });
@@ -353,6 +322,8 @@ describe('listTransactions', () => {
  */
 describe('listTransactions ordering and keyset pagination', () => {
   let db: FinanceDb;
+  let upSavingsId: string;
+  let anzVisaId: string;
 
   const SHARED_DATE = '2025-06-15';
 
@@ -360,7 +331,7 @@ describe('listTransactions ordering and keyset pagination', () => {
     for (let index = 0; index < count; index++) {
       createTransaction(db, {
         description: `Same day ${String(index)}`,
-        account: 'Up Savings',
+        accountId: upSavingsId,
         amountCents: -100 * (index + 1),
         date: SHARED_DATE,
         type: 'purchase',
@@ -397,6 +368,8 @@ describe('listTransactions ordering and keyset pagination', () => {
 
   beforeEach(() => {
     db = freshDb();
+    upSavingsId = resolveIdByName(db, 'Up Savings');
+    anzVisaId = resolveIdByName(db, 'ANZ Visa');
   });
 
   it('breaks date ties on id DESC, so repeated queries agree', () => {
@@ -413,7 +386,7 @@ describe('listTransactions ordering and keyset pagination', () => {
     seedSameDay(3);
     const older = createTransaction(db, {
       description: 'Older',
-      account: 'Up Savings',
+      accountId: upSavingsId,
       amountCents: -500,
       date: '2025-06-14',
       type: 'purchase',
@@ -445,7 +418,7 @@ describe('listTransactions ordering and keyset pagination', () => {
       inserted.push(
         createTransaction(db, {
           description: `Inserted after page ${String(pageIndex)}`,
-          account: 'Up Savings',
+          accountId: upSavingsId,
           amountCents: -999,
           date: '2025-07-01',
           type: 'purchase',
@@ -473,23 +446,23 @@ describe('listTransactions ordering and keyset pagination', () => {
     seedSameDay(4);
     createTransaction(db, {
       description: 'Same day other account',
-      account: 'ANZ Visa',
+      accountId: anzVisaId,
       amountCents: -100,
       date: SHARED_DATE,
       type: 'purchase',
     });
 
-    const filtered = listTransactions(db, { account: 'Up Savings' }, 50, 0).rows;
+    const filtered = listTransactions(db, { accountId: upSavingsId }, 50, 0).rows;
     const anchor = filtered[0];
 
     const next = listTransactions(
       db,
-      { account: 'Up Savings', beforeDate: anchor?.date, beforeId: anchor?.id },
+      { accountId: upSavingsId, beforeDate: anchor?.date, beforeId: anchor?.id },
       50,
       0
     ).rows;
 
-    expect(next.every((row) => row.account === 'Up Savings')).toBe(true);
+    expect(next.every((row) => row.accountId === upSavingsId)).toBe(true);
     expect(next.map((row) => row.id)).toEqual(filtered.slice(1).map((row) => row.id));
   });
 
@@ -525,7 +498,7 @@ describe('updateTransaction', () => {
   it('patches only the supplied fields and bumps lastEditedTime', async () => {
     const created = createTransaction(db, {
       description: 'Original',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -539,7 +512,7 @@ describe('updateTransaction', () => {
     expect(updated.id).toBe(created.id);
     expect(updated.description).toBe('Updated');
     expect(updated.amountCents).toBe(2500);
-    expect(updated.account).toBe('Up');
+    expect(updated.accountId).toBe(created.accountId);
     expect(updated.date).toBe('2025-06-15');
     expect(updated.lastEditedTime).not.toBe(original);
   });
@@ -547,7 +520,7 @@ describe('updateTransaction', () => {
   it('re-serialises tags from an array to a JSON string', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
       tags: ['Old'],
@@ -559,7 +532,7 @@ describe('updateTransaction', () => {
   it('clears a nullable field by setting to null', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
       notes: 'Some notes',
@@ -588,7 +561,7 @@ describe('updateTransaction', () => {
   it('is a no-op when the patch is empty (but still returns the row)', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -604,16 +577,16 @@ describe('updateTransaction', () => {
   });
 });
 
-describe('updateTransaction — accountId precedence (POPS-2769)', () => {
+describe('updateTransaction — accountId', () => {
   let db: FinanceDb;
   beforeEach(() => {
     db = freshDb();
   });
 
-  it('moves the transaction using only accountId, with no account supplied', () => {
+  it('moves the transaction to a new accountId', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -621,72 +594,28 @@ describe('updateTransaction — accountId precedence (POPS-2769)', () => {
 
     const updated = updateTransaction(db, created.id, { accountId: anzId });
     expect(updated.accountId).toBe(anzId);
-    expect(updated.account).toBe('ANZ Visa');
   });
 
-  it('accepts accountId alongside an agreeing account name', () => {
+  it('leaves accountId untouched when it is not patched', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
-      amountCents: 1000,
-      date: '2025-06-15',
-    });
-    const anzId = resolveIdByName(db, 'ANZ Visa');
-
-    const updated = updateTransaction(db, created.id, { account: 'anz visa', accountId: anzId });
-    expect(updated.accountId).toBe(anzId);
-    expect(updated.account).toBe('ANZ Visa');
-  });
-
-  it('rejects a patch whose account name disagrees with its accountId', () => {
-    const created = createTransaction(db, {
-      description: 'Test',
-      account: 'Up',
-      amountCents: 1000,
-      date: '2025-06-15',
-    });
-    const anzId = resolveIdByName(db, 'ANZ Visa');
-
-    expect(() =>
-      updateTransaction(db, created.id, { account: 'Up Savings', accountId: anzId })
-    ).toThrow(AccountIdentityMismatchError);
-  });
-
-  it('leaves the account untouched when neither account nor accountId is patched', () => {
-    const created = createTransaction(db, {
-      description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, { description: 'Renamed' });
-    expect(updated.account).toBe('Up');
     expect(updated.accountId).toBe(created.accountId);
   });
 
-  it('still resolves by name alone (back-compat) when only account is patched', () => {
+  it('throws AccountNotFoundError for an unknown accountId', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
-    const anzId = resolveIdByName(db, 'ANZ Visa');
-
-    const updated = updateTransaction(db, created.id, { account: 'ANZ Visa' });
-    expect(updated.account).toBe('ANZ Visa');
-    expect(updated.accountId).toBe(anzId);
-  });
-
-  it('throws UnresolvedAccountNameError for an unknown account name with no accountId', () => {
-    const created = createTransaction(db, {
-      description: 'Test',
-      account: 'Up',
-      amountCents: 1000,
-      date: '2025-06-15',
-    });
-    expect(() => updateTransaction(db, created.id, { account: 'Nonexistent Bank' })).toThrow(
-      UnresolvedAccountNameError
+    expect(() => updateTransaction(db, created.id, { accountId: 'does-not-exist' })).toThrow(
+      AccountNotFoundError
     );
   });
 });
@@ -700,7 +629,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
   it('stamps matchType "manual" and clears rule provenance when entityId is patched', () => {
     const created = createTransaction(db, {
       description: 'Woolworths Groceries',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 2000,
       date: '2025-06-15',
       entityId: 'ent-wrong',
@@ -718,7 +647,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
     (field) => {
       const created = createTransaction(db, {
         description: 'Test',
-        account: 'Up',
+        accountId: resolveIdByName(db, 'Up'),
         amountCents: 1000,
         date: '2025-06-15',
       });
@@ -730,7 +659,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
   it('does not stamp matchType when only an unrelated field is patched', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -741,7 +670,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
   it('is a no-op for matchType when the patch is empty', () => {
     const created = createTransaction(db, {
       description: 'Test',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
     });
@@ -759,7 +688,7 @@ describe('deleteTransaction', () => {
   it('removes the row and returns the snapshot', () => {
     const created = createTransaction(db, {
       description: 'To Delete',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
       date: '2025-06-15',
       tags: ['X'],
@@ -773,7 +702,7 @@ describe('deleteTransaction', () => {
   it('throws TransactionNotFoundError when the row is already gone', () => {
     const created = createTransaction(db, {
       description: 'X',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
       date: '2025-06-15',
     });
@@ -795,7 +724,7 @@ describe('restoreTransaction', () => {
   it('re-inserts a deleted row preserving id and dedup metadata', () => {
     const created = createTransaction(db, {
       description: 'Restored',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 9900,
       date: '2025-06-15',
       tags: ['Z'],
@@ -816,7 +745,7 @@ describe('restoreTransaction', () => {
   it('throws TransactionAlreadyExistsError if a row with the same id exists', () => {
     const created = createTransaction(db, {
       description: 'X',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
       date: '2025-06-15',
     });
@@ -826,7 +755,7 @@ describe('restoreTransaction', () => {
   it('TransactionAlreadyExistsError carries the conflicting id', () => {
     const created = createTransaction(db, {
       description: 'X',
-      account: 'Up',
+      accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
       date: '2025-06-15',
     });

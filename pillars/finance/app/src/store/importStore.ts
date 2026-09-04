@@ -21,7 +21,7 @@ export type {
   AddPendingChangeSetInput,
   AddPendingEntityInput,
   AddPendingTagRuleChangeSetInput,
-  BankType,
+  BankDialectId,
   ChangeSet,
   EntityType,
   ImportStore,

@@ -44,7 +44,6 @@ function insertTransaction(description: string): void {
   db.insert(transactions)
     .values({
       description,
-      account: 'Amex',
       accountId: seededAccountId(db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',

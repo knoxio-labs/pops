@@ -14,6 +14,7 @@ import { getBulk } from '@pops/pillar-settings/service';
 
 import {
   openFinanceDb,
+  resolveAccountIdByName,
   transactionCorrectionsService,
   transactionsService,
   type OpenedFinanceDb,
@@ -155,7 +156,7 @@ describe('corrections.generateRules', () => {
           description: 'NETFLIX.COM',
           entityName: 'Netflix',
           amount: -15,
-          account: 'checking',
+          accountId: 'checking',
           currentTags: [],
         },
       ],
@@ -174,7 +175,7 @@ describe('corrections.generateRules', () => {
     __setClaudeCompleterForTests(completerReturning({}));
     const res = await client().corrections.generateRules({
       transactions: [
-        { description: 'X', entityName: null, amount: -1, account: 'checking', currentTags: [] },
+        { description: 'X', entityName: null, amount: -1, accountId: 'checking', currentTags: [] },
       ],
     });
     expect(res.proposals).toEqual([]);
@@ -193,7 +194,7 @@ describe('corrections.generateRules', () => {
           description: 'NETFLIX.COM',
           entityName: 'Netflix',
           amount: -15,
-          account: 'checking',
+          accountId: 'checking',
           currentTags: [],
         },
       ],
@@ -212,9 +213,11 @@ describe('corrections.generateRules', () => {
 describe('corrections.proposeChangeSet', () => {
   it('proposes an add ChangeSet (no existing rule) and previews the impact', async () => {
     __setClaudeCompleterForTests(completerReturning({}));
+    // 'Amex' is already seeded by 0083_accounts.sql.
+    const amexId = resolveAccountIdByName(financeDb.db, 'Amex');
     transactionsService.createTransaction(financeDb.db, {
       description: 'WOOLWORTHS METRO',
-      account: 'Amex',
+      accountId: amexId,
       amountCents: -1200,
       date: '2026-01-01',
     });

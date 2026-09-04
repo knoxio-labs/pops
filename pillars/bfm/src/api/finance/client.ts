@@ -119,6 +119,20 @@ async function getAccount(
   return { kind: 'ok', value: toMobileAccount(record.value.data) };
 }
 
+/** Placeholder shown when an account lookup fails — a display nicety, not a hard dependency. */
+const UNKNOWN_ACCOUNT_NAME = 'Unknown account';
+
+/**
+ * Resolve an account's display name for the transaction detail screen
+ * (POPS-2770). Falls back to a placeholder rather than failing the whole
+ * transaction fetch — a stale or unreachable account lookup should not stop
+ * someone from reading the rest of the transaction they opened.
+ */
+async function resolveAccountName(gateway: PillarGateway, accountId: string): Promise<string> {
+  const outcome = await getAccount(gateway, accountId);
+  return isGatewayOk(outcome) ? outcome.value.name : UNKNOWN_ACCOUNT_NAME;
+}
+
 export function createMobileFinanceClient(gateway: PillarGateway): MobileFinanceClient {
   return {
     async listTransactions(request: ListTransactionsRequest) {
@@ -160,7 +174,8 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       );
       if (!isGatewayOk(record)) return record;
 
-      return { kind: 'ok', value: toMobileTransactionDetail(record.value.data) };
+      const accountName = await resolveAccountName(gateway, record.value.data.accountId);
+      return { kind: 'ok', value: toMobileTransactionDetail(record.value.data, accountName) };
     },
 
     listAccounts: () => listAccounts(gateway),

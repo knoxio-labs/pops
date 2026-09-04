@@ -9,7 +9,6 @@
  * the statement line as the input and the stored row as the output, so no hop
  * between them can quietly drop a field again.
  */
-import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 
 import { parseAmexRow } from '../../../../contract/amex-row.js';
@@ -63,11 +62,7 @@ async function commitLine(line: string, amount: number) {
   const result = await commitImport(db, noContacts(), payloadForStatementLine(line, amount));
   expect(result.failedDetails).toEqual([]);
   expect(result.transactionsImported).toBe(1);
-  const [row] = db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.account, 'ANZ Credit Card'))
-    .all();
+  const [row] = db.select().from(transactions).all();
   return row;
 }
 
@@ -143,7 +138,7 @@ async function commitAmexRow(row: Record<string, string>) {
   const result = await commitImport(db, noContacts(), payloadForAmexRow(row));
   expect(result.failedDetails).toEqual([]);
   expect(result.transactionsImported).toBe(1);
-  return db.select().from(transactions).where(eq(transactions.account, 'Amex')).all()[0];
+  return db.select().from(transactions).all()[0];
 }
 
 describe('foreign-charge capture from an Amex export row', () => {
@@ -233,11 +228,7 @@ describe('foreign-charge capture provenance', () => {
     const result = await commitImport(db, noContacts(), payload);
 
     expect(result.failedDetails).toEqual([]);
-    const [row] = db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.account, 'ANZ Credit Card'))
-      .all();
+    const [row] = db.select().from(transactions).all();
     expect(row?.fxCaptureSource).toBeNull();
   });
 });

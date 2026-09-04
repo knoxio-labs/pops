@@ -65,7 +65,7 @@ function renderFields(accounts: Account[]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AccountAndFormatFields bankType="Amex" onBankChange={vi.fn()} />
+      <AccountAndFormatFields dialectId="Amex" onBankChange={vi.fn()} />
     </QueryClientProvider>
   );
 }

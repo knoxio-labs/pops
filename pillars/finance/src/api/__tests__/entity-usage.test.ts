@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   entityPrecreateOutboxService,
   openFinanceDb,
+  resolveAccountIdByName,
   transactionsService,
   type OpenedFinanceDb,
 } from '../../db/index.js';
@@ -27,10 +28,13 @@ import { makeClient } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
+let amexAccountId: string;
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-entity-usage-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  // 'Amex' is already seeded by 0083_accounts.sql.
+  amexAccountId = resolveAccountIdByName(financeDb.db, 'Amex');
 });
 
 afterEach(() => {
@@ -52,7 +56,7 @@ function client(contacts: ContactsFake) {
 function seedTxn(entityId: string, description: string, date: string): void {
   transactionsService.createTransaction(financeDb.db, {
     description,
-    account: 'Amex',
+    accountId: amexAccountId,
     amountCents: -1000,
     date,
     entityId,

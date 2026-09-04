@@ -53,7 +53,8 @@ export type FinanceTransactionRow = z.infer<typeof FinanceTransactionRowSchema>;
 
 /** The fields the detail screen adds on top of a list row. */
 export const FinanceTransactionDetailSchema = FinanceTransactionRowSchema.extend({
-  account: z.string(),
+  /** FK to `accounts.id` — finance carries no denormalised account name (POPS-2770). */
+  accountId: z.string(),
   entityId: z.string().nullable(),
   location: z.string().nullable(),
   country: z.string().nullable(),
@@ -86,11 +87,20 @@ export function toMobileTransaction(row: FinanceTransactionRow): MobileTransacti
   };
 }
 
-/** Finance record → the mobile detail record. */
-export function toMobileTransactionDetail(row: FinanceTransactionDetail): MobileTransactionDetail {
+/**
+ * Finance record → the mobile detail record.
+ *
+ * `accountName` is resolved by the caller via the accounts lookup (POPS-2770)
+ * — finance's own response carries only `accountId`, and this mapper has no
+ * way to reach finance itself.
+ */
+export function toMobileTransactionDetail(
+  row: FinanceTransactionDetail,
+  accountName: string
+): MobileTransactionDetail {
   return {
     ...toMobileTransaction(row),
-    account: row.account,
+    account: accountName,
     entityId: row.entityId,
     location: row.location,
     country: row.country,

@@ -58,7 +58,6 @@ function seedTxn(input: SeedTxn): string {
     .values({
       id,
       description: input.description,
-      account: 'amex',
       accountId: seededAccountId(db, 'amex'),
       amountCents: -1250,
       date: '2026-01-01',

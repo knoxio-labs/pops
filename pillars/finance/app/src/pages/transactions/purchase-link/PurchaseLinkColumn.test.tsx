@@ -28,7 +28,6 @@ import type { TransactionLinkSummary } from './types';
 
 function transaction(id: string, description: string): Transaction {
   return {
-    account: 'Up Everyday',
     accountId: 'account-1',
     amount: -41.28,
     date: '2026-03-06',

@@ -181,30 +181,6 @@ export class UnresolvedAccountNameError extends Error {
 }
 
 /**
- * A transaction write named both an `account` string and an `accountId`
- * (POPS-2769's transition-period dual write), and the two disagree — the id
- * resolves to a different account than the name names. Rejected rather than
- * silently preferring one side, so `account` and `account_id` can never drift
- * apart on a write that supplied both.
- */
-export class AccountIdentityMismatchError extends Error {
-  override readonly name = 'AccountIdentityMismatchError' as const;
-  readonly account: string;
-  readonly accountId: string;
-  readonly resolvedAccountName: string;
-
-  constructor(account: string, accountId: string, resolvedAccountName: string) {
-    super(
-      `Account '${account}' does not match accountId '${accountId}' (which resolves to ` +
-        `'${resolvedAccountName}')`
-    );
-    this.account = account;
-    this.accountId = accountId;
-    this.resolvedAccountName = resolvedAccountName;
-  }
-}
-
-/**
  * A gift-card-only write (or read) targeted an account whose current `kind`
  * is not `gift-card`. Checked at the service layer against the account's
  * live `kind` rather than a SQL constraint, because `accounts.kind` can

@@ -193,7 +193,6 @@ export function insertImportTransaction(
     .values({
       id,
       description: input.description,
-      account: input.account,
       accountId: resolveImportAccountId(db, input.account, input.accountId),
       amountCents: input.amountCents,
       date: input.date,

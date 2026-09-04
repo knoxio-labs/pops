@@ -30,7 +30,6 @@ function txn(entityId: string | null, tags: string[]): void {
     .insert(transactions)
     .values({
       description: `txn-${entityId ?? 'none'}-${tags.join('|')}`,
-      account: 'Amex',
       accountId: seededAccountId(opened.db, 'Amex'),
       amountCents: -1000,
       date: '2026-01-01',

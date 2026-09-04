@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../db/__tests__/migrated-db.js';
+import { resolveAccountIdByName } from '../../../db/services/account-lookup.js';
 import { createAccount } from '../../../db/services/accounts.js';
 import {
   createTransaction,
@@ -24,17 +25,21 @@ const LONG_INTERVAL = 1_000_000;
 
 function freshDb(): FinanceDb {
   const db = freshMigratedFinanceDb().db;
-  createAccount(db, { name: 'Bendigo', kind: 'checking', currency: 'AUD' });
-  createAccount(db, { name: 'ING', kind: 'checking', currency: 'AUD' });
-  createAccount(db, { name: 'UP', kind: 'checking', currency: 'AUD' });
-  createAccount(db, { name: 'Up2', kind: 'checking', currency: 'AUD' });
+  // 'Amex' is already seeded by 0083_accounts.sql.
+  for (const name of ['Bendigo', 'ING', 'UP', 'Up2']) {
+    createAccount(db, { name, kind: 'checking', currency: 'AUD' });
+  }
   return db;
 }
 
-function seed(db: FinanceDb, overrides: Partial<CreateTransactionInput> = {}): TransactionRow {
+function seed(
+  db: FinanceDb,
+  accountName: string,
+  overrides: Partial<CreateTransactionInput> = {}
+): TransactionRow {
   return createTransaction(db, {
     description: 'seed',
-    account: 'Amex',
+    accountId: resolveAccountIdByName(db, accountName),
     amountCents: -5000,
     date: '2026-07-01',
     ...overrides,
@@ -58,8 +63,8 @@ describe('reconcile-paired-transfers worker', () => {
   it('is a no-op when the feature gate is off', () => {
     delete process.env[ENABLED];
     const db = freshDb();
-    const a = seed(db, { account: 'Amex', amountCents: -5000 });
-    const b = seed(db, { account: 'Bendigo', amountCents: 5000 });
+    const a = seed(db, 'Amex', { amountCents: -5000 });
+    const b = seed(db, 'Bendigo', { amountCents: 5000 });
     const handle = startReconcilePairedTransfersWorker({ db, intervalMs: LONG_INTERVAL });
     const stats = handle.runOnce();
     handle.stop();
@@ -71,8 +76,8 @@ describe('reconcile-paired-transfers worker', () => {
   it('links a pair whose legs were imported separately', () => {
     process.env[ENABLED] = 'true';
     const db = freshDb();
-    const a = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
-    const b = seed(db, { account: 'Bendigo', amountCents: 5000, date: '2026-07-02' });
+    const a = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
+    const b = seed(db, 'Bendigo', { amountCents: 5000, date: '2026-07-02' });
     const handle = startReconcilePairedTransfersWorker({ db, intervalMs: LONG_INTERVAL });
     const stats = handle.runOnce();
     handle.stop();
@@ -85,9 +90,9 @@ describe('reconcile-paired-transfers worker', () => {
   it('leaves competing debits unlinked and counts them ambiguous', () => {
     process.env[ENABLED] = 'true';
     const db = freshDb();
-    const debitA = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
-    const debitB = seed(db, { account: 'Bendigo', amountCents: -5000, date: '2026-07-01' });
-    const credit = seed(db, { account: 'ING', amountCents: 5000, date: '2026-07-01' });
+    const debitA = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
+    const debitB = seed(db, 'Bendigo', { amountCents: -5000, date: '2026-07-01' });
+    const credit = seed(db, 'ING', { amountCents: 5000, date: '2026-07-01' });
     const handle = startReconcilePairedTransfersWorker({ db, intervalMs: LONG_INTERVAL });
     const stats = handle.runOnce();
     handle.stop();
@@ -101,9 +106,9 @@ describe('reconcile-paired-transfers worker', () => {
   it('is idempotent across passes — a second run links nothing new', () => {
     process.env[ENABLED] = 'true';
     const db = freshDb();
-    const a = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
-    const b = seed(db, { account: 'Bendigo', amountCents: 5000, date: '2026-07-01' });
-    const lonely = seed(db, { account: 'ING', amountCents: -9900, date: '2026-07-01' });
+    const a = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
+    const b = seed(db, 'Bendigo', { amountCents: 5000, date: '2026-07-01' });
+    const lonely = seed(db, 'ING', { amountCents: -9900, date: '2026-07-01' });
     const handle = startReconcilePairedTransfersWorker({ db, intervalMs: LONG_INTERVAL });
     expect(handle.runOnce().linked).toBe(1);
     const second = handle.runOnce();
@@ -120,8 +125,8 @@ describe('reconcile-paired-transfers worker', () => {
     vi.useFakeTimers();
     try {
       const db = freshDb();
-      const a = seed(db, { account: 'Amex', amountCents: -5000, date: '2026-07-01' });
-      const b = seed(db, { account: 'Bendigo', amountCents: 5000, date: '2026-07-01' });
+      const a = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
+      const b = seed(db, 'Bendigo', { amountCents: 5000, date: '2026-07-01' });
       const handle = startReconcilePairedTransfersWorker({ db, intervalMs: 1000 });
 
       // No immediate pass at construction — the pair is still unlinked.
@@ -134,8 +139,8 @@ describe('reconcile-paired-transfers worker', () => {
       handle.stop();
 
       // A new unlinked pair must NOT be touched after stop().
-      const c = seed(db, { account: 'UP', amountCents: -7000, date: '2026-07-01' });
-      const d = seed(db, { account: 'Up2', amountCents: 7000, date: '2026-07-01' });
+      const c = seed(db, 'UP', { amountCents: -7000, date: '2026-07-01' });
+      const d = seed(db, 'Up2', { amountCents: 7000, date: '2026-07-01' });
       vi.advanceTimersByTime(10_000);
       expect(getTransaction(db, c.id).relatedTransactionId).toBeNull();
       expect(getTransaction(db, d.id).relatedTransactionId).toBeNull();

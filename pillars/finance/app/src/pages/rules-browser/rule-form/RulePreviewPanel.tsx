@@ -41,7 +41,7 @@ function MatchRow({
         <span className="text-muted-foreground tabular-nums">{formatDate(match.date)}</span>
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-        <AccountLabel accounts={accounts} account={match.account} size="compact" />
+        <AccountLabel accounts={accounts} account={match.accountId} size="compact" />
         {match.entityName && <span>• {match.entityName}</span>}
         {match.tags.length > 0 && (
           <TagBadgeRow

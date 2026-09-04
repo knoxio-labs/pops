@@ -55,7 +55,6 @@ function seedTransaction(
     .values({
       id,
       description: input.description ?? 'seed txn',
-      account: input.account ?? 'amex',
       accountId: seededAccountId(db, input.account ?? 'amex'),
       amountCents: -1000,
       date: input.date ?? '2026-01-01',

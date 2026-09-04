@@ -22,7 +22,8 @@ import type { PillarHandleFactory } from '../pillars/gateway.js';
 export interface FinanceFakeRow {
   id: string;
   description: string;
-  account: string;
+  /** FK to the fake's `accounts` store — finance carries no denormalised name. */
+  accountId: string;
   /** Signed decimal dollars — expenses negative, exactly as finance emits. */
   amount: number;
   date: string;
@@ -43,6 +44,32 @@ export interface ListCall {
   beforeId?: string;
 }
 
+/** A full finance account row, as finance's REST layer serves one. */
+export interface FinanceFakeAccountRow {
+  id: string;
+  name: string;
+  kind: string;
+  currency: string;
+  archivedAt: string | null;
+  institutionId: string | null;
+}
+
+export function financeAccountRow(
+  overrides: Partial<FinanceFakeAccountRow> & { id: string }
+): FinanceFakeAccountRow {
+  return {
+    name: 'Up Everyday',
+    kind: 'checking',
+    currency: 'AUD',
+    archivedAt: null,
+    institutionId: null,
+    ...overrides,
+  };
+}
+
+/** The default account every `financeRow()` fixture's `accountId` resolves against. */
+const DEFAULT_ACCOUNT = financeAccountRow({ id: 'acc-up-everyday' });
+
 export interface FinanceFake {
   factory: PillarHandleFactory;
   /** Every `transactions.list` input bfm sent, in order. */
@@ -54,7 +81,7 @@ export interface FinanceFake {
 export function financeRow(overrides: Partial<FinanceFakeRow> & { id: string }): FinanceFakeRow {
   return {
     description: 'Woolworths',
-    account: 'Up Everyday',
+    accountId: 'acc-up-everyday',
     amount: -42.5,
     date: '2026-03-01',
     type: 'purchase',
@@ -106,9 +133,11 @@ function readListCall(input: unknown): ListCall {
  */
 export function createFinanceFake(
   rows: readonly FinanceFakeRow[],
-  failWith?: Exclude<CallResult<unknown>, { kind: 'ok' }>
+  failWith?: Exclude<CallResult<unknown>, { kind: 'ok' }>,
+  accounts: readonly FinanceFakeAccountRow[] = [DEFAULT_ACCOUNT]
 ): FinanceFake {
   const store = [...rows];
+  const accountStore = [...accounts];
   const listCalls: ListCall[] = [];
 
   const list = (rawInput: unknown): Promise<CallResult<unknown>> => {
@@ -145,8 +174,22 @@ export function createFinanceFake(
     return Promise.resolve({ kind: 'ok', value: { data: found } });
   };
 
+  const getAccount = (input: unknown): Promise<CallResult<unknown>> => {
+    if (failWith !== undefined) return Promise.resolve(failWith);
+    const id = input !== null && typeof input === 'object' && 'id' in input ? input.id : undefined;
+    const found = accountStore.find((row) => row.id === id);
+    if (found === undefined) {
+      return Promise.resolve({ kind: 'not-found', pillar: 'finance' });
+    }
+    return Promise.resolve({ kind: 'ok', value: { data: found } });
+  };
+
   return {
-    factory: <TRouter>() => fakePillarHandle<TRouter>('finance', { transactions: { list, get } }),
+    factory: <TRouter>() =>
+      fakePillarHandle<TRouter>('finance', {
+        transactions: { list, get },
+        accounts: { get: getAccount },
+      }),
     listCalls,
     insert: (row: FinanceFakeRow) => {
       store.push(row);

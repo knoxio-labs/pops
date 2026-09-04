@@ -29,7 +29,7 @@ export function buildSetters(set: StoreSet) {
           : { ...downstreamReset, files, sourceFileNames };
       }),
     setAccount: (accountId: string, accountName: string) => set({ accountId, accountName }),
-    setBankType: (bankType: ImportStore['bankType']) => set({ bankType }),
+    setDialectId: (dialectId: ImportStore['dialectId']) => set({ dialectId }),
     setHeaders: (headers: string[]) => set({ headers }),
     setRows: (rows: Record<string, string>[]) => set({ rows }),
     setColumnMap: (columnMap: ImportStore['columnMap']) => set({ columnMap }),

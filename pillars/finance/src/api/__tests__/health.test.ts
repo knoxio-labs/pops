@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   entityPrecreateOutboxService,
   openFinanceDb,
+  resolveAccountIdByName,
   transactions,
   transactionsService,
   type OpenedFinanceDb,
@@ -22,10 +23,13 @@ import { requestOn } from './test-utils.js';
 
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
+let amexAccountId: string;
 
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-health-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
+  // 'Amex' is already seeded by 0083_accounts.sql.
+  amexAccountId = resolveAccountIdByName(financeDb.db, 'Amex');
 });
 
 afterEach(() => {
@@ -57,7 +61,7 @@ describe('GET /health', () => {
   it('reports a fresh, non-stale import right after a transaction is created', async () => {
     transactionsService.createTransaction(financeDb.db, {
       description: 'Groceries',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: 4200,
       date: '2026-07-01',
     });
@@ -73,7 +77,7 @@ describe('GET /health', () => {
   it('flags stale once the last edit is past the threshold', async () => {
     const stale = transactionsService.createTransaction(financeDb.db, {
       description: 'Old import',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: 1000,
       date: '2026-01-01',
     });
@@ -95,7 +99,7 @@ describe('GET /health', () => {
   it('treats a present-but-unparseable lastEditedTime as stale with unknown days', async () => {
     const row = transactionsService.createTransaction(financeDb.db, {
       description: 'Corrupt import',
-      account: 'Amex',
+      accountId: amexAccountId,
       amountCents: 1000,
       date: '2026-01-01',
     });

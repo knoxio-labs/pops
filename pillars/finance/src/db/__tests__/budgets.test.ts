@@ -36,20 +36,18 @@ interface SeedTransactionInput {
   date: string;
   type: string;
   tags: string[];
-  account?: string;
 }
 
 function seedTransaction(db: FinanceTestDb, input: SeedTransactionInput): void {
   const raw = db.$client;
   raw
     .prepare(
-      `INSERT INTO transactions (id, description, account, account_id, amount_cents, date, type, tags, last_edited_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO transactions (id, description, account_id, amount_cents, date, type, tags, last_edited_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       crypto.randomUUID(),
       input.description,
-      input.account ?? 'Test Account',
       seededAccountId(db, 'Amex'),
       input.amountCents,
       input.date,

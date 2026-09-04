@@ -110,7 +110,6 @@ function patternMatchesDescription(
 export interface PreviewMatchTransactionView {
   id: string;
   description: string;
-  account: string;
   accountId: string;
   amount: number;
   date: string;
@@ -129,7 +128,6 @@ function previewMatchTransaction(row: TransactionRow): PreviewMatchTransactionVi
   return {
     id: row.id,
     description: row.description,
-    account: row.account,
     accountId: row.accountId,
     amount: centsToDollars(row.amountCents),
     date: row.date,

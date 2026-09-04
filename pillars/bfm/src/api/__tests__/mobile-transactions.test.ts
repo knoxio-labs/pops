@@ -26,6 +26,7 @@ import { createPillarGateway } from '../pillars/gateway.js';
 import {
   createFinanceFake,
   createMalformedFinanceFake,
+  financeAccountRow,
   financeRow,
   type FinanceFake,
   type FinanceFakeRow,
@@ -340,6 +341,34 @@ describe('the detail record', () => {
       'type',
     ]);
     expect(res.body.notes).toBe('split with Sam');
+  });
+
+  it("resolves the account's display name from accountId via the accounts lookup (POPS-2770)", async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-1', accountId: 'acc-joint' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-joint', name: 'Joint Everyday' })]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, `${LIST_PATH}/txn-1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.account).toBe('Joint Everyday');
+  });
+
+  it('falls back to a placeholder rather than failing the whole fetch when the account lookup misses', async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-1', accountId: 'acc-deleted' })],
+      undefined,
+      []
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, `${LIST_PATH}/txn-1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.account).toBe('Unknown account');
   });
 
   it('404s a transaction finance does not have', async () => {

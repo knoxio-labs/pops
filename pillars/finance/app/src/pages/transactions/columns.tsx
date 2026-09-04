@@ -79,7 +79,7 @@ function buildAccountColumn(
     header: t('column.account'),
     cell: ({ row }) => {
       const resolved = resolveAccountOption(accounts, row.original.accountId);
-      if (!resolved) return <span className="text-sm font-mono">{row.original.account}</span>;
+      if (!resolved) return <span className="text-sm font-mono">{row.original.accountId}</span>;
       return <AccountChip account={resolved} size="compact" />;
     },
   };

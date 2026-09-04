@@ -5552,9 +5552,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -5576,7 +5573,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["description", "entityName", "amount", "account", "currentTags"],
+                      "required": [
+                        "description",
+                        "entityName",
+                        "amount",
+                        "accountId",
+                        "currentTags"
+                      ],
                       "type": "object"
                     },
                     "maxItems": 50,
@@ -6839,9 +6842,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "type": "string"
-                              },
                               "accountId": {
                                 "type": "string"
                               },
@@ -6871,7 +6871,6 @@
                             "required": [
                               "id",
                               "description",
-                              "account",
                               "accountId",
                               "amount",
                               "date",
@@ -19908,13 +19907,6 @@
           },
           {
             "in": "query",
-            "name": "account",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
             "name": "accountId",
             "schema": {
               "type": "string"
@@ -20015,9 +20007,6 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
-                          "account": {
-                            "type": "string"
-                          },
                           "accountId": {
                             "type": "string"
                           },
@@ -20105,7 +20094,6 @@
                         "required": [
                           "id",
                           "description",
-                          "account",
                           "accountId",
                           "amount",
                           "date",
@@ -20236,10 +20224,6 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "account": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
                   "accountId": {
                     "minLength": 1,
                     "type": "string"
@@ -20307,7 +20291,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["description", "account", "amount", "date", "type", "tags"],
+                "required": ["description", "accountId", "amount", "date", "type", "tags"],
                 "type": "object"
               }
             }
@@ -20324,9 +20308,6 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -20414,7 +20395,6 @@
                       "required": [
                         "id",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
@@ -20617,9 +20597,6 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "account": {
-                    "type": "string"
-                  },
                   "accountId": {
                     "type": "string"
                   },
@@ -20743,7 +20720,6 @@
                   "id",
                   "notionId",
                   "description",
-                  "account",
                   "accountId",
                   "amount",
                   "date",
@@ -20782,9 +20758,6 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -20872,7 +20845,6 @@
                       "required": [
                         "id",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
@@ -21078,9 +21050,6 @@
                     "snapshot": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -21204,7 +21173,6 @@
                         "id",
                         "notionId",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
@@ -21332,9 +21300,6 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -21422,7 +21387,6 @@
                       "required": [
                         "id",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
@@ -21541,10 +21505,6 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "account": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
                   "accountId": {
                     "minLength": 1,
                     "type": "string"
@@ -21621,9 +21581,6 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -21711,7 +21668,6 @@
                       "required": [
                         "id",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
@@ -21851,9 +21807,6 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "type": "string"
-                        },
                         "accountId": {
                           "type": "string"
                         },
@@ -21941,7 +21894,6 @@
                       "required": [
                         "id",
                         "description",
-                        "account",
                         "accountId",
                         "amount",
                         "date",
