@@ -214,6 +214,6 @@ export function useTransactionsPage() {
     handleAdd,
     handleEdit,
     onSubmit,
-    isSubmitting: createMutation.isPending || updateMutation.isPending || accountsQuery.isLoading,
+    isSubmitting: createMutation.isPending || updateMutation.isPending,
   };
 }
