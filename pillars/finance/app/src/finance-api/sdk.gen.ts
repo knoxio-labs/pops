@@ -15,6 +15,12 @@ import type {
   AccountsGetResponses,
   AccountsListData,
   AccountsListResponses,
+  AccountsMergeData,
+  AccountsMergeErrors,
+  AccountsMergeResponses,
+  AccountsPreviewMergeData,
+  AccountsPreviewMergeErrors,
+  AccountsPreviewMergeResponses,
   AccountsReorderData,
   AccountsReorderErrors,
   AccountsReorderResponses,
@@ -141,6 +147,27 @@ import type {
   InstitutionsUpdateData,
   InstitutionsUpdateErrors,
   InstitutionsUpdateResponses,
+  LoanGetTermsData,
+  LoanGetTermsErrors,
+  LoanGetTermsResponses,
+  LoanLinkOffsetAccountData,
+  LoanLinkOffsetAccountErrors,
+  LoanLinkOffsetAccountResponses,
+  LoanListOffsetLinksData,
+  LoanListOffsetLinksErrors,
+  LoanListOffsetLinksResponses,
+  LoanListRateHistoryData,
+  LoanListRateHistoryErrors,
+  LoanListRateHistoryResponses,
+  LoanRecordRateData,
+  LoanRecordRateErrors,
+  LoanRecordRateResponses,
+  LoanUnlinkOffsetAccountData,
+  LoanUnlinkOffsetAccountErrors,
+  LoanUnlinkOffsetAccountResponses,
+  LoanWriteTermsData,
+  LoanWriteTermsErrors,
+  LoanWriteTermsResponses,
   SearchSearchData,
   SearchSearchErrors,
   SearchSearchResponses,
@@ -391,6 +418,143 @@ export const giftCardDetailsReveal = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/accounts/{id}/gift-card-details/reveal',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List a loan account’s offset links, closed ones included unless active=true
+ */
+export const loanListOffsetLinks = <ThrowOnError extends boolean = false>(
+  options: Options<LoanListOffsetLinksData, ThrowOnError>
+): RequestResult<LoanListOffsetLinksResponses, LoanListOffsetLinksErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    LoanListOffsetLinksResponses,
+    LoanListOffsetLinksErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/loan-offset-links', ...options });
+
+/**
+ * Link an offset account to a loan account; any existing account may be the offset
+ */
+export const loanLinkOffsetAccount = <ThrowOnError extends boolean = false>(
+  options: Options<LoanLinkOffsetAccountData, ThrowOnError>
+): RequestResult<LoanLinkOffsetAccountResponses, LoanLinkOffsetAccountErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    LoanLinkOffsetAccountResponses,
+    LoanLinkOffsetAccountErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/loan-offset-links',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Close an offset link (sets unlinkedAt) without deleting it; idempotent
+ */
+export const loanUnlinkOffsetAccount = <ThrowOnError extends boolean = false>(
+  options: Options<LoanUnlinkOffsetAccountData, ThrowOnError>
+): RequestResult<LoanUnlinkOffsetAccountResponses, LoanUnlinkOffsetAccountErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    LoanUnlinkOffsetAccountResponses,
+    LoanUnlinkOffsetAccountErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/loan-offset-links/{linkId}/unlink',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List every rate a loan account has carried, newest effective date first
+ */
+export const loanListRateHistory = <ThrowOnError extends boolean = false>(
+  options: Options<LoanListRateHistoryData, ThrowOnError>
+): RequestResult<LoanListRateHistoryResponses, LoanListRateHistoryErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    LoanListRateHistoryResponses,
+    LoanListRateHistoryErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/loan-rate-history', ...options });
+
+/**
+ * Record a rate change and mirror it onto the loan’s terms; 422s a non-latest effectiveFrom
+ */
+export const loanRecordRate = <ThrowOnError extends boolean = false>(
+  options: Options<LoanRecordRateData, ThrowOnError>
+): RequestResult<LoanRecordRateResponses, LoanRecordRateErrors, ThrowOnError> =>
+  (options.client ?? client).post<LoanRecordRateResponses, LoanRecordRateErrors, ThrowOnError>({
+    url: '/accounts/{id}/loan-rate-history',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Read a loan account’s terms
+ */
+export const loanGetTerms = <ThrowOnError extends boolean = false>(
+  options: Options<LoanGetTermsData, ThrowOnError>
+): RequestResult<LoanGetTermsResponses, LoanGetTermsErrors, ThrowOnError> =>
+  (options.client ?? client).get<LoanGetTermsResponses, LoanGetTermsErrors, ThrowOnError>({
+    url: '/accounts/{id}/loan-terms',
+    ...options,
+  });
+
+/**
+ * Create or replace a loan account’s terms, recording the matching rate history row atomically
+ */
+export const loanWriteTerms = <ThrowOnError extends boolean = false>(
+  options: Options<LoanWriteTermsData, ThrowOnError>
+): RequestResult<LoanWriteTermsResponses, LoanWriteTermsErrors, ThrowOnError> =>
+  (options.client ?? client).put<LoanWriteTermsResponses, LoanWriteTermsErrors, ThrowOnError>({
+    url: '/accounts/{id}/loan-terms',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Merge account :id (the source) into targetId: repoint its transactions onto targetId and delete it outright. Irreversible — the caller should show the preview first
+ */
+export const accountsMerge = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsMergeData, ThrowOnError>
+): RequestResult<AccountsMergeResponses, AccountsMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<AccountsMergeResponses, AccountsMergeErrors, ThrowOnError>({
+    url: '/accounts/{id}/merge',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Preview merging account :id (the source) into targetId, without writing anything; rejects with 422 for a merge that cannot be meaningful (self, cross-currency, cross-sign-convention)
+ */
+export const accountsPreviewMerge = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsPreviewMergeData, ThrowOnError>
+): RequestResult<AccountsPreviewMergeResponses, AccountsPreviewMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    AccountsPreviewMergeResponses,
+    AccountsPreviewMergeErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/merge/preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

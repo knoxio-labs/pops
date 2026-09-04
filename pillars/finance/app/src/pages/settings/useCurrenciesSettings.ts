@@ -25,14 +25,25 @@ function useCurrencyMutations(args: {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: CURRENCIES_KEY });
 
   const updateMutation = useMutation({
-    mutationFn: async (input: { code: string; data: CurrencyFormValues }) =>
+    mutationFn: async (input: {
+      code: string;
+      data: CurrencyFormValues;
+      currentDecimals: number;
+    }) =>
       unwrap(
         await currenciesUpdate({
           path: { code: input.code },
           body: {
             name: input.data.name,
             symbol: input.data.symbol === '' ? null : input.data.symbol,
-            decimals: Number(input.data.decimals),
+            // The server refuses any request carrying `decimals` for a
+            // currency already in use, even when the value is unchanged —
+            // only send it when the user actually edited it, so renaming an
+            // in-use currency (an explicitly supported path) still works.
+            decimals:
+              Number(input.data.decimals) !== input.currentDecimals
+                ? Number(input.data.decimals)
+                : undefined,
             kind: input.data.kind,
           },
         })
@@ -94,7 +105,7 @@ export function useCurrenciesSettings() {
 
   const onSubmit = (values: CurrencyFormValues) => {
     if (!editing) return;
-    updateMutation.mutate({ code: editing.code, data: values });
+    updateMutation.mutate({ code: editing.code, data: values, currentDecimals: editing.decimals });
   };
 
   return {

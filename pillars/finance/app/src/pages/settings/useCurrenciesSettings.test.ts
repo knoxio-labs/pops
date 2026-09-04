@@ -100,6 +100,52 @@ describe('useCurrenciesSettings — edit', () => {
     );
   });
 
+  it('omits decimals from the update body when the user did not change it', async () => {
+    // POPS-2810 review-findings-gate finding: the server rejects any update
+    // that carries `decimals` for a currency already in use, even when the
+    // value is unchanged — sending it unconditionally blocked renaming an
+    // in-use currency, a path the server explicitly supports.
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useCurrenciesSettings(), { wrapper });
+
+    act(() => {
+      result.current.handleEdit(makeCurrency({ code: 'AUD', decimals: 2 }));
+    });
+    act(() => {
+      result.current.onSubmit({ name: 'AUD renamed', symbol: '$', decimals: '2', kind: 'fiat' });
+    });
+
+    await waitFor(() =>
+      expect(currenciesUpdateMock).toHaveBeenCalledWith({
+        path: { code: 'AUD' },
+        body: { name: 'AUD renamed', symbol: '$', decimals: undefined, kind: 'fiat' },
+      })
+    );
+  });
+
+  it('still sends decimals in the update body when the user did change it', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useCurrenciesSettings(), { wrapper });
+
+    act(() => {
+      result.current.handleEdit(makeCurrency({ code: 'AUD', decimals: 2 }));
+    });
+    act(() => {
+      result.current.onSubmit({
+        name: 'Australian Dollar',
+        symbol: '$',
+        decimals: '4',
+        kind: 'fiat',
+      });
+    });
+
+    await waitFor(() =>
+      expect(currenciesUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ body: expect.objectContaining({ decimals: 4 }) })
+      )
+    );
+  });
+
   it('does nothing when onSubmit is called with no currency being edited', () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useCurrenciesSettings(), { wrapper });
