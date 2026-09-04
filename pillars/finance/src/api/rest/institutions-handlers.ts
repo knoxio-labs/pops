@@ -1,12 +1,13 @@
 /**
  * Handlers for the `institutions.*` sub-router. `translateInstitutionError`
  * maps db domain errors (`InstitutionNotFoundError`, `InstitutionConflictError`,
- * `InstitutionInUseError`) to shared `HttpError` subclasses so `runHttp`
- * yields 404 / 409.
+ * `InstitutionInUseError`, `InstitutionMergeSameInstitutionError`) to shared
+ * `HttpError` subclasses so `runHttp` yields 404 / 409 / 422.
  */
 import {
   InstitutionConflictError,
   InstitutionInUseError,
+  InstitutionMergeSameInstitutionError,
   InstitutionNotFoundError,
 } from '../../db/errors.js';
 import { institutionsService, type FinanceDb } from '../../db/index.js';
@@ -16,7 +17,7 @@ import {
   toUpdateInstitutionInput,
 } from '../modules/institutions-types.js';
 import { removeInstitutionLogo, uploadInstitutionLogo } from '../modules/logo-upload.js';
-import { ConflictError, NotFoundError } from '../shared/errors.js';
+import { ConflictError, NotFoundError, UnprocessableEntityError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -29,6 +30,9 @@ function translateInstitutionError(err: unknown, id?: string): never {
   if (err instanceof InstitutionNotFoundError) throw new NotFoundError('Institution', id ?? err.id);
   if (err instanceof InstitutionConflictError) throw new ConflictError(err.message);
   if (err instanceof InstitutionInUseError) throw new ConflictError(err.message);
+  if (err instanceof InstitutionMergeSameInstitutionError) {
+    throw new UnprocessableEntityError(err.message);
+  }
   throw err;
 }
 
@@ -75,6 +79,19 @@ export function makeInstitutionsHandlers(db: FinanceDb) {
         try {
           institutionsService.deleteInstitution(db, params.id);
           return { status: 200 as const, body: { message: 'Institution deleted' } };
+        } catch (err) {
+          translateInstitutionError(err, params.id);
+        }
+      }),
+
+    merge: ({ params, body }: Req['merge']) =>
+      runHttp(() => {
+        try {
+          const row = institutionsService.mergeInstitutions(db, params.id, body.targetId);
+          return {
+            status: 200 as const,
+            body: { data: toInstitution(row), message: 'Institutions merged' },
+          };
         } catch (err) {
           translateInstitutionError(err, params.id);
         }

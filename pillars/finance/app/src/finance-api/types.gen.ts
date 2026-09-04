@@ -5772,6 +5772,77 @@ export type InstitutionsUploadLogoResponses = {
 export type InstitutionsUploadLogoResponse =
   InstitutionsUploadLogoResponses[keyof InstitutionsUploadLogoResponses];
 
+export type InstitutionsMergeData = {
+  /**
+   * Body
+   */
+  body?: {
+    targetId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/institutions/{id}/merge';
+};
+
+export type InstitutionsMergeErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type InstitutionsMergeError = InstitutionsMergeErrors[keyof InstitutionsMergeErrors];
+
+export type InstitutionsMergeResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      colour: string;
+      createdAt: string;
+      id: string;
+      logoAssetId: string | null;
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type InstitutionsMergeResponse =
+  InstitutionsMergeResponses[keyof InstitutionsMergeResponses];
+
 export type SearchSearchData = {
   /**
    * Body

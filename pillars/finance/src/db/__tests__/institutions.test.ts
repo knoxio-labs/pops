@@ -7,20 +7,23 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   InstitutionConflictError,
   InstitutionInUseError,
+  InstitutionMergeSameInstitutionError,
   InstitutionNotFoundError,
 } from '../errors.js';
-import { createAccount } from '../services/accounts.js';
+import { getAccount, createAccount } from '../services/accounts.js';
 import {
   createInstitution,
   deleteInstitution,
   getInstitution,
   isInstitutionInUse,
   listInstitutions,
+  mergeInstitutions,
   updateInstitution,
 } from '../services/institutions.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
+import type { MigratedFinanceDb } from './migrated-db.js';
 
 function freshDb(): FinanceDb {
   return freshMigratedFinanceDb().db;
@@ -188,5 +191,133 @@ describe('deleteInstitution', () => {
     });
 
     expect(() => deleteInstitution(db, created.id)).toThrow(InstitutionInUseError);
+  });
+});
+
+describe('mergeInstitutions', () => {
+  it('repoints every account referencing the source onto the target and removes the source', () => {
+    const db = freshDb();
+    const source = createInstitution(db, { name: 'A.N.Z.', colour: '#d5001c' });
+    const target = createInstitution(db, { name: 'ANZ Bank', colour: '#0033a0' });
+    const checking = createAccount(db, {
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: source.id,
+    });
+    const savings = createAccount(db, {
+      name: 'Savings',
+      kind: 'savings',
+      currency: 'AUD',
+      institutionId: source.id,
+    });
+
+    const survivor = mergeInstitutions(db, source.id, target.id);
+
+    expect(survivor.id).toBe(target.id);
+    expect(getAccount(db, checking.id).institutionId).toBe(target.id);
+    expect(getAccount(db, savings.id).institutionId).toBe(target.id);
+    expect(() => getInstitution(db, source.id)).toThrow(InstitutionNotFoundError);
+  });
+
+  it('keeps the target colour and logoAssetId unqualified — the source values are discarded', () => {
+    const db = freshDb();
+    const source = createInstitution(db, {
+      name: 'A.N.Z.',
+      colour: '#111111',
+      logoAssetId: 'asset-source',
+    });
+    const target = createInstitution(db, {
+      name: 'ANZ Bank',
+      colour: '#0033a0',
+      logoAssetId: 'asset-target',
+    });
+
+    const survivor = mergeInstitutions(db, source.id, target.id);
+
+    expect(survivor.colour).toBe('#0033a0');
+    expect(survivor.logoAssetId).toBe('asset-target');
+  });
+
+  it('merges two institutions that no account references (nothing to repoint, still deletes source)', () => {
+    const db = freshDb();
+    const source = createInstitution(db, { name: 'A.N.Z.', colour: '#d5001c' });
+    const target = createInstitution(db, { name: 'ANZ Bank', colour: '#0033a0' });
+
+    expect(() => mergeInstitutions(db, source.id, target.id)).not.toThrow();
+    expect(() => getInstitution(db, source.id)).toThrow(InstitutionNotFoundError);
+  });
+
+  it('throws InstitutionMergeSameInstitutionError and writes nothing for a self-merge', () => {
+    const db = freshDb();
+    const institution = createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+    const account = createAccount(db, {
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: institution.id,
+    });
+
+    expect(() => mergeInstitutions(db, institution.id, institution.id)).toThrow(
+      InstitutionMergeSameInstitutionError
+    );
+    expect(getInstitution(db, institution.id)).toBeTruthy();
+    expect(getAccount(db, account.id).institutionId).toBe(institution.id);
+  });
+
+  it('throws InstitutionNotFoundError, not InstitutionMergeSameInstitutionError, for a self-merge of a nonexistent id', () => {
+    const db = freshDb();
+    expect(() => mergeInstitutions(db, 'missing-id', 'missing-id')).toThrow(
+      InstitutionNotFoundError
+    );
+  });
+
+  it('throws InstitutionNotFoundError for an unknown source id', () => {
+    const db = freshDb();
+    const target = createInstitution(db, { name: 'ANZ Bank', colour: '#0033a0' });
+    expect(() => mergeInstitutions(db, 'missing-id', target.id)).toThrow(InstitutionNotFoundError);
+  });
+
+  it('throws InstitutionNotFoundError for an unknown target id, and repoints nothing', () => {
+    const db = freshDb();
+    const source = createInstitution(db, { name: 'A.N.Z.', colour: '#d5001c' });
+    const account = createAccount(db, {
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: source.id,
+    });
+
+    expect(() => mergeInstitutions(db, source.id, 'missing-id')).toThrow(InstitutionNotFoundError);
+    expect(getAccount(db, account.id).institutionId).toBe(source.id);
+    expect(getInstitution(db, source.id)).toBeTruthy();
+  });
+
+  it('rolls back the whole merge (leaving no account pointing at a deleted institution) when the delete step fails mid-transaction', () => {
+    const migrated: MigratedFinanceDb = freshMigratedFinanceDb();
+    const { db, raw } = migrated;
+    const source = createInstitution(db, { name: 'A.N.Z.', colour: '#d5001c' });
+    const target = createInstitution(db, { name: 'ANZ Bank', colour: '#0033a0' });
+    const account = createAccount(db, {
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: source.id,
+    });
+
+    raw
+      .prepare(
+        `CREATE TRIGGER fail_source_delete BEFORE DELETE ON institutions
+         WHEN OLD.id = '${source.id}'
+         BEGIN SELECT RAISE(ABORT, 'simulated mid-merge failure'); END`
+      )
+      .run();
+
+    expect(() => mergeInstitutions(db, source.id, target.id)).toThrow(
+      /simulated mid-merge failure/
+    );
+
+    expect(getAccount(db, account.id).institutionId).toBe(source.id);
+    expect(getInstitution(db, source.id)).toBeTruthy();
   });
 });

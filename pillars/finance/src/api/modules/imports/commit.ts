@@ -72,6 +72,7 @@ import {
   enqueueOutboxCandidatesPhase,
   preCreatePendingContacts,
 } from './commit-contacts-precreate.js';
+import { expandLoanRepaymentRow } from './commit-loan-split.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
 import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
 import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
@@ -158,12 +159,31 @@ function writeTransactionsPhase(
   const failedDetails: FailedTransactionDetail[] = [];
   const insertedIds: string[] = [];
 
-  for (const txn of payload.transactions) {
+  // The loan split (`expandLoanRepaymentRow`) computes each repayment's
+  // interest leg from `getAccountBalanceBefore`, which only sees rows already
+  // inserted earlier in this loop. A batch is not guaranteed to arrive in
+  // date order — a bank statement exported newest-first is a common CSV
+  // layout — so an out-of-order batch would let a later-processed-but-
+  // earlier-dated repayment be missing from an earlier-processed-but-later-
+  // dated repayment's balance lookup, understating the balance the interest
+  // is computed against. Sorting the whole batch chronologically before the
+  // insert loop fixes that for every account at once; nothing downstream of
+  // this loop (dedup-checksum collection, transfer pairing) depends on the
+  // original payload order.
+  const orderedTransactions = payload.transactions.toSorted((a, b) => a.date.localeCompare(b.date));
+
+  for (const txn of orderedTransactions) {
     const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
     try {
-      const row = importsService.insertImportTransaction(tx, transactionColumns(txn, entityId));
-      imported++;
-      insertedIds.push(row.id);
+      // A loan repayment expands to its interest + principal legs here
+      // (POPS-2830); every other row is its own single-element array, so the
+      // insert loop below doesn't need to know the split happened at all.
+      const rows = expandLoanRepaymentRow(tx, transactionColumns(txn, entityId));
+      for (const columns of rows) {
+        const row = importsService.insertImportTransaction(tx, columns);
+        imported++;
+        insertedIds.push(row.id);
+      }
       tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

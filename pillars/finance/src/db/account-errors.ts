@@ -96,6 +96,22 @@ export class InstitutionInUseError extends Error {
   }
 }
 
+/**
+ * A merge named the same institution as both source and target — there is
+ * nothing to repoint, and deleting it anyway would remove an institution the
+ * caller still expects to exist. Mirrors `AccountMergeSameAccountError`
+ * (`merge-account-errors.ts`, POPS-2812).
+ */
+export class InstitutionMergeSameInstitutionError extends Error {
+  override readonly name = 'InstitutionMergeSameInstitutionError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Institution '${id}' cannot be merged into itself`);
+    this.id = id;
+  }
+}
+
 /** No `logo_blobs` row for the given id — the logo was never uploaded, or was already removed. */
 export class LogoBlobNotFoundError extends Error {
   override readonly name = 'LogoBlobNotFoundError' as const;

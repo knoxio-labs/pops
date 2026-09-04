@@ -193,6 +193,36 @@ describe('linkTransferPair', () => {
     expect(rb.relatedTransactionId).toBeNull();
   });
 
+  it('refuses to link a fee/fee:interest leg, so a loan repayment split survives pairing untouched (POPS-2830)', () => {
+    const interestLeg = seed(db, {
+      account: 'Amex',
+      amountCents: -472,
+      type: 'fee',
+      tags: ['fee:interest'],
+    });
+    const coincidentalMatch = seed(db, { account: 'Bendigo', amountCents: 472 });
+
+    expect(linkTransferPair(db, interestLeg.id, coincidentalMatch.id)).toBe(false);
+
+    const reread = getTransaction(db, interestLeg.id);
+    expect(reread.type).toBe('fee');
+    expect(reread.relatedTransactionId).toBeNull();
+    expect(getTransaction(db, coincidentalMatch.id).relatedTransactionId).toBeNull();
+  });
+
+  it('refuses to link a fee leg even when it is the second argument', () => {
+    const principalLeg = seed(db, { account: 'Amex', amountCents: -2612, type: 'transfer' });
+    const interestLeg = seed(db, {
+      account: 'Bendigo',
+      amountCents: 2612,
+      type: 'fee',
+      tags: ['fee:interest'],
+    });
+
+    expect(linkTransferPair(db, principalLeg.id, interestLeg.id)).toBe(false);
+    expect(getTransaction(db, interestLeg.id).type).toBe('fee');
+  });
+
   it('is idempotent — refuses to relink when either side already carries a related id', () => {
     const a = seed(db, { account: 'Amex', amountCents: -5000 });
     const b = seed(db, { account: 'Bendigo', amountCents: 5000 });

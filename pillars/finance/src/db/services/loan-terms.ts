@@ -173,6 +173,26 @@ export function listLoanRateHistory(db: FinanceDb, accountId: string): LoanRateH
 }
 
 /**
+ * The rate in force on `date` — the latest {@link listLoanRateHistory} row
+ * whose `effective_from` is not later than `date`. Falls back to the
+ * earliest recorded rate when every rate on file postdates `date` (a
+ * statement line dated before the loan's own rate history begins): the best
+ * available estimate, since accepting the request is better than refusing an
+ * otherwise-valid import over a gap in rate history that predates the ledger.
+ *
+ * Throws `AccountNotFoundError`/`AccountKindMismatchError` per
+ * {@link requireLoanAccount}, or `LoanTermsNotFoundError` if the account has
+ * no rate history at all yet.
+ */
+export function getLoanRateAsOfDate(db: FinanceDb, accountId: string, date: string): number {
+  const history = listLoanRateHistory(db, accountId);
+  const effective = history.find((row) => row.effectiveFrom <= date);
+  const chosen = effective ?? history[history.length - 1];
+  if (!chosen) throw new LoanTermsNotFoundError(accountId);
+  return chosen.annualRatePct;
+}
+
+/**
  * Record a rate change, updating `loan_terms.annual_rate_pct` to match in
  * the same transaction.
  *

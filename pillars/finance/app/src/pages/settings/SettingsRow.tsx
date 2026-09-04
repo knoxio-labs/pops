@@ -10,10 +10,18 @@ interface SettingsRowProps {
   subtitle: ReactNode;
   onEdit: () => void;
   onDelete: () => void;
+  extraMenuItems?: ReactNode;
 }
 
 /** One row in a settings list: a leading mark, a title/subtitle pair, and an actions menu. */
-export function SettingsRow({ leading, title, subtitle, onEdit, onDelete }: SettingsRowProps) {
+export function SettingsRow({
+  leading,
+  title,
+  subtitle,
+  onEdit,
+  onDelete,
+  extraMenuItems,
+}: SettingsRowProps) {
   return (
     <div className="flex items-center gap-3 rounded-md border p-3">
       {leading}
@@ -32,6 +40,7 @@ export function SettingsRow({ leading, title, subtitle, onEdit, onDelete }: Sett
         <DropdownMenuItem onClick={onEdit}>
           <Pencil /> Edit
         </DropdownMenuItem>
+        {extraMenuItems}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
           <Trash2 /> Delete

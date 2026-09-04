@@ -441,6 +441,10 @@ export function makeClient(app: Express) {
           r.patch(`/institutions/${id}`).send(data)
         ),
       delete: (id: string) => call<{ message: string }>((r) => r.delete(`/institutions/${id}`)),
+      merge: (id: string, body: { targetId: string }) =>
+        call<{ data: Institution; message: string }>((r) =>
+          r.post(`/institutions/${id}/merge`).send(body)
+        ),
       uploadLogo: (id: string, body: { contentType: string; contentBase64: string }) =>
         call<{ data: Institution; message: string }>((r) =>
           r.post(`/institutions/${id}/logo`).send(body)
