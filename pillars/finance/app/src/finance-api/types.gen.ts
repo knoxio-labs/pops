@@ -710,6 +710,503 @@ export type GiftCardDetailsRevealResponses = {
 export type GiftCardDetailsRevealResponse =
   GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
 
+export type LoanListOffsetLinksData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    active?: 'true' | 'false';
+  };
+  url: '/accounts/{id}/loan-offset-links';
+};
+
+export type LoanListOffsetLinksErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanListOffsetLinksError = LoanListOffsetLinksErrors[keyof LoanListOffsetLinksErrors];
+
+export type LoanListOffsetLinksResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      createdAt: string;
+      id: string;
+      linkedFrom: string;
+      loanAccountId: string;
+      offsetAccountId: string;
+      unlinkedAt: string | null;
+    }>;
+  };
+};
+
+export type LoanListOffsetLinksResponse =
+  LoanListOffsetLinksResponses[keyof LoanListOffsetLinksResponses];
+
+export type LoanLinkOffsetAccountData = {
+  /**
+   * Body
+   */
+  body?: {
+    linkedFrom: string;
+    offsetAccountId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-offset-links';
+};
+
+export type LoanLinkOffsetAccountErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanLinkOffsetAccountError =
+  LoanLinkOffsetAccountErrors[keyof LoanLinkOffsetAccountErrors];
+
+export type LoanLinkOffsetAccountResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      createdAt: string;
+      id: string;
+      linkedFrom: string;
+      loanAccountId: string;
+      offsetAccountId: string;
+      unlinkedAt: string | null;
+    };
+    message: string;
+  };
+};
+
+export type LoanLinkOffsetAccountResponse =
+  LoanLinkOffsetAccountResponses[keyof LoanLinkOffsetAccountResponses];
+
+export type LoanUnlinkOffsetAccountData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+    linkId: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-offset-links/{linkId}/unlink';
+};
+
+export type LoanUnlinkOffsetAccountErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanUnlinkOffsetAccountError =
+  LoanUnlinkOffsetAccountErrors[keyof LoanUnlinkOffsetAccountErrors];
+
+export type LoanUnlinkOffsetAccountResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      createdAt: string;
+      id: string;
+      linkedFrom: string;
+      loanAccountId: string;
+      offsetAccountId: string;
+      unlinkedAt: string | null;
+    };
+    message: string;
+  };
+};
+
+export type LoanUnlinkOffsetAccountResponse =
+  LoanUnlinkOffsetAccountResponses[keyof LoanUnlinkOffsetAccountResponses];
+
+export type LoanListRateHistoryData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-rate-history';
+};
+
+export type LoanListRateHistoryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanListRateHistoryError = LoanListRateHistoryErrors[keyof LoanListRateHistoryErrors];
+
+export type LoanListRateHistoryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      annualRatePct: number;
+      createdAt: string;
+      effectiveFrom: string;
+      id: string;
+      loanAccountId: string;
+      source: 'manual' | 'imported';
+    }>;
+  };
+};
+
+export type LoanListRateHistoryResponse =
+  LoanListRateHistoryResponses[keyof LoanListRateHistoryResponses];
+
+export type LoanRecordRateData = {
+  /**
+   * Body
+   */
+  body?: {
+    annualRatePct: number;
+    effectiveFrom: string;
+    source?: 'manual' | 'imported';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-rate-history';
+};
+
+export type LoanRecordRateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanRecordRateError = LoanRecordRateErrors[keyof LoanRecordRateErrors];
+
+export type LoanRecordRateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      annualRatePct: number;
+      createdAt: string;
+      effectiveFrom: string;
+      id: string;
+      loanAccountId: string;
+      source: 'manual' | 'imported';
+    };
+    message: string;
+  };
+};
+
+export type LoanRecordRateResponse = LoanRecordRateResponses[keyof LoanRecordRateResponses];
+
+export type LoanGetTermsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-terms';
+};
+
+export type LoanGetTermsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanGetTermsError = LoanGetTermsErrors[keyof LoanGetTermsErrors];
+
+export type LoanGetTermsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      annualRatePct: number;
+      createdAt: string;
+      monthlyRepayment: number;
+      originalPrincipal: number;
+      source: 'manual';
+      startedOn: string;
+      termMonths: number;
+      termsEffectiveFrom: string;
+      updatedAt: string;
+    };
+  };
+};
+
+export type LoanGetTermsResponse = LoanGetTermsResponses[keyof LoanGetTermsResponses];
+
+export type LoanWriteTermsData = {
+  /**
+   * Body
+   */
+  body?: {
+    annualRatePct: number;
+    monthlyRepayment: number;
+    originalPrincipal: number;
+    startedOn: string;
+    termMonths: number;
+    termsEffectiveFrom: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/loan-terms';
+};
+
+export type LoanWriteTermsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type LoanWriteTermsError = LoanWriteTermsErrors[keyof LoanWriteTermsErrors];
+
+export type LoanWriteTermsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      annualRatePct: number;
+      createdAt: string;
+      monthlyRepayment: number;
+      originalPrincipal: number;
+      source: 'manual';
+      startedOn: string;
+      termMonths: number;
+      termsEffectiveFrom: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type LoanWriteTermsResponse = LoanWriteTermsResponses[keyof LoanWriteTermsResponses];
+
 export type AccountsMergeData = {
   /**
    * Body

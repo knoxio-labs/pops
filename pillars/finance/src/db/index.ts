@@ -114,6 +114,19 @@ export type {
   ExpiringGiftCard,
 } from './services/gift-card-details.js';
 
+export * as loanTermsService from './services/loan-terms.js';
+
+export type {
+  LoanTermsRow,
+  LoanRateHistoryRow,
+  WriteLoanTermsInput,
+  RecordLoanRateInput,
+} from './services/loan-terms.js';
+
+export * as loanOffsetLinksService from './services/loan-offset-links.js';
+
+export type { LoanOffsetLinkRow, LinkOffsetAccountInput } from './services/loan-offset-links.js';
+
 export { resolvePendingPersonAccountEntity } from './services/account-entity-resolution.js';
 
 export { resolveAccountEntityDisplays } from './services/account-entity-display.js';

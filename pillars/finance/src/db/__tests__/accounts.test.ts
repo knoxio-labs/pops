@@ -153,7 +153,7 @@ describe('createAccount', () => {
   });
 
   describe('reserved kinds', () => {
-    it.each(['shared', 'loan', 'novated-lease', 'crypto', 'other'] as const)(
+    it.each(['shared', 'novated-lease', 'crypto', 'other'] as const)(
       'rejects kind %s with ReservedAccountKindError',
       (kind) => {
         expect(() => createAccount(db, { name: 'Reserved', kind, currency: 'AUD' })).toThrow(
@@ -162,7 +162,7 @@ describe('createAccount', () => {
       }
     );
 
-    it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card'] as const)(
+    it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card', 'loan'] as const)(
       'still allows day-one kind %s',
       (kind, index) => {
         expect(() =>

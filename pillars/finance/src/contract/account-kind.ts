@@ -25,7 +25,12 @@ export const ACCOUNT_KINDS = [
   'person',
   /** Reserved: a joint/shared account. No behaviour defined yet. */
   'shared',
-  /** Reserved: a personal loan or mortgage. No behaviour defined yet. */
+  /**
+   * A personal loan or mortgage — a debt owed to a lender, drawn down by
+   * repayments. Its terms, rate history and offset links live in the
+   * `loan_terms` / `loan_rate_history` / `loan_offset_links` tables
+   * (POPS-2829).
+   */
   'loan',
   /** Reserved: a novated lease. No behaviour defined yet. */
   'novated-lease',
@@ -46,6 +51,7 @@ export const DAY_ONE_ACCOUNT_KINDS = [
   'cash',
   'gift-card',
   'person',
+  'loan',
 ] as const satisfies readonly AccountKind[];
 
 /**
@@ -99,7 +105,11 @@ export const ACCOUNT_KIND_BEHAVIOURS = {
   // against.
   person: { signConvention: 'asset', hasExternalBalance: false, isStoredValue: false },
   shared: RESERVED_PLACEHOLDER,
-  loan: RESERVED_PLACEHOLDER,
+  // A liability: a positive balance is what is still owed to the lender. The
+  // lender issues statements, so there IS an external balance to checkpoint
+  // against (POPS-2750's territory). Not stored value — the balance is a debt,
+  // not money the ledger holds.
+  loan: { signConvention: 'liability', hasExternalBalance: true, isStoredValue: false },
   'novated-lease': RESERVED_PLACEHOLDER,
   crypto: RESERVED_PLACEHOLDER,
   other: RESERVED_PLACEHOLDER,

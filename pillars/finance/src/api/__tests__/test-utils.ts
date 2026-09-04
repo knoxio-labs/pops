@@ -46,6 +46,7 @@ import type {
   ProcessImportOutput,
 } from '../modules/imports/types.js';
 import type { Institution } from '../modules/institutions-types.js';
+import type { LoanOffsetLink, LoanRate, LoanTerms } from '../modules/loan-types.js';
 import type { SuggestedTag } from '../modules/tag-suggester/index.js';
 import type { Transaction } from '../modules/transactions-types.js';
 import type { WishListItem } from '../modules/wishlist-types.js';
@@ -458,6 +459,32 @@ export function makeClient(app: Express) {
       reveal: (accountId: string) =>
         call<{ data: RevealedGiftCardSecretResponse; message: string }>((r) =>
           r.post(`/accounts/${accountId}/gift-card-details/reveal`).send({})
+        ),
+    },
+    loan: {
+      getTerms: (accountId: string) =>
+        call<{ data: LoanTerms }>((r) => r.get(`/accounts/${accountId}/loan-terms`)),
+      writeTerms: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: LoanTerms; message: string }>((r) =>
+          r.put(`/accounts/${accountId}/loan-terms`).send(body)
+        ),
+      listRateHistory: (accountId: string) =>
+        call<{ data: LoanRate[] }>((r) => r.get(`/accounts/${accountId}/loan-rate-history`)),
+      recordRate: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: LoanRate; message: string }>((r) =>
+          r.post(`/accounts/${accountId}/loan-rate-history`).send(body)
+        ),
+      listOffsetLinks: (accountId: string, query: { active?: 'true' | 'false' } = {}) =>
+        call<{ data: LoanOffsetLink[] }>((r) =>
+          r.get(`/accounts/${accountId}/loan-offset-links`).query(query)
+        ),
+      linkOffsetAccount: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: LoanOffsetLink; message: string }>((r) =>
+          r.post(`/accounts/${accountId}/loan-offset-links`).send(body)
+        ),
+      unlinkOffsetAccount: (accountId: string, linkId: string) =>
+        call<{ data: LoanOffsetLink; message: string }>((r) =>
+          r.post(`/accounts/${accountId}/loan-offset-links/${linkId}/unlink`).send({})
         ),
     },
     transactions: {

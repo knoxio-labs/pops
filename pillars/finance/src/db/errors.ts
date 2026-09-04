@@ -4,14 +4,16 @@
  * Plain Error subclasses — the service layer stays HTTP-agnostic. The API
  * layer maps each to its status code when surfacing to clients. The
  * accounts/currencies/institutions/gift-card error family lives in
- * `account-errors.ts`, and the account-merge refusal family (POPS-2812) in
- * `merge-account-errors.ts` — both split out once this file (then
- * `account-errors.ts`) hit its line cap — and are re-exported here so
- * existing `from '../errors.js'` imports keep working.
+ * `account-errors.ts`, the account-merge refusal family (POPS-2812) in
+ * `merge-account-errors.ts`, and the loan family in `loan-errors.ts` — all
+ * split out once this file (then `account-errors.ts`) hit its line cap —
+ * and are re-exported here so existing `from '../errors.js'` imports keep
+ * working.
  */
 
 export * from './account-errors.js';
 export * from './merge-account-errors.js';
+export * from './loan-errors.js';
 
 export class WishListItemNotFoundError extends Error {
   override readonly name = 'WishListItemNotFoundError' as const;
