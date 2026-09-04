@@ -233,9 +233,10 @@ describe('loan repayment split at import', () => {
     expect(earlierFee?.amountCents).toBe(50_000);
 
     // Later leg: balance before 2026-08-01 must include the earlier
-    // repayment's $1,000 already paid down ($100,000 - $1,000 = $99,000 owing),
-    // so interest is 6% × $99,000 / 12 = $495.00 — NOT the buggy $500.00 that
-    // results from missing the earlier-dated row.
+    // repayment's full $1,500 (both legs reduce the loan balance, not just the
+    // $1,000 principal) — $100,000 - $1,500 = $98,500 owing, so interest is
+    // 6% × $98,500 / 12 = $492.50 — NOT the buggy $500.00 that results from
+    // missing the earlier-dated row entirely.
     expect(laterFee?.amountCents).toBe(49_250);
   });
 
