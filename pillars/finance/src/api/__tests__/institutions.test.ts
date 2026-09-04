@@ -157,3 +157,59 @@ describe('institutions — error mapping', () => {
     });
   });
 });
+
+describe('institutions — merge (POPS-2844)', () => {
+  it('merges the source into the target, repoints its accounts, and removes the source', async () => {
+    const source = await client().institutions.create({ name: 'A.N.Z.', colour: '#111111' });
+    const target = await client().institutions.create({ name: 'ANZ Bank', colour: '#0033a0' });
+    const account = await client().accounts.create({
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: source.data.id,
+    });
+
+    const merged = await client().institutions.merge(source.data.id, { targetId: target.data.id });
+
+    expect(merged.data).toMatchObject({ id: target.data.id, colour: '#0033a0' });
+    expect(merged.message).toBe('Institutions merged');
+
+    const movedAccount = await client().accounts.get(account.data.id);
+    expect(movedAccount.data.institutionId).toBe(target.data.id);
+
+    const { data } = await client().institutions.list();
+    expect(data.map((i) => i.id)).not.toContain(source.data.id);
+  });
+
+  it('422s merging an institution into itself', async () => {
+    const institution = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
+
+    await expect(
+      client().institutions.merge(institution.data.id, { targetId: institution.data.id })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('404s merging an unknown source id', async () => {
+    const target = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
+
+    await expect(
+      client().institutions.merge('missing-id', { targetId: target.data.id })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('404s merging into an unknown target id', async () => {
+    const source = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
+
+    await expect(
+      client().institutions.merge(source.data.id, { targetId: 'missing-id' })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('rejects a missing targetId', async () => {
+    const source = await client().institutions.create({ name: 'Westpac', colour: '#d5001c' });
+
+    await expect(
+      client().institutions.merge(source.data.id, { targetId: '' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+});

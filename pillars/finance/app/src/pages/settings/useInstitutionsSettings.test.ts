@@ -8,11 +8,13 @@ import type { Institution } from './types';
 const institutionsListMock = vi.hoisted(() => vi.fn());
 const institutionsUpdateMock = vi.hoisted(() => vi.fn());
 const institutionsDeleteMock = vi.hoisted(() => vi.fn());
+const institutionsMergeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../finance-api/index.js', () => ({
   institutionsList: (...args: unknown[]) => institutionsListMock(...args),
   institutionsUpdate: (...args: unknown[]) => institutionsUpdateMock(...args),
   institutionsDelete: (...args: unknown[]) => institutionsDeleteMock(...args),
+  institutionsMerge: (...args: unknown[]) => institutionsMergeMock(...args),
 }));
 
 const toastSuccess = vi.hoisted(() => vi.fn());
@@ -53,6 +55,10 @@ beforeEach(() => {
   });
   institutionsDeleteMock.mockResolvedValue({
     data: { message: 'Institution deleted' },
+    error: undefined,
+  });
+  institutionsMergeMock.mockResolvedValue({
+    data: { data: makeInstitution(), message: 'Institutions merged' },
     error: undefined,
   });
 });
@@ -135,5 +141,65 @@ describe('useInstitutionsSettings — delete', () => {
       })
     );
     expect(toastSuccess).toHaveBeenCalledWith('Institution deleted');
+  });
+});
+
+describe('useInstitutionsSettings — merge', () => {
+  it('calls institutionsMerge with the merging id and picked targetId, invalidates the list, and toasts success', async () => {
+    const { queryClient, wrapper } = makeWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useInstitutionsSettings(), { wrapper });
+
+    act(() => {
+      result.current.setMerging(makeInstitution({ id: 'inst-source', name: 'A.N.Z.' }));
+    });
+    act(() => {
+      result.current.onMerge('inst-target');
+    });
+
+    await waitFor(() =>
+      expect(institutionsMergeMock).toHaveBeenCalledWith({
+        path: { id: 'inst-source' },
+        body: { targetId: 'inst-target' },
+      })
+    );
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ['finance', 'institutions', 'list'],
+      })
+    );
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Institutions merged'));
+  });
+
+  it('does nothing when onMerge is called with no institution being merged', () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useInstitutionsSettings(), { wrapper });
+
+    act(() => {
+      result.current.onMerge('inst-target');
+    });
+
+    expect(institutionsMergeMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a 422 same-institution refusal from the server as a toast', async () => {
+    institutionsMergeMock.mockResolvedValue({
+      data: undefined,
+      error: { message: "Institution 'inst-1' cannot be merged into itself" },
+      response: { status: 422 },
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useInstitutionsSettings(), { wrapper });
+
+    act(() => {
+      result.current.setMerging(makeInstitution({ id: 'inst-1' }));
+    });
+    act(() => {
+      result.current.onMerge('inst-1');
+    });
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Institution 'inst-1' cannot be merged into itself")
+    );
   });
 });

@@ -8,6 +8,7 @@ import { unwrap } from '../../finance-api-helpers.js';
 import {
   institutionsDelete,
   institutionsList,
+  institutionsMerge,
   institutionsUpdate,
 } from '../../finance-api/index.js';
 import { type Institution, InstitutionFormSchema, type InstitutionFormValues } from './types';
@@ -19,6 +20,7 @@ const DEFAULT_FORM_VALUES: InstitutionFormValues = { name: '', colour: '#6b7280'
 function useInstitutionMutations(args: {
   setEditing: (i: Institution | null) => void;
   setDeletingId: (id: string | null) => void;
+  setMerging: (i: Institution | null) => void;
 }) {
   const queryClient = useQueryClient();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: INSTITUTIONS_KEY });
@@ -44,7 +46,20 @@ function useInstitutionMutations(args: {
     onSettled: invalidate,
   });
 
-  return { updateMutation, deleteMutation };
+  const mergeMutation = useMutation({
+    mutationFn: async (input: { id: string; targetId: string }) =>
+      unwrap(
+        await institutionsMerge({ path: { id: input.id }, body: { targetId: input.targetId } })
+      ),
+    onSuccess: () => {
+      toast.success('Institutions merged');
+      args.setMerging(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+    onSettled: invalidate,
+  });
+
+  return { updateMutation, deleteMutation, mergeMutation };
 }
 
 /**
@@ -55,15 +70,17 @@ function useInstitutionMutations(args: {
 export function useInstitutionsSettings() {
   const [editing, setEditing] = useState<Institution | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [merging, setMerging] = useState<Institution | null>(null);
 
   const query = useQuery({
     queryKey: INSTITUTIONS_KEY,
     queryFn: async () => unwrap(await institutionsList()),
   });
 
-  const { updateMutation, deleteMutation } = useInstitutionMutations({
+  const { updateMutation, deleteMutation, mergeMutation } = useInstitutionMutations({
     setEditing,
     setDeletingId,
+    setMerging,
   });
 
   const form = useForm<InstitutionFormValues>({
@@ -81,6 +98,11 @@ export function useInstitutionsSettings() {
     updateMutation.mutate({ id: editing.id, data: values });
   };
 
+  const onMerge = (targetId: string) => {
+    if (!merging) return;
+    mergeMutation.mutate({ id: merging.id, targetId });
+  };
+
   return {
     query,
     form,
@@ -88,9 +110,13 @@ export function useInstitutionsSettings() {
     setEditing,
     deletingId,
     setDeletingId,
+    merging,
+    setMerging,
     handleEdit,
     onSubmit,
+    onMerge,
     updateMutation,
     deleteMutation,
+    mergeMutation,
   };
 }

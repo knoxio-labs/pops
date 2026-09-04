@@ -144,6 +144,9 @@ import type {
   InstitutionsDeleteResponses,
   InstitutionsListData,
   InstitutionsListResponses,
+  InstitutionsMergeData,
+  InstitutionsMergeErrors,
+  InstitutionsMergeResponses,
   InstitutionsUpdateData,
   InstitutionsUpdateErrors,
   InstitutionsUpdateResponses,
@@ -1246,6 +1249,25 @@ export const institutionsUpdate = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/institutions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Merge institution :id (the source) into targetId: repoint every account onto targetId and delete it outright. Rejects merging an institution into itself with 422. The survivor keeps its own colour and logoAssetId — targetId's values win unqualified.
+ */
+export const institutionsMerge = <ThrowOnError extends boolean = false>(
+  options: Options<InstitutionsMergeData, ThrowOnError>
+): RequestResult<InstitutionsMergeResponses, InstitutionsMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    InstitutionsMergeResponses,
+    InstitutionsMergeErrors,
+    ThrowOnError
+  >({
+    url: '/institutions/{id}/merge',
     ...options,
     headers: {
       'Content-Type': 'application/json',
