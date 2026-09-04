@@ -72,6 +72,14 @@ describe('buildAddress / parseAddress', () => {
     expect(parseAddress('/frame/s/a/b')).toBeNull();
   });
 
+  it('round-trips a flow step by its slug, not its catalog-wide id', () => {
+    const step = { id: 'finance/upload', slug: 'upload' };
+    const url = buildAddress({ path: ['finance', 'import'], stepId: step.slug });
+    expect(url).toBe('/s/finance/import?step=upload');
+    const [pathname, search] = url.split('?');
+    expect(parseAddress(pathname ?? '', `?${search}`)?.stepId).toBe(step.slug);
+  });
+
   it('derives the screen id from the address, and back', () => {
     expect(screenIdOf({ path: ['finance', 'accounts', 'form'] })).toBe('finance/accounts/form');
     expect(pathOf('finance/accounts/form')).toEqual(['finance', 'accounts', 'form']);

@@ -4,18 +4,12 @@ import { cn } from '@pops/ui';
 
 import { buildScreenTree } from '../registry';
 import { buildAddress, pathOf, type Address } from './address';
+import { nodesOf, prettify, toSegments, type Node } from './sidebar-tree';
 import { useSurfaceCoords } from './use-surface-coords';
 
 import type { ReactNode } from 'react';
 
-import type {
-  Catalog,
-  ExperimentEntry,
-  GroupNode,
-  Placed,
-  ScreenEntry,
-  TreeNode,
-} from '../registry';
+import type { Catalog, ExperimentEntry, GroupNode, ScreenEntry, TreeNode } from '../registry';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -24,49 +18,6 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
       ? 'bg-accent text-accent-foreground'
       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
   );
-
-/** A screen's place in the tree: the main screen if there is one, its active experiments, or both. */
-interface Node extends Placed {
-  id: string;
-  order: number;
-  title: string;
-  screen?: ScreenEntry;
-  experiments: ExperimentEntry[];
-}
-
-/** "account-form" → "Account form" — a group folder has no file to carry a title. */
-function prettify(name: string): string {
-  const spaced = name.replace(/-/gu, ' ');
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
-/**
- * The tree: main screens under their area and whatever groups nest them, each
- * listing its active experiments inline. An experiment whose screen exists
- * only in its own variants becomes a node of its own, in the place its id
- * puts it. Decided and archived experiments render nowhere — they are
- * history, and the overview lists them.
- */
-function nodesOf(catalog: Catalog): Node[] {
-  const nodes: Node[] = catalog.screens.map((screen) => ({
-    id: screen.id,
-    order: screen.order,
-    title: screen.title,
-    screen,
-    experiments: screen.experiments.filter((e) => e.status === 'active'),
-  }));
-  const mainIds = new Set(catalog.screens.map((s) => s.id));
-  for (const exp of catalog.experiments) {
-    if (exp.status !== 'active' || mainIds.has(exp.screen)) continue;
-    nodes.push({
-      id: exp.screen,
-      order: Number.MAX_SAFE_INTEGER,
-      title: prettify(pathOf(exp.screen).at(-1) ?? exp.screen),
-      experiments: [exp],
-    });
-  }
-  return nodes;
-}
 
 /** Every nested level indents inside the same rule, so depth reads at a glance. */
 function Nested({ children }: { children: ReactNode }) {
@@ -182,11 +133,18 @@ function ScreenNode({ node, active }: { node: Node; active: Active }) {
 function Branch({ nodes, active }: { nodes: TreeNode<Node>[]; active: Active }) {
   return (
     <>
-      {nodes.map((child) =>
-        child.kind === 'group' ? (
-          <Group key={child.group.path.join('/')} group={child.group} active={active} />
+      {toSegments(nodes).map((segment) =>
+        segment.kind === 'group' ? (
+          <Group key={segment.group.path.join('/')} group={segment.group} active={active} />
         ) : (
-          <ScreenNode key={child.item.id} node={child.item} active={active} />
+          <div
+            key={segment.cluster.key}
+            className={segment.cluster.grouped ? 'rounded-lg bg-muted/40 py-1' : undefined}
+          >
+            {segment.cluster.nodes.map((node) => (
+              <ScreenNode key={node.id} node={node} active={active} />
+            ))}
+          </div>
         )
       )}
     </>
@@ -218,8 +176,8 @@ export function SidebarScreens({ catalog }: { catalog: Catalog }) {
   return (
     <nav aria-label="Screens" className="space-y-4">
       {buildScreenTree(nodesOf(catalog)).map((area) => (
-        <div key={area.name}>
-          <p className="mb-1 px-3 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
+        <div key={area.name} className="space-y-1.5">
+          <p className="px-3 text-2xs font-semibold tracking-wider text-muted-foreground uppercase">
             {area.name}
           </p>
           <Branch nodes={area.children} active={active} />

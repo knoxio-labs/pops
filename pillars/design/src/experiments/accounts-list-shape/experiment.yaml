@@ -1,0 +1,20 @@
+name: Accounts list shape
+question: Does the accounts list read better as a flat table, as cards grouped
+  by kind, or as a card grid two or three across?
+status: decided
+screen: finance/accounts
+variants:
+  grouped: Cards grouped by kind
+  grid: Card grid, 2-3 per line
+chosen: grid
+decided: 2026-09-03
+rationale: >-
+  The grid. The balance is the point of this screen, and only the grid gives it
+  room to be the headline — the table demotes it to one right-aligned column
+  among four. A logo, a name and a number read as an account; a table row reads
+  as a database record. It also fills the page at the real account count, where
+  the table leaves the width empty.
+
+  Grouping by kind is not what lost. The objection to `grouped` was the
+  full-width card, not the sections, so a grid grouped by kind stays open and
+  this decision does not close it.

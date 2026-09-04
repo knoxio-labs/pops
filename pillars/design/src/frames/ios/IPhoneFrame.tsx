@@ -2,6 +2,8 @@ import './tokens.css';
 import './type-scale.css';
 import './frame.css';
 
+import { IosTabBar, tabBarVisible } from './TabBar';
+
 import type { ReactNode } from 'react';
 
 function StatusBar() {
@@ -19,7 +21,7 @@ function StatusBar() {
 function HomeIndicator() {
   return (
     <div
-      className="ios-home-indicator absolute inset-x-0 bottom-0 z-10 flex items-center justify-center"
+      className="ios-home-indicator absolute inset-x-0 bottom-0 z-20 flex items-center justify-center"
       aria-hidden
     >
       <span
@@ -41,7 +43,16 @@ function HomeIndicator() {
  * runtime. Native fidelity is deliberately out of scope — rasterising real
  * SwiftUI screens beside this is POPS-2784.
  */
-export function IPhoneFrame({ children }: { children: ReactNode }) {
+export function IPhoneFrame({
+  area,
+  slug,
+  children,
+}: {
+  area?: string;
+  slug?: string;
+  children: ReactNode;
+}) {
+  const showTabBar = tabBarVisible(area, slug);
   return (
     <div
       className="ios-frame flex min-h-screen items-center justify-center p-6"
@@ -53,7 +64,20 @@ export function IPhoneFrame({ children }: { children: ReactNode }) {
       >
         <div className="ios-device relative overflow-hidden rounded-[42px]">
           <StatusBar />
-          <div className="ios-device-content ios-body">{children}</div>
+          <div
+            className="ios-device-content ios-body"
+            style={
+              showTabBar
+                ? {
+                    paddingBottom:
+                      'calc(var(--ios-safe-area-inset-bottom) + var(--ios-tab-bar-height))',
+                  }
+                : undefined
+            }
+          >
+            {children}
+          </div>
+          {showTabBar ? <IosTabBar activeSlug={slug} /> : null}
           <HomeIndicator />
         </div>
       </div>

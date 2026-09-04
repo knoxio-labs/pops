@@ -11,11 +11,15 @@
 .ios-device {
   --ios-safe-area-inset-top: 59px;
   --ios-safe-area-inset-bottom: 34px;
+  --ios-tab-bar-height: 49px;
 
   width: 393px;
   height: 852px;
   background: var(--ios-background);
   color: var(--ios-foreground);
+  /* Gives `position: fixed` children (the tab bar, a floating hero button) a
+     containing block scoped to the phone rather than the whole document. */
+  transform: translateZ(0);
 }
 
 .ios-device-content {

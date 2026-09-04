@@ -46,14 +46,15 @@ export function Screen() {
   if (!screen) return <Note>Screen not found.</Note>;
 
   if (screen.steps) {
-    const hrefForStep = (stepId: string) =>
-      `${FRAME_PREFIX}${buildAddress({ ...address, stepId, state: state ?? undefined })}`;
+    const hrefForStep = (stepSlug: string) =>
+      `${FRAME_PREFIX}${buildAddress({ ...address, stepId: stepSlug, state: state ?? undefined })}`;
     const first = screen.steps[0];
-    if (!address.stepId) {
+    const step = address.stepId ? screen.steps.find((s) => s.slug === address.stepId) : undefined;
+    if (!step) {
       if (!first) return <Note>Flow has no steps.</Note>;
       return <Navigate replace to={hrefForStep(first.slug)} />;
     }
-    return <Flow flow={screen} stepId={address.stepId} state={state} hrefForStep={hrefForStep} />;
+    return <Flow flow={screen} stepId={step.slug} state={state} hrefForStep={hrefForStep} />;
   }
 
   const Render = renderOf(screen, state);

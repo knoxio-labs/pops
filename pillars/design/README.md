@@ -8,7 +8,7 @@ It is a port of [knoxio/design-playground](https://github.com/knoxio/design-play
 
 ## The design surface
 
-Three directories under `src/` are the surface a designer edits. Nothing in them is registered anywhere: a file in the right place is discovered by `src/registry/catalog.ts`, and a file in the wrong place is a contract error listed in the sidebar rather than a crash.
+Four directories under `src/` are the surface a designer edits. Nothing in them is registered anywhere: a file in the right place is discovered by `src/registry/catalog.ts`, and a file in the wrong place is a contract error listed in the sidebar rather than a crash.
 
 ```
 src/screens/<area>/<screen>.tsx           a screen: default export + `meta`, optional `states`
@@ -19,11 +19,16 @@ src/experiments/<id>/experiment.yaml      the question, its status, the screen i
 src/experiments/<id>/variants/<v>/screens/<area>/<screen>.tsx
                                           a variant's screens override main by path
 src/fixtures/                             typed, fictional data — no API calls, no contracts
+src/kit/                                  controls a screen composes, and not screens themselves
 ```
 
 A screen exports what `src/contract.ts` describes: a default component, a `meta` with a `title` (and an optional `order`), and optionally a `states` map of named render thunks — `empty`, `error`, `row-selected` — each rendering the component under that condition. The default render is the implicit `default` state.
 
 An experiment is a question about one screen. Its variants are the competing answers; each variant's screens overlay main by relative path, so flipping a variant always shows a complete app. At most one active experiment sits on a screen. Deciding one is a merge (the chosen variant's screens are copied into main and `chosen` and `rationale` are recorded); `archived` closes it without a decision. Both leave the sidebar; the overview still lists them.
+
+`src/kit/` is the one of those four the registry does not look at, and that is the point. `catalog.ts` globs only `src/screens` and `src/experiments`, so anything else under `src/` is invisible to it — which is what makes the kit possible. A control that several screens compose (an account picker, a filter row, a sparkline) is not a screen: it has no default export and no `meta`, and putting it beside a screen would make it a contract error. `src/frames/ios/primitives.tsx` was the first module of this shape; the kit is where the pattern went once more than one screen needed it.
+
+The rule that keeps it from becoming a dumping ground: a kit module is a **control**, and a screen is what arranges controls into something reviewable. If a file has states worth looking at, it belongs in `screens/`. Two consequences worth knowing. A variant may import from the kit even though variants are otherwise self-contained — the shapes under an experiment must offer _identical_ controls or they are not comparable, and sharing them enforces that rather than breaking it. And the kit is the seam an implementation builds against: when the picker designed here becomes a real component, it is the kit module that describes what it has to be.
 
 Areas are the first directory under `screens/` and head the sidebar. Use the pillar id the screen belongs to (`finance`, `media`) or a cross-cutting name (`shell`, `ios`).
 
