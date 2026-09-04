@@ -1,31 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
+import { makeCatalog, makeScreen } from '../test/factories';
 import { capabilitiesFor, resolveSurface } from './surface';
 
-import type { Catalog, ScreenEntry } from '../registry';
+import type { Catalog } from '../registry';
 
-function step(area: string, flow: string, slug: string): ScreenEntry {
-  return { id: `${area}/${slug}`, area, slug, title: slug, order: 0, experiments: [] };
-}
-
-function flowScreen(): ScreenEntry {
-  return {
+function flowScreen(): ReturnType<typeof makeScreen> {
+  return makeScreen({
     id: 'finance/import',
-    area: 'finance',
-    slug: 'import',
     title: 'Import',
-    order: 0,
     steps: [
-      step('finance', 'import', 'account'),
-      step('finance', 'import', 'upload'),
-      step('finance', 'import', 'review'),
+      makeScreen({ id: 'finance/account' }),
+      makeScreen({ id: 'finance/upload' }),
+      makeScreen({ id: 'finance/review' }),
     ],
-    experiments: [],
-  };
+  });
 }
 
-function catalogOf(screens: ScreenEntry[]): Catalog {
-  return { screens, experiments: [], errors: [] };
+function catalogOf(screens: ReturnType<typeof makeScreen>[]): Catalog {
+  return makeCatalog({ screens });
 }
 
 describe('resolveSurface', () => {

@@ -76,7 +76,8 @@ describe('buildAddress / parseAddress', () => {
     const step = { id: 'finance/upload', slug: 'upload' };
     const url = buildAddress({ path: ['finance', 'import'], stepId: step.slug });
     expect(url).toBe('/s/finance/import?step=upload');
-    expect(parseAddress(url)?.stepId).toBe(step.slug);
+    const [pathname, search] = url.split('?');
+    expect(parseAddress(pathname ?? '', `?${search}`)?.stepId).toBe(step.slug);
   });
 
   it('derives the screen id from the address, and back', () => {

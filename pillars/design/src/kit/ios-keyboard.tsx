@@ -17,7 +17,7 @@ export function IosKeyboard() {
     >
       {ROWS.map((row) => (
         <div key={row} className="flex justify-center gap-1.5">
-          {[...row].map((key) => (
+          {Array.from(row).map((key) => (
             <span
               key={key}
               className="ios-body flex h-10 w-8 items-center justify-center rounded-[5px]"
