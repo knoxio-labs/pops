@@ -18,9 +18,15 @@ import type {
   MobileBootstrapData,
   MobileBootstrapErrors,
   MobileBootstrapResponses,
+  MobileFinanceGetAccountData,
+  MobileFinanceGetAccountErrors,
+  MobileFinanceGetAccountResponses,
   MobileFinanceGetTransactionData,
   MobileFinanceGetTransactionErrors,
   MobileFinanceGetTransactionResponses,
+  MobileFinanceListAccountsData,
+  MobileFinanceListAccountsErrors,
+  MobileFinanceListAccountsResponses,
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
@@ -134,6 +140,34 @@ export const mobileBootstrap = <ThrowOnError extends boolean = false>(
     url: '/mobile/bootstrap',
     ...options,
   });
+
+/**
+ * Every account this device can read, active and archived alike
+ */
+export const mobileFinanceListAccounts = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileFinanceListAccountsData, ThrowOnError>
+): RequestResult<
+  MobileFinanceListAccountsResponses,
+  MobileFinanceListAccountsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobileFinanceListAccountsResponses,
+    MobileFinanceListAccountsErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/accounts', ...options });
+
+/**
+ * One account, for whatever the phone can build a dashboard from today
+ */
+export const mobileFinanceGetAccount = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceGetAccountData, ThrowOnError>
+): RequestResult<MobileFinanceGetAccountResponses, MobileFinanceGetAccountErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileFinanceGetAccountResponses,
+    MobileFinanceGetAccountErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/accounts/{id}', ...options });
 
 /**
  * One cursor-paginated page of transaction list rows
