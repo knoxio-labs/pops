@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSetPageContext } from '@pops/navigation';
@@ -8,12 +8,7 @@ import { Alert, Button, DataTable, PageHeader, Skeleton } from '@pops/ui';
 
 import { unwrap } from '../finance-api-helpers.js';
 import { transactionsSuggestTags, transactionsUpdate } from '../finance-api/index.js';
-import {
-  buildColumns,
-  buildTransactionFilters,
-  getDistinctAccounts,
-  type Transaction,
-} from './transactions/columns';
+import { buildColumns, buildTransactionFilters, type Transaction } from './transactions/columns';
 import { DeleteTransactionDialog } from './transactions/DeleteTransactionDialog';
 import { PurchaseDetailDialog } from './transactions/purchase-detail/PurchaseDetailDialog';
 import { usePurchaseLinkSummaries } from './transactions/purchase-link/usePurchaseLinkSummaries';
@@ -21,6 +16,8 @@ import { TransactionFormDialog } from './transactions/TransactionFormDialog';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
 
 import type { TFunction } from 'i18next';
+
+import type { AccountOption } from '@pops/ui';
 
 function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
   const { t } = useTranslation('finance');
@@ -48,7 +45,7 @@ function TableContent({
   isLoading: boolean;
   transactions: Transaction[] | undefined;
   columns: ReturnType<typeof buildColumns>;
-  accounts: string[];
+  accounts: AccountOption[];
   onFilteredCountChange: (count: number) => void;
 }) {
   const { t } = useTranslation('finance');
@@ -133,31 +130,39 @@ function useTagHandlers() {
   return { onTagSave, onTagSuggest };
 }
 
-export function TransactionsPage() {
-  const { t } = useTranslation('finance');
-  useSetPageContext({ page: 'transactions' });
-  const state = useTransactionsPage();
+function useTransactionColumns(
+  t: TFunction<'finance'>,
+  state: ReturnType<typeof useTransactionsPage>,
+  purchaseLinks: ReturnType<typeof usePurchaseLinkSummaries>,
+  onShowPurchase: (t: Transaction | null) => void
+) {
   const { onTagSave, onTagSuggest } = useTagHandlers();
-  const { description, setFilteredCount } = useSubtitle(t, state.query.data?.pagination.total); // prettier-ignore
-  const accounts = useMemo(() => getDistinctAccounts(state.query.data?.data), [state.query.data]);
-  const [purchaseTx, setPurchaseTx] = useState<Transaction | null>(null);
-  const purchaseLinks = usePurchaseLinkSummaries(state.query.data?.data);
-
-  if (state.query.error) {
-    return <ErrorView message={state.query.error.message} onRetry={() => state.query.refetch()} />;
-  }
-
-  const columns = buildColumns({
+  return buildColumns({
     t,
     availableTags: state.availableTags,
+    accounts: state.accounts,
     purchaseLinks,
     onTagSave,
     onTagSuggest,
     onEdit: state.handleEdit,
     onDelete: state.setDeletingTx,
     onUnlink: state.confirmUnlink,
-    onShowPurchase: setPurchaseTx,
+    onShowPurchase,
   });
+}
+
+export function TransactionsPage() {
+  const { t } = useTranslation('finance');
+  useSetPageContext({ page: 'transactions' });
+  const state = useTransactionsPage();
+  const { description, setFilteredCount } = useSubtitle(t, state.query.data?.pagination.total); // prettier-ignore
+  const [purchaseTx, setPurchaseTx] = useState<Transaction | null>(null);
+  const purchaseLinks = usePurchaseLinkSummaries(state.query.data?.data);
+  const columns = useTransactionColumns(t, state, purchaseLinks, setPurchaseTx);
+
+  if (state.query.error) {
+    return <ErrorView message={state.query.error.message} onRetry={() => state.query.refetch()} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -174,7 +179,7 @@ export function TransactionsPage() {
         isLoading={state.query.isLoading}
         transactions={state.query.data?.data}
         columns={columns}
-        accounts={accounts}
+        accounts={state.accounts}
         onFilteredCountChange={setFilteredCount}
       />
       <TransactionFormDialog
@@ -185,6 +190,7 @@ export function TransactionsPage() {
         isSubmitting={state.isSubmitting}
         onSubmit={state.onSubmit}
         entities={state.entities}
+        accounts={state.accounts}
       />
       <DeleteTransactionDialog
         deletingTx={state.deletingTx}

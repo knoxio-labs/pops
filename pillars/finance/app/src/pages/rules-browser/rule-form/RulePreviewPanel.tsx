@@ -6,7 +6,11 @@ import { Loader2, Search } from 'lucide-react';
 
 import { Button, formatDate } from '@pops/ui';
 
+import { AccountLabel } from '../../../components/accounts/AccountLabel';
+import { useAllAccounts } from '../../../components/accounts/hooks/useAllAccounts';
 import { TagBadgeRow } from '../../../components/tags/TagChip';
+
+import type { AccountOption } from '@pops/ui';
 
 import type { MatchType } from '../types';
 import type { RulePreviewResult } from './types';
@@ -23,7 +27,13 @@ export interface RulePreviewPanelProps {
   };
 }
 
-function MatchRow({ match }: { match: RulePreviewResult['matches'][number] }) {
+function MatchRow({
+  match,
+  accounts,
+}: {
+  match: RulePreviewResult['matches'][number];
+  accounts: AccountOption[] | undefined;
+}) {
   return (
     <li className="p-2 text-sm" data-testid="preview-match-row">
       <div className="flex items-center justify-between gap-2">
@@ -31,7 +41,7 @@ function MatchRow({ match }: { match: RulePreviewResult['matches'][number] }) {
         <span className="text-muted-foreground tabular-nums">{formatDate(match.date)}</span>
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-        <span>{match.account}</span>
+        <AccountLabel accounts={accounts} account={match.account} size="compact" />
         {match.entityName && <span>• {match.entityName}</span>}
         {match.tags.length > 0 && (
           <TagBadgeRow
@@ -46,7 +56,10 @@ function MatchRow({ match }: { match: RulePreviewResult['matches'][number] }) {
   );
 }
 
-function PreviewBody({ preview }: RulePreviewPanelProps) {
+function PreviewBody({
+  preview,
+  accounts,
+}: RulePreviewPanelProps & { accounts: AccountOption[] | undefined }) {
   const { data, isFetching, error, isIdle } = preview;
 
   if (isIdle) {
@@ -79,7 +92,7 @@ function PreviewBody({ preview }: RulePreviewPanelProps) {
   return (
     <ul className="divide-y divide-border rounded-md border" data-testid="preview-matches">
       {data.matches.map((match) => (
-        <MatchRow key={match.id} match={match} />
+        <MatchRow key={match.id} match={match} accounts={accounts} />
       ))}
     </ul>
   );
@@ -131,11 +144,12 @@ function PreviewSummary({ preview }: RulePreviewPanelProps) {
 }
 
 export function RulePreviewPanel({ preview }: RulePreviewPanelProps) {
+  const { accounts } = useAllAccounts();
   return (
     <div className="flex flex-col gap-3 min-w-0" data-testid="rule-preview-panel">
       <PreviewHeader preview={preview} />
       <PreviewSummary preview={preview} />
-      <PreviewBody preview={preview} />
+      <PreviewBody preview={preview} accounts={accounts} />
     </div>
   );
 }

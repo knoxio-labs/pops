@@ -1,5 +1,7 @@
 import { Badge } from '@pops/ui';
 
+import { AccountLabel } from '../../accounts/AccountLabel';
+import { useAllAccounts } from '../../accounts/hooks/useAllAccounts';
 import { matchTypeLabel } from '../lib/correction-utils';
 
 import type {
@@ -71,6 +73,7 @@ function TriggeringSection({
   triggeringTransaction: TriggeringTransactionContext;
   diff: string | null;
 }) {
+  const { accounts } = useAllAccounts();
   return (
     <div className="space-y-1">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -82,7 +85,13 @@ function TriggeringSection({
       <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
         <span data-testid="triggering-amount">{formatCurrency(triggeringTransaction.amount)}</span>
         <span data-testid="triggering-date">{triggeringTransaction.date}</span>
-        <span data-testid="triggering-account">{triggeringTransaction.account}</span>
+        <span data-testid="triggering-account">
+          <AccountLabel
+            accounts={accounts}
+            account={triggeringTransaction.account}
+            size="compact"
+          />
+        </span>
         {triggeringTransaction.location && <span>location: {triggeringTransaction.location}</span>}
       </div>
       {diff && (

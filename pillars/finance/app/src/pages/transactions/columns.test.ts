@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import enAUFinance from '@pops/locales/en-AU/finance.json';
 import ptBRFinance from '@pops/locales/pt-BR/finance.json';
 
-import { buildTransactionFilters, getDistinctAccounts } from './columns';
+import { buildTransactionFilters } from './columns';
 
-import type { Transaction } from './types';
+import type { AccountOption } from '@pops/ui';
 
 const i18n = createInstance();
 void i18n.use(initReactI18next).init({
@@ -22,52 +22,43 @@ void i18n.use(initReactI18next).init({
 const t = i18n.getFixedT<'finance'>('en-AU', 'finance');
 const tPt = i18n.getFixedT<'finance'>('pt-BR', 'finance');
 
-describe('getDistinctAccounts', () => {
-  it('returns an empty list when there are no transactions loaded yet', () => {
-    expect(getDistinctAccounts(undefined)).toEqual([]);
-  });
-
-  it('deduplicates repeated account names', () => {
-    const transactions: Pick<Transaction, 'account'>[] = [
-      { account: 'Up Everyday' },
-      { account: 'Amex' },
-      { account: 'Up Everyday' },
-    ];
-    expect(getDistinctAccounts(transactions)).toEqual(['Amex', 'Up Everyday']);
-  });
-
-  it('sorts account names alphabetically', () => {
-    const transactions: Pick<Transaction, 'account'>[] = [
-      { account: 'Zebra Bank' },
-      { account: 'Amex' },
-      { account: 'Macquarie' },
-    ];
-    expect(getDistinctAccounts(transactions)).toEqual(['Amex', 'Macquarie', 'Zebra Bank']);
-  });
-
-  it('surfaces an account not in any historical hardcoded list', () => {
-    const transactions: Pick<Transaction, 'account'>[] = [{ account: 'Brand New Bank' }];
-    expect(getDistinctAccounts(transactions)).toEqual(['Brand New Bank']);
-  });
-});
+function account(overrides: Partial<AccountOption> = {}): AccountOption {
+  return { id: 'a1', name: 'Up Everyday', kind: 'checking', ...overrides };
+}
 
 describe('buildTransactionFilters', () => {
-  it('sources the account filter options from the accounts passed in, not a hardcoded list', () => {
-    const filters = buildTransactionFilters(t, ['Brand New Bank', 'Up Everyday']);
-    const accountFilter = filters.find((f) => f.id === 'account');
+  it('sources the account filter options from the accounts passed in, not the loaded transactions', () => {
+    const filters = buildTransactionFilters(t, [
+      account({ id: 'a1', name: 'Brand New Bank' }),
+      account({ id: 'a2', name: 'Up Everyday' }),
+    ]);
+    const accountFilter = filters.find((f) => f.id === 'accountId');
 
     expect(accountFilter?.options).toEqual([
       { label: 'All Accounts', value: '' },
-      { label: 'Brand New Bank', value: 'Brand New Bank' },
-      { label: 'Up Everyday', value: 'Up Everyday' },
+      { label: 'Brand New Bank', value: 'a1' },
+      { label: 'Up Everyday', value: 'a2' },
     ]);
   });
 
   it('only offers the "All Accounts" option when no accounts are loaded', () => {
     const filters = buildTransactionFilters(t, []);
-    const accountFilter = filters.find((f) => f.id === 'account');
+    const accountFilter = filters.find((f) => f.id === 'accountId');
 
     expect(accountFilter?.options).toEqual([{ label: 'All Accounts', value: '' }]);
+  });
+
+  it('excludes archived accounts from the filter options', () => {
+    const filters = buildTransactionFilters(t, [
+      account({ id: 'a1', name: 'Active' }),
+      account({ id: 'a2', name: 'Closed', archived: true }),
+    ]);
+    const accountFilter = filters.find((f) => f.id === 'accountId');
+
+    expect(accountFilter?.options).toEqual([
+      { label: 'All Accounts', value: '' },
+      { label: 'Active', value: 'a1' },
+    ]);
   });
 
   it('offers every taxonomy type as a translated option (#3757 nit 1)', () => {

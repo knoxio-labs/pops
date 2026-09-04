@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import {
+  type AccountOption,
   Button,
   ChipInput,
   Dialog,
@@ -12,12 +13,12 @@ import {
   DialogTitle,
   EntitySelect,
   Label,
-  Select,
   Textarea,
   TextInput,
 } from '@pops/ui';
 
-import { type Transaction, TRANSACTION_TYPE_OPTIONS, type TransactionFormValues } from './types';
+import { AccountAndType } from './AccountAndTypeFields';
+import { type Transaction, type TransactionFormValues } from './types';
 
 interface DialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ interface DialogProps {
   isSubmitting: boolean;
   onSubmit: (values: TransactionFormValues) => void;
   entities: Array<{ id: string; name: string; type: string }>;
+  accounts: AccountOption[];
 }
 
 function PrimaryFields({ form }: { form: UseFormReturn<TransactionFormValues> }) {
@@ -59,25 +61,6 @@ function DescriptionField({ form }: { form: UseFormReturn<TransactionFormValues>
       {...form.register('description')}
       error={form.formState.errors.description?.message}
     />
-  );
-}
-
-function AccountAndType({ form }: { form: UseFormReturn<TransactionFormValues> }) {
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      <TextInput
-        label="Account"
-        placeholder="e.g. Bank Account"
-        {...form.register('account')}
-        error={form.formState.errors.account?.message}
-      />
-      <Select
-        label="Type"
-        options={TRANSACTION_TYPE_OPTIONS}
-        {...form.register('type')}
-        error={form.formState.errors.type?.message}
-      />
-    </div>
   );
 }
 
@@ -142,12 +125,13 @@ function NotesField({ form }: { form: UseFormReturn<TransactionFormValues> }) {
 function FormFields(props: {
   form: UseFormReturn<TransactionFormValues>;
   entities: DialogProps['entities'];
+  accounts: DialogProps['accounts'];
 }) {
   return (
     <div className="grid gap-4 py-4">
       <PrimaryFields form={props.form} />
       <DescriptionField form={props.form} />
-      <AccountAndType form={props.form} />
+      <AccountAndType form={props.form} accounts={props.accounts} />
       <EntityField form={props.form} entities={props.entities} />
       <TagsField form={props.form} />
       <NotesField form={props.form} />
@@ -156,7 +140,16 @@ function FormFields(props: {
 }
 
 export function TransactionFormDialog(props: DialogProps) {
-  const { open, onOpenChange, editingTransaction, form, isSubmitting, onSubmit, entities } = props;
+  const {
+    open,
+    onOpenChange,
+    editingTransaction,
+    form,
+    isSubmitting,
+    onSubmit,
+    entities,
+    accounts,
+  } = props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-125">
@@ -167,7 +160,7 @@ export function TransactionFormDialog(props: DialogProps) {
               Enter the details for this transaction
             </DialogDescription>
           </DialogHeader>
-          <FormFields form={form} entities={entities} />
+          <FormFields form={form} entities={entities} accounts={accounts} />
           <DialogFooter>
             <Button
               type="button"

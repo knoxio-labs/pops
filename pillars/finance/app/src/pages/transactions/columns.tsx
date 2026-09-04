@@ -1,7 +1,8 @@
 import { Link2 } from 'lucide-react';
 
-import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
+import { AccountChip, Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
 
+import { resolveAccountOption } from '../../components/accounts/resolveAccountOption';
 import { TagEditor } from '../../components/TagEditor';
 import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
@@ -11,6 +12,8 @@ import { RowActions, type RowActionHandlers } from './RowActions';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
+import type { AccountOption } from '@pops/ui';
+
 import type { PurchaseLinkSummaries } from './purchase-link/usePurchaseLinkSummaries';
 import type { Transaction } from './types';
 
@@ -19,6 +22,7 @@ export type { Transaction } from './types';
 interface BuildColumnsBase {
   t: TFunction<'finance'>;
   availableTags: string[];
+  accounts: AccountOption[];
   /**
    * The purchase column's answers, plus whether asking for them worked. The
    * pair travels together because an empty map means nothing without it.
@@ -66,7 +70,25 @@ function tagsFilterFn(
   return tags.some((tag) => tag.toLowerCase().includes(searchTerm));
 }
 
-function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
+function buildAccountColumn(
+  t: TFunction<'finance'>,
+  accounts: AccountOption[]
+): ColumnDef<Transaction> {
+  return {
+    accessorKey: 'accountId',
+    header: t('column.account'),
+    cell: ({ row }) => {
+      const resolved = resolveAccountOption(accounts, row.original.accountId);
+      if (!resolved) return <span className="text-sm font-mono">{row.original.account}</span>;
+      return <AccountChip account={resolved} size="compact" />;
+    },
+  };
+}
+
+function buildCoreColumns(
+  t: TFunction<'finance'>,
+  accounts: AccountOption[]
+): ColumnDef<Transaction>[] {
   const typeLabels: Record<string, string> = Object.fromEntries(
     TRANSACTION_TYPES.map((v) => [v, t(TYPE_LABEL_KEY[v])])
   );
@@ -92,11 +114,7 @@ function buildCoreColumns(t: TFunction<'finance'>): ColumnDef<Transaction>[] {
         />
       ),
     },
-    {
-      accessorKey: 'account',
-      header: t('column.account'),
-      cell: ({ row }) => <span className="text-sm font-mono">{row.original.account}</span>,
-    },
+    buildAccountColumn(t, accounts),
     {
       accessorKey: 'amount',
       header: ({ column }) => (
@@ -154,32 +172,31 @@ function buildInteractiveColumns(args: BuildColumnsArgs): ColumnDef<Transaction>
 }
 
 export function buildColumns(args: BuildColumnsArgs): ColumnDef<Transaction>[] {
-  return [...buildCoreColumns(args.t), ...buildInteractiveColumns(args)];
+  return [...buildCoreColumns(args.t, args.accounts), ...buildInteractiveColumns(args)];
 }
 
-/** Distinct account names present in the loaded transactions, alphabetised for the filter dropdown. */
-export function getDistinctAccounts(
-  transactions: Pick<Transaction, 'account'>[] | undefined
-): string[] {
-  if (!transactions) return [];
-  return Array.from(new Set(transactions.map((transaction) => transaction.account))).toSorted(
-    (a, b) => a.localeCompare(b)
-  );
-}
-
+/**
+ * Filter options sourced from the live accounts list rather than the
+ * distinct account names seen in the currently loaded page of transactions —
+ * an account with no transactions yet still shows up. Archived accounts are
+ * excluded; there is no reveal-archived affordance on this plain `select`
+ * filter type yet (follow-up ticket, POPS-2776).
+ */
 export function buildTransactionFilters(
   t: TFunction<'finance'>,
-  accounts: string[]
+  accounts: AccountOption[]
 ): ColumnFilter[] {
   return [
     { id: 'date', type: 'daterange', label: t('filter.dateRange') },
     {
-      id: 'account',
+      id: 'accountId',
       type: 'select',
       label: t('filter.account'),
       options: [
         { label: t('filter.allAccounts'), value: '' },
-        ...accounts.map((account) => ({ label: account, value: account })),
+        ...accounts
+          .filter((account) => !account.archived)
+          .map((account) => ({ label: account.name, value: account.id })),
       ],
     },
     {
