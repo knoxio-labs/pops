@@ -31,11 +31,6 @@ export const accounts = sqliteTable(
     // Case-insensitive uniqueness — migration hand-edited for `COLLATE
     // NOCASE`, same as `institutions.name`.
     index('idx_accounts_name_nocase').on(table.name),
-    // The migration hand-adds `WHERE kind = 'cash'` — drizzle-kit can't
-    // express a partial index, so this declaration exists for drizzle's
-    // schema introspection only; the actual DDL lives in
-    // `migrations/0083_accounts.sql`.
-    index('idx_accounts_kind_currency_cash').on(table.kind, table.currency),
     // One `person` account per contact per currency (POPS-2771). A plain
     // (not partial) UNIQUE index: SQLite treats every NULL `entity_id` as
     // distinct from every other for uniqueness purposes, so the many

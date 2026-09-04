@@ -1,9 +1,9 @@
 /**
  * Handlers for the `accounts.*` sub-router. `translateAccountError` maps db
  * domain errors (`AccountNotFoundError`, `AccountNameConflictError`,
- * `AccountCashCurrencyConflictError`, `ReservedAccountKindError`,
- * `PersonAccountRequiresEntityError`, `NonPersonAccountHasEntityError`,
- * `PersonAccountEntityConflictError`) to shared `HttpError` subclasses so
+ * `ReservedAccountKindError`, `PersonAccountRequiresEntityError`,
+ * `NonPersonAccountHasEntityError`, `PersonAccountEntityConflictError`) to
+ * shared `HttpError` subclasses so
  * `runHttp` yields 404 / 409 / 422. `delete` archives rather than removing
  * the row (see `db/services/accounts.ts`).
  *
@@ -14,7 +14,6 @@
  * row's `entityDisplayName` afterwards via `resolveAccountEntityDisplays`.
  */
 import {
-  AccountCashCurrencyConflictError,
   AccountNameConflictError,
   AccountNotFoundError,
   accountsService,
@@ -50,7 +49,6 @@ const DEFAULT_OFFSET = 0;
 function translateAccountError(err: unknown, id?: string): never {
   if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', id ?? err.id);
   if (err instanceof AccountNameConflictError) throw new ConflictError(err.message);
-  if (err instanceof AccountCashCurrencyConflictError) throw new ConflictError(err.message);
   if (err instanceof PersonAccountEntityConflictError) throw new ConflictError(err.message);
   if (err instanceof ReservedAccountKindError) throw new UnprocessableEntityError(err.message);
   if (err instanceof PersonAccountRequiresEntityError)
