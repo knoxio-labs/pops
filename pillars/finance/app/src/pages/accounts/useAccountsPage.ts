@@ -79,6 +79,7 @@ export function useAccountsPage() {
           id: dialog.editingAccount.id,
           values,
           loanTermsDirty: loanTermsFieldsDirty(dialog.form.formState.dirtyFields),
+          dirtyFields: dialog.form.formState.dirtyFields,
         })
       : createMutation.mutateAsync(values);
     mutation.catch((err: unknown) => {

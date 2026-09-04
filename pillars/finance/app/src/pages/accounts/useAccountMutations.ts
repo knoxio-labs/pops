@@ -7,9 +7,12 @@ import {
   accountsCreate,
   accountsUpdate,
   giftCardDetailsWrite,
+  loanGetTerms,
   loanWriteTerms,
 } from '../../finance-api/index.js';
 import { hasCompleteLoanTermsInput, hasInstitution, type AccountFormValues } from './types';
+
+import type { FieldNamesMarkedBoolean } from 'react-hook-form';
 
 import type { Account } from './types';
 
@@ -37,9 +40,27 @@ async function writeGiftCardDetails(accountId: string, values: AccountFormValues
  * blocks submit before this point otherwise), and stays a no-op for an
  * account left with no terms at all, which is a valid loan account per the
  * insight modules' "no loan terms recorded" empty states.
+ *
+ * `dirtyFields` is only ever missing on create, where there is no existing
+ * snapshot to be stale against. On update, some OTHER loan field (principal,
+ * rate, ...) can be dirty while `loanTermsEffectiveFrom` itself is not —
+ * the form still carries whatever date it was prefilled with, which a
+ * same-session "Record rate change" can have already moved past (that write
+ * never touches this form). Resending that untouched value would reject with
+ * `LoanRateNotLatestError` even though the user never meant to change the
+ * date, so an untouched `loanTermsEffectiveFrom` is replaced with the
+ * account's current one instead of trusting the form.
  */
-async function writeLoanTerms(accountId: string, values: AccountFormValues) {
+async function writeLoanTerms(
+  accountId: string,
+  values: AccountFormValues,
+  dirtyFields?: FieldNamesMarkedBoolean<AccountFormValues>
+) {
   if (!hasCompleteLoanTermsInput(values)) return;
+  const termsEffectiveFrom =
+    dirtyFields !== undefined && !dirtyFields.loanTermsEffectiveFrom
+      ? unwrap(await loanGetTerms({ path: { id: accountId } })).data.termsEffectiveFrom
+      : values.loanTermsEffectiveFrom;
   await unwrap(
     await loanWriteTerms({
       path: { id: accountId },
@@ -49,7 +70,7 @@ async function writeLoanTerms(accountId: string, values: AccountFormValues) {
         termMonths: values.loanTermMonths ?? 0,
         monthlyRepayment: values.loanMonthlyRepayment ?? 0,
         startedOn: values.loanStartedOn,
-        termsEffectiveFrom: values.loanTermsEffectiveFrom,
+        termsEffectiveFrom,
       },
     })
   );
@@ -95,6 +116,7 @@ export function useAccountMutations(onSuccess: () => void) {
       id,
       values,
       loanTermsDirty = true,
+      dirtyFields,
     }: {
       id: string;
       values: AccountFormValues;
@@ -106,12 +128,20 @@ export function useAccountMutations(onSuccess: () => void) {
        * stale `loanTermsEffectiveFrom` snapshot on an unrelated-field edit.
        */
       loanTermsDirty?: boolean;
+      /**
+       * The form's `formState.dirtyFields`, forwarded to `writeLoanTerms` so
+       * it can tell "some loan field changed" (`loanTermsDirty`, above) apart
+       * from "the effective-from date itself changed" — the latter decides
+       * whether the write can trust `values.loanTermsEffectiveFrom` or must
+       * fetch the account's current one instead.
+       */
+      dirtyFields?: FieldNamesMarkedBoolean<AccountFormValues>;
     }) => {
       const updated = unwrap(
         await accountsUpdate({ path: { id }, body: toAccountPayload(values) })
       );
       if (values.kind === 'gift-card') await writeGiftCardDetails(id, values);
-      if (values.kind === 'loan' && loanTermsDirty) await writeLoanTerms(id, values);
+      if (values.kind === 'loan' && loanTermsDirty) await writeLoanTerms(id, values, dirtyFields);
       return updated;
     },
     onSuccess: () => {

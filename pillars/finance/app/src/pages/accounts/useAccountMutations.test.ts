@@ -9,12 +9,14 @@ import { useAccountMutations } from './useAccountMutations';
 const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
 const loanWriteTerms = vi.fn();
+const loanGetTerms = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
   giftCardDetailsWrite: vi.fn(),
   loanWriteTerms: (...args: unknown[]) => loanWriteTerms(...args),
+  loanGetTerms: (...args: unknown[]) => loanGetTerms(...args),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -39,6 +41,10 @@ beforeEach(() => {
   });
   loanWriteTerms.mockResolvedValue({
     data: { data: { accountId: 'acc-new' }, message: 'Terms saved' },
+    error: undefined,
+  });
+  loanGetTerms.mockResolvedValue({
+    data: { data: { accountId: 'acc-1', termsEffectiveFrom: '2026-08-15' }, message: 'Terms' },
     error: undefined,
   });
 });
@@ -132,6 +138,56 @@ describe('useAccountMutations loan terms follow-up', () => {
     });
 
     expect(loanWriteTerms).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Regression for the review-findings-gate HIGH finding raised on top of the
+   * fix above: `loanTermsDirty` is true whenever ANY loan field is dirty, so
+   * editing only `loanOriginalPrincipal` (leaving `loanTermsEffectiveFrom`
+   * untouched) still reaches `writeLoanTerms`. The form's
+   * `loanTermsEffectiveFrom` is whatever it was prefilled with, which a
+   * same-session "Record rate change" can have already moved past. Resending
+   * that untouched value would reject with `LoanRateNotLatestError` even
+   * though the user never touched the date — the write must ask the server
+   * for the account's current `termsEffectiveFrom` instead of trusting the
+   * stale form value whenever `dirtyFields.loanTermsEffectiveFrom` is not
+   * itself set.
+   */
+  it('does not resend a stale terms-effective-from when only an unrelated loan field is dirty', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.updateMutation.mutateAsync({
+      id: 'acc-1',
+      values: { ...COMPLETE_LOAN_VALUES, loanOriginalPrincipal: 600_000 },
+      loanTermsDirty: true,
+      dirtyFields: { loanOriginalPrincipal: true },
+    });
+
+    expect(loanGetTerms).toHaveBeenCalledWith({ path: { id: 'acc-1' } });
+    expect(loanWriteTerms).toHaveBeenCalledWith({
+      path: { id: 'acc-1' },
+      body: expect.objectContaining({
+        originalPrincipal: 600_000,
+        termsEffectiveFrom: '2026-08-15',
+      }),
+    });
+  });
+
+  it('trusts the form value for terms-effective-from when the user actually edited that field', async () => {
+    const { result } = renderHook(() => useAccountMutations(vi.fn()), { wrapper });
+
+    await result.current.updateMutation.mutateAsync({
+      id: 'acc-1',
+      values: COMPLETE_LOAN_VALUES,
+      loanTermsDirty: true,
+      dirtyFields: { loanTermsEffectiveFrom: true },
+    });
+
+    expect(loanGetTerms).not.toHaveBeenCalled();
+    expect(loanWriteTerms).toHaveBeenCalledWith({
+      path: { id: 'acc-1' },
+      body: expect.objectContaining({ termsEffectiveFrom: '2026-07-01' }),
+    });
   });
 });
 
