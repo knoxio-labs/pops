@@ -3,8 +3,17 @@ import {
   droppedRows,
   importTxns,
   ruleProposals,
-  type RuleProposalFixture,
 } from '@/fixtures/import-transactions';
+import {
+  ClassificationRulesSection,
+  EntitiesSection,
+  isEmptySummary,
+  type PendingSummary,
+  TagAssignmentsSection,
+  TagRulesSection,
+  totalOpsOf,
+  TransactionsSection,
+} from '@/kit/import-commit-sections';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 import {
@@ -19,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertTitle,
-  Badge,
   Button,
   PageHeader,
 } from '@pops/ui';
@@ -30,88 +38,6 @@ import { ImportContextStrip } from './upload';
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Commit', order: 8, frame: 'web' };
-
-type RulesApplied = { add: number; edit: number; disable: number; remove: number };
-type TxnBreakdown = { imported: number; duplicates: number; dropped: number };
-
-interface PendingSummary {
-  entities: string[];
-  rulesApplied: RulesApplied;
-  tagRules: RuleProposalFixture[];
-  txnBreakdown: TxnBreakdown;
-  tagAssignment: { tagged: number; total: number };
-}
-
-const totalOpsOf = (r: RulesApplied) => r.add + r.edit + r.disable + r.remove;
-const totalTxnsOf = (b: TxnBreakdown) => b.imported + b.duplicates + b.dropped;
-const isEmptySummary = (s: PendingSummary) =>
-  s.entities.length === 0 &&
-  totalOpsOf(s.rulesApplied) === 0 &&
-  s.tagRules.length === 0 &&
-  totalTxnsOf(s.txnBreakdown) === 0 &&
-  s.tagAssignment.tagged === 0;
-
-type SectionProps = { title: string; count: number; children: React.ReactNode };
-
-const Section = ({ title, count, children }: SectionProps) =>
-  count === 0 ? null : (
-    <div className="rounded-lg border border-border">
-      <div className="px-4 py-3 font-medium">
-        {title} <span className="font-normal text-muted-foreground">({count})</span>
-      </div>
-      <div className="border-t border-border px-4 py-3">{children}</div>
-    </div>
-  );
-
-const EntitiesSection = ({ entities }: { entities: string[] }) => (
-  <Section title="New Entities" count={entities.length}>
-    <div className="flex flex-wrap gap-2">
-      {entities.map((name) => (
-        <Badge key={name} variant="secondary">
-          {name}
-        </Badge>
-      ))}
-    </div>
-  </Section>
-);
-
-const ClassificationRulesSection = ({ rulesApplied: r }: { rulesApplied: RulesApplied }) => (
-  <Section title="Classification Rule Changes" count={totalOpsOf(r)}>
-    <p className="text-sm text-muted-foreground">
-      {r.add} to add, {r.edit} to edit, {r.disable} to disable, {r.remove} to remove.
-    </p>
-  </Section>
-);
-
-const TagRulesSection = ({ proposals }: { proposals: RuleProposalFixture[] }) => (
-  <Section title="Tag Rule Changes" count={proposals.length}>
-    <ul className="space-y-1">
-      {proposals.map((p) => (
-        <li key={p.id} className="text-sm">
-          <span className="font-mono text-xs text-muted-foreground">{p.pattern}</span> →{' '}
-          {p.tags.join(', ')}
-        </li>
-      ))}
-    </ul>
-  </Section>
-);
-
-const TransactionsSection = ({ breakdown: b }: { breakdown: TxnBreakdown }) => (
-  <Section title="Transactions to Import" count={totalTxnsOf(b)}>
-    <p className="text-sm text-muted-foreground">
-      {b.imported} imported, {b.duplicates} skipped as duplicates, {b.dropped} dropped as untyped.
-    </p>
-  </Section>
-);
-
-const TagAssignmentsSection = ({ tagged, total }: { tagged: number; total: number }) => (
-  <Section title="Tag Assignments" count={tagged}>
-    <p className="text-sm text-muted-foreground">
-      {tagged} tag{tagged === 1 ? '' : 's'} will be applied across {total} transaction
-      {total === 1 ? '' : 's'}.
-    </p>
-  </Section>
-);
 
 type ConfirmDialogProps = { open: boolean; committing: boolean; summary: PendingSummary };
 
@@ -162,7 +88,7 @@ function Step({ choice, summary, confirmOpen = false, committing = false, error 
         <EntitiesSection entities={summary.entities} />
         <ClassificationRulesSection rulesApplied={summary.rulesApplied} />
         <TagRulesSection proposals={summary.tagRules} />
-        <TransactionsSection breakdown={summary.txnBreakdown} />
+        <TransactionsSection breakdown={summary.txnBreakdown} accountName={choice.account.name} />
         <TagAssignmentsSection {...summary.tagAssignment} />
         {isEmptySummary(summary) && (
           <p className="py-6 text-sm text-muted-foreground">No pending changes to review.</p>

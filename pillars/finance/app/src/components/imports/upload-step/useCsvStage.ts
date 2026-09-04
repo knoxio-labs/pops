@@ -7,19 +7,34 @@ import { parseAllFiles } from '../csv-parse';
 
 import type { BankDialectId } from '../../../store/import-store-types';
 
+export interface CsvStageCallbacks {
+  setError: (message: string | null) => void;
+  setFormatMismatch: (headerRow: string | null) => void;
+  setIsProcessing: (busy: boolean) => void;
+}
+
 /** Parsing uploaded CSV exports into the wizard's header/row state. */
 export function useCsvStage(
   files: File[],
   dialectId: BankDialectId,
-  setError: (message: string | null) => void,
-  setIsProcessing: (busy: boolean) => void
+  { setError, setFormatMismatch, setIsProcessing }: CsvStageCallbacks
 ): () => Promise<void> {
   const { setHeaders, setRows, nextStep } = useImportStore();
 
   return useCallback(async () => {
     setIsProcessing(true);
     setError(null);
-    const { error: parseError, parsed } = await parseAllFiles(files, bankDialect(dialectId));
+    setFormatMismatch(null);
+    const {
+      error: parseError,
+      formatMismatch,
+      parsed,
+    } = await parseAllFiles(files, bankDialect(dialectId));
+    if (formatMismatch) {
+      setIsProcessing(false);
+      setFormatMismatch(formatMismatch);
+      return;
+    }
     if (parseError) {
       setIsProcessing(false);
       setError(parseError);
@@ -34,5 +49,14 @@ export function useCsvStage(
     setHeaders(merged.headers);
     setRows(merged.rows);
     nextStep();
-  }, [files, dialectId, setHeaders, setRows, nextStep, setError, setIsProcessing]);
+  }, [
+    files,
+    dialectId,
+    setHeaders,
+    setRows,
+    nextStep,
+    setError,
+    setFormatMismatch,
+    setIsProcessing,
+  ]);
 }

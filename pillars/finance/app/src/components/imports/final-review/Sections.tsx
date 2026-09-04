@@ -137,7 +137,22 @@ export interface TxnBreakdown {
   total: number;
 }
 
-export function TransactionsSection({ txnBreakdown }: { txnBreakdown: TxnBreakdown }) {
+/**
+ * Breakdown of the transactions to import, plus — when any were skipped as
+ * duplicates — a note naming the account those duplicates were matched
+ * against (POPS-2820). The checksum dedup key is scoped to the real
+ * `accountId` (POPS-2773, re-scoped by POPS-2852), so a charge that already
+ * exists on a different account is never mistaken for a duplicate here; the
+ * note exists so that scoping is visible at the point someone might otherwise
+ * assume "skipped" means "seen anywhere before".
+ */
+export function TransactionsSection({
+  txnBreakdown,
+  accountName,
+}: {
+  txnBreakdown: TxnBreakdown;
+  accountName: string;
+}) {
   if (txnBreakdown.total === 0) return null;
   return (
     <Section title="Transactions to Import" count={txnBreakdown.total}>
@@ -165,6 +180,12 @@ export function TransactionsSection({ txnBreakdown }: { txnBreakdown: TxnBreakdo
           </div>
         )}
       </div>
+      {txnBreakdown.skipped > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Skipped as duplicates of a transaction already on {accountName} — matched against this
+          account only, not the rest of your ledger.
+        </p>
+      )}
     </Section>
   );
 }
