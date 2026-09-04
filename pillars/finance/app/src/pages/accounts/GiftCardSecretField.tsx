@@ -1,32 +1,17 @@
 import { Eye, Loader2 } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 
 import { TextInput } from '@pops/ui';
 
 import { unwrap } from '../../finance-api-helpers.js';
 import { giftCardDetailsReveal } from '../../finance-api/index.js';
+import { IconButton } from './IconButton';
 import { RevealedGiftCardValues } from './RevealedGiftCardValues';
 
 interface RevealState {
   status: 'masked' | 'loading' | 'revealed';
   number?: string;
   pin?: string;
-}
-
-export function IconButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button type="button" aria-label={label} onClick={onClick} className="text-muted-foreground">
-      {children}
-    </button>
-  );
 }
 
 /**

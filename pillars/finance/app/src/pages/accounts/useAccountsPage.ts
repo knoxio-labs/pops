@@ -27,10 +27,20 @@ function useAccountsData() {
   return { accounts, institutions, currencies };
 }
 
-function requiresGiftCardSecrets(values: AccountFormValues, isEditing: boolean): boolean {
+/**
+ * Gift-card secrets are never echoed back into the form (they're encrypted at
+ * rest), so editing an account that was ALREADY `gift-card` always sees blank
+ * fields — that blank must not be mistaken for "no secret on file". Secrets
+ * are required on create, and on an edit that just switched an existing
+ * non-gift-card account's kind to `gift-card` for the first time.
+ */
+export function requiresGiftCardSecrets(
+  values: AccountFormValues,
+  wasAlreadyGiftCard: boolean
+): boolean {
   return (
     values.kind === 'gift-card' &&
-    !isEditing &&
+    !wasAlreadyGiftCard &&
     (values.giftCardNumber === '' || values.giftCardPin === '')
   );
 }
@@ -42,7 +52,7 @@ export function useAccountsPage() {
   const createInstitution = useCreateInstitution(dialog.form);
 
   const onSubmit = (values: AccountFormValues) => {
-    if (requiresGiftCardSecrets(values, dialog.editingAccount !== null)) {
+    if (requiresGiftCardSecrets(values, dialog.editingAccount?.kind === 'gift-card')) {
       if (values.giftCardNumber === '')
         dialog.form.setError('giftCardNumber', { message: 'Card number is required' });
       if (values.giftCardPin === '')

@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { TextInput } from '@pops/ui';
 
-import { IconButton } from './GiftCardSecretField';
+import { IconButton } from './IconButton';
 
 /** The plaintext number and PIN once `giftCardDetailsReveal` has returned them, with copy and hide actions. */
 export function RevealedGiftCardValues({

@@ -28,7 +28,7 @@ export function AccountCard({
     <button
       type="button"
       onClick={onSelect}
-      className="block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="block h-full min-h-11 w-full min-w-11 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Card
         className={cn(
