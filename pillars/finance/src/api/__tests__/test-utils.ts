@@ -428,12 +428,18 @@ export function makeClient(app: Express) {
       list: () => call<{ data: Currency[] }>((r) => r.get('/currencies')),
       create: (body: Record<string, unknown>) =>
         call<{ data: Currency; message: string }>((r) => r.post('/currencies').send(body)),
+      update: (code: string, data: Record<string, unknown>) =>
+        call<{ data: Currency; message: string }>((r) => r.patch(`/currencies/${code}`).send(data)),
       delete: (code: string) => call<{ message: string }>((r) => r.delete(`/currencies/${code}`)),
     },
     institutions: {
       list: () => call<{ data: Institution[] }>((r) => r.get('/institutions')),
       create: (body: Record<string, unknown>) =>
         call<{ data: Institution; message: string }>((r) => r.post('/institutions').send(body)),
+      update: (id: string, data: Record<string, unknown>) =>
+        call<{ data: Institution; message: string }>((r) =>
+          r.patch(`/institutions/${id}`).send(data)
+        ),
       delete: (id: string) => call<{ message: string }>((r) => r.delete(`/institutions/${id}`)),
     },
     accounts: {

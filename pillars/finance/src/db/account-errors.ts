@@ -41,6 +41,24 @@ export class CurrencyInUseError extends Error {
   }
 }
 
+/**
+ * A currency's `decimals` cannot be changed because some other table's
+ * `currency` FK references it — changing minor-unit count would silently
+ * reinterpret every balance already stored against it. Distinct from
+ * `CurrencyInUseError` (which blocks delete) because a currency's other
+ * fields (name, symbol, kind) remain safe to edit while in use; only
+ * `decimals` is guarded.
+ */
+export class CurrencyDecimalsInUseError extends Error {
+  override readonly name = 'CurrencyDecimalsInUseError' as const;
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Currency '${code}' is in use — its decimals cannot be changed`);
+    this.code = code;
+  }
+}
+
 export class InstitutionNotFoundError extends Error {
   override readonly name = 'InstitutionNotFoundError' as const;
   readonly id: string;

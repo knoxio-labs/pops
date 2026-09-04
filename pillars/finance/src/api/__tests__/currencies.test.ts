@@ -89,6 +89,32 @@ describe('currencies — happy paths', () => {
     });
   });
 
+  it('updates a currency’s name, symbol, decimals and kind', async () => {
+    await client().currencies.create({
+      code: 'CAD',
+      name: 'Canadian Dollar',
+      symbol: '$',
+      decimals: 2,
+      kind: 'fiat',
+    });
+
+    const updated = await client().currencies.update('CAD', {
+      name: 'Loonie',
+      symbol: 'C$',
+      decimals: 0,
+      kind: 'points',
+    });
+
+    expect(updated.data).toMatchObject({
+      code: 'CAD',
+      name: 'Loonie',
+      symbol: 'C$',
+      decimals: 0,
+      kind: 'points',
+    });
+    expect(updated.message).toBe('Currency updated');
+  });
+
   it('deletes a currency that nothing references', async () => {
     await client().currencies.create({
       code: 'CAD',
@@ -127,11 +153,28 @@ describe('currencies — error mapping', () => {
     ).rejects.toMatchObject({ status: 409 });
   });
 
+  it('404s updating a currency that does not exist', async () => {
+    await expect(client().currencies.update('ZZZ', { name: 'X' })).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
   it('404s deleting a currency that does not exist', async () => {
     await expect(client().currencies.delete('ZZZ')).rejects.toMatchObject({ status: 404 });
   });
 
   it('409s deleting AUD — the seeded Amex/ANZ accounts reference it (POPS-2767)', async () => {
     await expect(client().currencies.delete('AUD')).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('409s changing decimals on AUD — the seeded Amex/ANZ accounts reference it', async () => {
+    await expect(client().currencies.update('AUD', { decimals: 3 })).rejects.toMatchObject({
+      status: 409,
+    });
+  });
+
+  it('still allows editing name/symbol/kind on AUD while it is in use', async () => {
+    const updated = await client().currencies.update('AUD', { name: 'Australian Dollar (AU)' });
+    expect(updated.data.name).toBe('Australian Dollar (AU)');
   });
 });

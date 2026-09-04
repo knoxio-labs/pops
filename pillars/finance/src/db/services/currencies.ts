@@ -7,7 +7,12 @@
  */
 import { asc, eq, sql } from 'drizzle-orm';
 
-import { CurrencyConflictError, CurrencyInUseError, CurrencyNotFoundError } from '../errors.js';
+import {
+  CurrencyConflictError,
+  CurrencyDecimalsInUseError,
+  CurrencyInUseError,
+  CurrencyNotFoundError,
+} from '../errors.js';
 import { currencies } from '../schema.js';
 import { isCurrencyCodeConflict } from './currency-conflict.js';
 
@@ -24,6 +29,14 @@ export interface CreateCurrencyInput {
   symbol?: string | null;
   decimals: number;
   kind: CurrencyKind;
+}
+
+/** Same shape as create — all fields optional for PATCH semantics. `code` is never patchable. */
+export interface UpdateCurrencyInput {
+  name?: string;
+  symbol?: string | null;
+  decimals?: number;
+  kind?: CurrencyKind;
 }
 
 /** List every currency, ordered by code. */
@@ -61,6 +74,46 @@ export function createCurrency(db: FinanceDb, input: CreateCurrencyInput): Curre
     throw err;
   }
   return getCurrency(db, input.code);
+}
+
+/**
+ * Patch a currency's `name`, `symbol`, `kind` and/or `decimals`. Throws
+ * `CurrencyNotFoundError` if missing, or `CurrencyConflictError` — unreachable
+ * today since `code` is immutable and every other field is unconstrained, kept
+ * only for symmetry with `createCurrency`'s mapping.
+ *
+ * Changing `decimals` while {@link isCurrencyInUse} is true throws
+ * `CurrencyDecimalsInUseError`: reinterpreting the minor-unit count would
+ * silently change how every balance already stored in this currency renders.
+ * Only `decimals` is guarded — name, symbol and kind remain editable on a
+ * currency already referenced by an account.
+ */
+export function updateCurrency(
+  db: FinanceDb,
+  code: string,
+  input: UpdateCurrencyInput
+): CurrencyRow {
+  getCurrency(db, code);
+  if (input.decimals !== undefined && isCurrencyInUse(db, code)) {
+    throw new CurrencyDecimalsInUseError(code);
+  }
+
+  const updates: Partial<typeof currencies.$inferInsert> = {};
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.symbol !== undefined) updates.symbol = input.symbol ?? null;
+  if (input.decimals !== undefined) updates.decimals = input.decimals;
+  if (input.kind !== undefined) updates.kind = input.kind;
+
+  if (Object.keys(updates).length > 0) {
+    try {
+      db.update(currencies).set(updates).where(eq(currencies.code, code)).run();
+    } catch (err) {
+      if (isCurrencyCodeConflict(err)) throw new CurrencyConflictError(code);
+      throw err;
+    }
+  }
+
+  return getCurrency(db, code);
 }
 
 /**

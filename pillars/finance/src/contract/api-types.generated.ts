@@ -524,7 +524,8 @@ export interface paths {
     delete: operations['currencies.delete'];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Edit a currency; changing decimals is refused with 409 while any account references it */
+    patch: operations['currencies.update'];
     trace?: never;
   };
   '/entity-usage': {
@@ -678,7 +679,8 @@ export interface paths {
     delete: operations['institutions.delete'];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Rename an institution and/or change its colour */
+    patch: operations['institutions.update'];
     trace?: never;
   };
   '/search': {
@@ -5827,6 +5829,89 @@ export interface operations {
       };
     };
   };
+  'currencies.update': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          decimals?: number;
+          /** @enum {string} */
+          kind?: 'fiat' | 'points';
+          name?: string;
+          symbol?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string;
+              createdAt: string;
+              decimals: number;
+              /** @enum {string} */
+              kind: 'fiat' | 'points';
+              name: string;
+              symbol: string | null;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'entityUsage.list': {
     parameters: {
       query?: {
@@ -7771,6 +7856,85 @@ export interface operations {
         };
         content: {
           'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'institutions.update': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          colour?: string;
+          name?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              colour: string;
+              createdAt: string;
+              id: string;
+              logoAssetId: string | null;
+              name: string;
+              updatedAt: string;
+            };
             message: string;
           };
         };

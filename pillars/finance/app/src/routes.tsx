@@ -40,6 +40,9 @@ const TagRulesBrowserPage = lazy(() =>
 const PromptViewerPage = lazy(() =>
   import('./pages/PromptViewerPage').then((m) => ({ default: m.PromptViewerPage }))
 );
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
 
 export { navConfig } from './nav';
 
@@ -54,4 +57,5 @@ export const routes: RouteObject[] = [
   { path: 'rules', element: <RulesBrowserPage /> },
   { path: 'tag-rules', element: <TagRulesBrowserPage /> },
   { path: 'prompts', element: <PromptViewerPage /> },
+  { path: 'settings', element: <SettingsPage /> },
 ];

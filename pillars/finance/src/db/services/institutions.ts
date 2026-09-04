@@ -28,6 +28,12 @@ export interface CreateInstitutionInput {
   logoAssetId?: string | null;
 }
 
+/** Same shape as create — all fields optional for PATCH semantics. */
+export interface UpdateInstitutionInput {
+  name?: string;
+  colour?: string;
+}
+
 /** List every institution, ordered by name. */
 export function listInstitutions(db: FinanceDb): InstitutionRow[] {
   return db.select().from(institutions).orderBy(asc(institutions.name)).all();
@@ -63,6 +69,38 @@ export function createInstitution(db: FinanceDb, input: CreateInstitutionInput):
     if (isInstitutionNameConflict(err)) throw new InstitutionConflictError(input.name);
     throw err;
   }
+  return getInstitution(db, id);
+}
+
+/**
+ * Patch an institution's `name` and/or `colour`. Throws
+ * `InstitutionNotFoundError` if missing, or `InstitutionConflictError` if the
+ * patched `name` collides case-insensitively with a different institution —
+ * mapped from the same unique-index violation `createInstitution` maps, so a
+ * no-op rename (patching a name to its own current value) never throws even
+ * though it "conflicts" with itself, since the UPDATE simply doesn't change
+ * the indexed value in that case.
+ */
+export function updateInstitution(
+  db: FinanceDb,
+  id: string,
+  input: UpdateInstitutionInput
+): InstitutionRow {
+  getInstitution(db, id);
+  const updates: Partial<typeof institutions.$inferInsert> = {};
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.colour !== undefined) updates.colour = input.colour;
+
+  if (Object.keys(updates).length > 0) {
+    updates.updatedAt = new Date().toISOString();
+    try {
+      db.update(institutions).set(updates).where(eq(institutions.id, id)).run();
+    } catch (err) {
+      if (isInstitutionNameConflict(err)) throw new InstitutionConflictError(input.name ?? '');
+      throw err;
+    }
+  }
+
   return getInstitution(db, id);
 }
 

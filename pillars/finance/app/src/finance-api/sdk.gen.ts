@@ -103,6 +103,9 @@ import type {
   CurrenciesDeleteResponses,
   CurrenciesListData,
   CurrenciesListResponses,
+  CurrenciesUpdateData,
+  CurrenciesUpdateErrors,
+  CurrenciesUpdateResponses,
   EntityUsageListData,
   EntityUsageListErrors,
   EntityUsageListResponses,
@@ -141,6 +144,9 @@ import type {
   InstitutionsDeleteResponses,
   InstitutionsListData,
   InstitutionsListResponses,
+  InstitutionsUpdateData,
+  InstitutionsUpdateErrors,
+  InstitutionsUpdateResponses,
   LoanGetTermsData,
   LoanGetTermsErrors,
   LoanGetTermsResponses,
@@ -1037,6 +1043,23 @@ export const currenciesDelete = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Edit a currency; changing decimals is refused with 409 while any account references it
+ */
+export const currenciesUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<CurrenciesUpdateData, ThrowOnError>
+): RequestResult<CurrenciesUpdateResponses, CurrenciesUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<CurrenciesUpdateResponses, CurrenciesUpdateErrors, ThrowOnError>(
+    {
+      url: '/currencies/{code}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    }
+  );
+
+/**
  * List entities with per-entity transactionCount; orphanedOnly=true returns count===0
  */
 export const entityUsageList = <ThrowOnError extends boolean = false>(
@@ -1201,6 +1224,25 @@ export const institutionsDelete = <ThrowOnError extends boolean = false>(
   (options.client ?? client).delete<
     InstitutionsDeleteResponses,
     InstitutionsDeleteErrors,
+    ThrowOnError
+  >({
+    url: '/institutions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Rename an institution and/or change its colour
+ */
+export const institutionsUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<InstitutionsUpdateData, ThrowOnError>
+): RequestResult<InstitutionsUpdateResponses, InstitutionsUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    InstitutionsUpdateResponses,
+    InstitutionsUpdateErrors,
     ThrowOnError
   >({
     url: '/institutions/{id}',

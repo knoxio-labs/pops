@@ -4,7 +4,7 @@
  * only the row → response projection and its TS shape.
  */
 import type { CurrencyKind } from '../../contract/currency-kind.js';
-import type { CreateCurrencyInput, CurrencyRow } from '../../db/index.js';
+import type { CreateCurrencyInput, CurrencyRow, UpdateCurrencyInput } from '../../db/index.js';
 
 /** API response shape (camelCase). */
 export interface Currency {
@@ -25,6 +25,14 @@ export interface CreateCurrencyBody {
   kind: CurrencyKind;
 }
 
+/** Wire body accepted by `PATCH /currencies/:code`. */
+export interface UpdateCurrencyBody {
+  name?: string;
+  symbol?: string | null;
+  decimals?: number;
+  kind?: CurrencyKind;
+}
+
 /** Map a SQLite row to the API response shape. */
 export function toCurrency(row: CurrencyRow): Currency {
   return {
@@ -43,6 +51,16 @@ export function toCreateCurrencyInput(body: CreateCurrencyBody): CreateCurrencyI
     code: body.code,
     name: body.name,
     symbol: body.symbol ?? null,
+    decimals: body.decimals,
+    kind: body.kind,
+  };
+}
+
+/** Map an update request body to the persistence layer's input shape. */
+export function toUpdateCurrencyInput(body: UpdateCurrencyBody): UpdateCurrencyInput {
+  return {
+    name: body.name,
+    symbol: body.symbol,
     decimals: body.decimals,
     kind: body.kind,
   };

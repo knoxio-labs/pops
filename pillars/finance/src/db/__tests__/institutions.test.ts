@@ -16,6 +16,7 @@ import {
   getInstitution,
   isInstitutionInUse,
   listInstitutions,
+  updateInstitution,
 } from '../services/institutions.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
@@ -106,6 +107,58 @@ describe('isInstitutionInUse', () => {
     });
 
     expect(isInstitutionInUse(db, created.id)).toBe(true);
+  });
+});
+
+describe('updateInstitution', () => {
+  it('renames and recolours an institution', () => {
+    const db = freshDb();
+    const created = createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+
+    const updated = updateInstitution(db, created.id, { name: 'Westpac Bank', colour: '#000000' });
+
+    expect(updated.name).toBe('Westpac Bank');
+    expect(updated.colour).toBe('#000000');
+  });
+
+  it('leaves fields untouched when omitted from the patch', () => {
+    const db = freshDb();
+    const created = createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+
+    const updated = updateInstitution(db, created.id, { colour: '#000000' });
+
+    expect(updated.name).toBe('Westpac');
+    expect(updated.colour).toBe('#000000');
+  });
+
+  it('throws InstitutionNotFoundError for a missing id', () => {
+    const db = freshDb();
+    expect(() => updateInstitution(db, 'missing-id', { name: 'X' })).toThrow(
+      InstitutionNotFoundError
+    );
+  });
+
+  it('throws InstitutionConflictError renaming to a name that already exists, case-insensitively', () => {
+    const db = freshDb();
+    createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+    const created = createInstitution(db, { name: 'CBA', colour: '#facc15' });
+
+    expect(() => updateInstitution(db, created.id, { name: 'westpac' })).toThrow(
+      InstitutionConflictError
+    );
+  });
+
+  it('can still rename an institution an account references', () => {
+    const db = freshDb();
+    const created = createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+    createAccount(db, {
+      name: 'Westpac Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: created.id,
+    });
+
+    expect(updateInstitution(db, created.id, { name: 'Westpac Bank' }).name).toBe('Westpac Bank');
   });
 });
 
