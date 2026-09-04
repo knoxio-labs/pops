@@ -710,6 +710,211 @@ export type GiftCardDetailsRevealResponses = {
 export type GiftCardDetailsRevealResponse =
   GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
 
+export type AccountsMergeData = {
+  /**
+   * Body
+   */
+  body?: {
+    targetId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/merge';
+};
+
+export type AccountsMergeErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsMergeError = AccountsMergeErrors[keyof AccountsMergeErrors];
+
+export type AccountsMergeResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      archivedAt: string | null;
+      createdAt: string;
+      currency: string;
+      displayOrder: number;
+      entityDisplayName: string | null;
+      entityDisplayNameStale: boolean;
+      entityId: string | null;
+      id: string;
+      institutionId: string | null;
+      kind:
+        | 'checking'
+        | 'savings'
+        | 'credit-card'
+        | 'cash'
+        | 'gift-card'
+        | 'person'
+        | 'shared'
+        | 'loan'
+        | 'novated-lease'
+        | 'crypto'
+        | 'other';
+      name: string;
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountsMergeResponse = AccountsMergeResponses[keyof AccountsMergeResponses];
+
+export type AccountsPreviewMergeData = {
+  /**
+   * Body
+   */
+  body?: {
+    targetId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/merge/preview';
+};
+
+export type AccountsPreviewMergeErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountsPreviewMergeError =
+  AccountsPreviewMergeErrors[keyof AccountsPreviewMergeErrors];
+
+export type AccountsPreviewMergeResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      hasGiftCardDetailsConflict: boolean;
+      resultingBalanceCents: number;
+      source: {
+        archivedAt: string | null;
+        createdAt: string;
+        currency: string;
+        displayOrder: number;
+        entityDisplayName: string | null;
+        entityDisplayNameStale: boolean;
+        entityId: string | null;
+        id: string;
+        institutionId: string | null;
+        kind:
+          | 'checking'
+          | 'savings'
+          | 'credit-card'
+          | 'cash'
+          | 'gift-card'
+          | 'person'
+          | 'shared'
+          | 'loan'
+          | 'novated-lease'
+          | 'crypto'
+          | 'other';
+        name: string;
+        updatedAt: string;
+      };
+      target: {
+        archivedAt: string | null;
+        createdAt: string;
+        currency: string;
+        displayOrder: number;
+        entityDisplayName: string | null;
+        entityDisplayNameStale: boolean;
+        entityId: string | null;
+        id: string;
+        institutionId: string | null;
+        kind:
+          | 'checking'
+          | 'savings'
+          | 'credit-card'
+          | 'cash'
+          | 'gift-card'
+          | 'person'
+          | 'shared'
+          | 'loan'
+          | 'novated-lease'
+          | 'crypto'
+          | 'other';
+        name: string;
+        updatedAt: string;
+      };
+      transactionCount: number;
+    };
+  };
+};
+
+export type AccountsPreviewMergeResponse =
+  AccountsPreviewMergeResponses[keyof AccountsPreviewMergeResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;

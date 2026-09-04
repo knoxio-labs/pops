@@ -15,6 +15,12 @@ import type {
   AccountsGetResponses,
   AccountsListData,
   AccountsListResponses,
+  AccountsMergeData,
+  AccountsMergeErrors,
+  AccountsMergeResponses,
+  AccountsPreviewMergeData,
+  AccountsPreviewMergeErrors,
+  AccountsPreviewMergeResponses,
   AccountsReorderData,
   AccountsReorderErrors,
   AccountsReorderResponses,
@@ -385,6 +391,40 @@ export const giftCardDetailsReveal = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/accounts/{id}/gift-card-details/reveal',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Merge account :id (the source) into targetId: repoint its transactions onto targetId and delete it outright. Irreversible — the caller should show the preview first
+ */
+export const accountsMerge = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsMergeData, ThrowOnError>
+): RequestResult<AccountsMergeResponses, AccountsMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<AccountsMergeResponses, AccountsMergeErrors, ThrowOnError>({
+    url: '/accounts/{id}/merge',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Preview merging account :id (the source) into targetId, without writing anything; rejects with 422 for a merge that cannot be meaningful (self, cross-currency, cross-sign-convention)
+ */
+export const accountsPreviewMerge = <ThrowOnError extends boolean = false>(
+  options: Options<AccountsPreviewMergeData, ThrowOnError>
+): RequestResult<AccountsPreviewMergeResponses, AccountsPreviewMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    AccountsPreviewMergeResponses,
+    AccountsPreviewMergeErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/merge/preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -92,6 +92,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/{id}/merge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Merge account :id (the source) into targetId: repoint its transactions onto targetId and delete it outright. Irreversible — the caller should show the preview first */
+    post: operations['accounts.merge'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/merge/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Preview merging account :id (the source) into targetId, without writing anything; rejects with 422 for a merge that cannot be meaningful (self, cross-currency, cross-sign-convention) */
+    post: operations['accounts.previewMerge'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/budgets': {
     parameters: {
       query?: never;
@@ -1874,6 +1908,254 @@ export interface operations {
               pin: string;
             };
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.merge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          targetId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              archivedAt: string | null;
+              createdAt: string;
+              currency: string;
+              displayOrder: number;
+              entityDisplayName: string | null;
+              entityDisplayNameStale: boolean;
+              entityId: string | null;
+              id: string;
+              institutionId: string | null;
+              /** @enum {string} */
+              kind:
+                | 'checking'
+                | 'savings'
+                | 'credit-card'
+                | 'cash'
+                | 'gift-card'
+                | 'person'
+                | 'shared'
+                | 'loan'
+                | 'novated-lease'
+                | 'crypto'
+                | 'other';
+              name: string;
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accounts.previewMerge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          targetId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              hasGiftCardDetailsConflict: boolean;
+              resultingBalanceCents: number;
+              source: {
+                archivedAt: string | null;
+                createdAt: string;
+                currency: string;
+                displayOrder: number;
+                entityDisplayName: string | null;
+                entityDisplayNameStale: boolean;
+                entityId: string | null;
+                id: string;
+                institutionId: string | null;
+                /** @enum {string} */
+                kind:
+                  | 'checking'
+                  | 'savings'
+                  | 'credit-card'
+                  | 'cash'
+                  | 'gift-card'
+                  | 'person'
+                  | 'shared'
+                  | 'loan'
+                  | 'novated-lease'
+                  | 'crypto'
+                  | 'other';
+                name: string;
+                updatedAt: string;
+              };
+              target: {
+                archivedAt: string | null;
+                createdAt: string;
+                currency: string;
+                displayOrder: number;
+                entityDisplayName: string | null;
+                entityDisplayNameStale: boolean;
+                entityId: string | null;
+                id: string;
+                institutionId: string | null;
+                /** @enum {string} */
+                kind:
+                  | 'checking'
+                  | 'savings'
+                  | 'credit-card'
+                  | 'cash'
+                  | 'gift-card'
+                  | 'person'
+                  | 'shared'
+                  | 'loan'
+                  | 'novated-lease'
+                  | 'crypto'
+                  | 'other';
+                name: string;
+                updatedAt: string;
+              };
+              transactionCount: number;
+            };
           };
         };
       };

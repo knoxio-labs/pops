@@ -1733,6 +1733,546 @@
         "tags": ["giftCardDetails"]
       }
     },
+    "/accounts/{id}/merge": {
+      "post": {
+        "operationId": "accounts.merge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "targetId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["targetId"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "archivedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "displayOrder": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "entityDisplayName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "entityDisplayNameStale": {
+                          "type": "boolean"
+                        },
+                        "entityId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "institutionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "checking",
+                            "savings",
+                            "credit-card",
+                            "cash",
+                            "gift-card",
+                            "person",
+                            "shared",
+                            "loan",
+                            "novated-lease",
+                            "crypto",
+                            "other"
+                          ],
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "institutionId",
+                        "kind",
+                        "currency",
+                        "archivedAt",
+                        "displayOrder",
+                        "entityId",
+                        "entityDisplayName",
+                        "entityDisplayNameStale",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["data", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "422"
+          }
+        },
+        "summary": "Merge account :id (the source) into targetId: repoint its transactions onto targetId and delete it outright. Irreversible — the caller should show the preview first",
+        "tags": ["accounts"]
+      }
+    },
+    "/accounts/{id}/merge/preview": {
+      "post": {
+        "operationId": "accounts.previewMerge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "targetId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["targetId"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hasGiftCardDetailsConflict": {
+                          "type": "boolean"
+                        },
+                        "resultingBalanceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "archivedAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "displayOrder": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "entityDisplayName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "entityDisplayNameStale": {
+                              "type": "boolean"
+                            },
+                            "entityId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "institutionId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": [
+                                "checking",
+                                "savings",
+                                "credit-card",
+                                "cash",
+                                "gift-card",
+                                "person",
+                                "shared",
+                                "loan",
+                                "novated-lease",
+                                "crypto",
+                                "other"
+                              ],
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "institutionId",
+                            "kind",
+                            "currency",
+                            "archivedAt",
+                            "displayOrder",
+                            "entityId",
+                            "entityDisplayName",
+                            "entityDisplayNameStale",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "type": "object"
+                        },
+                        "target": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "archivedAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "displayOrder": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "entityDisplayName": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "entityDisplayNameStale": {
+                              "type": "boolean"
+                            },
+                            "entityId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "institutionId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": [
+                                "checking",
+                                "savings",
+                                "credit-card",
+                                "cash",
+                                "gift-card",
+                                "person",
+                                "shared",
+                                "loan",
+                                "novated-lease",
+                                "crypto",
+                                "other"
+                              ],
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "institutionId",
+                            "kind",
+                            "currency",
+                            "archivedAt",
+                            "displayOrder",
+                            "entityId",
+                            "entityDisplayName",
+                            "entityDisplayNameStale",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "type": "object"
+                        },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "target",
+                        "transactionCount",
+                        "resultingBalanceCents",
+                        "hasGiftCardDetailsConflict"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "422"
+          }
+        },
+        "summary": "Preview merging account :id (the source) into targetId, without writing anything; rejects with 422 for a merge that cannot be meaningful (self, cross-currency, cross-sign-convention)",
+        "tags": ["accounts"]
+      }
+    },
     "/budgets": {
       "get": {
         "operationId": "budgets.list",
