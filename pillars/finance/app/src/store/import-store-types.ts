@@ -63,6 +63,10 @@ export interface ImportStore {
   currentStep: number;
   files: File[];
   sourceFileNames: string[];
+  /** The real account transactions land in — `null` until picked in the Upload step's account field. */
+  accountId: string | null;
+  /** Kept alongside `accountId` so the picked account survives a persisted-state reload without a refetch. */
+  accountName: string;
   bankType: BankType;
   headers: string[];
   rows: Record<string, string>[];
@@ -91,6 +95,7 @@ export interface ImportStore {
   manuallyResolvedChecksums: string[];
 
   setFiles: (files: File[]) => void;
+  setAccount: (accountId: string, accountName: string) => void;
   setBankType: (bankType: BankType) => void;
   setHeaders: (headers: string[]) => void;
   setRows: (rows: Record<string, string>[]) => void;
@@ -132,6 +137,8 @@ export const initialState = {
   currentStep: 1,
   files: [],
   sourceFileNames: [],
+  accountId: null,
+  accountName: '',
   bankType: 'Amex' as BankType,
   headers: [],
   rows: [],

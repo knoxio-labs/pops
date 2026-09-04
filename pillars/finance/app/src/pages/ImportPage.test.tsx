@@ -64,6 +64,8 @@ function seedResumableAtStepTwo(): void {
 function seedProcessingInterruptedRun(): void {
   seedSnapshot({
     currentStep: 6,
+    accountId: 'acc-amex',
+    accountName: 'Amex',
     parsedTransactions: [makeParsed('a')],
     parsedTransactionsFingerprint: 'a',
   });

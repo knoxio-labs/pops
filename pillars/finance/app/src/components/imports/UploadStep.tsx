@@ -1,13 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { RadioInput } from '@pops/ui';
-
 import { useImportStore } from '../../store/importStore';
+import { AccountAndFormatFields } from './account-step/AccountAndFormatFields';
 import { FileUpload } from './FileUpload';
 import { uploadRoute } from './pdf/anz-pdf-import';
 import { PdfStatementFindings } from './pdf/PdfStatementFindings';
-import { BANK_ACCEPTED_TYPES, BANK_OPTIONS, bankTakesPdf } from './upload-step/bank-upload-config';
+import { BANK_ACCEPTED_TYPES, bankTakesPdf } from './upload-step/bank-upload-config';
 import { BankExportHelp, UploadFooter, UploadStepHeader } from './upload-step/UploadStepChrome';
 import { useCsvStage } from './upload-step/useCsvStage';
 import { usePdfStage } from './upload-step/usePdfStage';
@@ -18,7 +17,7 @@ const MIXED_UPLOAD_ERROR =
   'Select either CSV exports or PDF statements, not both. They are read differently and a period covered by both would import twice.';
 
 function useUploadStep() {
-  const { files, rows, bankType, setFiles, setBankType, nextStep } = useImportStore();
+  const { files, rows, bankType, accountId, setFiles, setBankType, nextStep } = useImportStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pdf = usePdfStage(setError, setIsProcessing);
@@ -61,6 +60,7 @@ function useUploadStep() {
     files,
     rows,
     bankType,
+    accountId,
     isProcessing,
     error,
     pdfStatement: pdf.statement,
@@ -75,6 +75,7 @@ export function UploadStep() {
     files,
     rows,
     bankType,
+    accountId,
     isProcessing,
     error,
     pdfStatement,
@@ -88,31 +89,31 @@ export function UploadStep() {
     <div className="space-y-6">
       <UploadStepHeader takesPdf={bankTakesPdf(bankType)} />
 
-      <RadioInput
-        label="Bank"
-        options={BANK_OPTIONS}
-        value={bankType}
-        onValueChange={handleBankChange}
-        orientation="horizontal"
-      />
+      <AccountAndFormatFields bankType={bankType} onBankChange={handleBankChange} />
 
-      <FileUpload
-        onFilesSelect={handleFilesSelect}
-        acceptedTypes={BANK_ACCEPTED_TYPES[bankType]}
-        maxSizeMB={25}
-        maxTotalSizeMB={100}
-        initialFiles={files}
-      />
+      {accountId && (
+        <>
+          <FileUpload
+            onFilesSelect={handleFilesSelect}
+            acceptedTypes={BANK_ACCEPTED_TYPES[bankType]}
+            maxSizeMB={25}
+            maxTotalSizeMB={100}
+            initialFiles={files}
+          />
 
-      {pdfStatement && <PdfStatementFindings statement={pdfStatement} fileCount={files.length} />}
+          {pdfStatement && (
+            <PdfStatementFindings statement={pdfStatement} fileCount={files.length} />
+          )}
 
-      {files.length === 0 && rows.length > 0 && (
-        <div className="bg-info/5 border border-info/20 rounded-lg p-4">
-          <p className="text-xs text-info">{t('import.resumeFileNotice')}</p>
-        </div>
+          {files.length === 0 && rows.length > 0 && (
+            <div className="bg-info/5 border border-info/20 rounded-lg p-4">
+              <p className="text-xs text-info">{t('import.resumeFileNotice')}</p>
+            </div>
+          )}
+
+          <BankExportHelp bankType={bankType} />
+        </>
       )}
-
-      <BankExportHelp bankType={bankType} />
 
       {error && (
         <div className="p-4 text-sm text-destructive bg-destructive/10 dark:text-destructive/40 rounded-lg">
@@ -122,7 +123,7 @@ export function UploadStep() {
 
       <UploadFooter
         onNext={handleNext}
-        disabled={(files.length === 0 && rows.length === 0) || isProcessing}
+        disabled={!accountId || (files.length === 0 && rows.length === 0) || isProcessing}
         isProcessing={isProcessing}
         pdfStatement={pdfStatement}
       />
