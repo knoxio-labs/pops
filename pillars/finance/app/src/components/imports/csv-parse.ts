@@ -15,6 +15,14 @@ import type { ParsedCsvFile } from './csv-merge';
 export interface ParseResult {
   ok: boolean;
   error?: string;
+  /**
+   * Set instead of `error` when the file's own first row contradicts the
+   * chosen dialect's `hasHeader: false` — the one direction the header/data
+   * inference below cannot self-heal, since a headerless dialect has no
+   * column names to recover from a stripped header row. Carries the row as
+   * read so the caller can show what was found.
+   */
+  formatMismatch?: string;
   parsed?: ParsedCsvFile;
 }
 
@@ -94,6 +102,10 @@ function parseCsvFile(file: File, dialect: BankDialect): Promise<ParseResult> {
           return;
         }
         const hasHeaderRow = firstRowIsHeader(lines, dialect);
+        if (!dialect.hasHeader && hasHeaderRow) {
+          resolve({ ok: false, formatMismatch: firstLine.join(',') });
+          return;
+        }
         const dataRows = hasHeaderRow ? lines.slice(1) : lines;
         if (dataRows.length === 0) {
           resolve({ ok: false, error: `${file.name}: CSV file is empty` });
@@ -122,10 +134,11 @@ function parseCsvFile(file: File, dialect: BankDialect): Promise<ParseResult> {
 export async function parseAllFiles(
   files: File[],
   dialect: BankDialect
-): Promise<{ error?: string; parsed: ParsedCsvFile[] }> {
+): Promise<{ error?: string; formatMismatch?: string; parsed: ParsedCsvFile[] }> {
   const parsed: ParsedCsvFile[] = [];
   for (const file of files) {
     const result = await parseCsvFile(file, dialect);
+    if (result.formatMismatch) return { formatMismatch: result.formatMismatch, parsed: [] };
     if (!result.ok || !result.parsed) return { error: result.error ?? 'Unknown error', parsed: [] };
     parsed.push(result.parsed);
   }

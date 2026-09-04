@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useImportStore } from '../../../store/importStore';
 import { AccountAndFormatFields } from './AccountAndFormatFields';
 
-import type { Account } from '../../../pages/accounts/types';
+import type { Account, Institution } from '../../../pages/accounts/types';
 
 const accountsList = vi.fn();
 const institutionsList = vi.fn();
@@ -25,11 +25,26 @@ vi.mock('../../../finance-api/index.js', () => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+function institution(overrides: Partial<Institution>): Institution {
+  return {
+    id: 'inst-anz',
+    name: 'ANZ',
+    colour: '#0072ac',
+    logoAssetId: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+const ANZ_INSTITUTION = institution({});
+const ING_INSTITUTION = institution({ id: 'inst-ing', name: 'ING', colour: '#ff6200' });
+
 function account(overrides: Partial<Account>): Account {
   return {
     id: 'acc-1',
     name: 'ANZ Everyday',
-    institutionId: null,
+    institutionId: ANZ_INSTITUTION.id,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -52,7 +67,7 @@ const AUD = {
   createdAt: '',
 };
 
-function renderFields(accounts: Account[]) {
+function renderFields(accounts: Account[], institutions: Institution[] = [ANZ_INSTITUTION]) {
   accountsList.mockResolvedValue({
     data: {
       data: accounts,
@@ -60,7 +75,7 @@ function renderFields(accounts: Account[]) {
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
+  institutionsList.mockResolvedValue({ data: { data: institutions }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -99,6 +114,40 @@ describe('AccountAndFormatFields', () => {
     expect(useImportStore.getState().accountId).toBe('acc-1');
     expect(useImportStore.getState().accountName).toBe('ANZ Everyday');
     expect(screen.getAllByRole('radio').length).toBeGreaterThan(0);
+  });
+
+  it('changes the offered formats when a different institution is picked, instead of always showing the same list', async () => {
+    const user = userEvent.setup();
+    renderFields(
+      [
+        account({ id: 'acc-anz', name: 'ANZ Everyday', institutionId: ANZ_INSTITUTION.id }),
+        account({ id: 'acc-ing', name: 'ING Everyday', institutionId: ING_INSTITUTION.id }),
+      ],
+      [ANZ_INSTITUTION, ING_INSTITUTION]
+    );
+
+    await user.click(await screen.findByRole('combobox', { name: 'Account to import into' }));
+    await user.click(await screen.findByText('ANZ Everyday'));
+    expect(await screen.findByRole('radio', { name: 'ANZ' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'ING' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: 'Account to import into' }));
+    await user.click(await screen.findByText('ING Everyday'));
+    expect(await screen.findByRole('radio', { name: 'ING' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'ANZ' })).not.toBeInTheDocument();
+  });
+
+  it('says there is nothing to import instead of showing an unrelated bank list, for a kind with no export', async () => {
+    const user = userEvent.setup();
+    renderFields([
+      account({ id: 'acc-cash', name: 'Wallet cash', institutionId: null, kind: 'cash' }),
+    ]);
+
+    await user.click(await screen.findByRole('combobox', { name: 'Account to import into' }));
+    await user.click(await screen.findByText('Wallet cash'));
+
+    expect(await screen.findByText('Nothing to import into Wallet cash')).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
   });
 
   it('creating an account from the inline hatch pre-selects it on the store', async () => {

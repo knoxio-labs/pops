@@ -71,13 +71,16 @@ describe('parseAllFiles — a headerless export under a bank declared as headed'
 });
 
 describe('parseAllFiles — a headed export under a bank declared as headerless', () => {
-  it('does not import the column names as a transaction', async () => {
-    const { error, parsed } = await parseOne(HEADED_EXPORT, 'ANZ Credit Card');
+  // Unlike the reverse direction above, this one cannot self-heal: a
+  // headerless dialect has no column names of its own to recover once the
+  // header row is stripped, so it is surfaced as a format mismatch instead of
+  // being guessed at (POPS-2854).
+  it('reports a format mismatch instead of guessing at the file', async () => {
+    const { error, formatMismatch, parsed } = await parseOne(HEADED_EXPORT, 'ANZ Credit Card');
 
     expect(error).toBeUndefined();
-    expect(parsed[0]?.headers).toEqual(['Date', 'Description', 'Amount']);
-    expect(parsed[0]?.rows).toHaveLength(2);
-    expect(parsed[0]?.rows.map((row) => row.Date)).toEqual(['01/01/2026', '02/01/2026']);
+    expect(formatMismatch).toBe('Date,Description,Amount');
+    expect(parsed).toEqual([]);
   });
 });
 
