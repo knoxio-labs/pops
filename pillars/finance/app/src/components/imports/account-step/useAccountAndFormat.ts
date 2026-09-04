@@ -8,7 +8,7 @@ import { useAccountFormDialogState } from '../../../pages/accounts/useAccountFor
 import { useAccountMutations } from '../../../pages/accounts/useAccountMutations';
 import { useCreateInstitution } from '../../../pages/accounts/useCreateInstitution';
 import { useImportStore } from '../../../store/importStore';
-import { useAllAccounts } from '../../accounts/hooks/useAllAccounts';
+import { useAccountFormats } from './useAccountFormats';
 
 /**
  * Wires the import wizard's account picker to the real accounts endpoint and
@@ -19,7 +19,8 @@ import { useAllAccounts } from '../../accounts/hooks/useAllAccounts';
  */
 export function useAccountAndFormat() {
   const queryClient = useQueryClient();
-  const { accounts, isLoading: accountsLoading } = useAllAccounts();
+  const { accountId, setAccount } = useImportStore();
+  const { accounts, accountsLoading, account, availableBanks } = useAccountFormats(accountId);
   const institutionsQuery = useQuery({
     queryKey: ['finance', 'institutions', 'list'],
     queryFn: async () => unwrap(await institutionsList()),
@@ -28,7 +29,6 @@ export function useAccountAndFormat() {
     queryKey: ['finance', 'currencies', 'list'],
     queryFn: async () => unwrap(await currenciesList()),
   });
-  const { accountId, setAccount } = useImportStore();
   const dialog = useAccountFormDialogState();
   const { createMutation } = useAccountMutations(() => {
     // The mutation's own onSuccess (toast + would-be closeDialog) already ran;
@@ -58,10 +58,12 @@ export function useAccountAndFormat() {
   };
 
   return {
-    accounts: accounts ?? [],
+    accounts,
     accountsLoading,
     accountId,
     setAccount,
+    account,
+    availableBanks,
     institutions: institutionsQuery.data?.data ?? [],
     currencies: currenciesQuery.data?.data ?? [],
     dialog,

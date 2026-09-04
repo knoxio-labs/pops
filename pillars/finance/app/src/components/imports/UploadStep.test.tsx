@@ -8,14 +8,20 @@ import { useImportStore } from '../../store/importStore';
 import { UploadStep } from './UploadStep';
 
 // These tests are about parsing/merging behaviour, not the account picker
-// (POPS-2840) — accounts/institutions/currencies are mocked to empty lists so
+// (POPS-2840) — accounts/institutions/currencies default to empty lists so
 // `AccountAndFormatFields` never makes a real network call, and every test
 // pre-selects an account directly on the store so the file-parsing UI it now
-// gates stays reachable.
+// gates stays reachable. One test below (the format-derivation gate,
+// POPS-2854) overrides the account/institution lists for the one case that
+// needs the format picker's radio to actually be on screen.
+const accountsList = vi.fn();
+const institutionsList = vi.fn();
+const currenciesList = vi.fn();
+
 vi.mock('../../finance-api/index.js', () => ({
-  accountsList: async () => ({ data: { data: [], pagination: { total: 0 } } }),
-  institutionsList: async () => ({ data: { data: [] } }),
-  currenciesList: async () => ({ data: { data: [] } }),
+  accountsList: (...args: unknown[]) => accountsList(...args),
+  institutionsList: (...args: unknown[]) => institutionsList(...args),
+  currenciesList: (...args: unknown[]) => currenciesList(...args),
 }));
 
 function renderUploadStep(): ReactElement {
@@ -30,6 +36,9 @@ function renderUploadStep(): ReactElement {
 beforeEach(() => {
   useImportStore.getState().reset();
   useImportStore.getState().setAccount('acc-1', 'Test Account');
+  accountsList.mockResolvedValue({ data: { data: [], pagination: { total: 0 } } });
+  institutionsList.mockResolvedValue({ data: { data: [] } });
+  currenciesList.mockResolvedValue({ data: { data: [] } });
 });
 
 afterEach(() => {
@@ -125,6 +134,45 @@ describe('UploadStep — merging several CSVs', () => {
 
 describe('UploadStep — a headerless export uploaded under a headed bank', () => {
   it('imports every line rather than losing the first charge to the header row', async () => {
+    // Unlike the other tests in this file, this one needs the format radio
+    // itself on screen to pick 'ANZ' — so, just this once, the account and
+    // institution lists resolve to a real ANZ checking account (POPS-2854).
+    accountsList.mockResolvedValueOnce({
+      data: {
+        data: [
+          {
+            id: 'acc-1',
+            name: 'Test Account',
+            institutionId: 'inst-anz',
+            kind: 'checking',
+            currency: 'AUD',
+            archivedAt: null,
+            displayOrder: 0,
+            entityId: null,
+            entityDisplayName: null,
+            entityDisplayNameStale: false,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+      },
+    });
+    institutionsList.mockResolvedValueOnce({
+      data: {
+        data: [
+          {
+            id: 'inst-anz',
+            name: 'ANZ',
+            colour: '#0072ac',
+            logoAssetId: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+
     const lineCount = 556;
     const contents =
       Array.from(
@@ -132,11 +180,10 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
         (_unused, index) => `01/07/2026,-${(index + 1).toFixed(2)},MERCHANT ${index + 1},,,,,`
       ).join('\r\n') + '\r\n';
 
-    const { container } = render(renderUploadStep());
+    render(renderUploadStep());
 
     // 'ANZ' is the headed dialect; the file is a headerless credit-card export.
-    const anz = container.querySelector('[role="radio"][value="ANZ"]');
-    if (!anz) throw new Error('ANZ radio not found');
+    const anz = await screen.findByRole('radio', { name: 'ANZ' });
     fireEvent.click(anz);
     selectFiles([csvFile('anz.csv', contents)]);
     clickNext();
@@ -146,5 +193,42 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
     expect(state.rows).toHaveLength(lineCount);
     expect(state.headers).not.toContain('MERCHANT 1');
     expect(state.rows[0]).toMatchObject({ 'Column 3': 'MERCHANT 1' });
+  });
+});
+
+function selectFilesTakingPdf(files: File[]) {
+  fireEvent.change(screen.getByLabelText('Upload CSV or PDF files'), { target: { files } });
+}
+
+describe('UploadStep — a file that does not match the chosen bank', () => {
+  it('names the header row it found and blocks the import until it is resolved', async () => {
+    useImportStore.getState().setBankType('ANZ Credit Card');
+    render(renderUploadStep());
+
+    selectFilesTakingPdf([
+      csvFile('wrong.csv', 'Date,Description,Amount\n01/01/2026,Rent,-900.00\n'),
+    ]);
+    clickNext();
+
+    expect(await screen.findByText('This does not look like ANZ Credit Card')).toBeInTheDocument();
+    expect(screen.getByText('Date,Description,Amount')).toBeInTheDocument();
+    expect(useImportStore.getState().currentStep).toBe(1);
+    expect(useImportStore.getState().rows).toEqual([]);
+  });
+
+  it('clears the mismatch and the file when choosing another file instead', async () => {
+    useImportStore.getState().setBankType('ANZ Credit Card');
+    render(renderUploadStep());
+
+    selectFilesTakingPdf([
+      csvFile('wrong.csv', 'Date,Description,Amount\n01/01/2026,Rent,-900.00\n'),
+    ]);
+    clickNext();
+    await screen.findByText('This does not look like ANZ Credit Card');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose another file' }));
+
+    expect(screen.queryByText('This does not look like ANZ Credit Card')).not.toBeInTheDocument();
+    expect(useImportStore.getState().files).toEqual([]);
   });
 });
