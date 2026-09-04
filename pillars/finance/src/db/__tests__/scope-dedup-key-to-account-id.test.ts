@@ -1,16 +1,17 @@
 /**
- * Migration test for 0087_scope_dedup_key_to_account (POPS-2773).
+ * Migration test for 0089_scope_dedup_key_to_account_id (POPS-2852).
  *
  * Seeds the pre-migration `transactions` table — the shape it had right after
- * `0083_accounts` (the last migration to touch this table before `0087`),
- * with checksums computed the OLD (pre-account) way — then runs the REAL
- * migration SQL and the REAL `finance_account_scoped_checksum` function,
- * asserting:
- *   - every checksummed row is re-keyed to the account-scoped canonical
+ * `0088_loan_tables` (the last migration to touch this table before `0089`),
+ * with checksums computed the way `0087` left them (scoped to the bank/dialect
+ * label) — then runs the REAL migration SQL and the REAL
+ * `finance_account_id_scoped_checksum` function, asserting:
+ *   - every checksummed row is re-keyed to the account-id-scoped canonical
  *     SHA-256, which the pure builder agrees with byte-for-byte;
- *   - the same row on two different accounts is re-keyed to two DIFFERENT
- *     checksums (the acceptance criterion this migration exists for —
- *     identical rows on two accounts both commit going forward);
+ *   - two real accounts that share one bank dialect are re-keyed to two
+ *     DIFFERENT checksums for the same row — the acceptance criterion this
+ *     migration exists for, since `0087`'s dialect-scoped key could not tell
+ *     them apart;
  *   - re-running the migration (idempotent replay, e.g. a fresh install
  *     applying the full journal) converges on the same checksums;
  *   - null-checksum legacy rows are left untouched.
@@ -28,11 +29,11 @@ import { centsToDollars } from '../../money.js';
 import { registerFinanceSqlFunctions } from '../open-finance-db.js';
 
 /**
- * Pinned by hand to the shape `transactions` had right after `0083_accounts`
- * (the last migration to touch this table before `0087`) — `account_id`
+ * Pinned by hand to the shape `transactions` had right after `0088_loan_tables`
+ * (the last migration to touch this table before `0089`) — `account_id`
  * exists and is NOT NULL, `checksum` is a plain (non-unique) index as of
  * `0059`. Deliberately NOT derived from the journal (`migrated-db.ts`) —
- * that always includes `0087` itself once it lands, which would make this
+ * that always includes `0089` itself once it lands, which would make this
  * migration test vacuous.
  */
 const PRE_MIGRATION_DDL = `
@@ -68,7 +69,7 @@ CREATE INDEX idx_transactions_checksum ON transactions (checksum);
 
 function migrationSql(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
-  const file = join(here, '..', '..', '..', 'migrations', '0087_scope_dedup_key_to_account.sql');
+  const file = join(here, '..', '..', '..', 'migrations', '0089_scope_dedup_key_to_account_id.sql');
   return readFileSync(file, 'utf8')
     .split('--> statement-breakpoint')
     .map((chunk) => chunk.trim())
@@ -97,15 +98,11 @@ function seed(raw: Database.Database, row: SeedRow): void {
     .run(row);
 }
 
-function accountScopedChecksum(
-  row: Pick<SeedRow, 'date' | 'amountCents' | 'description' | 'rawRow' | 'account'>
+function accountIdScopedChecksum(
+  row: Pick<SeedRow, 'date' | 'amountCents' | 'description' | 'rawRow' | 'accountId'>
 ): string {
-  // `buildImportDedupKeyFromStoredRow` now takes `accountId`, not `account`
-  // (POPS-2852 — see its module doc comment). This test is pinned to `0087`'s
-  // OLD, dialect-scoped shape, so it keeps feeding the dialect string through
-  // under the new parameter name rather than switching to `row.accountId`.
   const key = buildImportDedupKeyFromStoredRow({
-    accountId: row.account,
+    accountId: row.accountId,
     date: row.date,
     amount: centsToDollars(row.amountCents),
     description: row.description,
@@ -114,7 +111,7 @@ function accountScopedChecksum(
   return createHash('sha256').update(key).digest('hex');
 }
 
-describe('0087_scope_dedup_key_to_account', () => {
+describe('0089_scope_dedup_key_to_account_id', () => {
   let raw: Database.Database;
 
   beforeEach(() => {
@@ -134,7 +131,7 @@ describe('0087_scope_dedup_key_to_account', () => {
     for (const statement of migrationSql()) raw.exec(statement);
   }
 
-  it('re-keys a checksummed row to the account-scoped canonical SHA-256', () => {
+  it('re-keys a checksummed row to the account-id-scoped canonical SHA-256', () => {
     const row: SeedRow = {
       id: 'a',
       account: 'Amex',
@@ -142,48 +139,47 @@ describe('0087_scope_dedup_key_to_account', () => {
       description: 'STARBUCKS STORE 1234',
       amountCents: -4250,
       date: '2026-01-15',
-      checksum: 'pre-account-hash-a',
+      checksum: 'pre-account-id-hash-a',
       rawRow: JSON.stringify({ Reference: 'REF-999' }),
     };
     seed(raw, row);
 
     runMigration();
 
-    expect(checksumOf('a')).toBe(accountScopedChecksum(row));
-    expect(checksumOf('a')).not.toBe('pre-account-hash-a');
+    expect(checksumOf('a')).toBe(accountIdScopedChecksum(row));
+    expect(checksumOf('a')).not.toBe('pre-account-id-hash-a');
   });
 
-  it('splits an identical row across two accounts into two DIFFERENT checksums', () => {
-    // Same subscription charged to two cards on the same day — a legitimate
-    // duplicate row across accounts, not a re-export of one charge.
+  it('splits an identical row across two real accounts sharing one bank dialect into two DIFFERENT checksums', () => {
+    // Two personal ANZ credit cards — same dialect, same date/amount/desc —
+    // which 0087's dialect-scoped key could not tell apart.
     const shared = {
+      account: 'ANZ Credit Card',
       description: 'NETFLIX.COM',
       amountCents: -1599,
       date: '2026-02-01',
       rawRow: JSON.stringify({ Reference: '' }),
     };
     seed(raw, {
-      id: 'amex-leg',
-      account: 'Amex',
-      accountId: 'acc-amex',
+      id: 'anz-personal',
+      accountId: 'acc-anz-personal',
       checksum: 'old-a',
       ...shared,
     });
     seed(raw, {
-      id: 'anz-leg',
-      account: 'ANZ Credit Card',
-      accountId: 'acc-anz',
+      id: 'anz-joint',
+      accountId: 'acc-anz-joint',
       checksum: 'old-b',
       ...shared,
     });
 
     runMigration();
 
-    const amex = checksumOf('amex-leg');
-    const anz = checksumOf('anz-leg');
-    expect(amex).not.toBeNull();
-    expect(anz).not.toBeNull();
-    expect(amex).not.toBe(anz);
+    const personal = checksumOf('anz-personal');
+    const joint = checksumOf('anz-joint');
+    expect(personal).not.toBeNull();
+    expect(joint).not.toBeNull();
+    expect(personal).not.toBe(joint);
   });
 
   it('is idempotent: re-running the migration converges on the same checksums', () => {
@@ -194,7 +190,7 @@ describe('0087_scope_dedup_key_to_account', () => {
       description: 'STARBUCKS STORE 1234',
       amountCents: -4250,
       date: '2026-01-15',
-      checksum: 'pre-account-hash-a',
+      checksum: 'pre-account-id-hash-a',
       rawRow: JSON.stringify({ Reference: 'REF-999' }),
     };
     seed(raw, row);

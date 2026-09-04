@@ -201,6 +201,7 @@ const PARSED_KEYS = {
   description: true,
   amount: true,
   account: true,
+  accountId: true,
   location: true,
   country: true,
   foreignAmountMinor: true,
@@ -214,6 +215,7 @@ const PARSED_KEYS = {
 describe('buildConfirmedTransactions parsed-field passthrough', () => {
   it('carries every parsed field to the commit payload', () => {
     const row = matched({
+      accountId: 'acc-real-account',
       location: 'Github.com',
       country: 'US',
       foreignAmountMinor: 10_000,
@@ -227,6 +229,19 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
     for (const key of Object.keys(PARSED_KEYS) as Array<keyof ParsedTransaction>) {
       expect(confirmed?.[key], `parsed field ${key} was dropped`).toEqual(row[key]);
     }
+  });
+
+  it('carries the picked accountId, not just the dialect-derived account name (POPS-2852)', () => {
+    // `account` is the bank/dialect label ("ANZ Credit Card"); `accountId` is
+    // the real account the wizard's account-step picked. A row whose dialect
+    // label would name-match a DIFFERENT real account than the one picked
+    // must still commit with the picked account's id.
+    const row = matched({ account: 'ANZ Credit Card', accountId: 'acc-anz-personal' });
+
+    const [confirmed] = buildConfirmedTransactions([row]);
+
+    expect(confirmed?.account).toBe('ANZ Credit Card');
+    expect(confirmed?.accountId).toBe('acc-anz-personal');
   });
 
   it('leaves the foreign-charge columns unset on a domestic row rather than zeroing them', () => {

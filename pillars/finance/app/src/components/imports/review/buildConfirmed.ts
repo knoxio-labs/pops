@@ -79,6 +79,7 @@ function parsedFields(t: ProcessedTransaction): ParsedTransaction {
     description: t.description,
     amount: t.amount,
     account: t.account,
+    accountId: t.accountId,
     location: t.location,
     country: t.country,
     foreignAmountMinor: t.foreignAmountMinor,

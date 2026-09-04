@@ -281,6 +281,13 @@
       "when": 1781913600033,
       "tag": "0088_loan_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1781913600034,
+      "tag": "0089_scope_dedup_key_to_account_id",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,14 @@ export const ParsedTransactionSchema = z.object({
   description: z.string().min(1),
   amount: z.number(),
   account: z.string().min(1),
+  /**
+   * The `accounts.id` the wizard's account-step (POPS-2840) picked for this
+   * import, distinct from `account` (the bank/dialect label stamped at parse
+   * time — see `column-map/validation.ts`). Optional only for a caller that
+   * predates the account-step; the commit path falls back to name-matching
+   * `account` when it is absent (POPS-2852).
+   */
+  accountId: z.string().min(1).optional(),
   location: z.string().optional(),
   /** ISO-3166-1 alpha-2, set by parsers that can tell a charge was foreign. */
   country: z.string().optional(),

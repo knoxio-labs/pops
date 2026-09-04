@@ -128,9 +128,10 @@ export type PdfUploadDecision =
 
 export async function readAnzPdfUpload(
   files: readonly File[],
-  coverage: AccountCoverage
+  coverage: AccountCoverage,
+  accountId: string
 ): Promise<PdfUploadDecision> {
-  const result = await importAnzPdfStatements(files, coverage);
+  const result = await importAnzPdfStatements(files, coverage, accountId);
   if (!result.ok) return { kind: 'error', message: describePdfFailure(result.error) };
   const { statement } = result;
   if (statement.plan.refusal) {
@@ -163,7 +164,8 @@ const ACCOUNT = 'ANZ Credit Card';
  */
 export async function importAnzPdfStatements(
   files: readonly File[],
-  coverage: AccountCoverage
+  coverage: AccountCoverage,
+  accountId: string
 ): Promise<AnzPdfImportResult> {
   const transactions = [];
   const unrecognisedRows: string[] = [];
@@ -175,7 +177,11 @@ export async function importAnzPdfStatements(
       return { ok: false, error: { fileName: file.name, failure: extraction } };
     }
     pageCount += extraction.pageCount;
-    const statement = parseAnzPdfStatementText(extraction.text, { account: ACCOUNT, hashDedupKey });
+    const statement = parseAnzPdfStatementText(extraction.text, {
+      account: ACCOUNT,
+      accountId,
+      hashDedupKey,
+    });
     transactions.push(...statement.transactions);
     unrecognisedRows.push(...statement.unrecognisedRows);
   }
