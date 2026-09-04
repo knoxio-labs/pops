@@ -364,6 +364,19 @@ describe('buildSubmit — account name fallback', () => {
   });
 });
 
+describe('useTransactionsPage — isSubmitting', () => {
+  it('stays false while the accounts query is still loading, so Cancel is never blocked by an unrelated fetch', () => {
+    // Regression test for the isSubmitting/Cancel-gating review finding: only
+    // create/update mutations in flight should disable Cancel, not the
+    // accounts query's own (unrelated) loading state.
+    accountsListMock.mockReturnValue(new Promise(() => {}));
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionsPage(), { wrapper });
+
+    expect(result.current.isSubmitting).toBe(false);
+  });
+});
+
 describe('useTransactionsPage — list query', () => {
   it('issues a transactions list query with the page-size limit and exposes available tags', async () => {
     transactionsAvailableTagsMock.mockResolvedValue({
