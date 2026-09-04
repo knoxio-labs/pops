@@ -162,6 +162,18 @@ export const accounts: Account[] = [
     balance: 0,
     transactionCount: 730,
   },
+  {
+    id: 'a12',
+    name: 'Car loan',
+    institutionId: 'anz',
+    kind: 'loan',
+    currency: 'AUD',
+    archived: false,
+    order: 12,
+    balance: -1_820_000,
+    balanceAsOf: '2026-09-01',
+    transactionCount: 14,
+  },
 ];
 
 /** The list as a screen shows it by default: active only, in display order. */
