@@ -18,10 +18,10 @@ import {
 } from '../../../../db/index.js';
 import {
   buildAnalyzePrompt,
-  buildGeneratePrompt,
   loadRecentAcceptedCorrections,
   type AcceptedCorrectionExample,
 } from '../ai-analyze.js';
+import { buildGeneratePrompt } from '../ai-generate-rules.js';
 
 let tmpDir: string;
 let opened: OpenedFinanceDb;

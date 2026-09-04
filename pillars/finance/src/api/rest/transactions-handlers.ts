@@ -7,6 +7,8 @@
  * `restore`, which re-inserts preserving id + dedup metadata.
  */
 import {
+  AccountIdentityMismatchError,
+  AccountNotFoundError,
   type FinanceDb,
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
@@ -39,6 +41,9 @@ const PREVIEW_DESCRIPTIONS_LIMIT = 2000;
 function translateTransactionError(err: unknown, id?: string): never {
   if (err instanceof TransactionNotFoundError) throw new NotFoundError('Transaction', id ?? err.id);
   if (err instanceof TransactionAlreadyExistsError) throw new ConflictError(err.message);
+  if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', err.id);
+  if (err instanceof AccountIdentityMismatchError)
+    throw new ValidationError(undefined, err.message);
   throw err;
 }
 
@@ -72,6 +77,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
           {
             search: query.search,
             account: query.account,
+            accountId: query.accountId,
             startDate: query.startDate,
             endDate: query.endDate,
             tag: query.tag,

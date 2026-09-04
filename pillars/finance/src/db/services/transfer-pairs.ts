@@ -32,7 +32,7 @@ function defaultTypeForAmount(amountCents: number): TransactionType {
 export interface PairTarget {
   id: string;
   amountCents: number;
-  account: string;
+  accountId: string;
   date: string;
 }
 
@@ -67,7 +67,7 @@ export function findPairCandidates(
     .where(
       and(
         eq(transactions.amountCents, -target.amountCents),
-        ne(transactions.account, target.account),
+        ne(transactions.accountId, target.accountId),
         isNull(transactions.relatedTransactionId),
         isNull(transactions.matchRuleId),
         gte(transactions.date, shiftDate(target.date, -windowDays)),

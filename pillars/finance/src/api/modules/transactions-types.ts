@@ -73,6 +73,7 @@ export interface TransactionSnapshot extends ForeignChargeFields {
 export interface CreateTransactionBody {
   description: string;
   account: string;
+  accountId?: string | undefined;
   amount: number;
   date: string;
   type: TransactionType;
@@ -91,6 +92,7 @@ export interface CreateTransactionBody {
 export interface UpdateTransactionBody {
   description?: string;
   account?: string;
+  accountId?: string;
   amount?: number;
   date?: string;
   type?: TransactionType;
@@ -186,6 +188,7 @@ export function toCreateTransactionInput(body: CreateTransactionBody): CreateTra
   return {
     description: body.description,
     account: body.account,
+    accountId: body.accountId,
     amountCents: dollarsToCents(body.amount),
     date: body.date,
     type: body.type,
@@ -206,6 +209,7 @@ export function toUpdateTransactionInput(body: UpdateTransactionBody): UpdateTra
   return {
     description: body.description,
     account: body.account,
+    accountId: body.accountId,
     amountCents: body.amount === undefined ? undefined : dollarsToCents(body.amount),
     date: body.date,
     type: body.type,

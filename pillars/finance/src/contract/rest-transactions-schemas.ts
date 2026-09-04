@@ -88,6 +88,13 @@ export const TransactionSnapshotSchema = z.object({
 export const CreateTransactionBody = z.object({
   description: z.string().min(1, 'Description is required'),
   account: z.string().min(1, 'Account is required'),
+  /**
+   * Preferred over `account` when both are supplied (POPS-2769) — the
+   * resolved account's name must match `account` case-insensitively, or the
+   * request is rejected. `account` stays required for this transition
+   * ticket; dropping it is POPS-2770's job.
+   */
+  accountId: z.string().min(1).optional(),
   amount: z.number(),
   date: z.string().min(1, 'Date is required'),
   type: TransactionTypeSchema,
@@ -105,6 +112,8 @@ export const CreateTransactionBody = z.object({
 export const UpdateTransactionBody = z.object({
   description: z.string().min(1, 'Description cannot be empty').optional(),
   account: z.string().min(1, 'Account cannot be empty').optional(),
+  /** Preferred over `account` when both are supplied — see `CreateTransactionBody.accountId`. */
+  accountId: z.string().min(1).optional(),
   amount: z.number().optional(),
   date: z.string().min(1, 'Date cannot be empty').optional(),
   type: TransactionTypeSchema.optional(),
@@ -120,6 +129,12 @@ export const UpdateTransactionBody = z.object({
 export const TransactionQuery = z.object({
   search: z.string().optional(),
   account: z.string().optional(),
+  /**
+   * Preferred over `account` when both are supplied (POPS-2769) — filters by
+   * the resolved id rather than the free-text name, which is strictly more
+   * correct since `accounts.name` is only unique case-insensitively.
+   */
+  accountId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   tag: z.string().optional(),

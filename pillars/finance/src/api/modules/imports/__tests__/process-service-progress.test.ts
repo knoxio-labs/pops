@@ -90,7 +90,6 @@ async function observeProgress(transactions: ParsedTransaction[]): Promise<Progr
       db,
       contacts: makeContactsFake(),
       transactions,
-      account: 'ANZ Credit Card',
       importBatchId: 'batch-1',
       onProgress: (update) => {
         if (update.processedCount === undefined) return;

@@ -4,8 +4,15 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
-import { createAccount } from '../services/accounts.js';
+import {
+  AccountIdentityMismatchError,
+  AccountNotFoundError,
+  TransactionAlreadyExistsError,
+  TransactionNotFoundError,
+  UnresolvedAccountNameError,
+} from '../errors.js';
+import { resolveAccountIdByName as resolveIdByName } from '../services/account-lookup.js';
+import { createAccount, getAccount } from '../services/accounts.js';
 import {
   createTransaction,
   deleteTransaction,
@@ -121,6 +128,51 @@ describe('createTransaction', () => {
     expect(created.notes).toBe('Weekly shop');
     expect(created.checksum).toBe('abc123');
     expect(created.rawRow).toBe('15/06/2025,Woolworths,150.75');
+  });
+});
+
+describe('createTransaction — accountId precedence (POPS-2769)', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('accepts accountId alongside an agreeing account (case-insensitive) and stores both', () => {
+    const account = getAccount(db, resolveIdByName(db, 'Up Savings'));
+    const created = createTransaction(db, {
+      description: 'Groceries',
+      account: 'up savings',
+      accountId: account.id,
+      amountCents: 5000,
+      date: '2025-06-15',
+    });
+    expect(created.accountId).toBe(account.id);
+    expect(created.account).toBe('Up Savings');
+  });
+
+  it('rejects a create whose account name disagrees with its accountId', () => {
+    const upId = resolveIdByName(db, 'Up');
+    expect(() =>
+      createTransaction(db, {
+        description: 'Groceries',
+        account: 'ANZ Visa',
+        accountId: upId,
+        amountCents: 5000,
+        date: '2025-06-15',
+      })
+    ).toThrow(AccountIdentityMismatchError);
+  });
+
+  it('throws AccountNotFoundError for an unknown accountId', () => {
+    expect(() =>
+      createTransaction(db, {
+        description: 'Groceries',
+        account: 'Up',
+        accountId: 'does-not-exist',
+        amountCents: 5000,
+        date: '2025-06-15',
+      })
+    ).toThrow(AccountNotFoundError);
   });
 });
 
@@ -548,6 +600,93 @@ describe('updateTransaction', () => {
   it('throws TransactionNotFoundError for an unknown id', () => {
     expect(() => updateTransaction(db, 'missing', { description: 'x' })).toThrow(
       TransactionNotFoundError
+    );
+  });
+});
+
+describe('updateTransaction — accountId precedence (POPS-2769)', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('moves the transaction using only accountId, with no account supplied', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    const anzId = resolveIdByName(db, 'ANZ Visa');
+
+    const updated = updateTransaction(db, created.id, { accountId: anzId });
+    expect(updated.accountId).toBe(anzId);
+    expect(updated.account).toBe('ANZ Visa');
+  });
+
+  it('accepts accountId alongside an agreeing account name', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    const anzId = resolveIdByName(db, 'ANZ Visa');
+
+    const updated = updateTransaction(db, created.id, { account: 'anz visa', accountId: anzId });
+    expect(updated.accountId).toBe(anzId);
+    expect(updated.account).toBe('ANZ Visa');
+  });
+
+  it('rejects a patch whose account name disagrees with its accountId', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    const anzId = resolveIdByName(db, 'ANZ Visa');
+
+    expect(() =>
+      updateTransaction(db, created.id, { account: 'Up Savings', accountId: anzId })
+    ).toThrow(AccountIdentityMismatchError);
+  });
+
+  it('leaves the account untouched when neither account nor accountId is patched', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    const updated = updateTransaction(db, created.id, { description: 'Renamed' });
+    expect(updated.account).toBe('Up');
+    expect(updated.accountId).toBe(created.accountId);
+  });
+
+  it('still resolves by name alone (back-compat) when only account is patched', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    const anzId = resolveIdByName(db, 'ANZ Visa');
+
+    const updated = updateTransaction(db, created.id, { account: 'ANZ Visa' });
+    expect(updated.account).toBe('ANZ Visa');
+    expect(updated.accountId).toBe(anzId);
+  });
+
+  it('throws UnresolvedAccountNameError for an unknown account name with no accountId', () => {
+    const created = createTransaction(db, {
+      description: 'Test',
+      account: 'Up',
+      amountCents: 1000,
+      date: '2025-06-15',
+    });
+    expect(() => updateTransaction(db, created.id, { account: 'Nonexistent Bank' })).toThrow(
+      UnresolvedAccountNameError
     );
   });
 });

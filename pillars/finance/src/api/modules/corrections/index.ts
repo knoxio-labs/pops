@@ -32,7 +32,8 @@ export {
 } from './types.js';
 
 // AI cluster (C1-b)
-export { analyzeCorrection, generateRules } from './ai-analyze.js';
+export { analyzeCorrection } from './ai-analyze.js';
+export { generateRules } from './ai-generate-rules.js';
 export { proposeChangeSetFromCorrectionSignal, reviseChangeSet } from './ai-propose.js';
 export {
   persistRejectedChangeSetFeedback,

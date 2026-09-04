@@ -118,6 +118,7 @@ const PreviewMatchTransactionSchema = z.object({
   id: z.string(),
   description: z.string(),
   account: z.string(),
+  accountId: z.string(),
   amount: z.number(),
   date: z.string(),
   entityName: z.string().nullable(),

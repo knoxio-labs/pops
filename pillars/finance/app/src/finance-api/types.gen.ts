@@ -1471,6 +1471,7 @@ export type CorrectionsGenerateRulesData = {
   body?: {
     transactions: Array<{
       account: string;
+      accountId?: string;
       amount: number;
       currentTags: Array<string>;
       description: string;
@@ -1947,6 +1948,7 @@ export type CorrectionsPreviewMatchesResponses = {
     data: {
       matches: Array<{
         account: string;
+        accountId: string;
         amount: number;
         date: string;
         description: string;
@@ -6247,6 +6249,7 @@ export type TransactionsListData = {
   query?: {
     search?: string;
     account?: string;
+    accountId?: string;
     startDate?: string;
     endDate?: string;
     tag?: string;
@@ -6356,6 +6359,7 @@ export type TransactionsCreateData = {
    */
   body?: {
     account: string;
+    accountId?: string;
     amount: number;
     checksum?: string;
     country?: string | null;
@@ -6836,6 +6840,7 @@ export type TransactionsUpdateData = {
    */
   body?: {
     account?: string;
+    accountId?: string;
     amount?: number;
     country?: string | null;
     date?: string;

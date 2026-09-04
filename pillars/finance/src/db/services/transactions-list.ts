@@ -18,6 +18,12 @@ import type { FinanceDb, TransactionRow } from './internal.js';
 export interface TransactionFilters {
   search?: string | undefined;
   account?: string | undefined;
+  /**
+   * Preferred over `account` when both are supplied (POPS-2769) — filters by
+   * the resolved id, which is strictly more correct than the free-text name
+   * since `accounts.name` is only unique case-insensitively.
+   */
+  accountId?: string | undefined;
   startDate?: string | undefined;
   endDate?: string | undefined;
   tag?: string | undefined;
@@ -44,7 +50,9 @@ function buildListConditions(filters: TransactionFilters): SQL[] {
   if (filters.search) {
     conditions.push(like(transactions.description, `%${filters.search}%`));
   }
-  if (filters.account) {
+  if (filters.accountId) {
+    conditions.push(eq(transactions.accountId, filters.accountId));
+  } else if (filters.account) {
     conditions.push(eq(transactions.account, filters.account));
   }
   if (filters.startDate) {

@@ -211,6 +211,7 @@ export interface BudgetQuery {
 export interface TransactionQuery {
   search?: string;
   account?: string;
+  accountId?: string;
   startDate?: string;
   endDate?: string;
   tag?: string;

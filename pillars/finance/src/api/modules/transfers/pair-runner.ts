@@ -20,7 +20,7 @@ function toPairCandidate(row: TransactionRow): PairCandidate {
   return {
     id: row.id,
     amount: row.amountCents,
-    account: row.account,
+    accountId: row.accountId,
     date: row.date,
     relatedTransactionId: row.relatedTransactionId,
   };

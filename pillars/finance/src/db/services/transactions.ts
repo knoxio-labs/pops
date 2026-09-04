@@ -20,7 +20,7 @@ import { eq } from 'drizzle-orm';
 
 import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
-import { resolveAccountIdByName } from './account-lookup.js';
+import { resolveAccountIdentity } from './account-lookup.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb, TransactionRow } from './internal.js';
@@ -32,6 +32,13 @@ export type { TransactionRow };
 export interface CreateTransactionInput {
   description: string;
   account: string;
+  /**
+   * Preferred over `account` when both are supplied (POPS-2769) — see
+   * {@link resolveAccountIdentity}. `account` stays required on the wire for
+   * this transition ticket, so this is purely an alternative/consistency
+   * check, never the only identity supplied.
+   */
+  accountId?: string | undefined;
   amountCents: number;
   date: string;
   type?: TransactionType | undefined;
@@ -52,6 +59,8 @@ export interface CreateTransactionInput {
 export interface UpdateTransactionInput {
   description?: string;
   account?: string;
+  /** Preferred over `account` when both are supplied — see {@link resolveAccountIdentity}. */
+  accountId?: string;
   amountCents?: number;
   date?: string;
   type?: TransactionType;
@@ -89,13 +98,14 @@ export function getTransaction(db: FinanceDb, id: string): TransactionRow {
 export function createTransaction(db: FinanceDb, input: CreateTransactionInput): TransactionRow {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const identity = resolveAccountIdentity(db, input.account, input.accountId);
 
   db.insert(transactions)
     .values({
       id,
       description: input.description,
-      account: input.account,
-      accountId: resolveAccountIdByName(db, input.account),
+      account: identity.account,
+      accountId: identity.accountId,
       amountCents: input.amountCents,
       date: input.date,
       type: input.type ?? 'purchase',
@@ -123,9 +133,10 @@ function applyCoreFields(
   updates: TransactionUpdate
 ): void {
   if (input.description !== undefined) updates.description = input.description;
-  if (input.account !== undefined) {
-    updates.account = input.account;
-    updates.accountId = resolveAccountIdByName(db, input.account);
+  if (input.account !== undefined || input.accountId !== undefined) {
+    const identity = resolveAccountIdentity(db, input.account, input.accountId);
+    updates.account = identity.account;
+    updates.accountId = identity.accountId;
   }
   if (input.amountCents !== undefined) updates.amountCents = input.amountCents;
   if (input.date !== undefined) updates.date = input.date;

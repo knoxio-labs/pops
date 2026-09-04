@@ -15,7 +15,7 @@ function tx(overrides: Partial<PairCandidate> = {}): PairCandidate {
   return {
     id: 'tx',
     amount: -5000,
-    account: 'Amex',
+    accountId: 'Amex',
     date: '2026-07-01',
     relatedTransactionId: null,
     ...overrides,
@@ -23,40 +23,40 @@ function tx(overrides: Partial<PairCandidate> = {}): PairCandidate {
 }
 
 describe('findPairForTransaction', () => {
-  const target = tx({ id: 'A', amount: -5000, account: 'Amex', date: '2026-07-01' });
+  const target = tx({ id: 'A', amount: -5000, accountId: 'Amex', date: '2026-07-01' });
 
   it('links a unique opposite-sign, same-amount, different-account, same-day counterpart', () => {
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-01' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'match', id: 'B' });
   });
 
   it('matches within the window (2 days apart, window 3)', () => {
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-03' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-03' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'match', id: 'B' });
   });
 
   it('matches at the exact window boundary (3 days apart, window 3 — inclusive)', () => {
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-04' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-04' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'match', id: 'B' });
   });
 
   it('does not match one day beyond the window (4 days apart, window 3)', () => {
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-05' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-05' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'none' });
   });
 
   it('rejects a same-account candidate (the #3608 hazard)', () => {
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Amex', date: '2026-07-01' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Amex', date: '2026-07-01' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'none' });
   });
 
   it('rejects a same-sign candidate', () => {
-    const counterpart = tx({ id: 'B', amount: -5000, account: 'Bendigo', date: '2026-07-01' });
+    const counterpart = tx({ id: 'B', amount: -5000, accountId: 'Bendigo', date: '2026-07-01' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'none' });
   });
 
   it('rejects a different-amount candidate', () => {
-    const counterpart = tx({ id: 'B', amount: 5001, account: 'Bendigo', date: '2026-07-01' });
+    const counterpart = tx({ id: 'B', amount: 5001, accountId: 'Bendigo', date: '2026-07-01' });
     expect(findPairForTransaction(target, [counterpart], 3)).toEqual({ kind: 'none' });
   });
 
@@ -70,7 +70,7 @@ describe('findPairForTransaction', () => {
 
   it('returns none when the target is already linked', () => {
     const linkedTarget = tx({ id: 'A', amount: -5000, relatedTransactionId: 'X' });
-    const counterpart = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-01' });
+    const counterpart = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
     expect(findPairForTransaction(linkedTarget, [counterpart], 3)).toEqual({ kind: 'none' });
   });
 
@@ -78,7 +78,7 @@ describe('findPairForTransaction', () => {
     const counterpart = tx({
       id: 'B',
       amount: 5000,
-      account: 'Bendigo',
+      accountId: 'Bendigo',
       date: '2026-07-01',
       relatedTransactionId: 'Z',
     });
@@ -86,14 +86,14 @@ describe('findPairForTransaction', () => {
   });
 
   it('breaks a tie by the closest date when one candidate is strictly nearer', () => {
-    const near = tx({ id: 'NEAR', amount: 5000, account: 'Bendigo', date: '2026-07-01' });
-    const far = tx({ id: 'FAR', amount: 5000, account: 'ING', date: '2026-07-03' });
+    const near = tx({ id: 'NEAR', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
+    const far = tx({ id: 'FAR', amount: 5000, accountId: 'ING', date: '2026-07-03' });
     expect(findPairForTransaction(target, [far, near], 3)).toEqual({ kind: 'match', id: 'NEAR' });
   });
 
   it('refuses to auto-link when two candidates are equally close', () => {
-    const one = tx({ id: 'ONE', amount: 5000, account: 'Bendigo', date: '2026-07-01' });
-    const two = tx({ id: 'TWO', amount: 5000, account: 'ING', date: '2026-07-01' });
+    const one = tx({ id: 'ONE', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
+    const two = tx({ id: 'TWO', amount: 5000, accountId: 'ING', date: '2026-07-01' });
     const result = findPairForTransaction(target, [one, two], 3);
     expect(result.kind).toBe('ambiguous');
     if (result.kind === 'ambiguous') {
@@ -102,9 +102,9 @@ describe('findPairForTransaction', () => {
   });
 
   it('reports only the equally-closest tie as ambiguous, excluding a farther eligible row', () => {
-    const tieA = tx({ id: 'TIE_A', amount: 5000, account: 'Bendigo', date: '2026-07-02' });
-    const tieB = tx({ id: 'TIE_B', amount: 5000, account: 'ING', date: '2026-06-30' });
-    const farther = tx({ id: 'FAR', amount: 5000, account: 'UP', date: '2026-07-04' });
+    const tieA = tx({ id: 'TIE_A', amount: 5000, accountId: 'Bendigo', date: '2026-07-02' });
+    const tieB = tx({ id: 'TIE_B', amount: 5000, accountId: 'ING', date: '2026-06-30' });
+    const farther = tx({ id: 'FAR', amount: 5000, accountId: 'UP', date: '2026-07-04' });
     const result = findPairForTransaction(target, [tieA, tieB, farther], 3);
     expect(result.kind).toBe('ambiguous');
     if (result.kind === 'ambiguous') {
@@ -113,8 +113,8 @@ describe('findPairForTransaction', () => {
   });
 
   it('handles a credit target (positive amount) symmetrically', () => {
-    const creditTarget = tx({ id: 'A', amount: 5000, account: 'Bendigo', date: '2026-07-01' });
-    const debitCounterpart = tx({ id: 'B', amount: -5000, account: 'Amex', date: '2026-07-01' });
+    const creditTarget = tx({ id: 'A', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
+    const debitCounterpart = tx({ id: 'B', amount: -5000, accountId: 'Amex', date: '2026-07-01' });
     expect(findPairForTransaction(creditTarget, [debitCounterpart], 3)).toEqual({
       kind: 'match',
       id: 'B',
@@ -123,8 +123,8 @@ describe('findPairForTransaction', () => {
 
   it('falls back to the default window (3 days) when none is passed', () => {
     delete process.env['FINANCE_TRANSFER_PAIR_WINDOW_DAYS'];
-    const inDefault = tx({ id: 'B', amount: 5000, account: 'Bendigo', date: '2026-07-04' });
-    const outOfDefault = tx({ id: 'C', amount: 5000, account: 'ING', date: '2026-07-05' });
+    const inDefault = tx({ id: 'B', amount: 5000, accountId: 'Bendigo', date: '2026-07-04' });
+    const outOfDefault = tx({ id: 'C', amount: 5000, accountId: 'ING', date: '2026-07-05' });
     expect(findPairForTransaction(target, [inDefault])).toEqual({ kind: 'match', id: 'B' });
     expect(findPairForTransaction(target, [outOfDefault])).toEqual({ kind: 'none' });
   });

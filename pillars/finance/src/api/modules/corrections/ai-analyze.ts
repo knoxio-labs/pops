@@ -1,38 +1,33 @@
 /**
- * AI rule derivation: `analyzeCorrection` (one signal → a validated rule) and
- * `generateRules` (a batch of transactions → proposed tagging rules). Ported
- * from the monolith `core/corrections/lib/{analyze-correction,rule-generator}.ts`,
- * routed through the injectable Claude completer (`ai-runtime.ts`).
+ * `analyzeCorrection`: one signal → a validated rule. Ported from the
+ * monolith `core/corrections/lib/analyze-correction.ts`, routed through the
+ * injectable Claude completer (`ai-runtime.ts`).
+ *
+ * Also owns the few-shot grounding (`loadRecentAcceptedCorrections`,
+ * `formatFewShotExamples`) and the shared `MATCH_TYPES`/`AcceptedCorrectionExample`
+ * that `ai-generate-rules.ts`'s `generateRules` reuses — split out to stay
+ * under the per-file line cap.
  */
 import { desc, eq } from 'drizzle-orm';
 
 import {
   type FinanceDb,
   transactionCorrections,
-  transactions,
   transactionCorrectionsService,
 } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
 import { getClaudeCompleter } from './ai-runtime.js';
-import { type CorrectionAnalysis, type ProposedRule } from './ai-types.js';
+import { type CorrectionAnalysis } from './ai-types.js';
 import { parseCorrectionTags } from './types.js';
 
 const MIN_PATTERN_LENGTH = 3;
-const MATCH_TYPES = ['exact', 'contains', 'regex'] as const;
+export const MATCH_TYPES = ['exact', 'contains', 'regex'] as const;
 const RECENT_CORRECTIONS_LIMIT = 5;
 
 export interface CorrectionInput {
   description: string;
   entityName: string;
   amount: number;
-}
-
-export interface GenerateRulesTransaction {
-  description: string;
-  entityName: string | null;
-  amount: number;
-  account: string;
-  currentTags: string[];
 }
 
 /** A previously accepted correction rule, shown to the AI as a few-shot example (CF062/#3661). */
@@ -71,7 +66,7 @@ export function loadRecentAcceptedCorrections(db: FinanceDb): AcceptedCorrection
 }
 
 /** Render accepted-correction examples as a few-shot block, or '' when there are none. */
-function formatFewShotExamples(examples: AcceptedCorrectionExample[]): string {
+export function formatFewShotExamples(examples: AcceptedCorrectionExample[]): string {
   if (examples.length === 0) return '';
   const lines = examples
     .map((example, i) => {
@@ -159,80 +154,4 @@ export async function analyzeCorrection(
   if (!result) return null;
   if (!patternMatchesDescription(result.pattern, result.matchType, input.description)) return null;
   return result;
-}
-
-function loadAvailableTags(db: FinanceDb): string[] {
-  const rows = db.select({ tags: transactions.tags }).from(transactions).all();
-  const seen = new Set<string>();
-  for (const row of rows) {
-    for (const tag of parseCorrectionTags(row.tags ?? '[]')) seen.add(tag);
-  }
-  return [...seen].toSorted();
-}
-
-export function buildGeneratePrompt(
-  txns: GenerateRulesTransaction[],
-  availableTags: string[],
-  examples: AcceptedCorrectionExample[] = []
-): string {
-  const lines = txns
-    .map((t, i) => {
-      const entity = t.entityName ?? 'unknown';
-      const tags = t.currentTags.length > 0 ? t.currentTags.join(', ') : 'none';
-      return `${i + 1}. "${t.description}" | entity: ${entity} | amount: ${t.amount} | account: ${t.account} | current tags: ${tags}`;
-    })
-    .join('\n');
-  const tagList =
-    availableTags.length > 0 ? availableTags.join(', ') : 'common financial categories';
-  return `You are a transaction categorization assistant. Propose reusable tagging rules for these transactions.
-
-Available tags: ${tagList}
-
-Transactions:
-${lines}${formatFewShotExamples(examples)}
-
-Return a JSON array; each rule: {"descriptionPattern":"...","matchType":"exact|contains|regex","tags":["Tag1"],"reasoning":"..."}.
-Return ONLY the JSON array, no markdown.`;
-}
-
-function parseProposals(text: string): ProposedRule[] {
-  const jsonSlice = extractJsonFromReply(text);
-  if (jsonSlice === null) return [];
-  try {
-    const parsed = JSON.parse(jsonSlice) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (item): item is Record<string, unknown> =>
-          item !== null && typeof item === 'object' && !Array.isArray(item)
-      )
-      .map((item) => ({
-        descriptionPattern:
-          typeof item['descriptionPattern'] === 'string' ? item['descriptionPattern'] : '',
-        matchType: (MATCH_TYPES.includes(String(item['matchType']) as (typeof MATCH_TYPES)[number])
-          ? item['matchType']
-          : 'contains') as ProposedRule['matchType'],
-        tags: Array.isArray(item['tags'])
-          ? item['tags'].filter((t): t is string => typeof t === 'string')
-          : [],
-        reasoning: typeof item['reasoning'] === 'string' ? item['reasoning'] : '',
-      }))
-      .filter((p) => p.descriptionPattern.length > 0);
-  } catch {
-    return [];
-  }
-}
-
-/** Batch-propose reusable tagging rules from a set of transactions. */
-export async function generateRules(
-  db: FinanceDb,
-  txns: GenerateRulesTransaction[]
-): Promise<ProposedRule[]> {
-  const text = await getClaudeCompleter()({
-    prompt: buildGeneratePrompt(txns, loadAvailableTags(db), loadRecentAcceptedCorrections(db)),
-    maxTokens: 2000,
-    operation: 'generate-rules',
-  });
-  if (!text) return [];
-  return parseProposals(text);
 }

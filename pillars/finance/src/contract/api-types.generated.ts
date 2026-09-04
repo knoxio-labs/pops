@@ -2864,6 +2864,7 @@ export interface operations {
         'application/json': {
           transactions: {
             account: string;
+            accountId?: string;
             amount: number;
             /** @default [] */
             currentTags: string[];
@@ -3396,6 +3397,7 @@ export interface operations {
             data: {
               matches: {
                 account: string;
+                accountId: string;
                 amount: number;
                 date: string;
                 description: string;
@@ -8625,6 +8627,7 @@ export interface operations {
       query?: {
         search?: string;
         account?: string;
+        accountId?: string;
         startDate?: string;
         endDate?: string;
         tag?: string;
@@ -8753,6 +8756,7 @@ export interface operations {
       content: {
         'application/json': {
           account: string;
+          accountId?: string;
           amount: number;
           checksum?: string;
           country?: string | null;
@@ -9316,6 +9320,7 @@ export interface operations {
       content: {
         'application/json': {
           account?: string;
+          accountId?: string;
           amount?: number;
           country?: string | null;
           date?: string;

@@ -11,9 +11,10 @@
  *
  * Self-gated: a tick is a no-op returning empty stats unless
  * `FINANCE_TRANSFER_PAIR_ENABLED` is set, so the worker is armed unconditionally
- * at boot and stays inert in production until #3608 ships real per-account
- * values (every CSV row is still `account: 'Amex'`, making the different-account
- * predicate meaningless).
+ * at boot and stays inert in production. Real per-account identity now exists
+ * and the different-account predicate correctly compares `accountId`
+ * (POPS-2769); the flag simply stays off pending a separate decision to enable
+ * it.
  *
  * A recursive `setTimeout` arms the next tick only after the current one
  * returns, which keeps the fan-out sequential and makes the worker trivial to
