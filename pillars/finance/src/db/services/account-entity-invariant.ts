@@ -52,3 +52,24 @@ export function validatePersonEntityInvariant(
   }
   if (entityId !== null) throw new NonPersonAccountHasEntityError(kind);
 }
+
+/**
+ * Re-run {@link validatePersonEntityInvariant} for an `updateAccount` patch,
+ * but only when the patch actually changes `kind` or `entityId` — re-sending
+ * an account's current (possibly already-pending) state unchanged must never
+ * throw, or a `person` account left pending by `createAccount`'s
+ * `allowPendingEntity` escape hatch could never be patched on an unrelated
+ * field before the outbox resolves it.
+ */
+export function validatePersonEntityInvariantOnUpdate(
+  current: { kind: AccountKind; entityId: string | null },
+  input: { kind?: AccountKind; entityId?: string | null },
+  effectiveKind: AccountKind,
+  effectiveEntityId: string | null
+): void {
+  const kindChanged = input.kind !== undefined && input.kind !== current.kind;
+  const entityIdChanged = input.entityId !== undefined && effectiveEntityId !== current.entityId;
+  if (kindChanged || entityIdChanged) {
+    validatePersonEntityInvariant(effectiveKind, effectiveEntityId, false);
+  }
+}

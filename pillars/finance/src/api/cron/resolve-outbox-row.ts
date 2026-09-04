@@ -22,7 +22,14 @@ import { ContactsPermanentError, ContactsUnavailableError } from '../contacts/cl
 import { NO_CREDENTIAL_REASON } from '../pillars/outbound.js';
 
 import type { ContactsClient } from '../contacts/client.js';
-import type { ReconcileWorkerLogger } from './reconcile-contacts-outbox.js';
+
+/** Minimal logging surface the outbox reconciler and its per-row resolver
+ * share — defined here (the leaf module) and re-exported by
+ * `reconcile-contacts-outbox.ts` to avoid a circular import between the two. */
+export interface ReconcileWorkerLogger {
+  info?: (msg: string, meta?: Record<string, unknown>) => void;
+  warn?: (msg: string, meta?: Record<string, unknown>) => void;
+}
 
 /**
  * True when the failure is this process holding no service-account key, as

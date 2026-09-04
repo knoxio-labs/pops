@@ -42,18 +42,15 @@
  * pillar that just came back up.
  */
 import { entityPrecreateOutboxService, type FinanceDb } from '../../db/index.js';
-import { resolveOne } from './resolve-outbox-row.js';
+import { resolveOne, type ReconcileWorkerLogger } from './resolve-outbox-row.js';
 
 import type { ContactsClient } from '../contacts/client.js';
+
+export type { ReconcileWorkerLogger } from './resolve-outbox-row.js';
 
 /** Retry cadence: frequent enough to heal a short contacts outage quickly,
  * without hammering a pillar that's still recovering. */
 const DEFAULT_INTERVAL_MS = 60_000;
-
-export interface ReconcileWorkerLogger {
-  info?: (msg: string, meta?: Record<string, unknown>) => void;
-  warn?: (msg: string, meta?: Record<string, unknown>) => void;
-}
 
 export interface ReconcileContactsOutboxOptions {
   db: FinanceDb;

@@ -42,7 +42,7 @@ export const accounts = sqliteTable(
     // non-`person` accounts (which always carry `entity_id = null`) never
     // collide with each other here, and neither do two `person` accounts
     // both transiently pending outbox resolution — see
-    // `migrations/0084_person_account_entity_currency.sql`.
+    // `migrations/0085_person_account_entity_currency.sql`.
     index('idx_accounts_entity_currency').on(table.entityId, table.currency),
   ]
 );

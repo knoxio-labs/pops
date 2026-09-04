@@ -17,6 +17,7 @@ import { accounts } from '../schema.js';
 import {
   translateWriteConflict,
   validatePersonEntityInvariant,
+  validatePersonEntityInvariantOnUpdate,
 } from './account-entity-invariant.js';
 import * as entityPrecreateOutboxService from './entity-precreate-outbox.js';
 
@@ -214,12 +215,16 @@ function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts
  * unchanged is not a transition and never throws, so an account created
  * before this restriction shipped can still be patched on unrelated fields.
  *
- * Patching the effective `(kind, entityId)` pair out of POPS-2771's
- * invariant throws `PersonAccountRequiresEntityError` (turning `kind` into
- * `person` with no `entityId` already set or supplied — `updateAccount` never
- * auto-resolves one from a name, unlike `createAccount`) or
- * `NonPersonAccountHasEntityError` (setting `entityId` on, or leaving it on
- * while turning `kind` away from, `person`).
+ * Patching `kind` or `entityId` out of POPS-2771's invariant throws
+ * `PersonAccountRequiresEntityError` (turning `kind` into `person` with no
+ * `entityId` already set or supplied — `updateAccount` never auto-resolves
+ * one from a name, unlike `createAccount`) or `NonPersonAccountHasEntityError`
+ * (setting `entityId` on, or leaving it on while turning `kind` away from,
+ * `person`). The invariant is only re-checked when the patch actually
+ * changes `kind` or `entityId` — a `person` account left pending by
+ * `createAccount`'s `allowPendingEntity` escape hatch (`entityId` still
+ * `null`) can be patched on unrelated fields without tripping
+ * `PersonAccountRequiresEntityError` before the outbox resolves it.
  */
 export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInput): AccountRow {
   const current = getAccount(db, id);
@@ -229,7 +234,7 @@ export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInp
   const effectiveKind = input.kind ?? current.kind;
   const effectiveEntityId =
     input.entityId !== undefined ? (input.entityId ?? null) : current.entityId;
-  validatePersonEntityInvariant(effectiveKind, effectiveEntityId, false);
+  validatePersonEntityInvariantOnUpdate(current, input, effectiveKind, effectiveEntityId);
 
   const updates = buildAccountUpdates(input);
   if (Object.keys(updates).length > 0) {

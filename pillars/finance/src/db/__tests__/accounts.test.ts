@@ -439,6 +439,20 @@ describe('person account entity invariant (POPS-2771)', () => {
     expect(updated.kind).toBe('person');
     expect(updated.entityId).toBe('entity-x');
   });
+
+  it('updateAccount allows patching an unrelated field on a still-pending person account', () => {
+    const created = createAccount(
+      db,
+      { name: 'Alice', kind: 'person', currency: 'AUD' },
+      { allowPendingEntity: true }
+    );
+    expect(created.entityId).toBeNull();
+
+    const updated = updateAccount(db, created.id, { displayOrder: 3 });
+    expect(updated.displayOrder).toBe(3);
+    expect(updated.kind).toBe('person');
+    expect(updated.entityId).toBeNull();
+  });
 });
 
 describe('resolvePendingPersonAccountEntity', () => {

@@ -381,7 +381,7 @@ describe('accounts — person accounts (POPS-2771)', () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
-  it('422s a person account with a name that fails to resolve for a PERMANENT reason', async () => {
+  it('propagates a PERMANENT contacts failure unhandled (500) when resolving a person account name', async () => {
     const contacts = makeContactsFake();
     contacts.createOrFetchByName = () => {
       throw new ContactsPermanentError('bad-request');
