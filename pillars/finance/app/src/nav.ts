@@ -36,6 +36,7 @@ export const navConfig = {
       icon: 'CreditCard',
     },
     { path: '/entities', label: 'Entities', labelKey: 'finance.entities', icon: 'Building2' },
+    { path: '/accounts', label: 'Accounts', labelKey: 'finance.accounts', icon: 'Landmark' },
     { path: '/budgets', label: 'Budgets', labelKey: 'finance.budgets', icon: 'PiggyBank' },
     { path: '/wishlist', label: 'Wish List', labelKey: 'finance.wishList', icon: 'Star' },
     { path: '/import', label: 'Import', labelKey: 'finance.import', icon: 'Download' },

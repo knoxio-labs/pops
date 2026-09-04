@@ -44,6 +44,7 @@ export type IconName =
   | 'Film'
   | 'GitPullRequest'
   | 'History'
+  | 'Landmark'
   | 'Layers'
   | 'LayoutDashboard'
   | 'Library'
