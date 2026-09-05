@@ -29,6 +29,7 @@ vi.mock('../finance-api/index.js', () => ({
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   transactionsList: (...args: unknown[]) => transactionsList(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
+  checkpointsHistory: vi.fn().mockResolvedValue({ data: { data: [] }, error: undefined }),
   transactionsAvailableTags: vi.fn(),
   institutionsCreate: vi.fn(),
   giftCardDetailsGet: vi.fn(),
@@ -155,13 +156,13 @@ describe('AccountDetailPage', () => {
     expect(await screen.findByText('No such account')).toBeInTheDocument();
   });
 
-  it('renders the header, an honestly-empty balance card and an empty module grid for a checking account', async () => {
+  it('renders the header, the balance card and an empty module grid for a checking account', async () => {
     renderDetail([account({ id: 'a1', name: 'Everyday', kind: 'checking' })], 'a1');
 
     expect(await screen.findByRole('heading', { name: 'Everyday' })).toBeInTheDocument();
     expect(screen.getByText('Checking')).toBeInTheDocument();
     expect(screen.getByText('AUD')).toBeInTheDocument();
-    expect(screen.getByText('Not tracked yet')).toBeInTheDocument();
+    expect(screen.getByText('Checking balance')).toBeInTheDocument();
     expect(screen.queryByText('Archived')).not.toBeInTheDocument();
   });
 
@@ -174,9 +175,26 @@ describe('AccountDetailPage', () => {
     expect(screen.getAllByText('Archived').length).toBeGreaterThan(0);
   });
 
-  it('gives a liability kind (credit-card) its own true balance-card wording, never asset framing', async () => {
-    renderDetail([account({ id: 'a1', kind: 'credit-card' })], 'a1');
-    expect(await screen.findByText(/check against your statements/)).toBeInTheDocument();
+  it('gives a liability its own balance and caption, never asset framing', async () => {
+    renderDetail(
+      [
+        account({
+          id: 'a1',
+          kind: 'credit-card',
+          balance: {
+            balanceCents: -213_755,
+            asOf: '2026-09-02',
+            basis: 'checkpoint',
+            anchor: { checkpointId: 'c1', asOf: '2026-09-02', source: 'statement' },
+            inconsistent: false,
+          },
+        }),
+      ],
+      'a1'
+    );
+
+    expect(await screen.findByText('Credit card balance')).toBeInTheDocument();
+    expect(screen.getByText('-$2,137.55')).toHaveClass('text-destructive');
   });
 
   it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card', 'person', 'loan'] as const)(
@@ -184,7 +202,10 @@ describe('AccountDetailPage', () => {
     async (kind) => {
       renderDetail([account({ id: 'a1', kind })], 'a1');
       await screen.findByRole('heading', { name: 'Everyday' });
-      expect(screen.getByText('Not tracked yet')).toBeInTheDocument();
+      // Every kind states where its number came from; with no checkpoint that
+      // is a transactions basis, worded by whether the kind has a bank to
+      // check against or is only ever counted.
+      expect(screen.getByText(/never (checked against the bank|counted)/)).toBeInTheDocument();
     }
   );
 

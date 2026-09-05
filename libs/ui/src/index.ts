@@ -138,6 +138,7 @@ export * from './components/BreakdownChart';
 export * from './components/ScrollShelf';
 export * from './components/ResponsiveCardGrid';
 export * from './components/RadarChart';
+export * from './components/Sparkline';
 export * from './components/TierListBoard';
 export * from './components/ActionButtonWithDetailPicker';
 export * from './components/DurationFieldInput';
