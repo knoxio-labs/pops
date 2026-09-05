@@ -1,13 +1,19 @@
 import { z } from 'zod';
 
+import { todayISODate } from '../../lib/local-date';
+
 import type { AccountKindBehaviour } from '@pops/finance';
 
 import type { CheckpointsListResponses } from '../../finance-api/index.js';
 
 export type Checkpoint = CheckpointsListResponses[200]['data'][number];
 
-/** Today as `YYYY-MM-DD`, matching the wire's `asOf` shape. */
-export const today = (): string => new Date().toISOString().slice(0, 10);
+/**
+ * Today as `YYYY-MM-DD`, matching the wire's `asOf` shape — the viewer's own
+ * calendar date, not the UTC one, or the dialog would refuse a checkpoint
+ * dated today for the ten hours a day AEST runs ahead of UTC.
+ */
+export const today = todayISODate;
 
 /**
  * Whether a checkpoint disagreed with what the ledger predicted for it.
