@@ -121,6 +121,8 @@ import type {
   CurrenciesUpdateData,
   CurrenciesUpdateErrors,
   CurrenciesUpdateResponses,
+  DataQualityNudgesData,
+  DataQualityNudgesResponses,
   EntityUsageListData,
   EntityUsageListErrors,
   EntityUsageListResponses,
@@ -1155,6 +1157,17 @@ export const currenciesUpdate = <ThrowOnError extends boolean = false>(
       },
     }
   );
+
+/**
+ * Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first
+ */
+export const dataQualityNudges = <ThrowOnError extends boolean = false>(
+  options?: Options<DataQualityNudgesData, ThrowOnError>
+): RequestResult<DataQualityNudgesResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<DataQualityNudgesResponses, unknown, ThrowOnError>({
+    url: '/data-quality/nudges',
+    ...options,
+  });
 
 /**
  * List entities with per-entity transactionCount; orphanedOnly=true returns count===0

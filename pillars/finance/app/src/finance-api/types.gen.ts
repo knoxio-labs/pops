@@ -4294,6 +4294,34 @@ export type CurrenciesUpdateResponses = {
 
 export type CurrenciesUpdateResponse = CurrenciesUpdateResponses[keyof CurrenciesUpdateResponses];
 
+export type DataQualityNudgesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/data-quality/nudges';
+};
+
+export type DataQualityNudgesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      accountName: string;
+      asOf: string;
+      checkpointId: string;
+      currency: string;
+      deltaCents: number;
+      href: string;
+      kind: 'checkpoint-inconsistency';
+    }>;
+  };
+};
+
+export type DataQualityNudgesResponse =
+  DataQualityNudgesResponses[keyof DataQualityNudgesResponses];
+
 export type EntityUsageListData = {
   body?: never;
   path?: never;

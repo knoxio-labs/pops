@@ -11340,6 +11340,80 @@
         "tags": ["currencies"]
       }
     },
+    "/data-quality/nudges": {
+      "get": {
+        "operationId": "dataQuality.nudges",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "oneOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "type": "string"
+                              },
+                              "asOf": {
+                                "type": "string"
+                              },
+                              "checkpointId": {
+                                "type": "string"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "deltaCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "href": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["checkpoint-inconsistency"],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "accountId",
+                              "accountName",
+                              "checkpointId",
+                              "asOf",
+                              "deltaCents",
+                              "currency",
+                              "href"
+                            ],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first",
+        "tags": ["dataQuality"]
+      }
+    },
     "/entity-usage": {
       "get": {
         "operationId": "entityUsage.list",

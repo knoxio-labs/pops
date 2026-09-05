@@ -597,6 +597,23 @@ export interface paths {
     patch: operations['currencies.update'];
     trace?: never;
   };
+  '/data-quality/nudges': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first */
+    get: operations['dataQuality.nudges'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/entity-usage': {
     parameters: {
       query?: never;
@@ -6513,6 +6530,38 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'dataQuality.nudges': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              accountName: string;
+              asOf: string;
+              checkpointId: string;
+              currency: string;
+              deltaCents: number;
+              href: string;
+              /** @enum {string} */
+              kind: 'checkpoint-inconsistency';
+            }[];
           };
         };
       };
