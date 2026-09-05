@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
+import { insertCheckpoint } from '../../../../db/services/account-checkpoints.js';
 import { createAccount } from '../../../../db/services/accounts.js';
 import { findExistingChecksums } from '../../../../db/services/imports.js';
 import { writeLoanTerms } from '../../../../db/services/loan-terms.js';
@@ -30,7 +31,7 @@ function noContacts() {
  * the interest is a clean, hand-computable `100_000_00 × 6 / 100 / 12 = 500_00`
  * cents ($500.00).
  */
-function seedLoanAccount(db: FinanceDb): void {
+function seedLoanAccount(db: FinanceDb): string {
   const account = createAccount(db, { name: 'Home Loan', kind: 'loan', currency: 'AUD' });
   writeLoanTerms(db, account.id, {
     originalPrincipalCents: 10_000_000,
@@ -47,6 +48,7 @@ function seedLoanAccount(db: FinanceDb): void {
     date: '2024-01-01',
     type: 'loan',
   });
+  return account.id;
 }
 
 const REPAYMENT_CHECKSUM = 'chk-loan-repayment-1';
@@ -92,6 +94,31 @@ describe('loan repayment split at import', () => {
     expect(fee).toMatchObject({ amountCents: 50_000, tags: JSON.stringify(['fee:interest']) });
     expect(transfer).toMatchObject({ amountCents: 100_000 });
     expect((fee?.amountCents ?? 0) + (transfer?.amountCents ?? 0)).toBe(150_000);
+  });
+
+  it('splits against the checkpoint-anchored balance, not the sum of the rows', async () => {
+    const { db } = freshMigratedFinanceDb();
+    const accountId = seedLoanAccount(db);
+
+    // The ledger only knows about the $100,000 drawdown, so without a
+    // checkpoint the split charges interest on the full amount ($500, asserted
+    // above). The lender says $80,000 was outstanding at the end of June — the
+    // repayments that paid it down are not in this import — so the interest
+    // for July is 80_000_00 x 6 / 100 / 12 = 400_00 cents, and the principal
+    // leg absorbs the difference.
+    insertCheckpoint(db, {
+      accountId,
+      balanceCents: -8_000_000,
+      asOf: '2026-06-30',
+      source: 'manual',
+    });
+
+    const result = await commitImport(db, noContacts(), repaymentPayload());
+    expect(result.failedDetails).toEqual([]);
+
+    const rows = repaymentRows(db);
+    expect(rows.find((row) => row.type === 'fee')?.amountCents).toBe(40_000);
+    expect(rows.find((row) => row.type === 'transfer')?.amountCents).toBe(110_000);
   });
 
   it('keeps the original checksum on the principal/transfer leg and derives a distinct one for the interest leg', async () => {

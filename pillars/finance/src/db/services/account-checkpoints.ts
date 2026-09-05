@@ -127,6 +127,24 @@ export function earliestCheckpointAfter(
     .get();
 }
 
+/**
+ * The account's newest checkpoint, or undefined when it has none. This is the
+ * one an inconsistency flag is read off: an older flagged checkpoint followed
+ * by a consistent newer one has been re-anchored.
+ */
+export function latestCheckpoint(
+  db: FinanceDb,
+  accountId: string
+): AccountCheckpointRow | undefined {
+  return db
+    .select()
+    .from(accountCheckpoints)
+    .where(eq(accountCheckpoints.accountId, accountId))
+    .orderBy(desc(accountCheckpoints.asOf), desc(accountCheckpoints.createdAt))
+    .limit(1)
+    .get();
+}
+
 /** One checkpoint by id, or undefined. */
 export function getCheckpoint(db: FinanceDb, id: string): AccountCheckpointRow | undefined {
   return db.select().from(accountCheckpoints).where(eq(accountCheckpoints.id, id)).get();

@@ -22,7 +22,8 @@ import {
 } from '../../../contract/loan-repayment-split.js';
 import {
   accountsService,
-  getAccountBalanceBefore,
+  balanceAsOf,
+  dayBefore,
   LoanTermsNotFoundError,
   loanTermsService,
   resolveImportAccountId,
@@ -58,7 +59,10 @@ function loanSplitContext(
 ): { annualRatePct: number; balanceCents: number } | undefined {
   try {
     const annualRatePct = loanTermsService.getLoanRateAsOfDate(db, accountId, date);
-    return { annualRatePct, balanceCents: getAccountBalanceBefore(db, accountId, date) };
+    return {
+      annualRatePct,
+      balanceCents: balanceAsOf(db, accountId, dayBefore(date)).balanceCents,
+    };
   } catch (error) {
     if (error instanceof LoanTermsNotFoundError) return undefined;
     throw error;

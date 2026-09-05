@@ -17,6 +17,7 @@
  * row's `entityDisplayName` afterwards via `resolveAccountEntityDisplays`.
  */
 import {
+  AccountMergeCheckpointCollisionError,
   AccountMergeCurrencyMismatchError,
   AccountMergeGiftCardDetailsConflictError,
   AccountMergePendingResolutionError,
@@ -73,6 +74,7 @@ const UNPROCESSABLE_ACCOUNT_ERRORS = [
   AccountMergeSignMismatchError,
   AccountMergeGiftCardDetailsConflictError,
   AccountMergePendingResolutionError,
+  AccountMergeCheckpointCollisionError,
 ] as const;
 
 function translateAccountError(err: unknown, id?: string): never {
