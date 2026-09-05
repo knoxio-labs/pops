@@ -1,7 +1,14 @@
 name: Account checkpoints
 question: Does checkpoint history read as part of the balance card, or as its
   own section with a dedicated entry point?
-status: active
+status: archived
+rationale: >-
+  The question presupposed checkpoints live on the account page. Joao decided
+  they shouldn't: checkpoints are invisible plumbing that only feeds the
+  balance card's provenance line and an inconsistency flag, and the actual
+  history/add/flags UI belongs on its own dedicated page — most of it will
+  eventually be automated (statements, receipts) rather than managed by hand.
+  Neither variant answers that; a fresh screen does.
 screen: finance/account
 variants:
   inline: inline
