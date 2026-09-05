@@ -30,6 +30,13 @@ export function AccountsPage() {
   const institutions = state.institutions.data?.data ?? [];
   const currencies = state.currencies.data?.data ?? [];
   const filters = useAccountListFilters(accounts, institutions);
+  // The grid tints and subtotals by currency kind — a points balance is
+  // neutral and stays out of the fiat totals. `currencies` is its own query
+  // with no ordering against `accounts`, so rendering on accounts alone would
+  // fall back to fiat/2dp for every account: a points balance would flash in a
+  // money tone, formatted with a currency symbol, and be summed into a dollar
+  // subtotal until the second query landed.
+  const isLoading = state.accounts.isLoading || state.currencies.isLoading;
 
   if (state.accounts.error) {
     return (
@@ -41,7 +48,7 @@ export function AccountsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Accounts"
-        description={state.accounts.isLoading ? undefined : filters.description}
+        description={isLoading ? undefined : filters.description}
         actions={
           <Button onClick={state.handleAdd} prefix={<Plus className="h-4 w-4" />}>
             Add account
@@ -49,7 +56,7 @@ export function AccountsPage() {
         }
       />
       <AccountsGrid
-        isLoading={state.accounts.isLoading}
+        isLoading={isLoading}
         accounts={accounts}
         institutions={institutions}
         currencies={currencies}
