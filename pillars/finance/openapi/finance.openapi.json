@@ -13681,8 +13681,7 @@
                         "transactionsImported",
                         "transactionsFailed",
                         "failedDetails",
-                        "retroactiveReclassifications",
-                        "checkpoints"
+                        "retroactiveReclassifications"
                       ],
                       "type": "object"
                     },

@@ -248,8 +248,14 @@ export const CommitResultSchema = z.object({
    * The account checkpoints this commit minted from source-file closing
    * balances — one per account, since a single commit can span several once
    * a row is retargeted in review. Empty when the file carried no balance.
+   *
+   * Optional for the same reason `warnings` is: `import_commits.result` rows
+   * are kept forever and replayed verbatim on a repeated `commitKey`, so a
+   * result recorded before this field existed must still parse. Absent means
+   * "recorded before checkpoints were minted", not "minted none" — a fresh
+   * commit always sends the array.
    */
-  checkpoints: z.array(CommitCheckpointSchema),
+  checkpoints: z.array(CommitCheckpointSchema).optional(),
 });
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({

@@ -7343,7 +7343,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              checkpoints: {
+              checkpoints?: {
                 accountId: string;
                 deltaCents: number;
                 id: string;

@@ -10,6 +10,7 @@ import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js'
 import { accountCheckpoints } from '../../../../db/schema.js';
 import { insertCheckpoint } from '../../../../db/services/account-checkpoints.js';
 import { createAccount } from '../../../../db/services/accounts.js';
+import { recordCommit } from '../../../../db/services/import-commits.js';
 import { page, stubHandle } from '../../../contacts/__tests__/stub-handle.js';
 import { createContactsClient } from '../../../contacts/client.js';
 import { signStatementBalance } from '../commit-checkpoint.js';
@@ -118,6 +119,34 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
     expect(db.select().from(accountCheckpoints).all()).toHaveLength(1);
   });
 
+  it('replays a result recorded before checkpoints existed instead of failing to parse it', async () => {
+    // `import_commits.result` rows are opaque JSON kept forever with no
+    // cleanup, and a repeated `commitKey` — a dropped response the tab
+    // retries — is re-parsed against today's contract. A row written before
+    // this field existed must still come back, or an already-successful
+    // commit reports a failure on retry.
+    const { db } = freshMigratedFinanceDb();
+    const accountId = seedAccount(db);
+    const legacyResult = {
+      entitiesCreated: 0,
+      rulesApplied: { add: 0, edit: 0, disable: 0, remove: 0 },
+      tagRulesApplied: 0,
+      transactionsImported: 2,
+      transactionsFailed: 0,
+      failedDetails: [],
+      retroactiveReclassifications: 0,
+    };
+    recordCommit(db, 'legacy-key', legacyResult);
+
+    const replayed = await commitImport(db, noContacts(), {
+      ...creditCardPayload(accountId),
+      commitKey: 'legacy-key',
+    });
+
+    expect(replayed).toEqual(legacyResult);
+    expect(db.select().from(accountCheckpoints).all()).toEqual([]);
+  });
+
   it('warns with the expected/actual/delta when the ledger disagrees, and still commits', async () => {
     const { db } = freshMigratedFinanceDb();
     const accountId = seedAccount(db);
@@ -154,7 +183,7 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
 
     expect(result.failedDetails).toEqual([]);
     expect(result.transactionsImported).toBe(1);
-    expect(result.checkpoints[0]?.deltaCents).toBe(-2_500);
+    expect(result.checkpoints?.[0]?.deltaCents).toBe(-2_500);
     expect(result.warnings).toEqual([
       {
         type: 'CHECKPOINT_MISMATCH',
@@ -207,7 +236,7 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
     const result = await commitImport(db, noContacts(), payload);
 
     expect(result.checkpoints).toHaveLength(2);
-    expect(result.checkpoints.map((c) => c.accountId).toSorted()).toEqual(
+    expect((result.checkpoints ?? []).map((c) => c.accountId).toSorted()).toEqual(
       [cardId, savings.id].toSorted()
     );
     expect(db.select().from(accountCheckpoints).all()).toHaveLength(2);

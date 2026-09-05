@@ -4996,7 +4996,7 @@ export type ImportsCommitImportResponses = {
    */
   200: {
     data: {
-      checkpoints: Array<{
+      checkpoints?: Array<{
         accountId: string;
         deltaCents: number;
         id: string;
