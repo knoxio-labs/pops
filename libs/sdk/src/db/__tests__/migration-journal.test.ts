@@ -96,6 +96,31 @@ describe('pendingMigrations', () => {
     recordAppliedMigrations(connection, []);
     expect(pendingMigrations(connection, folder)).toHaveLength(3);
   });
+
+  it('skips an entry sharing its timestamp with one already applied, and does not on a fresh database', () => {
+    // The POPS-2866 collision: two branches cut from the same base each
+    // append an entry stamped `previous + 1`, and the merge keeps both. The
+    // second is then unreachable on every database that took the first — its
+    // table is never created — while a fresh database applies both and every
+    // migration test, data-safety test and image smoke test stays green.
+    // scripts/ci/check-migration-journals.mjs exists to reject the journal.
+    const collided = [
+      ENTRIES[0],
+      ENTRIES[1],
+      { idx: 2, version: '6', when: 2000, tag: '0002_from_the_other_branch', breakpoints: true },
+    ];
+    const folder = writeJournal(collided);
+
+    recordAppliedMigrations(connection, [1000, 2000]);
+    expect(pendingMigrations(connection, folder)).toEqual([]);
+
+    const fresh = openTestDatabase(':memory:');
+    try {
+      expect(pendingMigrations(fresh, folder)).toHaveLength(3);
+    } finally {
+      fresh.close();
+    }
+  });
 });
 
 describe('lastAppliedMigrationAt', () => {
