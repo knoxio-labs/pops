@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeatureAccounts
 import FeaturePurchases
 import FeatureReceiptCapture
 import FeatureTransactions
@@ -70,6 +71,8 @@ internal struct ContentView: View {
         switch feature {
         case FeatureTransactions.feature:
             TransactionsFlowView(dependencies: dependencies, router: composition.router)
+        case FeatureAccounts.feature:
+            AccountsFlowView(dependencies: dependencies, router: composition.router)
         case FeaturePurchases.feature:
             PurchasesListView(dependencies: dependencies)
         case FeatureReceiptCapture.feature:

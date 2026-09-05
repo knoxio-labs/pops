@@ -1,6 +1,7 @@
 import AppCore
 import Auth
 import BFMClient
+import FeatureAccounts
 import Foundation
 import Testing
 
@@ -47,6 +48,11 @@ internal struct CompositionRootTests {
         #expect(bound.transactions is BFMTransactionsRepository)
         #expect(bound.pairing is BFMDevicePairingService)
         #expect(bound.receiptCapture is BFMReceiptCaptureRepository)
+        #expect(bound.purchases is BFMPurchasesRepository)
+        // `accounts` is here for exactly the reason `receiptCapture` is: it was
+        // the seam left unbound with a comment explaining why, and the comment
+        // outlived the reason (POPS-2848).
+        #expect(bound.accounts is BFMAccountsRepository)
     }
 
     /// Pairing is bound before there is a BFM to bind anything else to — the
@@ -117,6 +123,14 @@ internal struct CompositionRootTests {
     @Test("this build can draw the transactions feature")
     func renderableListIsNotEmpty() {
         #expect(RootFeature.renderable.contains(.transactions))
+    }
+
+    /// Registering a module is what makes it reachable — binding a repository
+    /// for it is not enough, and neither is the BFM naming it. Both halves of
+    /// POPS-2848 have to hold for the tab to appear.
+    @Test("this build can draw the accounts feature")
+    func accountsIsRenderable() {
+        #expect(RootFeature.renderable.contains(FeatureAccounts.feature))
     }
 
     /// `.invalid` is reserved by RFC 6761, so nothing built from this can reach

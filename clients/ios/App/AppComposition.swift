@@ -102,11 +102,7 @@ internal final class AppComposition {
             reachability: shell,
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
             purchases: BFMPurchasesRepository(client: authenticated(device)),
-            // The BFM has no `/mobile` accounts route yet, so there is nothing
-            // for a `BFMAccountsRepository` to call — left unbound rather than
-            // invented against an endpoint that does not exist. Binding this
-            // is follow-up work once the gateway route and its codegen exist.
-            accounts: AppDependencies.unbound.accounts
+            accounts: BFMAccountsRepository(client: authenticated(device))
         )
         bound = (device, dependencies)
         return dependencies

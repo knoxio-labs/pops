@@ -19,6 +19,7 @@ public struct MobileFeature: RawRepresentable, Hashable, Sendable {
     }
 
     public static let transactions = MobileFeature(rawValue: "transactions")
+    public static let accounts = MobileFeature(rawValue: "accounts")
     public static let purchases = MobileFeature(rawValue: "purchases")
     public static let receiptCapture = MobileFeature(rawValue: "receipt-capture")
 }

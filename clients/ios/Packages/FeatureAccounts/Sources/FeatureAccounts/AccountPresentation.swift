@@ -95,10 +95,24 @@ internal struct AccountPresentation: Sendable {
 
     /// When the number was last true, phrased so a derived balance never
     /// claims to be checked.
+    ///
+    /// It reads ``Account/balanceBasis`` rather than ``AccountKind`` because
+    /// only the basis is a fact about this account's figure. The kind says
+    /// whether an external balance *could* be checkpointed, which is a
+    /// different question: a checking account that nobody has ever checked is
+    /// checkpointable and still derived, and phrasing its net flow as "as of"
+    /// a date would date a number that was never anchored to anything.
     internal func asOfNote(_ account: Account) -> String {
-        if let balanceAsOf = account.balanceAsOf { return "As of \(day(balanceAsOf))" }
-        if !account.kind.isCheckpointable { return "Derived from transactions" }
-        return "Never checked against a statement"
+        switch account.balanceBasis {
+        case .checkpoint:
+            guard let balanceAsOf = account.balanceAsOf else {
+                return "Checked against a statement"
+            }
+            return "As of \(day(balanceAsOf))"
+        case .transactions:
+            return account.kind.isCheckpointable
+                ? "Derived from transactions, never checked" : "Derived from transactions"
+        }
     }
 
     internal func day(_ date: Date) -> String {

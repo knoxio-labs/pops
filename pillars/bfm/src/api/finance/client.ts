@@ -15,13 +15,12 @@
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { getAccountDetail, listAccounts, resolveAccountName } from './accounts-client.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
+import { FINANCE_PILLAR_ID } from './pillar.js';
 import {
-  FinanceAccountGetResponseSchema,
-  FinanceAccountListResponseSchema,
   FinanceTransactionGetResponseSchema,
   FinanceTransactionListResponseSchema,
-  toMobileAccount,
   toMobileTransaction,
   toMobileTransactionDetail,
 } from './wire.js';
@@ -29,14 +28,14 @@ import {
 import type { z } from 'zod';
 
 import type {
-  MobileAccount,
+  MobileAccountDetail,
   MobileAccountsPage,
   MobileTransactionDetail,
   MobileTransactionsPage,
 } from '../../contract/rest-schemas.js';
 
-/** The finance pillar id, as registered with the registry. */
-export const FINANCE_PILLAR_ID = 'finance';
+export { FINANCE_PILLAR_ID } from './pillar.js';
+export type { FinanceAccountsRouter } from './accounts-client.js';
 
 /**
  * The subset of finance's router bfm calls. A `type` rather than an
@@ -49,15 +48,12 @@ export const FINANCE_PILLAR_ID = 'finance';
  */
 export type FinanceTransactionsRouter = {
   transactions: {
-    list: (input: { limit?: number; beforeDate?: string; beforeId?: string }) => Promise<unknown>;
-    get: (input: { id: string }) => Promise<unknown>;
-  };
-};
-
-/** The subset of finance's router the mobile accounts screen calls. */
-export type FinanceAccountsRouter = {
-  accounts: {
-    list: (input: { limit?: number }) => Promise<unknown>;
+    list: (input: {
+      limit?: number;
+      beforeDate?: string;
+      beforeId?: string;
+      accountId?: string;
+    }) => Promise<unknown>;
     get: (input: { id: string }) => Promise<unknown>;
   };
 };
@@ -67,6 +63,8 @@ export interface ListTransactionsRequest {
   readonly limit: number;
   /** Where the previous page stopped, or `null` for the first page. */
   readonly cursor: PageCursor | null;
+  /** One account's rows only, or `null` for every account. */
+  readonly accountId: string | null;
 }
 
 export interface MobileFinanceClient {
@@ -75,62 +73,7 @@ export interface MobileFinanceClient {
   ): Promise<GatewayOutcome<MobileTransactionsPage>>;
   getTransaction(id: string): Promise<GatewayOutcome<MobileTransactionDetail>>;
   listAccounts(): Promise<GatewayOutcome<MobileAccountsPage>>;
-  getAccount(id: string): Promise<GatewayOutcome<MobileAccount>>;
-}
-
-/**
- * Rows requested per {@link FinanceAccountsRouter.accounts.list} call — the
- * contract's own cap, so one call gets every account without a second page.
- */
-const ACCOUNT_LIST_LIMIT = 500;
-
-async function listAccounts(gateway: PillarGateway): Promise<GatewayOutcome<MobileAccountsPage>> {
-  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
-    handle.accounts.list({ limit: ACCOUNT_LIST_LIMIT })
-  );
-
-  const page = parseOrMismatch(
-    FINANCE_PILLAR_ID,
-    outcome,
-    FinanceAccountListResponseSchema,
-    'accounts.list'
-  );
-  if (!isGatewayOk(page)) return page;
-
-  return { kind: 'ok', value: { data: page.value.data.map(toMobileAccount) } };
-}
-
-async function getAccount(
-  gateway: PillarGateway,
-  id: string
-): Promise<GatewayOutcome<MobileAccount>> {
-  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
-    handle.accounts.get({ id })
-  );
-
-  const record = parseOrMismatch(
-    FINANCE_PILLAR_ID,
-    outcome,
-    FinanceAccountGetResponseSchema,
-    'accounts.get'
-  );
-  if (!isGatewayOk(record)) return record;
-
-  return { kind: 'ok', value: toMobileAccount(record.value.data) };
-}
-
-/** Placeholder shown when an account lookup fails — a display nicety, not a hard dependency. */
-const UNKNOWN_ACCOUNT_NAME = 'Unknown account';
-
-/**
- * Resolve an account's display name for the transaction detail screen
- * (POPS-2770). Falls back to a placeholder rather than failing the whole
- * transaction fetch — a stale or unreachable account lookup should not stop
- * someone from reading the rest of the transaction they opened.
- */
-async function resolveAccountName(gateway: PillarGateway, accountId: string): Promise<string> {
-  const outcome = await getAccount(gateway, accountId);
-  return isGatewayOk(outcome) ? outcome.value.name : UNKNOWN_ACCOUNT_NAME;
+  getAccount(id: string): Promise<GatewayOutcome<MobileAccountDetail>>;
 }
 
 export function createMobileFinanceClient(gateway: PillarGateway): MobileFinanceClient {
@@ -146,6 +89,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
             limit: request.limit + 1,
             beforeDate: request.cursor?.d,
             beforeId: request.cursor?.i,
+            accountId: request.accountId ?? undefined,
           })
       );
 
@@ -179,7 +123,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
     },
 
     listAccounts: () => listAccounts(gateway),
-    getAccount: (id: string) => getAccount(gateway, id),
+    getAccount: (id: string) => getAccountDetail(gateway, id),
   };
 }
 

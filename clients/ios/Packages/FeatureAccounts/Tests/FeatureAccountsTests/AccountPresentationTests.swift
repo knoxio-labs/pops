@@ -84,16 +84,38 @@ internal struct AccountPresentationTests {
 
     @Test("an uncheckpointable kind with no checkpoint says it is derived")
     func asOfNoteDerived() {
-        let account = Account.fake(kind: .cash, balanceAsOf: nil)
+        let account = Account.fake(kind: .cash, balanceAsOf: nil, balanceBasis: .transactions)
 
         #expect(presentation.asOfNote(account) == "Derived from transactions")
     }
 
     @Test("a checkpointable kind that has never been checked says so")
     func asOfNoteNeverChecked() {
-        let account = Account.fake(kind: .checking, balanceAsOf: nil)
+        let account = Account.fake(kind: .checking, balanceAsOf: nil, balanceBasis: .transactions)
 
-        #expect(presentation.asOfNote(account) == "Never checked against a statement")
+        #expect(presentation.asOfNote(account) == "Derived from transactions, never checked")
+    }
+
+    /// The regression POPS-2848 exists to prevent. Every account the BFM
+    /// serves carries an `asOf` date whether or not a checkpoint anchors it, so
+    /// a note derived from the date alone would date a figure that is only a
+    /// sum of imports — the reading `BalanceBasis` was added to stop.
+    @Test("a dated balance with no checkpoint behind it still says it is derived")
+    func asOfNoteDatedButDerived() {
+        let account = Account.fake(
+            kind: .checking,
+            balanceAsOf: Date(timeIntervalSince1970: 0),
+            balanceBasis: .transactions
+        )
+
+        #expect(presentation.asOfNote(account) == "Derived from transactions, never checked")
+    }
+
+    @Test("a checkpointed balance with no date still refuses to invent one")
+    func asOfNoteCheckpointedWithoutDate() {
+        let account = Account.fake(balanceAsOf: nil, balanceBasis: .checkpoint)
+
+        #expect(presentation.asOfNote(account) == "Checked against a statement")
     }
 
     @Test("the subtitle prefers the institution over the contact and the kind")

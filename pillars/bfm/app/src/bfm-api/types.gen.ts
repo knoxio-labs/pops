@@ -349,9 +349,11 @@ export type MobileFinanceListAccountsResponses = {
         basis: 'checkpoint' | 'transactions';
         inconsistent: boolean;
       };
+      contact: string | null;
       currency: string;
       id: string;
       institutionId: string | null;
+      institutionName: string | null;
       kind: string;
       name: string;
     }>;
@@ -467,18 +469,26 @@ export type MobileFinanceGetAccountResponses = {
    * 200
    */
   200: {
-    archived: boolean;
-    balance: {
-      asOf: string;
-      balanceCents: number;
-      basis: 'checkpoint' | 'transactions';
-      inconsistent: boolean;
+    account: {
+      archived: boolean;
+      balance: {
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
+      contact: string | null;
+      currency: string;
+      id: string;
+      institutionId: string | null;
+      institutionName: string | null;
+      kind: string;
+      name: string;
     };
-    currency: string;
-    id: string;
-    institutionId: string | null;
-    kind: string;
-    name: string;
+    history: Array<{
+      balanceCents: number;
+      month: string;
+    }>;
   };
 };
 
@@ -491,6 +501,7 @@ export type MobileFinanceListTransactionsData = {
   query?: {
     limit?: number;
     cursor?: string;
+    accountId?: string;
   };
   url: '/mobile/finance/transactions';
 };
