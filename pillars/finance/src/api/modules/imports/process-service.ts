@@ -47,7 +47,7 @@ import type {
   ProcessImportOutput,
 } from './types.js';
 
-type ImportProgressUpdate = Parameters<typeof updateProgress>[1];
+type ImportProgressUpdate = Parameters<typeof updateProgress>[2];
 type ImportProgressCallback = (update: ImportProgressUpdate) => void;
 
 export interface ProcessCoreInput {

@@ -55,10 +55,11 @@ beforeEach(() => {
   delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-imports-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
-  clearProgress();
+  clearProgress(financeDb.db);
 });
 
 afterEach(() => {
+  clearProgress(financeDb.db);
   financeDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
 });

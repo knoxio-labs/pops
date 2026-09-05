@@ -1,7 +1,7 @@
 /**
  * Handlers for the `imports.*` sub-router.
  *
- * processImport mints a session id, seeds the in-memory progress store, kicks
+ * processImport mints a session id, seeds the durable progress store, kicks
  * off the work in the background, and returns `{ sessionId }` immediately —
  * the FE then polls getImportProgress.
  *
@@ -53,11 +53,14 @@ function isProcessImportOutput(result: unknown): result is ProcessImportOutput {
  * Resolve a completed processImport session or throw the matching HttpError.
  * Shared by applyChangeSetAndReevaluate + reevaluateWithPendingRules.
  */
-function requireProcessSession(sessionId: string): {
+function requireProcessSession(
+  db: FinanceDb,
+  sessionId: string
+): {
   progress: ImportProgress;
   result: ProcessImportOutput;
 } {
-  const progress = getProgress(sessionId);
+  const progress = getProgress(db, sessionId);
   if (!progress) {
     throw new NotFoundError('Import session', sessionId);
   }
@@ -79,7 +82,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
     processImport: ({ body }: Req['processImport']) =>
       runHttp(() => {
         const sessionId = randomUUID();
-        setProgress(sessionId, {
+        setProgress(db, sessionId, {
           sessionId,
           status: 'processing',
           currentStep: 'deduplicating',
@@ -101,7 +104,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
       }),
 
     getImportProgress: ({ query }: Req['getImportProgress']) =>
-      runHttp(() => ({ status: 200 as const, body: getProgress(query.sessionId) })),
+      runHttp(() => ({ status: 200 as const, body: getProgress(db, query.sessionId) })),
 
     createEntity: ({ body }: Req['createEntity']) =>
       runHttp(async () => ({
@@ -111,7 +114,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
 
     applyChangeSetAndReevaluate: ({ body }: Req['applyChangeSetAndReevaluate']) =>
       runHttp(async () => {
-        const { result } = requireProcessSession(body.sessionId);
+        const { result } = requireProcessSession(db, body.sessionId);
         applyChangeSet(db, body.changeSet);
         const { nextResult, affectedCount } = await reevaluateImportSessionResult({
           db,
@@ -119,7 +122,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
           result,
           minConfidence: body.minConfidence,
         });
-        updateProgress(body.sessionId, { result: nextResult });
+        updateProgress(db, body.sessionId, { result: nextResult });
         return { status: 200 as const, body: { result: nextResult, affectedCount } };
       }),
 
@@ -131,7 +134,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
 
     reevaluateWithPendingRules: ({ body }: Req['reevaluateWithPendingRules']) =>
       runHttp(async () => {
-        const { result } = requireProcessSession(body.sessionId);
+        const { result } = requireProcessSession(db, body.sessionId);
         const { nextResult, affectedCount } = await reevaluateImportSessionWithRules({
           db,
           contacts,
@@ -139,7 +142,7 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
           minConfidence: body.minConfidence,
           pendingChangeSets: body.pendingChangeSets,
         });
-        updateProgress(body.sessionId, { result: nextResult });
+        updateProgress(db, body.sessionId, { result: nextResult });
         return { status: 200 as const, body: { result: nextResult, affectedCount } };
       }),
   };

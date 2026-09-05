@@ -19,8 +19,12 @@ export {
 
 export {
   clearProgress,
+  failInterruptedImportSessions,
+  flushAllProgress,
+  forgetProgressCache,
   getProgress,
   setProgress,
+  sweepExpiredImportSessions,
   updateProgress,
   type ImportProgress,
 } from './progress-store.js';

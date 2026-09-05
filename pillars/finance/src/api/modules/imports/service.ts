@@ -1,6 +1,6 @@
 /**
  * Import service orchestration — background process with progress streaming
- * into the in-memory progress store, plus the thin `createEntity` shim.
+ * into the durable progress store, plus the thin `createEntity` shim.
  *
  * Ported from the monolith `service.ts`, db-injected. The handler kicks this
  * off (returning a session id immediately) and the FE polls `getImportProgress`.
@@ -33,9 +33,9 @@ function newImportBatchId(): string {
   return `import-${Date.now()}-${Math.random().toString(36).slice(7)}`;
 }
 
-function reportBackgroundFailure(sessionId: string, error: unknown): void {
+function reportBackgroundFailure(db: FinanceDb, sessionId: string, error: unknown): void {
   const formatted = formatImportError(error);
-  updateProgress(sessionId, {
+  updateProgress(db, sessionId, {
     status: 'failed',
     errors: [
       {
@@ -69,16 +69,16 @@ export async function processImportWithProgress(
       contacts,
       transactions,
       importBatchId: newImportBatchId(),
-      onProgress: (update) => updateProgress(sessionId, update),
+      onProgress: (update) => updateProgress(db, sessionId, update),
     });
 
-    updateProgress(sessionId, {
+    updateProgress(db, sessionId, {
       status: 'completed',
       processedCount: processedNewCount,
       result,
       errors,
     });
   } catch (error) {
-    reportBackgroundFailure(sessionId, error);
+    reportBackgroundFailure(db, sessionId, error);
   }
 }

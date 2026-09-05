@@ -40,11 +40,12 @@ beforeEach(() => {
   process.env['ANTHROPIC_API_KEY'] = 'sk-test';
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-imports-ai-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
-  clearProgress();
+  clearProgress(financeDb.db);
 });
 
 afterEach(() => {
   delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
+  clearProgress(financeDb.db);
   delete process.env['ANTHROPIC_API_KEY'];
   financeDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
