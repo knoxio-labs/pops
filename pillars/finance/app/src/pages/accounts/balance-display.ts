@@ -1,4 +1,4 @@
-import { formatBalance, type CurrencyFormat } from '@pops/finance';
+import { centsToDollars, formatBalance, type CurrencyFormat } from '@pops/finance';
 
 import type { Currency } from './account-subtotals';
 
@@ -13,9 +13,15 @@ export function currencyFormat(currencies: Currency[], code: string): CurrencyFo
 /**
  * A ledger-signed minor-units figure (`balanceCents`) as `formatBalance`
  * text. `formatBalance` takes a decimal already in the currency's own units,
- * not minor units, so this is the one place that division happens for a
- * balance rather than each call site repeating it.
+ * so the division happens here rather than at each call site.
+ *
+ * `centsToDollars`, not `10 ** currency.decimals`: the pillar persists every
+ * monetary value as integer hundredths whatever the currency's display
+ * precision (`money.ts`, CF041), and a points checkpoint is written through
+ * the same `dollarsToCents`. Scaling by `decimals` would read a points
+ * balance 100x too large here while the account page — which goes through
+ * `centsToDollars` — read it correctly, for the same stored number.
  */
 export function formatBalanceCents(cents: number, currency: CurrencyFormat): string {
-  return formatBalance(cents / 10 ** currency.decimals, currency);
+  return formatBalance(centsToDollars(cents), currency);
 }

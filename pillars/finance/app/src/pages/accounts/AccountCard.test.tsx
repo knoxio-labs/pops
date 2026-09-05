@@ -110,7 +110,10 @@ describe('AccountCard', () => {
   });
 
   it('keeps a points balance neutral in tone regardless of sign', () => {
-    renderCard({ currency: 'QFF', balance: { ...NO_BALANCE, balanceCents: -5_000 } }, [QFF]);
+    // -500_000 hundredths is -5,000 points: a points balance is stored in the
+    // same integer hundredths as money (`money.ts`, CF041), not scaled by the
+    // currency's zero display decimals.
+    renderCard({ currency: 'QFF', balance: { ...NO_BALANCE, balanceCents: -500_000 } }, [QFF]);
     const figure = screen.getByText('-5,000 pts');
     expect(figure.className).toContain('text-muted-foreground');
     expect(figure.className).not.toContain('text-destructive');

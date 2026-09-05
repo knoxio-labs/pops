@@ -78,6 +78,12 @@ export {
   type LoanTermsSource,
 } from './loan.js';
 export { CHECKPOINT_SOURCES, type CheckpointSource } from './checkpoint.js';
+export {
+  centsToDollars,
+  centsToDollarsNullable,
+  dollarsToCents,
+  dollarsToCentsNullable,
+} from '../money.js';
 export { formatBalance, type CurrencyFormat } from './format-balance.js';
 export {
   buildImportDedupKey,
