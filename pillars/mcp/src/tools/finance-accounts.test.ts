@@ -19,6 +19,9 @@ vi.mock('../pillar-client.js', () => ({
 }));
 
 const { financeTools } = await import('./finance.js');
+// Imported after the vi.mock above, not statically: finance-client.ts pulls in
+// pillar-client.js, and a top-level import of it races the hoisted mock.
+const { CHECKPOINT_SOURCES } = await import('./finance-client.js');
 
 const accounts = mockPillarFinance.finance.accounts;
 const checkpoints = mockPillarFinance.finance.checkpoints;
@@ -214,5 +217,30 @@ describe('finance.accounts.* wire shapes against the real finance OpenAPI spec',
     expect(Object.keys(props)).toEqual(
       expect.arrayContaining(['expectedBalanceCents', 'deltaCents', 'balanceCents', 'accountId'])
     );
+  });
+
+  it('CHECKPOINT_SOURCES matches the source enum GET /accounts/:id/checkpoints actually serves', () => {
+    // The constant in finance-client.ts is a hand-maintained mirror of
+    // CHECKPOINT_SOURCES in the finance contract, the same shape as
+    // SEARCH_FILTER_FIELDS — and, unlike that one, had nothing keeping it in
+    // step. A source added or renamed in finance goes stale here silently.
+    const source = drill(
+      spec,
+      'paths',
+      '/accounts/{id}/checkpoints',
+      'get',
+      'responses',
+      '200',
+      'content',
+      'application/json',
+      'schema',
+      'properties',
+      'data',
+      'items',
+      'properties',
+      'source',
+      'enum'
+    );
+    expect(source).toEqual([...CHECKPOINT_SOURCES]);
   });
 });
