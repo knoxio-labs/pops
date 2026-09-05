@@ -7,9 +7,15 @@ import type {
   AccountImportsGetConfigData,
   AccountImportsGetConfigErrors,
   AccountImportsGetConfigResponses,
+  AccountImportsGetSyncJobData,
+  AccountImportsGetSyncJobErrors,
+  AccountImportsGetSyncJobResponses,
   AccountImportsListBatchesData,
   AccountImportsListBatchesErrors,
   AccountImportsListBatchesResponses,
+  AccountImportsTriggerSyncData,
+  AccountImportsTriggerSyncErrors,
+  AccountImportsTriggerSyncResponses,
   AccountImportsWriteConfigData,
   AccountImportsWriteConfigErrors,
   AccountImportsWriteConfigResponses,
@@ -720,6 +726,41 @@ export const accountsPreviewMerge = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way
+ */
+export const accountImportsTriggerSync = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsTriggerSyncData, ThrowOnError>
+): RequestResult<
+  AccountImportsTriggerSyncResponses,
+  AccountImportsTriggerSyncErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    AccountImportsTriggerSyncResponses,
+    AccountImportsTriggerSyncErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/sync',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Progress and result of one sync job; 404 once it has expired
+ */
+export const accountImportsGetSyncJob = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsGetSyncJobData, ThrowOnError>
+): RequestResult<AccountImportsGetSyncJobResponses, AccountImportsGetSyncJobErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    AccountImportsGetSyncJobResponses,
+    AccountImportsGetSyncJobErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/sync/{jobId}', ...options });
 
 /**
  * List budgets with optional search / period / active filters and pagination

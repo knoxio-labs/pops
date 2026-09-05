@@ -31,6 +31,7 @@ import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
 
+import type { UpSyncJob } from '../../contract/rest-account-sync-schemas.js';
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
 import type { ImportBatch, ImportConfig } from '../modules/account-imports-types.js';
@@ -503,6 +504,10 @@ export function makeClient(app: Express) {
         call<{ data: ImportConfig; message: string }>((r) =>
           r.put(`/accounts/${accountId}/import-config`).send(body)
         ),
+      triggerSync: (accountId: string) =>
+        call<{ data: UpSyncJob }>((r) => r.post(`/accounts/${accountId}/sync`).send({})),
+      getSyncJob: (accountId: string, jobId: string) =>
+        call<{ data: UpSyncJob }>((r) => r.get(`/accounts/${accountId}/sync/${jobId}`)),
     },
     giftCardDetails: {
       get: (accountId: string) =>

@@ -27,6 +27,7 @@ import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-ou
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { startReconcileEntityOrphansWorker } from './cron/reconcile-entity-orphans.js';
 import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-transfers.js';
+import { startUpSyncScheduler } from './cron/up-sync-scheduler.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
 import { configureFinanceServerSdk } from './pillars/sdk-config.js';
@@ -109,6 +110,16 @@ const reconcilePairedTransfersHandle = startReconcilePairedTransfersWorker({
   logger: reconcileLogger,
 });
 
+// Scheduled Up Bank sync (POPS-2921). Governed by the `finance.upSync.*`
+// settings, off by default; armed unconditionally so flipping the toggle
+// needs no restart. Stopped LAST on shutdown, and awaited, so a pass in
+// flight commits its batch before the db closes.
+const upSyncHandle = startUpSyncScheduler({
+  db: financeDb.db,
+  contacts,
+  logger: reconcileLogger,
+});
+
 const server = app.listen(port, () => {
   console.warn(`[finance-api] Listening on port ${port}`);
 });
@@ -133,7 +144,10 @@ function shutdown(signal: NodeJS.Signals): void {
   reconcilePairedTransfersHandle.stop();
   void shutdownPillar({
     label: 'finance-api',
-    steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
+    steps: [
+      { name: 'deregister', run: () => pillarHandle?.stop() },
+      { name: 'up-sync', run: () => upSyncHandle.stop() },
+    ],
     server,
     closeDb: () => financeDb.raw.close(),
   });

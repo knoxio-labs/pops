@@ -5978,6 +5978,497 @@
         "tags": ["accounts"]
       }
     },
+    "/accounts/{id}/sync": {
+      "post": {
+        "operationId": "accountImports.triggerSync",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "alreadyHeld": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "batchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "checkpoint": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "balanceCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "deltaCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "balanceCents", "deltaCents"],
+                              "type": "object"
+                            },
+                            "failed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "fetched": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "imported": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "settled": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "warnings": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "fetched",
+                            "imported",
+                            "failed",
+                            "settled",
+                            "alreadyHeld",
+                            "batchId",
+                            "checkpoint",
+                            "warnings"
+                          ],
+                          "type": "object"
+                        },
+                        "startedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": ["running", "completed", "failed"],
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "trigger": {
+                          "enum": ["schedule", "manual"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "trigger",
+                        "status",
+                        "from",
+                        "to",
+                        "startedAt",
+                        "finishedAt",
+                        "result",
+                        "error"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "202"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "422"
+          }
+        },
+        "summary": "Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way",
+        "tags": ["accountImports"]
+      }
+    },
+    "/accounts/{id}/sync/{jobId}": {
+      "get": {
+        "operationId": "accountImports.getSyncJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "alreadyHeld": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "batchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "checkpoint": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "balanceCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "deltaCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "balanceCents", "deltaCents"],
+                              "type": "object"
+                            },
+                            "failed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "fetched": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "imported": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "settled": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "warnings": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "fetched",
+                            "imported",
+                            "failed",
+                            "settled",
+                            "alreadyHeld",
+                            "batchId",
+                            "checkpoint",
+                            "warnings"
+                          ],
+                          "type": "object"
+                        },
+                        "startedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": ["running", "completed", "failed"],
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "trigger": {
+                          "enum": ["schedule", "manual"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "trigger",
+                        "status",
+                        "from",
+                        "to",
+                        "startedAt",
+                        "finishedAt",
+                        "result",
+                        "error"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Progress and result of one sync job; 404 once it has expired",
+        "tags": ["accountImports"]
+      }
+    },
     "/budgets": {
       "get": {
         "operationId": "budgets.list",
@@ -19757,6 +20248,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -19878,6 +20371,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -20020,6 +20515,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -20159,6 +20656,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
