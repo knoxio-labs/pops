@@ -45,6 +45,10 @@
 import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
+import {
+  AccountsListResponseSchema,
+  InstitutionsListResponseSchema,
+} from './helpers/finance-accounts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
@@ -262,56 +266,6 @@ const EntitiesListResponseSchema = z
         hasMore: z.boolean(),
       })
       .strict(),
-  })
-  .strict();
-
-/**
- * `GET /finance-api/accounts` — hand-mirrored from `rest-accounts.ts`'s
- * `AccountSchema` / `financeAccountsContract.list` response, for the same
- * cross-pillar-import reason the other per-spec schemas above are hand-mirrored
- * rather than imported.
- */
-const AccountsListResponseSchema = z
-  .object({
-    data: z.array(
-      z
-        .object({
-          id: z.string(),
-          name: z.string(),
-          institutionId: z.string().nullable(),
-          kind: z.string(),
-          currency: z.string(),
-          archivedAt: z.string().nullable(),
-          displayOrder: z.number().int(),
-          entityId: z.string().nullable(),
-          entityDisplayName: z.string().nullable(),
-          entityDisplayNameStale: z.boolean(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
-        })
-        .strict()
-    ),
-    pagination: z
-      .object({ total: z.number(), limit: z.number(), offset: z.number(), hasMore: z.boolean() })
-      .strict(),
-  })
-  .strict();
-
-/** `GET /finance-api/institutions` — mirrors `rest-institutions.ts`'s `InstitutionSchema`. */
-const InstitutionsListResponseSchema = z
-  .object({
-    data: z.array(
-      z
-        .object({
-          id: z.string(),
-          name: z.string(),
-          colour: z.string(),
-          logoAssetId: z.string().nullable(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
-        })
-        .strict()
-    ),
   })
   .strict();
 
