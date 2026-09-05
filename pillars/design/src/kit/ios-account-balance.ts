@@ -1,4 +1,5 @@
 import { ACCOUNT_KINDS, sideNoun } from '@/fixtures/account-kinds';
+import { balanceAsOf } from '@/fixtures/checkpoints';
 import { currenciesByCode, formatBalance } from '@/fixtures/currencies';
 import { institutionsById } from '@/fixtures/institutions';
 
@@ -73,9 +74,11 @@ export function accountSubtitle(account: Account): string {
 
 /** When the number was last true, phrased so a derived balance never claims to be checked. */
 export function asOfNote(account: Account): string {
-  if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  if (!ACCOUNT_KINDS[account.kind].checkpointable) return 'Derived from transactions';
-  return 'Never checked against a statement';
+  const asOf = balanceAsOf(account);
+  if (asOf) return `As of ${day(asOf)}`;
+  return ACCOUNT_KINDS[account.kind].checkpointable
+    ? 'Never checked against the bank'
+    : 'Never counted';
 }
 
 export { day as iosDay };

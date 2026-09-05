@@ -1,9 +1,11 @@
 import { insightsByAccountId } from '@/fixtures/account-insights';
 import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
+import { balanceAsOf } from '@/fixtures/checkpoints';
 import { formatBalance } from '@/fixtures/currencies';
 import { importRows } from '@/fixtures/import-review';
 import { DashboardHeader } from '@/kit/account-dashboard-header';
+import { CheckpointInconsistencyBadge } from '@/kit/checkpoint-inconsistency-badge';
 import { modulesFor } from '@/kit/insights';
 import { balanceTone } from '@/kit/ledger-tone';
 import { Sparkline } from '@/kit/sparkline';
@@ -29,7 +31,7 @@ import type { ImportRow } from '@/fixtures/import-review';
 
 const signed = (row: ImportRow) => (row.type === 'debit' ? -row.amountCents : row.amountCents);
 
-const day = (iso: string) =>
+export const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
 /**
@@ -38,7 +40,7 @@ const day = (iso: string) =>
  * exception: a minus sign cannot say who is owed, so that one keeps a sentence
  * naming the contact.
  */
-function balanceCaption(account: Account): string {
+export function balanceCaption(account: Account): string {
   const kind = ACCOUNT_KINDS[account.kind];
   const who = account.contact ?? account.name;
   if (account.kind === 'person') {
@@ -49,12 +51,18 @@ function balanceCaption(account: Account): string {
   return `${kind.label} balance`;
 }
 
-function asOfLine(account: Account): string {
-  if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  if (!ACCOUNT_KINDS[account.kind].checkpointable) {
-    return 'No external balance to check against — derived from transactions';
-  }
-  return 'Derived from transactions; never checked against a statement';
+/**
+ * Every kind can take a checkpoint; what differs is who supplied the number.
+ * A bank or a card issuer publishes a balance to check against, a wallet or
+ * a person ledger only has what you counted — so the wording follows
+ * `checkpointable`, and the feature does not.
+ */
+export function asOfLine(account: Account): string {
+  const asOf = balanceAsOf(account);
+  if (asOf) return `As of ${day(asOf)}`;
+  return ACCOUNT_KINDS[account.kind].checkpointable
+    ? 'Derived from transactions; never checked against the bank'
+    : 'Derived from transactions; never counted';
 }
 
 /**
@@ -63,7 +71,7 @@ function asOfLine(account: Account): string {
  * zero stays red — it is a negative number getting less negative, and it is
  * still debt.
  */
-function trendLine(account: Account, history: BalancePoint[]): string {
+export function trendLine(account: Account, history: BalancePoint[]): string {
   const change = (history.at(-1)?.balance ?? 0) - (history.at(0)?.balance ?? 0);
   const direction = change >= 0 ? 'Up' : 'Down';
   return `${direction} ${formatBalance(Math.abs(change), account.currency)} over 12 months`;
@@ -76,14 +84,24 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
     <Card>
       <CardContent className="grid gap-6 pt-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-1">
-          <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            {balanceCaption(account)}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs tracking-wide text-muted-foreground uppercase">
+              {balanceCaption(account)}
+            </p>
+            <CheckpointInconsistencyBadge account={account} />
+          </div>
           <p className={cn('text-4xl font-semibold tabular-nums', tone)}>
             {formatBalance(account.balance, account.currency)}
           </p>
           <p className="text-xs text-muted-foreground">
             {asOfLine(account)} · {account.transactionCount.toLocaleString('en-AU')} transactions
+            {' · '}
+            <a
+              href={`#/accounts/${account.id}/checkpoints`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Checkpoints
+            </a>
           </p>
         </div>
         {history.length > 1 && (
@@ -97,7 +115,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
   );
 }
 
-function ModuleGrid({ account, insight }: { account: Account; insight?: AccountInsight }) {
+export function ModuleGrid({ account, insight }: { account: Account; insight?: AccountInsight }) {
   const modules = modulesFor(account.kind);
   if (!insight || modules.length === 0) return null;
   return (
@@ -116,7 +134,7 @@ function ModuleGrid({ account, insight }: { account: Account; insight?: AccountI
   );
 }
 
-function RecentTransactions({ account }: { account: Account }) {
+export function RecentTransactions({ account }: { account: Account }) {
   return (
     <section className="space-y-2">
       <div className="flex items-baseline justify-between gap-4">

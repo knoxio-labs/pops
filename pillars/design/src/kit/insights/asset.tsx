@@ -1,3 +1,4 @@
+import { balanceAsOf } from '@/fixtures/checkpoints';
 import { formatBalance } from '@/fixtures/currencies';
 import { ProgressBar } from '@/kit/sparkline';
 
@@ -152,7 +153,7 @@ export const assetModules: InsightModules = {
         const history = insight.history;
         const first = history.length > 1 ? history[0] : undefined;
         const drift = first ? periodChange(history).change : null;
-        const on = account.balanceAsOf;
+        const on = balanceAsOf(account);
         const countedOn = on
           ? new Date(on).toLocaleDateString('en-AU', { dateStyle: 'medium' })
           : 'Never';
