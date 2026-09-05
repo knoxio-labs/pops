@@ -100,4 +100,12 @@ describe('finance federated /settings', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('names the rejected key in the body, not just a 400 (POPS-3005)', async () => {
+    const res = await requestOn(app(), (agent) =>
+      agent.post('/settings/set-many').send({ entries: [{ key: 'finance.notAThing', value: 'x' }] })
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('finance.notAThing');
+  });
 });

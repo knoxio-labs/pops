@@ -64,7 +64,7 @@ describe('assertPersistableEntityId', () => {
   it('rejects an unresolved (null) id as a 400', () => {
     const error = caught(() => assertPersistableEntityId(TEMP_ID, null));
     expect(error.statusCode).toBe(400);
-    expect(String(error.details)).toContain('no resolved contact');
+    expect(error.message).toContain('no resolved contact');
   });
 
   it('rejects an undefined mapping result', () => {
@@ -74,7 +74,7 @@ describe('assertPersistableEntityId', () => {
   it('rejects any residual temp:-prefixed id, not only temp:entity:', () => {
     const error = caught(() => assertPersistableEntityId('temp:contact:x', 'temp:contact:x'));
     expect(error.statusCode).toBe(400);
-    expect(String(error.details)).toContain('placeholder');
+    expect(error.message).toContain('placeholder');
   });
 });
 
@@ -95,14 +95,14 @@ describe('resolveChangeSetTempIds', () => {
   it('throws on a temp id with no mapping instead of persisting the placeholder', () => {
     const error = caught(() => resolveChangeSetTempIds(correctionChangeSet(TEMP_ID), new Map()));
     expect(error.statusCode).toBe(400);
-    expect(String(error.details)).toContain('no resolved contact');
+    expect(error.message).toContain('no resolved contact');
   });
 
   it('throws on a residual temp: id that is not a temp:entity reference', () => {
     const error = caught(() =>
       resolveChangeSetTempIds(correctionChangeSet('temp:contact:abc'), new Map())
     );
-    expect(String(error.details)).toContain('placeholder');
+    expect(error.message).toContain('placeholder');
   });
 });
 

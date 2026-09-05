@@ -204,7 +204,10 @@ export function translateCorrectionError(err: unknown, id?: string): never {
     err instanceof InvalidPatternError ||
     err instanceof UnmatchablePatternError
   ) {
-    throw new ValidationError(err.message);
+    throw new ValidationError(
+      err instanceof TagsOnlyCorrectionError ? undefined : { pattern: err.pattern },
+      err.message
+    );
   }
   throw err;
 }

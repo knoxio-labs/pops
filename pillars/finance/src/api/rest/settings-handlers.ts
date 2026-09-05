@@ -48,7 +48,9 @@ function runSettings<T extends { status: number; body: unknown }>(
     try {
       return fn();
     } catch (err) {
-      if (err instanceof UnknownSettingKeyError) throw new ValidationError(err.message);
+      if (err instanceof UnknownSettingKeyError) {
+        throw new ValidationError({ keys: err.keys }, err.message);
+      }
       throw err;
     }
   });

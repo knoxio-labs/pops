@@ -19,42 +19,21 @@ import {
   type FinanceDb,
   transactionCorrections,
   transactionCorrectionsService,
-  UnmatchablePatternError,
 } from '../../../db/index.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
-import { NotFoundError, ValidationError } from '../../shared/errors.js';
+import { NotFoundError } from '../../shared/errors.js';
+import {
+  assertNotTagsOnly,
+  assertPatternCanMatch,
+  assertPatternCompiles,
+  normalisesToNothing,
+} from './add-op-guards.js';
 
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
 
 const { isTagsOnlyCorrectionInput, isValidRegexPattern, normalizePatternForStorage } =
   transactionCorrectionsService;
-
-/**
- * Reject a ChangeSet `add` whose data carries no `entityId`, no
- * `transactionType`, and non-empty `tags` — a tags-only row that violates the
- * classification-rule/tag-rule table boundary (CF061/#3650). Tag-only intent
- * belongs in a `transaction_tag_rules` ChangeSet, not here.
- */
-function assertNotTagsOnly(op: Extract<ChangeSetOp, { op: 'add' }>): void {
-  if (isTagsOnlyCorrectionInput(op.data)) {
-    throw new ValidationError(
-      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
-    );
-  }
-}
-
-/**
- * Would this `add` op store an `exact`/`contains` pattern that normalises to
- * the empty string — `'1234'`, `'  '` — which `patternMatchesDescription`
- * refuses unconditionally, leaving an active rule nothing can ever fire
- * (POPS-3001)? `transaction_tag_rules` has refused this since POPS-2942;
- * corrections never did.
- */
-function normalisesToNothing(op: Extract<ChangeSetOp, { op: 'add' }>): boolean {
-  if (op.data.matchType === 'regex') return false;
-  return normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType).length === 0;
-}
 
 function findExistingCorrectionByKey(
   tx: FinanceDb,
@@ -117,19 +96,6 @@ export function dropUnusableAddOps(changeSet: ChangeSet): ChangeSet {
     return false;
   });
   return { ...changeSet, ops };
-}
-
-/**
- * Reject a ChangeSet `add` whose `regex` pattern doesn't compile. Every matcher
- * silently skips an uncompilable pattern, so storing one leaves a rule that
- * looks active and can never fire (POPS-2600).
- */
-function assertPatternCompiles(op: Extract<ChangeSetOp, { op: 'add' }>): void {
-  if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
-    throw new ValidationError(
-      `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`
-    );
-  }
 }
 
 /** Whether an `add` op minted a new correction or landed on one that already existed. */
@@ -215,10 +181,7 @@ function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): 
 function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   assertNotTagsOnly(op);
   assertPatternCompiles(op);
-  if (normalisesToNothing(op)) {
-    const unmatchable = new UnmatchablePatternError(op.data.descriptionPattern);
-    throw new ValidationError(unmatchable.pattern, unmatchable.message);
-  }
+  assertPatternCanMatch(op);
 
   const normalized = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
   const existing = findExistingCorrectionByKey(tx, op.data.matchType, normalized);
