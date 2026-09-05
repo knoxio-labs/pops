@@ -68,6 +68,18 @@ export interface MarkRunCompleteResult {
  * given) creates the produced batch and writes its id back to
  * `recipe_runs.yielded_batch_id`. All writes happen in one transaction.
  *
+ * `rating` / `notes` are overlaid onto the existing row, not replaced
+ * wholesale (POPS-3027 — the fourth instance of the POPS-2755 / POPS-2954 /
+ * POPS-2987 defect family: an UPDATE that writes `input.x ?? null`
+ * unconditionally, erasing whatever the row already carried whenever the
+ * caller omits the field). Nothing currently stops `markRunComplete` being
+ * called more than once for the same run — a resupplied `rating`/`notes`
+ * from a caller with only partial information about the run must not wipe
+ * out what a previous call recorded. Distinguishing "omitted" from
+ * "explicitly cleared" is a real requirement here (unlike POPS-2987's tags
+ * path, which has no such need): omitting the field leaves the stored value
+ * untouched, while passing `null` explicitly clears it.
+ *
  * Refuses to complete a run whose recipe_version isn't `compiled` — the
  * planner / consumption helper need materialised `recipe_lines`.
  */
@@ -81,6 +93,8 @@ export function markRunComplete(
       .select({
         id: recipeRuns.id,
         recipeVersionId: recipeRuns.recipeVersionId,
+        rating: recipeRuns.rating,
+        notes: recipeRuns.notes,
       })
       .from(recipeRuns)
       .where(eq(recipeRuns.id, runId))
@@ -111,8 +125,8 @@ export function markRunComplete(
       .update(recipeRuns)
       .set({
         completedAt,
-        rating: opts.rating ?? null,
-        notes: opts.notes ?? null,
+        rating: opts.rating !== undefined ? opts.rating : run.rating,
+        notes: opts.notes !== undefined ? opts.notes : run.notes,
         yieldedBatchId: yieldedBatch?.id ?? null,
       })
       .where(eq(recipeRuns.id, runId))
