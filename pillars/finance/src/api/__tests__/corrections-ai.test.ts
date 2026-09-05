@@ -251,7 +251,10 @@ describe('corrections.proposeChangeSet', () => {
           tags: ['groceries'],
         },
       })
-    ).rejects.toMatchObject({ status: 400 });
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('transaction_tag_rules') },
+    });
   });
 
   it('proposes an edit ChangeSet when a rule already exists for the pattern', async () => {

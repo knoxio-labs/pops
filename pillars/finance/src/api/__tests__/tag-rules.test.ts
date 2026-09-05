@@ -807,6 +807,25 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
     const listed = await client().tagRules.list({});
     expect(listed.data).toHaveLength(0);
   });
+
+  it('names the offending pattern in the body, not just a 400 (POPS-3005)', async () => {
+    await expect(
+      client().tagRules.apply({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: '[unclosed', matchType: 'regex', tags: ['x'] },
+            },
+          ],
+        },
+        acceptedNewTags: [],
+      })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('[unclosed') },
+    });
+  });
 });
 
 describe('tagRules — resolveAddCollisions (POPS-2955)', () => {

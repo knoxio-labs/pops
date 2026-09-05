@@ -54,11 +54,13 @@ export function assertPersistableEntityId(
 ): asserts resolvedEntityId is string {
   if (resolvedEntityId == null) {
     throw new ValidationError(
+      { entityId: originalEntityId },
       `Entity id '${originalEntityId}' has no resolved contact; refusing to commit a placeholder`
     );
   }
   if (resolvedEntityId.startsWith(TEMP_ID_PREFIX)) {
     throw new ValidationError(
+      { entityId: resolvedEntityId },
       `Refusing to persist unresolved placeholder entity id '${resolvedEntityId}'`
     );
   }
@@ -68,7 +70,9 @@ function assertNoDuplicateNames(payload: CommitPayload): void {
   const names = new Set<string>();
   for (const entity of payload.entities) {
     const lower = entity.name.toLowerCase();
-    if (names.has(lower)) throw new ValidationError(`Duplicate entity name: '${entity.name}'`);
+    if (names.has(lower)) {
+      throw new ValidationError({ name: entity.name }, `Duplicate entity name: '${entity.name}'`);
+    }
     names.add(lower);
   }
 }
@@ -76,7 +80,7 @@ function assertNoDuplicateNames(payload: CommitPayload): void {
 export function validateCommitPayload(payload: CommitPayload): void {
   const tempIds = new Set(payload.entities.map((e) => e.tempId));
   if (tempIds.size !== payload.entities.length) {
-    throw new ValidationError('Duplicate temp IDs in entities array');
+    throw new ValidationError(undefined, 'Duplicate temp IDs in entities array');
   }
   assertNoDuplicateNames(payload);
 
@@ -90,6 +94,8 @@ export function validateCommitPayload(payload: CommitPayload): void {
   }
 
   for (const ref of referencedTempIds) {
-    if (!tempIds.has(ref)) throw new ValidationError(`Unknown temp ID referenced: '${ref}'`);
+    if (!tempIds.has(ref)) {
+      throw new ValidationError({ tempId: ref }, `Unknown temp ID referenced: '${ref}'`);
+    }
   }
 }

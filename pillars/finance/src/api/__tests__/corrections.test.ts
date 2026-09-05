@@ -385,6 +385,51 @@ describe('corrections — request validation', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('tells the caller why a tags-only add op was refused, not just that it failed', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'PAYID PAYMENT RECEIVED',
+                matchType: 'contains',
+                tags: ['Income'],
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('transaction_tag_rules') },
+    });
+  });
+
+  it('tells the caller which pattern failed to compile, not just that it failed', async () => {
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'UNCLOSED (GROUP',
+                matchType: 'regex',
+                entityId: 'ent-x',
+                entityName: 'X',
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('UNCLOSED (GROUP') },
+    });
+  });
+
   it('rolls back the whole ChangeSet when a later add op is tags-only (CF061/#3650)', async () => {
     await expect(
       client().corrections.applyChangeSet({
