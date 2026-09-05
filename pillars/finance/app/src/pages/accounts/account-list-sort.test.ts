@@ -42,6 +42,15 @@ describe('sortAccounts', () => {
     expect(sortAccounts(accounts, 'name').map((a) => a.id)).toEqual(['b', 'a']);
   });
 
+  it('orders by largest ledger-signed balance first', () => {
+    const accounts = [
+      account({ id: 'a', balance: { ...NO_BALANCE, balanceCents: -5_000 } }),
+      account({ id: 'b', balance: { ...NO_BALANCE, balanceCents: 10_000 } }),
+      account({ id: 'c', balance: { ...NO_BALANCE, balanceCents: 0 } }),
+    ];
+    expect(sortAccounts(accounts, 'balance').map((a) => a.id)).toEqual(['b', 'c', 'a']);
+  });
+
   it('orders by most recently updated first', () => {
     const accounts = [
       account({ id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }),
@@ -62,12 +71,13 @@ describe('sortAccounts', () => {
 describe('isAccountSort', () => {
   it('accepts every known sort value', () => {
     expect(isAccountSort('kind')).toBe(true);
+    expect(isAccountSort('balance')).toBe(true);
     expect(isAccountSort('name')).toBe(true);
     expect(isAccountSort('recent')).toBe(true);
   });
 
   it('rejects an unknown value', () => {
-    expect(isAccountSort('balance')).toBe(false);
+    expect(isAccountSort('kind-balance')).toBe(false);
     expect(isAccountSort('')).toBe(false);
   });
 });

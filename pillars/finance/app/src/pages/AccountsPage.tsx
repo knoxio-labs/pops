@@ -52,6 +52,7 @@ export function AccountsPage() {
         isLoading={state.accounts.isLoading}
         accounts={accounts}
         institutions={institutions}
+        currencies={currencies}
         filters={filters}
         onAdd={state.handleAdd}
         onSelect={(account) => navigate(`/finance/accounts/${account.id}`)}

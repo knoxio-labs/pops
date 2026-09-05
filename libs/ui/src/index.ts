@@ -78,6 +78,7 @@ export {
 // Composite components
 export * from './components/account-shared/account-kinds';
 export * from './components/account-shared/initials';
+export * from './components/account-shared/ledger-tone';
 export * from './components/account-shared/types';
 export * from './components/AccountChip';
 export * from './components/AccountSelect';

@@ -3,7 +3,9 @@ import { Skeleton } from '@pops/ui';
 import { AccountCard } from './AccountCard';
 import { NoAccountsYet, NoMatchingAccounts } from './AccountEmptyStates';
 import { AccountListControls } from './AccountListControls';
+import { AccountSubtotals } from './AccountSubtotals';
 
+import type { Currency } from './account-subtotals';
 import type { Account, Institution } from './types';
 import type { AccountListFilters } from './useAccountListFilters';
 
@@ -21,6 +23,7 @@ export function AccountsGrid({
   isLoading,
   accounts,
   institutions,
+  currencies,
   filters,
   onAdd,
   onSelect,
@@ -28,6 +31,7 @@ export function AccountsGrid({
   isLoading: boolean;
   accounts: Account[];
   institutions: Institution[];
+  currencies: Currency[];
   filters: AccountListFilters;
   onAdd: () => void;
   onSelect: (account: Account) => void;
@@ -36,6 +40,7 @@ export function AccountsGrid({
   if (accounts.length === 0) return <NoAccountsYet onAdd={onAdd} />;
   return (
     <>
+      <AccountSubtotals accounts={accounts} currencies={currencies} />
       <AccountListControls filters={filters} />
       {filters.visible.length === 0 && <NoMatchingAccounts onClear={filters.clear} />}
       {filters.visible.length > 0 && (
@@ -45,6 +50,7 @@ export function AccountsGrid({
               key={account.id}
               account={account}
               institutions={institutions}
+              currencies={currencies}
               onSelect={() => onSelect(account)}
             />
           ))}
