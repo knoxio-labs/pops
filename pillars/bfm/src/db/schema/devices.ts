@@ -20,6 +20,8 @@
 import { sql } from 'drizzle-orm';
 import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { DEVICE_CAPABILITY_MODES } from '../../contract/capabilities.js';
+
 export const devices = sqliteTable(
   'devices',
   {
@@ -75,6 +77,31 @@ export const devices = sqliteTable(
      * with the same set.
      */
     capabilities: text('capabilities').notNull().default('[]'),
+    /**
+     * How to read the column above (ADR-048, POPS-2928).
+     *
+     * `tracks-default` says this device holds whatever pairing grants, so its
+     * effective grant is resolved from `DEFAULT_DEVICE_CAPABILITIES` on every
+     * request rather than from the row — which is what lets a capability
+     * added after a device paired reach it at all, and what lets one removed
+     * from the default set leave it. The `capabilities` column is still
+     * written for such a row, as the record of what it was granted at pairing
+     * and so that an older build reading the same database behaves exactly as
+     * it did before this column existed.
+     *
+     * `explicit` says the column is the whole answer and nothing widens it —
+     * the shape a per-device narrowing takes (POPS-2460).
+     *
+     * Defaults to `explicit`, which is the fail-closed direction: paired with
+     * the empty default on `capabilities`, a row that reached this table
+     * without anyone deciding may still do nothing. The migration that added
+     * this column set the devices that predate it to `tracks-default`,
+     * because pairing was the only writer of a grant and every one of those
+     * rows therefore holds the default set of its day.
+     */
+    capabilityMode: text('capability_mode', { enum: DEVICE_CAPABILITY_MODES })
+      .notNull()
+      .default('explicit'),
   },
   // No index on `id`: SQLite backs a non-INTEGER primary key with an implicit
   // unique index, so lookups by device id are already index-driven. Adding one

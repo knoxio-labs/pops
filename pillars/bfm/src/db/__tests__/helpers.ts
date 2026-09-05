@@ -82,6 +82,11 @@ export function deviceRow(overrides: Partial<DeviceInsert> = {}): DeviceInsert &
     // that way — a test fixture is the right place to be generous, a schema
     // default is not.
     capabilities: serialiseDeviceCapabilities(DEFAULT_DEVICE_CAPABILITIES),
+    // `explicit`, not what pairing writes, so that a test naming a grant gets
+    // that grant and nothing else. A fixture that tracked the default set
+    // would answer every `capabilities` override with the whole default set,
+    // which is how a gate test would stop testing the gate.
+    capabilityMode: 'explicit',
     ...overrides,
   };
 }

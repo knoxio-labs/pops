@@ -17,6 +17,18 @@
  * the contract means the declaration sits beside the path in one file and the
  * gate cannot disagree with it.
  *
+ * ## When the grant is resolved
+ *
+ * Here, per request, through `resolveDeviceCapabilities` — not at pairing, not
+ * when an access token is minted, and not at refresh. The device row is
+ * already loaded by `requireDevice`, so resolution costs nothing beyond the
+ * comparison it feeds, and doing it any earlier would mean a set frozen into a
+ * credential: a phone offline across a deploy would keep an old answer until
+ * its next refresh, and a capability taken away would keep working for exactly
+ * as long. Resolving at the moment of the decision means a change to the
+ * default set — in either direction — lands on the very next call from every
+ * device, with nothing to re-pair and no token to expire first (POPS-2928).
+ *
  * ## Three ways a request does not get through, and only one of them is a 403
  *
  * 1. **The path matches no mobile route.** Fall through. There is nothing to
@@ -40,8 +52,8 @@
  * accidentally covering the other.
  */
 import {
-  parseDeviceCapabilities,
   readRouteCapability,
+  resolveDeviceCapabilities,
   type MobileCapability,
 } from '../../contract/capabilities.js';
 import { bfmContract } from '../../contract/rest.js';
@@ -165,7 +177,7 @@ export function createRequireCapability(contract: unknown = bfmContract): Reques
     }
 
     const device = readDevice(res);
-    const granted = parseDeviceCapabilities(device.capabilities, device.id);
+    const granted = resolveDeviceCapabilities(device);
     if (granted.includes(gate.capability)) {
       next();
       return;

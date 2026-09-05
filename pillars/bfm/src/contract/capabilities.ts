@@ -201,3 +201,79 @@ function warnUnreadableGrant(deviceId: string): void {
 export function serialiseDeviceCapabilities(capabilities: readonly string[]): string {
   return JSON.stringify(capabilities);
 }
+
+/**
+ * How a device row's grant is to be read.
+ *
+ * - `tracks-default` — the device was granted whatever pairing grants, and
+ *   still is. Its effective grant is {@link DEFAULT_DEVICE_CAPABILITIES} as
+ *   the running build defines it, so a capability added to the default set
+ *   reaches every such device on its next request, and one removed from it
+ *   leaves them on that same request. This is what pairing writes.
+ * - `explicit` — the grant is exactly what the row's `capabilities` column
+ *   says, and nothing widens it. This is what a narrowed grant will write
+ *   (ADR-048's operator surface, POPS-2460), and it is also the column
+ *   default, so a row that reached the table without anyone deciding what it
+ *   may do falls back on the empty grant rather than on the widest one.
+ */
+export const DEVICE_CAPABILITY_MODES = ['tracks-default', 'explicit'] as const;
+
+export type DeviceCapabilityMode = (typeof DEVICE_CAPABILITY_MODES)[number];
+
+/**
+ * The columns {@link resolveDeviceCapabilities} reads.
+ *
+ * `capabilityMode` is a plain `string` rather than {@link DeviceCapabilityMode}
+ * on purpose: the value comes back from SQLite, which enforces no
+ * enumeration, so the resolver has to be able to see a mode this build does
+ * not know and refuse it.
+ */
+export interface DeviceGrantRow {
+  readonly id: string;
+  readonly capabilities: string;
+  readonly capabilityMode: string;
+}
+
+/**
+ * What a device may actually do, resolved against the running build.
+ *
+ * The stored column is not the answer on its own. A grant is written once, at
+ * pairing, so reading it back verbatim froze every device at the vocabulary
+ * that existed on the day it paired: a capability added later reached devices
+ * paired later and nobody else. That is the defect POPS-2928 records — the
+ * handset in the field was offered an Accounts tab whose every call answered
+ * `403 capability_not_granted`, and ADR-048's recovery for that code is for
+ * the app to stop offering the feature, not to re-pair.
+ *
+ * Two things this deliberately does NOT do, both worse than the defect:
+ *
+ * 1. **It never grants more than the device is entitled to.** A
+ *    `tracks-default` device resolves to `defaults` — the set pairing hands
+ *    out — and never to {@link MOBILE_CAPABILITIES}, the vocabulary, which is
+ *    a superset the moment a capability exists that pairing does not grant.
+ *    An `explicit` device is not widened by the default set at all.
+ * 2. **It never resurrects a removed capability.** Removal has two shapes and
+ *    both survive: dropping one from the default set takes it from every
+ *    `tracks-default` device on their next request, because the default is
+ *    read live rather than copied into the row; narrowing one device writes
+ *    an `explicit` grant, which this returns untouched.
+ *
+ * An unknown mode yields the empty grant — the same fail-closed direction as
+ * an unparseable column, and for the same reason.
+ *
+ * @param defaults Injectable so a test can drive a default set that differs
+ *   from the vocabulary. Production passes nothing.
+ */
+export function resolveDeviceCapabilities(
+  device: DeviceGrantRow,
+  defaults: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES
+): readonly string[] {
+  if (device.capabilityMode === 'tracks-default') return defaults;
+  if (device.capabilityMode === 'explicit') {
+    return parseDeviceCapabilities(device.capabilities, device.id);
+  }
+  console.warn(
+    `[bfm-api] device ${device.id} carries an unknown capability mode; treating its grant as empty`
+  );
+  return [];
+}

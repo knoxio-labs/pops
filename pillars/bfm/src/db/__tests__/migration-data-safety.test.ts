@@ -190,6 +190,22 @@ describe('reopening a populated bfm database against the current journal', () =>
     expect(stored).toHaveLength(DEVICES.length);
   });
 
+  it('sets the devices that predate the mode column to track the default grant', () => {
+    // The column defaults to `explicit`, which would have frozen every device
+    // paired before it landed at the vocabulary of its pairing day — the
+    // defect POPS-2928 records, preserved by the very migration meant to fix
+    // it. Pairing was the only writer of a grant, so every pre-existing row
+    // holds the default set of its day and tracking the default is what it
+    // already meant.
+    const stored = rows<{ id: string; capability_mode: string }>(
+      `SELECT id, capability_mode FROM devices ORDER BY id`
+    );
+
+    expect(stored.map((device) => device.capability_mode)).toEqual(
+      DEVICES.map(() => 'tracks-default')
+    );
+  });
+
   it('keeps every device column byte-identical, quotes and unicode included', () => {
     const stored = rows<{ id: string; name: string; model: string; public_key_der: string }>(
       `SELECT id, name, model, public_key_der FROM devices ORDER BY id`
