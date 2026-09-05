@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 import { Alert, Button, PageHeader } from '@pops/ui';
 
@@ -23,6 +24,7 @@ function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 export function AccountsPage() {
+  const navigate = useNavigate();
   const state = useAccountsPage();
   const accounts = state.accounts.data?.data ?? [];
   const institutions = state.institutions.data?.data ?? [];
@@ -52,7 +54,7 @@ export function AccountsPage() {
         institutions={institutions}
         filters={filters}
         onAdd={state.handleAdd}
-        onSelect={state.handleEdit}
+        onSelect={(account) => navigate(`/finance/accounts/${account.id}`)}
       />
       <AccountFormDialog
         open={state.isDialogOpen}

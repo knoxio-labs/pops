@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AccountsPage } from './AccountsPage';
@@ -46,8 +46,11 @@ function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <AccountsPage />
+      <MemoryRouter initialEntries={['/finance/accounts']}>
+        <Routes>
+          <Route path="/finance/accounts" element={<AccountsPage />} />
+          <Route path="/finance/accounts/:id" element={<div>Account detail page</div>} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -112,6 +115,14 @@ describe('AccountsPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(screen.getByText('Everyday')).toBeInTheDocument());
+  });
+
+  it('navigates to the account detail page when a card is clicked, rather than opening the edit dialog', async () => {
+    mockLists([account({ id: 'a1', name: 'Everyday' })]);
+    renderPage();
+    await userEvent.click(await screen.findByText('Everyday'));
+    expect(await screen.findByText('Account detail page')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps archived accounts hidden until the reveal toggle is used', async () => {

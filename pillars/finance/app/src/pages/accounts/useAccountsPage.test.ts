@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_ACCOUNT_FORM_VALUES, type AccountFormValues } from './types';
-import { requiresGiftCardSecrets } from './useAccountsPage';
+import { requiresGiftCardSecrets } from './useAccountFormDialog';
 
 function values(overrides: Partial<AccountFormValues>): AccountFormValues {
   return { ...DEFAULT_ACCOUNT_FORM_VALUES, kind: 'gift-card', ...overrides };

@@ -37,7 +37,8 @@ export interface AccountFormDialogProps {
  * so nothing is destroyed and there is nothing to confirm. Matches the design
  * playground's account-dashboard banner (`pillars/design/src/kit/account-dashboard.tsx`).
  */
-function ArchivedBanner() {
+/** Exported so the account detail page's own top-of-page banner (POPS-2805) uses the same copy. */
+export function ArchivedBanner() {
   return (
     <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
       <Archive className="h-4 w-4" />

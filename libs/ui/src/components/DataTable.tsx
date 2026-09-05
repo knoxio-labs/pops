@@ -13,7 +13,7 @@ import { type ColumnFilter, FilterBar } from './DataTableFilters';
  * DataTable component - Comprehensive table with sorting, filtering, pagination, and editing
  * Built on TanStack Table and shadcn primitives
  */
-import type { ColumnDef, Table as TanStackTable } from '@tanstack/react-table';
+import type { ColumnDef, ColumnFiltersState, Table as TanStackTable } from '@tanstack/react-table';
 
 export interface DataTableProps<TData, TValue = unknown> {
   columns: ColumnDef<TData, TValue>[];
@@ -38,6 +38,8 @@ export interface DataTableProps<TData, TValue = unknown> {
   >;
   /** Called whenever the filtered row count changes. Receives the current count. */
   onFilteredCountChange?: (count: number) => void;
+  /** Column filters the table opens with — see `UseDataTableArgs.initialColumnFilters`. */
+  initialColumnFilters?: ColumnFiltersState;
 }
 
 function useFilteredCountNotifier<TData>(
@@ -69,9 +71,10 @@ export function DataTable<TData, TValue>({
   filters,
   filterFns,
   onFilteredCountChange,
+  initialColumnFilters,
 }: DataTableProps<TData, TValue>) {
   // prettier-ignore
-  const table = useDataTable({ data, columns, paginated, defaultPageSize, enableRowSelection, onSelectionChange, filterFns });
+  const table = useDataTable({ data, columns, paginated, defaultPageSize, enableRowSelection, onSelectionChange, filterFns, initialColumnFilters });
   useFilteredCountNotifier(table, onFilteredCountChange);
   return (
     <div className={cn('space-y-4', className)}>

@@ -1,8 +1,8 @@
 import { Link2 } from 'lucide-react';
 
-import { AccountChip, Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
+import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
 
-import { resolveAccountOption } from '../../components/accounts/resolveAccountOption';
+import { AccountLabel } from '../../components/accounts/AccountLabel';
 import { TagEditor } from '../../components/TagEditor';
 import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib/transaction-type';
 import { AmountCell, DescriptionCell } from './cells';
@@ -77,11 +77,9 @@ function buildAccountColumn(
   return {
     accessorKey: 'accountId',
     header: t('column.account'),
-    cell: ({ row }) => {
-      const resolved = resolveAccountOption(accounts, row.original.accountId);
-      if (!resolved) return <span className="text-sm font-mono">{row.original.accountId}</span>;
-      return <AccountChip account={resolved} size="compact" />;
-    },
+    cell: ({ row }) => (
+      <AccountLabel accounts={accounts} account={row.original.accountId} size="compact" />
+    ),
   };
 }
 
