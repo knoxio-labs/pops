@@ -10,11 +10,8 @@
  */
 import { desc, eq } from 'drizzle-orm';
 
-import {
-  type FinanceDb,
-  transactionCorrections,
-  transactionCorrectionsService,
-} from '../../../db/index.js';
+import { describeForMatching, patternMatchesDescription } from '../../../contract/pattern-match.js';
+import { type FinanceDb, transactionCorrections } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
 import { getClaudeCompleter } from './ai-runtime.js';
 import { type CorrectionAnalysis } from './ai-types.js';
@@ -79,24 +76,6 @@ export function formatFewShotExamples(examples: AcceptedCorrectionExample[]): st
   return `\n\nExamples of rules already accepted by this user (for calibration only — match this transaction on its own merits, do not copy an example verbatim unless it genuinely fits):\n${lines}`;
 }
 
-function patternMatchesDescription(
-  pattern: string,
-  matchType: 'exact' | 'contains' | 'regex',
-  description: string
-): boolean {
-  const { normalizeDescription } = transactionCorrectionsService;
-  const normalizedDescription = normalizeDescription(description);
-  const normalizedPattern = matchType === 'regex' ? pattern : normalizeDescription(pattern);
-  if (normalizedPattern.length === 0) return false;
-  if (matchType === 'exact') return normalizedPattern === normalizedDescription;
-  if (matchType === 'contains') return normalizedDescription.includes(normalizedPattern);
-  try {
-    return new RegExp(normalizedPattern).test(normalizedDescription);
-  } catch {
-    return false;
-  }
-}
-
 export function buildAnalyzePrompt(
   input: CorrectionInput,
   examples: AcceptedCorrectionExample[] = []
@@ -152,6 +131,14 @@ export async function analyzeCorrection(
   if (!text) return null;
   const result = parseAnalysis(text);
   if (!result) return null;
-  if (!patternMatchesDescription(result.pattern, result.matchType, input.description)) return null;
+  if (
+    !patternMatchesDescription(
+      result.pattern,
+      result.matchType,
+      describeForMatching(input.description)
+    )
+  ) {
+    return null;
+  }
   return result;
 }

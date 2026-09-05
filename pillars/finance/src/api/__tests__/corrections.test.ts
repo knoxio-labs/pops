@@ -251,6 +251,31 @@ describe('corrections — previewMatches', () => {
     expect(truncatedPreview.data.matches).toHaveLength(1);
     expect(truncatedPreview.data.truncated).toBe(true);
   });
+
+  it('tests a regex pattern against the raw description, digits included', async () => {
+    const db = financeDb.db;
+    const amexId = seedAmexAccount(db);
+    transactionsService.createTransaction(db, {
+      description: 'INV 1234-56 PAID',
+      accountId: amexId,
+      amountCents: -5000,
+      date: '2026-01-01',
+    });
+    transactionsService.createTransaction(db, {
+      description: 'INV PAID',
+      accountId: amexId,
+      amountCents: -1200,
+      date: '2026-01-02',
+    });
+
+    const preview = await client().corrections.previewMatches({
+      descriptionPattern: '\\d{4}-\\d{2}',
+      matchType: 'regex',
+    });
+
+    expect(preview.data.total).toBe(1);
+    expect(preview.data.matches.map((m) => m.description)).toEqual(['INV 1234-56 PAID']);
+  });
 });
 
 describe('corrections — ruleMatchPreview', () => {

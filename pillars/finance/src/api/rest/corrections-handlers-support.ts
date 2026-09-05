@@ -10,6 +10,7 @@
  */
 import { desc } from 'drizzle-orm';
 
+import { describeForMatching, patternMatchesDescription } from '../../contract/pattern-match.js';
 import {
   type FinanceDb,
   type RuleMatchPreviewResult,
@@ -82,31 +83,6 @@ export function toCorrection(row: TransactionCorrectionRow): Correction {
   };
 }
 
-/**
- * Verify a candidate `(pattern, matchType)` matches a description after
- * normalisation. Mirrors the monolith `patternMatchesDescription` so a preview
- * matches exactly what the rule would match at apply time (both pattern and
- * description are normalised for `exact`/`contains`; `regex` runs against the
- * normalised description with the raw pattern).
- */
-function patternMatchesDescription(
-  pattern: string,
-  matchType: TransactionCorrectionMatchType,
-  description: string
-): boolean {
-  const { normalizeDescription } = transactionCorrectionsService;
-  const normalizedDescription = normalizeDescription(description);
-  const normalizedPattern = matchType === 'regex' ? pattern : normalizeDescription(pattern);
-  if (normalizedPattern.length === 0) return false;
-  if (matchType === 'exact') return normalizedPattern === normalizedDescription;
-  if (matchType === 'contains') return normalizedDescription.includes(normalizedPattern);
-  try {
-    return new RegExp(normalizedPattern).test(normalizedDescription);
-  } catch {
-    return false;
-  }
-}
-
 export interface PreviewMatchTransactionView {
   id: string;
   description: string;
@@ -136,6 +112,15 @@ function previewMatchTransaction(row: TransactionRow): PreviewMatchTransactionVi
   };
 }
 
+/**
+ * The transactions a candidate `(pattern, matchType)` rule would match.
+ *
+ * Routed through `contract/pattern-match.ts`'s `patternMatchesDescription` so
+ * the preview cannot disagree with the live matcher. A private copy here
+ * tested a `regex` pattern against the digit-stripped description, so a
+ * preview of any digit-dependent regex showed no matches for a rule that would
+ * match at apply time (POPS-2707).
+ */
 export function previewMatches(
   db: FinanceDb,
   input: Req['previewMatches']['body']
@@ -144,7 +129,11 @@ export function previewMatches(
   const rows = db.select().from(transactions).orderBy(desc(transactions.date)).all();
 
   const matched = rows.filter((row) =>
-    patternMatchesDescription(input.descriptionPattern, input.matchType, row.description)
+    patternMatchesDescription(
+      input.descriptionPattern,
+      input.matchType,
+      describeForMatching(row.description)
+    )
   );
 
   const truncated = matched.length > limit;

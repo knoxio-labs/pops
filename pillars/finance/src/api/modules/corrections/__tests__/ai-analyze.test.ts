@@ -3,6 +3,10 @@
  * AI cluster (CF062/#3661): `loadRecentAcceptedCorrections` reads the most
  * recently accepted rules, and `buildAnalyzePrompt`/`buildGeneratePrompt`
  * render them as a bounded few-shot block.
+ *
+ * Plus `analyzeCorrection`'s verification of the model's own pattern, which
+ * now runs the shared `patternMatchesDescription` (POPS-2707) — a `regex`
+ * against the raw description, so a digit-dependent pattern survives.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,11 +21,13 @@ import {
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
 import {
+  analyzeCorrection,
   buildAnalyzePrompt,
   loadRecentAcceptedCorrections,
   type AcceptedCorrectionExample,
 } from '../ai-analyze.js';
 import { buildGeneratePrompt } from '../ai-generate-rules.js';
+import { __setClaudeCompleterForTests } from '../ai-runtime.js';
 
 let tmpDir: string;
 let opened: OpenedFinanceDb;
@@ -151,5 +157,51 @@ describe('buildGeneratePrompt — few-shot grounding', () => {
     ];
     const prompt = buildGeneratePrompt(txns, ['Groceries'], examples);
     expect(prompt).toContain('pattern: "NETFLIX.COM" (exact) -> entity: Netflix');
+  });
+});
+
+describe('analyzeCorrection — pattern verification', () => {
+  afterEach(() => {
+    __setClaudeCompleterForTests(null);
+  });
+
+  function replyWith(analysis: { matchType: string; pattern: string; confidence: number }): void {
+    __setClaudeCompleterForTests(() => Promise.resolve(JSON.stringify(analysis)));
+  }
+
+  it('accepts a regex pattern that only matches the raw description via its digits', async () => {
+    replyWith({ matchType: 'regex', pattern: 'INV \\d{4}-\\d{2}', confidence: 0.9 });
+
+    const result = await analyzeCorrection(db, {
+      description: 'INV 1234-56 PAID',
+      entityName: 'Acme',
+      amount: -50,
+    });
+
+    expect(result).toEqual({ matchType: 'regex', pattern: 'INV \\d{4}-\\d{2}', confidence: 0.9 });
+  });
+
+  it('rejects a regex pattern that does not match the raw description', async () => {
+    replyWith({ matchType: 'regex', pattern: 'COLES \\d{4}', confidence: 0.9 });
+
+    const result = await analyzeCorrection(db, {
+      description: 'INV 1234-56 PAID',
+      entityName: 'Acme',
+      amount: -50,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('still verifies exact/contains patterns against the normalised description', async () => {
+    replyWith({ matchType: 'contains', pattern: 'woolworths', confidence: 0.8 });
+
+    const result = await analyzeCorrection(db, {
+      description: 'WOOLWORTHS 1034 CANTERB',
+      entityName: 'Woolworths',
+      amount: -50,
+    });
+
+    expect(result?.pattern).toBe('woolworths');
   });
 });
