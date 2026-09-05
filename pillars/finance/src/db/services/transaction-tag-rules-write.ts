@@ -21,7 +21,7 @@ import type {
   CreateTransactionTagRuleInput,
   TagRuleMatchType,
   TransactionTagRuleRow,
-} from './transaction-tag-rules.js';
+} from './transaction-tag-rules-types.js';
 
 function findExistingTagRule(
   db: FinanceDb,

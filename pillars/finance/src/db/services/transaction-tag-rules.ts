@@ -33,22 +33,13 @@ export {
   type TagRuleConflictGroup,
 } from './transaction-tag-rules-audit.js';
 
-/** Raw drizzle row shape. */
-export type TransactionTagRuleRow = typeof transactionTagRules.$inferSelect;
+export type {
+  CreateTransactionTagRuleInput,
+  TagRuleMatchType,
+  TransactionTagRuleRow,
+} from './transaction-tag-rules-types.js';
 
-/** Match strategy for the rule's description pattern. */
-export type TagRuleMatchType = 'exact' | 'contains' | 'regex';
-
-/** Mutable subset accepted on create. `tags` is the parsed `string[]` form. */
-export interface CreateTransactionTagRuleInput {
-  descriptionPattern: string;
-  matchType: TagRuleMatchType;
-  entityId?: string | null;
-  tags: string[];
-  confidence?: number;
-  isActive?: boolean;
-  priority?: number;
-}
+import type { TagRuleMatchType, TransactionTagRuleRow } from './transaction-tag-rules-types.js';
 
 /**
  * PATCH-style update. Deliberately omits `descriptionPattern` and `matchType` —
