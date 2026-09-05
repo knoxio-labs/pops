@@ -39,7 +39,7 @@ function renderTab(
 ) {
   const props: ReviewTabBaseProps = {
     transactions,
-    groups: groupTransactionsByEntity(transactions),
+    groups: groupTransactionsByEntity(transactions, 'size'),
     viewMode: 'grouped',
     onViewModeChange: vi.fn(),
     onEntitySelect: vi.fn(),
@@ -91,6 +91,23 @@ describe('MatchedTab (POPS-2448)', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[7] as HTMLElement);
     expect(screen.getAllByTestId('transaction-card')).toHaveLength(40);
+  });
+
+  it('keeps the largest group first even when a smaller one was matched by the AI', () => {
+    const rows = [
+      ...matchedRows(1, ['Coles']).map((t) => ({
+        ...t,
+        entity: { ...t.entity, matchType: 'ai' as const },
+      })),
+      ...matchedRows(4, ['Woolworths']),
+    ];
+    renderTab(rows);
+
+    const groups = screen.getAllByTestId('transaction-group');
+    expect(groups.map((g) => within(g).getByRole('heading').textContent)).toEqual([
+      'Woolworths',
+      'Coles',
+    ]);
   });
 
   it('offers Reassign all and never Accept all, even for a group the AI matched', () => {

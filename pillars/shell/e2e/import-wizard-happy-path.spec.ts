@@ -7,7 +7,7 @@
  *   1. Upload CSV         → parsed client-side (no REST call)
  *   2. Map Columns        → auto-detected mapping, confirm via Next
  *   3. Processing         → polls GET /imports/progress until `completed`
- *   4. Review             → both transactions land in Matched tab
+ *   4. Review             → both transactions land in Matched tab, grouped by merchant
  *   5. Tag Review         → no edits, continue
  *   6. Create Rules       → skip (no patterns in mocked data)
  *   7. Final Review       → Approve & Commit All
@@ -535,8 +535,16 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     await expect(page.getByRole('tab', { name: /uncertain.*\(0\)/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /failed.*\(0\)/i })).toBeVisible();
 
-    // Both matched transactions are visible in the Matched tabpanel.
+    // The Matched tab groups by merchant and collapses each group (POPS-2448):
+    // one header per merchant, the rows behind it until it is expanded.
     const matchedPanel = page.getByRole('tabpanel');
+    const groups = matchedPanel.getByTestId('transaction-group');
+    await expect(groups).toHaveCount(2);
+    for (const merchant of ['Woolworths', 'Netflix']) {
+      const group = groups.filter({ hasText: merchant });
+      await expect(group.getByText('1 transaction')).toBeVisible();
+      await group.getByRole('button', { name: 'Expand' }).click();
+    }
     await expect(matchedPanel.getByText('WOOLWORTHS 1234').first()).toBeVisible();
     await expect(matchedPanel.getByText('NETFLIX.COM').first()).toBeVisible();
 

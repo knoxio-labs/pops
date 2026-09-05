@@ -139,7 +139,7 @@ export function useTransactionReview() {
     [localTransactions]
   );
   const matchedGroups = useMemo(
-    () => groupTransactionsByEntity(localTransactions.matched),
+    () => groupTransactionsByEntity(localTransactions.matched, 'size'),
     [localTransactions.matched]
   );
   const uncertainGroups = useMemo(
