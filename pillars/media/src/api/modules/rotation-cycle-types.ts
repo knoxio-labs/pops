@@ -65,11 +65,6 @@ export function calculateRemovalDeficit(
 }
 
 /**
- * How much a single pick may exceed the deficit still outstanding before the
- * walk looks past it. 1.5 leaves ordinary variation alone and only reacts to a
- * pick that would free half again more than is being asked for.
- */
-/**
  * A movie the plan would mark, with the arithmetic that put it there.
  *
  * Persisted alongside the cycle log and returned by the preview: a scored
@@ -99,6 +94,11 @@ export type PlannedRemoval = {
   abandonWeight: number;
 };
 
+/**
+ * How much a single pick may exceed the deficit still outstanding before the
+ * walk looks past it. 1.5 leaves ordinary variation alone and only reacts to a
+ * pick that would free half again more than is being asked for.
+ */
 const OVERSHOOT_TOLERANCE = 1.5;
 
 /**
