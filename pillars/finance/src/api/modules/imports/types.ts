@@ -9,6 +9,7 @@
 import type { EntityMaps } from '../../../db/index.js';
 import type { CorrectionRow } from '../corrections/index.js';
 
+export type { CommitBatch } from '../../../contract/import-source.js';
 export type {
   AiUsageStats,
   CommitCheckpoint,

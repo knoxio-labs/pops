@@ -81,6 +81,12 @@ export const TransactionSnapshotSchema = z.object({
   matchType: z.enum(TRANSACTION_MATCH_TYPES).nullable(),
   matchRuleId: z.string().min(1).nullable(),
   matchConfidence: z.number().min(0).max(1).nullable(),
+  /**
+   * The import batch that wrote the row (POPS-2916), carried so an Undo
+   * restores its provenance. Optional so a snapshot taken before the field
+   * existed still restores; absent reads as null.
+   */
+  importBatchId: z.string().nullable().optional(),
 });
 
 export const CreateTransactionBody = z.object({

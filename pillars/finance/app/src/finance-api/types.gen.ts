@@ -4877,6 +4877,13 @@ export type ImportsCommitImportData = {
       tempId: string;
       type: 'company' | 'person' | 'government' | 'bank' | 'place' | 'brand' | 'organisation';
     }>;
+    source?: {
+      dialectId?: string;
+      kind: 'csv-dialect' | 'pdf-statement' | 'api';
+      parserId?: string;
+      parserVersion?: string;
+      provider?: 'up';
+    };
     tagRuleChangeSets: Array<{
       acceptedNewTags?: Array<string>;
       changeSet: {
@@ -4997,6 +5004,15 @@ export type ImportsCommitImportResponses = {
    */
   200: {
     data: {
+      batches?: Array<{
+        accountId: string;
+        checkpointId: string | null;
+        dateFrom: string | null;
+        dateTo: string | null;
+        id: string;
+        rowCount: number;
+        sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      }>;
       checkpoints?: Array<{
         accountId: string;
         deltaCents: number;
@@ -8038,6 +8054,7 @@ export type TransactionsRestoreData = {
     fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
     fxFeeCents: number | null;
     id: string;
+    importBatchId?: string | null;
     lastEditedTime: string;
     location: string | null;
     matchConfidence: number | null;
@@ -8233,6 +8250,7 @@ export type TransactionsDeleteResponses = {
       fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
+      importBatchId?: string | null;
       lastEditedTime: string;
       location: string | null;
       matchConfidence: number | null;

@@ -67,6 +67,12 @@ export const transactions = sqliteTable(
     matchRuleId: text('match_rule_id'),
     /** Match confidence (0-1), set only for `ai`/`learned` matches. */
     matchConfidence: real('match_confidence'),
+    /**
+     * The `import_batches` row that wrote this transaction (POPS-2916). Null for
+     * a row committed before batches were recorded, and for one entered by
+     * hand; nothing infers a batch for those.
+     */
+    importBatchId: text('import_batch_id'),
   },
   (table) => [
     index('idx_transactions_date').on(table.date),
@@ -75,5 +81,6 @@ export const transactions = sqliteTable(
     index('idx_transactions_last_edited').on(table.lastEditedTime),
     index('idx_transactions_notion_id').on(table.notionId),
     index('idx_transactions_checksum').on(table.checksum),
+    index('idx_transactions_import_batch').on(table.importBatchId),
   ]
 );
