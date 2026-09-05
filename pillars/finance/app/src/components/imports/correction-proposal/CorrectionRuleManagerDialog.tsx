@@ -11,14 +11,14 @@ import { RuleManagerFooter } from './rule-manager/Footer';
 import { RuleManagerBody } from './rule-manager/RuleManagerBody';
 import { useRuleManagerHooks } from './rule-manager/useRuleManagerHooks';
 
-import type { LocalOp } from './types';
+import type { LocalOp, PreviewTransactionEntry } from './types';
 
 export interface CorrectionRuleManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBrowseClose?: (hadChanges: boolean) => void;
   minConfidence: number;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
 }
 
 interface CleanupArgs {

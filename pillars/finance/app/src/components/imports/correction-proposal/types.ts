@@ -23,6 +23,13 @@ export type ReviseChangeSetInput = NonNullable<CorrectionsReviseChangeSetData['b
 export type ReviseChangeSetOutput = CorrectionsReviseChangeSetResponse;
 export type ProposeChangeSetInput = NonNullable<CorrectionsProposeChangeSetData['body']>;
 export type ProposeChangeSetOutput = CorrectionsProposeChangeSetResponse;
+/**
+ * One row of `PreviewChangeSetInput['transactions']` — the shape every
+ * ChangeSet-preview caller builds its transaction list out of, `accountId`
+ * included (POPS-2593/POPS-2975) so a scoped rule's reach is diffed under the
+ * same scope the live matcher uses.
+ */
+export type PreviewTransactionEntry = PreviewChangeSetInput['transactions'][number];
 type ServerChangeSet = ProposeChangeSetOutput['changeSet'];
 type ServerChangeSetOp = ServerChangeSet['ops'][number];
 export type AddRuleData = Extract<ServerChangeSetOp, { op: 'add' }>['data'];

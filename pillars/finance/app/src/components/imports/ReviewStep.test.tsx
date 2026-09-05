@@ -432,6 +432,32 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     );
   });
 
+  it("carries each row's accountId into the ChangeSet preview body (POPS-2975)", () => {
+    mockProcessedTransactions = {
+      matched: [makeTx('WOOLWORTHS 1234 SYDNEY', { accountId: 'acc-a' })],
+      uncertain: [makeTx('COLES EXPRESS 9999', { accountId: undefined })],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    expect(lastProposalDialogProps).not.toBeNull();
+    const props = lastProposalDialogProps as {
+      previewTransactions?: Array<{ description: string; accountId?: string }>;
+    };
+    expect(props.previewTransactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ description: 'WOOLWORTHS 1234 SYDNEY', accountId: 'acc-a' }),
+      ])
+    );
+    // A row with no resolved account previews unscoped, exactly as before.
+    const colesEntry = props.previewTransactions?.find(
+      (t) => t.description === 'COLES EXPRESS 9999'
+    );
+    expect(colesEntry).toBeDefined();
+    expect(colesEntry).not.toHaveProperty('accountId');
+  });
+
   it('does not re-evaluate and apply rules before approval', () => {
     const tx1 = makeTx('WOOLWORTHS 1234 SYDNEY');
     const tx2 = makeTx('WOOLWORTHS 5678 MELBOURNE');
