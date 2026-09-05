@@ -67,9 +67,17 @@ internal struct AccountDetailHeaderView: View {
         }
     }
 
+    /// The provenance sentence, and the transaction count when there is one.
+    ///
+    /// A missing count drops the clause rather than printing a zero: the wire
+    /// does not carry one (POPS-2924), and "0 transactions" on an account with
+    /// a balance is a statement, not a blank.
     private var asOfLine: String {
-        let count = account.transactionCount.formatted(.number.locale(Locale(identifier: "en_AU")))
-        let noun = account.transactionCount == 1 ? "transaction" : "transactions"
+        guard let transactionCount = account.transactionCount else {
+            return presentation.asOfNote(account)
+        }
+        let count = transactionCount.formatted(.number.locale(Locale(identifier: "en_AU")))
+        let noun = transactionCount == 1 ? "transaction" : "transactions"
         return "\(presentation.asOfNote(account)) · \(count) \(noun)"
     }
 }

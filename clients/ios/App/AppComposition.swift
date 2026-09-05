@@ -43,14 +43,29 @@ internal final class AppComposition {
     private let credentialStore: DeviceCredentialStore
     private let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
 
-    /// The navigation path the paired app pushes onto.
+    /// One navigation path per feature, since each draws its own
+    /// `NavigationStack`.
     ///
-    /// Held here rather than created where it is used, because a `Router()`
+    /// Held here rather than created where they are used, because a `Router()`
     /// written inside a view's body is a new one on every re-render: the
     /// screen that captured the first keeps sending taps to it while the
     /// `NavigationStack` renders another, and the path changes with nothing
-    /// moving on screen. One instance, for the life of the process.
-    internal let router = Router()
+    /// moving on screen. One instance per feature, for the life of the process.
+    ///
+    /// Per feature rather than one shared instance, which is what this was
+    /// until a second feature drew a stack (POPS-2848). Two `NavigationStack`s
+    /// bound to the same `[Route]` are one stack rendered twice: tapping an
+    /// account would push `.accountDetail` onto the transactions tab as well,
+    /// and each tab would inherit the other's depth on every switch.
+    private var routers: [MobileFeature: Router] = [:]
+
+    /// The router driving one feature's stack, minted on first use.
+    internal func router(for feature: MobileFeature) -> Router {
+        if let existing = routers[feature] { return existing }
+        let created = Router()
+        routers[feature] = created
+        return created
+    }
 
     /// The last device's dependencies, kept so a body evaluation is free.
     /// One entry, not a cache: the app is paired to one device at a time, and
@@ -102,11 +117,7 @@ internal final class AppComposition {
             reachability: shell,
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
             purchases: BFMPurchasesRepository(client: authenticated(device)),
-            // The BFM has no `/mobile` accounts route yet, so there is nothing
-            // for a `BFMAccountsRepository` to call — left unbound rather than
-            // invented against an endpoint that does not exist. Binding this
-            // is follow-up work once the gateway route and its codegen exist.
-            accounts: AppDependencies.unbound.accounts
+            accounts: BFMAccountsRepository(client: authenticated(device))
         )
         bound = (device, dependencies)
         return dependencies

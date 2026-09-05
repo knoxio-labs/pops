@@ -32,7 +32,8 @@ internal struct PersonFactsView: View {
 
     private var summary: String {
         guard account.balance.minorUnits != 0 else { return "Settled up with \(who)" }
-        return "\(account.transactionCount) entries with \(who)"
+        guard let transactionCount = account.transactionCount else { return "Open with \(who)" }
+        return "\(transactionCount) entries with \(who)"
     }
 
     private var biggestMove: String? {

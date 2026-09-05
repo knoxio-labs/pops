@@ -292,6 +292,7 @@ describe('the federation half-broken, seen from the phone', () => {
     expect(res.body.pillars).toEqual([]);
     expect(res.body.features).toEqual([
       { id: 'transactions', reachability: 'unavailable' },
+      { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);

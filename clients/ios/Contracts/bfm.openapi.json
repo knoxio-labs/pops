@@ -665,6 +665,10 @@
                             "required": ["balanceCents", "asOf", "basis", "inconsistent"],
                             "type": "object"
                           },
+                          "contact": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "currency": {
                             "type": "string"
                           },
@@ -672,6 +676,10 @@
                             "type": "string"
                           },
                           "institutionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "institutionName": {
                             "nullable": true,
                             "type": "string"
                           },
@@ -689,6 +697,8 @@
                           "currency",
                           "archived",
                           "institutionId",
+                          "institutionName",
+                          "contact",
                           "balance"
                         ],
                         "type": "object"
@@ -911,57 +921,92 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
-                    "archived": {
-                      "type": "boolean"
-                    },
-                    "balance": {
+                    "account": {
                       "additionalProperties": false,
                       "properties": {
-                        "asOf": {
-                          "type": "string"
-                        },
-                        "balanceCents": {
-                          "maximum": 9007199254740991,
-                          "minimum": -9007199254740991,
-                          "type": "integer"
-                        },
-                        "basis": {
-                          "enum": ["checkpoint", "transactions"],
-                          "type": "string"
-                        },
-                        "inconsistent": {
+                        "archived": {
                           "type": "boolean"
+                        },
+                        "balance": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "asOf": {
+                              "type": "string"
+                            },
+                            "balanceCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "basis": {
+                              "enum": ["checkpoint", "transactions"],
+                              "type": "string"
+                            },
+                            "inconsistent": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                          "type": "object"
+                        },
+                        "contact": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "institutionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "institutionName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
                         }
                       },
-                      "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "currency",
+                        "archived",
+                        "institutionId",
+                        "institutionName",
+                        "contact",
+                        "balance"
+                      ],
                       "type": "object"
                     },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "id": {
-                      "type": "string"
-                    },
-                    "institutionId": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "kind": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
+                    "history": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "balanceCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "month": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["month", "balanceCents"],
+                        "type": "object"
+                      },
+                      "type": "array"
                     }
                   },
-                  "required": [
-                    "id",
-                    "name",
-                    "kind",
-                    "currency",
-                    "archived",
-                    "institutionId",
-                    "balance"
-                  ],
+                  "required": ["account", "history"],
                   "type": "object"
                 }
               }
@@ -1188,7 +1233,7 @@
             "description": "503"
           }
         },
-        "summary": "One account, for whatever the phone can build a dashboard from today",
+        "summary": "One account and its month-end balance history, for the dashboard screen",
         "tags": ["mobileFinance"]
       }
     },
@@ -1209,6 +1254,13 @@
           {
             "in": "query",
             "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "accountId",
             "schema": {
               "type": "string"
             }

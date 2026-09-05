@@ -25,6 +25,7 @@ interface MobileFeature {
 
 export const MOBILE_FEATURES: readonly MobileFeature[] = [
   { id: 'transactions', pillar: 'finance' },
+  { id: 'accounts', pillar: 'finance' },
   { id: 'purchases', pillar: 'purchases' },
   { id: 'receipt-capture', pillar: 'purchases' },
 ];

@@ -25,6 +25,34 @@ internal enum ISO8601Instant {
     }
 }
 
+/// A date-only wire value — `YYYY-MM-DD` and nothing else — as the instant
+/// that day begins in a given zone.
+///
+/// The BFM types these as bare strings with no `format`, so the generator emits
+/// a `String` and something has to decide what one means. This is the strictest
+/// reading that matches what the BFM already enforces on the way in, and being
+/// strict is the point: a producer that started sending a full timestamp
+/// arrives as a contract mismatch, loudly, rather than as dates that are
+/// silently a few hours out.
+///
+/// The round trip is what makes it strict. `ISO8601FormatStyle` restricted to
+/// date components parses a leading `2026-03-05` happily and ignores whatever
+/// follows it, so parsing alone accepts a timestamp; formatting the result back
+/// and requiring the same bytes does not.
+internal enum ISO8601Day {
+    internal static func parse(_ raw: String, in timeZone: TimeZone) -> Date? {
+        let style = Date.ISO8601FormatStyle(dateSeparator: .dash, timeZone: timeZone)
+            .year()
+            .month()
+            .day()
+
+        guard let parsed = try? Date(raw, strategy: style), style.format(parsed) == raw else {
+            return nil
+        }
+        return parsed
+    }
+}
+
 /// What the generated client uses to read a `format: date-time` field.
 ///
 /// Without it the runtime's default transcoder applies `withInternetDateTime`
