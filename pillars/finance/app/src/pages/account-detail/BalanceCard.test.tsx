@@ -144,6 +144,16 @@ describe('BalanceCard provenance', () => {
     renderCard({ account: account({ kind: 'loan' }) });
     expect(screen.queryByText(/As of/)).not.toBeInTheDocument();
   });
+
+  it('links out to the checkpoints page under the shell prefix that mounts it', () => {
+    // `routes.tsx` declares its paths relative to the shell's `/finance/*`
+    // mount, so an in-app link that omits the prefix matches no route at all.
+    renderCard({ account: account({ id: 'a7' }) });
+    expect(screen.getByRole('link', { name: 'Checkpoints' })).toHaveAttribute(
+      'href',
+      '/finance/accounts/a7/checkpoints'
+    );
+  });
 });
 
 describe('BalanceCard inconsistency flag', () => {
