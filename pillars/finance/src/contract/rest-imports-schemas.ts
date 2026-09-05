@@ -57,6 +57,12 @@ export const ParsedTransactionSchema = z.object({
   balanceCents: z.number().int().optional(),
   /** The printed balance's own `CR`/`DR` suffix, when the source states one. */
   balanceMarker: z.enum(['CR', 'DR']).optional(),
+  /**
+   * The source says this row has not settled yet (an Up `HELD` card charge,
+   * POPS-30). Stored on the row and cleared in place when the same row comes
+   * back settled; absent means settled, since no file importer knows otherwise.
+   */
+  pending: z.boolean().optional(),
   rawRow: z.string(),
   checksum: z.string(),
 });

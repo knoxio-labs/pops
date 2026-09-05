@@ -41,6 +41,12 @@ export const FX_CAPTURE_SOURCES = [
    * states neither a country nor a foreign amount. The NULLs mean "this source
    * cannot say", not "domestic".
    */
+  /**
+   * The Up API's `foreignAmount` object was present on the resource (POPS-30).
+   * No foreign amount means domestic; Up states no merchant country, so
+   * `country` stays NULL without making the row uncaptured.
+   */
+  'up-api',
   'unavailable',
 ] as const;
 

@@ -13253,7 +13253,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -13307,6 +13307,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -13486,7 +13489,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -13540,6 +13543,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -13719,7 +13725,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -13773,6 +13779,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -13952,7 +13961,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -14006,6 +14015,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -14737,7 +14749,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                           "type": "string"
                         },
                         "fxFeeCents": {
@@ -14769,6 +14781,9 @@
                             "none"
                           ],
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "type": "string"
@@ -15282,7 +15297,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                           "type": "string"
                         },
                         "fxFeeCents": {
@@ -15292,6 +15307,9 @@
                         },
                         "location": {
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "type": "string"
@@ -15592,7 +15610,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -15646,6 +15664,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -15825,7 +15846,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -15879,6 +15900,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16058,7 +16082,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -16112,6 +16136,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16291,7 +16318,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -16345,6 +16372,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16947,7 +16977,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -17001,6 +17031,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -17180,7 +17213,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -17234,6 +17267,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -17413,7 +17449,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -17467,6 +17503,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -17646,7 +17685,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -17700,6 +17739,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -22796,7 +22838,13 @@
                             "type": "string"
                           },
                           "fxCaptureSource": {
-                            "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                            "enum": [
+                              "amex-columns",
+                              "anz-descriptor",
+                              "up-api",
+                              "unavailable",
+                              null
+                            ],
                             "nullable": true,
                             "type": "string"
                           },
@@ -23097,7 +23145,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -23390,7 +23438,7 @@
                     "type": "string"
                   },
                   "fxCaptureSource": {
-                    "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                    "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                     "nullable": true,
                     "type": "string"
                   },
@@ -23447,6 +23495,9 @@
                   "notionId": {
                     "nullable": true,
                     "type": "string"
+                  },
+                  "pending": {
+                    "type": "boolean"
                   },
                   "rawRow": {
                     "nullable": true,
@@ -23551,7 +23602,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -23847,7 +23898,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -23904,6 +23955,9 @@
                         "notionId": {
                           "nullable": true,
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "nullable": true,
@@ -24097,7 +24151,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -24378,7 +24432,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -24604,7 +24658,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },

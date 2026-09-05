@@ -88,6 +88,7 @@ function parsedFields(t: ProcessedTransaction): ParsedTransaction {
     fxCaptureSource: t.fxCaptureSource,
     balanceCents: t.balanceCents,
     balanceMarker: t.balanceMarker,
+    pending: t.pending,
     rawRow: t.rawRow,
     checksum: t.checksum,
   };
