@@ -120,21 +120,53 @@ export interface MerchantResolver {
   resolve(receiptMerchantName: string): Promise<string | null>;
 }
 
+type MatchTier = 'name' | 'alias';
+
+/**
+ * Whether, and how, a candidate matches the receipt's wording.
+ *
+ * A name hit and an alias hit are both {@link isSameMerchant} against the
+ * receipt — an alias only widens what a candidate is compared against, it
+ * does not change what counts as a match.
+ */
+function matchTier(receiptName: string, candidate: ContactEntity): MatchTier | null {
+  if (isSameMerchant(receiptName, candidate.name)) return 'name';
+  if (candidate.aliases.some((alias) => isSameMerchant(receiptName, alias))) return 'alias';
+  return null;
+}
+
 /**
  * Pick the one candidate that is the merchant, or none.
  *
- * Two candidates that both qualify is not a near-miss to be broken by
- * ranking — it is the case where guessing costs most, because the two
- * entities are by construction similarly named and a human would have to
- * look. Ambiguity resolves to no match.
+ * **A name match outranks an alias-only match.** An alias is recorded
+ * precisely because it is looser than the name — it exists to catch a
+ * shorthand or a former name the entity itself does not use — so a receipt
+ * that also lines up with a candidate's actual name is the stronger signal.
+ * Where at least one name match exists, alias-only matches are set aside
+ * entirely, even if there is more than one of them: an entity someone
+ * merely aliased close to the receipt's wording must not block a candidate
+ * the receipt names outright.
+ *
+ * Two candidates that both qualify *within the winning tier* is not a
+ * near-miss to be broken by further ranking — it is the case where
+ * guessing costs most, because the two entities are by construction
+ * similarly identified and a human would have to look. Ambiguity there
+ * resolves to no match.
  */
 export function chooseMerchant(
   receiptName: string,
   candidates: readonly ContactEntity[]
 ): string | null {
-  const matches = candidates.filter((entity) => isSameMerchant(receiptName, entity.name));
-  if (matches.length !== 1) return null;
-  return matches[0]?.id ?? null;
+  const tiered = candidates
+    .map((entity) => ({ entity, tier: matchTier(receiptName, entity) }))
+    .filter((candidate): candidate is { entity: ContactEntity; tier: MatchTier } =>
+      Boolean(candidate.tier)
+    );
+
+  const nameMatches = tiered.filter((candidate) => candidate.tier === 'name');
+  const winningTier = nameMatches.length > 0 ? nameMatches : tiered;
+
+  return winningTier.length === 1 ? (winningTier[0]?.entity.id ?? null) : null;
 }
 
 /**
