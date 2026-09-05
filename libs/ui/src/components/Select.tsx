@@ -6,6 +6,7 @@ import { type VariantProps } from 'class-variance-authority';
 import { forwardRef, type ReactNode, type SelectHTMLAttributes, useId, useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { FieldLabel } from './FieldLabel';
 import { containerVariants, selectVariants } from './Select.variants';
 
 export interface SelectOption {
@@ -61,7 +62,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) =>
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <SelectLabel htmlFor={selectId} label={label} />
+      <FieldLabel htmlFor={selectId} label={label} />
       <SelectShell
         variant={variant}
         size={size}
@@ -96,18 +97,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) =>
     </div>
   );
 });
-
-function SelectLabel({ htmlFor, label }: { htmlFor: string; label?: string }) {
-  if (!label) return null;
-  return (
-    <label
-      htmlFor={htmlFor}
-      className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1"
-    >
-      {label}
-    </label>
-  );
-}
 
 function SelectOptions({
   options,
