@@ -983,7 +983,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List tag rules with optional matchType/isActive/minConfidence filters and pagination */
+    /** List tag rules with optional matchType/isActive/minConfidence filters and pagination; each row carries its ledgerMatchStatus (POPS-2941) */
     get: operations['tagRules.list'];
     put?: never;
     post?: never;
@@ -1119,7 +1119,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Get a single tag rule by id */
+    /** Get a single tag rule by id, with its ledgerMatchStatus (POPS-2941) */
     get: operations['tagRules.get'];
     put?: never;
     post?: never;
@@ -10140,6 +10140,8 @@ export interface operations {
               isActive: boolean;
               lastUsedAt: string | null;
               /** @enum {string} */
+              ledgerMatchStatus: 'matched' | 'unused' | 'broken';
+              /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
               priority: number;
               tags: string[];
@@ -10899,6 +10901,8 @@ export interface operations {
               id: string;
               isActive: boolean;
               lastUsedAt: string | null;
+              /** @enum {string} */
+              ledgerMatchStatus: 'matched' | 'unused' | 'broken';
               /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
               priority: number;

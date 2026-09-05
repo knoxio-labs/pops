@@ -808,3 +808,120 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
     expect(listed.data).toHaveLength(0);
   });
 });
+
+describe('tagRules — write path refuses an unconditionally unmatchable pattern (POPS-2942)', () => {
+  it('400s an add op whose contains pattern normalises to empty, writing nothing', async () => {
+    await expect(
+      client().tagRules.apply({
+        changeSet: {
+          ops: [
+            { op: 'add', data: { descriptionPattern: '42', matchType: 'contains', tags: ['x'] } },
+          ],
+        },
+        acceptedNewTags: [],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const listed = await client().tagRules.list({});
+    expect(listed.data).toHaveLength(0);
+  });
+
+  it("does not refuse a well-formed pattern that matches nothing in today's ledger — the forward-looking case", async () => {
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'BRAND NEW MERCHANT', matchType: 'contains', tags: ['x'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    expect(applied.rules[0]?.descriptionPattern).toBe('BRAND NEW MERCHANT');
+  });
+});
+
+describe('tagRules — ledgerMatchStatus on list/get (POPS-2941)', () => {
+  it('marks a rule "matched" when its pattern matches a ledger transaction', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'WOOLWORTHS 1234 SYDNEY',
+      accountId: amexAccountId,
+      amountCents: -5000,
+      date: '2026-01-01',
+    });
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'WOOLWORTHS', matchType: 'contains', tags: ['groceries'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const id = applied.rules[0]?.id ?? '';
+
+    const listed = await client().tagRules.list({});
+    expect(listed.data.find((r) => r.id === id)?.ledgerMatchStatus).toBe('matched');
+
+    const fetched = await client().tagRules.get(id);
+    expect(fetched.data.ledgerMatchStatus).toBe('matched');
+  });
+
+  it('marks an entity-scoped rule "unused" (not "broken") when its entity has no transactions yet', async () => {
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'BRAND NEW MERCHANT',
+              matchType: 'contains',
+              entityId: 'ent-new',
+              tags: ['x'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const id = applied.rules[0]?.id ?? '';
+
+    const listed = await client().tagRules.list({});
+    expect(listed.data.find((r) => r.id === id)?.ledgerMatchStatus).toBe('unused');
+  });
+
+  it('marks an entity-scoped rule "broken" when its entity has transactions and none of them match', async () => {
+    const db = financeDb.db;
+    transactionsService.createTransaction(db, {
+      description: 'IMPERIAL HOTEL ERSKIN ERSKINEVILLE',
+      accountId: amexAccountId,
+      amountCents: -3000,
+      date: '2026-01-01',
+      entityId: 'ent-imperial',
+    });
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'IMPERIAL HOTEL ERSKINEVILLE',
+              matchType: 'contains',
+              entityId: 'ent-imperial',
+              tags: ['x'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const id = applied.rules[0]?.id ?? '';
+
+    const listed = await client().tagRules.list({});
+    expect(listed.data.find((r) => r.id === id)?.ledgerMatchStatus).toBe('broken');
+  });
+});

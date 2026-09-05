@@ -20191,6 +20191,10 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "ledgerMatchStatus": {
+                            "enum": ["matched", "unused", "broken"],
+                            "type": "string"
+                          },
                           "matchType": {
                             "enum": ["exact", "contains", "regex"],
                             "type": "string"
@@ -20219,7 +20223,8 @@
                           "priority",
                           "timesApplied",
                           "createdAt",
-                          "lastUsedAt"
+                          "lastUsedAt",
+                          "ledgerMatchStatus"
                         ],
                         "type": "object"
                       },
@@ -20322,7 +20327,7 @@
             "description": "409"
           }
         },
-        "summary": "List tag rules with optional matchType/isActive/minConfidence filters and pagination",
+        "summary": "List tag rules with optional matchType/isActive/minConfidence filters and pagination; each row carries its ledgerMatchStatus (POPS-2941)",
         "tags": ["tagRules"]
       }
     },
@@ -22141,6 +22146,10 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "ledgerMatchStatus": {
+                          "enum": ["matched", "unused", "broken"],
+                          "type": "string"
+                        },
                         "matchType": {
                           "enum": ["exact", "contains", "regex"],
                           "type": "string"
@@ -22169,7 +22178,8 @@
                         "priority",
                         "timesApplied",
                         "createdAt",
-                        "lastUsedAt"
+                        "lastUsedAt",
+                        "ledgerMatchStatus"
                       ],
                       "type": "object"
                     }
@@ -22251,7 +22261,7 @@
             "description": "409"
           }
         },
-        "summary": "Get a single tag rule by id",
+        "summary": "Get a single tag rule by id, with its ledgerMatchStatus (POPS-2941)",
         "tags": ["tagRules"]
       },
       "patch": {

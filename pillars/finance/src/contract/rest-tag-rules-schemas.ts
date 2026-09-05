@@ -8,6 +8,15 @@ import { LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
 
+/**
+ * A tag rule's relationship to the current ledger (POPS-2941): `matched` has
+ * fired or would fire, `unused` matches nothing but has a benign explanation
+ * (its entity has no transactions yet, or the ledger is empty), `broken`
+ * matches nothing and has no such explanation — the POPS-2758 failure shape.
+ * See `tag-rule-ledger-match.ts` for the full reasoning.
+ */
+export const TagRuleLedgerMatchStatusSchema = z.enum(['matched', 'unused', 'broken']);
+
 export const TagRuleDataSchema = z.object({
   descriptionPattern: z.string().min(1),
   matchType: MatchTypeSchema.default('exact'),
@@ -122,6 +131,16 @@ export const TagRuleSchema = z.object({
   timesApplied: z.number(),
   createdAt: z.string(),
   lastUsedAt: z.string().nullable(),
+});
+
+/**
+ * `TagRuleSchema` plus {@link TagRuleLedgerMatchStatusSchema} — only the
+ * Tag Rules browser's `list`/`get` responses carry this; ChangeSet
+ * propose/preview/apply return the plain `TagRuleSchema` and do not pay for
+ * a ledger scan on every apply.
+ */
+export const TagRuleWithLedgerStatusSchema = TagRuleSchema.extend({
+  ledgerMatchStatus: TagRuleLedgerMatchStatusSchema,
 });
 
 export const MaxPreviewItems = z.coerce.number().int().positive().max(500).default(200);
