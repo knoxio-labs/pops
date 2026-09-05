@@ -2,6 +2,7 @@ import AppCore
 import Auth
 import BFMClient
 import FeatureAccounts
+import FeatureTransactions
 import Foundation
 import Testing
 
@@ -131,6 +132,34 @@ internal struct CompositionRootTests {
     @Test("this build can draw the accounts feature")
     func accountsIsRenderable() {
         #expect(RootFeature.renderable.contains(FeatureAccounts.feature))
+    }
+
+    /// Two `NavigationStack`s bound to one `[Route]` are one stack rendered
+    /// twice. This was unobservable while transactions was the only feature
+    /// that drew a stack, and became a real defect the moment accounts did.
+    @Test("each feature's stack has a navigation path of its own")
+    func routersAreNotShared() {
+        let root = composition()
+
+        let transactions = root.router(for: FeatureTransactions.feature)
+        let accounts = root.router(for: FeatureAccounts.feature)
+
+        #expect(transactions !== accounts)
+        accounts.send(.push(.accountDetail(id: "acc-1")))
+        #expect(accounts.path == [.accountDetail(id: "acc-1")])
+        #expect(transactions.path.isEmpty)
+    }
+
+    /// A `Router()` per body evaluation is a router the screen keeps sending
+    /// taps to while the stack renders another — the reason these are held on
+    /// the composition root at all.
+    @Test("a feature's router is the same instance every time it is asked for")
+    func routersAreStable() {
+        let root = composition()
+
+        #expect(
+            root.router(for: FeatureAccounts.feature)
+                === root.router(for: FeatureAccounts.feature))
     }
 
     /// `.invalid` is reserved by RFC 6761, so nothing built from this can reach
