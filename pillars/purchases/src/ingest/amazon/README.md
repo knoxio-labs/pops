@@ -131,8 +131,6 @@ The bytes go down **before** the request that names them, because a row pointing
 
 **No captures.** The export publishes no per-charge breakdown of what was _paid_, so every order lands at `awaiting_settlement` with its full total as residual until the reconciliation engine mints a derived charge for the transaction it matches. A first backfill therefore reads as 748 orders, 100% unexplained. That is correct, not broken. Refunds are the sole exception, and they do not reduce the residual.
 
-**No documents** (POPS-1304). The bundle ships 325 tax-invoice PDFs, but their filenames carry no order id — mapping one to an order needs text extraction from the PDF.
-
 **No digital orders.** `Digital Content Orders.csv` is a separate Order ID namespace with zero overlap against the 748 physical orders, and `../amazon-digital/` reads it under its own source. `Digital Returns.csv` belongs with it, not here.
 
 ## Running it
