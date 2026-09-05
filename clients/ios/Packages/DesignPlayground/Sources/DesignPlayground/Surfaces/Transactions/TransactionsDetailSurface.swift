@@ -18,7 +18,8 @@ extension TransactionsSurfaces {
             states: [
                 DesignState.standard {
                     TransactionDetailView(
-                        model: detailModel(seed: seedRow, detail: .detail(Fixtures.transactionDetail))
+                        model: detailModel(
+                            seed: seedRow, detail: .detail(Fixtures.transactionDetail))
                     )
                 },
                 DesignState("loading", "Loading") {
@@ -31,7 +32,8 @@ extension TransactionsSurfaces {
                     TransactionDetailView(model: detailModel(seed: nil, detail: .detail(nil)))
                 },
                 DesignState("failed", "Failed, nothing to show") {
-                    TransactionDetailView(model: detailModel(seed: nil, detail: .failure(.unauthorized)))
+                    TransactionDetailView(
+                        model: detailModel(seed: nil, detail: .failure(.unauthorized)))
                 },
                 DesignState("failed-over-seed", "Failed, seeded row kept") {
                     TransactionDetailView(

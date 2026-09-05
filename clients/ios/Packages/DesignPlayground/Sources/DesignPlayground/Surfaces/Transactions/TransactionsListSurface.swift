@@ -14,7 +14,8 @@ extension TransactionsSurfaces {
         DesignSurface(
             id: SurfaceID(area: "transactions", slug: "list"),
             title: "Transactions",
-            synopsis: "The ledger the app renders — loading, empty, failing, and paging that keeps its rows.",
+            synopsis:
+                "The ledger the app renders — loading, empty, failing, and paging that keeps its rows.",
             chrome: .navigationAndTabs,
             states: [
                 DesignState.standard {

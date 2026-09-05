@@ -21,7 +21,8 @@ internal enum PurchasesSurfaces {
             chrome: .tabbed,
             states: [
                 DesignState.standard {
-                    PurchasesListView(dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
+                    PurchasesListView(
+                        dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
                 },
                 DesignState("empty", "Empty") {
                     PurchasesListView(dependencies: playgroundPurchasesDependencies())
@@ -30,10 +31,12 @@ internal enum PurchasesSurfaces {
                     PurchasesListView(dependencies: playgroundPurchasesDependencies(hangs: true))
                 },
                 DesignState("error-unavailable", "Pillar unavailable") {
-                    PurchasesListView(dependencies: playgroundPurchasesDependencies(failure: .unavailable))
+                    PurchasesListView(
+                        dependencies: playgroundPurchasesDependencies(failure: .unavailable))
                 },
                 DesignState("error-unauthorized", "Session ended") {
-                    PurchasesListView(dependencies: playgroundPurchasesDependencies(failure: .unauthorized))
+                    PurchasesListView(
+                        dependencies: playgroundPurchasesDependencies(failure: .unauthorized))
                 },
                 DesignState("error-contract-mismatch", "Contract mismatch") {
                     PurchasesListView(
@@ -41,13 +44,14 @@ internal enum PurchasesSurfaces {
                 },
                 DesignState("error-transport", "No connection") {
                     PurchasesListView(
-                        dependencies: playgroundPurchasesDependencies(failure: .transport("offline")))
+                        dependencies: playgroundPurchasesDependencies(
+                            failure: .transport("offline")))
                 },
                 DesignState("error-dependency-not-bound", "Not wired up") {
                     PurchasesListView(
                         dependencies: playgroundPurchasesDependencies(failure: .dependencyNotBound))
                 },
             ]
-        ),
+        )
     ]
 }

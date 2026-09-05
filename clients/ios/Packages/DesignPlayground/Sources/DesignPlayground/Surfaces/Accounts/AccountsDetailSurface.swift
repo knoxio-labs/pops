@@ -17,7 +17,8 @@ extension AccountsSurfaces {
             states: [
                 DesignState.standard {
                     AccountDetailView(
-                        model: detailModel(seed: Fixtures.everyday, detail: .detail(Fixtures.everydayDetail))
+                        model: detailModel(
+                            seed: Fixtures.everyday, detail: .detail(Fixtures.everydayDetail))
                     )
                 },
                 DesignState("loading", "Loading") {
@@ -30,7 +31,8 @@ extension AccountsSurfaces {
                     AccountDetailView(model: detailModel(seed: nil, detail: .detail(nil)))
                 },
                 DesignState("failed", "Failed, nothing to show") {
-                    AccountDetailView(model: detailModel(seed: nil, detail: .failure(.unauthorized)))
+                    AccountDetailView(
+                        model: detailModel(seed: nil, detail: .failure(.unauthorized)))
                 },
                 DesignState("failed-over-seed", "Failed, seeded row kept") {
                     AccountDetailView(
@@ -42,12 +44,14 @@ extension AccountsSurfaces {
                 },
                 DesignState("liability", "Liability") {
                     AccountDetailView(
-                        model: detailModel(seed: Fixtures.amex, detail: .detail(Fixtures.amexDetail))
+                        model: detailModel(
+                            seed: Fixtures.amex, detail: .detail(Fixtures.amexDetail))
                     )
                 },
                 DesignState("person", "Person ledger") {
                     AccountDetailView(
-                        model: detailModel(seed: Fixtures.marta, detail: .detail(Fixtures.martaDetail))
+                        model: detailModel(
+                            seed: Fixtures.marta, detail: .detail(Fixtures.martaDetail))
                     )
                 },
                 DesignState("stored-value", "Gift card") {
@@ -64,7 +68,8 @@ extension AccountsSurfaces {
                 },
                 DesignState("never-counted", "Never counted") {
                     AccountDetailView(
-                        model: detailModel(seed: Fixtures.euros, detail: .detail(Fixtures.eurosDetail))
+                        model: detailModel(
+                            seed: Fixtures.euros, detail: .detail(Fixtures.eurosDetail))
                     )
                 },
                 DesignState("long-name", "Name that truncates") {

@@ -26,7 +26,8 @@ internal enum ShellSurfaces {
         DesignSurface(
             id: SurfaceID(area: "shell", slug: "root"),
             title: "App shell",
-            synopsis: "What RootView shows: booting, a paired screen, and a stale or failed bootstrap.",
+            synopsis:
+                "What RootView shows: booting, a paired screen, and a stale or failed bootstrap.",
             chrome: .bare,
             states: [
                 DesignState("launching", "Launching") {
@@ -42,7 +43,8 @@ internal enum ShellSurfaces {
                     ShellContentView(degradation: .failed)
                 },
                 DesignState("nothing-offered", "Nothing offered") {
-                    ErrorStateView(message: ShellCopy.nothingOffered, retryTitle: ShellCopy.retry) {}
+                    ErrorStateView(message: ShellCopy.nothingOffered, retryTitle: ShellCopy.retry) {
+                    }
                 },
                 DesignState("nothing-usable", "Nothing usable") {
                     ErrorStateView(message: ShellCopy.nothingUsable, retryTitle: ShellCopy.retry) {}
@@ -60,6 +62,6 @@ internal enum ShellSurfaces {
                     ShellTabBarView(count: 1)
                 },
             ]
-        ),
+        )
     ]
 }

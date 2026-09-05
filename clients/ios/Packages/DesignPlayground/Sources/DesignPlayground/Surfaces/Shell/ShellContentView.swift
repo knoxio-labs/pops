@@ -24,7 +24,8 @@ internal struct ShellContentView: View {
     var body: some View {
         VStack(spacing: PopsSpacing.zero) {
             banner
-            PurchasesListView(dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
+            PurchasesListView(
+                dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
         }
     }
 
