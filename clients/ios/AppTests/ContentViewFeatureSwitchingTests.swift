@@ -18,7 +18,9 @@ import UIKit
 internal enum ContentViewFixture {
     private static let namespace = "com.knoxiolabs.pops.tests.content-view-switching"
 
-    internal static func view(available: [MobileFeature]) -> ContentView {
+    internal static func view(
+        available: [MobileFeature], bootstrap: BootstrapPhase = .answered(.fresh)
+    ) -> ContentView {
         let bound = AppComposition(
             credentialStore: DeviceCredentialStore(
                 keyStore: SecureEnclaveKeyStore(),
@@ -28,7 +30,7 @@ internal enum ContentViewFixture {
         )
         return ContentView(
             surface: FeatureSurface(
-                available: available, unavailable: [], bootstrap: .answered(.fresh)),
+                available: available, unavailable: [], bootstrap: bootstrap),
             shell: bound.shell,
             composition: bound
         )
@@ -232,6 +234,48 @@ internal struct ContentViewTabSwitcherTests {
             Comment(
                 rawValue: "the features the BFM said are available are not the features on offer "
                     + "— a feature the app cannot reach is a feature that may as well not exist"
+            )
+        )
+    }
+
+    /// POPS-2894: the degraded banner is drawn above the tab bar's content,
+    /// not stacked above the tab bar itself — so the bar's own position in the
+    /// window must not move when the banner appears. A `VStack` ahead of
+    /// `features` would take the banner's height off the top of the whole
+    /// tree, including the `TabView`, shifting this frame up by exactly that
+    /// height; this is the regression the ticket is named after, made into an
+    /// assertion a future edit to `ContentView.body` can trip.
+    @Test("the tab bar does not move when the degraded banner appears")
+    func tabBarFrameIsUnaffectedByTheDegradedBanner() throws {
+        let available: [MobileFeature] = [.receiptCapture, MobileFeature(rawValue: "budgets")]
+
+        func mount(bootstrap: BootstrapPhase) throws -> UITabBarController {
+            let scene = try #require(
+                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
+                "the test host is not showing a window scene, so nothing can be mounted in one"
+            )
+            let window = UIWindow(windowScene: scene)
+            window.frame = CGRect(origin: .zero, size: Self.canvas)
+            window.rootViewController = UIHostingController(
+                rootView: ContentViewFixture.view(available: available, bootstrap: bootstrap))
+            window.makeKeyAndVisible()
+            window.layoutIfNeeded()
+            defer { window.isHidden = true }
+
+            return try #require(
+                Self.tabBarController(in: window.rootViewController),
+                "more than one feature is available and no tab bar was built for them"
+            )
+        }
+
+        let steady = try mount(bootstrap: .answered(.fresh))
+        let degraded = try mount(bootstrap: .failed(.unavailable))
+
+        #expect(
+            steady.tabBar.frame == degraded.tabBar.frame,
+            Comment(
+                rawValue: "the tab bar's frame changed once the degraded banner was showing — "
+                    + "it is being displaced rather than the banner sitting in a safe-area inset"
             )
         )
     }
