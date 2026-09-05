@@ -3,13 +3,21 @@ import FeatureTransactions
 
 extension TransactionsSurfaces {
     /// The transactions list, in every condition ``TransactionsListState`` and
-    /// ``PagingState`` can put it in.
+    /// ``PagingState`` can put it in, plus ``refreshFailure``.
     ///
     /// ``PagingState/idle`` has no state of its own here. The list's own
     /// footer fires its next-page fetch the moment it appears, so idle is true
     /// for less than a frame before becoming ``PagingState/loading`` — the
     /// footer draws the same words either way, and there is nothing to hold
     /// still long enough to review.
+    ///
+    /// ``refreshFailure`` needs
+    /// ``PlaygroundRefreshFailureTransactionsRepository`` rather than
+    /// ``PlaygroundTransactionsRepository`` because it is a third field, not a
+    /// case of either enum above — reached by a load that succeeds followed by
+    /// a refresh that fails over the same rows — and refresh reuses the first
+    /// load's `cursor: nil`, which an outcome-indexed-by-cursor stand-in
+    /// cannot answer two different ways.
     @MainActor internal static var listSurface: DesignSurface {
         DesignSurface(
             id: SurfaceID(area: "transactions", slug: "list"),
@@ -40,6 +48,14 @@ extension TransactionsSurfaces {
                                 .page(pagedFirstPage),
                                 .failure(.transport("host unreachable")),
                             ]
+                        )
+                    )
+                },
+                DesignState("refresh-failed", "Refresh failed, rows kept") {
+                    TransactionsRefreshFailureState(
+                        repository: PlaygroundRefreshFailureTransactionsRepository(
+                            firstPage: loadedPage,
+                            refreshFailure: .transport("host unreachable")
                         )
                     )
                 },

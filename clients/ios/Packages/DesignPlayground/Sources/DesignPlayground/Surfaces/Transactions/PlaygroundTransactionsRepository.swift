@@ -81,3 +81,37 @@ internal struct PlaygroundTransactionsRepository: TransactionsRepository {
         }
     }
 }
+
+/// A ``TransactionsRepository`` that answers the *same* `cursor: nil` request
+/// differently depending on how many times it has been asked.
+///
+/// ``PlaygroundTransactionsRepository`` is indexed by cursor, and both a first
+/// load and a pull-to-refresh ask for `cursor: nil` — so it cannot tell them
+/// apart. This can, by counting: the first call answers with
+/// ``firstPage``, and every call after that fails with ``refreshFailure``.
+/// An `actor` rather than a `struct` because that count is mutated by
+/// whichever call reaches it, and the protocol only promises `Sendable`, not
+/// isolation to one actor.
+internal actor PlaygroundRefreshFailureTransactionsRepository: TransactionsRepository {
+    private let firstPage: TransactionPage
+    private let refreshFailure: RepositoryError
+    private var callCount = 0
+
+    internal init(
+        firstPage: TransactionPage,
+        refreshFailure: RepositoryError
+    ) {
+        self.firstPage = firstPage
+        self.refreshFailure = refreshFailure
+    }
+
+    internal func transactions(after cursor: String?) async throws -> TransactionPage {
+        callCount += 1
+        guard callCount == 1 else { throw refreshFailure }
+        return firstPage
+    }
+
+    internal func transactionDetail(id: Transaction.ID) async throws -> TransactionDetail? {
+        nil
+    }
+}
