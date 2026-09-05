@@ -17,7 +17,7 @@ import {
 
 import type { ChangeSetImpactSummary } from './ai-types.js';
 
-const { normalizeDescription } = transactionCorrectionsService;
+const { normalizePatternForStorage } = transactionCorrectionsService;
 
 export interface RejectedChangeSetFeedbackRecord {
   createdAt: string;
@@ -27,11 +27,24 @@ export interface RejectedChangeSetFeedbackRecord {
   impactSummary: ChangeSetImpactSummary | null;
 }
 
+/**
+ * The settings-store key a rejection record is filed under.
+ *
+ * Takes the RAW pattern and normalises it here, rather than trusting a caller
+ * to have done it: both callers used to normalise separately with
+ * `normalizeDescription`, which is not injective over regex patterns — it
+ * uppercases metacharacters and strips digits, so `WOOLWORTHS \d{4}` and
+ * `WOOLWORTHS \d{2}` both collapsed to `WOOLWORTHS \D{}` and shared one
+ * record. Feedback about one rule was then replayed against a different one
+ * (POPS-3002). `normalizePatternForStorage` leaves a regex verbatim, which is
+ * the same derivation the stored pattern uses (POPS-2704).
+ */
 export function feedbackKey(args: {
   matchType: 'exact' | 'contains' | 'regex';
-  normalizedPattern: string;
+  descriptionPattern: string;
 }): string {
-  return `corrections.changeSetRejections:${args.matchType}:${args.normalizedPattern}`;
+  const pattern = normalizePatternForStorage(args.descriptionPattern, args.matchType);
+  return `corrections.changeSetRejections:${args.matchType}:${pattern}`;
 }
 
 function parseFeedbackRecord(value: string): RejectedChangeSetFeedbackRecord | null {
@@ -66,7 +79,7 @@ export async function loadLatestRejectedFeedback(
   db: FinanceDb,
   args: {
     matchType: 'exact' | 'contains' | 'regex';
-    normalizedPattern: string;
+    descriptionPattern: string;
   }
 ): Promise<RejectedChangeSetFeedbackRecord | null> {
   const raw = await getFeedbackStore().load(db, feedbackKey(args));
@@ -83,7 +96,6 @@ export async function persistRejectedChangeSetFeedback(
     userEmail: string;
   }
 ): Promise<void> {
-  const normalizedPattern = normalizeDescription(args.signal.descriptionPattern);
   const record: RejectedChangeSetFeedbackRecord = {
     createdAt: new Date().toISOString(),
     userEmail: args.userEmail,
@@ -93,7 +105,10 @@ export async function persistRejectedChangeSetFeedback(
   };
   await getFeedbackStore().persist(
     db,
-    feedbackKey({ matchType: args.signal.matchType, normalizedPattern }),
+    feedbackKey({
+      matchType: args.signal.matchType,
+      descriptionPattern: args.signal.descriptionPattern,
+    }),
     JSON.stringify(record)
   );
 }

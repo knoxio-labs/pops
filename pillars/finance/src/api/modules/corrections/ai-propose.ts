@@ -25,8 +25,7 @@ import { buildAddChangeSet, buildEditChangeSet } from './changeset-builders.js';
 import { computeChangeSetImpact } from './changeset-impact.js';
 import { type CorrectionRow } from './types.js';
 
-const { isTagsOnlyCorrectionInput, normalizeDescription, normalizePatternForStorage } =
-  transactionCorrectionsService;
+const { isTagsOnlyCorrectionInput, normalizePatternForStorage } = transactionCorrectionsService;
 
 interface FeedbackInfo {
   changeSet: ChangeSet;
@@ -39,7 +38,7 @@ async function resolveEffectiveSignal(
 ): Promise<{ effectiveSignal: CorrectionSignal; feedback: FeedbackInfo | null }> {
   const latest = await loadLatestRejectedFeedback(db, {
     matchType: signal.matchType,
-    normalizedPattern: normalizeDescription(signal.descriptionPattern),
+    descriptionPattern: signal.descriptionPattern,
   });
   if (!latest) return { effectiveSignal: signal, feedback: null };
   const effectiveSignal = await interpretRejectionFeedback(
