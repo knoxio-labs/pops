@@ -17,8 +17,8 @@ interface IosTab {
  * the app's own labels: "purchases" is lower-case and generically iconed
  * because `RootCopy.name(of:)`/`symbol(for:)` special-case only Transactions
  * and Receipts, so that is literally what a paired phone draws
- * today. The playground shows it as it is rather than tidying it, because a
- * tidied facsimile is one nobody would ever fix.
+ * today (POPS-2893). The playground shows it as it is rather than tidying it,
+ * because a tidied facsimile is one nobody would ever fix.
  *
  * Accounts is the odd one out and is deliberately last: `FeatureAccounts` is
  * built but not on `RootFeature.renderable` — BFM has no `/mobile` accounts
