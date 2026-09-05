@@ -47,9 +47,11 @@ import {
 import {
   accountCheckpoints,
   accountGiftCardDetails,
+  accountImportConfig,
   accounts,
   entityPrecreateOutbox,
   giftCardSecretReveals,
+  importBatches,
   transactions,
 } from '../schema.js';
 import { balanceAsOf } from './account-balance.js';
@@ -136,6 +138,16 @@ function hasGiftCardDetails(db: FinanceDb, accountId: string): boolean {
       .select({ accountId: accountGiftCardDetails.accountId })
       .from(accountGiftCardDetails)
       .where(eq(accountGiftCardDetails.accountId, accountId))
+      .get() !== undefined
+  );
+}
+
+function hasImportConfig(db: FinanceDb, accountId: string): boolean {
+  return (
+    db
+      .select({ accountId: accountImportConfig.accountId })
+      .from(accountImportConfig)
+      .where(eq(accountImportConfig.accountId, accountId))
       .get() !== undefined
   );
 }
@@ -277,6 +289,25 @@ export function mergeAccounts(db: FinanceDb, sourceId: string, targetId: string)
       tx.update(accountGiftCardDetails)
         .set({ accountId: targetId })
         .where(eq(accountGiftCardDetails.accountId, sourceId))
+        .run();
+    }
+
+    // Batches are history and move with the transactions they describe. A
+    // commit that spanned both accounts leaves the survivor with two batches
+    // under one commit key, which is why `import_batches` carries no unique
+    // index on (account, commit_key).
+    tx.update(importBatches)
+      .set({ accountId: targetId })
+      .where(eq(importBatches.accountId, sourceId))
+      .run();
+
+    // The survivor keeps its own config. Only when it has none does the
+    // source's carry over; a config is one coherent statement about a source,
+    // so two are never merged field by field.
+    if (!hasImportConfig(tx, targetId)) {
+      tx.update(accountImportConfig)
+        .set({ accountId: targetId })
+        .where(eq(accountImportConfig.accountId, sourceId))
         .run();
     }
 

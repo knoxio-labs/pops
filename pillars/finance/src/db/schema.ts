@@ -24,6 +24,8 @@ export { transactionCorrections } from './schema/corrections.js';
 export { entityPrecreateOutbox } from './schema/entity-precreate-outbox.js';
 export { giftCardSecretReveals } from './schema/gift-card-secret-reveals.js';
 export { importCommits } from './schema/import-commits.js';
+export { importBatches } from './schema/import-batches.js';
+export { accountImportConfig } from './schema/account-import-config.js';
 export { institutions } from './schema/institutions.js';
 export { logoBlobs } from './schema/logo-blobs.js';
 export { loanOffsetLinks } from './schema/loan-offset-links.js';

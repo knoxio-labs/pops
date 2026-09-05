@@ -133,6 +133,9 @@ export type {
 
 export { isCheckpointConflict } from './services/checkpoint-conflict.js';
 
+export * as importBatchesService from './services/import-batches.js';
+export * as accountImportConfigService from './services/account-import-config.js';
+
 export { resolveAccountIdByName, resolveImportAccountId } from './services/account-lookup.js';
 
 export * as giftCardDetailsService from './services/gift-card-details.js';

@@ -31,19 +31,20 @@ vi.mock('../../finance-api/index.js', () => ({
 }));
 
 vi.mock('../../lib/commit-payload', () => ({
+  importSourceFor: vi.fn(() => ({ kind: 'csv-dialect', dialectId: 'Amex' })),
   buildCommitPayload: vi.fn(
-    (
-      entities: unknown[],
-      changeSets: unknown[],
-      tagRuleChangeSets: unknown[],
-      transactions: unknown[]
-    ) => ({
-      entities,
-      changeSets: (changeSets as Array<{ changeSet: unknown }>).map((pcs) => pcs.changeSet),
-      tagRuleChangeSets: (tagRuleChangeSets as Array<{ changeSet: unknown }>).map(
-        (pcs) => pcs.changeSet
-      ),
-      transactions,
+    (inputs: {
+      pendingEntities: unknown[];
+      pendingChangeSets: Array<{ changeSet: unknown }>;
+      pendingTagRuleChangeSets: Array<{ changeSet: unknown }>;
+      confirmedTransactions: unknown[];
+      source: unknown;
+    }) => ({
+      entities: inputs.pendingEntities,
+      changeSets: inputs.pendingChangeSets.map((pcs) => pcs.changeSet),
+      tagRuleChangeSets: inputs.pendingTagRuleChangeSets.map((pcs) => pcs.changeSet),
+      transactions: inputs.confirmedTransactions,
+      source: inputs.source,
     })
   ),
 }));

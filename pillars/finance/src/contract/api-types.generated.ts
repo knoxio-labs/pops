@@ -7231,6 +7231,15 @@ export interface operations {
              */
             type: 'company' | 'person' | 'government' | 'bank' | 'place' | 'brand' | 'organisation';
           }[];
+          source?: {
+            dialectId?: string;
+            /** @enum {string} */
+            kind: 'csv-dialect' | 'pdf-statement' | 'api';
+            parserId?: string;
+            parserVersion?: string;
+            /** @enum {string} */
+            provider?: 'up';
+          };
           /** @default [] */
           tagRuleChangeSets: {
             acceptedNewTags?: string[];
@@ -7344,6 +7353,16 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              batches?: {
+                accountId: string;
+                checkpointId: string | null;
+                dateFrom: string | null;
+                dateTo: string | null;
+                id: string;
+                rowCount: number;
+                /** @enum {string} */
+                sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+              }[];
               checkpoints?: {
                 accountId: string;
                 deltaCents: number;
@@ -11064,6 +11083,7 @@ export interface operations {
           fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
           fxFeeCents: number | null;
           id: string;
+          importBatchId?: string | null;
           lastEditedTime: string;
           location: string | null;
           matchConfidence: number | null;
@@ -11345,6 +11365,7 @@ export interface operations {
               fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
               fxFeeCents: number | null;
               id: string;
+              importBatchId?: string | null;
               lastEditedTime: string;
               location: string | null;
               matchConfidence: number | null;

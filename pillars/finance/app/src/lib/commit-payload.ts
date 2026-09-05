@@ -1,6 +1,12 @@
-import type { ChangeSet, CommitTagRuleChangeSet, ConfirmedTransaction } from '@pops/finance';
+import type {
+  ChangeSet,
+  CommitTagRuleChangeSet,
+  ConfirmedTransaction,
+  ImportSource,
+} from '@pops/finance';
 
 import type {
+  BankDialectId,
   PendingChangeSet,
   PendingEntity,
   PendingTagRuleChangeSet,
@@ -11,6 +17,26 @@ export interface CommitPayload {
   changeSets: ChangeSet[];
   tagRuleChangeSets: CommitTagRuleChangeSet[];
   transactions: ConfirmedTransaction[];
+  source: ImportSource;
+}
+
+/** The parser the wizard reads a statement PDF with; the only one it has. */
+export const ANZ_PDF_PARSER_ID = 'anz-pdf-statement';
+
+/**
+ * What this import read, for the commit to record on its batch (POPS-2916).
+ * The wizard has no explicit "this was a PDF" state: the PDF path is taken
+ * when the picked dialect accepts `.pdf` and the file is one, so the file
+ * names are the signal.
+ */
+export function importSourceFor(
+  dialectId: BankDialectId,
+  sourceFileNames: readonly string[]
+): ImportSource {
+  const readPdf = sourceFileNames.some((name) => name.toLowerCase().endsWith('.pdf'));
+  return readPdf
+    ? { kind: 'pdf-statement', parserId: ANZ_PDF_PARSER_ID }
+    : { kind: 'csv-dialect', dialectId };
 }
 
 export interface DanglingEntityRefError {
@@ -63,12 +89,21 @@ function validateChangeSetEntities(
  * replace-not-mutate pattern guarantees object identity changes on updates,
  * so shallow copies are sufficient for snapshot isolation.
  */
-export function buildCommitPayload(
-  pendingEntities: PendingEntity[],
-  pendingChangeSets: PendingChangeSet[],
-  pendingTagRuleChangeSets: PendingTagRuleChangeSet[],
-  confirmedTransactions: ConfirmedTransaction[]
-): CommitPayload {
+export interface CommitPayloadInputs {
+  pendingEntities: PendingEntity[];
+  pendingChangeSets: PendingChangeSet[];
+  pendingTagRuleChangeSets: PendingTagRuleChangeSet[];
+  confirmedTransactions: ConfirmedTransaction[];
+  source: ImportSource;
+}
+
+export function buildCommitPayload({
+  pendingEntities,
+  pendingChangeSets,
+  pendingTagRuleChangeSets,
+  confirmedTransactions,
+  source,
+}: CommitPayloadInputs): CommitPayload {
   const validTempEntityIds = new Set(pendingEntities.map((e) => e.tempId));
   validateChangeSetEntities(pendingChangeSets, validTempEntityIds, 'ChangeSet');
   validateChangeSetEntities(pendingTagRuleChangeSets, validTempEntityIds, 'Tag rule ChangeSet');
@@ -80,5 +115,6 @@ export function buildCommitPayload(
       ...(pcs.acceptedNewTags ? { acceptedNewTags: pcs.acceptedNewTags } : {}),
     })),
     transactions: [...confirmedTransactions],
+    source,
   };
 }

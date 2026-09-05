@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import { elementAt } from '../test-utils';
-import { buildCommitPayload, type DanglingEntityRefError } from './commit-payload';
+import {
+  ANZ_PDF_PARSER_ID,
+  buildCommitPayload,
+  importSourceFor,
+  type DanglingEntityRefError,
+} from './commit-payload';
 
-import type { ChangeSet, ConfirmedTransaction, TagRuleChangeSet } from '@pops/finance';
+import type {
+  ChangeSet,
+  ConfirmedTransaction,
+  ImportSource,
+  TagRuleChangeSet,
+} from '@pops/finance';
+
+const SOURCE: ImportSource = { kind: 'csv-dialect', dialectId: 'Amex' };
 
 import type {
   PendingChangeSet,
@@ -87,7 +99,13 @@ const sampleTagRuleChangeSet: TagRuleChangeSet = {
 
 describe('buildCommitPayload', () => {
   it('returns empty payload when no pending data', () => {
-    const payload = buildCommitPayload([], [], [], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.entities).toEqual([]);
     expect(payload.changeSets).toEqual([]);
     expect(payload.tagRuleChangeSets).toEqual([]);
@@ -96,7 +114,13 @@ describe('buildCommitPayload', () => {
 
   it('returns entities only when no changeSets or transactions', () => {
     const entity = makePendingEntity({ name: 'Coles' });
-    const payload = buildCommitPayload([entity], [], [], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [entity],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.entities).toHaveLength(1);
     expect(elementAt(payload.entities, 0).name).toBe('Coles');
     expect(payload.changeSets).toEqual([]);
@@ -106,7 +130,13 @@ describe('buildCommitPayload', () => {
 
   it('returns changeSets only when no entities or transactions', () => {
     const pcs = makePendingChangeSet(sampleChangeSet);
-    const payload = buildCommitPayload([], [pcs], [], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [pcs],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.entities).toEqual([]);
     expect(payload.changeSets).toHaveLength(1);
     expect(payload.changeSets[0]).toEqual(sampleChangeSet);
@@ -116,7 +146,13 @@ describe('buildCommitPayload', () => {
 
   it('returns tagRuleChangeSets only when no entities or transactions', () => {
     const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet);
-    const payload = buildCommitPayload([], [], [pcs], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [pcs],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.entities).toEqual([]);
     expect(payload.changeSets).toEqual([]);
     expect(payload.tagRuleChangeSets).toHaveLength(1);
@@ -128,7 +164,13 @@ describe('buildCommitPayload', () => {
     const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet, {
       acceptedNewTags: ['Groceries'],
     });
-    const payload = buildCommitPayload([], [], [pcs], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [pcs],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.tagRuleChangeSets[0]).toEqual({
       changeSet: sampleTagRuleChangeSet,
       acceptedNewTags: ['Groceries'],
@@ -137,13 +179,25 @@ describe('buildCommitPayload', () => {
 
   it('omits acceptedNewTags for a staged entry that carries none', () => {
     const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet);
-    const payload = buildCommitPayload([], [], [pcs], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [pcs],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(elementAt(payload.tagRuleChangeSets, 0)).not.toHaveProperty('acceptedNewTags');
   });
 
   it('keeps an empty acceptedNewTags list distinct from an absent one', () => {
     const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet, { acceptedNewTags: [] });
-    const payload = buildCommitPayload([], [], [pcs], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [pcs],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(elementAt(payload.tagRuleChangeSets, 0).acceptedNewTags).toEqual([]);
   });
 
@@ -167,7 +221,13 @@ describe('buildCommitPayload', () => {
     const pcs = makePendingChangeSet(cs);
     const txn = makeConfirmedTransaction({ entityId: entity.tempId, entityName: 'New Corp' });
 
-    const payload = buildCommitPayload([entity], [pcs], [], [txn]);
+    const payload = buildCommitPayload({
+      pendingEntities: [entity],
+      pendingChangeSets: [pcs],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [txn],
+      source: SOURCE,
+    });
     expect(payload.entities).toHaveLength(1);
     expect(payload.changeSets).toHaveLength(1);
     expect(payload.transactions).toHaveLength(1);
@@ -192,10 +252,24 @@ describe('buildCommitPayload', () => {
     };
     const pcs = makePendingChangeSet(cs);
 
-    expect(() => buildCommitPayload([], [pcs], [], [])).toThrow(/Dangling entity reference/);
+    expect(() =>
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [pcs],
+        pendingTagRuleChangeSets: [],
+        confirmedTransactions: [],
+        source: SOURCE,
+      })
+    ).toThrow(/Dangling entity reference/);
 
     try {
-      buildCommitPayload([], [pcs], [], []);
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [pcs],
+        pendingTagRuleChangeSets: [],
+        confirmedTransactions: [],
+        source: SOURCE,
+      });
     } catch (err) {
       const e = err as Error & DanglingEntityRefError;
       expect(e.type).toBe('dangling-entity-ref');
@@ -212,7 +286,15 @@ describe('buildCommitPayload', () => {
     };
     const pcs = makePendingChangeSet(cs);
 
-    expect(() => buildCommitPayload([], [pcs], [], [])).toThrow(/Dangling entity reference/);
+    expect(() =>
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [pcs],
+        pendingTagRuleChangeSets: [],
+        confirmedTransactions: [],
+        source: SOURCE,
+      })
+    ).toThrow(/Dangling entity reference/);
   });
 
   it('throws descriptive error for dangling entity reference in tag rule add op', () => {
@@ -233,7 +315,15 @@ describe('buildCommitPayload', () => {
     };
     const pcs = makePendingTagRuleChangeSet(cs);
 
-    expect(() => buildCommitPayload([], [], [pcs], [])).toThrow(/Dangling entity reference/);
+    expect(() =>
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [],
+        pendingTagRuleChangeSets: [pcs],
+        confirmedTransactions: [],
+        source: SOURCE,
+      })
+    ).toThrow(/Dangling entity reference/);
   });
 
   it('does not throw for non-temp entity IDs in changeSets', () => {
@@ -252,7 +342,15 @@ describe('buildCommitPayload', () => {
       ],
     };
     const pcs = makePendingChangeSet(cs);
-    expect(() => buildCommitPayload([], [pcs], [], [])).not.toThrow();
+    expect(() =>
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [pcs],
+        pendingTagRuleChangeSets: [],
+        confirmedTransactions: [],
+        source: SOURCE,
+      })
+    ).not.toThrow();
   });
 
   it('preserves ChangeSet insertion order', () => {
@@ -278,7 +376,13 @@ describe('buildCommitPayload', () => {
       { appliedAt: '2026-04-12T03:00:00Z' }
     );
 
-    const payload = buildCommitPayload([], [pcs1, pcs2, pcs3], [], []);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [pcs1, pcs2, pcs3],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [],
+      source: SOURCE,
+    });
     expect(payload.changeSets.map((cs) => cs.source)).toEqual(['first', 'second', 'third']);
   });
 
@@ -287,7 +391,13 @@ describe('buildCommitPayload', () => {
     const txn1 = makeConfirmedTransaction({ entityId: entity.tempId, entityName: 'Temp Corp' });
     const txn2 = makeConfirmedTransaction({ entityId: 'real-id', entityName: 'Real Corp' });
 
-    const payload = buildCommitPayload([entity], [], [], [txn1, txn2]);
+    const payload = buildCommitPayload({
+      pendingEntities: [entity],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [txn1, txn2],
+      source: SOURCE,
+    });
     expect(payload.transactions).toHaveLength(2);
     expect(elementAt(payload.transactions, 0).entityId).toBe(entity.tempId);
     expect(elementAt(payload.transactions, 1).entityId).toBe('real-id');
@@ -302,7 +412,13 @@ describe('buildCommitPayload', () => {
 
     // Transactions are NOT validated — only ChangeSet ops are.
     // Temp entity ID resolution in transactions is the commit endpoint's job.
-    const payload = buildCommitPayload([], [], [], [txn]);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [txn],
+      source: SOURCE,
+    });
     expect(payload.transactions).toHaveLength(1);
     expect(elementAt(payload.transactions, 0).entityId).toBe(danglingTempId);
   });
@@ -313,7 +429,13 @@ describe('buildCommitPayload', () => {
     const tagRuleChangeSets = [makePendingTagRuleChangeSet(sampleTagRuleChangeSet)];
     const transactions = [makeConfirmedTransaction()];
 
-    const payload = buildCommitPayload(entities, changeSets, tagRuleChangeSets, transactions);
+    const payload = buildCommitPayload({
+      pendingEntities: entities,
+      pendingChangeSets: changeSets,
+      pendingTagRuleChangeSets: tagRuleChangeSets,
+      confirmedTransactions: transactions,
+      source: SOURCE,
+    });
 
     // Mutating the input arrays should not affect the payload
     entities.push(makePendingEntity({ name: 'Extra' }));
@@ -325,5 +447,40 @@ describe('buildCommitPayload', () => {
     expect(payload.changeSets).toHaveLength(1);
     expect(payload.tagRuleChangeSets).toHaveLength(1);
     expect(payload.transactions).toHaveLength(1);
+  });
+});
+
+describe('importSourceFor', () => {
+  it('names the CSV dialect when every file is a CSV', () => {
+    expect(importSourceFor('ANZ Credit Card', ['jun.csv', 'jul.CSV'])).toEqual({
+      kind: 'csv-dialect',
+      dialectId: 'ANZ Credit Card',
+    });
+  });
+
+  it('names the statement parser, not the dialect, when a PDF was read', () => {
+    expect(importSourceFor('ANZ Credit Card', ['statement.PDF'])).toEqual({
+      kind: 'pdf-statement',
+      parserId: ANZ_PDF_PARSER_ID,
+    });
+  });
+
+  it('treats an empty file list as a CSV import rather than guessing a PDF', () => {
+    expect(importSourceFor('Amex', []).kind).toBe('csv-dialect');
+  });
+});
+
+describe('buildCommitPayload source', () => {
+  it('carries the source through unchanged', () => {
+    const source: ImportSource = { kind: 'pdf-statement', parserId: ANZ_PDF_PARSER_ID };
+    expect(
+      buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [],
+        pendingTagRuleChangeSets: [],
+        confirmedTransactions: [],
+        source,
+      }).source
+    ).toEqual(source);
   });
 });

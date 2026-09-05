@@ -22,8 +22,10 @@ import {
 } from '../schema.js';
 import { balanceAsOf } from '../services/account-balance.js';
 import { insertCheckpoint, listCheckpoints } from '../services/account-checkpoints.js';
+import { getImportConfig, upsertImportConfig } from '../services/account-import-config.js';
 import { createAccount, getAccount } from '../services/accounts.js';
 import { writeGiftCardDetails } from '../services/gift-card-details.js';
+import { insertBatch, listBatchesForAccount } from '../services/import-batches.js';
 import { mergeAccounts, previewAccountMerge } from '../services/merge-accounts.js';
 import { createTransaction } from '../services/transactions.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
@@ -392,5 +394,50 @@ describe('mergeAccounts', () => {
         .all()
         .every((row) => row.accountId === AMEX_ID)
     ).toBe(true);
+  });
+});
+
+describe('mergeAccounts import records (POPS-2916)', () => {
+  let db: FinanceDb;
+
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it('moves the source batches onto the target instead of cascading them away', () => {
+    insertBatch(
+      db,
+      { accountId: AMEX_ID, sourceKind: 'csv-dialect', rowCount: 3, commitKey: 'k1' },
+      []
+    );
+    insertBatch(
+      db,
+      { accountId: ANZ_ID, sourceKind: 'csv-dialect', rowCount: 1, commitKey: 'k1' },
+      []
+    );
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    const moved = listBatchesForAccount(db, ANZ_ID, { limit: 10 }).items;
+    expect(moved).toHaveLength(2);
+    expect(moved.map((b) => b.rowCount).toSorted()).toEqual([1, 3]);
+  });
+
+  it("carries the source's import config over only when the target has none", () => {
+    upsertImportConfig(db, { accountId: AMEX_ID, sourceKind: 'csv-dialect', dialectId: 'Amex' });
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    expect(getImportConfig(db, ANZ_ID)?.dialectId).toBe('Amex');
+  });
+
+  it("keeps the target's own import config and lets the source's cascade away", () => {
+    upsertImportConfig(db, { accountId: AMEX_ID, sourceKind: 'csv-dialect', dialectId: 'Amex' });
+    upsertImportConfig(db, { accountId: ANZ_ID, sourceKind: 'api', provider: 'up' });
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    expect(getImportConfig(db, ANZ_ID)).toMatchObject({ sourceKind: 'api', provider: 'up' });
+    expect(getImportConfig(db, AMEX_ID)).toBeUndefined();
   });
 });

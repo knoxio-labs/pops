@@ -130,3 +130,21 @@ export class InvalidPatternError extends Error {
     this.pattern = pattern;
   }
 }
+
+/**
+ * An `account_import_config` row that names a source kind without the field
+ * that kind needs to act — a `csv-dialect` with no dialect, an `api` with no
+ * provider (POPS-2916). Refused at the write so the imports page never shows
+ * an account as configured that nothing can feed.
+ */
+export class ImportConfigInvalidError extends Error {
+  override readonly name = 'ImportConfigInvalidError' as const;
+  readonly accountId: string;
+  readonly missingField: string;
+
+  constructor(accountId: string, missingField: string) {
+    super(`Import config for account ${accountId} needs ${missingField} for its source kind`);
+    this.accountId = accountId;
+    this.missingField = missingField;
+  }
+}

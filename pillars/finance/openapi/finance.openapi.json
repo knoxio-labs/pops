@@ -13234,6 +13234,33 @@
                     },
                     "type": "array"
                   },
+                  "source": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "dialectId": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": ["csv-dialect", "pdf-statement", "api"],
+                        "type": "string"
+                      },
+                      "parserId": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "parserVersion": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "provider": {
+                        "enum": ["up"],
+                        "type": "string"
+                      }
+                    },
+                    "required": ["kind"],
+                    "type": "object"
+                  },
                   "tagRuleChangeSets": {
                     "default": [],
                     "items": {
@@ -13562,6 +13589,51 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "batches": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "checkpointId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "dateFrom": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "dateTo": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "rowCount": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sourceKind": {
+                                "enum": ["csv-dialect", "pdf-statement", "api"],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "accountId",
+                              "sourceKind",
+                              "rowCount",
+                              "dateFrom",
+                              "dateTo",
+                              "checkpointId"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "checkpoints": {
                           "items": {
                             "additionalProperties": false,
@@ -22077,6 +22149,10 @@
                   "id": {
                     "type": "string"
                   },
+                  "importBatchId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "lastEditedTime": {
                     "type": "string"
                   },
@@ -22528,6 +22604,10 @@
                           "type": "integer"
                         },
                         "id": {
+                          "type": "string"
+                        },
+                        "importBatchId": {
+                          "nullable": true,
                           "type": "string"
                         },
                         "lastEditedTime": {

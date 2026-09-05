@@ -67,6 +67,7 @@ import {
 import { type ContactsClient } from '../../contacts/client.js';
 import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
+import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
 import { mintImportCheckpointsPhase } from './commit-checkpoint.js';
 import { transactionColumns } from './commit-columns.js';
 import {
@@ -84,7 +85,13 @@ import {
 } from './commit-validation.js';
 import { reclassifyExistingTransactions } from './reclassify-existing.js';
 
-import type { CommitPayload, CommitResult, FailedTransactionDetail } from './types.js';
+import type {
+  CommitBatch,
+  CommitPayload,
+  CommitResult,
+  FailedTransactionDetail,
+  ImportWarning,
+} from './types.js';
 
 interface RuleApplyCounts {
   add: number;
@@ -134,8 +141,8 @@ interface WriteTxnsResult {
   imported: number;
   failed: number;
   failedDetails: FailedTransactionDetail[];
-  /** Ids of the rows successfully inserted this batch, for the pairing phase. */
-  insertedIds: string[];
+  /** The rows successfully inserted this commit, for the pairing and batch phases. */
+  inserted: InsertedTransaction[];
 }
 
 function resolveTxnEntityId(
@@ -158,7 +165,7 @@ function writeTransactionsPhase(
   let imported = 0;
   let failed = 0;
   const failedDetails: FailedTransactionDetail[] = [];
-  const insertedIds: string[] = [];
+  const inserted: InsertedTransaction[] = [];
 
   // The loan split (`expandLoanRepaymentRow`) computes each repayment's
   // interest leg from `balanceAsOf` the day before it, which only sees rows
@@ -183,7 +190,12 @@ function writeTransactionsPhase(
       for (const columns of rows) {
         const row = importsService.insertImportTransaction(tx, columns);
         imported++;
-        insertedIds.push(row.id);
+        inserted.push({
+          id: row.id,
+          accountId: row.accountId,
+          date: row.date,
+          carriesBalance: txn.balanceCents !== undefined,
+        });
       }
       tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
@@ -194,7 +206,44 @@ function writeTransactionsPhase(
     }
   }
 
-  return { imported, failed, failedDetails, insertedIds };
+  return { imported, failed, failedDetails, inserted };
+}
+
+/**
+ * The phases that read back what the write phase did: pair the rows just
+ * written, mint checkpoints from any closing balance the file carried, and
+ * record one batch per account. All three run after every row has landed and
+ * before `recordCommit`, so a replayed key returns them rather than redoing
+ * them.
+ */
+function recordOutcomePhases(
+  tx: FinanceDb,
+  payload: CommitPayload,
+  writeResult: WriteTxnsResult
+): { checkpoints: CommitResult['checkpoints']; warnings: ImportWarning[]; batches: CommitBatch[] } {
+  pairTransfersPhase(
+    tx,
+    writeResult.inserted.map((row) => row.id)
+  );
+
+  const failedChecksums = new Set(
+    writeResult.failedDetails.map((d) => d.checksum).filter((c): c is string => c !== null)
+  );
+  const { checkpoints, warnings } = mintImportCheckpointsPhase(
+    tx,
+    payload.transactions,
+    failedChecksums,
+    payload.commitKey
+  );
+
+  const batches = recordImportBatchesPhase(tx, {
+    inserted: writeResult.inserted,
+    source: payload.source,
+    checkpoints,
+    commitKey: payload.commitKey,
+  });
+
+  return { checkpoints, warnings, batches };
 }
 
 /**
@@ -242,17 +291,7 @@ export async function commitImport(
         payload.transactions.map((t) => t.checksum).filter((c): c is string => c != null)
       );
 
-      pairTransfersPhase(tx, writeResult.insertedIds);
-
-      const failedChecksums = new Set(
-        writeResult.failedDetails.map((d) => d.checksum).filter((c): c is string => c !== null)
-      );
-      const { checkpoints, warnings } = mintImportCheckpointsPhase(
-        tx,
-        payload.transactions,
-        failedChecksums,
-        commitKey
-      );
+      const { checkpoints, warnings, batches } = recordOutcomePhases(tx, payload, writeResult);
 
       const result: CommitResult = {
         entitiesCreated,
@@ -264,6 +303,7 @@ export async function commitImport(
         retroactiveReclassifications,
         ...(warnings.length > 0 ? { warnings } : {}),
         checkpoints,
+        batches,
       };
 
       if (commitKey) importCommitsService.recordCommit(tx, commitKey, result);

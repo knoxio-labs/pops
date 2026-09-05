@@ -45,6 +45,8 @@ export interface Transaction extends ForeignChargeFields {
  * same as every other wire shape.
  */
 export interface TransactionSnapshot extends ForeignChargeFields {
+  /** The batch that wrote the row (POPS-2916); absent on a snapshot taken before the field existed. */
+  importBatchId?: string | null;
   id: string;
   notionId: string | null;
   description: string;
@@ -146,6 +148,7 @@ export function toTransactionSnapshot(row: TransactionRow): TransactionSnapshot 
     matchType: row.matchType,
     matchRuleId: row.matchRuleId,
     matchConfidence: row.matchConfidence,
+    importBatchId: row.importBatchId,
   };
 }
 
@@ -173,6 +176,7 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
     matchType: snapshot.matchType,
     matchRuleId: snapshot.matchRuleId,
     matchConfidence: snapshot.matchConfidence,
+    importBatchId: snapshot.importBatchId ?? null,
   };
 }
 

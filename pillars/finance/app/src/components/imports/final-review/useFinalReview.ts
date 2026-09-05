@@ -7,7 +7,7 @@ import {
   type ImportsCommitImportData,
   type ImportsCommitImportResponses,
 } from '../../../finance-api/index.js';
-import { buildCommitPayload } from '../../../lib/commit-payload';
+import { buildCommitPayload, importSourceFor } from '../../../lib/commit-payload';
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { clearPersistedImport } from '../../../store/import-store-lifecycle';
 import { useImportStore } from '../../../store/importStore';
@@ -23,6 +23,8 @@ function useStoreSlice() {
     confirmedTransactions: useImportStore((s) => s.confirmedTransactions),
     processedTransactions: useImportStore((s) => s.processedTransactions),
     accountName: useImportStore((s) => s.accountName),
+    dialectId: useImportStore((s) => s.dialectId),
+    sourceFileNames: useImportStore((s) => s.sourceFileNames),
     prevStep: useImportStore((s) => s.prevStep),
     nextStep: useImportStore((s) => s.nextStep),
     setCommitResult: useImportStore((s) => s.setCommitResult),
@@ -113,12 +115,13 @@ export function useFinalReview() {
   };
   const cancelConfirm = () => setConfirmOpen(false);
   const confirmCommit = () => {
-    const payload = buildCommitPayload(
-      slice.pendingEntities,
-      slice.pendingChangeSets,
-      slice.pendingTagRuleChangeSets,
-      slice.confirmedTransactions
-    );
+    const payload = buildCommitPayload({
+      pendingEntities: slice.pendingEntities,
+      pendingChangeSets: slice.pendingChangeSets,
+      pendingTagRuleChangeSets: slice.pendingTagRuleChangeSets,
+      confirmedTransactions: slice.confirmedTransactions,
+      source: importSourceFor(slice.dialectId, slice.sourceFileNames),
+    });
     commitMutation.mutate({
       ...payload,
       changeSets: payload.changeSets.map(toRestCorrectionChangeSet),

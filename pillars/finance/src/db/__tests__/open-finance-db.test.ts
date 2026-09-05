@@ -105,16 +105,21 @@ describe('openFinanceDb', () => {
         expect(fks).toEqual([]);
       }
 
-      // transactions itself keeps only the 0083 account_id → accounts FK —
-      // no trace of the dropped entity_id FK.
+      // transactions keeps the 0083 account_id → accounts FK and the 0093
+      // import_batch_id → import_batches link — no trace of the dropped
+      // entity_id FK.
       const transactionsFks = raw.prepare('PRAGMA foreign_key_list(transactions)').all() as {
         from: string;
         table: string;
       }[];
       expect(transactionsFks.find((fk) => fk.from === 'entity_id')).toBeUndefined();
-      expect(transactionsFks).toEqual([
-        expect.objectContaining({ from: 'account_id', table: 'accounts' }),
-      ]);
+      expect(transactionsFks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ from: 'account_id', table: 'accounts' }),
+          expect.objectContaining({ from: 'import_batch_id', table: 'import_batches' }),
+        ])
+      );
+      expect(transactionsFks).toHaveLength(2);
     } finally {
       raw.close();
     }

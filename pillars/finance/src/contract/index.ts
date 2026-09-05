@@ -79,6 +79,16 @@ export {
 } from './loan.js';
 export { CHECKPOINT_SOURCES, type CheckpointSource } from './checkpoint.js';
 export {
+  CommitBatchSchema,
+  IMPORT_PROVIDERS,
+  IMPORT_SOURCE_KINDS,
+  ImportSourceSchema,
+  type CommitBatch,
+  type ImportProvider,
+  type ImportSource,
+  type ImportSourceKind,
+} from './import-source.js';
+export {
   centsToDollars,
   centsToDollarsNullable,
   dollarsToCents,

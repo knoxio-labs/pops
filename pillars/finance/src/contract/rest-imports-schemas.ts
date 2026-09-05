@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 import { FX_CAPTURE_SOURCES } from './fx-capture.js';
+import { CommitBatchSchema, ImportSourceSchema } from './import-source.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
@@ -209,6 +210,7 @@ export const CommitPayloadSchema = z.object({
    * whole payload.
    */
   commitKey: z.string().uuid().optional(),
+  source: ImportSourceSchema.optional(),
 });
 
 export const RulesAppliedSchema = z.object({
@@ -256,32 +258,13 @@ export const CommitResultSchema = z.object({
    * commit always sends the array.
    */
   checkpoints: z.array(CommitCheckpointSchema).optional(),
+  batches: z.array(CommitBatchSchema).optional(),
 });
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({
   sessionId: z.string().uuid(),
   minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
   pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })),
-});
-
-export const SessionIdSchema = z.object({ sessionId: z.string() });
-
-const ProgressBatchItemSchema = z.object({
-  description: z.string(),
-  status: z.enum(['processing', 'success', 'failed']),
-  error: z.string().optional(),
-});
-
-export const ImportProgressSchema = z.object({
-  sessionId: z.string(),
-  status: z.enum(['processing', 'completed', 'failed']),
-  currentStep: z.enum(['deduplicating', 'matching', 'categorizing']),
-  totalTransactions: z.number(),
-  processedCount: z.number(),
-  currentBatch: z.array(ProgressBatchItemSchema),
-  errors: z.array(z.object({ description: z.string(), error: z.string() })),
-  startedAt: z.string(),
-  result: ProcessImportOutputSchema.optional(),
 });
 
 export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;
