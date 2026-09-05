@@ -190,7 +190,12 @@ function writeTransactionsPhase(
       for (const columns of rows) {
         const row = importsService.insertImportTransaction(tx, columns);
         imported++;
-        inserted.push({ id: row.id, accountId: row.accountId, date: row.date });
+        inserted.push({
+          id: row.id,
+          accountId: row.accountId,
+          date: row.date,
+          carriesBalance: txn.balanceCents !== undefined,
+        });
       }
       tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
@@ -233,7 +238,6 @@ function recordOutcomePhases(
 
   const batches = recordImportBatchesPhase(tx, {
     inserted: writeResult.inserted,
-    transactions: payload.transactions,
     source: payload.source,
     checkpoints,
     commitKey: payload.commitKey,

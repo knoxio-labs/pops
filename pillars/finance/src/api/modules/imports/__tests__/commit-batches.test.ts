@@ -160,6 +160,32 @@ describe('recordImportBatchesPhase, via commitImport', () => {
     );
   });
 
+  it('infers the kind per account, so a statement row does not relabel the other account in the same commit', async () => {
+    const { db } = freshMigratedFinanceDb();
+    const card = seedAccount(db, 'Card', 'credit-card');
+    const checking = seedAccount(db, 'Checking', 'checking');
+
+    await commitImport(
+      db,
+      noContacts(),
+      payload([
+        row(card, '2026-07-10', 'c1', { balanceCents: 65_000 }),
+        row(checking, '2026-07-10', 'k1'),
+      ])
+    );
+
+    const kinds = db
+      .select({ accountId: importBatches.accountId, kind: importBatches.sourceKind })
+      .from(importBatches)
+      .all();
+    expect(kinds).toEqual(
+      expect.arrayContaining([
+        { accountId: card, kind: 'pdf-statement' },
+        { accountId: checking, kind: 'csv-dialect' },
+      ])
+    );
+  });
+
   it('writes no batch for an account whose every row failed, and counts only written rows', async () => {
     const { db } = freshMigratedFinanceDb();
     const card = seedAccount(db, 'Card', 'credit-card');
@@ -227,8 +253,7 @@ describe('recordImportBatchesPhase, via commitImport', () => {
     expect(() =>
       db.transaction((tx) => {
         recordImportBatchesPhase(tx, {
-          inserted: [{ id, accountId: card, date: '2026-07-01' }],
-          transactions: [],
+          inserted: [{ id, accountId: card, date: '2026-07-01', carriesBalance: false }],
           source: { kind: 'csv-dialect', dialectId: 'Amex' },
           checkpoints: [],
           commitKey: undefined,

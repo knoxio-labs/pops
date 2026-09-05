@@ -11,27 +11,33 @@
  * nothing new".
  *
  * `payload.source` is recorded verbatim when the client sent it. When it did
- * not — a client predating the field — the kind is read off the rows: only
- * the PDF statement parser stamps `balanceCents`, so a batch carrying one is a
- * statement and anything else is a CSV. That inference stays here, at the one
- * seam that has to cope with an old client, and nowhere else.
+ * not — a client predating the field — the kind is read off each account's
+ * own rows: only the PDF statement parser stamps `balanceCents`, so a batch
+ * carrying one is a statement and anything else is a CSV. Per account, not
+ * per commit, because a row retargeted in review makes one commit feed two
+ * accounts, and the statement's balance says nothing about the other one.
+ * That inference stays here, at the one seam that has to cope with an old
+ * client, and nowhere else.
  */
 import { importBatchesService, type FinanceDb } from '../../../db/index.js';
 
 import type { ImportSource } from '../../../contract/import-source.js';
-import type { CommitBatch, CommitCheckpoint, ConfirmedTransaction } from './types.js';
+import type { CommitBatch, CommitCheckpoint } from './types.js';
 
 /** What the write phase knows about a row it inserted, enough to batch it. */
 export interface InsertedTransaction {
   id: string;
   accountId: string;
   date: string;
+  /** Whether the confirmed row carried `balanceCents`, which only the statement parser stamps. */
+  carriesBalance: boolean;
 }
 
 interface AccountRows {
   ids: string[];
   dateFrom: string;
   dateTo: string;
+  carriesBalance: boolean;
 }
 
 function groupByAccount(rows: readonly InsertedTransaction[]): Map<string, AccountRows> {
@@ -39,19 +45,24 @@ function groupByAccount(rows: readonly InsertedTransaction[]): Map<string, Accou
   for (const row of rows) {
     const existing = byAccount.get(row.accountId);
     if (existing === undefined) {
-      byAccount.set(row.accountId, { ids: [row.id], dateFrom: row.date, dateTo: row.date });
+      byAccount.set(row.accountId, {
+        ids: [row.id],
+        dateFrom: row.date,
+        dateTo: row.date,
+        carriesBalance: row.carriesBalance,
+      });
       continue;
     }
     existing.ids.push(row.id);
+    existing.carriesBalance ||= row.carriesBalance;
     if (row.date < existing.dateFrom) existing.dateFrom = row.date;
     if (row.date > existing.dateTo) existing.dateTo = row.date;
   }
   return byAccount;
 }
 
-function inferredSource(transactions: readonly ConfirmedTransaction[]): ImportSource {
-  const carriesBalance = transactions.some((t) => t.balanceCents !== undefined);
-  return carriesBalance ? { kind: 'pdf-statement' } : { kind: 'csv-dialect' };
+function inferredSource(rows: AccountRows): ImportSource {
+  return rows.carriesBalance ? { kind: 'pdf-statement' } : { kind: 'csv-dialect' };
 }
 
 function sourceRefOf(source: ImportSource): string | null {
@@ -74,17 +85,16 @@ export function recordImportBatchesPhase(
   tx: FinanceDb,
   args: {
     inserted: readonly InsertedTransaction[];
-    transactions: readonly ConfirmedTransaction[];
     source: ImportSource | undefined;
     checkpoints: readonly CommitCheckpoint[];
     commitKey: string | undefined;
   }
 ): CommitBatch[] {
-  const source = args.source ?? inferredSource(args.transactions);
   const checkpointByAccount = new Map(args.checkpoints.map((c) => [c.accountId, c.id]));
   const batches: CommitBatch[] = [];
 
   for (const [accountId, rows] of groupByAccount(args.inserted)) {
+    const source = args.source ?? inferredSource(rows);
     const checkpointId = checkpointByAccount.get(accountId) ?? null;
     const row = importBatchesService.insertBatch(
       tx,
