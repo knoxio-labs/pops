@@ -24,6 +24,7 @@ import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import { financeContract } from '../contract/rest.js';
 import { type FinanceApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
+import { makeUpWebhookIngest } from './modules/up-bank/webhook-ingest.js';
 import { createRequestValidationErrorHandler } from './rest/error-mapping.js';
 import { makeFinanceRestHandlers } from './rest/handlers.js';
 import { makeServeLogo } from './rest/serve-logo.js';
@@ -111,7 +112,9 @@ export function createFinanceApiApp(deps: FinanceApiDeps): Express {
   // Raw (non-ts-rest) webhook route. Mounted after the contract endpoints; its
   // `/webhooks/up` paths don't collide with any contract path, so it adds no
   // OpenAPI surface.
-  app.use(createUpBankWebhookRouter());
+  app.use(
+    createUpBankWebhookRouter({ ingest: makeUpWebhookIngest(deps.financeDb.db, deps.contacts) })
+  );
 
   return app;
 }
