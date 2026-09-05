@@ -229,3 +229,47 @@ export function exceedsFacetCardinality(existing: readonly string[], tag: string
   if (spec?.single !== true) return false;
   return existing.some((present) => parseTagFacet(present).facet === facet);
 }
+
+/** The outcome of {@link mergeTagsWithinFacetLimits}. */
+export interface TagMergeResult {
+  /** `existing` in its original order, followed by the incoming tags that joined. */
+  tags: string[];
+  /** Incoming tags refused because the facet already holds its one allowed value. */
+  dropped: string[];
+}
+
+/**
+ * `existing` plus every tag of `incoming` that can join it.
+ *
+ * The one merge rule for additive tag writes, in one place. A tag already
+ * present is a no-op; a tag that would be a second value on a single-valued
+ * facet is refused and reported in `dropped` rather than silently stored,
+ * because storing both is precisely what `single: true` cannot survive — the
+ * axis stops being groupable and nothing downstream can tell which value was
+ * meant.
+ *
+ * **Incumbency wins.** When the facet is already occupied, the value that is
+ * there stays and the incoming one is dropped. The caller is performing an
+ * *add*, which asserts that a tag belongs — never that an existing one does
+ * not. Replacing a tag is a different act, and callers who mean it have an
+ * explicit edit path for it.
+ *
+ * The order of `existing` is preserved so a merge never reshuffles a list a
+ * user arranged.
+ */
+export function mergeTagsWithinFacetLimits(
+  existing: readonly string[],
+  incoming: readonly string[]
+): TagMergeResult {
+  const tags = [...existing];
+  const dropped: string[] = [];
+  for (const tag of incoming) {
+    if (tags.includes(tag)) continue;
+    if (exceedsFacetCardinality(tags, tag)) {
+      dropped.push(tag);
+      continue;
+    }
+    tags.push(tag);
+  }
+  return { tags, dropped };
+}

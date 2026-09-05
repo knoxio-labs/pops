@@ -14,6 +14,7 @@ import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { CommitBatchSchema, ImportSourceSchema } from './import-source.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
+import { RulesAppliedSchema, TagRuleWritesSchema } from './rest-imports-rule-counts.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
 
 /** Transaction as parsed upstream (client-side or a transformer), with audit + dedup fields. */
@@ -213,12 +214,7 @@ export const CommitPayloadSchema = z.object({
   source: ImportSourceSchema.optional(),
 });
 
-export const RulesAppliedSchema = z.object({
-  add: z.number().int().nonnegative(),
-  edit: z.number().int().nonnegative(),
-  disable: z.number().int().nonnegative(),
-  remove: z.number().int().nonnegative(),
-});
+export { RulesAppliedSchema, TagRuleWritesSchema };
 
 export const FailedTransactionDetailSchema = z.object({
   checksum: z.string().nullable(),
@@ -240,6 +236,16 @@ export const CommitResultSchema = z.object({
   entitiesCreated: z.number().int().nonnegative(),
   rulesApplied: RulesAppliedSchema,
   tagRulesApplied: z.number().int().nonnegative(),
+  /**
+   * Of this commit's tag-rule `add` ops, how many minted a rule against how
+   * many merged into one that already existed (POPS-2755). `tagRulesApplied`
+   * stays the total across every op kind.
+   *
+   * Optional because a result recorded before this field existed is replayed
+   * through this schema verbatim on a `commitKey` resubmit — a required field
+   * would turn every historical commit's replay into a parse failure.
+   */
+  tagRuleWrites: TagRuleWritesSchema.optional(),
   transactionsImported: z.number().int().nonnegative(),
   transactionsFailed: z.number().int().nonnegative(),
   failedDetails: z.array(FailedTransactionDetailSchema),

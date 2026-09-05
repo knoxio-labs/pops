@@ -28,6 +28,7 @@ import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { tagVocabulary, transactionTagRules } from '../schema.js';
 import { upsertVocabularyTag } from '../services/tag-vocabulary.js';
 import {
+  createOrReinforceTransactionTagRule,
   createTransactionTagRule,
   deleteTransactionTagRule,
   disableTransactionTagRule,
@@ -551,5 +552,108 @@ describe('tag_vocabulary sibling-table integration', () => {
         tags: ['DefinitelyNotSeeded'],
       })
     ).not.toThrow();
+  });
+});
+
+describe('createOrReinforceTransactionTagRule — an add never replaces curated tags (POPS-2755)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  function seedCuratedRule(tags: string[]) {
+    return createTransactionTagRule(harness.db, {
+      descriptionPattern: 'HUNGRY JACKS',
+      matchType: 'contains',
+      tags,
+    });
+  }
+
+  it('merges incoming tags into the existing set instead of overwriting it', () => {
+    const curated = seedCuratedRule(['Fast Food', 'Dining']);
+
+    const reinforced = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'hungry jacks 42',
+      matchType: 'contains',
+      tags: ['Cairns 2026'],
+    });
+
+    expect(reinforced.id).toBe(curated.id);
+    expect(JSON.parse(reinforced.tags)).toEqual(['Fast Food', 'Dining', 'Cairns 2026']);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(1);
+  });
+
+  it('reports a collision as a reinforcement, carrying the tags the rule had before', () => {
+    seedCuratedRule(['Fast Food', 'Dining']);
+
+    const result = createOrReinforceTransactionTagRule(harness.db, {
+      descriptionPattern: 'HUNGRY JACKS',
+      matchType: 'contains',
+      tags: ['Cairns 2026'],
+    });
+
+    expect(result.outcome).toBe('reinforced');
+    expect(result.previousTags).toEqual(['Fast Food', 'Dining']);
+    expect(JSON.parse(result.row.tags)).toEqual(['Fast Food', 'Dining', 'Cairns 2026']);
+  });
+
+  it('reports a fresh pattern as an insert, with no previous tags', () => {
+    const result = createOrReinforceTransactionTagRule(harness.db, {
+      descriptionPattern: 'KINGSMEN HAIR',
+      matchType: 'contains',
+      tags: ['Haircut'],
+    });
+
+    expect(result.outcome).toBe('inserted');
+    expect(result.previousTags).toEqual([]);
+  });
+
+  it('does not duplicate a tag the rule already carries', () => {
+    seedCuratedRule(['Fast Food']);
+
+    const reinforced = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'HUNGRY JACKS',
+      matchType: 'contains',
+      tags: ['Fast Food', 'Dining'],
+    });
+
+    expect(JSON.parse(reinforced.tags)).toEqual(['Fast Food', 'Dining']);
+  });
+
+  it('refuses a second value on a single-valued facet, keeping the incumbent', () => {
+    seedCuratedRule(['venue:restaurant']);
+
+    const reinforced = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'HUNGRY JACKS',
+      matchType: 'contains',
+      tags: ['venue:cafe', 'Dining'],
+    });
+
+    // `venue` is single-valued: storing both takes the axis out of service.
+    // An add asserts that a tag belongs, never that an existing one does not.
+    expect(JSON.parse(reinforced.tags)).toEqual(['venue:restaurant', 'Dining']);
+  });
+
+  it('still lets an explicit edit replace the tag set outright', () => {
+    const curated = seedCuratedRule(['Fast Food', 'Dining']);
+
+    const edited = updateTransactionTagRule(harness.db, curated.id, { tags: ['Cairns 2026'] });
+
+    expect(JSON.parse(edited.tags)).toEqual(['Cairns 2026']);
+  });
+
+  it('leaves the reinforcement side effects other than tags unchanged', () => {
+    const curated = seedCuratedRule(['Fast Food']);
+    disableTransactionTagRule(harness.db, curated.id);
+
+    const reinforced = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'HUNGRY JACKS',
+      matchType: 'contains',
+      tags: ['Dining'],
+    });
+
+    expect(reinforced.confidence).toBeCloseTo(1.0, 5);
+    expect(reinforced.isActive).toBe(true);
+    expect(reinforced.timesApplied).toBe(0);
   });
 });

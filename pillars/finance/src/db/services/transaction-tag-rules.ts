@@ -14,17 +14,19 @@
  * and can pass a transaction), plain functions, typed domain errors, no HTTP
  * concerns.
  */
-import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
-import { InvalidPatternError, TransactionTagRuleNotFoundError } from '../errors.js';
+import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
-import {
-  isValidRegexPattern,
-  normalizePatternForStorage,
-} from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
 
+export {
+  createOrReinforceTransactionTagRule,
+  createTransactionTagRule,
+  type TagRuleWriteOutcome,
+  type TagRuleWriteResult,
+} from './transaction-tag-rules-write.js';
 export {
   findDuplicateTransactionTagRules,
   findUnreachableTransactionTagRules,
@@ -122,108 +124,6 @@ export function getTransactionTagRule(db: FinanceDb, id: string): TransactionTag
   const row = db.select().from(transactionTagRules).where(eq(transactionTagRules.id, id)).get();
   if (!row) throw new TransactionTagRuleNotFoundError(id);
   return row;
-}
-
-function findExistingTagRule(
-  db: FinanceDb,
-  matchType: TagRuleMatchType,
-  normalizedPattern: string,
-  entityId: string | null
-): TransactionTagRuleRow | undefined {
-  return db
-    .select()
-    .from(transactionTagRules)
-    .where(
-      and(
-        eq(transactionTagRules.matchType, matchType),
-        eq(transactionTagRules.descriptionPattern, normalizedPattern),
-        entityId === null
-          ? isNull(transactionTagRules.entityId)
-          : eq(transactionTagRules.entityId, entityId)
-      )
-    )
-    .get();
-}
-
-/**
- * Reinforce an existing tag rule hit on the `(normalizedPattern, matchType,
- * entityId)` key: confidence bumped by 0.1 (capped at 1.0), `isActive` reset
- * to true, `tags` overwritten by `input.tags`. `priority` is overlaid only
- * when the input supplies one — mirrors `reinforceExistingCorrection`.
- *
- * `timesApplied` and `lastUsedAt` are deliberately untouched: re-creating a
- * rule is not a use of it. Those two belong exclusively to
- * {@link incrementTransactionTagRuleUsage}, called from the matcher, so
- * `timesApplied` stays readable as usage evidence (POPS-2597/POPS-254).
- */
-function reinforceExistingTagRule(
-  db: FinanceDb,
-  existing: TransactionTagRuleRow,
-  input: CreateTransactionTagRuleInput
-): TransactionTagRuleRow {
-  return db
-    .update(transactionTagRules)
-    .set({
-      confidence: Math.min(existing.confidence + 0.1, 1.0),
-      tags: JSON.stringify(input.tags),
-      priority: input.priority ?? existing.priority,
-      isActive: true,
-    })
-    .where(eq(transactionTagRules.id, existing.id))
-    .returning()
-    .get();
-}
-
-/**
- * Create-or-reinforce a tag rule keyed on `(normalized descriptionPattern,
- * matchType, entityId)` — mirrors `createOrUpdateTransactionCorrection` so a
- * case/digit variant of an already-known pattern (e.g. `'K Mart'` vs
- * `'k mart 42'`) reinforces the existing row instead of forking a duplicate
- * that then never matches under `matchType: 'exact'` (CF022). `entityId` is
- * part of the key (unlike corrections, which has no entity-scoping concept)
- * so two rules deliberately scoped to different entities never collapse into
- * one.
- *
- * `tags` is JSON-encoded before insert. Insert defaults: `confidence=0.95`,
- * `isActive=true`, `priority=0`, `timesApplied=0`. The generated `id` is a
- * UUID from drizzle's `$defaultFn`.
- *
- * `descriptionPattern` is normalized (uppercased, digit-stripped,
- * whitespace-collapsed) for `exact`/`contains` patterns, which are matched
- * against a normalized description and need the same treatment to line up.
- * A `regex` pattern is stored raw: `normalizeDescription` uppercases every
- * character including metacharacters (`\d` -> `\D`, `\s` -> `\S`), which
- * would silently corrupt the pattern. An uncompilable `regex` pattern throws
- * `InvalidPatternError` (-> 400) instead of being stored as a rule that can
- * never fire (POPS-2600).
- */
-export function createTransactionTagRule(
-  db: FinanceDb,
-  input: CreateTransactionTagRuleInput
-): TransactionTagRuleRow {
-  if (input.matchType === 'regex' && !isValidRegexPattern(input.descriptionPattern)) {
-    throw new InvalidPatternError(input.descriptionPattern);
-  }
-  const normalized = normalizePatternForStorage(input.descriptionPattern, input.matchType);
-  const entityId = input.entityId ?? null;
-
-  const existing = findExistingTagRule(db, input.matchType, normalized, entityId);
-  if (existing) return reinforceExistingTagRule(db, existing, input);
-
-  return db
-    .insert(transactionTagRules)
-    .values({
-      descriptionPattern: normalized,
-      matchType: input.matchType,
-      entityId,
-      tags: JSON.stringify(input.tags),
-      confidence: input.confidence ?? 0.95,
-      isActive: input.isActive ?? true,
-      priority: input.priority ?? 0,
-      timesApplied: 0,
-    })
-    .returning()
-    .get();
 }
 
 function buildTagRuleUpdates(
