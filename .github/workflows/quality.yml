@@ -562,6 +562,33 @@ jobs:
       - name: No migration file relies on PRAGMA foreign_keys
         run: node scripts/ci/check-migration-fk-pragma.mjs
 
+  migration-journal-integrity:
+    name: Migration journal integrity
+    # A journal entry is selected by its `when`, not its position:
+    # `pendingMigrations` keeps only entries newer than the timestamp the
+    # database recorded. The stamping convention is `previous + 1`, so two
+    # branches cut from the same base mint the SAME `when`, git resolves the
+    # collision as ordinary conflicting text, and the second entry is then
+    # permanently skipped on every database that applied the first — its table
+    # never created, its backfill never run. Nothing else catches it: a fresh
+    # database applies both, and fresh is what every migration test, data-safety
+    # test and image smoke test builds from. Found for real in POPS-2866
+    # (finance idx 40 minted twice, on POPS-2804 and POPS-2852). This guard
+    # rejects a duplicate `when` or `idx`, an entry with no .sql file, and a
+    # .sql file with no entry, across every pillar journal found on disk. It
+    # reads the source tree directly and pulls in no third-party deps, so it
+    # skips `pnpm install`. See scripts/ci/check-migration-journals.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
+        run: node scripts/ci/check-migration-journals.mjs --self-test
+      - name: Every migration journal has unique timestamps and matches its SQL
+        run: node scripts/ci/check-migration-journals.mjs
+
   manifest-payload-coverage:
     name: Manifest payload coverage (POPS-2585)
     # `bootstrapPillar` runs every pillar's manifest through the SDK's strict
