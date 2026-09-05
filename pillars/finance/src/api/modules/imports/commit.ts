@@ -160,8 +160,8 @@ function writeTransactionsPhase(
   const insertedIds: string[] = [];
 
   // The loan split (`expandLoanRepaymentRow`) computes each repayment's
-  // interest leg from `getAccountBalanceBefore`, which only sees rows already
-  // inserted earlier in this loop. A batch is not guaranteed to arrive in
+  // interest leg from `balanceAsOf` the day before it, which only sees rows
+  // already inserted earlier in this loop. A batch is not guaranteed to arrive in
   // date order — a bank statement exported newest-first is a common CSV
   // layout — so an out-of-order batch would let a later-processed-but-
   // earlier-dated repayment be missing from an earlier-processed-but-later-

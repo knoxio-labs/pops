@@ -109,7 +109,19 @@ export {
   type AccountMergePreview,
 } from './services/merge-accounts.js';
 
-export { getAccountBalanceBefore } from './services/account-balance.js';
+export {
+  balanceAsOf,
+  balanceHistory,
+  checkpointDelta,
+  dayBefore,
+  isAccountInconsistent,
+  today,
+  type AccountBalance,
+  type BalanceAnchor,
+  type BalanceBasis,
+  type BalancePoint,
+  type CheckpointDelta,
+} from './services/account-balance.js';
 
 export * as accountCheckpointsService from './services/account-checkpoints.js';
 

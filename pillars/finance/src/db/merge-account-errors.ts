@@ -4,6 +4,8 @@
  * `errors.ts` so existing `from '../errors.js'` imports keep working.
  */
 
+import type { CheckpointSource } from '../contract/checkpoint.js';
+
 /**
  * A merge named the same account as both source and target. There is
  * nothing to move — refused rather than silently no-opping, since a caller
@@ -79,6 +81,41 @@ export class AccountMergeGiftCardDetailsConflictError extends Error {
     );
     this.sourceId = sourceId;
     this.targetId = targetId;
+  }
+}
+
+/**
+ * Both accounts in a merge carry a machine-written checkpoint — an `import`
+ * or a `statement` one — for the same `as_of` date. Repointing the source's
+ * rows onto the target (see `mergeAccounts`) would collide with the partial
+ * unique index on `(account_id, as_of, source)`, so the merge is refused up
+ * front, naming the date, rather than surfacing a raw constraint violation
+ * from inside the transaction.
+ *
+ * `manual` sits outside that index entirely, so two hand-counted figures on
+ * one day, or a counted figure and an imported one, go on coexisting on the
+ * merged account exactly as they did apart.
+ */
+export class AccountMergeCheckpointCollisionError extends Error {
+  override readonly name = 'AccountMergeCheckpointCollisionError' as const;
+  readonly sourceId: string;
+  readonly targetId: string;
+  readonly asOf: string;
+  readonly checkpointSource: CheckpointSource;
+
+  constructor(
+    sourceId: string,
+    targetId: string,
+    asOf: string,
+    checkpointSource: CheckpointSource
+  ) {
+    super(
+      `Account '${sourceId}' and '${targetId}' each carry a '${checkpointSource}' checkpoint dated ${asOf} — resolve which one to keep before merging`
+    );
+    this.sourceId = sourceId;
+    this.targetId = targetId;
+    this.asOf = asOf;
+    this.checkpointSource = checkpointSource;
   }
 }
 

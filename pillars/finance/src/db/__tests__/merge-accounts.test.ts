@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  AccountMergeCheckpointCollisionError,
   AccountMergeCurrencyMismatchError,
   AccountMergeGiftCardDetailsConflictError,
   AccountMergePendingResolutionError,
@@ -19,6 +20,8 @@ import {
   entityPrecreateOutbox,
   transactions,
 } from '../schema.js';
+import { balanceAsOf } from '../services/account-balance.js';
+import { insertCheckpoint, listCheckpoints } from '../services/account-checkpoints.js';
 import { createAccount, getAccount } from '../services/accounts.js';
 import { writeGiftCardDetails } from '../services/gift-card-details.js';
 import { mergeAccounts, previewAccountMerge } from '../services/merge-accounts.js';
@@ -63,10 +66,82 @@ describe('previewAccountMerge', () => {
     expect(preview.hasGiftCardDetailsConflict).toBe(false);
   });
 
+  it('adds the two checkpoint-anchored balances, not the two net flows', () => {
+    // Each account's rows sum to a flow that says nothing about what it holds;
+    // the checkpoints say what it holds. A preview reading the sums would
+    // report -1300 (the case above), which is what a merge of two partial
+    // imports used to claim.
+    addTransaction(db, AMEX_ID, -1000);
+    addTransaction(db, AMEX_ID, -500);
+    addTransaction(db, ANZ_ID, 200);
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -200_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+
+    const preview = previewAccountMerge(db, AMEX_ID, ANZ_ID);
+    expect(preview.resultingBalanceCents).toBe(-251_300);
+  });
+
   it('reports zero transactions and a zero resulting balance for two empty accounts', () => {
     const preview = previewAccountMerge(db, AMEX_ID, ANZ_ID);
     expect(preview.transactionCount).toBe(0);
     expect(preview.resultingBalanceCents).toBe(0);
+  });
+
+  it('throws AccountMergeCheckpointCollisionError when both sides carry a same-day machine checkpoint, naming the date', () => {
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -100_000,
+      asOf: '2026-01-15',
+      source: 'import',
+      sourceRef: 'commit-a',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2026-01-15',
+      source: 'import',
+      sourceRef: 'commit-b',
+    });
+
+    let thrown: unknown;
+    try {
+      previewAccountMerge(db, AMEX_ID, ANZ_ID);
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(AccountMergeCheckpointCollisionError);
+    expect((thrown as AccountMergeCheckpointCollisionError).message).toContain('2026-01-15');
+  });
+
+  it('does not throw for a same-day pair whose sources differ', () => {
+    // The partial unique index keys on `source` too, and skips `manual`
+    // entirely — a counted figure and an imported one on one date are not a
+    // collision, and refusing them would block a legitimate merge.
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -100_000,
+      asOf: '2026-01-15',
+      source: 'manual',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2026-01-15',
+      source: 'import',
+      sourceRef: 'commit-b',
+    });
+
+    expect(() => previewAccountMerge(db, AMEX_ID, ANZ_ID)).not.toThrow();
   });
 
   it('throws AccountNotFoundError for an unknown source or target id', () => {
@@ -210,5 +285,60 @@ describe('mergeAccounts', () => {
     expect(pendingRow).toBeDefined();
 
     expect(() => mergeAccounts(db, person.id, cash.id)).toThrow(AccountMergePendingResolutionError);
+  });
+
+  it('moves the source checkpoints onto the target instead of cascading them away', () => {
+    // `account_checkpoints.account_id` is ON DELETE CASCADE, and this is the
+    // only path that hard-deletes an account: without an explicit repoint the
+    // source's anchor dies with it and the survivor silently falls back to
+    // unanchored net flow — a different figure from the one the preview
+    // quoted a moment earlier.
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -200_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+    addTransaction(db, AMEX_ID, -1300);
+    const previewed = previewAccountMerge(db, AMEX_ID, ANZ_ID).resultingBalanceCents;
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    const moved = listCheckpoints(db, ANZ_ID);
+    expect(moved).toHaveLength(1);
+    expect(moved[0]?.balanceCents).toBe(-200_000);
+    const after = balanceAsOf(db, ANZ_ID);
+    expect(after.basis).toBe('checkpoint');
+    expect(after.balanceCents).toBe(previewed);
+  });
+
+  it('refuses a same-day machine collision and writes nothing', () => {
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -100_000,
+      asOf: '2026-01-15',
+      source: 'import',
+      sourceRef: 'commit-a',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2026-01-15',
+      source: 'import',
+      sourceRef: 'commit-b',
+    });
+    addTransaction(db, AMEX_ID, -1000);
+
+    expect(() => mergeAccounts(db, AMEX_ID, ANZ_ID)).toThrow(AccountMergeCheckpointCollisionError);
+    expect(getAccount(db, AMEX_ID)).toBeDefined();
+    expect(listCheckpoints(db, AMEX_ID)).toHaveLength(1);
+    expect(listCheckpoints(db, ANZ_ID)).toHaveLength(1);
+    expect(
+      db
+        .select()
+        .from(transactions)
+        .all()
+        .every((row) => row.accountId === AMEX_ID)
+    ).toBe(true);
   });
 });

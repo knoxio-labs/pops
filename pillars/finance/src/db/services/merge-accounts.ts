@@ -1,7 +1,7 @@
 /**
- * Merge one account into another (POPS-2812): repoint every transaction and
- * kind-specific detail row from `sourceId` onto `targetId`, then delete the
- * source outright.
+ * Merge one account into another (POPS-2812): repoint every transaction,
+ * checkpoint, and kind-specific detail row from `sourceId` onto `targetId`,
+ * then delete the source outright.
  *
  * Unlike every other account mutation, this hard-deletes rather than
  * archiving (decision log, 2026-09-03): by the time the source row goes,
@@ -11,21 +11,32 @@
  * {@link previewAccountMerge} exists — a caller must be able to show the
  * transaction count and resulting balance before committing.
  *
+ * That resulting balance is checkpoint-anchored, so the source's checkpoints
+ * have to move with its transactions: `account_checkpoints.account_id`
+ * cascades on account delete (POPS-2878) and this is the only path that ever
+ * hard-deletes an account, so leaving the cascade to fire would destroy the
+ * anchor the preview just quoted and drop the survivor back onto unanchored
+ * net flow.
+ *
  * Refuses a merge that cannot be meaningful: the same account into itself
  * (`AccountMergeSameAccountError`), across currencies
- * (`AccountMergeCurrencyMismatchError`), or across
+ * (`AccountMergeCurrencyMismatchError`), across
  * `ACCOUNT_KIND_BEHAVIOURS` sign conventions (`AccountMergeSignMismatchError`
- * — an asset merged into a liability or vice versa). Does not run dedup
+ * — an asset merged into a liability or vice versa), or where both sides
+ * carry a machine-written checkpoint for the same day
+ * (`AccountMergeCheckpointCollisionError` — the repoint would otherwise trip
+ * the partial unique index mid-transaction). Does not run dedup
  * (POPS-2773): two transactions that become duplicates only once they share
  * an account are left for that separate pass to find, not silently merged
  * away here — `previewAccountMerge` only reports whether either account
  * carries gift-card details that would collide, since that case has no
  * automatic resolution at all.
  */
-import { count, eq, sum } from 'drizzle-orm';
+import { and, count, eq, ne } from 'drizzle-orm';
 
 import { getAccountKindBehaviour } from '../../contract/account-kind.js';
 import {
+  AccountMergeCheckpointCollisionError,
   AccountMergeCurrencyMismatchError,
   AccountMergeGiftCardDetailsConflictError,
   AccountMergePendingResolutionError,
@@ -33,14 +44,18 @@ import {
   AccountMergeSignMismatchError,
 } from '../merge-account-errors.js';
 import {
+  accountCheckpoints,
   accountGiftCardDetails,
   accounts,
   entityPrecreateOutbox,
   giftCardSecretReveals,
   transactions,
 } from '../schema.js';
+import { balanceAsOf } from './account-balance.js';
 import { getAccount, type AccountRow } from './accounts.js';
+import { isCheckpointConflict } from './checkpoint-conflict.js';
 
+import type { CheckpointSource } from '../../contract/checkpoint.js';
 import type { FinanceDb } from './internal.js';
 
 /** Preview of what {@link mergeAccounts} would do, without writing anything. */
@@ -49,7 +64,11 @@ export interface AccountMergePreview {
   target: AccountRow;
   /** Transactions currently on `source` — every one of these moves to `target`. */
   transactionCount: number;
-  /** `source`'s balance plus `target`'s balance, in their shared currency's minor units. */
+  /**
+   * `source`'s balance plus `target`'s balance, in their shared currency's
+   * minor units — each checkpoint-anchored (ADR-051), so a preview shows what
+   * the merged account will hold rather than the two files' combined net flow.
+   */
   resultingBalanceCents: number;
   /**
    * True when both accounts carry an `account_gift_card_details` row —
@@ -60,15 +79,6 @@ export interface AccountMergePreview {
   hasGiftCardDetailsConflict: boolean;
 }
 
-function balanceCents(db: FinanceDb, accountId: string): number {
-  const row = db
-    .select({ total: sum(transactions.amountCents) })
-    .from(transactions)
-    .where(eq(transactions.accountId, accountId))
-    .get();
-  return Number(row?.total ?? 0);
-}
-
 function transactionCount(db: FinanceDb, accountId: string): number {
   const row = db
     .select({ total: count() })
@@ -76,6 +86,36 @@ function transactionCount(db: FinanceDb, accountId: string): number {
     .where(eq(transactions.accountId, accountId))
     .get();
   return row?.total ?? 0;
+}
+
+interface MachineCheckpointKey {
+  asOf: string;
+  source: CheckpointSource;
+}
+
+/**
+ * The date and source both accounts carry a machine-written checkpoint for,
+ * or undefined if none collide. `manual` is excluded because the partial
+ * unique index on `(account_id, as_of, source)` excludes it — two counted
+ * figures on one day are allowed to coexist on the merged account.
+ */
+function machineCheckpointCollision(
+  db: FinanceDb,
+  sourceId: string,
+  targetId: string
+): MachineCheckpointKey | undefined {
+  const machineCheckpointsOf = (accountId: string): MachineCheckpointKey[] =>
+    db
+      .select({ asOf: accountCheckpoints.asOf, source: accountCheckpoints.source })
+      .from(accountCheckpoints)
+      .where(
+        and(eq(accountCheckpoints.accountId, accountId), ne(accountCheckpoints.source, 'manual'))
+      )
+      .all();
+  const targetKeys = new Set(
+    machineCheckpointsOf(targetId).map((row) => `${row.asOf}|${row.source}`)
+  );
+  return machineCheckpointsOf(sourceId).find((row) => targetKeys.has(`${row.asOf}|${row.source}`));
 }
 
 function hasGiftCardDetails(db: FinanceDb, accountId: string): boolean {
@@ -100,12 +140,12 @@ function hasPendingResolution(db: FinanceDb, accountId: string): boolean {
 
 /**
  * Throws `AccountMergeSameAccountError`, `AccountMergeCurrencyMismatchError`,
- * or `AccountMergeSignMismatchError` — the three refusals that make a merge
- * meaningless outright, checked by both {@link previewAccountMerge} and
- * {@link mergeAccounts} so a preview never shows numbers for a merge the
- * commit would then refuse.
+ * `AccountMergeSignMismatchError`, or `AccountMergeCheckpointCollisionError`
+ * — the refusals that make a merge meaningless or unperformable outright,
+ * checked by both {@link previewAccountMerge} and {@link mergeAccounts} so a
+ * preview never shows numbers for a merge the commit would then refuse.
  */
-function assertAccountsAreMergeable(source: AccountRow, target: AccountRow): void {
+function assertAccountsAreMergeable(db: FinanceDb, source: AccountRow, target: AccountRow): void {
   if (source.id === target.id) throw new AccountMergeSameAccountError(source.id);
   if (source.currency !== target.currency) {
     throw new AccountMergeCurrencyMismatchError(source.currency, target.currency);
@@ -114,6 +154,15 @@ function assertAccountsAreMergeable(source: AccountRow, target: AccountRow): voi
   const targetSign = getAccountKindBehaviour(target.kind).signConvention;
   if (sourceSign !== targetSign) {
     throw new AccountMergeSignMismatchError(source.kind, target.kind);
+  }
+  const collision = machineCheckpointCollision(db, source.id, target.id);
+  if (collision) {
+    throw new AccountMergeCheckpointCollisionError(
+      source.id,
+      target.id,
+      collision.asOf,
+      collision.source
+    );
   }
 }
 
@@ -132,21 +181,23 @@ export function previewAccountMerge(
 ): AccountMergePreview {
   const source = getAccount(db, sourceId);
   const target = getAccount(db, targetId);
-  assertAccountsAreMergeable(source, target);
+  assertAccountsAreMergeable(db, source, target);
 
   return {
     source,
     target,
     transactionCount: transactionCount(db, sourceId),
-    resultingBalanceCents: balanceCents(db, sourceId) + balanceCents(db, targetId),
+    resultingBalanceCents:
+      balanceAsOf(db, sourceId).balanceCents + balanceAsOf(db, targetId).balanceCents,
     hasGiftCardDetailsConflict:
       hasGiftCardDetails(db, sourceId) && hasGiftCardDetails(db, targetId),
   };
 }
 
 /**
- * Merge `sourceId` into `targetId`: repoint every `transactions.account_id`
- * and `gift_card_secret_reveals.account_id` from `sourceId` to `targetId`,
+ * Merge `sourceId` into `targetId`: repoint every `transactions.account_id`,
+ * `account_checkpoints.account_id` and `gift_card_secret_reveals.account_id`
+ * from `sourceId` to `targetId`,
  * move `sourceId`'s `account_gift_card_details` row onto `targetId` if
  * `targetId` doesn't already have one, then delete the `sourceId` row.
  *
@@ -155,7 +206,8 @@ export function previewAccountMerge(
  * source account still present (or vice versa).
  *
  * Throws `AccountNotFoundError` if either id is unknown; the merge
- * refusals from {@link assertAccountsAreMergeable}; `AccountMergeGiftCardDetailsConflictError`
+ * refusals from {@link assertAccountsAreMergeable} (including
+ * `AccountMergeCheckpointCollisionError`); `AccountMergeGiftCardDetailsConflictError`
  * if both accounts carry gift-card details; and
  * `AccountMergePendingResolutionError` if the source account has an
  * unresolved `entity_precreate_outbox` row (POPS-2771) — merging it away
@@ -165,7 +217,7 @@ export function previewAccountMerge(
 export function mergeAccounts(db: FinanceDb, sourceId: string, targetId: string): AccountRow {
   const source = getAccount(db, sourceId);
   const target = getAccount(db, targetId);
-  assertAccountsAreMergeable(source, target);
+  assertAccountsAreMergeable(db, source, target);
 
   if (hasGiftCardDetails(db, sourceId) && hasGiftCardDetails(db, targetId)) {
     throw new AccountMergeGiftCardDetailsConflictError(sourceId, targetId);
@@ -184,6 +236,29 @@ export function mergeAccounts(db: FinanceDb, sourceId: string, targetId: string)
       .set({ accountId: targetId })
       .where(eq(giftCardSecretReveals.accountId, sourceId))
       .run();
+
+    try {
+      tx.update(accountCheckpoints)
+        .set({ accountId: targetId })
+        .where(eq(accountCheckpoints.accountId, sourceId))
+        .run();
+    } catch (err) {
+      // `assertAccountsAreMergeable` has already refused every collision the
+      // index can hold, and nothing can write between that check and this
+      // statement, so this branch is unreachable today and carries no test.
+      // It stays because no raw driver error should leave a write to this
+      // table — the same reason every other `account_checkpoints` write goes
+      // through `isCheckpointConflict`.
+      if (!isCheckpointConflict(err)) throw err;
+      const collision = machineCheckpointCollision(tx, sourceId, targetId);
+      if (!collision) throw err;
+      throw new AccountMergeCheckpointCollisionError(
+        sourceId,
+        targetId,
+        collision.asOf,
+        collision.source
+      );
+    }
 
     if (hasGiftCardDetails(tx, sourceId) && !hasGiftCardDetails(tx, targetId)) {
       tx.update(accountGiftCardDetails)
