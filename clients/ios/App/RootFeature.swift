@@ -31,4 +31,33 @@ internal enum RootFeature {
         FeaturePurchases.feature,
         FeatureReceiptCapture.feature,
     ]
+
+    /// What each renderable feature calls itself: its tab label and icon, as
+    /// the feature module — not the tab bar — declares them.
+    ///
+    /// Keyed here rather than switched on in `RootCopy`, so a feature that
+    /// forgets to appear in this dictionary is the same mistake as forgetting
+    /// to add it to `renderable` above: both are noticed the moment the
+    /// feature is wired in, not rediscovered by whoever next edits the tab
+    /// bar.
+    internal static let presentation: [MobileFeature: FeaturePresentation] = [
+        FeatureTransactions.feature: FeaturePresentation(
+            displayName: FeatureTransactions.displayName,
+            symbolName: FeatureTransactions.symbolName),
+        FeatureAccounts.feature: FeaturePresentation(
+            displayName: FeatureAccounts.displayName,
+            symbolName: FeatureAccounts.symbolName),
+        FeaturePurchases.feature: FeaturePresentation(
+            displayName: FeaturePurchases.displayName,
+            symbolName: FeaturePurchases.symbolName),
+        FeatureReceiptCapture.feature: FeaturePresentation(
+            displayName: FeatureReceiptCapture.displayName,
+            symbolName: FeatureReceiptCapture.symbolName),
+    ]
+}
+
+/// A feature's tab label and SF Symbol, as its own module declares them.
+internal struct FeaturePresentation {
+    internal let displayName: String
+    internal let symbolName: String
 }

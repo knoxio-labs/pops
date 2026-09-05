@@ -41,24 +41,19 @@ internal enum RootCopy {
     /// but a far better one than a blank. Shared with the tab bar's labels —
     /// one name per feature, not one for the empty state and a second for the
     /// switcher.
+    ///
+    /// Sourced from ``RootFeature/presentation``, which each renderable
+    /// feature module populates with its own name — not switched on here,
+    /// because a switch over feature ids is exactly the thing a fourth
+    /// feature would need this file edited to extend.
     internal static func name(of feature: MobileFeature) -> String {
-        switch feature {
-        case .transactions: "Transactions"
-        case .accounts: "Accounts"
-        case .receiptCapture: "Receipts"
-        default: feature.rawValue
-        }
+        RootFeature.presentation[feature]?.displayName ?? feature.rawValue
     }
 
     /// The tab icon for a feature. Falls back to a generic glyph rather than no
     /// glyph, for the same reason ``name(of:)`` falls back to the raw id — a
     /// tab this build has never heard of is still a tab a user can tap.
     internal static func symbol(for feature: MobileFeature) -> String {
-        switch feature {
-        case .transactions: "list.bullet.rectangle"
-        case .accounts: "building.columns"
-        case .receiptCapture: "doc.text.viewfinder"
-        default: "square.grid.2x2"
-        }
+        RootFeature.presentation[feature]?.symbolName ?? "square.grid.2x2"
     }
 }

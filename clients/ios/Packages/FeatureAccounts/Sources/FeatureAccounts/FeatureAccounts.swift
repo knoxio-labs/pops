@@ -20,4 +20,10 @@ public enum FeatureAccounts {
     /// Declared here rather than in the composition root, for the reason
     /// `FeatureTransactions.feature` gives.
     public static let feature: MobileFeature = .accounts
+
+    /// The tab bar's label for this feature.
+    public static let displayName = "Accounts"
+
+    /// The tab bar's icon for this feature.
+    public static let symbolName = "building.columns"
 }
