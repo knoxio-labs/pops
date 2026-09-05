@@ -174,6 +174,18 @@ export const accounts: Account[] = [
     balanceAsOf: '2026-09-01',
     transactionCount: 14,
   },
+  {
+    id: 'a13',
+    name: 'Up Spending',
+    institutionId: 'up',
+    kind: 'checking',
+    currency: 'AUD',
+    archived: false,
+    order: 13,
+    balance: 61_215,
+    balanceAsOf: '2026-09-06',
+    transactionCount: 312,
+  },
 ];
 
 /** The list as a screen shows it by default: active only, in display order. */

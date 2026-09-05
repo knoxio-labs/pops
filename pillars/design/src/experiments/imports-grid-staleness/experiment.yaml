@@ -1,0 +1,8 @@
+name: Staleness on the accounts grid
+question: Does the accounts grid flag overdue accounts on the tile, or only
+  offer a filter that surfaces them?
+status: active
+screen: finance/accounts
+variants:
+  tile-flag: tile-flag
+  filter-only: filter-only

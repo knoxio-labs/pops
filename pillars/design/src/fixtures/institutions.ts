@@ -38,6 +38,7 @@ export const institutions: Institution[] = [
   },
   { id: 'ing', name: 'ING', colour: '#ff6200' },
   { id: 'paylab', name: 'PayLab', colour: '#7b4bd6' },
+  { id: 'up', name: 'Up', colour: '#ff7a64' },
 ];
 
 export const institutionsById = new Map(institutions.map((i) => [i.id, i]));
