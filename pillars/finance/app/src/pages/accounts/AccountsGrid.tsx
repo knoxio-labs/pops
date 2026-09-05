@@ -40,7 +40,10 @@ export function AccountsGrid({
   if (accounts.length === 0) return <NoAccountsYet onAdd={onAdd} />;
   return (
     <>
-      <AccountSubtotals accounts={accounts} currencies={currencies} />
+      {/* `filters.visible`, not `accounts`: a subtotal for rows the search
+          has hidden describes nothing on the page — at its worst, a nonzero
+          total sitting above "No accounts match". */}
+      <AccountSubtotals accounts={filters.visible} currencies={currencies} />
       <AccountListControls filters={filters} />
       {filters.visible.length === 0 && <NoMatchingAccounts onClear={filters.clear} />}
       {filters.visible.length > 0 && (

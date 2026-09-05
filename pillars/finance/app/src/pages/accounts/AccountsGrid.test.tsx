@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NO_BALANCE } from '../../test-utils.js';
@@ -82,6 +83,47 @@ describe('AccountsGrid subtotals', () => {
     expect(subtotals.getByText('€50.00')).toBeInTheDocument();
     expect(subtotals.queryByText('QFF')).not.toBeInTheDocument();
     expect(subtotals.queryByText(/9,000 pts/)).not.toBeInTheDocument();
+  });
+
+  it('totals only what the search left on the page', async () => {
+    const accounts = [
+      account({
+        id: 'a',
+        name: 'Everyday',
+        currency: 'AUD',
+        balance: { ...NO_BALANCE, balanceCents: 100_000 },
+      }),
+      account({
+        id: 'b',
+        name: 'Rainy day',
+        currency: 'AUD',
+        balance: { ...NO_BALANCE, balanceCents: 30_000 },
+      }),
+    ];
+    render(<Harness accounts={accounts} currencies={[AUD]} />);
+    expect(
+      within(screen.getByTestId('account-subtotals')).getByText('$1,300.00')
+    ).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Search accounts'), 'Rainy');
+
+    expect(
+      within(screen.getByTestId('account-subtotals')).getByText('$300.00')
+    ).toBeInTheDocument();
+  });
+
+  it('shows no subtotal at all beside the no-results empty state', async () => {
+    // A nonzero total above "No accounts match" would describe accounts that
+    // appear nowhere on the page.
+    const accounts = [
+      account({ id: 'a', name: 'Everyday', balance: { ...NO_BALANCE, balanceCents: 100_000 } }),
+    ];
+    render(<Harness accounts={accounts} currencies={[AUD]} />);
+
+    await userEvent.type(screen.getByLabelText('Search accounts'), 'nothing matches this');
+
+    expect(screen.getByText('No accounts match')).toBeInTheDocument();
+    expect(screen.queryByTestId('account-subtotals')).not.toBeInTheDocument();
   });
 
   it('renders no subtotal row when every account is a points balance', () => {
