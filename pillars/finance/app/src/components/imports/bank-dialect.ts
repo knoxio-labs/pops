@@ -51,12 +51,29 @@ export interface DerivedFields {
   fxCaptureSource?: FxCaptureSource;
 }
 
+/**
+ * An export that states money in and money out in two columns instead of one
+ * signed amount. The debit side is read by magnitude, because a bank that
+ * splits the columns has already said which way the money went and may or
+ * may not also sign it.
+ */
+export interface SplitAmountColumns {
+  credit: string;
+  debit: string;
+}
+
 export interface BankDialect {
   /** False when the export has no header row and {@link BankDialect.columns} names them instead. */
   hasHeader: boolean;
   /** Synthetic column names, in file order. Required when `hasHeader` is false. */
   columns?: readonly string[];
   amountSign: AmountSign;
+  /**
+   * Set when the export splits the amount across two columns (ING). The
+   * mapper then offers no Amount field: the two columns are found by name
+   * and combined per row instead.
+   */
+  splitAmount?: SplitAmountColumns;
   /**
    * Bank-specific parse of a row into stored fields. Absent when the export's
    * columns already hold each field separately and the mapper can reach them.
@@ -113,11 +130,23 @@ const AMEX: BankDialect = {
   fxCaptureSource: 'unavailable',
 };
 
+/**
+ * ING ships a header row with the amount split into `Credit` and `Debit`
+ * columns (POPS-29). Money out is whatever the Debit column holds, by
+ * magnitude, so the sign convention is not a property this dialect needs.
+ */
+const ING: BankDialect = {
+  hasHeader: true,
+  amountSign: 'debit-negative',
+  splitAmount: { credit: 'Credit', debit: 'Debit' },
+  fxCaptureSource: 'unavailable',
+};
+
 const DIALECTS: Readonly<Record<BankDialectId, BankDialect>> = {
   ANZ: DEFAULT_DIALECT,
   'ANZ Credit Card': ANZ_CREDIT_CARD,
   Amex: AMEX,
-  ING: DEFAULT_DIALECT,
+  ING,
   Up: DEFAULT_DIALECT,
 };
 

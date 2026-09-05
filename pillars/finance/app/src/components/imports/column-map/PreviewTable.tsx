@@ -1,12 +1,14 @@
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
-import { parseAmount, parseDate } from './parsers';
+import { parseDate, readRowAmount } from './parsers';
 
+import type { BankDialect } from '../bank-dialect';
 import type { ColumnMap } from './parsers';
 
 interface PreviewTableProps {
   rows: Record<string, string>[];
   columnMap: ColumnMap;
+  dialect: Pick<BankDialect, 'amountSign' | 'splitAmount'>;
 }
 
 function CellWithStatus({
@@ -29,7 +31,7 @@ function CellWithStatus({
   );
 }
 
-export function PreviewTable({ rows, columnMap }: PreviewTableProps) {
+export function PreviewTable({ rows, columnMap, dialect }: PreviewTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
@@ -46,7 +48,7 @@ export function PreviewTable({ rows, columnMap }: PreviewTableProps) {
           <tbody className="divide-y divide-border">
             {rows.map((row, idx) => {
               const dateStr = row[columnMap.date ?? ''];
-              const amountStr = row[columnMap.amount ?? ''];
+              const { raw: amountStr, amount } = readRowAmount(row, columnMap, dialect);
               return (
                 <tr key={idx} className="hover:bg-muted">
                   <td className="px-4 py-2 text-muted-foreground">{idx + 1}</td>
@@ -55,7 +57,7 @@ export function PreviewTable({ rows, columnMap }: PreviewTableProps) {
                   </td>
                   <td className="px-4 py-2">{row[columnMap.description ?? '']}</td>
                   <td className="px-4 py-2">
-                    <CellWithStatus value={amountStr} parsed={parseAmount(amountStr)} />
+                    <CellWithStatus value={amountStr} parsed={amount} />
                   </td>
                   {columnMap.location && <td className="px-4 py-2">{row[columnMap.location]}</td>}
                 </tr>

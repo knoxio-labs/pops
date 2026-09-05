@@ -31,8 +31,15 @@ describe('bankDialect', () => {
     });
   });
 
+  it('declares ING as headed with the amount split across Credit and Debit (POPS-29)', () => {
+    expect(bankDialect('ING')).toMatchObject({
+      hasHeader: true,
+      splitAmount: { credit: 'Credit', debit: 'Debit' },
+    });
+  });
+
   it('leaves the headed, debit-positive banks on the default', () => {
-    for (const bank of ['ANZ', 'Amex', 'ING', 'Up'] as const) {
+    for (const bank of ['ANZ', 'Amex', 'Up'] as const) {
       expect(bankDialect(bank)).toMatchObject({
         hasHeader: true,
         amountSign: 'debit-positive',
@@ -49,6 +56,12 @@ describe('bankDialect', () => {
   it('leaves the banks with no hidden fields without a parser', () => {
     for (const bank of ['ANZ', 'ING', 'Up'] as const) {
       expect(bankDialect(bank).deriveFields).toBeUndefined();
+    }
+  });
+
+  it('gives only the split-amount bank two amount columns', () => {
+    for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'Up'] as const) {
+      expect(bankDialect(bank).splitAmount).toBeUndefined();
     }
   });
 });

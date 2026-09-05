@@ -62,6 +62,33 @@ describe('ColumnMapStep — auto-detect vs. manual override (#3621)', () => {
     expect(useImportStore.getState().columnMap.date).toBe('Value Date');
   });
 });
+describe('ColumnMapStep — split-amount bank (POPS-29)', () => {
+  it('offers no Amount field for ING and lets the step proceed without one', () => {
+    useImportStore.getState().setDialectId('ING');
+    useImportStore.getState().setHeaders(['Date', 'Description', 'Credit', 'Debit', 'Balance']);
+    useImportStore.getState().setRows([
+      {
+        Date: '14/08/2026',
+        Description: 'WOOLWORTHS',
+        Credit: '',
+        Debit: '-52.30',
+        Balance: '1.00',
+      },
+    ]);
+    const { container } = render(<ColumnMapStep />);
+
+    expect(container.querySelector('select[name="amount"]')).toBeNull();
+    expect(getDateSelect(container)).toHaveValue('Date');
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    expect(screen.getByText('→ -52.3')).toBeInTheDocument();
+  });
+
+  it('still requires an Amount mapping for a single-column bank', () => {
+    const { container } = render(<ColumnMapStep />);
+    expect(container.querySelector('select[name="amount"]')).not.toBeNull();
+  });
+});
+
 describe('ColumnMapStep — nothing auto-detected', () => {
   it('says nothing matched instead of showing four blank dropdowns', () => {
     useImportStore.getState().setHeaders(['Column 1', 'Column 2', 'Column 3']);

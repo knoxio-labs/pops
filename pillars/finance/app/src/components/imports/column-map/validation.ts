@@ -3,7 +3,13 @@ import crypto from 'crypto-js';
 import { buildImportDedupKey, extractReferenceValue } from '@pops/finance';
 
 import { bankDialect, type BankDialect } from '../bank-dialect';
-import { extractLocation, parseAmount, parseDate, type ColumnMap } from './parsers';
+import {
+  extractLocation,
+  hasRequiredColumns,
+  parseDate,
+  readRowAmount,
+  type ColumnMap,
+} from './parsers';
 
 import type { AnzForeignCharge, FxCaptureSource, ParsedTransaction } from '@pops/finance';
 
@@ -81,9 +87,8 @@ function validateRow(
   const dateStr = row[columnMap.date];
   const parsedDate = parseDate(dateStr);
   if (!parsedDate) return { error: `Row ${rowNum}: Invalid date format "${dateStr}"` };
-  const amountStr = row[columnMap.amount];
-  const parsedAmount = parseAmount(amountStr, dialect.amountSign);
-  if (parsedAmount === null) return { error: `Row ${rowNum}: Invalid amount "${amountStr}"` };
+  const { raw: amountStr, amount: parsedAmount } = readRowAmount(row, columnMap, dialect);
+  if (parsedAmount === null) return { error: `Row ${rowNum}: Invalid amount "${amountStr ?? ''}"` };
   const { description, location, country, foreignCharge, fxCaptureSource } = describeRow(
     row,
     columnMap,
@@ -132,10 +137,15 @@ export function validateAllRows(
 ): ValidationResult {
   const errors: string[] = [];
   const parsedTransactions: ParsedTransaction[] = [];
-  if (!columnMap.date || !columnMap.description || !columnMap.amount) {
+  const dialect = bankDialect(dialectId);
+  if (!hasRequiredColumns(columnMap, dialect)) {
     return {
       valid: false,
-      errors: ['Please map all required fields: Date, Description, Amount'],
+      errors: [
+        dialect.splitAmount
+          ? 'Please map all required fields: Date, Description'
+          : 'Please map all required fields: Date, Description, Amount',
+      ],
       parsedTransactions,
     };
   }
