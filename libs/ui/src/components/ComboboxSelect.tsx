@@ -2,7 +2,7 @@
  * ComboboxSelect - Advanced select with filtering using shadcn primitives
  * Built on Popover + Command for proper positioning and filtering
  */
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { ComboboxPopover, SelectedChips } from './ComboboxSelect.popover';
@@ -25,6 +25,20 @@ export interface ComboboxSelectProps {
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
+  /**
+   * `id` applied to the trigger button. Defaults to a generated id so a
+   * `<Label htmlFor>` can always associate with the control — pass an
+   * explicit `id` when the caller's own `<Label>` needs to name it.
+   */
+  id?: string;
+  /**
+   * Accessible name for the trigger. `role="combobox"` takes no name from
+   * its own content, so the selected option's label never names the
+   * control on its own — pass this or `aria-labelledby`.
+   */
+  'aria-label'?: string;
+  /** Accessible name sourced from another element's id, instead of `aria-label`. */
+  'aria-labelledby'?: string;
 }
 
 function getSelectedValues(value: string | string[] | undefined): string[] {
@@ -45,19 +59,12 @@ function getDisplayText(
   return selectedValues.length > 0 ? getOptionLabel(selectedValues[0] ?? '') : placeholder;
 }
 
-export function ComboboxSelect({
+function useComboboxSelectState({
   options,
   value,
   onChange,
-  multiple = false,
-  placeholder = 'Select...',
-  searchPlaceholder = 'Search...',
-  emptyMessage = 'No options found.',
-  disabled = false,
-  variant = 'outline',
-  size = 'default',
-  className,
-}: ComboboxSelectProps) {
+  multiple,
+}: Pick<ComboboxSelectProps, 'options' | 'value' | 'onChange' | 'multiple'>) {
   const [open, setOpen] = useState(false);
   const selectedValues = getSelectedValues(value);
   const getOptionLabel = (val: string): string =>
@@ -80,6 +87,30 @@ export function ComboboxSelect({
     onChange?.(selectedValues.filter((v) => v !== optionValue));
   };
 
+  return { open, setOpen, selectedValues, getOptionLabel, toggleOption, removeValue };
+}
+
+export function ComboboxSelect({
+  options,
+  value,
+  onChange,
+  multiple = false,
+  placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
+  emptyMessage = 'No options found.',
+  disabled = false,
+  variant = 'outline',
+  size = 'default',
+  className,
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+}: ComboboxSelectProps) {
+  const generatedId = useId();
+  const triggerId = id ?? generatedId;
+  const { open, setOpen, selectedValues, getOptionLabel, toggleOption, removeValue } =
+    useComboboxSelectState({ options, value, onChange, multiple });
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <ComboboxPopover
@@ -96,6 +127,9 @@ export function ComboboxSelect({
         emptyMessage={emptyMessage}
         className={className}
         onToggle={toggleOption}
+        id={triggerId}
+        ariaLabel={ariaLabel}
+        ariaLabelledBy={ariaLabelledBy}
       />
       {multiple && selectedValues.length > 0 && (
         <SelectedChips values={selectedValues} getLabel={getOptionLabel} onRemove={removeValue} />

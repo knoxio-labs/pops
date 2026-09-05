@@ -171,3 +171,24 @@ export const Disabled: Story = {
     return <ComboboxSelect options={countries} value="us" disabled placeholder="Disabled..." />;
   },
 };
+
+/**
+ * `role="combobox"` takes no accessible name from its own visible content,
+ * so `aria-label` (or `aria-labelledby`, for an existing on-page label) is
+ * required to name the control for assistive technology.
+ */
+export const WithAccessibleName: Story = {
+  args: {},
+  render: () => {
+    const [value, setValue] = useState<string>('');
+    return (
+      <ComboboxSelect
+        options={countries}
+        value={value}
+        onChange={(v) => setValue(v as string)}
+        placeholder="Select a country..."
+        aria-label="Country"
+      />
+    );
+  },
+};

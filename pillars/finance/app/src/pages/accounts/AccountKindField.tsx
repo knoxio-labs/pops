@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import { ACCOUNT_KIND_META, ComboboxSelect, Label } from '@pops/ui';
@@ -14,14 +15,16 @@ const KIND_OPTIONS = KIND_FORM_OPTIONS.map((o) => ({
 
 /** The kind combobox (design decision: a `ComboboxSelect`, not a native `<select>`), reserved kinds present but disabled. */
 export function AccountKindField({ form }: { form: UseFormReturn<AccountFormValues> }) {
+  const kindId = useId();
   return (
     <div className="space-y-1.5">
-      <Label>Kind</Label>
+      <Label htmlFor={kindId}>Kind</Label>
       <Controller
         control={form.control}
         name="kind"
         render={({ field }) => (
           <ComboboxSelect
+            id={kindId}
             options={KIND_OPTIONS}
             value={field.value}
             onChange={(value) => {
