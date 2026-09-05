@@ -1,11 +1,11 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { dollarsToCents, getAccountKindBehaviour } from '@pops/finance';
 
 import {
-  CheckpointFormSchema,
+  checkpointFormSchema,
   DEFAULT_CHECKPOINT_FORM_VALUES,
   today,
   type CheckpointFormValues,
@@ -46,10 +46,15 @@ export function useAccountCheckpointsActions(accountId: string, account: Account
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { createMutation, deleteMutation } = useCheckpointMutations(accountId);
 
-  const form = useForm({
-    resolver: standardSchemaResolver(CheckpointFormSchema),
-    defaultValues: DEFAULT_CHECKPOINT_FORM_VALUES,
-  });
+  // `account` is null on the first renders, and the dialog is unreachable
+  // until it resolves; 'asset' is the permissive convention, so the stricter
+  // liability rule can only ever be added, never dropped, as it arrives.
+  const signConvention = account ? getAccountKindBehaviour(account.kind).signConvention : 'asset';
+  const resolver = useMemo(
+    () => standardSchemaResolver(checkpointFormSchema(signConvention)),
+    [signConvention]
+  );
+  const form = useForm({ resolver, defaultValues: DEFAULT_CHECKPOINT_FORM_VALUES });
 
   const openDialog = () => {
     form.reset({ ...DEFAULT_CHECKPOINT_FORM_VALUES, asOf: today() });
