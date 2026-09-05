@@ -32,3 +32,9 @@ run = "vitest run"
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
+
+[env]
+# See pillars/shell/mise.toml — same reason (POPS-2715). `vite` is this unit's
+# own dependency, so `build` and `dev` had no way to find it, and `build` is
+# in the `run-all` fan-out behind `openapi:generate`.
+_.path = ["{{config_root}}/node_modules/.bin"]
