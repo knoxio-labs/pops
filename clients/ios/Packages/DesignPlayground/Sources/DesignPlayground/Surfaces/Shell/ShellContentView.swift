@@ -19,10 +19,12 @@ internal enum ShellDegradation: Hashable, Sendable {
 /// it, and a placeholder cannot be asked that.
 ///
 /// Attached with `.safeAreaInset(edge: .top)` rather than stacked above the
-/// content, mirroring `ContentView`'s own shape (POPS-2894): a stack would
-/// take the banner's height off the top of the tree, which for a `TabView`
-/// means its tab bar shifting up too. This surface exists to review that the
-/// bar does not move — staging it any other way would defeat the point.
+/// content, mirroring `ContentView`'s own shape (POPS-2894), so that what is
+/// reviewed here is the construction the app actually ships. The reason
+/// `ContentView` needs the inset — a stack takes the banner's height off the
+/// top of its `TabView`, carrying the tab bar up with it — is not visible in
+/// this surface, which renders no tab bar; `ContentViewFeatureSwitchingTests`
+/// covers that.
 internal struct ShellContentView: View {
     let degradation: ShellDegradation
 
