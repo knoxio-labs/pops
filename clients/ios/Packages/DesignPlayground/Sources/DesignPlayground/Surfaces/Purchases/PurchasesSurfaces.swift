@@ -1,7 +1,5 @@
 import AppCore
-import DesignSystem
 import FeaturePurchases
-import SwiftUI
 
 /// The purchase history, staged through the exact view and view model the app
 /// ships — see ``PlaygroundPurchasesRepository`` for how a state pins down

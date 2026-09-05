@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// The screens tab: every surface, grouped by area.

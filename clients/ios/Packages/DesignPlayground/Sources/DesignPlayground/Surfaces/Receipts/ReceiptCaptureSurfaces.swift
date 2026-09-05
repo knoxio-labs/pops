@@ -1,6 +1,5 @@
 import AppCore
 import FeatureReceiptCapture
-import SwiftUI
 
 /// The capture prompt: a camera to open, a refusal to explain, or a scan that
 /// came back with nothing to send.

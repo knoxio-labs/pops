@@ -11,8 +11,6 @@ import SwiftUI
 /// size. The swatch pairs each colour with `popsBackground` and with
 /// `popsSurface`, because a token is only legible or not against something.
 internal struct TokensView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     private let colors: [(name: String, color: Color)] = [
         ("popsAccent", .popsAccent),
         ("popsForeground", .popsForeground),

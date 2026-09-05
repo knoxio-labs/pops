@@ -1,6 +1,5 @@
 import AppCore
 import FeatureReceiptCapture
-import SwiftUI
 
 /// What reading an uploaded receipt came back as: a purchase, a reading
 /// waiting on a person, nothing usable, or the upload never landing at all.

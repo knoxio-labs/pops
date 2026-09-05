@@ -1,7 +1,5 @@
-import AppCore
 import DesignSystem
 import FeatureReceiptCapture
-import SwiftUI
 
 /// A reading as a form: pre-filled, live from the first frame, and carrying
 /// the gate's complaints as hints rather than locks.

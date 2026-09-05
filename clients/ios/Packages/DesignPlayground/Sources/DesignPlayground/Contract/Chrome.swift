@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The navigation chrome a surface is drawn inside.
 ///
 /// This is the axis the web playground structurally cannot have. A nav bar, a
