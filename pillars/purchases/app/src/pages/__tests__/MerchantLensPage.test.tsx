@@ -146,12 +146,6 @@ function nth<T>(items: readonly T[], index: number): T {
   return item;
 }
 
-/**
- * Queried by its accessible NAME, not by bare role. `@pops/ui`'s `Select`
- * renders its label as a sibling with no `htmlFor`, so a control that relies
- * on the `label` prop alone announces as an unnamed combobox — a bare
- * `getByRole('combobox')` would pass right through that.
- */
 function periodPicker(): HTMLElement {
   return screen.getByRole('combobox', { name: enAUPurchases['merchants.period.label'] });
 }
