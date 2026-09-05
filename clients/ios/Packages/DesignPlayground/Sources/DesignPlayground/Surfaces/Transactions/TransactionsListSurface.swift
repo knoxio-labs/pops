@@ -12,7 +12,7 @@ extension TransactionsSurfaces {
     /// still long enough to review.
     ///
     /// ``refreshFailure`` needs
-    /// ``PlaygroundRefreshFailureTransactionsRepository`` rather than
+    /// ``PlaygroundRefreshFailureRepository`` rather than
     /// ``PlaygroundTransactionsRepository`` because it is a third field, not a
     /// case of either enum above — reached by a load that succeeds followed by
     /// a refresh that fails over the same rows — and refresh reuses the first
@@ -53,7 +53,7 @@ extension TransactionsSurfaces {
                 },
                 DesignState("refresh-failed", "Refresh failed, rows kept") {
                     TransactionsRefreshFailureState(
-                        repository: PlaygroundRefreshFailureTransactionsRepository(
+                        repository: PlaygroundRefreshFailureRepository(
                             firstPage: loadedPage,
                             refreshFailure: .transport("host unreachable")
                         )

@@ -92,7 +92,7 @@ internal struct PlaygroundTransactionsRepository: TransactionsRepository {
 /// An `actor` rather than a `struct` because that count is mutated by
 /// whichever call reaches it, and the protocol only promises `Sendable`, not
 /// isolation to one actor.
-internal actor PlaygroundRefreshFailureTransactionsRepository: TransactionsRepository {
+internal actor PlaygroundRefreshFailureRepository: TransactionsRepository {
     private let firstPage: TransactionPage
     private let refreshFailure: RepositoryError
     private var callCount = 0

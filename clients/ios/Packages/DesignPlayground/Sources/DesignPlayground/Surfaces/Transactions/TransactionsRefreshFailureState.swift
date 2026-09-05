@@ -19,9 +19,9 @@ internal struct TransactionsRefreshFailureState: View {
     @State private var model: TransactionsListViewModel
     @State private var isReady = false
 
-    private let repository: PlaygroundRefreshFailureTransactionsRepository
+    private let repository: PlaygroundRefreshFailureRepository
 
-    internal init(repository: PlaygroundRefreshFailureTransactionsRepository) {
+    internal init(repository: PlaygroundRefreshFailureRepository) {
         self.repository = repository
         _model = State(
             wrappedValue: TransactionsListViewModel(
