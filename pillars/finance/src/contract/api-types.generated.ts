@@ -673,7 +673,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first */
+    /** Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first) */
     get: operations['dataQuality.nudges'];
     put?: never;
     post?: never;
@@ -7279,17 +7279,29 @@ export interface operations {
         };
         content: {
           'application/json': {
-            data: {
-              accountId: string;
-              accountName: string;
-              asOf: string;
-              checkpointId: string;
-              currency: string;
-              deltaCents: number;
-              href: string;
-              /** @enum {string} */
-              kind: 'checkpoint-inconsistency';
-            }[];
+            data: (
+              | {
+                  accountId: string;
+                  accountName: string;
+                  asOf: string;
+                  checkpointId: string;
+                  currency: string;
+                  deltaCents: number;
+                  href: string;
+                  /** @enum {string} */
+                  kind: 'checkpoint-inconsistency';
+                }
+              | {
+                  accountId: string;
+                  accountName: string;
+                  daysStale: number;
+                  href: string;
+                  /** @enum {string} */
+                  kind: 'stale-account';
+                  newestTransactionDate: string;
+                  thresholdDays: number;
+                }
+            )[];
           };
         };
       };

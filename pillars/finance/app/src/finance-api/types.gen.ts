@@ -4864,16 +4864,27 @@ export type DataQualityNudgesResponses = {
    * 200
    */
   200: {
-    data: Array<{
-      accountId: string;
-      accountName: string;
-      asOf: string;
-      checkpointId: string;
-      currency: string;
-      deltaCents: number;
-      href: string;
-      kind: 'checkpoint-inconsistency';
-    }>;
+    data: Array<
+      | {
+          accountId: string;
+          accountName: string;
+          asOf: string;
+          checkpointId: string;
+          currency: string;
+          deltaCents: number;
+          href: string;
+          kind: 'checkpoint-inconsistency';
+        }
+      | {
+          accountId: string;
+          accountName: string;
+          daysStale: number;
+          href: string;
+          kind: 'stale-account';
+          newestTransactionDate: string;
+          thresholdDays: number;
+        }
+    >;
   };
 };
 

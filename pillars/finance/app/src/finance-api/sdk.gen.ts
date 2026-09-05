@@ -1260,7 +1260,7 @@ export const currenciesUpdate = <ThrowOnError extends boolean = false>(
   );
 
 /**
- * Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first
+ * Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first)
  */
 export const dataQualityNudges = <ThrowOnError extends boolean = false>(
   options?: Options<DataQualityNudgesData, ThrowOnError>
