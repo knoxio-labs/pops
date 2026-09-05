@@ -31,6 +31,11 @@ function fakeUp(rows: UpTransaction[]): UpBankClient {
     ping: async () => ({ customerId: 'cust-1' }),
     listAccounts: async () => [account],
     getAccount: async () => account,
+    getTransaction: async (id) => {
+      const found = rows.find((row) => row.id === id);
+      if (!found) throw new Error(`unknown Up transaction ${id}`);
+      return found;
+    },
     listTransactions: async () => rows,
   };
 }

@@ -32,6 +32,11 @@ function fakeUp(rows: UpTransaction[], account: UpAccount = upAccount()) {
       if (id !== account.id) throw new Error(`unknown Up account ${id}`);
       return account;
     },
+    getTransaction: async (id) => {
+      const found = rows.find((row) => row.id === id);
+      if (!found) throw new Error(`unknown Up transaction ${id}`);
+      return found;
+    },
     listTransactions: async (_id, range) => {
       ranges.push(range);
       return rows;

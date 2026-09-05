@@ -7,7 +7,9 @@
  * length-mismatch guard), valid signature → 200, the `UP_WEBHOOK_SECRET_FILE`
  * secret source, the missing-secret → 500 path, and the liveness ping. The
  * app under test wires the same path-scoped raw parser the real factory
- * uses, so the Buffer-body assumption is covered too.
+ * uses, so the Buffer-body assumption is covered too. Ingest is a stub here
+ * (POPS-2920): the route's contract is to acknowledge first and hand the
+ * event on, and what the event then does is `webhook-ingest.test.ts`.
  */
 import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -15,19 +17,40 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import express, { type Express } from 'express';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestOn } from '../__tests__/test-utils.js';
-import { __resetWebhookSecretCacheForTests, createUpBankWebhookRouter } from './up-bank.js';
+import {
+  __resetWebhookSecretCacheForTests,
+  createUpBankWebhookRouter,
+  type UpBankWebhookLogger,
+} from './up-bank.js';
+
+import type { UpWebhookIngest } from '../modules/up-bank/webhook-ingest.js';
 
 const SECRET = 'test-up-webhook-secret';
 
-function buildApp(): Express {
+const acknowledgeOnly: UpWebhookIngest = async () => ({ kind: 'ignored', reason: 'test stub' });
+
+function buildApp(
+  ingest: UpWebhookIngest = acknowledgeOnly,
+  logger?: UpBankWebhookLogger
+): Express {
   const app = express();
   app.use('/webhooks/up', express.raw({ type: 'application/json' }));
   app.use(express.json());
-  app.use(createUpBankWebhookRouter());
+  app.use(createUpBankWebhookRouter({ ingest, logger }));
   return app;
+}
+
+function signedPost(app: Express, body: string = EVENT_BODY) {
+  return requestOn(app, (r) =>
+    r
+      .post('/webhooks/up')
+      .set('content-type', 'application/json')
+      .set('x-up-authenticity-signature', sign(body))
+      .send(body)
+  );
 }
 
 function sign(body: string, secret: string = SECRET): string {
@@ -184,6 +207,75 @@ describe('POST /webhooks/up', () => {
     );
 
     expect(res.status).toBe(500);
+  });
+});
+
+describe('POST /webhooks/up ingest hand-off (POPS-2920)', () => {
+  it('hands the event type and transaction id to ingest', async () => {
+    const ingest = vi.fn(acknowledgeOnly);
+    const res = await signedPost(buildApp(ingest));
+
+    expect(res.status).toBe(200);
+    expect(ingest).toHaveBeenCalledWith({
+      eventType: 'TRANSACTION_CREATED',
+      transactionId: 'txn-123',
+    });
+  });
+
+  it('acknowledges before ingest finishes, and even when ingest never does', async () => {
+    let settle: () => void = () => {};
+    const ingest: UpWebhookIngest = () =>
+      new Promise((res) => {
+        settle = () => res({ kind: 'ignored', reason: 'late' });
+      });
+
+    const res = await signedPost(buildApp(ingest));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+    settle();
+  });
+
+  it('logs an ingest failure at warn and never surfaces it to Up', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() };
+    const ingest: UpWebhookIngest = () => Promise.reject(new Error('Up API 500 for /transactions'));
+
+    const res = await signedPost(buildApp(ingest, logger));
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledTimes(1));
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[webhook/up] ingest failed',
+      expect.objectContaining({ transactionId: 'txn-123', error: 'Up API 500 for /transactions' })
+    );
+  });
+
+  it('warns for an unmapped Up account and for a deletion, informs for the rest', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() };
+    const outcomes: UpWebhookIngest[] = [
+      async () => ({ kind: 'unmapped', upAccountId: 'up-acc-9', transactionId: 'txn-123' }),
+      async () => ({ kind: 'deleted', transactionId: 'txn-123' }),
+      async () => ({ kind: 'imported', accountId: 'a1', batchId: 'b1', failed: 0 }),
+    ];
+    for (const ingest of outcomes) await signedPost(buildApp(ingest, logger));
+
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledTimes(2));
+    expect(logger.warn.mock.calls.map(([msg]) => msg)).toEqual([
+      '[webhook/up] transaction for an Up account with no import config',
+      '[webhook/up] TRANSACTION_DELETED not applied; the next sync reconciles it',
+    ]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ upAccountId: 'up-acc-9' })
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      '[webhook/up] imported',
+      expect.objectContaining({ batchId: 'b1' })
+    );
+  });
+
+  it('hands undefined fields on for a payload missing them', async () => {
+    const ingest = vi.fn(acknowledgeOnly);
+    await signedPost(buildApp(ingest), JSON.stringify({ data: {} }));
+    expect(ingest).toHaveBeenCalledWith({ eventType: undefined, transactionId: undefined });
   });
 });
 

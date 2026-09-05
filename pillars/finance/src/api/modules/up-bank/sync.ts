@@ -18,22 +18,15 @@ import {
   accountCheckpointsService,
   checkpointDelta,
   importBatchesService,
-  importsService,
   isCheckpointConflict,
   today,
   type FinanceDb,
 } from '../../../db/index.js';
-import { commitImport } from '../imports/commit.js';
-import { processImportCore } from '../imports/process-service.js';
-import { UP_MAPPER_VERSION, UP_SOURCE_REF, type MappedUpTransaction } from './map-transaction.js';
 import { planUpSync, type UpSyncArgs, type UpSyncPlan } from './sync-plan.js';
+import { importMappedRows, settleMappedRows } from './write-rows.js';
 
-import type {
-  ConfirmedTransaction,
-  ImportWarning,
-} from '../../../contract/rest-imports-schemas.js';
+import type { ImportWarning } from '../../../contract/rest-imports-schemas.js';
 import type { ContactsClient } from '../../contacts/client.js';
-import type { ProcessedTransaction } from '../imports/types.js';
 
 export interface UpSyncCheckpoint {
   id: string;
@@ -53,96 +46,6 @@ export interface UpSyncResult {
   /** Null when a checkpoint for this account and day already exists. */
   checkpoint: UpSyncCheckpoint | null;
   warnings: ImportWarning[];
-}
-
-interface ImportedRows {
-  imported: number;
-  failed: number;
-  batchId: string | null;
-  warnings: ImportWarning[];
-}
-
-/**
- * Unattended confirmation: a matched row keeps the entity and tags the
- * pipeline gave it; anything less certain is imported bare and left for
- * review. The mapper's own type wins over the ladder's where it asserted one,
- * because Up knows a transfer is a transfer.
- */
-function confirmUnattended(
-  processed: ProcessedTransaction,
-  mappedType: Map<string, MappedUpTransaction['transactionType']>
-): ConfirmedTransaction {
-  const { entity, status, skipReason, error, ruleProvenance, matchedRules, ...parsed } = processed;
-  const confident = status === 'matched';
-  return {
-    ...parsed,
-    transactionType: mappedType.get(processed.checksum) ?? processed.transactionType,
-    entityId: confident ? entity.entityId : undefined,
-    entityName: confident ? entity.entityName : undefined,
-    tags: confident ? (processed.suggestedTags ?? []).map((s) => s.tag) : [],
-    matchType: confident ? entity.matchType : undefined,
-    matchRuleId: confident ? ruleProvenance?.ruleId : undefined,
-    matchConfidence: confident ? entity.confidence : undefined,
-  };
-}
-
-async function importNewRows(
-  db: FinanceDb,
-  contacts: ContactsClient,
-  plan: UpSyncPlan,
-  commitKey: string
-): Promise<ImportedRows> {
-  if (plan.newRows.length === 0) {
-    const batch = importBatchesService.insertBatch(
-      db,
-      {
-        accountId: plan.account.id,
-        sourceKind: 'api',
-        sourceRef: UP_SOURCE_REF,
-        parserVersion: UP_MAPPER_VERSION,
-        commitKey,
-        rowCount: 0,
-      },
-      []
-    );
-    return { imported: 0, failed: 0, batchId: batch.id, warnings: [] };
-  }
-
-  const mappedType = new Map(plan.newRows.map((row) => [row.parsed.checksum, row.transactionType]));
-  const { output } = await processImportCore({
-    db,
-    contacts,
-    transactions: plan.newRows.map((row) => row.parsed),
-    importBatchId: commitKey,
-  });
-  const transactions = [...output.matched, ...output.uncertain, ...output.failed].map((row) =>
-    confirmUnattended(row, mappedType)
-  );
-  const result = await commitImport(db, contacts, {
-    entities: [],
-    changeSets: [],
-    tagRuleChangeSets: [],
-    transactions,
-    commitKey,
-    source: { kind: 'api', provider: 'up', parserVersion: UP_MAPPER_VERSION },
-  });
-  return {
-    imported: result.transactionsImported,
-    failed: result.transactionsFailed,
-    batchId: result.batches?.find((b) => b.accountId === plan.account.id)?.id ?? null,
-    warnings: result.warnings ?? [],
-  };
-}
-
-function settleRows(db: FinanceDb, plan: UpSyncPlan): number {
-  for (const { transactionId, mapped } of plan.settleable) {
-    importsService.settleImportedTransaction(db, transactionId, {
-      date: mapped.parsed.date,
-      amountCents: Math.round(mapped.parsed.amount * 100),
-      rawRow: mapped.parsed.rawRow,
-    });
-  }
-  return plan.settleable.length;
 }
 
 /**
@@ -197,8 +100,13 @@ export async function syncUpAccount(
   const plan = await planUpSync(db, args);
   const commitKey = crypto.randomUUID();
 
-  const imported = await importNewRows(db, contacts, plan, commitKey);
-  const settled = settleRows(db, plan);
+  const imported = await importMappedRows(
+    db,
+    contacts,
+    { accountId: plan.account.id, commitKey },
+    plan.newRows
+  );
+  const settled = settleMappedRows(db, plan.settleable);
   const minted = mintBalanceCheckpoint(db, plan, commitKey, args.asOf ?? today());
   if (minted.checkpoint !== null && imported.batchId !== null) {
     importBatchesService.attachCheckpoint(db, imported.batchId, minted.checkpoint.id);

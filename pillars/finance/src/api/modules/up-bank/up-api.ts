@@ -103,6 +103,8 @@ export interface UpBankClient {
   ping(): Promise<{ customerId: string }>;
   listAccounts(): Promise<UpAccount[]>;
   getAccount(id: string): Promise<UpAccount>;
+  /** One transaction by Up's id, whichever account it sits on; 404 surfaces as {@link UpBankApiError}. */
+  getTransaction(id: string): Promise<UpTransaction>;
   /** Every transaction on the account inside `range`, in Up's own order (newest first). */
   listTransactions(accountId: string, range: UpTransactionRange): Promise<UpTransaction[]>;
 }
@@ -156,6 +158,14 @@ export function createUpBankClient(options: UpBankClientOptions): UpBankClient {
       const body = await getJson(
         `${baseUrl}/accounts/${encodeURIComponent(id)}`,
         z.object({ data: UpAccountSchema })
+      );
+      return body.data;
+    },
+
+    async getTransaction(id) {
+      const body = await getJson(
+        `${baseUrl}/transactions/${encodeURIComponent(id)}`,
+        z.object({ data: UpTransactionSchema })
       );
       return body.data;
     },
