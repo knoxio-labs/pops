@@ -233,6 +233,48 @@ describe('useProposalGeneration — concurrent accept guard', () => {
   });
 });
 
+describe('useProposalGeneration — triggering transaction account (POPS-2872)', () => {
+  it('carries the picked account id, not the bank-dialect label, when the row has one', async () => {
+    analyzeMock.mockResolvedValueOnce(analyzeEnvelope('STARBUCKS'));
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useProposalGeneration(), { wrapper });
+
+    act(() => {
+      void result.current.generateProposal({
+        triggeringTransaction: makeTransaction({
+          account: 'Amex',
+          accountId: 'acc-personal-amex',
+        }),
+        entityId: 'ent-starbucks',
+        entityName: 'Starbucks',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isGeneratingProposal).toBe(false));
+    expect(result.current.proposalTriggeringTransaction?.account).toBe('acc-personal-amex');
+    expect(result.current.proposalTriggeringTransaction?.account).not.toBe('Amex');
+  });
+
+  it('falls back to the bank-dialect label when the row predates the account-step', async () => {
+    analyzeMock.mockResolvedValueOnce(analyzeEnvelope('STARBUCKS'));
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useProposalGeneration(), { wrapper });
+
+    act(() => {
+      void result.current.generateProposal({
+        triggeringTransaction: makeTransaction({ account: 'Amex', accountId: undefined }),
+        entityId: 'ent-starbucks',
+        entityName: 'Starbucks',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isGeneratingProposal).toBe(false));
+    expect(result.current.proposalTriggeringTransaction?.account).toBe('Amex');
+  });
+});
+
 describe('useProposalGeneration — AI confidence threading (CF038/#3655)', () => {
   it('carries the AI-reported confidence into proposalConfidence', async () => {
     analyzeMock.mockResolvedValueOnce(analyzeEnvelope('ALDI', 'contains', 0.35));
