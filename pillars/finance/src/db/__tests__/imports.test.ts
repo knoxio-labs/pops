@@ -180,7 +180,7 @@ describe('insertImportTransaction', () => {
   it('persists the supplied fields and round-trips them, incl. a non-local entity id', () => {
     const row = insertImportTransaction(harness.db, {
       description: 'Espresso',
-      account: 'amex',
+      dialectAccountLabel: 'amex',
       amountCents: -450,
       date: '2026-02-14',
       type: 'purchase',
@@ -203,7 +203,7 @@ describe('insertImportTransaction', () => {
   it('serialises empty tags as a JSON array and defaults rawRow/checksum to null', () => {
     const row = insertImportTransaction(harness.db, {
       description: 'No tags',
-      account: 'amex',
+      dialectAccountLabel: 'amex',
       amountCents: -100,
       date: '2026-02-15',
       type: 'purchase',
@@ -223,7 +223,7 @@ describe('insertImportTransaction', () => {
     // genuinely distinct charges can hash the same. Dedup moved to the commit
     // path, which asks `findExistingChecksums` first.
     const base: Omit<InsertImportTransactionInput, 'description'> = {
-      account: 'amex',
+      dialectAccountLabel: 'amex',
       amountCents: -100,
       date: '2026-02-15',
       type: 'purchase',
@@ -256,7 +256,7 @@ describe('insertImportTransaction', () => {
 
     const row = insertImportTransaction(harness.db, {
       description: 'Espresso',
-      account: 'amex',
+      dialectAccountLabel: 'amex',
       accountId: pickedAccount.id,
       amountCents: -450,
       date: '2026-02-14',
@@ -274,7 +274,7 @@ describe('insertImportTransaction', () => {
   it('falls back to name-matching `account` when no accountId is supplied (legacy caller)', () => {
     const row = insertImportTransaction(harness.db, {
       description: 'Espresso',
-      account: 'amex',
+      dialectAccountLabel: 'amex',
       amountCents: -450,
       date: '2026-02-14',
       type: 'purchase',
@@ -291,7 +291,7 @@ describe('insertImportTransaction', () => {
     expect(() =>
       insertImportTransaction(harness.db, {
         description: 'Espresso',
-        account: 'amex',
+        dialectAccountLabel: 'amex',
         accountId: 'not-a-real-account-id',
         amountCents: -450,
         date: '2026-02-14',
@@ -309,7 +309,7 @@ describe('insertImportTransaction', () => {
       harness.db.transaction(() => {
         insertImportTransaction(harness.db, {
           description: 'rolled back',
-          account: 'amex',
+          dialectAccountLabel: 'amex',
           amountCents: -100,
           date: '2026-02-15',
           type: 'purchase',

@@ -13175,10 +13175,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13206,6 +13202,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13394,7 +13394,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13408,10 +13408,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13439,6 +13435,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13627,7 +13627,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13641,10 +13641,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13672,6 +13668,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13860,7 +13860,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13874,10 +13874,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13905,6 +13901,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -14093,7 +14093,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -14687,10 +14687,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
                         "accountId": {
                           "minLength": 1,
                           "type": "string"
@@ -14718,6 +14714,10 @@
                           "type": "string"
                         },
                         "description": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "dialectAccountLabel": {
                           "minLength": 1,
                           "type": "string"
                         },
@@ -14821,7 +14821,7 @@
                         "date",
                         "description",
                         "amount",
-                        "account",
+                        "dialectAccountLabel",
                         "rawRow",
                         "checksum"
                       ],
@@ -15238,10 +15238,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
                         "accountId": {
                           "minLength": 1,
                           "type": "string"
@@ -15269,6 +15265,10 @@
                           "type": "string"
                         },
                         "description": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "dialectAccountLabel": {
                           "minLength": 1,
                           "type": "string"
                         },
@@ -15301,7 +15301,7 @@
                         "date",
                         "description",
                         "amount",
-                        "account",
+                        "dialectAccountLabel",
                         "rawRow",
                         "checksum"
                       ],
@@ -15514,10 +15514,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -15545,6 +15541,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -15733,7 +15733,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -15747,10 +15747,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -15778,6 +15774,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -15966,7 +15966,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -15980,10 +15980,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16011,6 +16007,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -16199,7 +16199,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -16213,10 +16213,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16244,6 +16240,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -16432,7 +16432,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -16869,10 +16869,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16900,6 +16896,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17088,7 +17088,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17102,10 +17102,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17133,6 +17129,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17321,7 +17321,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17335,10 +17335,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17366,6 +17362,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17554,7 +17554,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17568,10 +17568,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17599,6 +17595,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17787,7 +17787,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",

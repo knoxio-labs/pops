@@ -84,7 +84,7 @@ function parsed(overrides: Record<string, unknown> = {}) {
     date: '2026-02-13',
     description: 'TEST MERCHANT',
     amount: -100,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: `chk-${Math.random().toString(36).slice(2, 12)}`,
     ...overrides,
@@ -96,7 +96,7 @@ function confirmed(overrides: Record<string, unknown> = {}) {
     date: '2026-02-13',
     description: 'CONFIRMED MERCHANT',
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{"line":"x"}',
     checksum: `chk-${Math.random().toString(36).slice(2, 12)}`,
     ...overrides,
@@ -157,7 +157,7 @@ function seedTransaction(overrides: {
 }) {
   importsService.insertImportTransaction(financeDb.db, {
     description: overrides.description,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     amountCents: -4250,
     date: '2026-02-13',
     type: 'purchase',
@@ -722,7 +722,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
         confirmed({
           description: 'COMMIT WITH REAL ACCOUNT',
           checksum: 'commit-accountid',
-          account: 'Amex',
+          dialectAccountLabel: 'Amex',
           accountId: pickedAccount.data.id,
         }),
       ],

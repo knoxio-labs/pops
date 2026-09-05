@@ -51,7 +51,7 @@ function makeTransaction(overrides: Partial<ProcessedTransaction> = {}): Process
     date: '2026-02-06',
     description: 'STARBUCKS STORE 123',
     amount: -8.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{"checksum":"a"}',
     checksum: 'a',
     entity: { matchType: 'none' },
@@ -243,7 +243,7 @@ describe('useProposalGeneration — triggering transaction account (POPS-2872)',
     act(() => {
       void result.current.generateProposal({
         triggeringTransaction: makeTransaction({
-          account: 'Amex',
+          dialectAccountLabel: 'Amex',
           accountId: 'acc-personal-amex',
         }),
         entityId: 'ent-starbucks',
@@ -264,7 +264,10 @@ describe('useProposalGeneration — triggering transaction account (POPS-2872)',
 
     act(() => {
       void result.current.generateProposal({
-        triggeringTransaction: makeTransaction({ account: 'Amex', accountId: undefined }),
+        triggeringTransaction: makeTransaction({
+          dialectAccountLabel: 'Amex',
+          accountId: undefined,
+        }),
         entityId: 'ent-starbucks',
         entityName: 'Starbucks',
       });

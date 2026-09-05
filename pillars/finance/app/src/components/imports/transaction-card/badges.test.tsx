@@ -16,7 +16,7 @@ function makeTx(
     date: '2026-04-01',
     description: 'WOOLWORTHS 1234',
     amount: -12.34,
-    account: 'Everyday',
+    dialectAccountLabel: 'Everyday',
     rawRow: '{}',
     checksum: 'abc',
     location: undefined,

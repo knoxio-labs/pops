@@ -45,7 +45,7 @@ function seedOutboxRow(name: string, type: EntityType = 'company'): string {
 function seedTransactionWithEntity(checksum: string, entityId: string): void {
   importsService.insertImportTransaction(opened.db, {
     description: `TXN ${checksum}`,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     amountCents: -1000,
     date: '2026-02-13',
     type: 'purchase',
@@ -204,7 +204,7 @@ describe('startReconcileContactsOutboxWorker', () => {
           date: '2026-02-13',
           description: 'ACME CORP',
           amount: -20,
-          account: 'Amex',
+          dialectAccountLabel: 'Amex',
           rawRow: '{}',
           checksum: 'e2e-outbox-1',
           entityId: tempId,

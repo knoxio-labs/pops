@@ -206,7 +206,7 @@ describe('categorizeWithAi — PII allowlist (CF008)', () => {
       date: '2026-01-02',
       description: 'WOOLWORTHS METRO 1234',
       amount: 42.5,
-      account: 'Amex',
+      dialectAccountLabel: 'Amex',
       location: 'SYDNEY',
       rawRow: JSON.stringify({
         Date: '02/01/2026',
@@ -238,7 +238,7 @@ describe('categorizeWithAi — PII allowlist (CF008)', () => {
       date: '2026-03-14',
       description: 'ALDI STORES',
       amount: 18.9,
-      account: 'Amex',
+      dialectAccountLabel: 'Amex',
       rawRow: JSON.stringify({
         Description: 'ALDI STORES',
         Amount: '18.90',

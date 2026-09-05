@@ -87,7 +87,7 @@ export function FieldGrid({ transaction }: { transaction: ProcessedTransaction }
             list at dozens of call sites with no QueryClient in scope, and
             ProcessedTransaction carries no accountId yet — left for POPS-2776's
             follow-up ticket (the deferred import-wizard cutover). */}
-        <span className="font-medium">{transaction.account}</span>
+        <span className="font-medium">{transaction.dialectAccountLabel}</span>
       </div>
       {transaction.location && (
         <div className="col-span-2">

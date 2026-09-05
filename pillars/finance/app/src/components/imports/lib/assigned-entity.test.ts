@@ -9,7 +9,7 @@ function row(entity: ProcessedTransaction['entity'] = { matchType: 'none' }): Pr
     date: '2026-06-29',
     description: 'APPLE.COM/BILL',
     amount: -144.99,
-    account: 'ANZ Credit Card',
+    dialectAccountLabel: 'ANZ Credit Card',
     rawRow: '{}',
     checksum: 'apple-1',
     entity,

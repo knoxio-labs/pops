@@ -36,13 +36,13 @@ describe('validateAllRows — account (#3608)', () => {
     const result = validateAllRows([baseRow], columnMap, 'ANZ', 'acc-test');
     expect(result.valid).toBe(true);
     expect(result.parsedTransactions).toHaveLength(1);
-    expect(result.parsedTransactions[0]?.account).toBe('ANZ');
+    expect(result.parsedTransactions[0]?.dialectAccountLabel).toBe('ANZ');
   });
 
   it('threads through every supported bank', () => {
     for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'ING', 'Up'] as const) {
       const result = validateAllRows([baseRow], columnMap, bank, 'acc-test');
-      expect(result.parsedTransactions[0]?.account).toBe(bank);
+      expect(result.parsedTransactions[0]?.dialectAccountLabel).toBe(bank);
     }
   });
 });
