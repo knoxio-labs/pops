@@ -38,9 +38,22 @@ export function AccountsPage() {
   // subtotal until the second query landed.
   const isLoading = state.accounts.isLoading || state.currencies.isLoading;
 
-  if (state.accounts.error) {
+  // A failed `currencies` is as fatal as a failed `accounts`, not a cosmetic
+  // loss: the grid tints, formats and subtotals by currency kind, so
+  // rendering without it prints every points balance as dollars and sums it
+  // into a money subtotal — the same misreading the hold above exists to
+  // prevent, except permanent rather than momentary.
+  const error = state.accounts.error ?? state.currencies.error;
+
+  if (error) {
     return (
-      <ErrorPanel message={state.accounts.error.message} onRetry={() => state.accounts.refetch()} />
+      <ErrorPanel
+        message={error.message}
+        onRetry={() => {
+          void state.accounts.refetch();
+          void state.currencies.refetch();
+        }}
+      />
     );
   }
 

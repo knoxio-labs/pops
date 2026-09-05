@@ -92,14 +92,21 @@ describe('AccountCard', () => {
     expect(screen.queryByText(/as of/)).not.toBeInTheDocument();
   });
 
-  it('keeps a person ledger neutral in tone but adds a direction note', () => {
+  it('reds a person ledger in debt and names the direction the sign cannot carry', () => {
     renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: -5_000 } });
     expect(screen.getByText('you owe')).toBeInTheDocument();
+    expect(screen.getByText('-$50.00').className).toContain('text-destructive');
   });
 
-  it('says a settled-up person ledger is owed to no one', () => {
+  it('greens a person ledger in credit and names its direction too', () => {
     renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: 5_000 } });
     expect(screen.getByText('owed to you')).toBeInTheDocument();
+    expect(screen.getByText('$50.00').className).toContain('text-primary');
+  });
+
+  it('says a person ledger at zero is settled up', () => {
+    renderCard({ kind: 'person', balance: { ...NO_BALANCE, balanceCents: 0 } });
+    expect(screen.getByText('settled up')).toBeInTheDocument();
   });
 
   it('keeps a points balance neutral in tone regardless of sign', () => {

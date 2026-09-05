@@ -30,7 +30,15 @@ function kindThenName(a: Account, b: Account): number {
 
 const COMPARATORS: Record<AccountSort, (a: Account, b: Account) => number> = {
   kind: kindThenName,
-  balance: (a, b) => b.balance.balanceCents - a.balance.balanceCents,
+  // Cents only compare within one currency: AUD against EUR needs a rate that
+  // does not exist here, and points are not money at all — the same refusal
+  // `account-subtotals.ts` makes when it declines to blend a total. So the
+  // currency is the primary key and the balance orders within it, which keeps
+  // a 900,000-point balance from outranking every dollar account on the page.
+  balance: (a, b) =>
+    a.currency === b.currency
+      ? b.balance.balanceCents - a.balance.balanceCents
+      : a.currency.localeCompare(b.currency),
   name: (a, b) => a.name.localeCompare(b.name),
   recent: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
 };

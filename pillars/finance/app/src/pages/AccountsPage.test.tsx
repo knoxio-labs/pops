@@ -147,6 +147,20 @@ describe('AccountsPage', () => {
     expect(await screen.findByText('Everyday')).toBeInTheDocument();
   });
 
+  it('shows the error panel when currencies fail even though accounts loaded', async () => {
+    // Without currencies the grid has no kind, symbol or decimals to format
+    // by, so it would render every points balance as dollars and sum it into
+    // a money subtotal. A failed currencies query is a failed page.
+    mockLists([account({ id: 'a1', name: 'Everyday' })]);
+    currenciesList.mockRejectedValue(new Error('currencies exploded'));
+
+    renderPage();
+
+    expect(await screen.findByText('Failed to load accounts')).toBeInTheDocument();
+    expect(screen.getByText('currencies exploded')).toBeInTheDocument();
+    expect(screen.queryByText('Everyday')).not.toBeInTheDocument();
+  });
+
   it('shows the no-results empty state when a search matches nothing, and clears back to the full list', async () => {
     mockLists([account({ id: 'a1', name: 'Everyday' })]);
     renderPage();

@@ -51,6 +51,25 @@ describe('sortAccounts', () => {
     expect(sortAccounts(accounts, 'balance').map((a) => a.id)).toEqual(['b', 'c', 'a']);
   });
 
+  it('groups by currency before balance, so points never outrank money', () => {
+    const accounts = [
+      account({
+        id: 'points',
+        currency: 'QFF',
+        balance: { ...NO_BALANCE, balanceCents: 90_000_000 },
+      }),
+      account({ id: 'small-aud', balance: { ...NO_BALANCE, balanceCents: 1_000 } }),
+      account({ id: 'big-aud', balance: { ...NO_BALANCE, balanceCents: 10_000 } }),
+      account({ id: 'eur', currency: 'EUR', balance: { ...NO_BALANCE, balanceCents: 50_000 } }),
+    ];
+    expect(sortAccounts(accounts, 'balance').map((a) => a.id)).toEqual([
+      'big-aud',
+      'small-aud',
+      'eur',
+      'points',
+    ]);
+  });
+
   it('orders by most recently updated first', () => {
     const accounts = [
       account({ id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }),
