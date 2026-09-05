@@ -36,7 +36,7 @@ function makeTransaction(description: string): ParsedTransaction {
     date: '2026-01-01',
     description,
     amount: -42,
-    account: 'amex',
+    dialectAccountLabel: 'amex',
     rawRow: description,
     checksum: crypto.randomUUID(),
   };

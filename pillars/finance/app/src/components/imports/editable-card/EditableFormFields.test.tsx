@@ -50,7 +50,7 @@ beforeEach(() => {
 
 describe('EditableFormFields AccountField picker branch', () => {
   it('falls back to a free-text input when the import has no account yet', () => {
-    renderFields({ account: 'Some Bank' });
+    renderFields({ dialectAccountLabel: 'Some Bank' });
 
     expect(screen.getByLabelText('Account')).toHaveValue('Some Bank');
     expect(screen.queryByRole('combobox', { name: 'Account' })).not.toBeInTheDocument();
@@ -65,20 +65,20 @@ describe('EditableFormFields AccountField picker branch', () => {
     // past that, would make `resolveImportAccountId` treat '' as a real id
     // and throw `AccountNotFoundError`.
     const user = userEvent.setup();
-    const { setEditedFields } = renderFields({ account: 'Some Bank' });
+    const { setEditedFields } = renderFields({ dialectAccountLabel: 'Some Bank' });
 
     await user.type(screen.getByLabelText('Account'), 'x');
 
     expect(setEditedFields).toHaveBeenCalled();
     const lastCall = setEditedFields.mock.calls.at(-1)?.[0];
-    expect(lastCall).toMatchObject({ account: 'Some Bankx' });
+    expect(lastCall).toMatchObject({ dialectAccountLabel: 'Some Bankx' });
     expect(lastCall).not.toHaveProperty('accountId', '');
     expect(lastCall.accountId).toBeUndefined();
   });
 
   it('renders the account picker once the import has a real account, pre-selecting a match by name', async () => {
     useImportStore.getState().setAccount('acc-1', 'Everyday');
-    renderFields({ account: 'Everyday' });
+    renderFields({ dialectAccountLabel: 'Everyday' });
 
     const trigger = await screen.findByRole('combobox', { name: 'Account' });
     expect(trigger).toHaveTextContent('Everyday');
@@ -86,7 +86,7 @@ describe('EditableFormFields AccountField picker branch', () => {
 
   it('leaves the picker unselected when the row names an account absent from the list', async () => {
     useImportStore.getState().setAccount('acc-1', 'Everyday');
-    renderFields({ account: 'Some Unknown Bank' });
+    renderFields({ dialectAccountLabel: 'Some Unknown Bank' });
 
     const trigger = await screen.findByRole('combobox', { name: 'Account' });
     expect(trigger).not.toHaveTextContent('Some Unknown Bank');
@@ -95,13 +95,13 @@ describe('EditableFormFields AccountField picker branch', () => {
   it('calls onChange with the picked account name when a selection is made', async () => {
     const user = userEvent.setup();
     useImportStore.getState().setAccount('acc-1', 'Everyday');
-    const { setEditedFields } = renderFields({ account: 'Everyday' });
+    const { setEditedFields } = renderFields({ dialectAccountLabel: 'Everyday' });
 
     await user.click(await screen.findByRole('combobox', { name: 'Account' }));
     await user.click(await screen.findByText('Emergency Fund'));
 
     expect(setEditedFields).toHaveBeenCalledWith(
-      expect.objectContaining({ account: 'Emergency Fund' })
+      expect.objectContaining({ dialectAccountLabel: 'Emergency Fund' })
     );
   });
 
@@ -112,13 +112,16 @@ describe('EditableFormFields AccountField picker branch', () => {
     // directly) silently ignored this edit.
     const user = userEvent.setup();
     useImportStore.getState().setAccount('acc-1', 'Everyday');
-    const { setEditedFields } = renderFields({ account: 'Everyday', accountId: 'acc-1' });
+    const { setEditedFields } = renderFields({
+      dialectAccountLabel: 'Everyday',
+      accountId: 'acc-1',
+    });
 
     await user.click(await screen.findByRole('combobox', { name: 'Account' }));
     await user.click(await screen.findByText('Emergency Fund'));
 
     expect(setEditedFields).toHaveBeenCalledWith(
-      expect.objectContaining({ account: 'Emergency Fund', accountId: 'acc-2' })
+      expect.objectContaining({ dialectAccountLabel: 'Emergency Fund', accountId: 'acc-2' })
     );
   });
 });

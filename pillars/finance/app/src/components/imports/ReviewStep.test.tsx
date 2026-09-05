@@ -333,7 +333,7 @@ function makeTx(description: string, overrides: Record<string, unknown> = {}) {
     date: '2026-01-15',
     description,
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     location: null,
     rawRow: {},
     checksum: `chk-${description}`,
@@ -755,7 +755,7 @@ describe('ReviewStep — AI correction analysis', () => {
     );
     // Verify account is NOT sent to AI
     expect(mockAnalyzeCorrectionMutateAsync).not.toHaveBeenCalledWith(
-      expect.objectContaining({ account: expect.anything() })
+      expect.objectContaining({ dialectAccountLabel: expect.anything() })
     );
   });
 

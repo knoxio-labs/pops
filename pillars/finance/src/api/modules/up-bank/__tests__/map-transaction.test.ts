@@ -81,7 +81,7 @@ describe('toParsedTransaction', () => {
       date: '2026-09-01',
       description: 'Coles',
       amount: -12,
-      account: 'Everyday',
+      dialectAccountLabel: 'Everyday',
       accountId: 'acc-1',
       fxCaptureSource: 'up-api',
       pending: false,

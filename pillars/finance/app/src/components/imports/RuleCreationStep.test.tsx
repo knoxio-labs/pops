@@ -24,7 +24,7 @@ function makeTxn(overrides: Record<string, unknown> = {}) {
     description: 'WOOLWORTHS 1034 SYDNEY',
     date: '2026-01-01',
     amount: -25.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: 'abc',
     entityId: 'entity-woolworths',

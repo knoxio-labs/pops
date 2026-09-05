@@ -116,7 +116,7 @@ describe('UploadStep — ANZ credit-card PDF statements', () => {
     expect(parsedTransactions[0]).toMatchObject({
       description: 'ALDI STORES - MARRICKV',
       amount: -42.1,
-      account: 'ANZ Credit Card',
+      dialectAccountLabel: 'ANZ Credit Card',
     });
   });
 

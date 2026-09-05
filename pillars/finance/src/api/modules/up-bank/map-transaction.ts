@@ -110,7 +110,7 @@ export function toParsedTransaction(
     date: upLocalDate(attributes.settledAt ?? attributes.createdAt),
     description: attributes.description,
     amount: centsToDollars(attributes.amount.valueInBaseUnits),
-    account: target.accountLabel,
+    dialectAccountLabel: target.accountLabel,
     accountId: target.accountId,
     fxCaptureSource: 'up-api',
     ...(foreign !== null

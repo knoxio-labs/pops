@@ -82,7 +82,7 @@ function loanSplitContext(
  * stable across re-imports and never colliding with a real bank checksum.
  */
 export function expandLoanRepaymentRow(db: FinanceDb, columns: Columns): Columns[] {
-  const accountId = resolveImportAccountId(db, columns.account, columns.accountId);
+  const accountId = resolveImportAccountId(db, columns.dialectAccountLabel, columns.accountId);
   const isLoanAccount = accountsService.getAccount(db, accountId).kind === 'loan';
 
   assertNotLoanTypedCredit(columns, isLoanAccount);

@@ -7264,7 +7264,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7274,6 +7273,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7340,7 +7340,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7350,6 +7349,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7416,7 +7416,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7426,6 +7425,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7492,7 +7492,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7502,6 +7501,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7794,7 +7794,6 @@ export interface operations {
             };
           }[];
           transactions: {
-            account: string;
             accountId?: string;
             amount: number;
             balanceCents?: number;
@@ -7804,6 +7803,7 @@ export interface operations {
             country?: string;
             date: string;
             description: string;
+            dialectAccountLabel: string;
             entityId?: string;
             entityName?: string;
             foreignAmountMinor?: number;
@@ -8026,7 +8026,6 @@ export interface operations {
       content: {
         'application/json': {
           transactions: {
-            account: string;
             accountId?: string;
             amount: number;
             balanceCents?: number;
@@ -8036,6 +8035,7 @@ export interface operations {
             country?: string;
             date: string;
             description: string;
+            dialectAccountLabel: string;
             foreignAmountMinor?: number;
             foreignCurrency?: string;
             /** @enum {string} */
@@ -8142,7 +8142,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8152,6 +8151,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8218,7 +8218,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8228,6 +8227,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8294,7 +8294,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8304,6 +8303,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8370,7 +8370,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8380,6 +8379,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8620,7 +8620,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8630,6 +8629,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8696,7 +8696,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8706,6 +8705,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8772,7 +8772,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8782,6 +8781,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8848,7 +8848,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8858,6 +8857,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;

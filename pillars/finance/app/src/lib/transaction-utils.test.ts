@@ -13,7 +13,7 @@ function makeTransaction(
     date: '2026-05-07',
     description,
     amount: -29.41,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum,
     entity: { matchType: 'none' },

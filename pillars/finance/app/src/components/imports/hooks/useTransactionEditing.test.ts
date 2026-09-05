@@ -15,7 +15,7 @@ function makeTransaction(overrides: Partial<ProcessedTransaction> = {}): Process
     date: '2026-02-06',
     description: 'WOOLWORTHS 1234',
     amount: -12.34,
-    account: 'Everyday',
+    dialectAccountLabel: 'Everyday',
     rawRow: '{}',
     checksum: 'abc',
     entity: { matchType: 'learned', confidence: 0.92, entityId: 'ent-1', entityName: 'Woolworths' },

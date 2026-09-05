@@ -66,7 +66,7 @@ function batch(size: number): ParsedTransaction[] {
     date: '2026-01-01',
     description: `UNKNOWN MERCHANT ${i}`,
     amount: -20,
-    account: 'ANZ Credit Card',
+    dialectAccountLabel: 'ANZ Credit Card',
     rawRow: `row-${i}`,
     checksum: `sum-${i}`,
   }));

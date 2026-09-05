@@ -60,9 +60,9 @@ function buildTriggeringContext(transaction: ProcessedTransaction): TriggeringTr
     date: transaction.date,
     // `accountId` (POPS-2840) is the real account picked up front in the
     // account-step; `AccountLabel` resolves it to that account's display
-    // name. Only a pre-account-step caller lacks it, so `account` (the
-    // bank-dialect label, e.g. "Amex") stays as the fallback (POPS-2872).
-    account: transaction.accountId ?? transaction.account,
+    // name. Only a pre-account-step caller lacks it, so `dialectAccountLabel`
+    // (the bank-dialect label, e.g. "Amex") stays as the fallback (POPS-2872).
+    account: transaction.accountId ?? transaction.dialectAccountLabel,
     location: transaction.location ?? null,
     previousEntityName: transaction.entity?.entityName ?? null,
     previousTransactionType: transaction.transactionType ?? null,
