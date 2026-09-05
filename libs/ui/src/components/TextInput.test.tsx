@@ -33,6 +33,44 @@ function ControlledHarness({
   );
 }
 
+describe('TextInput — accessible name', () => {
+  it('resolves the accessible name from the label prop alone', () => {
+    render(<TextInput label="Account name" />);
+
+    expect(screen.getByRole('textbox', { name: 'Account name' })).toBeInTheDocument();
+  });
+
+  it('associates the label with the control via a generated id/htmlFor pair', () => {
+    render(<TextInput label="Account name" />);
+
+    const input = screen.getByRole('textbox', { name: 'Account name' });
+    const label = screen.getByText('Account name');
+    expect(label.tagName).toBe('LABEL');
+    expect(label).toHaveAttribute('for', input.id);
+    expect(input.id).not.toBe('');
+  });
+
+  it('keeps an explicitly passed id authoritative', () => {
+    render(<TextInput id="account-name" label="Account name" />);
+
+    const input = screen.getByRole('textbox', { name: 'Account name' });
+    expect(input).toHaveAttribute('id', 'account-name');
+  });
+
+  it('lets an explicit aria-label override the label prop', () => {
+    render(<TextInput label="Account name" aria-label="Name of account" />);
+
+    expect(screen.getByRole('textbox', { name: 'Name of account' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Account name' })).not.toBeInTheDocument();
+  });
+
+  it('renders with no accessible name when no label is supplied', () => {
+    render(<TextInput placeholder="search" />);
+
+    expect(screen.getByRole('textbox', { name: '' })).toBeInTheDocument();
+  });
+});
+
 describe('TextInput — uncontrolled', () => {
   it('renders the input without a `value` attribute when no `value` prop is supplied', () => {
     render(<TextInput placeholder="search" />);

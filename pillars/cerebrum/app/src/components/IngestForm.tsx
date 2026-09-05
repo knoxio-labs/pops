@@ -119,7 +119,6 @@ function IngestFormFields({
         value={model.form.title}
         onChange={(e) => model.updateField('title', e.target.value)}
         placeholder={t('ingest.titlePlaceholder')}
-        aria-label={t('ingest.title.label')}
       />
       <BodyEditor
         value={model.form.body}

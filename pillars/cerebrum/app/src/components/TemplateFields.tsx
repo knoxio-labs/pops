@@ -43,7 +43,6 @@ function StringField({
       placeholder={def.description}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
-      aria-label={name}
       aria-required={required}
     />
   );
