@@ -41,9 +41,9 @@ function currencyFormat(
 }
 
 /**
- * `/accounts/:id` — the account dashboard (POPS-2805). Header, an honestly
- * empty balance card (POPS-2750 has not shipped a real one), an empty module
- * grid (POPS-2807's seam, not this ticket's scope) and recent transactions.
+ * `/accounts/:id` — the account dashboard (POPS-2805). Header, the balance
+ * card and its twelve-month trend (POPS-2887), an empty module grid
+ * (POPS-2807's seam) and recent transactions.
  */
 export function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +75,7 @@ export function AccountDetailPage() {
         onEdit={() => state.handleEdit(account)}
         onAddTransaction={addTransaction.openDialog}
       />
-      <BalanceCard account={account} />
+      <BalanceCard account={account} currency={currencyFormat(state.currency)} />
       <ModuleGrid kind={account.kind} />
       <RecentTransactionsSection accountId={accountId} currency={currencyFormat(state.currency)} />
       <AccountFormDialog

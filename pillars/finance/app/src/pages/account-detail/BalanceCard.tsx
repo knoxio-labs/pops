@@ -1,41 +1,96 @@
-import { getAccountKindBehaviour } from '@pops/finance';
-import { Card, CardContent } from '@pops/ui';
+import { TriangleAlert } from 'lucide-react';
+import { Link } from 'react-router';
+
+import { centsToDollars, formatBalance, type CurrencyFormat } from '@pops/finance';
+import { Badge, balanceTone, Card, CardContent, cn, Sparkline } from '@pops/ui';
+
+import { balanceCaption, provenanceLine, trendLine } from './balance-card-copy';
+import { useBalanceHistory } from './useBalanceHistory';
 
 import type { Account } from '../accounts/types';
 
 /**
- * What is true about this kind's balance today, with no number attached.
- * `hasExternalBalance` and `isStoredValue` are the same fields POPS-2750 will
- * checkpoint against — this text names the reason there is nothing here yet
- * without guessing at when that lands.
+ * The one place an inconsistency is announced next to the number itself.
+ * Destructive regardless of the account's own tone — a liability already reads
+ * red when it owes money, so this differs in SHAPE (an icon and a claim), not
+ * colour, or it would vanish against the balance it is warning about.
  */
-function provenanceLine(account: Account): string {
-  const behaviour = getAccountKindBehaviour(account.kind);
-  if (behaviour.isStoredValue) {
-    return "Balance tracking isn't wired up yet — this will track the stored value directly (POPS-2750).";
-  }
-  if (behaviour.hasExternalBalance) {
-    return "Balance tracking isn't wired up yet — this will check against your statements (POPS-2750).";
-  }
-  return 'No external balance to check against; a future balance here would be derived from transactions (POPS-2750).';
+function InconsistencyBadge() {
+  return (
+    <Badge variant="destructive" className="gap-1 font-normal">
+      <TriangleAlert className="h-3 w-3" aria-hidden />
+      Disagrees with a checkpoint
+    </Badge>
+  );
+}
+
+function BalanceTrend({
+  accountId,
+  currency,
+  tone,
+}: {
+  accountId: string;
+  currency: CurrencyFormat;
+  tone: string;
+}) {
+  const history = useBalanceHistory(accountId);
+  const points = history.data?.data ?? [];
+  // One reading is not a trend. Nothing is drawn rather than a flat line or a
+  // placeholder, which would be a claim the data does not support.
+  if (points.length < 2) return null;
+
+  return (
+    <div className="space-y-1">
+      <Sparkline
+        points={points.map((point) => ({ label: point.month, value: point.balanceCents }))}
+        className={tone}
+        label={`Balance over ${points.length} months`}
+      />
+      <p className="text-xs text-muted-foreground">
+        {trendLine(points, (cents) => formatBalance(centsToDollars(cents), currency))}
+      </p>
+    </div>
+  );
 }
 
 /**
- * The balance card, honestly empty. The real `accounts` wire schema carries
- * no balance field (POPS-2750 is still Backlog) — summing this account's
- * transactions would give net flow, not balance, and a confidently wrong
- * number is worse than none, so this renders no figure and no trend rather
- * than fabricate either client-side. Once POPS-2750 ships a checkpoint, this
- * is where the signed headline number and its 12-month trend land — see the
- * design reference (`pillars/design/src/kit/account-dashboard.tsx`).
+ * The account's balance, signed in its own terms: a card that owes reads
+ * `-$2,137.55` in red, because nothing negates a balance before showing it
+ * (ADR-051).
+ *
+ * This is the only thing on the account page that knows checkpoints exist, and
+ * it shows their RESULT — an as-of date, a disagreement flag — then links out.
+ * It never lists or edits them; that is the checkpoints page's job.
  */
-export function BalanceCard({ account }: { account: Account }) {
+export function BalanceCard({ account, currency }: { account: Account; currency: CurrencyFormat }) {
+  const { balance } = account;
+  const tone = balanceTone(balance.balanceCents, currency.kind);
+
   return (
     <Card>
-      <CardContent className="space-y-1 pt-6">
-        <p className="text-xs tracking-wide text-muted-foreground uppercase">Balance</p>
-        <p className="text-2xl font-semibold text-muted-foreground">Not tracked yet</p>
-        <p className="text-xs text-muted-foreground">{provenanceLine(account)}</p>
+      <CardContent className="grid gap-6 pt-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs tracking-wide text-muted-foreground uppercase">
+              {balanceCaption(account)}
+            </p>
+            {balance.inconsistent && <InconsistencyBadge />}
+          </div>
+          <p className={cn('text-4xl font-semibold tabular-nums', tone)}>
+            {formatBalance(centsToDollars(balance.balanceCents), currency)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {provenanceLine(account, balance)}
+            {' · '}
+            <Link
+              to={`/accounts/${account.id}/checkpoints`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Checkpoints
+            </Link>
+          </p>
+        </div>
+        <BalanceTrend accountId={account.id} currency={currency} tone={tone} />
       </CardContent>
     </Card>
   );
