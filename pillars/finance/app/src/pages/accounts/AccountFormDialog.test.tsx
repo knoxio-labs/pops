@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AccountDetailPage } from '../AccountDetailPage';
 import { AccountsPage } from '../AccountsPage';
 
 import type { Account } from './types';
@@ -13,6 +14,8 @@ const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
+const transactionsList = vi.fn();
+const entitiesList = vi.fn();
 const loanWriteTerms = vi.fn();
 const loanGetTerms = vi.fn();
 const loanListRateHistory = vi.fn();
@@ -26,6 +29,8 @@ vi.mock('../../finance-api/index.js', () => ({
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
+  transactionsList: (...args: unknown[]) => transactionsList(...args),
+  transactionsAvailableTags: vi.fn(),
   institutionsCreate: vi.fn(),
   giftCardDetailsGet: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
@@ -37,6 +42,10 @@ vi.mock('../../finance-api/index.js', () => ({
   loanListOffsetLinks: (...args: unknown[]) => loanListOffsetLinks(...args),
   loanLinkOffsetAccount: (...args: unknown[]) => loanLinkOffsetAccount(...args),
   loanUnlinkOffsetAccount: (...args: unknown[]) => loanUnlinkOffsetAccount(...args),
+}));
+
+vi.mock('../../contacts-api/index.js', () => ({
+  entitiesList: (...args: unknown[]) => entitiesList(...args),
 }));
 
 function account(overrides: Partial<Account>): Account {
@@ -84,6 +93,48 @@ function renderPage(accounts: Account[]) {
       </MemoryRouter>
     </QueryClientProvider>
   );
+}
+
+/**
+ * The edit dialog moved off the accounts list onto the account detail page
+ * (POPS-2805) — this renders that page directly at the target account's id,
+ * with the transactions/entities queries its "Add transaction" action and
+ * recent-transactions section always fire stubbed to empty, since none of
+ * the edit-dialog tests below care about either.
+ */
+function renderDetailPage(accounts: Account[], id: string) {
+  accountsList.mockResolvedValue({
+    data: {
+      data: accounts,
+      pagination: { total: accounts.length, limit: 500, offset: 0, hasMore: false },
+    },
+    error: undefined,
+  });
+  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
+  currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
+  transactionsList.mockResolvedValue({
+    data: { data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } },
+    error: undefined,
+  });
+  entitiesList.mockResolvedValue({
+    data: { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } },
+    error: undefined,
+  });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[`/finance/accounts/${id}`]}>
+        <Routes>
+          <Route path="/finance/accounts/:id" element={<AccountDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+async function openEditDialog() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit account' }));
+  return within(screen.getByRole('dialog'));
 }
 
 async function openCreateDialog() {
@@ -233,10 +284,10 @@ describe('AccountFormDialog — edit', () => {
       data: { data: account({ id: 'a1', name: 'Renamed' }), message: 'Account updated' },
       error: undefined,
     });
-    renderPage([account({ id: 'a1', name: 'Everyday' })]);
+    renderDetailPage([account({ id: 'a1', name: 'Everyday' })], 'a1');
 
-    await userEvent.click(await screen.findByText('Everyday'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Everyday');
+    const dialog = await openEditDialog();
     expect(dialog.getByDisplayValue('Everyday')).toBeInTheDocument();
 
     await userEvent.clear(dialog.getByPlaceholderText('Everyday'));
@@ -281,10 +332,10 @@ describe('AccountFormDialog — edit', () => {
       },
       error: undefined,
     });
-    renderPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })]);
+    renderDetailPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })], 'loan-1');
 
-    await userEvent.click(await screen.findByText('Home loan'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
 
     expect(await dialog.findByLabelText('Original principal')).toHaveValue(500_000);
     expect(dialog.getByLabelText('Annual rate')).toHaveValue(6.24);
@@ -346,10 +397,10 @@ describe('AccountFormDialog — edit', () => {
     // ('2026-01-01') is earlier than the rate history's latest ('2026-07-01').
     // If the fix regresses and this gets called anyway, the update fails.
     loanWriteTerms.mockRejectedValue(new Error('terms effective from is not the latest'));
-    renderPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })]);
+    renderDetailPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })], 'loan-1');
 
-    await userEvent.click(await screen.findByText('Home loan'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
     await dialog.findByLabelText('Original principal');
 
     await userEvent.clear(dialog.getByPlaceholderText('Everyday'));
@@ -401,13 +452,16 @@ describe('AccountFormDialog — edit', () => {
       },
       error: undefined,
     });
-    renderPage([
-      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
-      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
-    ]);
+    renderDetailPage(
+      [
+        account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+        account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+      ],
+      'loan-1'
+    );
 
-    await userEvent.click(await screen.findByText('Home loan'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
 
     expect(await dialog.findByText('Closed')).toBeInTheDocument();
     const unlinkButton = await dialog.findByRole('button', { name: 'Unlink' });
@@ -440,13 +494,16 @@ describe('AccountFormDialog — edit', () => {
       error: undefined,
     });
     loanUnlinkOffsetAccount.mockRejectedValue(new Error('offset link is already closed'));
-    renderPage([
-      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
-      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
-    ]);
+    renderDetailPage(
+      [
+        account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+        account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+      ],
+      'loan-1'
+    );
 
-    await userEvent.click(await screen.findByText('Home loan'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
     await userEvent.click(await dialog.findByRole('button', { name: 'Unlink' }));
 
     expect(await dialog.findByText('offset link is already closed')).toBeInTheDocument();
@@ -470,13 +527,16 @@ describe('AccountFormDialog — edit', () => {
       },
       error: undefined,
     });
-    renderPage([
-      account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
-      account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
-    ]);
+    renderDetailPage(
+      [
+        account({ id: 'loan-1', name: 'Home loan', kind: 'loan' }),
+        account({ id: 'checking-1', name: 'Everyday', kind: 'checking' }),
+      ],
+      'loan-1'
+    );
 
-    await userEvent.click(await screen.findByText('Home loan'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
     await userEvent.click(await dialog.findByRole('button', { name: 'Link offset account' }));
     await userEvent.click(dialog.getByRole('combobox', { name: 'Offset account' }));
 
@@ -502,10 +562,10 @@ describe('AccountFormDialog — edit', () => {
       data: { data: account({ id: 'a1', archivedAt: '2026-02-01T00:00:00.000Z' }), message: '' },
       error: undefined,
     });
-    renderPage([account({ id: 'a1', name: 'Everyday', archivedAt: null })]);
+    renderDetailPage([account({ id: 'a1', name: 'Everyday', archivedAt: null })], 'a1');
 
-    await userEvent.click(await screen.findByText('Everyday'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Everyday');
+    const dialog = await openEditDialog();
     expect(dialog.queryByText(/Archived, not deleted/)).not.toBeInTheDocument();
 
     await userEvent.click(dialog.getByRole('button', { name: 'Archive account' }));
@@ -523,13 +583,13 @@ describe('AccountFormDialog — edit', () => {
       data: { data: account({ id: 'a1', archivedAt: null }), message: '' },
       error: undefined,
     });
-    renderPage([
-      account({ id: 'a1', name: 'Old savings', archivedAt: '2026-01-01T00:00:00.000Z' }),
-    ]);
+    renderDetailPage(
+      [account({ id: 'a1', name: 'Old savings', archivedAt: '2026-01-01T00:00:00.000Z' })],
+      'a1'
+    );
 
-    await userEvent.click(await screen.findByRole('button', { name: /Show 1 archived/ }));
-    await userEvent.click(await screen.findByText('Old savings'));
-    const dialog = within(screen.getByRole('dialog'));
+    await screen.findByText('Old savings');
+    const dialog = await openEditDialog();
     expect(dialog.getByText(/Archived, not deleted/)).toBeInTheDocument();
 
     await userEvent.click(dialog.getByRole('button', { name: 'Unarchive account' }));

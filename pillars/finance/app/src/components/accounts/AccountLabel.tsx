@@ -1,4 +1,6 @@
-import { AccountChip } from '@pops/ui';
+import { Link } from 'react-router';
+
+import { AccountChip, cn } from '@pops/ui';
 
 import { resolveAccountOption } from './resolveAccountOption';
 
@@ -17,6 +19,11 @@ export interface AccountLabelProps {
  * accounts list. Falls back to the plain string while accounts are still
  * loading, or when nothing resolves — a renamed or otherwise unresolvable
  * historical account.
+ *
+ * A resolved chip is a link to that account's dashboard (POPS-2805) — the
+ * one place this resolution happens, so every caller (the import review
+ * panel, recent transactions, the rule preview) gets "reachable from every
+ * chip" for free rather than wiring navigation itself.
  */
 export function AccountLabel({
   accounts,
@@ -26,5 +33,15 @@ export function AccountLabel({
 }: AccountLabelProps) {
   const resolved = resolveAccountOption(accounts, account);
   if (!resolved) return <span className={className}>{account}</span>;
-  return <AccountChip account={resolved} size={size} className={className} />;
+  return (
+    <Link
+      to={`/finance/accounts/${resolved.id}`}
+      className={cn(
+        'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className
+      )}
+    >
+      <AccountChip account={resolved} size={size} />
+    </Link>
+  );
 }

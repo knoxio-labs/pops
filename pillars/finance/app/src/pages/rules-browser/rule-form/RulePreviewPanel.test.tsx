@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RulePreviewPanel } from './RulePreviewPanel';
@@ -35,7 +36,11 @@ function makeResult(matches: RulePreviewMatch[]): RulePreviewResult {
 function renderPanel(data: RulePreviewResult | undefined) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(QueryClientProvider, { client: queryClient }, children);
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(MemoryRouter, null, children)
+    );
   return render(
     <RulePreviewPanel
       preview={{

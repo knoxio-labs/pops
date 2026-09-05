@@ -13,8 +13,10 @@ import { DeleteTransactionDialog } from './transactions/DeleteTransactionDialog'
 import { PurchaseDetailDialog } from './transactions/purchase-detail/PurchaseDetailDialog';
 import { usePurchaseLinkSummaries } from './transactions/purchase-link/usePurchaseLinkSummaries';
 import { TransactionFormDialog } from './transactions/TransactionFormDialog';
+import { useInitialAccountFilter } from './transactions/useInitialAccountFilter';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
 
+import type { ColumnFiltersState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
 import type { AccountOption } from '@pops/ui';
@@ -41,12 +43,14 @@ function TableContent({
   columns,
   accounts,
   onFilteredCountChange,
+  initialColumnFilters,
 }: {
   isLoading: boolean;
   transactions: Transaction[] | undefined;
   columns: ReturnType<typeof buildColumns>;
   accounts: AccountOption[];
   onFilteredCountChange: (count: number) => void;
+  initialColumnFilters: ColumnFiltersState;
 }) {
   const { t } = useTranslation('finance');
   if (isLoading) {
@@ -69,6 +73,7 @@ function TableContent({
       defaultPageSize={50}
       filters={buildTransactionFilters(t, accounts)}
       onFilteredCountChange={onFilteredCountChange}
+      initialColumnFilters={initialColumnFilters}
     />
   );
 }
@@ -159,6 +164,7 @@ export function TransactionsPage() {
   const [purchaseTx, setPurchaseTx] = useState<Transaction | null>(null);
   const purchaseLinks = usePurchaseLinkSummaries(state.query.data?.data);
   const columns = useTransactionColumns(t, state, purchaseLinks, setPurchaseTx);
+  const initialColumnFilters = useInitialAccountFilter();
 
   if (state.query.error) {
     return <ErrorView message={state.query.error.message} onRetry={() => state.query.refetch()} />;
@@ -181,6 +187,7 @@ export function TransactionsPage() {
         columns={columns}
         accounts={state.accounts}
         onFilteredCountChange={setFilteredCount}
+        initialColumnFilters={initialColumnFilters}
       />
       <TransactionFormDialog
         open={state.isDialogOpen}
