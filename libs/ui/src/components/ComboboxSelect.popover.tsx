@@ -82,6 +82,9 @@ export interface ComboboxPopoverProps {
   emptyMessage: string;
   className?: string;
   onToggle: (v: string) => void;
+  id?: string;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
 }
 
 export function ComboboxPopover({
@@ -98,15 +101,21 @@ export function ComboboxPopover({
   emptyMessage,
   className,
   onToggle,
+  id,
+  ariaLabel,
+  ariaLabelledBy,
 }: ComboboxPopoverProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant={variant}
           size={size}
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           disabled={disabled}
           className={cn('justify-between', className)}
         >
