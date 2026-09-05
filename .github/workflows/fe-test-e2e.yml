@@ -81,26 +81,18 @@ jobs:
         timeout-minutes: 15
         run: |
           cd pillars/shell
-          for attempt in 1 2 3; do
-            if timeout 300 npx playwright install --with-deps; then exit 0; fi
-            echo "::warning::playwright install --with-deps attempt ${attempt} failed or stalled; retrying"
-            sleep $((attempt * 45))
-          done
-          echo "::error::playwright install --with-deps failed after 3 bounded attempts; a slow mirror or a dpkg lock held by another process are the usual causes"
-          exit 1
+          node ../../scripts/ci/playwright-install-retry.mjs \
+            --label "playwright install --with-deps" \
+            -- npx playwright install --with-deps
 
       - name: Install Playwright system dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         timeout-minutes: 15
         run: |
           cd pillars/shell
-          for attempt in 1 2 3; do
-            if timeout 300 npx playwright install-deps; then exit 0; fi
-            echo "::warning::playwright install-deps attempt ${attempt} failed or stalled; retrying"
-            sleep $((attempt * 45))
-          done
-          echo "::error::playwright install-deps failed after 3 bounded attempts; a slow mirror or a dpkg lock held by another process are the usual causes"
-          exit 1
+          node ../../scripts/ci/playwright-install-retry.mjs \
+            --label "playwright install-deps" \
+            -- npx playwright install-deps
 
       - name: Run Playwright tests
         run: |
