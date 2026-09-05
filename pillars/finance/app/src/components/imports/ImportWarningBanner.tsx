@@ -2,7 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 
 import { cn } from '@pops/ui';
 
-import { importWarningTitle } from './import-warnings';
+import { describesUncategorizedTransactions, importWarningTitle } from './import-warnings';
 
 import type { ImportWarning } from '@pops/finance';
 
@@ -31,7 +31,7 @@ export function ImportWarningBanner({
           <p className="font-medium">{importWarningTitle(warning.type)}</p>
           <p className="text-xs">{warning.message}</p>
           {warning.details && <p className="text-xs opacity-70 font-mono">{warning.details}</p>}
-          {warning.affectedCount && (
+          {warning.affectedCount && describesUncategorizedTransactions(warning.type) && (
             <p className="text-xs opacity-80">
               {warning.affectedCount} transaction
               {warning.affectedCount !== 1 ? 's' : ''} could not be automatically categorized

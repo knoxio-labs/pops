@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { isBlockingImportWarning } from './import-warnings';
 import { ImportWarningBanner } from './ImportWarningBanner';
 import { ReviewWarnings } from './review/ReviewWarnings';
 
@@ -73,6 +74,38 @@ describe('ImportWarningBanner', () => {
         '1 transaction could not be automatically categorized and may appear in the Uncertain or Failed tabs.'
       )
     ).toBeInTheDocument();
+  });
+
+  describe('CHECKPOINT_MISMATCH (POPS-2882)', () => {
+    function mismatch(overrides: Partial<ImportWarning> = {}): ImportWarning {
+      return {
+        type: 'CHECKPOINT_MISMATCH',
+        message: "Ledger disagrees with ANZ Credit Card's statement closing balance",
+        affectedCount: 1,
+        details: 'expected -1500c, statement says -4000c (Δ -2500c)',
+        ...overrides,
+      };
+    }
+
+    it('titles it Checkpoint Mismatch and renders its message and details', () => {
+      render(<ImportWarningBanner warning={mismatch()} affectedHint="." />);
+      expect(screen.getByText('Checkpoint Mismatch')).toBeInTheDocument();
+      expect(
+        screen.getByText("Ledger disagrees with ANZ Credit Card's statement closing balance")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('expected -1500c, statement says -4000c (Δ -2500c)')
+      ).toBeInTheDocument();
+    });
+
+    it('does not render the AI categorization copy despite carrying affectedCount', () => {
+      render(<ImportWarningBanner warning={mismatch()} affectedHint="." />);
+      expect(screen.queryByText(/could not be automatically categorized/)).not.toBeInTheDocument();
+    });
+
+    it('is non-blocking', () => {
+      expect(isBlockingImportWarning(mismatch())).toBe(false);
+    });
   });
 });
 

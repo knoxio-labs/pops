@@ -86,6 +86,8 @@ function parsedFields(t: ProcessedTransaction): ParsedTransaction {
     foreignCurrency: t.foreignCurrency,
     fxFeeCents: t.fxFeeCents,
     fxCaptureSource: t.fxCaptureSource,
+    balanceCents: t.balanceCents,
+    balanceMarker: t.balanceMarker,
     rawRow: t.rawRow,
     checksum: t.checksum,
   };

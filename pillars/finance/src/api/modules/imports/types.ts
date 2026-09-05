@@ -11,6 +11,7 @@ import type { CorrectionRow } from '../corrections/index.js';
 
 export type {
   AiUsageStats,
+  CommitCheckpoint,
   CommitPayload,
   CommitResult,
   ConfirmedTransaction,

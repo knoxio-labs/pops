@@ -4527,6 +4527,8 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -4591,6 +4593,8 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -4655,6 +4659,8 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -4719,6 +4725,8 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -4783,7 +4791,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         affectedCount?: number;
         details?: string;
         message: string;
-        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
       }>;
     };
   };
@@ -4912,6 +4920,8 @@ export type ImportsCommitImportData = {
       account: string;
       accountId?: string;
       amount: number;
+      balanceCents?: number;
+      balanceMarker?: 'CR' | 'DR';
       checksum: string;
       country?: string;
       date: string;
@@ -4986,6 +4996,10 @@ export type ImportsCommitImportResponses = {
    */
   200: {
     data: {
+      checkpoint?: {
+        deltaCents: number;
+        id: string;
+      };
       entitiesCreated: number;
       failedDetails: Array<{
         checksum: string | null;
@@ -5001,6 +5015,12 @@ export type ImportsCommitImportResponses = {
       tagRulesApplied: number;
       transactionsFailed: number;
       transactionsImported: number;
+      warnings?: Array<{
+        affectedCount?: number;
+        details?: string;
+        message: string;
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
+      }>;
     };
     message: string;
   };
@@ -5073,6 +5093,8 @@ export type ImportsProcessImportData = {
       account: string;
       accountId?: string;
       amount: number;
+      balanceCents?: number;
+      balanceMarker?: 'CR' | 'DR';
       checksum: string;
       country?: string;
       date: string;
@@ -5200,6 +5222,8 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5264,6 +5288,8 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5328,6 +5354,8 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5392,6 +5420,8 @@ export type ImportsGetImportProgressResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5456,7 +5486,7 @@ export type ImportsGetImportProgressResponses = {
         affectedCount?: number;
         details?: string;
         message: string;
-        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
       }>;
     };
     sessionId: string;
@@ -5606,6 +5636,8 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5670,6 +5702,8 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5734,6 +5768,8 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5798,6 +5834,8 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         account: string;
         accountId?: string;
         amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
         checksum: string;
         country?: string;
         date: string;
@@ -5862,7 +5900,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         affectedCount?: number;
         details?: string;
         message: string;
-        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
       }>;
     };
   };

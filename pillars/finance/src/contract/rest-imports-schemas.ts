@@ -47,6 +47,15 @@ export const ParsedTransactionSchema = z.object({
    * absent only from a client that predates the field.
    */
   fxCaptureSource: z.enum(FX_CAPTURE_SOURCES).optional(),
+  /**
+   * The running balance printed on this row, in cents and UNSIGNED (POPS-2882).
+   * Set only by a parser that reads one off the source file (currently the ANZ
+   * PDF statement importer); ledger-signing it happens at commit, once the
+   * account's `kind` is known.
+   */
+  balanceCents: z.number().int().optional(),
+  /** The printed balance's own `CR`/`DR` suffix, when the source states one. */
+  balanceMarker: z.enum(['CR', 'DR']).optional(),
   rawRow: z.string(),
   checksum: z.string(),
 });
@@ -111,7 +120,13 @@ export const ConfirmedTransactionSchema = ParsedTransactionSchema.extend({
 });
 
 export const ImportWarningSchema = z.object({
-  type: z.enum(['AI_CATEGORIZATION_UNAVAILABLE', 'AI_API_ERROR']),
+  /**
+   * `CHECKPOINT_MISMATCH` (POPS-2882): the checkpoint this commit minted from
+   * the source file's own closing balance disagrees with what the ledger
+   * predicted. Non-blocking — the import is right, the ledger is short — and
+   * carries `details` naming expected, actual and delta.
+   */
+  type: z.enum(['AI_CATEGORIZATION_UNAVAILABLE', 'AI_API_ERROR', 'CHECKPOINT_MISMATCH']),
   message: z.string(),
   affectedCount: z.number().optional(),
   details: z.string().optional(),
@@ -208,6 +223,13 @@ export const FailedTransactionDetailSchema = z.object({
   error: z.string(),
 });
 
+/** The checkpoint minted from this commit's closing balance, if any (POPS-2882). */
+export const CommitCheckpointSchema = z.object({
+  id: z.string(),
+  /** `checkpoint.balanceCents - expectedBalanceCents`; zero means agreement. */
+  deltaCents: z.number().int(),
+});
+
 export const CommitResultSchema = z.object({
   entitiesCreated: z.number().int().nonnegative(),
   rulesApplied: RulesAppliedSchema,
@@ -216,6 +238,10 @@ export const CommitResultSchema = z.object({
   transactionsFailed: z.number().int().nonnegative(),
   failedDetails: z.array(FailedTransactionDetailSchema),
   retroactiveReclassifications: z.number().int().nonnegative(),
+  /** Non-blocking commit-time findings — currently only `CHECKPOINT_MISMATCH`. */
+  warnings: z.array(ImportWarningSchema).optional(),
+  /** The account checkpoint this commit minted from a source file's closing balance, if any. */
+  checkpoint: CommitCheckpointSchema.optional(),
 });
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({
@@ -260,4 +286,5 @@ export type PendingEntity = z.infer<typeof PendingEntitySchema>;
 export type CommitTagRuleChangeSet = z.infer<typeof CommitTagRuleChangeSetSchema>;
 export type CommitPayload = z.infer<typeof CommitPayloadSchema>;
 export type CommitResult = z.infer<typeof CommitResultSchema>;
+export type CommitCheckpoint = z.infer<typeof CommitCheckpointSchema>;
 export type FailedTransactionDetail = z.infer<typeof FailedTransactionDetailSchema>;

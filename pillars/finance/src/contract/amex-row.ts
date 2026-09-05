@@ -17,6 +17,10 @@
  * currency — Amex states the MERCHANT's country, which is the better datum and
  * not always the currency's: the sample foreign charge is a Singapore merchant
  * billing USD.
+ *
+ * Neither export shape carries a running balance column (POPS-2882): the ANZ
+ * PDF statement importer captures one because ANZ prints it on every row, but
+ * nothing here reads one, because Amex's CSV export states none to read.
  */
 import { foreignChargeFromParts, type AnzForeignCharge } from './anz-description.js';
 

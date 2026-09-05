@@ -208,6 +208,8 @@ const PARSED_KEYS = {
   foreignCurrency: true,
   fxFeeCents: true,
   fxCaptureSource: true,
+  balanceCents: true,
+  balanceMarker: true,
   rawRow: true,
   checksum: true,
 } satisfies Record<keyof ParsedTransaction, true>;
@@ -222,6 +224,8 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
       foreignCurrency: 'USD',
       fxFeeCents: 503,
       fxCaptureSource: 'anz-descriptor',
+      balanceCents: 64_080,
+      balanceMarker: 'CR',
     });
 
     const [confirmed] = buildConfirmedTransactions([row]);
