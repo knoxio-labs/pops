@@ -18,6 +18,17 @@ name: E2E Tests
 # surfaces in the merge queue where it ejects the whole batch. `pillars/**` and
 # `libs/**` are the two roots the build step's `--filter` expressions resolve
 # to; the root configs are what `tsc -b` reads underneath them.
+#
+# `pillars/design` is carved back out of that closure. The playground mounts
+# no app bundle into the shell and no spec here routes at a `/design-api`
+# path, so nothing it contains can change a Playwright outcome — it is only
+# in the closure at all because the build step's `./pillars/*` filter builds
+# every workspace package. A design PR that broke that build would still be
+# caught: `Unit Quality` filters on `pillars/**` with no such exclusion and
+# builds the same package, and `merge_group` below takes no `paths` filter,
+# so the queue runs this lane against the design change regardless.
+# `ci-gate.yml`'s PATH_FILTERS mirror carries the same exclusion, and
+# `scripts/ci/check-ci-gate-wiring.mjs` fails if the two drift.
 on:
   push:
     branches: [main]
@@ -30,6 +41,7 @@ on:
       - "tsconfig.base.json"
       - "tsconfig.build.json"
       - ".github/workflows/fe-test-e2e.yml"
+      - "!pillars/design/**"
   merge_group:
   workflow_dispatch:
 

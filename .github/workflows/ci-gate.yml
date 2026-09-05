@@ -287,15 +287,18 @@ jobs:
                 "pnpm-workspace.yaml",
                 "tsconfig.base.json",
                 "tsconfig.build.json",
-                ".github/workflows/fe-test-e2e.yml"
+                ".github/workflows/fe-test-e2e.yml",
+                "!pillars/design/**"
               ]
             };
 
             // A GitHub Actions `paths:` glob, restricted to what this repo's
             // workflows actually use: literal segments, `*` within a segment,
             // and `**` spanning segments. Not a general glob implementation —
-            // `?`, `[...]` and a leading `!` negation are unsupported because
-            // no gated workflow's `pull_request.paths` uses them.
+            // `?` and `[...]` are unsupported because no gated workflow's
+            // `pull_request.paths` uses them. A leading `!` is NOT handled
+            // here: it is a property of the pattern LIST, stripped by
+            // `matchesPathFilter` before a pattern reaches this function.
             function escapeGlobLiteral(char) {
               return /[.*+?^${}()|[\]\\]/u.test(char) ? `\\${char}` : char;
             }
@@ -324,12 +327,31 @@ jobs:
             // `files`? `true` when `name` carries no filter at all (always
             // expected). `null` when `files` is unknown — a caller must not
             // read that as "no match".
+            //
+            // A pattern prefixed with `!` is an EXCLUSION, matching GitHub's
+            // own `paths:` semantics: the list is walked in order and the LAST
+            // pattern that matches a file decides whether that file is
+            // selected. So a file selected by an earlier positive pattern is
+            // dropped by a later `!` one, and re-selected by a positive
+            // pattern later still. A file no positive pattern ever matched is
+            // never selected, which makes a filter of only exclusions select
+            // nothing at all — the same as GitHub, where a negation removes
+            // from a selection rather than creating one.
             function matchesPathFilter(name, files) {
               const patterns = PATH_FILTERS[name];
               if (!patterns) return true;
               if (files === null) return null;
-              const regexes = patterns.map(globToRegExp);
-              return files.some((file) => regexes.some((re) => re.test(file)));
+              const compiled = patterns.map((pattern) => {
+                const excluded = pattern.startsWith("!");
+                return { excluded, re: globToRegExp(excluded ? pattern.slice(1) : pattern) };
+              });
+              return files.some((file) => {
+                let selected = false;
+                for (const { excluded, re } of compiled) {
+                  if (re.test(file)) selected = !excluded;
+                }
+                return selected;
+              });
             }
 
             // Test-only seam: `scripts/ci/__tests__/ci-gate-path-filters.test.ts`
