@@ -47,6 +47,7 @@ export interface Transaction extends ForeignChargeFields {
 export interface TransactionSnapshot extends ForeignChargeFields {
   /** The batch that wrote the row (POPS-2916); absent on a snapshot taken before the field existed. */
   importBatchId?: string | null;
+  pending?: boolean;
   id: string;
   notionId: string | null;
   description: string;
@@ -149,6 +150,7 @@ export function toTransactionSnapshot(row: TransactionRow): TransactionSnapshot 
     matchRuleId: row.matchRuleId,
     matchConfidence: row.matchConfidence,
     importBatchId: row.importBatchId,
+    pending: row.pending,
   };
 }
 
@@ -177,6 +179,7 @@ export function fromTransactionSnapshot(snapshot: TransactionSnapshot): Transact
     matchRuleId: snapshot.matchRuleId,
     matchConfidence: snapshot.matchConfidence,
     importBatchId: snapshot.importBatchId ?? null,
+    pending: snapshot.pending ?? false,
   };
 }
 
