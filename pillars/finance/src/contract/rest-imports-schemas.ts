@@ -223,9 +223,13 @@ export const FailedTransactionDetailSchema = z.object({
   error: z.string(),
 });
 
-/** The checkpoint minted from this commit's closing balance, if any (POPS-2882). */
+/**
+ * A checkpoint minted from a source file's closing balance (POPS-2882). One
+ * per account the commit touched, so `accountId` is what tells two apart.
+ */
 export const CommitCheckpointSchema = z.object({
   id: z.string(),
+  accountId: z.string(),
   /** `checkpoint.balanceCents - expectedBalanceCents`; zero means agreement. */
   deltaCents: z.number().int(),
 });
@@ -240,8 +244,12 @@ export const CommitResultSchema = z.object({
   retroactiveReclassifications: z.number().int().nonnegative(),
   /** Non-blocking commit-time findings — currently only `CHECKPOINT_MISMATCH`. */
   warnings: z.array(ImportWarningSchema).optional(),
-  /** The account checkpoint this commit minted from a source file's closing balance, if any. */
-  checkpoint: CommitCheckpointSchema.optional(),
+  /**
+   * The account checkpoints this commit minted from source-file closing
+   * balances — one per account, since a single commit can span several once
+   * a row is retargeted in review. Empty when the file carried no balance.
+   */
+  checkpoints: z.array(CommitCheckpointSchema),
 });
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({

@@ -137,8 +137,15 @@ function CommitWarnings({ warnings }: { warnings: NonNullable<CommitResult['warn
   if (warnings.length === 0) return null;
   return (
     <div className="space-y-2">
-      {warnings.map((warning) => (
-        <ImportWarningBanner key={warning.type} warning={warning} affectedHint="" />
+      {warnings.map((warning, index) => (
+        // A commit spanning two accounts raises one CHECKPOINT_MISMATCH each,
+        // so `type` alone is not unique and the second account's banner would
+        // collide with the first — the position disambiguates them.
+        <ImportWarningBanner
+          key={`${warning.type}:${String(index)}`}
+          warning={warning}
+          affectedHint=""
+        />
       ))}
     </div>
   );

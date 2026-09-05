@@ -13556,20 +13556,26 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
-                        "checkpoint": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "deltaCents": {
-                              "maximum": 9007199254740991,
-                              "minimum": -9007199254740991,
-                              "type": "integer"
+                        "checkpoints": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "deltaCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "id": {
+                                "type": "string"
+                              }
                             },
-                            "id": {
-                              "type": "string"
-                            }
+                            "required": ["id", "accountId", "deltaCents"],
+                            "type": "object"
                           },
-                          "required": ["id", "deltaCents"],
-                          "type": "object"
+                          "type": "array"
                         },
                         "entitiesCreated": {
                           "maximum": 9007199254740991,
@@ -13675,7 +13681,8 @@
                         "transactionsImported",
                         "transactionsFailed",
                         "failedDetails",
-                        "retroactiveReclassifications"
+                        "retroactiveReclassifications",
+                        "checkpoints"
                       ],
                       "type": "object"
                     },

@@ -34,9 +34,14 @@ import {
 
 import type { CommitCheckpoint, ConfirmedTransaction, ImportWarning } from './types.js';
 
-/** What `mintImportCheckpointsPhase` produces: at most one checkpoint (one account per import) and its warnings. */
+/**
+ * What `mintImportCheckpointsPhase` produces: one checkpoint per account the
+ * commit minted for, and the warnings they raised. A commit spans more than
+ * one account whenever a row was retargeted in review, so this is a list —
+ * collapsing it to a single field would drop every account but the last.
+ */
 export interface ImportCheckpointResult {
-  checkpoint?: CommitCheckpoint;
+  checkpoints: CommitCheckpoint[];
   warnings: ImportWarning[];
 }
 
@@ -133,10 +138,10 @@ function mintOne(
 
   const delta = checkpointDelta(tx, row);
   if (delta === null || delta.deltaCents === 0) {
-    return { checkpoint: { id: row.id, deltaCents: 0 } };
+    return { checkpoint: { id: row.id, accountId: candidate.accountId, deltaCents: 0 } };
   }
   return {
-    checkpoint: { id: row.id, deltaCents: delta.deltaCents },
+    checkpoint: { id: row.id, accountId: candidate.accountId, deltaCents: delta.deltaCents },
     warning: {
       type: 'CHECKPOINT_MISMATCH',
       message: `Ledger disagrees with ${account.name}'s statement closing balance`,
@@ -161,12 +166,12 @@ export function mintImportCheckpointsPhase(
   commitKey: string | undefined
 ): ImportCheckpointResult {
   const candidates = closingBalanceCandidates(tx, transactions, failedChecksums);
-  const result: ImportCheckpointResult = { warnings: [] };
+  const result: ImportCheckpointResult = { checkpoints: [], warnings: [] };
 
   for (const candidate of candidates.values()) {
     const minted = mintOne(tx, candidate, commitKey);
     if (minted === undefined) continue;
-    result.checkpoint = minted.checkpoint;
+    result.checkpoints.push(minted.checkpoint);
     if (minted.warning) result.warnings.push(minted.warning);
   }
 

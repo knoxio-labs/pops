@@ -4996,10 +4996,11 @@ export type ImportsCommitImportResponses = {
    */
   200: {
     data: {
-      checkpoint?: {
+      checkpoints: Array<{
+        accountId: string;
         deltaCents: number;
         id: string;
-      };
+      }>;
       entitiesCreated: number;
       failedDetails: Array<{
         checksum: string | null;

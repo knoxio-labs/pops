@@ -100,7 +100,7 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
       balanceCents: -65_000,
       source: 'import',
     });
-    expect(result.checkpoint).toEqual({ id: checkpoints[0]?.id, deltaCents: 0 });
+    expect(result.checkpoints).toEqual([{ id: checkpoints[0]?.id, accountId, deltaCents: 0 }]);
   });
 
   it('does not double the checkpoint on a re-import of the same statement', async () => {
@@ -109,12 +109,12 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
     const payload = creditCardPayload(accountId);
 
     const first = await commitImport(db, noContacts(), payload);
-    expect(first.checkpoint).toBeDefined();
+    expect(first.checkpoints).toHaveLength(1);
 
     const second = await commitImport(db, noContacts(), creditCardPayload(accountId));
 
     expect(second.failedDetails).toEqual([]);
-    expect(second.checkpoint).toBeUndefined();
+    expect(second.checkpoints).toEqual([]);
     expect(db.select().from(accountCheckpoints).all()).toHaveLength(1);
   });
 
@@ -154,7 +154,7 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
 
     expect(result.failedDetails).toEqual([]);
     expect(result.transactionsImported).toBe(1);
-    expect(result.checkpoint?.deltaCents).toBe(-2_500);
+    expect(result.checkpoints[0]?.deltaCents).toBe(-2_500);
     expect(result.warnings).toEqual([
       {
         type: 'CHECKPOINT_MISMATCH',
@@ -163,5 +163,53 @@ describe('mintImportCheckpointsPhase, via commitImport', () => {
         details: 'expected -1500c, statement says -4000c (Δ -2500c)',
       },
     ]);
+  });
+
+  it("keeps every account's checkpoint when one commit spans two accounts", async () => {
+    // The final-review step lets a row be retargeted to a different account,
+    // so one commit can mint for several. A singular result field would keep
+    // only the last-processed account's, silently dropping the rest from the
+    // response while writing them all to the database.
+    const { db } = freshMigratedFinanceDb();
+    const cardId = seedAccount(db);
+    const savings = createAccount(db, { name: 'Test Savings', kind: 'savings', currency: 'AUD' });
+
+    const payload: CommitPayload = {
+      entities: [],
+      changeSets: [],
+      tagRuleChangeSets: [],
+      transactions: [
+        {
+          date: '2026-07-05',
+          description: 'Coffee shop',
+          amount: -4.5,
+          account: 'Test Credit Card',
+          accountId: cardId,
+          rawRow: '{}',
+          checksum: 'chk-card',
+          transactionType: 'purchase',
+          balanceCents: 45_000,
+        },
+        {
+          date: '2026-07-06',
+          description: 'Salary',
+          amount: 1_000,
+          account: 'Test Savings',
+          accountId: savings.id,
+          rawRow: '{}',
+          checksum: 'chk-savings',
+          transactionType: 'income',
+          balanceCents: 250_000,
+        },
+      ],
+    };
+
+    const result = await commitImport(db, noContacts(), payload);
+
+    expect(result.checkpoints).toHaveLength(2);
+    expect(result.checkpoints.map((c) => c.accountId).toSorted()).toEqual(
+      [cardId, savings.id].toSorted()
+    );
+    expect(db.select().from(accountCheckpoints).all()).toHaveLength(2);
   });
 });

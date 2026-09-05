@@ -247,7 +247,7 @@ export async function commitImport(
       const failedChecksums = new Set(
         writeResult.failedDetails.map((d) => d.checksum).filter((c): c is string => c !== null)
       );
-      const { checkpoint, warnings } = mintImportCheckpointsPhase(
+      const { checkpoints, warnings } = mintImportCheckpointsPhase(
         tx,
         payload.transactions,
         failedChecksums,
@@ -263,7 +263,7 @@ export async function commitImport(
         failedDetails: writeResult.failedDetails,
         retroactiveReclassifications,
         ...(warnings.length > 0 ? { warnings } : {}),
-        ...(checkpoint ? { checkpoint } : {}),
+        checkpoints,
       };
 
       if (commitKey) importCommitsService.recordCommit(tx, commitKey, result);

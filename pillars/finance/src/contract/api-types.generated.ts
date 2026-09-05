@@ -7343,10 +7343,11 @@ export interface operations {
         content: {
           'application/json': {
             data: {
-              checkpoint?: {
+              checkpoints: {
+                accountId: string;
                 deltaCents: number;
                 id: string;
-              };
+              }[];
               entitiesCreated: number;
               failedDetails: {
                 checksum: string | null;
