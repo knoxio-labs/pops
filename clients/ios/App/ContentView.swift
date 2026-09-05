@@ -26,10 +26,8 @@ internal struct ContentView: View {
     internal let composition: AppComposition
 
     internal var body: some View {
-        VStack(spacing: PopsSpacing.zero) {
-            degradedBanner
-            features
-        }
+        features
+            .safeAreaInset(edge: .top) { degradedBanner }
     }
 
     /// Every available feature, in the BFM's order.
@@ -103,6 +101,15 @@ internal struct ContentView: View {
 
     /// Non-blocking, above the content, and never in the way of it. The app is
     /// usable; this says the picture it is working from is incomplete.
+    ///
+    /// Attached to `features` with `.safeAreaInset(edge: .top)` rather than
+    /// stacked above it: a stack takes the banner's height off the top of
+    /// the whole tree, which for the multi-feature case is the `TabView`
+    /// itself — so the tab bar at its bottom shifts up by that height too,
+    /// moving a control a person navigates by muscle memory. A safe-area
+    /// inset instead reserves space inside `features`' own layout, the same
+    /// reasoning `PopsActionBar`'s docstring gives for the equivalent bottom
+    /// case.
     @ViewBuilder private var degradedBanner: some View {
         if surface.bootstrap.isDegraded {
             PopsCard {

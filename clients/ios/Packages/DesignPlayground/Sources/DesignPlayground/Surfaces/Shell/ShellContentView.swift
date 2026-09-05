@@ -14,19 +14,23 @@ internal enum ShellDegradation: Hashable, Sendable {
 
 /// The paired shell's own content: the degraded banner `ContentView` draws
 /// above whatever features are showing, over the real ``PurchasesListView`` —
-/// not a placeholder. The web facsimile this mirrors makes the reason
-/// explicit: the question a banner state exists to answer is whether it
-/// reads as a notice over usable content or as a wall in front of it, and a
-/// placeholder cannot be asked that.
+/// not a placeholder. The question a banner state exists to answer is
+/// whether it reads as a notice over usable content or as a wall in front of
+/// it, and a placeholder cannot be asked that.
+///
+/// Attached with `.safeAreaInset(edge: .top)` rather than stacked above the
+/// content, mirroring `ContentView`'s own shape (POPS-2894): a stack would
+/// take the banner's height off the top of the tree, which for a `TabView`
+/// means its tab bar shifting up too. This surface exists to review that the
+/// bar does not move — staging it any other way would defeat the point.
 internal struct ShellContentView: View {
     let degradation: ShellDegradation
 
     var body: some View {
-        VStack(spacing: PopsSpacing.zero) {
-            banner
-            PurchasesListView(
-                dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
-        }
+        PurchasesListView(
+            dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all)
+        )
+        .safeAreaInset(edge: .top) { banner }
     }
 
     @ViewBuilder private var banner: some View {
