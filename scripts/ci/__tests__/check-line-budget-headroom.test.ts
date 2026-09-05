@@ -5,10 +5,16 @@
  * must not, plus one end-to-end run against a throwaway git repo that plants
  * the rebase-tips-a-shared-file-over-budget shape: a file at its cap on the
  * target branch, a branch that only adds one line to it.
+ *
+ * The `reports` block below is deliberately the adversarial half (POPS-3026,
+ * POPS-2110): it runs the real BINARY, on runs that EXIT ZERO, and asserts
+ * what the passing run said. Every check there would still pass if the
+ * reporting were deleted and only the exit code were asserted, which is
+ * exactly the blind spot a guard's own self-test cannot find.
  */
 
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,9 +22,12 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  annotationsFor,
   countBudgetLines,
+  describeVerdict,
   evaluate,
   globToRegExp,
+  headroomLeft,
   matchesAnyGlob,
   parseMaxLinesConfig,
 } from '../check-line-budget-headroom.mjs';
@@ -330,4 +339,252 @@ describe('the guard self-test', () => {
     },
     SELF_TEST_TIMEOUT_MS
   );
+});
+
+describe('what a PASSING run says (POPS-3026)', () => {
+  const repos: string[] = [];
+  const script = join(repoRoot, 'scripts', 'ci', 'check-line-budget-headroom.mjs');
+
+  afterEach(() => {
+    for (const dir of repos.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  function makeRepo(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'line-budget-report-'));
+    repos.push(dir);
+    execFileSync('git', ['init', '--initial-branch=main', '-q'], { cwd: dir, env: gitEnv() });
+    execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: dir, env: gitEnv() });
+    execFileSync('git', ['config', 'user.name', 'Test'], { cwd: dir, env: gitEnv() });
+    return dir;
+  }
+
+  function commit(dir: string, files: Record<string, string>, message: string): void {
+    for (const [file, content] of Object.entries(files)) writeFileSync(join(dir, file), content);
+    execFileSync('git', ['add', ...Object.keys(files)], { cwd: dir, env: gitEnv() });
+    execFileSync('git', ['commit', '-q', '-m', message], { cwd: dir, env: gitEnv() });
+  }
+
+  function body(n: number, tag = 'x'): string {
+    return `${Array.from({ length: n }, (_, i) => `console.error('${tag}${i}');`).join('\n')}\n`;
+  }
+
+  /**
+   * Runs the real binary against a planted repo. `spawnSync` rather than
+   * `execFileSync` so a non-zero exit is a value to assert on, not a throw
+   * whose payload has to be cast back into shape.
+   *
+   * The inherited `GITHUB_STEP_SUMMARY` is dropped unless a case sets one:
+   * a GitHub runner always exports it, and the guard writes to whatever it is
+   * handed, so these fixture runs would otherwise append `atCap.ts`/`roomy.ts`
+   * tables to the REAL job's summary.
+   */
+  function runGuard(
+    repo: string,
+    extraEnv: NodeJS.ProcessEnv = {}
+  ): { status: number | null; stdout: string; stderr: string } {
+    const env = gitEnv();
+    delete env['GITHUB_STEP_SUMMARY'];
+    Object.assign(env, extraEnv);
+    const result = spawnSync('node', [script, '--base', 'main', '--repo', repo], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env,
+    });
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  }
+
+  /**
+   * A branch that takes a shared file to EXACTLY the cap. Nothing is over
+   * budget, oxlint is happy, the check is green — and the next PR to add a
+   * line to the same file ejects the merge group both of them are in.
+   */
+  function repoAtExactlyTheCap(): string {
+    const dir = makeRepo();
+    commit(dir, { 'atCap.ts': body(199), 'roomy.ts': body(10, 'r') }, 'ancestor');
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
+    commit(
+      dir,
+      { 'atCap.ts': body(200), 'roomy.ts': body(11, 'r') },
+      'feature: consume the last line of atCap.ts'
+    );
+    return dir;
+  }
+
+  it('exits zero when a touched file lands on exactly the cap — the exit code alone says nothing', () => {
+    expect(runGuard(repoAtExactlyTheCap()).status).toBe(0);
+  });
+
+  it('names the zero-headroom file and how many lines are left, on that same zero exit', () => {
+    const { stdout } = runGuard(repoAtExactlyTheCap());
+    expect(stdout).toContain('atCap.ts');
+    expect(stdout).toContain('0 lines of headroom left');
+  });
+
+  it('annotates the near-cap file so a green check is still visible on the PR', () => {
+    const { stdout } = runGuard(repoAtExactlyTheCap(), { GITHUB_ACTIONS: 'true' });
+    expect(stdout).toMatch(/^::warning file=atCap\.ts,title=Line budget::/m);
+  });
+
+  it('reports a file that is comfortably fine too, rather than only the ones in trouble', () => {
+    const { stdout } = runGuard(repoAtExactlyTheCap());
+    expect(stdout).toMatch(/roomy\.ts[^\n]*\d+ lines of headroom left/);
+    expect(stdout).not.toMatch(/^::warning file=roomy\.ts,/m);
+  });
+
+  it('writes a per-file headroom table to the step summary on a passing run', () => {
+    const dir = repoAtExactlyTheCap();
+    const summary = join(dir, 'summary.md');
+    const { status } = runGuard(dir, { GITHUB_STEP_SUMMARY: summary });
+    expect(status).toBe(0);
+    expect(existsSync(summary)).toBe(true);
+    const written = readFileSync(summary, 'utf8');
+    expect(written).toContain('| `atCap.ts` | 200 | 200 | 0 | WARN |');
+    expect(written).toContain('| `roomy.ts` |');
+  });
+
+  it('does not append fixture tables to a step summary it merely inherited from the runner', () => {
+    // These cases spawn the real binary, and on a GitHub runner
+    // GITHUB_STEP_SUMMARY is always exported. Inheriting it would put
+    // `atCap.ts` and `roomy.ts` rows into the summary of the job running the
+    // tests.
+    const dir = repoAtExactlyTheCap();
+    const inherited = join(dir, 'runner-summary.md');
+    writeFileSync(inherited, '');
+    const previous = process.env.GITHUB_STEP_SUMMARY;
+    process.env.GITHUB_STEP_SUMMARY = inherited;
+    try {
+      expect(runGuard(dir).status).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_STEP_SUMMARY;
+      else process.env.GITHUB_STEP_SUMMARY = previous;
+    }
+    expect(readFileSync(inherited, 'utf8')).toBe('');
+  });
+
+  it('fails when a step summary it was handed cannot be written, even with nothing over cap', () => {
+    const dir = repoAtExactlyTheCap();
+    const { status, stderr } = runGuard(dir, {
+      GITHUB_STEP_SUMMARY: join(dir, 'no-such-dir', 'summary.md'),
+    });
+    expect(status).toBe(1);
+    expect(stderr).toContain('cannot answer');
+  });
+
+  it('says so explicitly when the branch touched no linted file at all', () => {
+    const dir = makeRepo();
+    commit(dir, { 'notes.md': 'hello\n' }, 'ancestor');
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
+    commit(dir, { 'notes.md': 'hello again\n' }, 'feature: docs only');
+
+    const { status, stdout } = runGuard(dir);
+    expect(status).toBe(0);
+    expect(stdout).toContain('touches no file');
+  });
+
+  it('still fails, and annotates as an error, when a file crosses the cap', () => {
+    const dir = makeRepo();
+    commit(dir, { 'over.ts': body(200) }, 'ancestor: at the cap');
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
+    commit(dir, { 'over.ts': body(201) }, 'feature: one line over');
+
+    const { status, stdout, stderr } = runGuard(dir, { GITHUB_ACTIONS: 'true' });
+    expect(status).toBe(1);
+    expect(stdout).toMatch(/^::error file=over\.ts,title=Line budget::/m);
+    expect(stdout).toContain('1 OVER the 200-line cap');
+    expect(stderr).toContain('Split the file before pushing');
+  });
+});
+
+describe('headroom description helpers', () => {
+  const base = { file: 'a.ts', max: 200, baseHeadCount: 190, branchDelta: 5 } as const;
+
+  it('reads out an exact-cap file as zero headroom, not as a pass', () => {
+    expect(describeVerdict({ ...base, status: 'warn', approxCount: 200 })).toContain(
+      '0 lines of headroom left'
+    );
+  });
+
+  it('singularises the last remaining line', () => {
+    expect(describeVerdict({ ...base, status: 'warn', approxCount: 199 })).toContain(
+      '1 line of headroom left'
+    );
+  });
+
+  it('reports an over-cap file as over, with the overshoot', () => {
+    expect(describeVerdict({ ...base, status: 'fail', approxCount: 203 })).toContain(
+      '3 OVER the 200-line cap'
+    );
+    expect(headroomLeft({ ...base, status: 'fail', approxCount: 203 })).toBe(-3);
+  });
+
+  it('describes a brand-new file by its own count, not by a target it has no history on', () => {
+    const text = describeVerdict({
+      file: 'new.ts',
+      status: 'new-file',
+      approxCount: 195,
+      max: 200,
+      baseHeadCount: 0,
+      branchDelta: 195,
+    });
+    expect(text).toContain('new to the target branch');
+  });
+
+  it('escapes a newline out of an annotation rather than truncating the finding', () => {
+    const annotations = annotationsFor([
+      {
+        file: 'a\nb.ts',
+        status: 'warn',
+        approxCount: 200,
+        max: 200,
+        baseHeadCount: 199,
+        branchDelta: 1,
+      },
+    ]);
+    expect(annotations).toHaveLength(1);
+    expect(annotations[0]).not.toContain('\n');
+    expect(annotations[0]).toContain('%0A');
+  });
+
+  it('escapes a comma in a path so one annotation does not split into two broken ones', () => {
+    const annotations = annotationsFor([
+      {
+        file: 'a,b.ts',
+        status: 'fail',
+        approxCount: 201,
+        max: 200,
+        baseHeadCount: 200,
+        branchDelta: 1,
+      },
+    ]);
+    expect(annotations).toHaveLength(1);
+    expect(annotations[0]).toMatch(/^::error file=a%2Cb\.ts,title=Line budget::/);
+  });
+});
+
+describe('the finance db barrel keeps real headroom (POPS-3026)', () => {
+  // The instance the guard was sharpened on. Flat, this barrel was AT 200/200
+  // and three merge groups were ejected on it in one evening. It is now a list
+  // of per-domain groups under db/exports/, and this pins that: re-flattening
+  // it puts the repo back one export line away from a silent merge-group
+  // ejection, and a typecheck will not notice.
+  const barrel = 'pillars/finance/src/db/index.ts';
+  const CAP = 200;
+  const REQUIRED_HEADROOM = 150;
+
+  it('leaves the barrel far enough under the cap that a re-flatten is obvious', () => {
+    const count = countBudgetLines(readFileSync(join(repoRoot, barrel), 'utf8'));
+    expect(count).toBeLessThanOrEqual(CAP - REQUIRED_HEADROOM);
+  });
+
+  it('keeps every export group under the cap too, so the split has not just moved the problem', () => {
+    const dir = join(repoRoot, 'pillars', 'finance', 'src', 'db', 'exports');
+    expect(existsSync(dir)).toBe(true);
+    const files = readdirSync(dir).filter((f) => f.endsWith('.ts'));
+    // A floor, not a smoke test: an `exports/` directory that has quietly lost
+    // its groups back into the barrel would otherwise pass this vacuously.
+    expect(files.length).toBeGreaterThanOrEqual(4);
+    for (const file of files) {
+      expect(countBudgetLines(readFileSync(join(dir, file), 'utf8'))).toBeLessThan(CAP);
+    }
+  });
 });
