@@ -114,6 +114,34 @@ describe('scanSource — what is code and what is prose', () => {
     expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", typeArg: 'R', line: 2 }]);
   });
 
+  it('does not lose its place on a contraction in JSX text', () => {
+    // POPS-2850: `points aren't counted` in pillars/design/src/screens/
+    // finance/accounts.tsx read the apostrophe as a string opener, found no
+    // close, and failed the whole gate for that file. Worked around at the
+    // time by rewording the prose.
+    const scanned = scanSource(
+      "const A = () => <p>points aren't counted</p>;\nconst h = pillar<R>('lists');"
+    );
+    expect(scanned.unterminated).toBeNull();
+    expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", typeArg: 'R', line: 2 }]);
+  });
+
+  it.each([
+    ["the user's balance", 'a possessive'],
+    ["it's not counted", 'a contraction of "is"'],
+    ['the "best" option', 'double quotes around a word'],
+  ])('treats %j in JSX text as prose (%s)', (text) => {
+    expect(scanSource(`const A = () => <p>${text}</p>;`).unterminated).toBeNull();
+  });
+
+  it('still opens a literal for a quote glued to a keyword', () => {
+    // `return'x'` is legal, if unformattable-to by oxfmt. The word before the
+    // quote is what separates it from prose, so the keyword case must survive.
+    const scanned = scanSource("function f() { return'a pillar(\\'never\\') mention'; }");
+    expect(scanned.unterminated).toBeNull();
+    expect(findPillarCalls(scanned)).toHaveLength(0);
+  });
+
   it('reports rather than tolerates an unterminated block comment', () => {
     expect(scanSource('/* never closed').unterminated).toBe('block comment');
   });
