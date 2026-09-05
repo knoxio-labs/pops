@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 43 tools; a new adapter that breaks one is a bug even
+These hold across all 45 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -37,6 +37,10 @@ though nothing enforces it mechanically.
 
 - `finance.entities.list` dispatches to the **`contacts`** pillar, which owns
   the entity table. Finance only owns the transaction usage rollup.
+- `finance.accounts.checkpoints` calls the finance pillar's `checkpoints.list`
+  operation (`GET /accounts/:id/checkpoints`), not `accounts.*` — checkpoints
+  and accounts are separate contract sub-routers even though the tool name
+  groups them under `accounts` for discoverability.
 - The `finance.*` family is read-only on purpose: no create/update/delete tool
   is wired, and `finance.test.ts` asserts no mutation-shaped name ever appears.
 - The `purchases.*` family is read-only for a sharper reason, asserted the same

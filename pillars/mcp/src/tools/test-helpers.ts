@@ -122,6 +122,12 @@ export const mockPillarFinance = {
       list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
       get: vi.fn().mockResolvedValue(callOk({ data: null })),
     },
+    accounts: {
+      list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+    },
+    checkpoints: {
+      list: vi.fn().mockResolvedValue(callOk({ data: [] })),
+    },
     imports: { getImportProgress: vi.fn().mockResolvedValue(callOk(null)) },
     search: { search: vi.fn().mockResolvedValue(callOk({ hits: [] })) },
   },

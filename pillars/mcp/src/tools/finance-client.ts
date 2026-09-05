@@ -38,6 +38,31 @@ export type WishlistListInput = {
   offset?: number;
 };
 
+/** Where a checkpoint's balance came from — mirrors `CHECKPOINT_SOURCES` in `checkpoint.ts`. */
+export const CHECKPOINT_SOURCES = ['manual', 'import', 'statement'] as const;
+export type CheckpointSource = (typeof CHECKPOINT_SOURCES)[number];
+
+/**
+ * An account's balance at a date, ledger-signed: positive is money held,
+ * negative is money owed, for assets and liabilities alike. `basis:
+ * 'transactions'` means no checkpoint exists yet and the figure is net flow
+ * of whatever was imported, not a real balance. Mirrors `AccountBalanceSchema`
+ * in `pillars/finance/src/contract/rest-checkpoints-schemas.ts`.
+ */
+export type AccountBalance = {
+  balanceCents: number;
+  asOf: string;
+  basis: 'checkpoint' | 'transactions';
+  anchor: { checkpointId: string; asOf: string; source: CheckpointSource } | null;
+  inconsistent: boolean;
+};
+
+export type AccountListInput = {
+  archived?: 'true' | 'false';
+  limit?: number;
+  offset?: number;
+};
+
 /**
  * The closed field vocabulary `POST /search` enforces, mirrored from
  * `SEARCH_FILTER_FIELDS` in `pillars/finance/src/contract/rest-search.ts` —
@@ -93,6 +118,12 @@ export type FinancePillarShape = {
   wishlist: {
     list: (input: WishlistListInput) => unknown;
     get: (input: { id: string }) => unknown;
+  };
+  accounts: {
+    list: (input: AccountListInput) => unknown;
+  };
+  checkpoints: {
+    list: (input: { id: string }) => unknown;
   };
   imports: {
     getImportProgress: (input: { sessionId: string }) => unknown;

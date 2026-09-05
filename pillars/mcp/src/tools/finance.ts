@@ -1,3 +1,4 @@
+import { accountsTools } from './finance-accounts.js';
 import { ENTITY_TYPES, contacts, finance, type EntityType } from './finance-client.js';
 import { correctionsTools } from './finance-corrections.js';
 import { importsTools } from './finance-imports.js';
@@ -140,6 +141,7 @@ export const financeTools: readonly ToolDef[] = [
   budgetsGet,
   ...correctionsTools,
   ...wishlistTools,
+  ...accountsTools,
   ...importsTools,
   ...searchTools,
 ];
