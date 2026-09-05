@@ -25,6 +25,8 @@ export interface UseDataTableArgs<TData, TValue> {
     string,
     <TData>(row: TData, columnId: string, filterValue: unknown) => boolean
   >;
+  /** Column filters the table opens with — e.g. a list reached via a link that already scopes it to one value. */
+  initialColumnFilters?: ColumnFiltersState;
 }
 
 export function useDataTable<TData, TValue>({
@@ -35,9 +37,12 @@ export function useDataTable<TData, TValue>({
   enableRowSelection,
   onSelectionChange,
   filterFns,
+  initialColumnFilters,
 }: UseDataTableArgs<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+    initialColumnFilters ?? []
+  );
   const [columnVisibilityState, setColumnVisibilityState] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
