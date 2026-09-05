@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 43 tools', () => {
-    expect(allTools).toHaveLength(43);
+  it('exports exactly 45 tools', () => {
+    expect(allTools).toHaveLength(45);
   });
 
   it('includes all inventory write tools', () => {
@@ -34,6 +34,8 @@ describe('allTools', () => {
       'finance.tagRules.vocabulary',
       'finance.wishlist.list',
       'finance.wishlist.get',
+      'finance.accounts.list',
+      'finance.accounts.checkpoints',
       'finance.imports.getImportProgress',
       'finance.search',
     ]) {
