@@ -292,7 +292,7 @@ interface PreviewMatchResult {
   matches: {
     id: string;
     description: string;
-    account: string;
+    accountId: string;
     amount: number;
     date: string;
     entityName: string | null;
