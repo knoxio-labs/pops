@@ -32,13 +32,16 @@ types the positive figure the real card app shows. `useAccountCheckpointsActions
 `toCreateBody` is the one place that gets negated, branching on `getAccountKindBehaviour(kind)
 .signConvention` (`@pops/finance`) rather than a duplicated liability list.
 
-## Query keys POPS-2887 is expected to adopt
+## Query keys shared with the real balance card (POPS-2887)
 
-`queryKeys.ts` names `accountBalanceKey`/`accountBalanceHistoryKey` even though nothing on this
-branch reads them yet — POPS-2887's real balance card does not exist here. Every create/delete
-mutation invalidates them anyway, on the `['finance', 'accounts', accountId, <resource>]` scheme,
-so that card picks up a fresh number without a reload once it queries under the same keys instead
-of needing a second invalidation pass wired in later.
+`useCheckpointMutations` invalidates `accountCheckpointsKey`, `accountBalanceHistoryKey`,
+`ACCOUNTS_KEY` and `ALL_ACCOUNTS_KEY` on every create/delete. `accountBalanceHistoryKey`'s prefix
+matches `useBalanceHistory`'s real query key (`account-detail/useBalanceHistory.ts`), so the
+sparkline refreshes without a reload. The balance figure itself needs no dedicated invalidation:
+POPS-2887 reads `account.balance` straight off the accounts-list row, which the accounts-list
+invalidation already covers. `accountBalanceKey` in `queryKeys.ts` has no reader today — kept for
+a future per-account balance query rather than removed, since invalidating a key nothing reads is
+free.
 
 ## Deferred, not built here
 
