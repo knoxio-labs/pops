@@ -1112,3 +1112,90 @@ describe('a scoped min-h-*/min-w-* is a floor applied to the cascaded reading, n
     expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
   });
 });
+
+describe('a raw element sized by an enclosing sizing-primitive `asChild` wrapper is not a violation (POPS-2579)', () => {
+  it('does not flag an unsized <a> that is the direct child of an asChild wrapper, same line', () => {
+    const src = '<Button asChild><a href="/x">inline</a></Button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('does not flag an unsized <a> that is the direct child of an asChild wrapper, formatted across lines — the real DocumentList.tsx/PlexConnectPanel.tsx shape', () => {
+    const src = [
+      '<Button variant="outline" size="sm" asChild>',
+      '  <a href={href} download aria-label="Download">',
+      '    Download',
+      '  </a>',
+      '</Button>',
+    ].join('\n');
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('does not flag an unsized raw <button> as the direct child of a Button asChild wrapper', () => {
+    const src = '<Button asChild><button onClick={onClick}>Open</button></Button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('still flags an unsized <button> under a TooltipTrigger asChild — a trigger has no sizing of its own to merge', () => {
+    const src = '<TooltipTrigger asChild><button onClick={onClick}>Open</button></TooltipTrigger>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('still flags an unsized <button> under a Badge asChild — a small pill is not a 44px target', () => {
+    const src = '<Badge asChild className="cursor-pointer"><button>filter</button></Badge>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('still flags an unsized <button> under a CollapsibleTrigger asChild', () => {
+    const src = '<CollapsibleTrigger asChild><button>toggle</button></CollapsibleTrigger>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'button' },
+    ]);
+  });
+
+  it('honours asChild regardless of attribute order on the wrapper', () => {
+    const src = '<Button asChild variant="outline" size="sm"><a href="/x">link</a></Button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([]);
+  });
+
+  it('still flags an unsized <a> when the wrapper carries asChild={false} — the one shape the Slot pattern renders normally rather than merging onto', () => {
+    const src = '<Button asChild={false}><a href="/x">link</a></Button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+    ]);
+  });
+
+  it('still flags a raw <a> that is nowhere near an asChild wrapper — the baseline negative case', () => {
+    const src = '<a href="/x" className="text-sm underline">link</a>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+    ]);
+  });
+
+  it('still flags a raw <a> that is a SIBLING after an asChild wrapper closes, not its child', () => {
+    const src = [
+      '<Button asChild><span /></Button>',
+      '<a href="/x" className="text-sm underline">sibling link</a>',
+    ].join('\n');
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 2, tag: 'a' },
+    ]);
+  });
+
+  it('still flags a raw <a> nested two levels inside an asChild wrapper — only the DIRECT wrapper counts', () => {
+    const src = '<Button asChild><span><a href="/x">nested link</a></span></Button>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+    ]);
+  });
+
+  it('still flags an unsized <a> preceded by a self-closing tag — asChild has no child to merge onto', () => {
+    const src = '<Button asChild /><a href="/x" className="text-sm underline">link</a>';
+    expect(findViolations('pillars/x/app/src/A.tsx', src)).toEqual([
+      { file: 'pillars/x/app/src/A.tsx', line: 1, tag: 'a' },
+    ]);
+  });
+});
