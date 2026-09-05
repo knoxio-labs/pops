@@ -1,17 +1,24 @@
 import type { CommitResult } from '@pops/finance';
 
+type WriteCounts = CommitResult['tagRuleWrites'];
+
 /**
- * A tag-rule `add` that lands on a rule the batch did not create merges into
- * it rather than creating anything. Naming that separately is the whole point
- * of POPS-2755: "20 added" hid the fact that some of the 20 were somebody
- * else's curated rules being amended.
+ * An `add` that lands on a rule the batch did not create merges into it
+ * rather than creating anything. Naming that separately is the whole point of
+ * POPS-2755 and POPS-2954: "20 added" hid the fact that some of the 20 were
+ * somebody else's curated rules being amended.
+ *
+ * Rendered only when something was in fact merged — an import where every add
+ * created a rule has nothing to disambiguate, and a footnote saying so would
+ * be noise on the common path.
  */
-function TagRuleWriteBreakdown({ writes }: { writes: CommitResult['tagRuleWrites'] }) {
+function RuleWriteBreakdown({ writes, noun }: { writes: WriteCounts; noun: string }) {
   if (!writes || writes.reinforced === 0) return null;
   return (
     <p className="text-xs text-muted-foreground mt-2">
-      {writes.inserted} tag {writes.inserted === 1 ? 'rule' : 'rules'} created, {writes.reinforced}{' '}
-      merged into {writes.reinforced === 1 ? 'a rule' : 'rules'} that already existed.
+      {writes.inserted} {noun} {writes.inserted === 1 ? 'rule' : 'rules'} created,{' '}
+      {writes.reinforced} merged into {writes.reinforced === 1 ? 'a rule' : 'rules'} that already
+      existed.
     </p>
   );
 }
@@ -19,10 +26,12 @@ function TagRuleWriteBreakdown({ writes }: { writes: CommitResult['tagRuleWrites
 export function RuleBreakdown({
   rulesApplied,
   tagRuleWrites,
+  correctionRuleWrites,
   totalRules,
 }: {
   rulesApplied: CommitResult['rulesApplied'];
   tagRuleWrites: CommitResult['tagRuleWrites'];
+  correctionRuleWrites: CommitResult['correctionRuleWrites'];
   totalRules: number;
 }) {
   if (totalRules === 0) return null;
@@ -45,7 +54,8 @@ export function RuleBreakdown({
           ) : null
         )}
       </div>
-      <TagRuleWriteBreakdown writes={tagRuleWrites} />
+      <RuleWriteBreakdown writes={correctionRuleWrites} noun="correction" />
+      <RuleWriteBreakdown writes={tagRuleWrites} noun="tag" />
     </div>
   );
 }

@@ -243,3 +243,55 @@ describe('tag-rule write breakdown (POPS-2755)', () => {
     expect(screen.queryByText(/merged into/i)).not.toBeInTheDocument();
   });
 });
+
+describe('correction-rule write breakdown (POPS-2954)', () => {
+  it('names the correction rules it merged into separately from the ones it created', () => {
+    storeState = {
+      commitResult: makeCommitResult({
+        correctionRuleWrites: { inserted: 1, reinforced: 2 },
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(
+      screen.getByText(/1 correction rule created, 2 merged into rules that already existed/i)
+    ).toBeInTheDocument();
+  });
+
+  it('distinguishes a correction merge from a tag merge when a commit did both', () => {
+    // Both footnotes read almost identically; the noun is the only thing
+    // telling an operator which curated rules were amended.
+    storeState = {
+      commitResult: makeCommitResult({
+        tagRulesApplied: 3,
+        tagRuleWrites: { inserted: 1, reinforced: 1 },
+        correctionRuleWrites: { inserted: 2, reinforced: 3 },
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(
+      screen.getByText(/2 correction rules created, 3 merged into rules that already existed/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 tag rule created, 1 merged into a rule that already existed/i)
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing when every correction add op created a rule', () => {
+    storeState = {
+      commitResult: makeCommitResult({
+        correctionRuleWrites: { inserted: 2, reinforced: 0 },
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(screen.queryByText(/correction rule/i)).not.toBeInTheDocument();
+  });
+
+  it('says nothing for a commit recorded before the field existed', () => {
+    storeState = { commitResult: makeCommitResult(), reset: mockReset };
+    render(<SummaryStep />);
+    expect(screen.queryByText(/correction rule/i)).not.toBeInTheDocument();
+  });
+});

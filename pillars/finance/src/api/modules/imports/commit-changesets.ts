@@ -6,7 +6,11 @@
  * threaded in, so their inner service calls nest as savepoints rather than
  * opening transactions of their own.
  */
-import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
+import {
+  applyChangeSet,
+  dropUnusableAddOps,
+  type CorrectionRuleWriteCounts,
+} from '../corrections/index.js';
 import { applyTagRuleChangeSet, type TagRuleWriteCounts } from '../tag-rules/service.js';
 import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
 
@@ -18,12 +22,6 @@ export interface RuleApplyCounts {
   edit: number;
   disable: number;
   remove: number;
-}
-
-/** Created-vs-reinforced split for a commit's correction-rule `add` ops (POPS-2954). */
-export interface CorrectionRuleWriteCounts {
-  inserted: number;
-  reinforced: number;
 }
 
 export interface CorrectionChangeSetPhaseResult {
