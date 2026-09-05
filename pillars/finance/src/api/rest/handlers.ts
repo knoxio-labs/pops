@@ -42,7 +42,7 @@ export function makeFinanceRestHandlers(deps: {
     institutions: makeInstitutionsHandlers(db),
     accounts: makeAccountsHandlers(db, deps.contacts),
     checkpoints: makeCheckpointsHandlers(db),
-    accountImports: makeAccountImportsHandlers(db),
+    accountImports: makeAccountImportsHandlers(db, deps.contacts),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),

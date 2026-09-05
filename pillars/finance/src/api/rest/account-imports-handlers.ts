@@ -6,6 +6,10 @@
  * account fed by hand has none, in the same way it has no gift-card details.
  * `writeConfig` maps the service's "this kind needs that field" refusal to
  * 422, since the body was well-formed and only meaningless.
+ *
+ * `triggerSync` (POPS-2921) 422s the same way for an account not fed by the
+ * Up API: the route exists for every account, the action only for one kind.
+ * A job already running for the account is what the second trigger gets.
  */
 import {
   accountImportConfigService,
@@ -18,6 +22,7 @@ import {
   toImportConfig,
   toUpsertImportConfigInput,
 } from '../modules/account-imports-types.js';
+import { getUpSyncJob, startUpSyncJob } from '../modules/up-bank/sync-jobs.js';
 import { NotFoundError, UnprocessableEntityError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 import { requireAccount } from './require-account.js';
@@ -25,12 +30,13 @@ import { requireAccount } from './require-account.js';
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { financeAccountImportsContract } from '../../contract/rest-account-imports.js';
+import type { ContactsClient } from '../contacts/client.js';
 
 type Req = ServerInferRequest<typeof financeAccountImportsContract>;
 
 const DEFAULT_LIMIT = 50;
 
-export function makeAccountImportsHandlers(db: FinanceDb) {
+export function makeAccountImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
     listBatches: ({ params, query }: Req['listBatches']) =>
       runHttp(() => {
@@ -71,6 +77,27 @@ export function makeAccountImportsHandlers(db: FinanceDb) {
           }
           throw err;
         }
+      }),
+
+    triggerSync: ({ params }: Req['triggerSync']) =>
+      runHttp(() => {
+        requireAccount(db, params.id);
+        const config = accountImportConfigService.getImportConfig(db, params.id);
+        if (config?.sourceKind !== 'api' || config.provider !== 'up') {
+          throw new UnprocessableEntityError(`Account ${params.id} is not fed by the Up API`);
+        }
+        const started = startUpSyncJob(db, contacts, { accountId: params.id, trigger: 'manual' });
+        return { status: 202 as const, body: { data: started.job } };
+      }),
+
+    getSyncJob: ({ params }: Req['getSyncJob']) =>
+      runHttp(() => {
+        requireAccount(db, params.id);
+        const job = getUpSyncJob(params.jobId);
+        if (job === null || job.accountId !== params.id) {
+          throw new NotFoundError('Sync job', params.jobId);
+        }
+        return { status: 200 as const, body: { data: job } };
       }),
   };
 }

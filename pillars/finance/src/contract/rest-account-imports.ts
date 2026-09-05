@@ -11,6 +11,11 @@
  * The summary of both — last import, span, cadence — rides on every accounts
  * response as `importStatus` rather than on a route of its own, so the grid,
  * the account page and the staleness nudge read one answer.
+ *
+ * `sync` (POPS-2921) is the one action an `api` source offers: it starts the
+ * same pass the scheduler runs and answers 202 with a job to poll, or with the
+ * job already running for the account when one is — two triggers serialise
+ * rather than race for the same rows.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -21,6 +26,7 @@ import {
   ImportConfigSchema,
   WriteImportConfigBodySchema,
 } from './rest-account-imports-schemas.js';
+import { UpSyncJobSchema } from './rest-account-sync-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_422 } from './rest-schemas.js';
 
 const c = initContract();
@@ -55,5 +61,22 @@ export const financeAccountImportsContract = c.router({
     summary:
       'Create or replace an account’s import config; 422s a config missing what its kind needs ' +
       '(a dialect, a parser or a provider)',
+  },
+  triggerSync: {
+    method: 'POST',
+    path: '/accounts/:id/sync',
+    pathParams: AccountParams,
+    body: z.object({}).optional(),
+    responses: { 202: z.object({ data: UpSyncJobSchema }), ...ERR_RESPONSES_WITH_422 },
+    summary:
+      'Start an Up sync for an account fed by the Up API, or report the one already running; ' +
+      '422 for an account not fed that way',
+  },
+  getSyncJob: {
+    method: 'GET',
+    path: '/accounts/:id/sync/:jobId',
+    pathParams: z.object({ id: z.string(), jobId: z.string() }),
+    responses: { 200: z.object({ data: UpSyncJobSchema }), ...ERR_RESPONSES },
+    summary: 'Progress and result of one sync job; 404 once it has expired',
   },
 });

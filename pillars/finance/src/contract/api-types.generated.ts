@@ -301,6 +301,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/{id}/sync': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way */
+    post: operations['accountImports.triggerSync'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/sync/{jobId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Progress and result of one sync job; 404 once it has expired */
+    get: operations['accountImports.getSyncJob'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/budgets': {
     parameters: {
       query?: never;
@@ -4001,6 +4035,203 @@ export interface operations {
       };
       /** @description 422 */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accountImports.triggerSync': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 202 */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              error: string | null;
+              finishedAt: string | null;
+              from: string;
+              id: string;
+              result: {
+                alreadyHeld: number;
+                batchId: string | null;
+                checkpoint: {
+                  balanceCents: number;
+                  deltaCents: number;
+                  id: string;
+                } | null;
+                failed: number;
+                fetched: number;
+                imported: number;
+                settled: number;
+                warnings: string[];
+              } | null;
+              startedAt: string;
+              /** @enum {string} */
+              status: 'running' | 'completed' | 'failed';
+              to: string;
+              /** @enum {string} */
+              trigger: 'schedule' | 'manual';
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accountImports.getSyncJob': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        jobId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              error: string | null;
+              finishedAt: string | null;
+              from: string;
+              id: string;
+              result: {
+                alreadyHeld: number;
+                batchId: string | null;
+                checkpoint: {
+                  balanceCents: number;
+                  deltaCents: number;
+                  id: string;
+                } | null;
+                failed: number;
+                fetched: number;
+                imported: number;
+                settled: number;
+                warnings: string[];
+              } | null;
+              startedAt: string;
+              /** @enum {string} */
+              status: 'running' | 'completed' | 'failed';
+              to: string;
+              /** @enum {string} */
+              trigger: 'schedule' | 'manual';
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -9814,6 +10045,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -9885,6 +10118,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -9964,6 +10199,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -10042,6 +10279,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;

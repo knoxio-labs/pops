@@ -2186,6 +2186,170 @@ export type AccountsPreviewMergeResponses = {
 export type AccountsPreviewMergeResponse =
   AccountsPreviewMergeResponses[keyof AccountsPreviewMergeResponses];
 
+export type AccountImportsTriggerSyncData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/sync';
+};
+
+export type AccountImportsTriggerSyncErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsTriggerSyncError =
+  AccountImportsTriggerSyncErrors[keyof AccountImportsTriggerSyncErrors];
+
+export type AccountImportsTriggerSyncResponses = {
+  /**
+   * 202
+   */
+  202: {
+    data: {
+      accountId: string;
+      error: string | null;
+      finishedAt: string | null;
+      from: string;
+      id: string;
+      result: {
+        alreadyHeld: number;
+        batchId: string | null;
+        checkpoint: {
+          balanceCents: number;
+          deltaCents: number;
+          id: string;
+        } | null;
+        failed: number;
+        fetched: number;
+        imported: number;
+        settled: number;
+        warnings: Array<string>;
+      } | null;
+      startedAt: string;
+      status: 'running' | 'completed' | 'failed';
+      to: string;
+      trigger: 'schedule' | 'manual';
+    };
+  };
+};
+
+export type AccountImportsTriggerSyncResponse =
+  AccountImportsTriggerSyncResponses[keyof AccountImportsTriggerSyncResponses];
+
+export type AccountImportsGetSyncJobData = {
+  body?: never;
+  path: {
+    id: string;
+    jobId: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/sync/{jobId}';
+};
+
+export type AccountImportsGetSyncJobErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsGetSyncJobError =
+  AccountImportsGetSyncJobErrors[keyof AccountImportsGetSyncJobErrors];
+
+export type AccountImportsGetSyncJobResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      error: string | null;
+      finishedAt: string | null;
+      from: string;
+      id: string;
+      result: {
+        alreadyHeld: number;
+        batchId: string | null;
+        checkpoint: {
+          balanceCents: number;
+          deltaCents: number;
+          id: string;
+        } | null;
+        failed: number;
+        fetched: number;
+        imported: number;
+        settled: number;
+        warnings: Array<string>;
+      } | null;
+      startedAt: string;
+      status: 'running' | 'completed' | 'failed';
+      to: string;
+      trigger: 'schedule' | 'manual';
+    };
+  };
+};
+
+export type AccountImportsGetSyncJobResponse =
+  AccountImportsGetSyncJobResponses[keyof AccountImportsGetSyncJobResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;
@@ -7002,6 +7166,8 @@ export type SettingsGetData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7064,6 +7230,8 @@ export type SettingsSetData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7127,6 +7295,8 @@ export type SettingsEnsureData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7189,6 +7359,8 @@ export type SettingsResetKeyData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
