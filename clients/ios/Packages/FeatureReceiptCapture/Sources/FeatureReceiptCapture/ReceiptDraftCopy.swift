@@ -6,18 +6,18 @@
 /// what they say about it. Nothing here is phrased as a refusal or a rescue —
 /// most people who open this screen are here because a till printed
 /// `ZCHEETOS C&B BALLS` and they would like it to say what it is.
-internal enum ReceiptDraftCopy {
+public enum ReceiptDraftCopy {
     /// The screen's own name. Not "Fix this receipt": the common case is a
     /// reading that is already right, and telling somebody to fix something
     /// that is correct is how a confirmation becomes an interrogation.
-    internal static let title = "Check this receipt"
-    internal static let subtitle =
+    public static let title = "Check this receipt"
+    public static let subtitle =
         "Everything read off the paper is here and every line can be changed. "
         + "Rename anything that isn't how you'd say it."
 
     /// The same screen with nothing read into it.
-    internal static let manualTitle = "Add a purchase"
-    internal static let manualSubtitle =
+    public static let manualTitle = "Add a purchase"
+    public static let manualSubtitle =
         "For something with no receipt to photograph. Fill in what you know."
 
     internal static let save = "Save purchase"

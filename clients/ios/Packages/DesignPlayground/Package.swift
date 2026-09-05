@@ -9,11 +9,12 @@ let strictSwiftSettings: [SwiftSetting] = [
     .treatAllWarnings(as: .error),
 ]
 
-// Two dependencies, and the list is the point: `AppCore` for the domain types a
-// fixture is written in and `DesignSystem` for the primitives a surface draws
-// with. Both declare no dependencies of their own, so this package links no
-// networking, no persistence and no view model — see `Catalog.swift` for why
-// that is a rule rather than a coincidence.
+// The dependency list is the point. `AppCore` for the domain types a fixture is
+// written in, `DesignSystem` for the primitives, and every `Feature*` package
+// so a surface can stage the view the app actually ships rather than a
+// look-alike. None of them names `Auth` or `BFMClient`, so nothing reachable
+// from here can perform HTTP, read the keychain or touch a store — see
+// `Catalog.swift` for why that is a rule rather than a coincidence.
 //
 // macOS is declared alongside iOS for the same reason `AppCore` declares it:
 // `swift build` and `swift test` compile for the *host*, and without a floor
@@ -25,11 +26,24 @@ let package = Package(
     dependencies: [
         .package(path: "../AppCore"),
         .package(path: "../DesignSystem"),
+        .package(path: "../FeatureAccounts"),
+        .package(path: "../FeaturePairing"),
+        .package(path: "../FeaturePurchases"),
+        .package(path: "../FeatureReceiptCapture"),
+        .package(path: "../FeatureTransactions"),
     ],
     targets: [
         .target(
             name: "DesignPlayground",
-            dependencies: ["AppCore", "DesignSystem"],
+            dependencies: [
+                "AppCore",
+                "DesignSystem",
+                "FeatureAccounts",
+                "FeaturePairing",
+                "FeaturePurchases",
+                "FeatureReceiptCapture",
+                "FeatureTransactions",
+            ],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(

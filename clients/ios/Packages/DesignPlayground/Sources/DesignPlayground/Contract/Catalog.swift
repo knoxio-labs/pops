@@ -12,22 +12,46 @@ import SwiftUI
 /// This is the list — one line per surface, and a surface not on it simply
 /// does not appear.
 ///
-/// That drift is real, and `CatalogTests` is what makes it visible rather than
-/// silent: it scans the source tree for surface types and fails when one is
-/// not registered, which is the same shape as `RenderComparisonTraitScanner`
-/// and `TokenDisciplineScanner` — a text scan, because nothing in the type
-/// system distinguishes "a view" from "a view meant to be reviewed".
+/// That drift is real, and `SurfaceRegistrationTests` is what makes it visible
+/// rather than silent: it scans `Surfaces/` for `SurfaceID` literals and fails
+/// when one of them is not in this list. Same shape as
+/// `RenderComparisonTraitScanner` and `TokenDisciplineScanner` in
+/// `DesignSystem` — a text scan, because nothing in the type system
+/// distinguishes "a view" from "a view meant to be reviewed".
 ///
 /// ## Why nothing here fetches
 ///
-/// Every state closes over a literal in ``Fixtures``. The package links
-/// `AppCore` and `DesignSystem` and nothing else — no repository, no client,
-/// no store — so there is no code path that could reach a network even by
-/// mistake. The playground works with the phone in flight mode, on a plane,
-/// or considerably further away.
+/// Most surfaces stage the view the app ships, driven by its real view model,
+/// which means a repository has to answer them. Every one of those answers
+/// comes from a literal in this package: each area declares its own stand-in
+/// conforming to the public seam, and none of them opens a connection.
+///
+/// The stronger half of the guarantee is the package graph. This package links
+/// `AppCore`, `DesignSystem` and the `Feature*` packages, and not one of them
+/// depends on `Auth` or `BFMClient` — the only two modules in the tree that
+/// hold key material or perform HTTP, a rule `ModuleBoundaryTests` enforces by
+/// reading every manifest. So there is no code path from here that could reach
+/// a network even by mistake. The playground works with the phone in flight
+/// mode, on a plane, or considerably further away.
+///
+/// It also links no fake. `AppCoreFakes` is barred from every `Sources` tree
+/// by `ModuleBoundaryTests.fakesAreTestOnly`, which is why each area writes
+/// its own stand-in rather than reusing `InMemoryTransactionsRepository`.
 @MainActor
 internal enum Catalog {
-    static let surfaces: [DesignSurface] = [
+    /// Registration order is editorial. The shell first, because it is what
+    /// the app opens into; then the three features in the order a paired
+    /// phone's tab bar puts them; then accounts, which is built and not yet
+    /// offered; then pairing, which a paired phone never sees again.
+    static let surfaces: [DesignSurface] =
+        ShellSurfaces.surfaces
+        + TransactionsSurfaces.surfaces
+        + PurchasesSurfaces.surfaces
+        + ReceiptSurfaces.surfaces
+        + accountSurfaces
+        + PairingSurfaces.surfaces
+
+    private static let accountSurfaces: [DesignSurface] = [
         DesignSurface(
             id: SurfaceID(area: "accounts", slug: "list"),
             title: "Accounts",
@@ -103,44 +127,6 @@ internal enum Catalog {
                 },
             ],
             backdrop: { NewTransactionBackdrop() }
-        ),
-        DesignSurface(
-            id: SurfaceID(area: "receipts", slug: "receipt"),
-            title: "Receipt",
-            synopsis: "What was read off a photographed receipt, and what can be done with it.",
-            chrome: .navigation,
-            states: [
-                DesignState.standard { ReceiptSurface() },
-                DesignState("loading", "Reading") {
-                    LoadingStateView(message: "Reading the receipt\u{2026}")
-                },
-                DesignState("empty", "Nothing read") {
-                    EmptyStateView(message: "No lines were read from this receipt.")
-                },
-                DesignState("error", "Unreadable") {
-                    ErrorStateView(
-                        message: "The receipt could not be read.", retryTitle: "Try again"
-                    ) {}
-                },
-            ]
-        ),
-        DesignSurface(
-            id: SurfaceID(area: "shell", slug: "states"),
-            title: "Whole-screen states",
-            synopsis: "What a screen shows when it has nothing, is waiting, or failed.",
-            chrome: .navigationLarge,
-            states: [
-                DesignState("loading", "Loading") {
-                    LoadingStateView(message: "Loading accounts…")
-                },
-                DesignState("empty", "Empty") {
-                    EmptyStateView(message: "No transactions in this period.")
-                },
-                DesignState("error", "Error") {
-                    ErrorStateView(message: "Could not reach the server.", retryTitle: "Try again")
-                    {}
-                },
-            ]
         ),
     ]
 
