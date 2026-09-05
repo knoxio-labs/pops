@@ -31,6 +31,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ACCOUNT_KINDS } from './account-kind.js';
+import { ImportStatusSchema } from './rest-account-imports-schemas.js';
 import { AccountBalanceSchema } from './rest-checkpoints-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
@@ -54,6 +55,11 @@ export const AccountSchema = z.object({
    * the sum of whatever happens to have been imported.
    */
   balance: AccountBalanceSchema,
+  /**
+   * When the account last got data and how it is fed (POPS-2917). Read-only
+   * and derived per response; every field null for an account never imported into.
+   */
+  importStatus: ImportStatusSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });

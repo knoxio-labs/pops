@@ -83,11 +83,22 @@ export {
   IMPORT_PROVIDERS,
   IMPORT_SOURCE_KINDS,
   ImportSourceSchema,
+  isImportProvider,
   type CommitBatch,
   type ImportProvider,
   type ImportSource,
   type ImportSourceKind,
 } from './import-source.js';
+export {
+  ImportBatchSchema,
+  ImportConfigSchema,
+  ImportStatusSchema,
+  WriteImportConfigBodySchema,
+  type ImportBatch,
+  type ImportConfig,
+  type ImportStatus,
+  type WriteImportConfigBody,
+} from './rest-account-imports-schemas.js';
 export {
   centsToDollars,
   centsToDollarsNullable,
