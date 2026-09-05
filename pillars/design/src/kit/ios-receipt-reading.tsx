@@ -97,7 +97,7 @@ export function ReceiptReading({ reading }: { reading: ExtractedReceipt }) {
           <PopsDivider />
           <div className="space-y-3">
             {reading.lines.map((line) => (
-              <ReceiptLineRow key={line.description} line={line} />
+              <ReceiptLineRow key={line.id} line={line} />
             ))}
           </div>
           <PopsDivider />

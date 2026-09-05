@@ -101,6 +101,11 @@ function TabCounts() {
  * `UserDefaults` read takes, and a logo or a spinner there is a splash screen
  * that will one day be seen for a whole second because something behind it
  * got slow.
+ *
+ * The purchases list under the banner is the real screen rather than a grey
+ * placeholder, because the whole question about this banner is whether it
+ * reads as a notice over usable content or as a wall in front of it, and a
+ * placeholder cannot be asked that.
  */
 export function AppShell({ degraded, retry = false }: { degraded?: boolean; retry?: boolean }) {
   return (

@@ -9,6 +9,8 @@
  * screen exists to show.
  */
 export interface ReceiptLine {
+  /** The line's own identity: two lines of a receipt can print identically. */
+  id: string;
   description: string;
   amount: string;
   quantity?: number;
@@ -58,10 +60,10 @@ export const woolworthsReading: ExtractedReceipt = {
   discounts: ['2.00'],
   surcharges: ['0.03'],
   lines: [
-    { description: 'Full cream milk 2L', amount: '4.50', quantity: 2 },
-    { description: 'Sourdough loaf', amount: '6.00' },
-    { description: 'Royal gala apples', amount: '7.84', unitNote: '$4.90/kg' },
-    { description: 'Free range eggs 12pk', amount: '9.20' },
+    { id: 'w1', description: 'Full cream milk 2L', amount: '4.50', quantity: 2 },
+    { id: 'w2', description: 'Sourdough loaf', amount: '6.00' },
+    { id: 'w3', description: 'Royal gala apples', amount: '7.84', unitNote: '$4.90/kg' },
+    { id: 'w4', description: 'Free range eggs 12pk', amount: '9.20' },
   ],
   unreadableNotes: ['The line under the eggs is torn away.'],
 };
@@ -89,9 +91,9 @@ export const kmartReading: ExtractedReceipt = {
   discounts: [],
   surcharges: [],
   lines: [
-    { description: 'ZCHEETOS C&B BALLS', amount: '4.00' },
-    { description: 'ZSOFT TCH BLK TRAY', amount: '12.00' },
-    { description: 'ZIRONING BOARD', amount: '15.00' },
+    { id: 'k1', description: 'ZCHEETOS C&B BALLS', amount: '4.00' },
+    { id: 'k2', description: 'ZSOFT TCH BLK TRAY', amount: '12.00' },
+    { id: 'k3', description: 'ZIRONING BOARD', amount: '15.00' },
   ],
   unreadableNotes: [],
 };

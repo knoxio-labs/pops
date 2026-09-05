@@ -34,7 +34,7 @@ const BLANK: ExtractedReceipt = {
   currency: 'AUD',
   discounts: [],
   surcharges: [],
-  lines: [{ description: '', amount: '' }],
+  lines: [{ id: 'blank', description: '', amount: '' }],
   unreadableNotes: [],
 };
 
@@ -69,7 +69,7 @@ function Items({ reading }: { reading: ExtractedReceipt }) {
     <DraftSection label="Items" trailing={itemCountLine(reading.lines.length)}>
       <div className="space-y-4">
         {reading.lines.map((line, index) => (
-          <div key={line.description || index} className="space-y-4">
+          <div key={line.id} className="space-y-4">
             {index > 0 ? <PopsDivider /> : null}
             <DraftLineRow line={line} />
           </div>
@@ -147,7 +147,7 @@ export function ReceiptDraft({
   reading: ExtractedReceipt;
   heading: { title: string; subtitle: string };
   pages?: number;
-  status?: boolean;
+  status?: string;
   reconciliation?: Reconciliation;
   delta?: string;
 }) {
@@ -155,15 +155,15 @@ export function ReceiptDraft({
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-6 p-4">
         <ReceiptPages count={pages} />
-        {status === true ? (
+        {status === undefined ? null : (
           <PopsStatusHeader
             tone="warning"
             title={RECEIPT_COPY.reviewTitle}
-            message={reviewMessage(woolworthsFailures)}
+            message={status}
             caption={photoCountLine(pages)}
             glyph={<TriangleAlert size={30} />}
           />
-        ) : null}
+        )}
         <header className="space-y-2">
           <h1 className="ios-large-title">{heading.title}</h1>
           <p className="ios-body" style={{ color: 'var(--ios-muted-foreground)' }}>
@@ -189,7 +189,7 @@ export const states: ScreenStates = {
       reading={woolworthsReading}
       heading={CORRECTION}
       pages={2}
-      status
+      status={reviewMessage(woolworthsFailures)}
       reconciliation="mismatched"
       delta={deltaWording(-250)}
     />
