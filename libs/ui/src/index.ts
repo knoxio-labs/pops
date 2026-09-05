@@ -77,6 +77,7 @@ export {
 
 // Composite components
 export * from './components/account-shared/account-kinds';
+export * from './components/account-shared/checkpoint-source';
 export * from './components/account-shared/initials';
 export * from './components/account-shared/ledger-tone';
 export * from './components/account-shared/types';
@@ -85,6 +86,7 @@ export * from './components/AccountSelect';
 export * from './components/Autocomplete';
 export * from './components/Button';
 export * from './components/CheckboxInput';
+export * from './components/CheckpointSourceBadge';
 export * from './components/Chip';
 export * from './components/ChipInput';
 export * from './components/ComboboxSelect';
