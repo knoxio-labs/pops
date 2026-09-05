@@ -15,6 +15,7 @@ export { TRANSACTION_MATCH_TYPES } from './match-types.js';
 export type { TransactionMatchType } from './match-types.js';
 
 export { accounts } from './schema/accounts.js';
+export { accountCheckpoints } from './schema/account-checkpoints.js';
 export { accountGiftCardDetails } from './schema/account-gift-card-details.js';
 export { aiUsage } from './schema/ai-usage.js';
 export { budgets } from './schema/budgets.js';
