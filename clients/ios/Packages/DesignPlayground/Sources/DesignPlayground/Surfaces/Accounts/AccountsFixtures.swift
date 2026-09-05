@@ -4,7 +4,7 @@ import Foundation
 /// The fuller records behind ``Fixtures``'s accounts, one per kind
 /// ``AccountFactsView`` switches on — a checking account with a trend, a card
 /// with a cycle, a person ledger with a history, a gift card with an original
-/// value, and the two undated accounts ``AccountProvenanceTests`` in
+/// value, and the two undated accounts `AccountPresentationTests` in
 /// `FeatureAccountsTests` pins.
 extension Fixtures {
     public static let everydayDetail = AccountDetail(
