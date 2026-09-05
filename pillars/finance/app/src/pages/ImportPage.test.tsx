@@ -1,15 +1,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { processMock, progressMock } = vi.hoisted(() => ({
+const { processMock, progressMock, accountsListMock, institutionsListMock } = vi.hoisted(() => ({
   processMock: vi.fn(),
   progressMock: vi.fn(),
+  accountsListMock: vi.fn(),
+  institutionsListMock: vi.fn(),
 }));
 vi.mock('../finance-api/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../finance-api/index.js')>()),
   importsProcessImport: (...args: unknown[]) => processMock(...args),
   importsGetImportProgress: (...args: unknown[]) => progressMock(...args),
+  accountsList: (...args: unknown[]) => accountsListMock(...args),
+  institutionsList: (...args: unknown[]) => institutionsListMock(...args),
 }));
 
 import {
@@ -23,9 +28,29 @@ import {
   type PersistedImportState,
 } from '../store/import-store-persistence';
 import { useImportStore } from '../store/importStore';
+import { NO_BALANCE, NO_IMPORT_STATUS } from '../test-utils.js';
 import { ImportPage } from './ImportPage';
 
 import type { ParsedTransaction } from '@pops/finance';
+
+import type { Account } from './accounts/types';
+
+const ANZ_EVERYDAY: Account = {
+  id: 'acc-1',
+  name: 'ANZ Everyday',
+  institutionId: null,
+  kind: 'checking',
+  currency: 'AUD',
+  archivedAt: null,
+  displayOrder: 0,
+  entityId: null,
+  entityDisplayName: null,
+  entityDisplayNameStale: false,
+  balance: NO_BALANCE,
+  importStatus: NO_IMPORT_STATUS,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
 
 let storage: MemoryPersistStorage<PersistedImportState>;
 
@@ -71,19 +96,29 @@ function seedProcessingInterruptedRun(): void {
   });
 }
 
-function renderImportPage() {
+function renderImportPage(url = '/finance/import') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ImportPage />
+      <MemoryRouter initialEntries={[url]}>
+        <ImportPage />
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  accountsListMock.mockResolvedValue({
+    data: {
+      data: [ANZ_EVERYDAY],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    },
+    error: undefined,
+  });
+  institutionsListMock.mockResolvedValue({ data: { data: [] }, error: undefined });
   useImportStore.getState().reset();
   storage = createMemoryPersistStorage();
   useImportStore.persist.setOptions({ storage });
@@ -165,6 +200,49 @@ describe('ImportPage', () => {
       body: {
         transactions: [expect.objectContaining({ checksum: 'a' })],
       },
+    });
+  });
+
+  describe('?account= pre-scope (POPS-2875)', () => {
+    it('pre-selects the named account in a fresh wizard', async () => {
+      renderImportPage('/finance/import?account=acc-1');
+
+      expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
+      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
+      expect(useImportStore.getState().accountName).toBe('ANZ Everyday');
+    });
+
+    it('leaves a resumed run’s own account alone', async () => {
+      seedProcessingInterruptedRun();
+      processMock.mockReturnValue(new Promise(() => {}));
+      renderImportPage('/finance/import?account=acc-1');
+      await screen.findByText('Resume import?');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+
+      await waitFor(() => expect(processMock).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
+      expect(useImportStore.getState().accountId).toBe('acc-amex');
+      expect(useImportStore.getState().accountName).toBe('Amex');
+    });
+
+    it('applies after a persisted run is discarded, since that starts fresh', async () => {
+      seedProcessingInterruptedRun();
+      renderImportPage('/finance/import?account=acc-1');
+      await screen.findByText('Resume import?');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+
+      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
+    });
+
+    it('ignores an id the accounts list does not know', async () => {
+      renderImportPage('/finance/import?account=acc-nope');
+
+      expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
+      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
+      await new Promise((res) => setTimeout(res, 20));
+      expect(useImportStore.getState().accountId).toBeNull();
     });
   });
 });

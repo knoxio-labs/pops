@@ -54,10 +54,13 @@ function useHydrationGate(setStatus: (status: ResumeStatus) => void): void {
  */
 export function useImportResume(): {
   status: ResumeStatus;
+  /** True once the person chose Resume: the wizard holds a run already in progress. */
+  resumed: boolean;
   resume: () => void;
   discard: () => void;
 } {
   const [status, setStatus] = useState<ResumeStatus>('pending');
+  const [resumed, setResumed] = useState(false);
   const { t } = useTranslation('finance');
 
   useHydrationGate(setStatus);
@@ -73,12 +76,15 @@ export function useImportResume(): {
     [t]
   );
 
-  const resume = useCallback(() => setStatus('ready'), []);
+  const resume = useCallback(() => {
+    setResumed(true);
+    setStatus('ready');
+  }, []);
   const discard = useCallback(() => {
     useImportStore.getState().reset();
     clearPersistedImport(true);
     setStatus('ready');
   }, []);
 
-  return { status, resume, discard };
+  return { status, resumed, resume, discard };
 }
