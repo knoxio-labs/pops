@@ -1,4 +1,4 @@
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { useHoverTarget } from './use-hover-target';
@@ -29,10 +29,6 @@ function move(): void {
 }
 
 afterEach(() => {
-  // The pillar's vitest config sets no `globals`, so RTL registers no
-  // automatic cleanup: without this, a hook from an earlier test stays
-  // mounted and keeps answering mousemove.
-  cleanup();
   document.body.innerHTML = '';
   document.documentElement.style.cursor = '';
 });
