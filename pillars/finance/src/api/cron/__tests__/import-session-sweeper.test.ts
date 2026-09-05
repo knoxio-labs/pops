@@ -12,6 +12,8 @@ import {
 } from '../../modules/imports/progress-store.js';
 import { startImportSessionSweeper } from '../import-session-sweeper.js';
 
+const HOUR_MS = 60 * 60 * 1000;
+
 let fx: MigratedFinanceDb;
 
 beforeEach(() => {
@@ -39,12 +41,13 @@ describe('startImportSessionSweeper', () => {
       errors: [],
       startedAt: new Date().toISOString(),
     });
-    const handle = startImportSessionSweeper({ db: fx.db, intervalMs: 1000, logger: { info } });
+    const handle = startImportSessionSweeper({ db: fx.db, intervalMs: HOUR_MS, logger: { info } });
 
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(HOUR_MS);
     expect(info).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(IMPORT_SESSION_IDLE_TTL_MS);
+    expect(info).toHaveBeenCalledTimes(1);
     expect(info).toHaveBeenCalledWith('finance import-session sweep', { swept: 1 });
 
     handle.stop();
