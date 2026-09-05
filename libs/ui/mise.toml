@@ -9,3 +9,8 @@ run = "oxlint src scripts && oxfmt --check ."
 
 [tasks.storybook]
 run = "storybook dev -p 6006"
+
+[env]
+# See pillars/shell/mise.toml — same reason (POPS-2715). `storybook` is this
+# unit's own dependency and is not hoisted to the workspace bin dir.
+_.path = ["{{config_root}}/node_modules/.bin"]
