@@ -20,6 +20,7 @@ import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
+import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
 import {
   buildCorrectionUpdates,
   isTagsOnlyCorrectionInput,
@@ -97,13 +98,23 @@ function reinforceExistingCorrection(
   existing: TransactionCorrectionRow,
   input: CreateTransactionCorrectionInput
 ): TransactionCorrectionRow {
+  const { tags, dropped } = mergeTagsWithinFacetLimits(
+    parseStoredTags(existing.tags),
+    input.tags ?? []
+  );
+  for (const tag of dropped) {
+    console.warn(
+      `[corrections] not adding ${JSON.stringify(tag)} to rule ${existing.id}: ` +
+        `the rule already carries a value on that single-valued facet`
+    );
+  }
   db.update(transactionCorrections)
     .set({
       confidence: Math.min(existing.confidence + 0.1, 1.0),
       entityId: input.entityId ?? existing.entityId,
       entityName: input.entityName ?? existing.entityName,
       location: input.location ?? existing.location,
-      tags: JSON.stringify(input.tags ?? []),
+      tags: JSON.stringify(tags),
       transactionType: input.transactionType ?? existing.transactionType,
       priority: input.priority ?? existing.priority,
       isActive: true,
@@ -162,10 +173,20 @@ function insertNewCorrection(
  * On hit, the row is "reinforced" — confidence is bumped by 0.1 (capped at 1.0),
  * `isActive` is reset to true, the `entityId` / `entityName` / `location` / `transactionType` /
  * `priority` fields are overlaid with the input only when the input value is
- * non-null (a `null` keeps the existing value), and `tags` is always
- * overwritten by `input.tags ?? []`. The last item is intentional —
- * omitting `tags` from a reinforcement clears them. Pass the existing tags
- * through explicitly if you want to keep them.
+ * non-null (a `null` keeps the existing value), and `tags` is merged into the
+ * existing set via {@link mergeTagsWithinFacetLimits} rather than replaced
+ * (POPS-2987 — the third instance of the POPS-2755/POPS-2954 defect: a value
+ * refused for occupying an already-single-valued facet is dropped and logged,
+ * never silently discarded and never silently overwriting the incumbent).
+ * This docstring used to call the wholesale overwrite intentional; it was
+ * not. The only caller of this branch is the rules-browser's "Add rule"
+ * dialog landing on an existing `(pattern, matchType, accountId)` key — it
+ * starts from an empty tag list because, being a create form, it has no way
+ * to know a rule already exists there — so an omitted or empty `tags` was
+ * never an operator's deliberate "clear this rule's tags", it was this same
+ * defect wearing the same disguise as the other two. Consequently this path
+ * cannot clear a rule's tags; that remains the job of `updateTransactionCorrection`
+ * (the PATCH path), which replaces `tags` outright when the field is present.
  *
  * On miss, a new row is inserted at {@link MIN_MATCH_CONFIDENCE} (the matching
  * floor — never below it, so a freshly created rule is never structurally

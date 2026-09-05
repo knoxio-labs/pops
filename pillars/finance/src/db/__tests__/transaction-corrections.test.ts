@@ -299,7 +299,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
     expect(after.confidence).toBe(1.0);
   });
 
-  it('overwrites tags with [] on the conflict path when input.tags is omitted', () => {
+  it('leaves existing tags untouched on the conflict path when input.tags is omitted (POPS-2987)', () => {
     const id = seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
@@ -311,7 +311,53 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
       matchType: 'exact',
     });
     expect(after.id).toBe(id);
-    expect(after.tags).toBe('[]');
+    expect(JSON.parse(after.tags)).toEqual(['old-tag']);
+  });
+
+  it('merges incoming tags into the existing set instead of replacing it (POPS-2987)', () => {
+    const id = seedCorrection(harness.raw, {
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      tags: JSON.stringify(['old-tag']),
+    });
+
+    const after = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'coffee',
+      matchType: 'exact',
+      tags: ['new-tag'],
+    });
+    expect(after.id).toBe(id);
+    expect(JSON.parse(after.tags)).toEqual(['old-tag', 'new-tag']);
+  });
+
+  it('does not duplicate a tag the row already carries (POPS-2987)', () => {
+    seedCorrection(harness.raw, {
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      tags: JSON.stringify(['old-tag']),
+    });
+
+    const after = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'coffee',
+      matchType: 'exact',
+      tags: ['old-tag', 'new-tag'],
+    });
+    expect(JSON.parse(after.tags)).toEqual(['old-tag', 'new-tag']);
+  });
+
+  it('refuses a second value on a single-valued facet, keeping the incumbent (POPS-2987)', () => {
+    seedCorrection(harness.raw, {
+      descriptionPattern: 'COFFEE',
+      matchType: 'exact',
+      tags: JSON.stringify(['venue:cafe']),
+    });
+
+    const after = createOrUpdateTransactionCorrection(harness.db, {
+      descriptionPattern: 'coffee',
+      matchType: 'exact',
+      tags: ['venue:restaurant', 'new-tag'],
+    });
+    expect(JSON.parse(after.tags)).toEqual(['venue:cafe', 'new-tag']);
   });
 
   it('preserves existing entity fields when input fields are undefined', () => {
