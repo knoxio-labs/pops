@@ -40,8 +40,14 @@ export type NullableColumnKeys<Input, Row, V> = {
 
 /**
  * Write `input[key] ?? null` for every key, so an absent key is stored as
- * `null` rather than left out. Create builders want this: it stops an omitted
- * field silently taking a column default.
+ * `null` rather than left out — an omitted field cannot silently take a column
+ * default.
+ *
+ * That is a choice, and **not every create builder wants this**: inventory's
+ * item create builder reaches for {@link assignNullableKeys} precisely so an
+ * omitted `condition` takes the schema default rather than landing as `NULL`
+ * (POPS-3020). Pick by whether the table has a default worth honouring, not by
+ * whether the builder is a create or an update.
  */
 export function setNullableKeys<K extends string, V>(
   values: Partial<Record<K, V | null>>,
