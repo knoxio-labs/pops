@@ -13,5 +13,14 @@
   },
   "pillars/food/src/worker/ai/web-llm-anthropic.ts": {
     "as unknown as": 1
+  },
+  "pillars/media/src/api/clients/plex/client-mappers.ts": {
+    "wide staging cast": 1
+  },
+  "pillars/media/src/db/services/movies.ts": {
+    "wide staging cast": 2
+  },
+  "pillars/media/src/db/services/tv-shows.ts": {
+    "wide staging cast": 2
   }
 }
