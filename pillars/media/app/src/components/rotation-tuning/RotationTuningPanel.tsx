@@ -53,10 +53,15 @@ function TuningSlider({
 
 function PreviewDetail({ movie }: { movie: PreviewMovie }) {
   const watched = movie.watchCount === 0 ? 'unwatched' : `watched ${movie.watchCount}×`;
+  const abandoned =
+    movie.abandonedProgress === null
+      ? null
+      : `abandoned at ${Math.round(movie.abandonedProgress * 100)}%`;
   return (
     <span className="text-xs text-muted-foreground">
-      {Math.round(movie.ageDays)}d · {watched} · quality {movie.quality.toFixed(2)} (
-      {movie.qualitySource}) · {movie.sizeGb.toFixed(1)} GB
+      {Math.round(movie.ageDays)}d · {watched}
+      {abandoned && <> · {abandoned}</>} · quality {movie.quality.toFixed(2)} ({movie.qualitySource}
+      ) · {movie.sizeGb.toFixed(1)} GB
     </span>
   );
 }

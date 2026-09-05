@@ -13,6 +13,7 @@ export type {
   OpKind,
   PreviewChangeSetInput,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   PreviewView,
   ProposeChangeSetInput,
   ProposeChangeSetOutput,

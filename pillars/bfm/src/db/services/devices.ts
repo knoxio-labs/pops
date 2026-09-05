@@ -18,7 +18,10 @@
  */
 import { and, desc, eq, isNull } from 'drizzle-orm';
 
-import { serialiseDeviceCapabilities } from '../../contract/capabilities.js';
+import {
+  serialiseDeviceCapabilities,
+  type DeviceCapabilityMode,
+} from '../../contract/capabilities.js';
 import { devices, refreshTokens } from '../schema.js';
 
 import type { BfmDb } from '../open-bfm-db.js';
@@ -92,6 +95,15 @@ export interface InsertDeviceValues {
    * authorises nothing, and a caller that genuinely wants that has to say so.
    */
   capabilities: readonly string[];
+  /**
+   * How that grant is to be read on every later request (ADR-048, POPS-2928).
+   *
+   * Required rather than defaulted for the same reason the grant itself is:
+   * the column defaults to `explicit`, which reads the row verbatim, and a
+   * caller that wants a device to follow the default set as it grows has to
+   * say so.
+   */
+  capabilityMode: DeviceCapabilityMode;
 }
 
 /** Write one device row. Takes a {@link BfmDb}, so a transaction handle composes. */
@@ -105,6 +117,7 @@ export function insertDevice(db: BfmDb, values: InsertDeviceValues): void {
       createdAt: values.createdAt,
       lastSeenAt: values.createdAt,
       capabilities: serialiseDeviceCapabilities(values.capabilities),
+      capabilityMode: values.capabilityMode,
     })
     .run();
 }

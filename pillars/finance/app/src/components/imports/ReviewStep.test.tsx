@@ -333,7 +333,7 @@ function makeTx(description: string, overrides: Record<string, unknown> = {}) {
     date: '2026-01-15',
     description,
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     location: null,
     rawRow: {},
     checksum: `chk-${description}`,
@@ -430,6 +430,32 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith(
       expect.stringContaining('Proposal generated — review and approve to learn')
     );
+  });
+
+  it("carries each row's accountId into the ChangeSet preview body (POPS-2975)", () => {
+    mockProcessedTransactions = {
+      matched: [makeTx('WOOLWORTHS 1234 SYDNEY', { accountId: 'acc-a' })],
+      uncertain: [makeTx('COLES EXPRESS 9999', { accountId: undefined })],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    expect(lastProposalDialogProps).not.toBeNull();
+    const props = lastProposalDialogProps as {
+      previewTransactions?: Array<{ description: string; accountId?: string }>;
+    };
+    expect(props.previewTransactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ description: 'WOOLWORTHS 1234 SYDNEY', accountId: 'acc-a' }),
+      ])
+    );
+    // A row with no resolved account previews unscoped, exactly as before.
+    const colesEntry = props.previewTransactions?.find(
+      (t) => t.description === 'COLES EXPRESS 9999'
+    );
+    expect(colesEntry).toBeDefined();
+    expect(colesEntry).not.toHaveProperty('accountId');
   });
 
   it('does not re-evaluate and apply rules before approval', () => {
@@ -755,7 +781,7 @@ describe('ReviewStep — AI correction analysis', () => {
     );
     // Verify account is NOT sent to AI
     expect(mockAnalyzeCorrectionMutateAsync).not.toHaveBeenCalledWith(
-      expect.objectContaining({ account: expect.anything() })
+      expect.objectContaining({ dialectAccountLabel: expect.anything() })
     );
   });
 

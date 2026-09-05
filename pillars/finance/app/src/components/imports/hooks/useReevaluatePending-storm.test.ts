@@ -46,7 +46,7 @@ function makeParsed(checksum: string): ParsedTransaction {
     date: '2026-01-15',
     description: `TXN ${checksum}`,
     amount: -10,
-    account: 'ANZ Credit Card',
+    dialectAccountLabel: 'ANZ Credit Card',
     rawRow: `{"checksum":"${checksum}"}`,
     checksum,
   };

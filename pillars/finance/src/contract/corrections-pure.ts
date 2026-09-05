@@ -28,6 +28,8 @@ export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
 export interface Correction {
   id: string;
   descriptionPattern: string;
+  /** Optional account scope — `null` means the rule matches on every account. */
+  accountId: string | null;
   matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   entityName: string | null;
@@ -50,6 +52,8 @@ export interface Correction {
 export interface CorrectionRow {
   id: string;
   descriptionPattern: string;
+  /** Optional account scope — `null` means the rule matches on every account. */
+  accountId: string | null;
   matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   entityName: string | null;
@@ -78,6 +82,7 @@ export function toCorrection(row: CorrectionRow): Correction {
   return {
     id: row.id,
     descriptionPattern: row.descriptionPattern,
+    accountId: row.accountId,
     matchType: row.matchType,
     entityId: row.entityId,
     entityName: row.entityName,
@@ -98,6 +103,7 @@ export function correctionToRow(c: Correction): CorrectionRow {
   return {
     id: c.id,
     descriptionPattern: c.descriptionPattern,
+    accountId: c.accountId,
     matchType: c.matchType,
     entityId: c.entityId,
     entityName: c.entityName,
@@ -138,6 +144,7 @@ function makeAddedRow(op: Extract<ChangeSetOp, { op: 'add' }>, tempId: string): 
   return {
     id: tempId,
     descriptionPattern: normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType),
+    accountId: op.data.accountId ?? null,
     matchType: op.data.matchType,
     entityId: op.data.entityId ?? null,
     entityName: op.data.entityName ?? null,
@@ -163,6 +170,10 @@ function applyEditOpInMemory(
 ): CorrectionRow {
   return {
     ...existing,
+    // Explicit rather than left to the spread: an edit op that re-scopes a rule
+    // must move it here too, or the merged preview would keep showing the old
+    // scope while the persisted PATCH changed it (POPS-2593).
+    accountId: withDefined(op.data.accountId, existing.accountId),
     entityId: withDefined(op.data.entityId, existing.entityId),
     entityName: withDefined(op.data.entityName, existing.entityName),
     location: withDefined(op.data.location, existing.location),
@@ -243,3 +254,5 @@ export function applyChangeSetToRules(
 
   return next;
 }
+
+export { compareRuleScope, ruleAppliesToAccount } from './corrections-scope.js';

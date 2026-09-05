@@ -81,6 +81,37 @@ token is a `401` and a revoked device a `403`, why a missing device row is a
 what is never logged, and why `lastSeenAt` is written here on a coalesced
 schedule rather than on every request.
 
+#### A grant is resolved, not replayed
+
+A device row carries two columns, not one: `capabilities`, the JSON grant, and
+`capability_mode`, which says how to read it. `tracks-default` means the device
+holds whatever pairing grants and its effective set is resolved from
+`DEFAULT_DEVICE_CAPABILITIES` on every request; `explicit` means the column is
+the whole answer. Pairing writes the first, the column defaults to the second,
+and `resolveDeviceCapabilities` in `src/contract/capabilities.ts` is the one
+place either is turned into a set — `requireCapability` gates with it and
+`/mobile/bootstrap` reports it, so what the app is told it may do and what it
+is allowed to do cannot drift apart.
+
+The mode exists because the grant used to be written once and read back
+verbatim, which froze every handset at the vocabulary of the day it paired: a
+capability added later reached devices paired later and nobody else, and the
+phone in the field was offered a feature whose every call answered `403`
+(POPS-2928). Resolution happens **per request**, not at pairing, at token mint
+or at refresh — the row is already loaded by `requireDevice`, so it is free,
+and a set frozen into a credential would mean a device offline across a deploy
+keeps the old answer until its next refresh, in both directions. A capability
+removed from the default set is gone on the next call, not on the next refresh.
+
+Two properties it must not lose, each with a test that fails when it does
+(`src/contract/__tests__/device-capability-resolution.test.ts`): a
+`tracks-default` device resolves to the DEFAULT set and never to
+`MOBILE_CAPABILITIES`, so re-resolution cannot become "grant everything this
+build knows about"; and an `explicit` grant is never widened by the default
+set, so a per-device narrowing (POPS-2460) cannot be undone by it. An unknown
+mode resolves to the empty grant, the same fail-closed direction as an
+unparseable column.
+
 ### `POST /devices/pair` — the way in
 
 The one route with no gate at all, and that is the design rather than a hole:

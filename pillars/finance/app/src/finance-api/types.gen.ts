@@ -2186,6 +2186,170 @@ export type AccountsPreviewMergeResponses = {
 export type AccountsPreviewMergeResponse =
   AccountsPreviewMergeResponses[keyof AccountsPreviewMergeResponses];
 
+export type AccountImportsTriggerSyncData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/sync';
+};
+
+export type AccountImportsTriggerSyncErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsTriggerSyncError =
+  AccountImportsTriggerSyncErrors[keyof AccountImportsTriggerSyncErrors];
+
+export type AccountImportsTriggerSyncResponses = {
+  /**
+   * 202
+   */
+  202: {
+    data: {
+      accountId: string;
+      error: string | null;
+      finishedAt: string | null;
+      from: string;
+      id: string;
+      result: {
+        alreadyHeld: number;
+        batchId: string | null;
+        checkpoint: {
+          balanceCents: number;
+          deltaCents: number;
+          id: string;
+        } | null;
+        failed: number;
+        fetched: number;
+        imported: number;
+        settled: number;
+        warnings: Array<string>;
+      } | null;
+      startedAt: string;
+      status: 'running' | 'completed' | 'failed';
+      to: string;
+      trigger: 'schedule' | 'manual';
+    };
+  };
+};
+
+export type AccountImportsTriggerSyncResponse =
+  AccountImportsTriggerSyncResponses[keyof AccountImportsTriggerSyncResponses];
+
+export type AccountImportsGetSyncJobData = {
+  body?: never;
+  path: {
+    id: string;
+    jobId: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/sync/{jobId}';
+};
+
+export type AccountImportsGetSyncJobErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsGetSyncJobError =
+  AccountImportsGetSyncJobErrors[keyof AccountImportsGetSyncJobErrors];
+
+export type AccountImportsGetSyncJobResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      error: string | null;
+      finishedAt: string | null;
+      from: string;
+      id: string;
+      result: {
+        alreadyHeld: number;
+        batchId: string | null;
+        checkpoint: {
+          balanceCents: number;
+          deltaCents: number;
+          id: string;
+        } | null;
+        failed: number;
+        fetched: number;
+        imported: number;
+        settled: number;
+        warnings: Array<string>;
+      } | null;
+      startedAt: string;
+      status: 'running' | 'completed' | 'failed';
+      to: string;
+      trigger: 'schedule' | 'manual';
+    };
+  };
+};
+
+export type AccountImportsGetSyncJobResponse =
+  AccountImportsGetSyncJobResponses[keyof AccountImportsGetSyncJobResponses];
+
 export type BudgetsListData = {
   body?: never;
   path?: never;
@@ -2522,6 +2686,7 @@ export type CorrectionsListResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2563,6 +2728,7 @@ export type CorrectionsCreateOrUpdateData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     descriptionPattern: string;
     entityId?: string | null;
     entityName?: string | null;
@@ -2623,6 +2789,7 @@ export type CorrectionsCreateOrUpdateResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2724,6 +2891,7 @@ export type CorrectionsApplyChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -2749,6 +2917,7 @@ export type CorrectionsApplyChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -2827,6 +2996,7 @@ export type CorrectionsApplyChangeSetResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2864,6 +3034,7 @@ export type CorrectionsFindMatchData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     description: string;
     minConfidence: number;
   };
@@ -2908,6 +3079,7 @@ export type CorrectionsFindMatchResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -3017,6 +3189,7 @@ export type CorrectionsListMergedData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -3042,6 +3215,7 @@ export type CorrectionsListMergedData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;
@@ -3121,6 +3295,7 @@ export type CorrectionsListMergedResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -3167,6 +3342,7 @@ export type CorrectionsPreviewChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3192,6 +3368,7 @@ export type CorrectionsPreviewChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3234,6 +3411,7 @@ export type CorrectionsPreviewChangeSetData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -3259,6 +3437,7 @@ export type CorrectionsPreviewChangeSetData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;
@@ -3297,6 +3476,7 @@ export type CorrectionsPreviewChangeSetData = {
       };
     }>;
     transactions: Array<{
+      accountId?: string;
       checksum?: string;
       description: string;
     }>;
@@ -3511,6 +3691,7 @@ export type CorrectionsProposeChangeSetResponses = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3536,6 +3717,7 @@ export type CorrectionsProposeChangeSetResponses = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3624,6 +3806,7 @@ export type CorrectionsProposeChangeSetResponses = {
     rationale: string;
     targetRules: {
       [key: string]: {
+        accountId: string | null;
         confidence: number;
         createdAt: string;
         descriptionPattern: string;
@@ -3665,6 +3848,7 @@ export type CorrectionsRejectChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3690,6 +3874,7 @@ export type CorrectionsRejectChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3810,6 +3995,7 @@ export type CorrectionsReviseChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3835,6 +4021,7 @@ export type CorrectionsReviseChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3940,6 +4127,7 @@ export type CorrectionsReviseChangeSetResponses = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3965,6 +4153,7 @@ export type CorrectionsReviseChangeSetResponses = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -4004,6 +4193,7 @@ export type CorrectionsReviseChangeSetResponses = {
     rationale: string;
     targetRules: {
       [key: string]: {
+        accountId: string | null;
         confidence: number;
         createdAt: string;
         descriptionPattern: string;
@@ -4203,6 +4393,7 @@ export type CorrectionsGetResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -4238,6 +4429,7 @@ export type CorrectionsUpdateData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     confidence?: number;
     descriptionPattern?: string;
     entityId?: string | null;
@@ -4301,6 +4493,7 @@ export type CorrectionsUpdateResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -4671,16 +4864,27 @@ export type DataQualityNudgesResponses = {
    * 200
    */
   200: {
-    data: Array<{
-      accountId: string;
-      accountName: string;
-      asOf: string;
-      checkpointId: string;
-      currency: string;
-      deltaCents: number;
-      href: string;
-      kind: 'checkpoint-inconsistency';
-    }>;
+    data: Array<
+      | {
+          accountId: string;
+          accountName: string;
+          asOf: string;
+          checkpointId: string;
+          currency: string;
+          deltaCents: number;
+          href: string;
+          kind: 'checkpoint-inconsistency';
+        }
+      | {
+          accountId: string;
+          accountName: string;
+          daysStale: number;
+          href: string;
+          kind: 'stale-account';
+          newestTransactionDate: string;
+          thresholdDays: number;
+        }
+    >;
   };
 };
 
@@ -4766,6 +4970,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -4791,6 +4996,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -4889,7 +5095,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -4898,6 +5103,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -4956,7 +5162,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -4965,6 +5170,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5023,7 +5229,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5032,6 +5237,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5090,7 +5296,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5099,6 +5304,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5178,6 +5384,7 @@ export type ImportsCommitImportData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -5203,6 +5410,7 @@ export type ImportsCommitImportData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -5293,7 +5501,6 @@ export type ImportsCommitImportData = {
       };
     }>;
     transactions: Array<{
-      account: string;
       accountId?: string;
       amount: number;
       balanceCents?: number;
@@ -5302,6 +5509,7 @@ export type ImportsCommitImportData = {
       country?: string;
       date: string;
       description: string;
+      dialectAccountLabel: string;
       entityId?: string;
       entityName?: string;
       foreignAmountMinor?: number;
@@ -5387,6 +5595,10 @@ export type ImportsCommitImportResponses = {
         deltaCents: number;
         id: string;
       }>;
+      correctionRuleWrites?: {
+        inserted: number;
+        reinforced: number;
+      };
       entitiesCreated: number;
       failedDetails: Array<{
         checksum: string | null;
@@ -5480,7 +5692,6 @@ export type ImportsProcessImportData = {
    */
   body?: {
     transactions: Array<{
-      account: string;
       accountId?: string;
       amount: number;
       balanceCents?: number;
@@ -5489,6 +5700,7 @@ export type ImportsProcessImportData = {
       country?: string;
       date: string;
       description: string;
+      dialectAccountLabel: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
       fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
@@ -5610,7 +5822,6 @@ export type ImportsGetImportProgressResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5619,6 +5830,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5677,7 +5889,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5686,6 +5897,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5744,7 +5956,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5753,6 +5964,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5811,7 +6023,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5820,6 +6031,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5905,6 +6117,7 @@ export type ImportsReevaluateWithPendingRulesData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -5930,6 +6143,7 @@ export type ImportsReevaluateWithPendingRulesData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;
@@ -6028,7 +6242,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6037,6 +6250,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6095,7 +6309,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6104,6 +6317,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6162,7 +6376,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6171,6 +6384,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6229,7 +6443,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6238,6 +6451,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -7002,6 +7216,8 @@ export type SettingsGetData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7064,6 +7280,8 @@ export type SettingsSetData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7127,6 +7345,8 @@ export type SettingsEnsureData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7189,6 +7409,8 @@ export type SettingsResetKeyData = {
       | 'finance.aiCategorizer.maxTokens'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
+      | 'finance.upSync.enabled'
+      | 'finance.upSync.intervalMinutes'
       | 'finance.defaultLimit';
   };
   query?: never;
@@ -7840,6 +8062,101 @@ export type TagRulesRejectResponses = {
 };
 
 export type TagRulesRejectResponse = TagRulesRejectResponses[keyof TagRulesRejectResponses];
+
+export type TagRulesResolveAddCollisionsData = {
+  /**
+   * Body
+   */
+  body?: {
+    changeSets: Array<{
+      ops: Array<
+        | {
+            data: {
+              confidence?: number;
+              descriptionPattern: string;
+              entityId?: string | null;
+              isActive?: boolean;
+              matchType: 'exact' | 'contains' | 'regex';
+              priority?: number;
+              tags: Array<string>;
+            };
+            op: 'add';
+          }
+        | {
+            data: {
+              confidence?: number;
+              entityId?: string | null;
+              isActive?: boolean;
+              priority?: number;
+              tags?: Array<string>;
+            };
+            id: string;
+            op: 'edit';
+          }
+        | {
+            id: string;
+            op: 'disable';
+          }
+        | {
+            id: string;
+            op: 'remove';
+          }
+      >;
+      reason?: string;
+      source?: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/tag-rules/resolve-add-collisions';
+};
+
+export type TagRulesResolveAddCollisionsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesResolveAddCollisionsError =
+  TagRulesResolveAddCollisionsErrors[keyof TagRulesResolveAddCollisionsErrors];
+
+export type TagRulesResolveAddCollisionsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    collisions: Array<
+      Array<{
+        existingTags: Array<string>;
+        ruleId: string;
+      } | null>
+    >;
+  };
+};
+
+export type TagRulesResolveAddCollisionsResponse =
+  TagRulesResolveAddCollisionsResponses[keyof TagRulesResolveAddCollisionsResponses];
 
 export type TagRulesVocabularyData = {
   body?: never;

@@ -16,7 +16,7 @@ function matched(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransa
     date: '2026-02-13',
     description: 'WOOLWORTHS 1234',
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: 'chk-1',
     status: 'matched',
@@ -200,7 +200,7 @@ const PARSED_KEYS = {
   date: true,
   description: true,
   amount: true,
-  account: true,
+  dialectAccountLabel: true,
   accountId: true,
   location: true,
   country: true,
@@ -237,15 +237,15 @@ describe('buildConfirmedTransactions parsed-field passthrough', () => {
   });
 
   it('carries the picked accountId, not just the dialect-derived account name (POPS-2852)', () => {
-    // `account` is the bank/dialect label ("ANZ Credit Card"); `accountId` is
-    // the real account the wizard's account-step picked. A row whose dialect
-    // label would name-match a DIFFERENT real account than the one picked
-    // must still commit with the picked account's id.
-    const row = matched({ account: 'ANZ Credit Card', accountId: 'acc-anz-personal' });
+    // `dialectAccountLabel` is the bank/dialect label ("ANZ Credit Card");
+    // `accountId` is the real account the wizard's account-step picked. A row
+    // whose dialect label would name-match a DIFFERENT real account than the
+    // one picked must still commit with the picked account's id.
+    const row = matched({ dialectAccountLabel: 'ANZ Credit Card', accountId: 'acc-anz-personal' });
 
     const [confirmed] = buildConfirmedTransactions([row]);
 
-    expect(confirmed?.account).toBe('ANZ Credit Card');
+    expect(confirmed?.dialectAccountLabel).toBe('ANZ Credit Card');
     expect(confirmed?.accountId).toBe('acc-anz-personal');
   });
 

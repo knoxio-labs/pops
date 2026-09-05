@@ -37,7 +37,7 @@ function row(
     date,
     description: `Row ${checksum}`,
     amount: -10,
-    account: 'Any',
+    dialectAccountLabel: 'Any',
     accountId,
     rawRow: '{}',
     checksum,

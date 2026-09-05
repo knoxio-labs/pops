@@ -112,6 +112,7 @@ function RulesBrowserBody({ model }: { model: Model }) {
         onSubmit={model.ruleForm.onSubmit}
         preview={preview}
         entities={model.ruleForm.entities}
+        accounts={model.ruleForm.accounts}
       />
     </div>
   );

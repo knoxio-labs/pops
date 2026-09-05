@@ -14,7 +14,9 @@
  */
 import {
   applyChangeSetToRules as applyChangeSetToRulesPure,
+  compareRuleScope,
   MIN_MATCH_CONFIDENCE,
+  ruleAppliesToAccount,
 } from '../../../contract/corrections-pure.js';
 import { transactionCorrectionsService } from '../../../db/index.js';
 import { NotFoundError } from '../../shared/errors.js';
@@ -41,28 +43,44 @@ export function ruleMatchesDescription(
 }
 
 /**
- * Return ALL matching correction rules in priority order (priority ASC, id ASC).
- * The first entry is the winner; subsequent entries are overridden alternatives.
- * Inactive rules and rules below `minConfidence` are filtered out first.
+ * Return ALL matching correction rules, account-scoped rules first, then in
+ * priority order (priority ASC, id ASC). The first entry is the winner;
+ * subsequent entries are overridden alternatives. Inactive rules, rules below
+ * `minConfidence`, and rules scoped to a different account are filtered out
+ * first.
  *
- * Filtering (active + confidence + pattern match) runs before the sort, so only
- * the matched subset — usually zero or one row — is sorted, not the full rule
- * set. That keeps a per-transaction import loop that threads one fetched-once
- * rule array through every call at O(rules) per row instead of
+ * `accountId` is the transaction's `accounts.id`, or `null` for a caller with
+ * no account in hand (a description-only probe), which sees every rule. Scope
+ * is the outermost ordering key, so an account-scoped rule beats a global one
+ * on the same description whatever their priorities — see
+ * {@link compareRuleScope} (POPS-2593). It is a required parameter rather than
+ * a defaulted one: either answer would be silently wrong for half the callers,
+ * so each one has to state which it is.
+ *
+ * Filtering (active + confidence + scope + pattern match) runs before the
+ * sort, so only the matched subset — usually zero or one row — is sorted, not
+ * the full rule set. That keeps a per-transaction import loop that threads one
+ * fetched-once rule array through every call at O(rules) per row instead of
  * O(rules·log rules) (CF040/#3664).
  */
 export function findAllMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
+  accountId: string | null,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionRow[] {
   const matchable = describeForMatching(description);
   return rules
     .filter(
       (rule) =>
-        rule.isActive && rule.confidence >= minConfidence && ruleMatchesDescription(rule, matchable)
+        rule.isActive &&
+        rule.confidence >= minConfidence &&
+        ruleAppliesToAccount(rule, accountId) &&
+        ruleMatchesDescription(rule, matchable)
     )
     .toSorted((a, b) => {
+      const scope = compareRuleScope(a, b);
+      if (scope !== 0) return scope;
       if (a.priority !== b.priority) return a.priority - b.priority;
       if (a.id < b.id) return -1;
       if (a.id > b.id) return 1;
@@ -70,13 +88,18 @@ export function findAllMatchingCorrectionFromRules(
     });
 }
 
-/** First matching rule in priority order, classified — or null when none match. */
+/**
+ * Winning rule for `description` on `accountId`, classified — or null when
+ * none match. Account-scoped rules win over global ones; see
+ * {@link findAllMatchingCorrectionFromRules}.
+ */
 export function findMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
+  accountId: string | null,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): CorrectionMatchResult | null {
-  const first = findAllMatchingCorrectionFromRules(description, rules, minConfidence)[0];
+  const first = findAllMatchingCorrectionFromRules(description, rules, accountId, minConfidence)[0];
   return first ? classifyCorrectionMatch(first) : null;
 }
 

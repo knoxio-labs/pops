@@ -243,7 +243,7 @@ export async function commitImport(
     return db.transaction((tx) => {
       enqueueOutboxCandidatesPhase(tx, outboxCandidates);
       applyCommitTagVocabulary(tx, tagPlan);
-      const rulesApplied = applyChangeSetsPhase(tx, payload, tempIdMap);
+      const correctionPhase = applyChangeSetsPhase(tx, payload, tempIdMap);
       const tagRulePhase = applyTagRuleChangeSetsPhase(tx, tagPlan.tagRuleChangeSets, tempIdMap);
       const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);
 
@@ -256,7 +256,8 @@ export async function commitImport(
 
       const result: CommitResult = {
         entitiesCreated,
-        rulesApplied,
+        rulesApplied: correctionPhase.counts,
+        correctionRuleWrites: correctionPhase.writes,
         tagRulesApplied: tagRulePhase.applied,
         tagRuleWrites: tagRulePhase.writes,
         transactionsImported: writeResult.imported,

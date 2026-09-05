@@ -268,13 +268,14 @@ function verdictsFor(t: Triple): Record<string, boolean> {
         describeForMatching(t.description)
       ),
       classificationPass:
-        findAllMatchingTransactionCorrectionsFromDb(db, t.description, 0).length > 0,
+        findAllMatchingTransactionCorrectionsFromDb(db, t.description, null, 0).length > 0,
       suggesterCorrectionPass:
-        findAllMatchingTransactionCorrections(db, t.description, 0).length > 0,
+        findAllMatchingTransactionCorrections(db, t.description, null, 0).length > 0,
       inMemoryCorrectionMatch:
         findAllMatchingCorrectionFromRules(
           t.description,
           listTransactionCorrections(db, { limit: 100, offset: 0 }).rows,
+          null,
           0
         ).length > 0,
       tagRuleLivePath: findMatchingTagRules(db, t.description, null).length > 0,

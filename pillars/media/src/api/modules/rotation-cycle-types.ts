@@ -65,11 +65,6 @@ export function calculateRemovalDeficit(
 }
 
 /**
- * How much a single pick may exceed the deficit still outstanding before the
- * walk looks past it. 1.5 leaves ordinary variation alone and only reacts to a
- * pick that would free half again more than is being asked for.
- */
-/**
  * A movie the plan would mark, with the arithmetic that put it there.
  *
  * Persisted alongside the cycle log and returned by the preview: a scored
@@ -95,8 +90,15 @@ export type PlannedRemoval = {
   quality: number;
   qualitySource: RankedCandidate['qualitySource'];
   keepWeight: number;
+  abandonedProgress: number | null;
+  abandonWeight: number;
 };
 
+/**
+ * How much a single pick may exceed the deficit still outstanding before the
+ * walk looks past it. 1.5 leaves ordinary variation alone and only reacts to a
+ * pick that would free half again more than is being asked for.
+ */
 const OVERSHOOT_TOLERANCE = 1.5;
 
 /**
@@ -140,8 +142,12 @@ export interface DeficitSelection<T> {
  *
  * File sizes are heavily skewed — a 90 GB remux next to a 3 GB encode — so an
  * unconditional walk can free double what was asked for purely because of the
- * order it met things in. Measured on the live library, a 40 GB deficit took
- * 87 GB.
+ * order it met things in. The live figure that motivated this (a 40 GB deficit
+ * taking 87 GB) is withdrawn rather than restated: it was measured over a
+ * ranking that aged movies from the wrong Radarr field and read every movie as
+ * unwatched with no Elo, so it describes an order the engine no longer
+ * produces (POPS-2730). The skew itself is a property of the files and does
+ * not depend on that ranking.
  *
  * Two properties keep this from becoming the size-ordering the ranking
  * deliberately excludes. The **first** eligible movie is always taken, so the

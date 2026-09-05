@@ -8,7 +8,7 @@
  * configured. Everything else (whether the secret exists, whether the
  * external account maps) is checked by the thing that runs the import.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { ImportConfigInvalidError } from '../errors.js';
 import { accountImportConfig } from '../schema.js';
@@ -43,6 +43,21 @@ function assertKindIsActionable(input: UpsertImportConfigInput): void {
       if (!input.provider) throw new ImportConfigInvalidError(input.accountId, 'provider');
       return;
   }
+}
+
+/** Every account an `api` source of the given provider feeds, in account-id order so a scheduler pass is deterministic. */
+export function listImportConfigsByProvider(
+  db: FinanceDb,
+  provider: ImportProvider
+): AccountImportConfigRow[] {
+  return db
+    .select()
+    .from(accountImportConfig)
+    .where(
+      and(eq(accountImportConfig.sourceKind, 'api'), eq(accountImportConfig.provider, provider))
+    )
+    .orderBy(accountImportConfig.accountId)
+    .all();
 }
 
 /** The account's config, or undefined for an account fed by hand. */

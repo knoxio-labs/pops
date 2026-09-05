@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  accounts,
   openFinanceDb,
   transactionCorrections,
   type FinanceDb,
@@ -43,7 +44,7 @@ function transaction(overrides: Partial<ParsedTransaction> = {}): ParsedTransact
     date: '2026-02-13',
     description: 'SPOTIFY AB SYDNEY',
     amount: -12.99,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: crypto.randomUUID(),
     ...overrides,
@@ -54,6 +55,7 @@ function rule(overrides: Partial<CorrectionRow> = {}): CorrectionRow {
   return {
     id: 'rule-1',
     descriptionPattern: 'SPOTIFY',
+    accountId: null,
     matchType: 'contains',
     entityId: 'ent-spotify',
     entityName: 'Spotify',
@@ -75,6 +77,7 @@ function seedRule(input: CorrectionRow): void {
     .values({
       id: input.id,
       descriptionPattern: input.descriptionPattern,
+      accountId: input.accountId,
       matchType: input.matchType,
       entityId: input.entityId,
       entityName: input.entityName,
@@ -460,5 +463,138 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
     });
 
     expect(result?.processed.transactionType).toBeUndefined();
+  });
+});
+
+/**
+ * POPS-2593: the import path itself, not just the matcher underneath it. Two
+ * banks posting an identical `LATE FEE` must each land their own merchant and
+ * their own tags, on both the DB-fetch and in-memory-rules branches — a rule
+ * threaded only into one of the two would leave the preview disagreeing with
+ * the commit.
+ */
+describe('applyLearnedCorrection — account-scoped rules', () => {
+  const BANK_A = 'acct-bank-a';
+  const BANK_B = 'acct-bank-b';
+
+  function seedAccounts(): void {
+    for (const [id, name] of [
+      [BANK_A, 'Bank A Card'],
+      [BANK_B, 'Bank B Card'],
+    ] as const) {
+      db.insert(accounts).values({ id, name, kind: 'credit-card', currency: 'AUD' }).run();
+    }
+  }
+
+  const scopedRules = (): CorrectionRow[] => [
+    rule({
+      id: 'rule-a',
+      descriptionPattern: 'LATE FEE',
+      accountId: BANK_A,
+      entityId: 'ent-bank-a',
+      entityName: 'Bank A',
+      tags: JSON.stringify(['bank-a-fee']),
+    }),
+    rule({
+      id: 'rule-b',
+      descriptionPattern: 'LATE FEE',
+      accountId: BANK_B,
+      entityId: 'ent-bank-b',
+      entityName: 'Bank B',
+      tags: JSON.stringify(['bank-b-fee']),
+    }),
+  ];
+
+  beforeEach(seedAccounts);
+
+  function applyOn(accountId: string, rules?: CorrectionRow[]) {
+    return applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'LATE FEE', accountId }),
+      minConfidence: 0.7,
+      knownTags: [],
+      ...(rules ? { rules } : {}),
+    });
+  }
+
+  it('gives each account its own merchant and tags (in-memory rules)', () => {
+    const rules = scopedRules();
+    const onA = applyOn(BANK_A, rules);
+    const onB = applyOn(BANK_B, rules);
+
+    expect(onA?.processed.entity.entityName).toBe('Bank A');
+    expect(onA?.processed.suggestedTags?.map((s) => s.tag)).toContain('bank-a-fee');
+    expect(onA?.processed.suggestedTags?.map((s) => s.tag)).not.toContain('bank-b-fee');
+
+    expect(onB?.processed.entity.entityName).toBe('Bank B');
+    expect(onB?.processed.suggestedTags?.map((s) => s.tag)).toContain('bank-b-fee');
+    expect(onB?.processed.suggestedTags?.map((s) => s.tag)).not.toContain('bank-a-fee');
+  });
+
+  it('gives each account its own merchant and tags (DB fetch)', () => {
+    for (const r of scopedRules()) seedRule(r);
+
+    expect(applyOn(BANK_A)?.processed.entity.entityName).toBe('Bank A');
+    expect(applyOn(BANK_B)?.processed.entity.entityName).toBe('Bank B');
+  });
+
+  it('still applies an unscoped rule to an account with no scoped one', () => {
+    seedRule(
+      rule({
+        id: 'rule-global',
+        descriptionPattern: 'LATE FEE',
+        entityId: 'ent-generic',
+        entityName: 'Generic Bank',
+      })
+    );
+
+    expect(applyOn(BANK_A)?.processed.entity.entityName).toBe('Generic Bank');
+    expect(applyOn(BANK_B)?.processed.entity.entityName).toBe('Generic Bank');
+  });
+
+  it('lets the scoped rule beat a global one carrying the lower priority', () => {
+    seedRule(
+      rule({
+        id: 'rule-global',
+        descriptionPattern: 'LATE FEE',
+        entityId: 'ent-generic',
+        entityName: 'Generic Bank',
+        priority: 0,
+      })
+    );
+    seedRule(
+      rule({
+        id: 'rule-scoped',
+        descriptionPattern: 'LATE FEE',
+        accountId: BANK_A,
+        entityId: 'ent-bank-a',
+        entityName: 'Bank A',
+        priority: 9,
+      })
+    );
+
+    expect(applyOn(BANK_A)?.processed.entity.entityName).toBe('Bank A');
+    expect(applyOn(BANK_B)?.processed.entity.entityName).toBe('Generic Bank');
+  });
+
+  it('falls back to global matching for a transaction carrying no account', () => {
+    // `ParsedTransaction.accountId` is optional for callers predating the
+    // account-step (POPS-2852); absent, matching must behave as it did before
+    // the scope existed rather than returning nothing.
+    seedRule(
+      rule({
+        id: 'rule-global',
+        descriptionPattern: 'LATE FEE',
+        entityId: 'ent-generic',
+        entityName: 'Generic Bank',
+      })
+    );
+
+    const result = applyLearnedCorrection(db, {
+      transaction: transaction({ description: 'LATE FEE' }),
+      minConfidence: 0.7,
+      knownTags: [],
+    });
+
+    expect(result?.processed.entity.entityName).toBe('Generic Bank');
   });
 });

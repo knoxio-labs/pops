@@ -6,6 +6,7 @@ import type {
   LocalOp,
   PreviewChangeSetInput,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   ServerChangeSet,
 } from '../correction-proposal-shared';
 
@@ -25,7 +26,7 @@ export interface PreviewSlotState {
 interface BaseEffectShared {
   open: boolean;
   minConfidence: number;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   pendingChangeSets: Array<{ changeSet: ServerChangeSet }>;
   normalisedDbTransactions: Array<{ checksum?: string; description: string }>;
   rerunToken: number;

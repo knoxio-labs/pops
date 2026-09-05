@@ -67,6 +67,7 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
         const matches = transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb(
           db,
           body.description,
+          body.accountId ?? null,
           body.minConfidence
         );
         const first = matches[0];
@@ -177,7 +178,7 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       runHttp(() => ({
         status: 200 as const,
         body: {
-          data: applyCorrectionChangeSet(db, body.changeSet).map(toCorrection),
+          data: applyCorrectionChangeSet(db, body.changeSet).rows.map(toCorrection),
           message: 'ChangeSet applied',
         },
       })),

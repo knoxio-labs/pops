@@ -31,6 +31,7 @@ import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
 
+import type { UpSyncJob } from '../../contract/rest-account-sync-schemas.js';
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
 import type { ImportBatch, ImportConfig } from '../modules/account-imports-types.js';
@@ -182,7 +183,7 @@ interface TransactionSnapshot {
   id: string;
   notionId: string | null;
   description: string;
-  account: string;
+  accountId: string;
   amount: number;
   date: string;
   type: string;
@@ -215,7 +216,6 @@ export interface BudgetQuery {
 
 export interface TransactionQuery {
   search?: string;
-  account?: string;
   accountId?: string;
   startDate?: string;
   endDate?: string;
@@ -509,6 +509,10 @@ export function makeClient(app: Express) {
         call<{ data: ImportConfig; message: string }>((r) =>
           r.put(`/accounts/${accountId}/import-config`).send(body)
         ),
+      triggerSync: (accountId: string) =>
+        call<{ data: UpSyncJob }>((r) => r.post(`/accounts/${accountId}/sync`).send({})),
+      getSyncJob: (accountId: string, jobId: string) =>
+        call<{ data: UpSyncJob }>((r) => r.get(`/accounts/${accountId}/sync/${jobId}`)),
     },
     giftCardDetails: {
       get: (accountId: string) =>
@@ -612,6 +616,10 @@ export function makeClient(app: Express) {
         call<{ rules: TagRule[] }>((r) => r.post('/tag-rules/apply').send(body)),
       reject: (body: Record<string, unknown>) =>
         call<{ message: string }>((r) => r.post('/tag-rules/reject').send(body)),
+      resolveAddCollisions: (body: Record<string, unknown>) =>
+        call<{ collisions: ({ ruleId: string; existingTags: string[] } | null)[][] }>((r) =>
+          r.post('/tag-rules/resolve-add-collisions').send(body)
+        ),
     },
     corrections: {
       list: (query: CorrectionListQuery = {}) =>

@@ -169,6 +169,11 @@ export function completePairingExchange(
       // column's default — which is the empty grant, so a row that reached
       // the table without anyone deciding may do nothing (ADR-048).
       capabilities: DEFAULT_DEVICE_CAPABILITIES,
+      // ...and recorded as tracking that set rather than as a copy of it, so
+      // this device is not frozen at the vocabulary of the day it paired
+      // (POPS-2928). The column above stays the record of what it was granted
+      // here; what it may do is resolved against the running build.
+      capabilityMode: 'tracks-default',
     });
 
     insertRefreshToken(tx, {

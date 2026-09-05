@@ -14,7 +14,7 @@ import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { CommitBatchSchema, ImportSourceSchema } from './import-source.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
-import { RulesAppliedSchema, TagRuleWritesSchema } from './rest-imports-rule-counts.js';
+import { RulesAppliedSchema, RuleWriteCountsSchema } from './rest-imports-rule-counts.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
 
 /** Transaction as parsed upstream (client-side or a transformer), with audit + dedup fields. */
@@ -22,13 +22,13 @@ export const ParsedTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   description: z.string().min(1),
   amount: z.number(),
-  account: z.string().min(1),
+  dialectAccountLabel: z.string().min(1),
   /**
    * The `accounts.id` the wizard's account-step (POPS-2840) picked for this
-   * import, distinct from `account` (the bank/dialect label stamped at parse
-   * time — see `column-map/validation.ts`). Optional only for a caller that
-   * predates the account-step; the commit path falls back to name-matching
-   * `account` when it is absent (POPS-2852).
+   * import, distinct from `dialectAccountLabel` (the bank/dialect label
+   * stamped at parse time — see `column-map/validation.ts`). Optional only
+   * for a caller that predates the account-step; the commit path falls back
+   * to name-matching `dialectAccountLabel` when it is absent (POPS-2852).
    */
   accountId: z.string().min(1).optional(),
   location: z.string().optional(),
@@ -219,7 +219,7 @@ export const CommitPayloadSchema = z.object({
   source: ImportSourceSchema.optional(),
 });
 
-export { RulesAppliedSchema, TagRuleWritesSchema };
+export { RulesAppliedSchema, RuleWriteCountsSchema };
 
 export const FailedTransactionDetailSchema = z.object({
   checksum: z.string().nullable(),
@@ -250,7 +250,17 @@ export const CommitResultSchema = z.object({
    * through this schema verbatim on a `commitKey` resubmit — a required field
    * would turn every historical commit's replay into a parse failure.
    */
-  tagRuleWrites: TagRuleWritesSchema.optional(),
+  tagRuleWrites: RuleWriteCountsSchema.optional(),
+  /**
+   * Of this commit's correction-rule `add` ops, how many minted a rule
+   * against how many merged into one that already existed (POPS-2954) —
+   * `rulesApplied.add` stays the raw op count across both.
+   *
+   * Optional for the same replay reason as `tagRuleWrites`: a result recorded
+   * before this field existed is replayed through this schema verbatim on a
+   * `commitKey` resubmit.
+   */
+  correctionRuleWrites: RuleWriteCountsSchema.optional(),
   transactionsImported: z.number().int().nonnegative(),
   transactionsFailed: z.number().int().nonnegative(),
   failedDetails: z.array(FailedTransactionDetailSchema),

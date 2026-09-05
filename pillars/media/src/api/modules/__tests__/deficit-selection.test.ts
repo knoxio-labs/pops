@@ -21,9 +21,14 @@ const titles = (films: readonly Film[]): string[] => films.map((f) => f.title);
 const total = (films: readonly Film[]): number => films.reduce((sum, f) => sum + f.sizeGb, 0);
 
 describe('selectForDeficit', () => {
-  it('meets the deficit without the 118% overshoot measured on the live library', () => {
-    // The real top of the ranking for a 40 GB deficit on 2026-08-31. The
-    // unconditional walk took the first five for 87.2 GB.
+  it('meets the deficit without the overshoot an unconditional walk takes', () => {
+    // Titles and sizes lifted from a live ranking on 2026-08-30, kept as a
+    // fixture for its size distribution. What produced that order has since
+    // been found to age movies from the wrong Radarr field with its watch and
+    // Elo signals dead (POPS-2730), so this is no longer "the top of the
+    // ranking" — but the walk under test consumes whatever order it is handed,
+    // and the 118% overshoot an unconditional walk takes over these eight
+    // sizes is arithmetic on the sizes alone.
     const ranked = [
       film('Road to Ninja', 2.1),
       film('Taxi', 2.4),

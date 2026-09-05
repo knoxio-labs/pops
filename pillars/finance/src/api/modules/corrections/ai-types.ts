@@ -85,6 +85,8 @@ export interface ChangeSetImpactItem {
 export interface Correction {
   id: string;
   descriptionPattern: string;
+  /** Optional account scope — `null` means the rule matches on every account. */
+  accountId: string | null;
   matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   entityName: string | null;
@@ -103,6 +105,7 @@ export function toCorrection(row: TransactionCorrectionRow): Correction {
   return {
     id: row.id,
     descriptionPattern: row.descriptionPattern,
+    accountId: row.accountId,
     matchType: row.matchType,
     entityId: row.entityId,
     entityName: row.entityName,

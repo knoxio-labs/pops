@@ -32,11 +32,13 @@ extension AccountsSurfaces {
                 DesignState("one", "Single account") {
                     AccountsListView(model: listModel(outcome: .list([Fixtures.everyday])))
                 },
-                // POPS-2900: pinned here, rather than left to the inspector's
-                // type-size dial, so a reviewer sees the shipping defect by
-                // opening the surface — this renders the real
-                // `AccountsListView` at AX5, not a description of it.
-                DesignState("ax5", "AX5 row collapse") {
+                // Pinned here, rather than left to the inspector's type-size
+                // dial, so the largest accessibility size is one click rather
+                // than a setting a reviewer has to remember — this renders the
+                // real `AccountsListView` at AX5, not a description of it. It
+                // is where POPS-2900 was seen, and where the stacked row it
+                // produced is checked.
+                DesignState("ax5", "AX5 rows stack") {
                     AccountsListView(model: listModel(outcome: .list(Fixtures.activeAccounts)))
                         .dynamicTypeSize(.accessibility5)
                 },

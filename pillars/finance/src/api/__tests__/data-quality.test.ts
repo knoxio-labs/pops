@@ -140,6 +140,8 @@ describe('GET /data-quality/nudges', () => {
     const { data } = await client().dataQuality.nudges();
 
     expect(data.map((n) => n.accountId)).toEqual([large, small]);
-    expect(data.map((n) => Math.abs(n.deltaCents))).toEqual([10_000, 100]);
+    expect(
+      data.map((n) => (n.kind === 'checkpoint-inconsistency' ? Math.abs(n.deltaCents) : n.kind))
+    ).toEqual([10_000, 100]);
   });
 });

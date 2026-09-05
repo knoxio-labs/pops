@@ -26,6 +26,7 @@ function rule(id: string, pattern: string): Correction {
   return {
     id,
     descriptionPattern: pattern,
+    accountId: null,
     matchType: 'contains',
     entityId: null,
     entityName: null,

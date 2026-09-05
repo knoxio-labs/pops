@@ -23,7 +23,7 @@ function makeProcessed(
     date: '2026-02-06',
     description: `TXN ${checksum}`,
     amount: -20,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: `{"checksum":"${checksum}"}`,
     checksum,
     entity: { entityName: 'Bunnings', matchType: 'ai', confidence: 0.8 },

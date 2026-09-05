@@ -23,6 +23,13 @@ export type ReviseChangeSetInput = NonNullable<CorrectionsReviseChangeSetData['b
 export type ReviseChangeSetOutput = CorrectionsReviseChangeSetResponse;
 export type ProposeChangeSetInput = NonNullable<CorrectionsProposeChangeSetData['body']>;
 export type ProposeChangeSetOutput = CorrectionsProposeChangeSetResponse;
+/**
+ * One row of `PreviewChangeSetInput['transactions']` — the shape every
+ * ChangeSet-preview caller builds its transaction list out of, `accountId`
+ * included (POPS-2593/POPS-2975) so a scoped rule's reach is diffed under the
+ * same scope the live matcher uses.
+ */
+export type PreviewTransactionEntry = PreviewChangeSetInput['transactions'][number];
 type ServerChangeSet = ProposeChangeSetOutput['changeSet'];
 type ServerChangeSetOp = ServerChangeSet['ops'][number];
 export type AddRuleData = Extract<ServerChangeSetOp, { op: 'add' }>['data'];
@@ -89,6 +96,12 @@ export interface TriggeringTransactionContext {
   description: string;
   amount: number;
   date: string;
+  /**
+   * The real account id (POPS-2840) when the row's picked one; the
+   * bank-dialect label ("Amex") only as a fallback for a pre-account-step
+   * caller (POPS-2872). `AccountLabel` resolves either against the live
+   * accounts list.
+   */
   account: string;
   location?: string | null;
   previousEntityName?: string | null;

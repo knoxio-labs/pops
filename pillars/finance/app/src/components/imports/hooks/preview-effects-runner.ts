@@ -4,6 +4,7 @@ import { localOpsToChangeSet } from './useLocalOps';
 import type {
   LocalOp,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   ServerChangeSet,
 } from '../correction-proposal-shared';
 import type { PreviewMutateAsync } from './preview-effect-hooks';
@@ -34,7 +35,7 @@ function applyPreviewResult({
 
 interface RunPreviewArgs {
   ops: LocalOp[];
-  sessionTxns: Array<{ checksum?: string; description: string }>;
+  sessionTxns: PreviewTransactionEntry[];
   dbTxns: Array<{ checksum?: string; description: string }>;
   minConfidence: number;
   pendingChangeSets: Array<{ changeSet: ServerChangeSet }>;

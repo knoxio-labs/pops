@@ -60,7 +60,7 @@ function makeRow(spec: RowSpec): TransactionProcessResult {
     date: '2026-01-01',
     description: spec.description,
     amount: -20,
-    account: 'amex',
+    dialectAccountLabel: 'amex',
     rawRow: spec.description,
     checksum: crypto.randomUUID(),
     entity: {

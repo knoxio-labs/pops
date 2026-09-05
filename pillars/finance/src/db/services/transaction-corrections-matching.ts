@@ -6,9 +6,13 @@
  * surface through the `transactionCorrectionsService` namespace on the
  * package barrel and the in-tree consumer treats them as one slice.
  */
-import { and, asc, desc, eq, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, or, type SQL } from 'drizzle-orm';
 
-import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
+import {
+  compareRuleScope,
+  MIN_MATCH_CONFIDENCE,
+  ruleAppliesToAccount,
+} from '../../contract/corrections-pure.js';
 import { centsToDollars } from '../../money.js';
 import { transactionCorrections, transactions } from '../schema.js';
 import {
@@ -35,8 +39,30 @@ function ruleMatchesDescription(
 }
 
 /**
- * Return every active correction whose pattern matches `description`, in
+ * SQL narrowing for the account scope: an unscoped rule (`account_id IS NULL`)
+ * plus, when the caller knows the account, that account's own rules.
+ *
+ * `accountId === null` (a description-only probe with no account in hand)
+ * narrows nothing — see {@link ruleAppliesToAccount} for why a probe must see
+ * scoped rules too.
+ */
+function accountScopeFilter(accountId: string | null): SQL | undefined {
+  if (accountId === null) return undefined;
+  return or(
+    isNull(transactionCorrections.accountId),
+    eq(transactionCorrections.accountId, accountId)
+  );
+}
+
+/**
+ * Return every active correction whose pattern matches `description` and whose
+ * account scope admits `accountId`, account-scoped rules first, then in
  * priority order (priority ASC, id ASC as tie-breaker).
+ *
+ * `accountId` is the transaction's `accounts.id`, or `null` for a caller with
+ * no account in hand. Scope is the outermost ordering key, so an
+ * account-scoped rule beats a global one on the same description whatever
+ * their priorities — see {@link compareRuleScope} (POPS-2593).
  *
  * Filters out rules below `minConfidence` and inactive rules before the
  * in-memory pattern test, mirroring the in-tree
@@ -45,6 +71,7 @@ function ruleMatchesDescription(
 export function findAllMatchingTransactionCorrectionsFromDb(
   db: FinanceDb,
   description: string,
+  accountId: string | null,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
   const matchable = describeForMatching(description);
@@ -55,13 +82,16 @@ export function findAllMatchingTransactionCorrectionsFromDb(
     .where(
       and(
         eq(transactionCorrections.isActive, true),
-        gte(transactionCorrections.confidence, minConfidence)
+        gte(transactionCorrections.confidence, minConfidence),
+        accountScopeFilter(accountId)
       )
     )
     .orderBy(asc(transactionCorrections.priority), asc(transactionCorrections.id))
     .all();
 
-  return candidates.filter((rule) => ruleMatchesDescription(rule, matchable));
+  return candidates
+    .filter((rule) => ruleMatchesDescription(rule, matchable))
+    .toSorted(compareRuleScope);
 }
 
 /**
@@ -91,9 +121,15 @@ export function listActiveTransactionCorrectionsForMatching(
 }
 
 /**
- * Match `description` against an already-fetched active-correction set,
- * grouped by `matchType` in `[exact, contains, regex]` order, with each group
- * sorted by `confidence DESC, timesApplied DESC, id ASC`.
+ * Match `description` against an already-fetched active-correction set, with
+ * account-scoped rules first, then grouped by `matchType` in
+ * `[exact, contains, regex]` order, each group sorted by
+ * `confidence DESC, timesApplied DESC, id ASC`.
+ *
+ * The account scope is filtered here rather than in SQL, because `rows` is a
+ * set the caller already holds — a scope narrowing baked into the fetch would
+ * be wrong for every other description this same set is matched against. That
+ * is the same reason the pattern predicate runs here (POPS-2593/POPS-2600).
  *
  * The pure counterpart of {@link findAllMatchingTransactionCorrections}: same
  * ordering, grouping and pattern predicate, but over rows the caller already
@@ -104,7 +140,8 @@ export function listActiveTransactionCorrectionsForMatching(
  */
 export function findAllMatchingTransactionCorrectionsFromRows(
   rows: readonly TransactionCorrectionRow[],
-  description: string
+  description: string,
+  accountId: string | null
 ): TransactionCorrectionRow[] {
   const matchable = describeForMatching(description);
 
@@ -116,18 +153,22 @@ export function findAllMatchingTransactionCorrectionsFromRows(
       if (a.id > b.id) return 1;
       return 0;
     })
-    .filter((rule) => ruleMatchesDescription(rule, matchable));
+    .filter(
+      (rule) => ruleAppliesToAccount(rule, accountId) && ruleMatchesDescription(rule, matchable)
+    );
 
-  return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
+  const byMatchType = MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
     matched.filter((rule) => rule.matchType === matchType)
   );
+  return byMatchType.toSorted(compareRuleScope);
 }
 
 /**
  * Return every active correction at or above `minConfidence` whose pattern
- * matches `description`, grouped by `matchType` in `[exact, contains, regex]`
- * order, with each group sorted by `confidence DESC, timesApplied DESC,
- * id ASC`.
+ * matches `description` and whose account scope admits `accountId`,
+ * account-scoped rules first, then grouped by `matchType` in
+ * `[exact, contains, regex]` order, each group sorted by
+ * `confidence DESC, timesApplied DESC, id ASC`.
  *
  * Used by callers that need to surface all matches (not just the winning
  * rule) rather than a single classification verdict — today, the
@@ -155,11 +196,13 @@ export function findAllMatchingTransactionCorrectionsFromRows(
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
   description: string,
+  accountId: string | null,
   minConfidence: number = MIN_MATCH_CONFIDENCE
 ): TransactionCorrectionRow[] {
   return findAllMatchingTransactionCorrectionsFromRows(
     listActiveTransactionCorrectionsForMatching(db, minConfidence),
-    description
+    description,
+    accountId
   );
 }
 

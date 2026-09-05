@@ -131,7 +131,6 @@ export function EngramEditForm({ model }: { model: Model }) {
     >
       <TextInput
         label={t('engrams.edit.title')}
-        aria-label={t('engrams.edit.title')}
         value={form.title}
         onChange={(e) => updateForm({ title: e.currentTarget.value })}
       />

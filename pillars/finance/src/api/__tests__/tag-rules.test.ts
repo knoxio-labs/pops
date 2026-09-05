@@ -809,6 +809,124 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
   });
 });
 
+describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
+  it('reports null for an add op that would create a new rule', async () => {
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'FRESH PATTERN', matchType: 'contains', tags: ['x'] },
+            },
+          ],
+        },
+      ],
+    });
+    expect(collisions).toEqual([[null]]);
+  });
+
+  it('reports the existing rule id and tags for an add op that would merge', async () => {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'CURATED MERCHANT',
+              matchType: 'contains',
+              tags: ['venue:cafe', 'occasion:birthday'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const ruleId = created.rules[0]!.id;
+
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'CURATED MERCHANT',
+                matchType: 'contains',
+                tags: ['contains:coffee'],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(collisions).toEqual([[{ ruleId, existingTags: ['venue:cafe', 'occasion:birthday'] }]]);
+  });
+
+  it('lines up one entry per op, null for edit/disable/remove ops', async () => {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'EXISTING RULE', matchType: 'exact', tags: ['x'] },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const ruleId = created.rules[0]!.id;
+
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            { op: 'edit', id: ruleId, data: { tags: ['y'] } },
+            { op: 'add', data: { descriptionPattern: 'NEW ONE', matchType: 'exact', tags: ['z'] } },
+            { op: 'disable', id: ruleId },
+          ],
+        },
+      ],
+    });
+    expect(collisions).toEqual([[null, null, null]]);
+  });
+
+  it('resolves collisions independently across multiple ChangeSets, in request order', async () => {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          { op: 'add', data: { descriptionPattern: 'MULTI SET', matchType: 'exact', tags: ['x'] } },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+    const ruleId = created.rules[0]!.id;
+
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'BRAND NEW', matchType: 'exact', tags: ['a'] },
+            },
+          ],
+        },
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'MULTI SET', matchType: 'exact', tags: ['b'] },
+            },
+          ],
+        },
+      ],
+    });
+    expect(collisions[0]).toEqual([null]);
+    expect(collisions[1]).toEqual([{ ruleId, existingTags: ['x'] }]);
+  });
+});
+
 describe('tagRules — write path refuses an unconditionally unmatchable pattern (POPS-2942)', () => {
   it('400s an add op whose contains pattern normalises to empty, writing nothing', async () => {
     await expect(

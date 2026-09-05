@@ -15,13 +15,13 @@
  * here. All three surface through the `transactionCorrectionsService`
  * namespace on the package barrel.
  */
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 
 import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
-  assertPatchLeavesCompilablePattern,
+  buildCorrectionUpdates,
   isTagsOnlyCorrectionInput,
   storablePattern,
   wouldUpdateLeaveTagsOnly,
@@ -125,6 +125,7 @@ function insertNewCorrection(
     .values({
       descriptionPattern: normalized,
       matchType: input.matchType,
+      accountId: input.accountId ?? null,
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
       location: input.location ?? null,
@@ -147,7 +148,16 @@ function insertNewCorrection(
 }
 
 /**
- * Upsert a correction keyed on `(normalized descriptionPattern, matchType)`.
+ * Upsert a correction keyed on
+ * `(normalized descriptionPattern, matchType, accountId)`.
+ *
+ * `accountId` joins the key rather than riding along as a payload field
+ * (POPS-2593). It has to: the whole point of the scope is that a global
+ * `LATE FEE` rule and an ANZ-scoped `LATE FEE` rule are two different rules.
+ * Keyed on the pattern alone, creating the second would silently reinforce
+ * the first and overwrite its entity — the exact fight the scope exists to
+ * end. A missing/`null` `accountId` matches only the global row, never an
+ * arbitrary scoped one.
  *
  * On hit, the row is "reinforced" — confidence is bumped by 0.1 (capped at 1.0),
  * `isActive` is reset to true, the `entityId` / `entityName` / `location` / `transactionType` /
@@ -175,43 +185,24 @@ export function createOrUpdateTransactionCorrection(
 ): TransactionCorrectionRow {
   const normalized = storablePattern(input.descriptionPattern, input.matchType);
 
+  const accountId = input.accountId ?? null;
+
   const existing = db
     .select()
     .from(transactionCorrections)
     .where(
       and(
         eq(transactionCorrections.descriptionPattern, normalized),
-        eq(transactionCorrections.matchType, input.matchType)
+        eq(transactionCorrections.matchType, input.matchType),
+        accountId === null
+          ? isNull(transactionCorrections.accountId)
+          : eq(transactionCorrections.accountId, accountId)
       )
     )
     .get();
 
   if (existing) return reinforceExistingCorrection(db, existing, input);
   return insertNewCorrection(db, input, normalized);
-}
-
-function buildCorrectionUpdates(
-  input: UpdateTransactionCorrectionInput,
-  existing: TransactionCorrectionRow
-): Partial<typeof transactionCorrections.$inferInsert> {
-  const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
-  const effectiveMatchType = input.matchType ?? existing.matchType;
-
-  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
-
-  if (input.descriptionPattern !== undefined) {
-    updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);
-  }
-  if (input.matchType !== undefined) updates.matchType = input.matchType;
-  if (input.entityId !== undefined) updates.entityId = input.entityId;
-  if (input.entityName !== undefined) updates.entityName = input.entityName;
-  if (input.location !== undefined) updates.location = input.location;
-  if (input.tags !== undefined) updates.tags = JSON.stringify(input.tags);
-  if (input.transactionType !== undefined) updates.transactionType = input.transactionType;
-  if (input.isActive !== undefined) updates.isActive = input.isActive;
-  if (input.confidence !== undefined) updates.confidence = input.confidence;
-  if (input.priority !== undefined) updates.priority = input.priority;
-  return updates;
 }
 
 /**

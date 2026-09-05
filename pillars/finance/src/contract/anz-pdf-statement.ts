@@ -99,8 +99,8 @@ export interface AnzPdfStatement {
 }
 
 export interface AnzPdfStatementOptions {
-  /** Account name stored on every transaction, as the ledger names this card. */
-  account: string;
+  /** Bank/dialect label stamped on every transaction, as the ledger names this card. */
+  dialectAccountLabel: string;
   /**
    * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
    * this import — see `column-map/validation.ts`'s identical parameter. Used
@@ -150,7 +150,7 @@ function toTransaction(
     date,
     description,
     amount,
-    account: options.account,
+    dialectAccountLabel: options.dialectAccountLabel,
     accountId: options.accountId,
     location,
     country,
@@ -211,20 +211,22 @@ export interface AnzPdfImportPlan {
   refusal?: ImportRefusal;
 }
 
-function isCovered(date: string, coverage: DateInterval | undefined): boolean {
-  return coverage !== undefined && date >= coverage.from && date <= coverage.to;
+function isCovered(date: string, coverage: DateInterval | null): boolean {
+  return coverage !== null && date >= coverage.from && date <= coverage.to;
 }
 
 /**
  * Split parsed statement rows into what may be imported and what the account
  * already covers from another source.
  *
- * `coverage` is the inclusive span of the account's existing transactions;
- * omitting it means the account has none and every row is importable.
+ * `coverage` is the inclusive span of the account's existing transactions,
+ * and it is required (POPS-2504): `null` says out loud that the account has
+ * none and every row is importable. A caller that has not asked cannot spell
+ * that the same way as a caller that asked and found nothing.
  */
 export function planAnzPdfImport(
   transactions: readonly ParsedTransaction[],
-  coverage?: DateInterval
+  coverage: DateInterval | null
 ): AnzPdfImportPlan {
   const importable: ParsedTransaction[] = [];
   const withheld: WithheldTransaction[] = [];

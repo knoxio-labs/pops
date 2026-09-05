@@ -7,8 +7,10 @@ import { describe, expect, it } from 'vitest';
 
 import { selectForDeficit } from '../rotation-cycle-types.js';
 import {
+  abandonWeightFor,
   DEFAULT_TUNING,
   keepWeight,
+  pressureFrom,
   rankForRemoval,
   type RemovalCandidate,
   removableOnly,
@@ -41,6 +43,7 @@ function candidate(title: string, over: Partial<RemovalCandidate> = {}): Removal
 interface RankOptions {
   graceDays?: number;
   acquired?: Map<number, string>;
+  abandonedProgress?: Map<number, number>;
 }
 
 function rank(candidates: RemovalCandidate[], options: RankOptions = {}) {
@@ -48,6 +51,7 @@ function rank(candidates: RemovalCandidate[], options: RankOptions = {}) {
   return rankForRemoval({
     candidates,
     acquiredAt,
+    abandonedProgress: options.abandonedProgress,
     graceDays: options.graceDays ?? 30,
     now: NOW,
     // Fixed draw so a tie resolves deterministically here; the production
@@ -104,6 +108,22 @@ describe('age', () => {
 
     const [ranked] = rank([fresh], { acquired, graceDays: 30 });
     expect(ranked?.pressure).toBe(0);
+  });
+
+  it('puts a long-held movie back inside the grace window when it was just watched', () => {
+    // The window is applied to the effective age, so the watch anchor pulls a
+    // 600-day-old file back under a 30-day grace. Pinned because the setting
+    // reads as a download-age window and is not one, and because how large a
+    // share of the library it removes from consideration is a live question
+    // for the re-fit (POPS-2730).
+    const held = candidate('Held', { watchCount: 1, lastWatchedAt: daysAgo(5) });
+    const acquired = new Map([[held.tmdbId, daysAgo(600)]]);
+
+    const [ranked] = rank([held], { acquired, graceDays: 30 });
+    expect(ranked?.ageAnchor).toBe('watched');
+    expect(ranked?.ageDays).toBe(5);
+    expect(ranked?.pressure).toBe(0);
+    expect(removableOnly(rank([held], { acquired, graceDays: 30 }))).toEqual([]);
   });
 
   it('scores a movie with no acquisition date and no watch at zero rather than guessing', () => {
@@ -224,6 +244,106 @@ describe('quality', () => {
   });
 });
 
+describe('abandoned play', () => {
+  it('ranks an abandoned film strictly above an otherwise identical never-opened one', () => {
+    const abandoned = candidate('Abandoned');
+    const neverOpened = candidate('Never opened');
+    const acquired = new Map([
+      [abandoned.tmdbId, daysAgo(400)],
+      [neverOpened.tmdbId, daysAgo(400)],
+    ]);
+    const abandonedProgress = new Map([[abandoned.id, 0.08]]);
+
+    expect(order(rank([neverOpened, abandoned], { acquired, abandonedProgress }))).toEqual([
+      'Abandoned',
+      'Never opened',
+    ]);
+  });
+
+  it('ranks an abandoned film above one abandoned much later into the play', () => {
+    const rejected = candidate('Rejected at 8%');
+    const interrupted = candidate('Interrupted at 90%');
+    const acquired = new Map([
+      [rejected.tmdbId, daysAgo(400)],
+      [interrupted.tmdbId, daysAgo(400)],
+    ]);
+    const abandonedProgress = new Map([
+      [rejected.id, 0.08],
+      [interrupted.id, 0.9],
+    ]);
+
+    expect(order(rank([interrupted, rejected], { acquired, abandonedProgress }))).toEqual([
+      'Rejected at 8%',
+      'Interrupted at 90%',
+    ]);
+  });
+
+  it('still ranks a late-abandoned film above a never-opened one', () => {
+    // Even an interruption near the end is stronger evidence than never
+    // starting at all — the multiplier must never decay all the way to 1.
+    const interrupted = candidate('Interrupted at 99%');
+    const neverOpened = candidate('Never opened');
+    const acquired = new Map([
+      [interrupted.tmdbId, daysAgo(400)],
+      [neverOpened.tmdbId, daysAgo(400)],
+    ]);
+    const abandonedProgress = new Map([[interrupted.id, 0.99]]);
+
+    expect(order(rank([neverOpened, interrupted], { acquired, abandonedProgress }))).toEqual([
+      'Interrupted at 99%',
+      'Never opened',
+    ]);
+  });
+
+  it('does not count a partial play that was later watched to completion', () => {
+    // Same movie: a completed watch (watchCount > 0) must win over a stray
+    // in-progress row — the mirror of Plex's state can lag or reflect a fresh
+    // rewatch not yet finished.
+    const completedAfterAbandon = candidate('Completed after abandon', { watchCount: 1 });
+    const neverOpened = candidate('Never opened');
+    const acquired = new Map([
+      [completedAfterAbandon.tmdbId, daysAgo(400)],
+      [neverOpened.tmdbId, daysAgo(400)],
+    ]);
+    const abandonedProgress = new Map([[completedAfterAbandon.id, 0.08]]);
+
+    const ranked = rank([neverOpened, completedAfterAbandon], { acquired, abandonedProgress });
+    const completed = ranked.find((r) => r.title === 'Completed after abandon');
+    expect(completed?.abandonWeight).toBe(1);
+    expect(completed?.abandonedProgress).toBeNull();
+  });
+
+  it('leaves an untouched movie with no abandon signal at all', () => {
+    const [ranked] = rank([candidate('Untouched')]);
+    expect(ranked?.abandonWeight).toBe(1);
+    expect(ranked?.abandonedProgress).toBeNull();
+  });
+
+  describe('abandonWeightFor', () => {
+    it('is 1 when there is no progress to score', () => {
+      expect(abandonWeightFor(0, null)).toBe(1);
+    });
+
+    it('is 1 when a completed watch exists, regardless of progress', () => {
+      expect(abandonWeightFor(1, 0.05)).toBe(1);
+      expect(abandonWeightFor(3, 0.95)).toBe(1);
+    });
+
+    it('is strictly greater than 1 across the whole progress range', () => {
+      for (const progress of [0, 0.01, 0.5, 0.99, 1]) {
+        expect(abandonWeightFor(0, progress)).toBeGreaterThan(1);
+      }
+    });
+
+    it('decreases monotonically as progress runs toward completion', () => {
+      const weights = [0, 0.2, 0.4, 0.6, 0.8, 1].map((p) => abandonWeightFor(0, p));
+      for (let i = 1; i < weights.length; i++) {
+        expect(weights[i]).toBeLessThan(weights[i - 1] as number);
+      }
+    });
+  });
+});
+
 describe('ranking properties', () => {
   it('never lets a highly-rated movie become permanently unremovable', () => {
     // No hard floor: given enough time a loved movie outranks a mediocre one
@@ -271,6 +391,26 @@ describe('ranking properties', () => {
     expect(ranked?.ageAnchor).toBe('watched');
     expect(ranked?.keepWeight).toBeCloseTo(keepWeight(2, DEFAULT_TUNING), 5);
     expect(ranked?.quality).toBeGreaterThan(0);
+  });
+
+  it('reproduces a stored pressure from its components alone, abandon term included', () => {
+    const abandonedFilm = candidate('Abandoned');
+    const acquired = new Map([[abandonedFilm.tmdbId, daysAgo(400)]]);
+    const abandonedProgress = new Map([[abandonedFilm.id, 0.08]]);
+
+    const [ranked] = rank([abandonedFilm], { acquired, abandonedProgress });
+    expect(ranked?.abandonWeight).toBeGreaterThan(1);
+    expect(
+      pressureFrom(
+        {
+          ageDays: ranked?.ageDays ?? 0,
+          quality: ranked?.quality ?? 0,
+          keepWeight: ranked?.keepWeight ?? 1,
+          abandonWeight: ranked?.abandonWeight ?? 1,
+        },
+        DEFAULT_TUNING
+      )
+    ).toBeCloseTo(ranked?.pressure ?? -1, 10);
   });
 
   it('handles an empty candidate list', () => {

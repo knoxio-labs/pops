@@ -68,6 +68,8 @@ const PlannedRemovalSchema = z.object({
   quality: z.number(),
   qualitySource: z.enum(['elo', 'tmdb', 'blended', 'none']),
   keepWeight: z.number(),
+  abandonedProgress: z.number().nullable(),
+  abandonWeight: z.number(),
 });
 
 const RemovalPlanSchema = z.object({

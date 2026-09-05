@@ -40,6 +40,16 @@ export interface SuggestedTag {
 export interface SuggestTagsOptions {
   description: string;
   entityId: string | null;
+  /**
+   * Account the transaction belongs to, so the correction pass narrows to the
+   * same account scope the classifier used (POPS-2593). `null` — a caller with
+   * no account in hand — sees every rule, scoped or not.
+   *
+   * Optional, defaulting to `null`, only because a tag suggestion is advisory:
+   * an over-broad suggestion offers a tag the operator can decline, unlike the
+   * classifier, where the same slip silently stamps the wrong merchant.
+   */
+  accountId?: string | null;
   aiTags?: string[];
   aiCategory?: string | null;
   knownTags?: string[];
@@ -105,6 +115,7 @@ function remember(seen: Set<string>, tag: string): boolean {
 }
 
 interface TagPass {
+  accountId: string | null;
   db: FinanceDb;
   description: string;
   entityId: string | null;
@@ -122,7 +133,7 @@ function addCorrectionTags(
   correctionTags: string[] | undefined,
   correctionPattern: string | undefined
 ): void {
-  const { db, description, corrections, seen, result } = pass;
+  const { db, description, accountId, corrections, seen, result } = pass;
   if (correctionTags && correctionTags.length > 0) {
     for (const tag of correctionTags) {
       if (!remember(seen, tag)) continue;
@@ -133,9 +144,14 @@ function addCorrectionTags(
   const matches = corrections
     ? transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromRows(
         corrections,
-        description
+        description,
+        accountId
       )
-    : transactionCorrectionsService.findAllMatchingTransactionCorrections(db, description);
+    : transactionCorrectionsService.findAllMatchingTransactionCorrections(
+        db,
+        description,
+        accountId
+      );
   for (const correction of matches) {
     for (const tag of parseStoredTags(correction.tags)) {
       if (!remember(seen, tag)) continue;
@@ -267,6 +283,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
   const pass: TagPass = {
     db,
     description: opts.description,
+    accountId: opts.accountId ?? null,
     entityId: opts.entityId,
     entityDefaultTags: opts.entityDefaultTags ?? new Map(),
     recordTagRuleUsage: opts.recordTagRuleUsage ?? true,

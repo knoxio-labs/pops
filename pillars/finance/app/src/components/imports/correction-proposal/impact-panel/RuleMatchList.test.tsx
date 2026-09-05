@@ -36,6 +36,7 @@ function makeRule(overrides: Partial<CorrectionRule> = {}): CorrectionRule {
   return {
     id: 'rule-1',
     descriptionPattern: 'STARBUCKS',
+    accountId: null,
     matchType: 'contains',
     entityId: 'ent-rule',
     entityName: 'Starbucks',

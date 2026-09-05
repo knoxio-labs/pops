@@ -7,9 +7,15 @@ import type {
   AccountImportsGetConfigData,
   AccountImportsGetConfigErrors,
   AccountImportsGetConfigResponses,
+  AccountImportsGetSyncJobData,
+  AccountImportsGetSyncJobErrors,
+  AccountImportsGetSyncJobResponses,
   AccountImportsListBatchesData,
   AccountImportsListBatchesErrors,
   AccountImportsListBatchesResponses,
+  AccountImportsTriggerSyncData,
+  AccountImportsTriggerSyncErrors,
+  AccountImportsTriggerSyncResponses,
   AccountImportsWriteConfigData,
   AccountImportsWriteConfigErrors,
   AccountImportsWriteConfigResponses,
@@ -262,6 +268,9 @@ import type {
   TagRulesRejectData,
   TagRulesRejectErrors,
   TagRulesRejectResponses,
+  TagRulesResolveAddCollisionsData,
+  TagRulesResolveAddCollisionsErrors,
+  TagRulesResolveAddCollisionsResponses,
   TagRulesUpdateData,
   TagRulesUpdateErrors,
   TagRulesUpdateResponses,
@@ -720,6 +729,41 @@ export const accountsPreviewMerge = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way
+ */
+export const accountImportsTriggerSync = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsTriggerSyncData, ThrowOnError>
+): RequestResult<
+  AccountImportsTriggerSyncResponses,
+  AccountImportsTriggerSyncErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    AccountImportsTriggerSyncResponses,
+    AccountImportsTriggerSyncErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/sync',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Progress and result of one sync job; 404 once it has expired
+ */
+export const accountImportsGetSyncJob = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsGetSyncJobData, ThrowOnError>
+): RequestResult<AccountImportsGetSyncJobResponses, AccountImportsGetSyncJobErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    AccountImportsGetSyncJobResponses,
+    AccountImportsGetSyncJobErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/sync/{jobId}', ...options });
 
 /**
  * List budgets with optional search / period / active filters and pagination
@@ -1219,7 +1263,7 @@ export const currenciesUpdate = <ThrowOnError extends boolean = false>(
   );
 
 /**
- * Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first
+ * Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first)
  */
 export const dataQualityNudges = <ThrowOnError extends boolean = false>(
   options?: Options<DataQualityNudgesData, ThrowOnError>
@@ -1701,6 +1745,29 @@ export const tagRulesReject = <ThrowOnError extends boolean = false>(
 ): RequestResult<TagRulesRejectResponses, TagRulesRejectErrors, ThrowOnError> =>
   (options?.client ?? client).post<TagRulesRejectResponses, TagRulesRejectErrors, ThrowOnError>({
     url: '/tag-rules/reject',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955)
+ */
+export const tagRulesResolveAddCollisions = <ThrowOnError extends boolean = false>(
+  options?: Options<TagRulesResolveAddCollisionsData, ThrowOnError>
+): RequestResult<
+  TagRulesResolveAddCollisionsResponses,
+  TagRulesResolveAddCollisionsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    TagRulesResolveAddCollisionsResponses,
+    TagRulesResolveAddCollisionsErrors,
+    ThrowOnError
+  >({
+    url: '/tag-rules/resolve-add-collisions',
     ...options,
     headers: {
       'Content-Type': 'application/json',

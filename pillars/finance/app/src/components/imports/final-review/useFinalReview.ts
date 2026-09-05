@@ -11,6 +11,7 @@ import { buildCommitPayload, importSourceFor } from '../../../lib/commit-payload
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { clearPersistedImport } from '../../../store/import-store-lifecycle';
 import { useImportStore } from '../../../store/importStore';
+import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
 
 type CommitResponse = ImportsCommitImportResponses[200];
 type CommitBody = NonNullable<ImportsCommitImportData['body']>;
@@ -80,6 +81,7 @@ function useDerivedCounts(slice: ReturnType<typeof useStoreSlice>) {
 export function useFinalReview() {
   const slice = useStoreSlice();
   const counts = useDerivedCounts(slice);
+  const tagRuleAddCollisions = useTagRuleAddCollisions(slice.pendingTagRuleChangeSets);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitKey] = useState(() => crypto.randomUUID());
@@ -132,6 +134,7 @@ export function useFinalReview() {
     pendingEntities: slice.pendingEntities,
     pendingChangeSets: slice.pendingChangeSets,
     pendingTagRuleChangeSets: slice.pendingTagRuleChangeSets,
+    tagRuleAddCollisions: tagRuleAddCollisions.data,
     accountName: slice.accountName,
     ...counts,
     commitError,

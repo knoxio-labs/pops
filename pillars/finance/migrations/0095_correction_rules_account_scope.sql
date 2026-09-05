@@ -1,0 +1,39 @@
+-- POPS-2593: give `transaction_corrections` an optional account scope, so two
+-- banks that post an identical description can each carry their own rule.
+--
+-- The table matched on description alone. Bank A and Bank B both posting
+-- `LATE FEE` normalise to the same string, whichever rule sorted first won,
+-- and it stamped ITS entity on both rows. Correcting one by hand taught the
+-- engine the mirror-image wrong answer, because learning is keyed on the
+-- description too. No string-shaped pattern can separate two identical
+-- strings.
+--
+-- `account_id` is NULLABLE and OPT-IN. Every existing row lands on NULL and
+-- keeps matching globally, exactly as before — this migration changes no
+-- row's behaviour. The only writer of a non-NULL value is an operator
+-- narrowing a rule in the rule form; no proposal surface ever populates it,
+-- because a narrower rule is worse by default.
+--
+-- It is a real FK onto `accounts.id`, not a free-text bank label. POPS-2773
+-- keyed the import dedup identity on the `BankType` dialect label and
+-- POPS-2852 had to re-key it onto `accounts.id` because two real accounts can
+-- share one dialect (two ANZ cards) — see `contract/import-dedup.ts`. The same
+-- reasoning applies here: a rule scoped to "ANZ" would not separate two ANZ
+-- cards, which is the failure being fixed.
+--
+-- `ON DELETE` is `no action` (the default), not `set null`. Widening a
+-- deliberately-narrowed rule back to every account is precisely the
+-- misattribution this column exists to prevent, so a delete that would orphan
+-- a scope is refused rather than silently changing what the rule matches.
+-- `mergeAccounts` repoints these rows inside its transaction, the way it
+-- already repoints every other `account_id`, so the merge path never trips
+-- this.
+--
+-- No table rebuild: SQLite accepts `ADD COLUMN` carrying a `REFERENCES`
+-- clause as long as the new column defaults to NULL, which this one does —
+-- the same single-statement shape `0093` used for
+-- `transactions.import_batch_id`.
+
+ALTER TABLE `transaction_corrections` ADD `account_id` text REFERENCES accounts(id);
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `idx_corrections_account` ON `transaction_corrections` (`account_id`);

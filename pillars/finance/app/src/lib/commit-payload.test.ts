@@ -65,7 +65,7 @@ function makeConfirmedTransaction(
     date: '2026-01-15',
     description: 'WOOLWORTHS',
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: `chk-${crypto.randomUUID().slice(0, 8)}`,
     entityId: 'entity-1',

@@ -20,6 +20,7 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
 
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
@@ -114,41 +115,100 @@ function assertPatternCompiles(op: Extract<ChangeSetOp, { op: 'add' }>): void {
   }
 }
 
+/** Whether an `add` op minted a new correction or landed on one that already existed. */
+export type CorrectionAddOutcome = 'inserted' | 'reinforced';
+
+type AddOp = Extract<ChangeSetOp, { op: 'add' }>;
+
+/**
+ * Merge `op.data.tags` into `existingTags` via {@link mergeTagsWithinFacetLimits}
+ * (POPS-2954, the same defect POPS-2755 fixed one table over on
+ * `transaction_tag_rules`) and log a warning for every incoming tag a
+ * single-valued facet already occupied refused.
+ */
+function mergeAddOpTags(existingTags: string[], op: AddOp, existingId: string): string[] {
+  const { tags, dropped } = mergeTagsWithinFacetLimits(existingTags, op.data.tags ?? []);
+  for (const tag of dropped) {
+    console.warn(
+      `[Corrections] Not adding ${JSON.stringify(tag)} to rule ${existingId}: ` +
+        `the rule already carries a value on that single-valued facet`
+    );
+  }
+  return tags;
+}
+
+/**
+ * Reinforce a correction hit on the `(normalized descriptionPattern,
+ * matchType)` key: `tags` merged (see {@link mergeAddOpTags}), the
+ * classification fields (`entityId`, `entityName`, `location`,
+ * `transactionType`) replaced wholesale — unlike tags, every add op decides
+ * a rule's classification on purpose. An `add` asserts a complete
+ * classification for the pattern, not an incremental one: a rule fired
+ * against the wrong entity is fixed by adding a corrected classification for
+ * the same pattern, and that correction should win outright, the way a tag
+ * never should evict one an earlier add already asserted. `entityId` is the
+ * operative field and `entityName` only its display label; the two are
+ * always written together (the standing invariant from POPS-2848), which is
+ * why both come from the same op rather than one persisting while the other
+ * resets.
+ */
+function reinforceExistingCorrectionRule(tx: FinanceDb, existing: CorrectionRow, op: AddOp): void {
+  const tags = mergeAddOpTags(parseStoredTags(existing.tags), op, existing.id);
+  tx.update(transactionCorrections)
+    .set({
+      entityId: op.data.entityId ?? null,
+      entityName: op.data.entityName ?? null,
+      location: op.data.location ?? null,
+      tags: JSON.stringify(tags),
+      transactionType: op.data.transactionType ?? null,
+      isActive: op.data.isActive ?? true,
+      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+      priority: op.data.priority ?? 0,
+    })
+    .where(eq(transactionCorrections.id, existing.id))
+    .run();
+}
+
+function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): void {
+  tx.insert(transactionCorrections)
+    .values({
+      descriptionPattern: normalized,
+      matchType: op.data.matchType,
+      entityId: op.data.entityId ?? null,
+      entityName: op.data.entityName ?? null,
+      location: op.data.location ?? null,
+      tags: JSON.stringify(op.data.tags ?? []),
+      transactionType: op.data.transactionType ?? null,
+      isActive: op.data.isActive ?? true,
+      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+      priority: op.data.priority ?? 0,
+    })
+    .run();
+}
+
 /**
  * Add a correction rule, upserting on the `(normalized descriptionPattern,
  * matchType)` key instead of a raw insert (CF035): two `add` ops for the same
  * pattern in one ChangeSet — or across ChangeSets in the same commit — land
  * on the same row (the second becomes an update) instead of forking a
- * duplicate where only one of the two ever matches.
+ * duplicate where only one of the two ever matches. See
+ * {@link reinforceExistingCorrectionRule} for what a hit does to `tags`
+ * versus the classification fields.
  */
-function applyAddOp(tx: FinanceDb, op: Extract<ChangeSetOp, { op: 'add' }>): void {
+function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   assertNotTagsOnly(op);
   assertPatternCompiles(op);
 
   const normalized = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
-  const values = {
-    entityId: op.data.entityId ?? null,
-    entityName: op.data.entityName ?? null,
-    location: op.data.location ?? null,
-    tags: JSON.stringify(op.data.tags ?? []),
-    transactionType: op.data.transactionType ?? null,
-    isActive: op.data.isActive ?? true,
-    confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
-    priority: op.data.priority ?? 0,
-  };
-
   const existing = findExistingCorrectionByKey(tx, op.data.matchType, normalized);
+
   if (existing) {
-    tx.update(transactionCorrections)
-      .set(values)
-      .where(eq(transactionCorrections.id, existing.id))
-      .run();
-    return;
+    reinforceExistingCorrectionRule(tx, existing, op);
+    return 'reinforced';
   }
 
-  tx.insert(transactionCorrections)
-    .values({ descriptionPattern: normalized, matchType: op.data.matchType, ...values })
-    .run();
+  insertNewCorrectionRule(tx, normalized, op);
+  return 'inserted';
 }
 
 function buildEditUpdates(
@@ -191,25 +251,45 @@ function applyMutatingOp(tx: FinanceDb, op: Exclude<ChangeSetOp, { op: 'add' }>)
   tx.delete(transactionCorrections).where(eq(transactionCorrections.id, op.id)).run();
 }
 
+/** Created-vs-reinforced split for a ChangeSet's `add` ops (POPS-2954). */
+export interface CorrectionRuleWriteCounts {
+  inserted: number;
+  reinforced: number;
+}
+
+/** Result of applying a correction ChangeSet: the full rule set, and what the `add` ops did. */
+export interface ApplyChangeSetResult {
+  rows: CorrectionRow[];
+  writes: CorrectionRuleWriteCounts;
+}
+
 /**
  * Apply a ChangeSet atomically and return the full rule set ordered by
- * `confidence DESC, timesApplied DESC`. Ops run in a fixed order
- * (add → edit → disable → remove).
+ * `confidence DESC, timesApplied DESC`, plus how many `add` ops created a
+ * rule against how many merged into one that already existed. Ops run in a
+ * fixed order (add → edit → disable → remove).
  */
-export function applyChangeSet(db: FinanceDb, changeSet: ChangeSet): CorrectionRow[] {
+export function applyChangeSet(db: FinanceDb, changeSet: ChangeSet): ApplyChangeSetResult {
   return db.transaction((tx) => {
     const order: Record<ChangeSetOp['op'], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
     const ops = [...changeSet.ops].toSorted((a, b) => order[a.op] - order[b.op]);
 
+    const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
     for (const op of ops) {
-      if (op.op === 'add') applyAddOp(tx, op);
-      else applyMutatingOp(tx, op);
+      if (op.op === 'add') {
+        const outcome = applyAddOp(tx, op);
+        if (outcome === 'inserted') writes.inserted++;
+        else writes.reinforced++;
+      } else {
+        applyMutatingOp(tx, op);
+      }
     }
 
-    return tx
+    const rows = tx
       .select()
       .from(transactionCorrections)
       .orderBy(desc(transactionCorrections.confidence), desc(transactionCorrections.timesApplied))
       .all();
+    return { rows, writes };
   });
 }

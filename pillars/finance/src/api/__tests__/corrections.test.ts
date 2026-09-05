@@ -597,6 +597,123 @@ describe('corrections — applyChangeSet', () => {
     expect(retried.data[0]).toMatchObject({ entityName: 'Acme Corp', priority: 5 });
     expect((await client().corrections.list()).pagination.total).toBe(1);
   });
+
+  it('merges tags into an existing rule on add instead of replacing them (POPS-2954)', async () => {
+    await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'CURATED MERCHANT',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['venue:cafe', 'occasion:birthday'],
+            },
+          },
+        ],
+      },
+    });
+
+    // A second `add` on the same key — e.g. an import batch that has no idea
+    // what this rule already carries — asserts one more tag. It must not
+    // wipe out the curated ones.
+    const merged = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'CURATED MERCHANT',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['contains:coffee'],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(merged.data).toHaveLength(1);
+    expect(merged.data[0]!.tags).toEqual(
+      expect.arrayContaining(['venue:cafe', 'occasion:birthday', 'contains:coffee'])
+    );
+    expect(merged.data[0]!.tags).toHaveLength(3);
+  });
+
+  it('an add op with no tags leaves an existing rule tags alone instead of blanking them (POPS-2954)', async () => {
+    await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'TAGLESS FOLLOWUP',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['venue:cafe'],
+            },
+          },
+        ],
+      },
+    });
+
+    const reinforced = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'TAGLESS FOLLOWUP',
+              matchType: 'contains',
+              transactionType: 'purchase',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(reinforced.data).toHaveLength(1);
+    expect(reinforced.data[0]!.tags).toEqual(['venue:cafe']);
+  });
+
+  it('drops an incoming tag that would take a single-valued facet past one value, reusing the tag-rule merge helper (POPS-2954)', async () => {
+    await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'FACET CONFLICT',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['venue:cafe'],
+            },
+          },
+        ],
+      },
+    });
+
+    const merged = await client().corrections.applyChangeSet({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'FACET CONFLICT',
+              matchType: 'contains',
+              transactionType: 'purchase',
+              tags: ['venue:restaurant'],
+            },
+          },
+        ],
+      },
+    });
+
+    // `venue` is single-valued (POPS-2606) — the incumbent wins, the same as
+    // the tag-rule merge (POPS-2755).
+    expect(merged.data[0]!.tags).toEqual(['venue:cafe']);
+  });
 });
 
 describe('corrections — previewChangeSet', () => {

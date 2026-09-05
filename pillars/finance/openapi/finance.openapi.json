@@ -5978,6 +5978,497 @@
         "tags": ["accounts"]
       }
     },
+    "/accounts/{id}/sync": {
+      "post": {
+        "operationId": "accountImports.triggerSync",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "alreadyHeld": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "batchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "checkpoint": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "balanceCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "deltaCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "balanceCents", "deltaCents"],
+                              "type": "object"
+                            },
+                            "failed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "fetched": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "imported": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "settled": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "warnings": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "fetched",
+                            "imported",
+                            "failed",
+                            "settled",
+                            "alreadyHeld",
+                            "batchId",
+                            "checkpoint",
+                            "warnings"
+                          ],
+                          "type": "object"
+                        },
+                        "startedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": ["running", "completed", "failed"],
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "trigger": {
+                          "enum": ["schedule", "manual"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "trigger",
+                        "status",
+                        "from",
+                        "to",
+                        "startedAt",
+                        "finishedAt",
+                        "result",
+                        "error"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "202"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "422"
+          }
+        },
+        "summary": "Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way",
+        "tags": ["accountImports"]
+      }
+    },
+    "/accounts/{id}/sync/{jobId}": {
+      "get": {
+        "operationId": "accountImports.getSyncJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "alreadyHeld": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "batchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "checkpoint": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "balanceCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "deltaCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["id", "balanceCents", "deltaCents"],
+                              "type": "object"
+                            },
+                            "failed": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "fetched": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "imported": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "settled": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "warnings": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "fetched",
+                            "imported",
+                            "failed",
+                            "settled",
+                            "alreadyHeld",
+                            "batchId",
+                            "checkpoint",
+                            "warnings"
+                          ],
+                          "type": "object"
+                        },
+                        "startedAt": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": ["running", "completed", "failed"],
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        },
+                        "trigger": {
+                          "enum": ["schedule", "manual"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "trigger",
+                        "status",
+                        "from",
+                        "to",
+                        "startedAt",
+                        "finishedAt",
+                        "result",
+                        "error"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Progress and result of one sync job; 404 once it has expired",
+        "tags": ["accountImports"]
+      }
+    },
     "/budgets": {
       "get": {
         "operationId": "budgets.list",
@@ -6794,6 +7285,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -6861,6 +7356,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -6987,6 +7483,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "descriptionPattern": {
                     "minLength": 1,
                     "type": "string"
@@ -7054,6 +7555,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -7121,6 +7626,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -7378,6 +7884,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -7453,6 +7964,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -7587,6 +8103,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -7654,6 +8174,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -7766,6 +8287,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "description": {
                     "minLength": 1,
                     "type": "string"
@@ -7795,6 +8321,10 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -7862,6 +8392,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -8172,6 +8703,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8247,6 +8783,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8387,6 +8928,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -8454,6 +8999,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -8594,6 +9140,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -8669,6 +9220,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -8806,6 +9362,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8881,6 +9442,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -9007,6 +9573,10 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
                         "checksum": {
                           "type": "string"
                         },
@@ -9501,6 +10071,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -9576,6 +10151,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -9863,6 +10443,10 @@
                       "additionalProperties": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -9930,6 +10514,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -10051,6 +10636,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10126,6 +10716,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10454,6 +11049,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10529,6 +11129,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10742,6 +11347,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -10817,6 +11427,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -10939,6 +11554,10 @@
                       "additionalProperties": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -11006,6 +11625,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -11421,6 +12041,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -11488,6 +12112,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -11602,6 +12227,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "confidence": {
                     "maximum": 1,
                     "minimum": 0.7,
@@ -11674,6 +12304,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -11741,6 +12375,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -12660,6 +13295,48 @@
                               "href"
                             ],
                             "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "type": "string"
+                              },
+                              "daysStale": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "href": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["stale-account"],
+                                "type": "string"
+                              },
+                              "newestTransactionDate": {
+                                "type": "string"
+                              },
+                              "thresholdDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "accountId",
+                              "accountName",
+                              "newestTransactionDate",
+                              "daysStale",
+                              "thresholdDays",
+                              "href"
+                            ],
+                            "type": "object"
                           }
                         ]
                       },
@@ -12674,7 +13351,7 @@
             "description": "200"
           }
         },
-        "summary": "Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first",
+        "summary": "Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first)",
         "tags": ["dataQuality"]
       }
     },
@@ -12915,6 +13592,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -12990,6 +13672,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -13175,10 +13862,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13206,6 +13889,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13397,7 +14084,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13411,10 +14098,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13442,6 +14125,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13633,7 +14320,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13647,10 +14334,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13678,6 +14361,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -13869,7 +14556,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -13883,10 +14570,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -13914,6 +14597,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -14105,7 +14792,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -14275,6 +14962,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -14350,6 +15042,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -14699,10 +15396,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
                         "accountId": {
                           "minLength": 1,
                           "type": "string"
@@ -14730,6 +15423,10 @@
                           "type": "string"
                         },
                         "description": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "dialectAccountLabel": {
                           "minLength": 1,
                           "type": "string"
                         },
@@ -14836,7 +15533,7 @@
                         "date",
                         "description",
                         "amount",
-                        "account",
+                        "dialectAccountLabel",
                         "rawRow",
                         "checksum"
                       ],
@@ -14927,6 +15624,23 @@
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "correctionRuleWrites": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "inserted": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "reinforced": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["inserted", "reinforced"],
+                          "type": "object"
                         },
                         "entitiesCreated": {
                           "maximum": 9007199254740991,
@@ -15270,10 +15984,6 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
-                        "account": {
-                          "minLength": 1,
-                          "type": "string"
-                        },
                         "accountId": {
                           "minLength": 1,
                           "type": "string"
@@ -15301,6 +16011,10 @@
                           "type": "string"
                         },
                         "description": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "dialectAccountLabel": {
                           "minLength": 1,
                           "type": "string"
                         },
@@ -15336,7 +16050,7 @@
                         "date",
                         "description",
                         "amount",
-                        "account",
+                        "dialectAccountLabel",
                         "rawRow",
                         "checksum"
                       ],
@@ -15549,10 +16263,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -15580,6 +16290,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -15771,7 +16485,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -15785,10 +16499,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -15816,6 +16526,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -16007,7 +16721,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -16021,10 +16735,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16052,6 +16762,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -16243,7 +16957,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -16257,10 +16971,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16288,6 +16998,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -16479,7 +17193,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -16656,6 +17370,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -16731,6 +17450,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -16916,10 +17640,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -16947,6 +17667,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17138,7 +17862,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17152,10 +17876,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17183,6 +17903,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17374,7 +18098,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17388,10 +18112,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17419,6 +18139,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17610,7 +18334,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -17624,10 +18348,6 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
-                              "account": {
-                                "minLength": 1,
-                                "type": "string"
-                              },
                               "accountId": {
                                 "minLength": 1,
                                 "type": "string"
@@ -17655,6 +18375,10 @@
                                 "type": "string"
                               },
                               "description": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "dialectAccountLabel": {
                                 "minLength": 1,
                                 "type": "string"
                               },
@@ -17846,7 +18570,7 @@
                               "date",
                               "description",
                               "amount",
-                              "account",
+                              "dialectAccountLabel",
                               "rawRow",
                               "checksum",
                               "entity",
@@ -19583,6 +20307,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -19704,6 +20430,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -19846,6 +20574,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -19985,6 +20715,8 @@
                 "finance.aiCategorizer.maxTokens",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
+                "finance.upSync.enabled",
+                "finance.upSync.intervalMinutes",
                 "finance.defaultLimit"
               ],
               "type": "string"
@@ -21952,6 +22684,286 @@
           }
         },
         "summary": "Reject a ChangeSet, recording the feedback against the refused ChangeSet",
+        "tags": ["tagRules"]
+      }
+    },
+    "/tag-rules/resolve-add-collisions": {
+      "post": {
+        "operationId": "tagRules.resolveAddCollisions",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "changeSets": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "ops": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "data": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "confidence": {
+                                        "maximum": 1,
+                                        "minimum": 0,
+                                        "type": "number"
+                                      },
+                                      "descriptionPattern": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "entityId": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      },
+                                      "matchType": {
+                                        "default": "exact",
+                                        "enum": ["exact", "contains", "regex"],
+                                        "type": "string"
+                                      },
+                                      "priority": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "tags": {
+                                        "items": {
+                                          "type": "string"
+                                        },
+                                        "minItems": 1,
+                                        "type": "array"
+                                      }
+                                    },
+                                    "required": ["descriptionPattern", "matchType", "tags"],
+                                    "type": "object"
+                                  },
+                                  "op": {
+                                    "enum": ["add"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["op", "data"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "data": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "confidence": {
+                                        "maximum": 1,
+                                        "minimum": 0,
+                                        "type": "number"
+                                      },
+                                      "entityId": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      },
+                                      "priority": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "tags": {
+                                        "items": {
+                                          "type": "string"
+                                        },
+                                        "minItems": 1,
+                                        "type": "array"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "id": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "op": {
+                                    "enum": ["edit"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["op", "id", "data"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "op": {
+                                    "enum": ["disable"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["op", "id"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "op": {
+                                    "enum": ["remove"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["op", "id"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["ops"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["changeSets"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "collisions": {
+                      "items": {
+                        "items": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "existingTags": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "ruleId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["ruleId", "existingTags"],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["collisions"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955)",
         "tags": ["tagRules"]
       }
     },

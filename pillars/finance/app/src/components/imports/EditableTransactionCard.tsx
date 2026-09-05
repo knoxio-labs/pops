@@ -143,7 +143,7 @@ export function EditableTransactionCard({
     amount: transaction.amount,
     date: transaction.date,
     location: transaction.location ?? '',
-    account: transaction.account,
+    dialectAccountLabel: transaction.dialectAccountLabel,
     transactionType: transaction.transactionType ?? 'purchase',
     entity: transaction.entity,
   });

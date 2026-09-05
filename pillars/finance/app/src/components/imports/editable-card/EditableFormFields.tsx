@@ -126,8 +126,10 @@ export function EditableFormFields({ editedFields, setEditedFields }: FieldProps
         onChange={(v) => update('date', v)}
       />
       <AccountField
-        value={editedFields.account ?? ''}
-        onChange={(v, accountId) => setEditedFields({ ...editedFields, account: v, accountId })}
+        value={editedFields.dialectAccountLabel ?? ''}
+        onChange={(v, accountId) =>
+          setEditedFields({ ...editedFields, dialectAccountLabel: v, accountId })
+        }
       />
       <TextField
         id="location"

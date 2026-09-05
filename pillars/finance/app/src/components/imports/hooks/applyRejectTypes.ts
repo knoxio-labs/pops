@@ -2,6 +2,7 @@ import type {
   CorrectionSignal,
   LocalOp,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   ServerChangeSet,
 } from '../correction-proposal-shared';
 import type { AiMessage } from '../CorrectionProposalDialogPanels';
@@ -12,7 +13,7 @@ export interface UseApplyRejectMutationsOptions {
   localOps: LocalOp[];
   combinedPreview: PreviewChangeSetOutput | null;
   combinedPreviewError: string | null;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   isFetching: boolean;
   previewMutationPending: boolean;
   hasDirty: boolean;

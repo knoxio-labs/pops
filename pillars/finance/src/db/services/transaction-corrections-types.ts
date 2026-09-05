@@ -45,6 +45,12 @@ export type TransactionCorrectionTransactionType = TransactionType;
 export interface CreateTransactionCorrectionInput {
   descriptionPattern: string;
   matchType: TransactionCorrectionMatchType;
+  /**
+   * Optional `accounts.id` scope. Omitted or `null` creates a global rule —
+   * the default, and what every proposal surface emits (POPS-2593). Part of
+   * the upsert identity: a scoped and a global rule can share a pattern.
+   */
+  accountId?: string | null;
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
@@ -57,6 +63,8 @@ export interface CreateTransactionCorrectionInput {
 export interface UpdateTransactionCorrectionInput {
   descriptionPattern?: string;
   matchType?: TransactionCorrectionMatchType;
+  /** `null` widens the rule back to every account; omitted leaves it as-is. */
+  accountId?: string | null;
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
@@ -167,4 +175,43 @@ export function assertPatchLeavesCompilablePattern(
   if (input.descriptionPattern !== undefined) return;
   if (input.matchType === undefined || input.matchType === existing.matchType) return;
   assertPatternCompiles(existing.descriptionPattern, effectiveMatchType);
+}
+
+/**
+ * Update fields copied straight across when the patch provides them. Listed
+ * rather than written out one `if` per field so adding a column (POPS-2593
+ * added `accountId`) does not push this function past the complexity cap; the
+ * two fields needing real work — `descriptionPattern` (normalised against the
+ * effective match type) and `tags` (serialised to JSON) — stay explicit below.
+ */
+const DIRECT_UPDATE_FIELDS = [
+  'matchType',
+  'accountId',
+  'entityId',
+  'entityName',
+  'location',
+  'transactionType',
+  'isActive',
+  'confidence',
+  'priority',
+] as const satisfies readonly (keyof UpdateTransactionCorrectionInput)[];
+
+export function buildCorrectionUpdates(
+  input: UpdateTransactionCorrectionInput,
+  existing: TransactionCorrectionRow
+): Partial<typeof transactionCorrections.$inferInsert> {
+  const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
+  const effectiveMatchType = input.matchType ?? existing.matchType;
+
+  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
+
+  if (input.descriptionPattern !== undefined) {
+    updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);
+  }
+  if (input.tags !== undefined) updates.tags = JSON.stringify(input.tags);
+  for (const field of DIRECT_UPDATE_FIELDS) {
+    const value = input[field];
+    if (value !== undefined) Object.assign(updates, { [field]: value });
+  }
+  return updates;
 }

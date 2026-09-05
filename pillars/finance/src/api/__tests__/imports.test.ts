@@ -84,7 +84,7 @@ function parsed(overrides: Record<string, unknown> = {}) {
     date: '2026-02-13',
     description: 'TEST MERCHANT',
     amount: -100,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: `chk-${Math.random().toString(36).slice(2, 12)}`,
     ...overrides,
@@ -96,7 +96,7 @@ function confirmed(overrides: Record<string, unknown> = {}) {
     date: '2026-02-13',
     description: 'CONFIRMED MERCHANT',
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{"line":"x"}',
     checksum: `chk-${Math.random().toString(36).slice(2, 12)}`,
     ...overrides,
@@ -157,7 +157,7 @@ function seedTransaction(overrides: {
 }) {
   importsService.insertImportTransaction(financeDb.db, {
     description: overrides.description,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     amountCents: -4250,
     date: '2026-02-13',
     type: 'purchase',
@@ -722,7 +722,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
         confirmed({
           description: 'COMMIT WITH REAL ACCOUNT',
           checksum: 'commit-accountid',
-          account: 'Amex',
+          dialectAccountLabel: 'Amex',
           accountId: pickedAccount.data.id,
         }),
       ],
@@ -1039,6 +1039,70 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
       .prepare('SELECT description_pattern FROM transaction_corrections')
       .all() as { description_pattern: string }[];
     expect(rules.map((r) => r.description_pattern)).toEqual(['GOOD RULE']);
+  });
+
+  it('counts a correction rule it created apart from one it merged into, and never blanks the merged tags (POPS-2954)', async () => {
+    const c = client();
+
+    const first = await c.imports.commitImport({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION',
+                matchType: 'contains',
+                transactionType: 'purchase',
+                tags: ['venue:cafe'],
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [confirmed({ checksum: 'commit-correction-split-a' })],
+    });
+    expect(first.data.rulesApplied).toEqual({ add: 1, edit: 0, disable: 0, remove: 0 });
+    expect(first.data.correctionRuleWrites).toEqual({ inserted: 1, reinforced: 0 });
+
+    const second = await c.imports.commitImport({
+      changeSets: [
+        {
+          ops: [
+            // Merges into the rule the first commit created — no tags of its
+            // own, so the merge must leave `venue:cafe` alone rather than
+            // blanking it (the defect this ticket fixes).
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION',
+                matchType: 'contains',
+                transactionType: 'purchase',
+              },
+            },
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION_NEW',
+                matchType: 'contains',
+                transactionType: 'purchase',
+                tags: ['occasion:birthday'],
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [confirmed({ checksum: 'commit-correction-split-b' })],
+    });
+
+    // Two add ops, but only one of them created a rule.
+    expect(second.data.rulesApplied).toEqual({ add: 2, edit: 0, disable: 0, remove: 0 });
+    expect(second.data.correctionRuleWrites).toEqual({ inserted: 1, reinforced: 1 });
+
+    const merged = financeDb.raw
+      .prepare('SELECT tags FROM transaction_corrections WHERE description_pattern = ?')
+      .get('SPLIT_CORRECTION') as { tags: string };
+    expect(JSON.parse(merged.tags)).toEqual(['venue:cafe']);
   });
 
   it('applies pending tag-rule ChangeSets during commit', async () => {

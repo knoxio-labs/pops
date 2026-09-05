@@ -23,7 +23,15 @@ import type {
   TransactionTagRuleRow,
 } from './transaction-tag-rules-types.js';
 
-function findExistingTagRule(
+/**
+ * The `(matchType, normalized descriptionPattern, entityId)` identity-key
+ * lookup {@link createOrReinforceTransactionTagRule} resolves an `add` op
+ * against. Exported so a caller that only needs to know *whether* an op
+ * would collide — Final Review's collision preview (POPS-2955) — can ask the
+ * same question the write path asks, rather than growing a second copy of
+ * the key that can drift from this one.
+ */
+export function findExistingTagRule(
   db: FinanceDb,
   matchType: TagRuleMatchType,
   normalizedPattern: string,

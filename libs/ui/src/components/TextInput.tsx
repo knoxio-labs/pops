@@ -3,10 +3,19 @@
  * Supports controlled and uncontrolled modes
  */
 import { type VariantProps } from 'class-variance-authority';
-import { forwardRef, useMemo, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useId,
+  useMemo,
+  useRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 import { cn } from '../lib/utils';
+import { FieldLabel } from './FieldLabel';
 import { useTextInput } from './TextInput.hooks';
+import { TrailingSlot } from './TextInput.trailing';
 import { containerVariants, inputVariants } from './TextInput.variants';
 
 export interface TextInputProps
@@ -154,6 +163,7 @@ function TextInputBody({
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
   const {
+    id,
     className,
     containerClassName,
     variant,
@@ -175,14 +185,12 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, re
     ...inputAttrs
   } = props;
   const ti = useTextInput({ controlledValue, defaultValue, onChange, onClear });
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      {label && (
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1">
-          {label}
-        </label>
-      )}
+      <FieldLabel htmlFor={inputId} label={label} />
       <div
         className={cn(
           containerVariants({ variant, size, shape }),
@@ -203,7 +211,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, re
           onFocus={onFocus}
           onBlur={onBlur}
           inputClassName={cn(inputVariants({ size, centered, className }))}
-          inputProps={inputAttrs}
+          inputProps={{ id: inputId, ...inputAttrs }}
         />
       </div>
       {error && <p className="text-2xs font-medium text-destructive ml-1">{error}</p>}
@@ -212,52 +220,3 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, re
 });
 
 TextInput.displayName = 'TextInput';
-
-function TrailingSlot({
-  showClearButton,
-  suffix,
-  onClear,
-}: {
-  showClearButton: boolean;
-  suffix?: ReactNode;
-  onClear: () => void;
-}) {
-  if (showClearButton) {
-    return (
-      <button
-        type="button"
-        onClick={onClear}
-        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm p-1 min-w-11 min-h-11 inline-flex items-center justify-center"
-        aria-label="Clear input"
-        tabIndex={-1}
-      >
-        <XIcon />
-      </button>
-    );
-  }
-  if (suffix) return <span className="flex-shrink-0 text-muted-foreground">{suffix}</span>;
-  return null;
-}
-
-/**
- * X icon for clear button
- */
-function XIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}

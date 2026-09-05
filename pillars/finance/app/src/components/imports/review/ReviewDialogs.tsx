@@ -6,6 +6,7 @@ import { CorrectionProposalDialog } from '../CorrectionProposalDialog';
 import { EntityCreateDialog } from '../EntityCreateDialog';
 import { useReevaluatePending } from '../hooks/useReevaluatePending';
 
+import type { PreviewTransactionEntry } from '../correction-proposal-shared';
 import type { useBulkAssignment } from '../hooks/useBulkAssignment';
 import type { useProposalGeneration } from '../hooks/useProposalGeneration';
 import type { useTransactionReview } from '../hooks/useTransactionReview';
@@ -14,7 +15,7 @@ interface BrowseDialogProps {
   open: boolean;
   setOpen: (v: boolean) => void;
   sessionId: string;
-  previewTransactions: Array<{ checksum: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   applyReevaluatedResult: ReturnType<typeof useTransactionReview>['applyReevaluatedResult'];
 }
 
@@ -56,7 +57,7 @@ interface DialogsProps {
   bulk: ReturnType<typeof useBulkAssignment>;
   review: ReturnType<typeof useTransactionReview>;
   processSessionId: string;
-  allPreviewTransactions: Array<{ checksum: string; description: string }>;
+  allPreviewTransactions: PreviewTransactionEntry[];
 }
 
 export function ReviewDialogs({

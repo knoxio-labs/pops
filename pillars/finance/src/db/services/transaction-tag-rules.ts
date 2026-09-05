@@ -24,6 +24,7 @@ import type { FinanceDb } from './internal.js';
 export {
   createOrReinforceTransactionTagRule,
   createTransactionTagRule,
+  findExistingTagRule,
   type TagRuleWriteOutcome,
   type TagRuleWriteResult,
 } from './transaction-tag-rules-write.js';

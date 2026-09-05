@@ -8,28 +8,23 @@
  * live transactions table.
  */
 import { Loader2 } from 'lucide-react';
-import { Controller, type UseFormReturn } from 'react-hook-form';
+import { type UseFormReturn } from 'react-hook-form';
 
 import {
+  type AccountOption,
   Button,
-  CheckboxInput,
-  ChipInput,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  EntitySelect,
   type EntityOption,
-  Label,
-  NumberInput,
-  Select,
-  TextInput,
 } from '@pops/ui';
 
+import { PatternAndType, TagsAndActive } from './RuleFormFields';
 import { RulePreviewPanel, type RulePreviewPanelProps } from './RulePreviewPanel';
-import { MATCH_TYPE_OPTIONS, type RuleFormValues } from './types';
+import { type RuleFormValues } from './types';
 
 import type { Correction } from '../types';
 
@@ -42,118 +37,7 @@ interface RuleFormDialogProps {
   onSubmit: (values: RuleFormValues) => void;
   preview: RulePreviewPanelProps['preview'];
   entities: EntityOption[];
-}
-
-function PriorityField({ form }: { form: UseFormReturn<RuleFormValues> }) {
-  return (
-    <Controller
-      control={form.control}
-      name="priority"
-      render={({ field }) => (
-        <div className="flex flex-col gap-1.5 w-full">
-          <Label>Priority</Label>
-          <NumberInput
-            min={0}
-            value={field.value}
-            onChange={(e) => {
-              const next = Number(e.currentTarget.value);
-              field.onChange(Number.isFinite(next) ? next : 0);
-            }}
-            aria-label="Priority"
-          />
-        </div>
-      )}
-    />
-  );
-}
-
-function EntityField({
-  form,
-  entities,
-}: {
-  form: UseFormReturn<RuleFormValues>;
-  entities: EntityOption[];
-}) {
-  return (
-    <Controller
-      control={form.control}
-      name="entityId"
-      render={({ field }) => (
-        <div className="flex flex-col gap-1.5 w-full">
-          <Label>Entity</Label>
-          <EntitySelect
-            aria-label="Entity"
-            entities={entities}
-            value={field.value ?? undefined}
-            onChange={(id) => field.onChange(id)}
-            onClear={() => field.onChange(null)}
-            placeholder="Choose entity..."
-          />
-        </div>
-      )}
-    />
-  );
-}
-
-function PatternAndType({
-  form,
-  entities,
-}: {
-  form: UseFormReturn<RuleFormValues>;
-  entities: EntityOption[];
-}) {
-  return (
-    <>
-      <TextInput
-        label="Pattern"
-        placeholder="e.g. WOOLWORTHS"
-        {...form.register('descriptionPattern')}
-        error={form.formState.errors.descriptionPattern?.message}
-      />
-      <div className="grid grid-cols-2 gap-4">
-        <Select
-          label="Match Type"
-          options={MATCH_TYPE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
-          {...form.register('matchType')}
-        />
-        <PriorityField form={form} />
-      </div>
-      <EntityField form={form} entities={entities} />
-    </>
-  );
-}
-
-function TagsAndActive({ form }: { form: UseFormReturn<RuleFormValues> }) {
-  return (
-    <>
-      <div className="space-y-2">
-        <Label>Tags</Label>
-        <Controller
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <ChipInput
-              placeholder="Type and press Enter..."
-              value={field.value}
-              onChange={field.onChange}
-            />
-          )}
-        />
-      </div>
-      <Controller
-        control={form.control}
-        name="isActive"
-        render={({ field }) => (
-          <CheckboxInput
-            label="Active"
-            description="Inactive rules are skipped by the matcher."
-            checked={field.value}
-            onCheckedChange={(checked) => field.onChange(Boolean(checked))}
-          />
-        )}
-      />
-    </>
-  );
+  accounts: AccountOption[];
 }
 
 function DialogActions({
@@ -179,8 +63,17 @@ function DialogActions({
 }
 
 export function RuleFormDialog(props: RuleFormDialogProps) {
-  const { open, onOpenChange, editingRule, form, isSubmitting, onSubmit, preview, entities } =
-    props;
+  const {
+    open,
+    onOpenChange,
+    editingRule,
+    form,
+    isSubmitting,
+    onSubmit,
+    preview,
+    entities,
+    accounts,
+  } = props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-4xl">
@@ -193,7 +86,7 @@ export function RuleFormDialog(props: RuleFormDialogProps) {
           </DialogHeader>
           <div className="grid gap-6 py-4 md:grid-cols-2">
             <div className="grid gap-4 min-w-0">
-              <PatternAndType form={form} entities={entities} />
+              <PatternAndType form={form} entities={entities} accounts={accounts} />
               <TagsAndActive form={form} />
             </div>
             <RulePreviewPanel preview={preview} />

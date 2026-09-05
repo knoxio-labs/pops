@@ -301,6 +301,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/{id}/sync': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way */
+    post: operations['accountImports.triggerSync'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/sync/{jobId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Progress and result of one sync job; 404 once it has expired */
+    get: operations['accountImports.getSyncJob'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/budgets': {
     parameters: {
       query?: never;
@@ -639,7 +673,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first */
+    /** Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first) */
     get: operations['dataQuality.nudges'];
     put?: never;
     post?: never;
@@ -1089,6 +1123,23 @@ export interface paths {
     put?: never;
     /** Reject a ChangeSet, recording the feedback against the refused ChangeSet */
     post: operations['tagRules.reject'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tag-rules/resolve-add-collisions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955) */
+    post: operations['tagRules.resolveAddCollisions'];
     delete?: never;
     options?: never;
     head?: never;
@@ -4014,6 +4065,203 @@ export interface operations {
       };
     };
   };
+  'accountImports.triggerSync': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 202 */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              error: string | null;
+              finishedAt: string | null;
+              from: string;
+              id: string;
+              result: {
+                alreadyHeld: number;
+                batchId: string | null;
+                checkpoint: {
+                  balanceCents: number;
+                  deltaCents: number;
+                  id: string;
+                } | null;
+                failed: number;
+                fetched: number;
+                imported: number;
+                settled: number;
+                warnings: string[];
+              } | null;
+              startedAt: string;
+              /** @enum {string} */
+              status: 'running' | 'completed' | 'failed';
+              to: string;
+              /** @enum {string} */
+              trigger: 'schedule' | 'manual';
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accountImports.getSyncJob': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        jobId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              error: string | null;
+              finishedAt: string | null;
+              from: string;
+              id: string;
+              result: {
+                alreadyHeld: number;
+                batchId: string | null;
+                checkpoint: {
+                  balanceCents: number;
+                  deltaCents: number;
+                  id: string;
+                } | null;
+                failed: number;
+                fetched: number;
+                imported: number;
+                settled: number;
+                warnings: string[];
+              } | null;
+              startedAt: string;
+              /** @enum {string} */
+              status: 'running' | 'completed' | 'failed';
+              to: string;
+              /** @enum {string} */
+              trigger: 'schedule' | 'manual';
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'budgets.list': {
     parameters: {
       query?: {
@@ -4392,6 +4640,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4480,6 +4729,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           descriptionPattern: string;
           entityId?: string | null;
           entityName?: string | null;
@@ -4516,6 +4766,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4678,6 +4929,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -4710,6 +4962,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -4763,6 +5016,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4846,6 +5100,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           description: string;
           /** @default 0.7 */
           minConfidence: number;
@@ -4861,6 +5116,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -5033,6 +5289,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -5065,6 +5322,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -5119,6 +5377,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -5211,6 +5470,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -5243,6 +5503,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -5291,6 +5552,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -5323,6 +5585,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -5366,6 +5629,7 @@ export interface operations {
             };
           }[];
           transactions: {
+            accountId?: string;
             checksum?: string;
             description: string;
           }[];
@@ -5585,6 +5849,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -5617,6 +5882,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -5712,6 +5978,7 @@ export interface operations {
             rationale: string;
             targetRules: {
               [key: string]: {
+                accountId: string | null;
                 confidence: number;
                 createdAt: string;
                 descriptionPattern: string;
@@ -5799,6 +6066,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -5831,6 +6099,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -5972,6 +6241,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -6004,6 +6274,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -6086,6 +6357,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -6118,6 +6390,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -6162,6 +6435,7 @@ export interface operations {
             rationale: string;
             targetRules: {
               [key: string]: {
+                accountId: string | null;
                 confidence: number;
                 createdAt: string;
                 descriptionPattern: string;
@@ -6336,6 +6610,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -6488,6 +6763,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           confidence?: number;
           descriptionPattern?: string;
           entityId?: string | null;
@@ -6522,6 +6798,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -7019,17 +7296,29 @@ export interface operations {
         };
         content: {
           'application/json': {
-            data: {
-              accountId: string;
-              accountName: string;
-              asOf: string;
-              checkpointId: string;
-              currency: string;
-              deltaCents: number;
-              href: string;
-              /** @enum {string} */
-              kind: 'checkpoint-inconsistency';
-            }[];
+            data: (
+              | {
+                  accountId: string;
+                  accountName: string;
+                  asOf: string;
+                  checkpointId: string;
+                  currency: string;
+                  deltaCents: number;
+                  href: string;
+                  /** @enum {string} */
+                  kind: 'checkpoint-inconsistency';
+                }
+              | {
+                  accountId: string;
+                  accountName: string;
+                  daysStale: number;
+                  href: string;
+                  /** @enum {string} */
+                  kind: 'stale-account';
+                  newestTransactionDate: string;
+                  thresholdDays: number;
+                }
+            )[];
           };
         };
       };
@@ -7134,6 +7423,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -7166,6 +7456,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -7233,7 +7524,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7243,6 +7533,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7309,7 +7600,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7319,6 +7609,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7385,7 +7676,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7395,6 +7685,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7461,7 +7752,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -7471,6 +7761,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -7617,6 +7908,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -7649,6 +7941,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -7761,7 +8054,6 @@ export interface operations {
             };
           }[];
           transactions: {
-            account: string;
             accountId?: string;
             amount: number;
             balanceCents?: number;
@@ -7771,6 +8063,7 @@ export interface operations {
             country?: string;
             date: string;
             description: string;
+            dialectAccountLabel: string;
             entityId?: string;
             entityName?: string;
             foreignAmountMinor?: number;
@@ -7840,6 +8133,10 @@ export interface operations {
                 deltaCents: number;
                 id: string;
               }[];
+              correctionRuleWrites?: {
+                inserted: number;
+                reinforced: number;
+              };
               entitiesCreated: number;
               failedDetails: {
                 checksum: string | null;
@@ -7993,7 +8290,6 @@ export interface operations {
       content: {
         'application/json': {
           transactions: {
-            account: string;
             accountId?: string;
             amount: number;
             balanceCents?: number;
@@ -8003,6 +8299,7 @@ export interface operations {
             country?: string;
             date: string;
             description: string;
+            dialectAccountLabel: string;
             foreignAmountMinor?: number;
             foreignCurrency?: string;
             /** @enum {string} */
@@ -8109,7 +8406,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8119,6 +8415,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8185,7 +8482,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8195,6 +8491,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8261,7 +8558,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8271,6 +8567,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8337,7 +8634,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8347,6 +8643,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8487,6 +8784,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -8519,6 +8817,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -8585,7 +8884,6 @@ export interface operations {
                 totalOutputTokens: number;
               };
               failed: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8595,6 +8893,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8661,7 +8960,6 @@ export interface operations {
                   | 'fee';
               }[];
               matched: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8671,6 +8969,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8737,7 +9036,6 @@ export interface operations {
                   | 'fee';
               }[];
               skipped: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8747,6 +9045,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -8813,7 +9112,6 @@ export interface operations {
                   | 'fee';
               }[];
               uncertain: {
-                account: string;
                 accountId?: string;
                 amount: number;
                 balanceCents?: number;
@@ -8823,6 +9121,7 @@ export interface operations {
                 country?: string;
                 date: string;
                 description: string;
+                dialectAccountLabel: string;
                 entity: {
                   confidence?: number;
                   entityId?: string;
@@ -9814,6 +10113,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -9885,6 +10186,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -9964,6 +10267,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -10042,6 +10347,8 @@ export interface operations {
           | 'finance.aiCategorizer.maxTokens'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
+          | 'finance.upSync.enabled'
+          | 'finance.upSync.intervalMinutes'
           | 'finance.defaultLimit';
       };
       cookie?: never;
@@ -10809,6 +11116,121 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'tagRules.resolveAddCollisions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          changeSets: {
+            ops: (
+              | {
+                  data: {
+                    confidence?: number;
+                    descriptionPattern: string;
+                    entityId?: string | null;
+                    isActive?: boolean;
+                    /**
+                     * @default exact
+                     * @enum {string}
+                     */
+                    matchType: 'exact' | 'contains' | 'regex';
+                    priority?: number;
+                    tags: string[];
+                  };
+                  /** @enum {string} */
+                  op: 'add';
+                }
+              | {
+                  data: {
+                    confidence?: number;
+                    entityId?: string | null;
+                    isActive?: boolean;
+                    priority?: number;
+                    tags?: string[];
+                  };
+                  id: string;
+                  /** @enum {string} */
+                  op: 'edit';
+                }
+              | {
+                  id: string;
+                  /** @enum {string} */
+                  op: 'disable';
+                }
+              | {
+                  id: string;
+                  /** @enum {string} */
+                  op: 'remove';
+                }
+            )[];
+            reason?: string;
+            source?: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            collisions: ({
+              existingTags: string[];
+              ruleId: string;
+            } | null)[][];
           };
         };
       };

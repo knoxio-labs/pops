@@ -21,7 +21,7 @@ import { buildImportDedupKey } from '../import-dedup.js';
 const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
 
 const OPTIONS: AnzPdfStatementOptions = {
-  account: 'ANZ Credit Card',
+  dialectAccountLabel: 'ANZ Credit Card',
   accountId: 'acc-anz-credit-card',
   hashDedupKey: sha256,
 };
@@ -196,7 +196,7 @@ describe('planAnzPdfImport', () => {
   const transactions = parse().transactions;
 
   it('offers every row when the account has no existing coverage', () => {
-    expect(planAnzPdfImport(transactions)).toEqual({
+    expect(planAnzPdfImport(transactions, null)).toEqual({
       importable: transactions,
       withheld: [],
     });
@@ -224,7 +224,7 @@ describe('planAnzPdfImport', () => {
   });
 
   it('refuses an empty statement rather than reporting a clean import', () => {
-    const plan = planAnzPdfImport(parse('Closing balance 640.80').transactions);
+    const plan = planAnzPdfImport(parse('Closing balance 640.80').transactions, null);
     expect(plan).toEqual({ importable: [], withheld: [], refusal: 'no-transactions-found' });
   });
 });
