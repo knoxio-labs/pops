@@ -1,5 +1,4 @@
 import { TriangleAlert } from 'lucide-react';
-import { Link } from 'react-router';
 
 import { centsToDollars, formatBalance, type CurrencyFormat } from '@pops/finance';
 import { Badge, balanceTone, Card, CardContent, cn, Sparkline } from '@pops/ui';
@@ -59,8 +58,9 @@ function BalanceTrend({
  * (ADR-051).
  *
  * This is the only thing on the account page that knows checkpoints exist, and
- * it shows their RESULT — an as-of date, a disagreement flag — then links out.
- * It never lists or edits them; that is the checkpoints page's job.
+ * it shows their RESULT — an as-of date, a disagreement flag. It never lists or
+ * edits them; that is the checkpoints page's job (POPS-2888), and the link out
+ * to it ships with that page rather than pointing at a route nothing serves.
  */
 export function BalanceCard({ account, currency }: { account: Account; currency: CurrencyFormat }) {
   const { balance } = account;
@@ -79,16 +79,7 @@ export function BalanceCard({ account, currency }: { account: Account; currency:
           <p className={cn('text-4xl font-semibold tabular-nums', tone)}>
             {formatBalance(centsToDollars(balance.balanceCents), currency)}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {provenanceLine(account, balance)}
-            {' · '}
-            <Link
-              to={`/accounts/${account.id}/checkpoints`}
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Checkpoints
-            </Link>
-          </p>
+          <p className="text-xs text-muted-foreground">{provenanceLine(account, balance)}</p>
         </div>
         <BalanceTrend accountId={account.id} currency={currency} tone={tone} />
       </CardContent>
