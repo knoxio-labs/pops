@@ -75,10 +75,11 @@ export function accountSubtitle(account: Account): string {
 /** When the number was last true, phrased so a derived balance never claims to be checked. */
 export function asOfNote(account: Account): string {
   if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  if (!ACCOUNT_KINDS[account.kind].checkpointable) return 'Derived from transactions';
-  return checkpointsFor(account.id).length > 0
-    ? 'Derived from transactions since the last checkpoint'
-    : 'Derived from transactions; no checkpoint yet';
+  const external = ACCOUNT_KINDS[account.kind].checkpointable;
+  if (checkpointsFor(account.id).length > 0) {
+    return external ? 'Since the last checkpoint' : 'Since you last counted it';
+  }
+  return external ? 'Never checked against the bank' : 'Never counted';
 }
 
 export { day as iosDay };

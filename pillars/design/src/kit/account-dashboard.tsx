@@ -51,14 +51,23 @@ export function balanceCaption(account: Account): string {
   return `${kind.label} balance`;
 }
 
+/**
+ * Every kind can take a checkpoint; what differs is who supplied the number.
+ * A bank or a card issuer publishes a balance to check against, a wallet or
+ * a person ledger only has what you counted — so the wording follows
+ * `checkpointable`, and the feature does not.
+ */
 export function asOfLine(account: Account): string {
   if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  if (!ACCOUNT_KINDS[account.kind].checkpointable) {
-    return 'No external balance to check against — derived from transactions';
+  const external = ACCOUNT_KINDS[account.kind].checkpointable;
+  if (checkpointsFor(account.id).length > 0) {
+    return external
+      ? 'Derived from transactions since the last checkpoint'
+      : 'Derived from transactions since you last counted it';
   }
-  return checkpointsFor(account.id).length > 0
-    ? 'Derived from transactions since the last checkpoint'
-    : 'Derived from transactions; no checkpoint yet';
+  return external
+    ? 'Derived from transactions; never checked against the bank'
+    : 'Derived from transactions; never counted';
 }
 
 /**
@@ -76,7 +85,6 @@ export function trendLine(account: Account, history: BalancePoint[]): string {
 function BalanceCard({ account, insight }: { account: Account; insight?: AccountInsight }) {
   const history = insight?.history ?? [];
   const tone = balanceTone(account);
-  const checkpointable = ACCOUNT_KINDS[account.kind].checkpointable;
   return (
     <Card>
       <CardContent className="grid gap-6 pt-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -92,17 +100,13 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
           </p>
           <p className="text-xs text-muted-foreground">
             {asOfLine(account)} · {account.transactionCount.toLocaleString('en-AU')} transactions
-            {checkpointable && (
-              <>
-                {' · '}
-                <a
-                  href={`#/accounts/${account.id}/checkpoints`}
-                  className="underline underline-offset-2 hover:text-foreground"
-                >
-                  Checkpoints
-                </a>
-              </>
-            )}
+            {' · '}
+            <a
+              href={`#/accounts/${account.id}/checkpoints`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Checkpoints
+            </a>
           </p>
         </div>
         {history.length > 1 && (

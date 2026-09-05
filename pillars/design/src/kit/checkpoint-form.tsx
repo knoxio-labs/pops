@@ -1,3 +1,4 @@
+import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
 
 import {
@@ -22,6 +23,7 @@ const today = () => new Date().toISOString().slice(0, 10);
  * hand.
  */
 export function AddCheckpointDialog({ account }: { account: Account }) {
+  const external = ACCOUNT_KINDS[account.kind].checkpointable;
   return (
     <Dialog open>
       <DialogContent className="max-w-md" showCloseButton={false}>
@@ -37,7 +39,12 @@ export function AddCheckpointDialog({ account }: { account: Account }) {
           <TextInput label="As of" type="date" defaultValue={today()} />
           <div className="space-y-1.5">
             <Label>Note (optional)</Label>
-            <Textarea placeholder="Confirmed against the banking app" rows={2} />
+            <Textarea
+              placeholder={
+                external ? 'Confirmed against the banking app' : 'Counted the notes and coins'
+              }
+              rows={2}
+            />
           </div>
         </div>
         <DialogFooter>
