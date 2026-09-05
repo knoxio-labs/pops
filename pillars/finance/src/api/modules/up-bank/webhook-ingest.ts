@@ -27,10 +27,11 @@
  * makes a checksum unique, so two concurrent ingests of one transaction
  * would each see no row and each write one. Chaining them per transaction id
  * makes the second one run after the first has committed, where it finds the
- * row and settles or skips it.
+ * row and settles or skips it. The commit key is the transaction's own id,
+ * so even a second process importing the same transaction hits the
+ * `import_commits` primary key and gets the first commit's result back
+ * instead of a second row.
  */
-import { randomUUID } from 'node:crypto';
-
 import {
   accountImportConfigService,
   accountsService,
@@ -71,6 +72,11 @@ export interface UpWebhookIngestDeps {
 
 const INGESTED_EVENTS = new Set(['TRANSACTION_CREATED', 'TRANSACTION_SETTLED']);
 
+/** One commit per Up transaction, whatever delivers it. */
+export function webhookCommitKey(upTransactionId: string): string {
+  return `up-webhook:${upTransactionId}`;
+}
+
 function defaultClientFor(secretRef: string): UpBankClient {
   return createUpBankClient({ token: requireNamedSecret(secretRef) });
 }
@@ -94,16 +100,15 @@ async function fetchAcrossTokens(
 async function writeRow(
   db: FinanceDb,
   contacts: ContactsClient,
-  accountId: string,
+  target: { accountId: string; commitKey: string },
   mapped: MappedUpTransaction
 ): Promise<UpWebhookOutcome> {
+  const { accountId } = target;
   const existing = importsService
     .findTransactionsByChecksums(db, [mapped.parsed.checksum])
     .get(mapped.parsed.checksum);
   if (existing === undefined) {
-    const imported = await importMappedRows(db, contacts, { accountId, commitKey: randomUUID() }, [
-      mapped,
-    ]);
+    const imported = await importMappedRows(db, contacts, target, [mapped]);
     return { kind: 'imported', accountId, batchId: imported.batchId, failed: imported.failed };
   }
   if (existing.pending && !mapped.parsed.pending) {
@@ -180,5 +185,10 @@ async function ingestTransaction(
 
   const account = accountsService.getAccount(db, config.accountId);
   const mapped = toParsedTransaction(txn, { accountId: account.id, accountLabel: account.name });
-  return writeRow(db, contacts, account.id, mapped);
+  return writeRow(
+    db,
+    contacts,
+    { accountId: account.id, commitKey: webhookCommitKey(txn.id) },
+    mapped
+  );
 }

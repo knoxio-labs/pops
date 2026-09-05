@@ -10,13 +10,13 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
-import { importBatches, transactions } from '../../../../db/schema.js';
+import { importBatches, importCommits, transactions } from '../../../../db/schema.js';
 import { upsertImportConfig } from '../../../../db/services/account-import-config.js';
 import { createAccount } from '../../../../db/services/accounts.js';
 import { makeContactsFake } from '../../../__tests__/contacts-fake.js';
 import { syncUpAccount } from '../sync.js';
 import { UpBankApiError, type UpBankClient, type UpTransaction } from '../up-api.js';
-import { makeUpWebhookIngest, type UpWebhookIngest } from '../webhook-ingest.js';
+import { makeUpWebhookIngest, webhookCommitKey, type UpWebhookIngest } from '../webhook-ingest.js';
 import { upAccount, upTransaction } from './fixtures.js';
 
 import type { FinanceDb } from '../../../../db/services/internal.js';
@@ -101,6 +101,9 @@ describe('makeUpWebhookIngest', () => {
       { accountId, sourceKind: 'api', sourceRef: 'up', rowCount: 1, dateFrom: '2026-09-05' },
     ]);
     expect(first.kind === 'imported' && first.batchId).toBe(batches()[0]?.id);
+    expect(db.select({ key: importCommits.commitKey }).from(importCommits).all()).toEqual([
+      { key: webhookCommitKey('txn-1') },
+    ]);
 
     const second = await ingest(created);
     expect(second).toEqual({ kind: 'duplicate', accountId });
