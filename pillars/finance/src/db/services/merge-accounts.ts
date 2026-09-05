@@ -9,7 +9,8 @@
  * an archived husk would exist only to say "this was merged into that" —
  * clutter with no reader. That makes the merge irreversible, which is why
  * {@link previewAccountMerge} exists — a caller must be able to show the
- * transaction count and resulting balance before committing.
+ * transaction count, checkpoint count, and resulting balance before
+ * committing.
  *
  * That resulting balance is checkpoint-anchored, so the source's checkpoints
  * have to move with its transactions: `account_checkpoints.account_id`
@@ -64,6 +65,8 @@ export interface AccountMergePreview {
   target: AccountRow;
   /** Transactions currently on `source` — every one of these moves to `target`. */
   transactionCount: number;
+  /** Checkpoints currently on `source` — every one of these moves to `target`. */
+  checkpointCount: number;
   /**
    * `source`'s balance plus `target`'s balance, in their shared currency's
    * minor units — each checkpoint-anchored (ADR-051), so a preview shows what
@@ -84,6 +87,15 @@ function transactionCount(db: FinanceDb, accountId: string): number {
     .select({ total: count() })
     .from(transactions)
     .where(eq(transactions.accountId, accountId))
+    .get();
+  return row?.total ?? 0;
+}
+
+function checkpointCount(db: FinanceDb, accountId: string): number {
+  const row = db
+    .select({ total: count() })
+    .from(accountCheckpoints)
+    .where(eq(accountCheckpoints.accountId, accountId))
     .get();
   return row?.total ?? 0;
 }
@@ -187,6 +199,7 @@ export function previewAccountMerge(
     source,
     target,
     transactionCount: transactionCount(db, sourceId),
+    checkpointCount: checkpointCount(db, sourceId),
     resultingBalanceCents:
       balanceAsOf(db, sourceId).balanceCents + balanceAsOf(db, targetId).balanceCents,
     hasGiftCardDetailsConflict:

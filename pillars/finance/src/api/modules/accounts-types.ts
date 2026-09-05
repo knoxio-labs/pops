@@ -109,6 +109,7 @@ export interface AccountMergePreviewBody {
   source: Account;
   target: Account;
   transactionCount: number;
+  checkpointCount: number;
   resultingBalanceCents: number;
   hasGiftCardDetailsConflict: boolean;
 }
@@ -128,6 +129,7 @@ export function toAccountMergePreviewBody(
     source,
     target,
     transactionCount: preview.transactionCount,
+    checkpointCount: preview.checkpointCount,
     resultingBalanceCents: preview.resultingBalanceCents,
     hasGiftCardDetailsConflict: preview.hasGiftCardDetailsConflict,
   };

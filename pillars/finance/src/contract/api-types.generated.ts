@@ -3407,6 +3407,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              checkpointCount: number;
               hasGiftCardDetailsConflict: boolean;
               resultingBalanceCents: number;
               source: {

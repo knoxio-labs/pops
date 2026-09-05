@@ -1739,6 +1739,7 @@ export type AccountsPreviewMergeResponses = {
    */
   200: {
     data: {
+      checkpointCount: number;
       hasGiftCardDetailsConflict: boolean;
       resultingBalanceCents: number;
       source: {

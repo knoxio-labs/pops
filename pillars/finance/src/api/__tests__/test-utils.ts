@@ -33,7 +33,7 @@ import type { Express } from 'express';
 
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
-import type { Account } from '../modules/accounts-types.js';
+import type { Account, AccountMergePreviewBody } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
 import type { Checkpoint } from '../modules/checkpoints-types.js';
 import type { Currency } from '../modules/currencies-types.js';
@@ -467,6 +467,14 @@ export function makeClient(app: Express) {
         call<{ data: Account; message: string }>((r) => r.delete(`/accounts/${id}`)),
       reorder: (body: { accounts: { id: string; displayOrder: number }[] }) =>
         call<{ data: Account[]; message: string }>((r) => r.post('/accounts/reorder').send(body)),
+      previewMerge: (id: string, targetId: string) =>
+        call<{ data: AccountMergePreviewBody }>((r) =>
+          r.post(`/accounts/${id}/merge/preview`).send({ targetId })
+        ),
+      merge: (id: string, targetId: string) =>
+        call<{ data: Account; message: string }>((r) =>
+          r.post(`/accounts/${id}/merge`).send({ targetId })
+        ),
     },
     checkpoints: {
       list: (accountId: string) =>

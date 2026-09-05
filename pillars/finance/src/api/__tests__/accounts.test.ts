@@ -414,3 +414,32 @@ describe('accounts — person accounts (POPS-2771)', () => {
     expect(downRow?.entityDisplayNameStale).toBe(true);
   });
 });
+
+describe('accounts — merge preview (POPS-2883)', () => {
+  it("reports each side's full account (balance included) and a checkpointCount, not a duplicate balance field", async () => {
+    const { data: accountsList } = await client().accounts.list();
+    const amex = accountsList.find((a) => a.name === 'Amex');
+    const anz = accountsList.find((a) => a.name === 'ANZ Credit Card');
+    if (amex === undefined || anz === undefined) throw new Error('seed accounts missing');
+
+    const { data } = await client().accounts.previewMerge(amex.id, anz.id);
+
+    expect(data.source.id).toBe(amex.id);
+    expect(data.target.id).toBe(anz.id);
+    expect(data.source.balance).toBeDefined();
+    expect(data.target.balance).toBeDefined();
+    expect(data.checkpointCount).toBe(0);
+    expect(Object.keys(data)).not.toContain('sourceBalance');
+    expect(Object.keys(data)).not.toContain('targetBalance');
+  });
+
+  it('rejects a merge with 422 when source and target are the same account', async () => {
+    const { data: accountsList } = await client().accounts.list();
+    const amex = accountsList.find((a) => a.name === 'Amex');
+    if (amex === undefined) throw new Error('seed account missing');
+
+    await expect(client().accounts.previewMerge(amex.id, amex.id)).rejects.toMatchObject({
+      status: 422,
+    });
+  });
+});

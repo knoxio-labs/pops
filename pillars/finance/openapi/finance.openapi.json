@@ -4342,6 +4342,11 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "checkpointCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "hasGiftCardDetailsConflict": {
                           "type": "boolean"
                         },
@@ -4604,6 +4609,7 @@
                         "source",
                         "target",
                         "transactionCount",
+                        "checkpointCount",
                         "resultingBalanceCents",
                         "hasGiftCardDetailsConflict"
                       ],
