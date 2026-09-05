@@ -2776,6 +2776,73 @@ internal enum Operations {
                         internal struct DataPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/archived`.
                             internal var archived: Swift.Bool
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance`.
+                            internal struct BalancePayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance/asOf`.
+                                internal var asOf: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance/balanceCents`.
+                                internal var balanceCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance/basis`.
+                                internal enum BasisPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case checkpoint = "checkpoint"
+                                    case transactions = "transactions"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance/basis`.
+                                internal var basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload.BasisPayload
+                                /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance/inconsistent`.
+                                internal var inconsistent: Swift.Bool
+                                /// Creates a new `BalancePayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - asOf:
+                                ///   - balanceCents:
+                                ///   - basis:
+                                ///   - inconsistent:
+                                internal init(
+                                    asOf: Swift.String,
+                                    balanceCents: Swift.Int,
+                                    basis: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload.BasisPayload,
+                                    inconsistent: Swift.Bool
+                                ) {
+                                    self.asOf = asOf
+                                    self.balanceCents = balanceCents
+                                    self.basis = basis
+                                    self.inconsistent = inconsistent
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case asOf
+                                    case balanceCents
+                                    case basis
+                                    case inconsistent
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.asOf = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .asOf
+                                    )
+                                    self.balanceCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .balanceCents
+                                    )
+                                    self.basis = try container.decode(
+                                        Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload.BasisPayload.self,
+                                        forKey: .basis
+                                    )
+                                    self.inconsistent = try container.decode(
+                                        Swift.Bool.self,
+                                        forKey: .inconsistent
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "asOf",
+                                        "balanceCents",
+                                        "basis",
+                                        "inconsistent"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/balance`.
+                            internal var balance: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/currency`.
                             internal var currency: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/id`.
@@ -2790,6 +2857,7 @@ internal enum Operations {
                             ///
                             /// - Parameters:
                             ///   - archived:
+                            ///   - balance:
                             ///   - currency:
                             ///   - id:
                             ///   - institutionId:
@@ -2797,6 +2865,7 @@ internal enum Operations {
                             ///   - name:
                             internal init(
                                 archived: Swift.Bool,
+                                balance: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload,
                                 currency: Swift.String,
                                 id: Swift.String,
                                 institutionId: Swift.String? = nil,
@@ -2804,6 +2873,7 @@ internal enum Operations {
                                 name: Swift.String
                             ) {
                                 self.archived = archived
+                                self.balance = balance
                                 self.currency = currency
                                 self.id = id
                                 self.institutionId = institutionId
@@ -2812,6 +2882,7 @@ internal enum Operations {
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case archived
+                                case balance
                                 case currency
                                 case id
                                 case institutionId
@@ -2823,6 +2894,10 @@ internal enum Operations {
                                 self.archived = try container.decode(
                                     Swift.Bool.self,
                                     forKey: .archived
+                                )
+                                self.balance = try container.decode(
+                                    Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload.self,
+                                    forKey: .balance
                                 )
                                 self.currency = try container.decode(
                                     Swift.String.self,
@@ -2846,6 +2921,7 @@ internal enum Operations {
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "archived",
+                                    "balance",
                                     "currency",
                                     "id",
                                     "institutionId",
@@ -3727,6 +3803,73 @@ internal enum Operations {
                     internal struct JsonPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/archived`.
                         internal var archived: Swift.Bool
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance`.
+                        internal struct BalancePayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance/asOf`.
+                            internal var asOf: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance/balanceCents`.
+                            internal var balanceCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance/basis`.
+                            internal enum BasisPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case checkpoint = "checkpoint"
+                                case transactions = "transactions"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance/basis`.
+                            internal var basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload.BasisPayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance/inconsistent`.
+                            internal var inconsistent: Swift.Bool
+                            /// Creates a new `BalancePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - asOf:
+                            ///   - balanceCents:
+                            ///   - basis:
+                            ///   - inconsistent:
+                            internal init(
+                                asOf: Swift.String,
+                                balanceCents: Swift.Int,
+                                basis: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload.BasisPayload,
+                                inconsistent: Swift.Bool
+                            ) {
+                                self.asOf = asOf
+                                self.balanceCents = balanceCents
+                                self.basis = basis
+                                self.inconsistent = inconsistent
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case asOf
+                                case balanceCents
+                                case basis
+                                case inconsistent
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.asOf = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .asOf
+                                )
+                                self.balanceCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .balanceCents
+                                )
+                                self.basis = try container.decode(
+                                    Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload.BasisPayload.self,
+                                    forKey: .basis
+                                )
+                                self.inconsistent = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .inconsistent
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "asOf",
+                                    "balanceCents",
+                                    "basis",
+                                    "inconsistent"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/balance`.
+                        internal var balance: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/currency`.
                         internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/id`.
@@ -3741,6 +3884,7 @@ internal enum Operations {
                         ///
                         /// - Parameters:
                         ///   - archived:
+                        ///   - balance:
                         ///   - currency:
                         ///   - id:
                         ///   - institutionId:
@@ -3748,6 +3892,7 @@ internal enum Operations {
                         ///   - name:
                         internal init(
                             archived: Swift.Bool,
+                            balance: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload,
                             currency: Swift.String,
                             id: Swift.String,
                             institutionId: Swift.String? = nil,
@@ -3755,6 +3900,7 @@ internal enum Operations {
                             name: Swift.String
                         ) {
                             self.archived = archived
+                            self.balance = balance
                             self.currency = currency
                             self.id = id
                             self.institutionId = institutionId
@@ -3763,6 +3909,7 @@ internal enum Operations {
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case archived
+                            case balance
                             case currency
                             case id
                             case institutionId
@@ -3774,6 +3921,10 @@ internal enum Operations {
                             self.archived = try container.decode(
                                 Swift.Bool.self,
                                 forKey: .archived
+                            )
+                            self.balance = try container.decode(
+                                Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.BalancePayload.self,
+                                forKey: .balance
                             )
                             self.currency = try container.decode(
                                 Swift.String.self,
@@ -3797,6 +3948,7 @@ internal enum Operations {
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "archived",
+                                "balance",
                                 "currency",
                                 "id",
                                 "institutionId",

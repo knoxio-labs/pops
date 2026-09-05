@@ -343,6 +343,12 @@ export type MobileFinanceListAccountsResponses = {
   200: {
     data: Array<{
       archived: boolean;
+      balance: {
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       currency: string;
       id: string;
       institutionId: string | null;
@@ -462,6 +468,12 @@ export type MobileFinanceGetAccountResponses = {
    */
   200: {
     archived: boolean;
+    balance: {
+      asOf: string;
+      balanceCents: number;
+      basis: 'checkpoint' | 'transactions';
+      inconsistent: boolean;
+    };
     currency: string;
     id: string;
     institutionId: string | null;

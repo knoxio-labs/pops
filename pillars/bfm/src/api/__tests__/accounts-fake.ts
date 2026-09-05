@@ -21,6 +21,13 @@ export interface AccountFakeRow {
   currency: string;
   archivedAt: string | null;
   institutionId: string | null;
+  balance: {
+    balanceCents: number;
+    asOf: string;
+    basis: 'checkpoint' | 'transactions';
+    anchor: unknown;
+    inconsistent: boolean;
+  };
 }
 
 export interface AccountsFake {
@@ -36,6 +43,13 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
     currency: 'AUD',
     archivedAt: null,
     institutionId: null,
+    balance: {
+      balanceCents: 0,
+      asOf: '2026-09-05',
+      basis: 'transactions',
+      anchor: null,
+      inconsistent: false,
+    },
     ...overrides,
   };
 }

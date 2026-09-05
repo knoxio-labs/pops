@@ -643,6 +643,28 @@
                           "archived": {
                             "type": "boolean"
                           },
+                          "balance": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "asOf": {
+                                "type": "string"
+                              },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "basis": {
+                                "enum": ["checkpoint", "transactions"],
+                                "type": "string"
+                              },
+                              "inconsistent": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                            "type": "object"
+                          },
                           "currency": {
                             "type": "string"
                           },
@@ -660,7 +682,15 @@
                             "type": "string"
                           }
                         },
-                        "required": ["id", "name", "kind", "currency", "archived", "institutionId"],
+                        "required": [
+                          "id",
+                          "name",
+                          "kind",
+                          "currency",
+                          "archived",
+                          "institutionId",
+                          "balance"
+                        ],
                         "type": "object"
                       },
                       "type": "array"
@@ -884,6 +914,28 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "balance": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "asOf": {
+                          "type": "string"
+                        },
+                        "balanceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "basis": {
+                          "enum": ["checkpoint", "transactions"],
+                          "type": "string"
+                        },
+                        "inconsistent": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["balanceCents", "asOf", "basis", "inconsistent"],
+                      "type": "object"
+                    },
                     "currency": {
                       "type": "string"
                     },
@@ -901,7 +953,15 @@
                       "type": "string"
                     }
                   },
-                  "required": ["id", "name", "kind", "currency", "archived", "institutionId"],
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "currency",
+                    "archived",
+                    "institutionId",
+                    "balance"
+                  ],
                   "type": "object"
                 }
               }

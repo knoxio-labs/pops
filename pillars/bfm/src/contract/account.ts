@@ -1,13 +1,29 @@
 import { z } from 'zod';
 
 /**
- * One account, as the phone reads it.
+ * What the account holds today, as the phone reads it — finance's own
+ * `AccountBalance` (POPS-2880) minus `anchor`: the phone shows a date and an
+ * `inconsistent` flag, not a checkpoint id to link to. Ledger-signed like
+ * everywhere else in this contract — positive is money held, negative is
+ * money owed, for assets and liabilities alike; nothing here negates it.
  *
- * Deliberately missing a balance: finance's own `accounts` wire schema
- * carries none yet (POPS-2750). Adding one here ahead of finance emitting a
- * real figure would mean fabricating money shown on a dashboard, which is
- * worse than the field being absent — `BFMAccountsRepository` stays unbound
- * to a fake account source until POPS-2750 lands (POPS-2848).
+ * `basis: 'transactions'` means finance found no checkpoint to anchor on and
+ * the figure is the sum of whatever was imported — net flow, not a balance.
+ * A caller that renders this the same way it renders `'checkpoint'` is
+ * showing a number that can drift arbitrarily far from what the account
+ * actually holds; POPS-2848 owns making that distinction visible.
+ */
+export const MobileAccountBalanceSchema = z.object({
+  balanceCents: z.number().int(),
+  asOf: z.string(),
+  basis: z.enum(['checkpoint', 'transactions']),
+  inconsistent: z.boolean(),
+});
+
+export type MobileAccountBalance = z.infer<typeof MobileAccountBalanceSchema>;
+
+/**
+ * One account, as the phone reads it.
  *
  * `kind` is left an open string for the same reason as
  * {@link MobileTransactionSchema.shape.type}: finance adding an account kind
@@ -22,6 +38,7 @@ export const MobileAccountSchema = z.object({
   archived: z.boolean(),
   /** `institutions` id this account is held at, or `null` for cash and person accounts. */
   institutionId: z.string().nullable(),
+  balance: MobileAccountBalanceSchema,
 });
 
 export type MobileAccount = z.infer<typeof MobileAccountSchema>;

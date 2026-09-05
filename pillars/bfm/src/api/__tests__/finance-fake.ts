@@ -52,6 +52,13 @@ export interface FinanceFakeAccountRow {
   currency: string;
   archivedAt: string | null;
   institutionId: string | null;
+  balance: {
+    balanceCents: number;
+    asOf: string;
+    basis: 'checkpoint' | 'transactions';
+    anchor: unknown;
+    inconsistent: boolean;
+  };
 }
 
 export function financeAccountRow(
@@ -63,6 +70,13 @@ export function financeAccountRow(
     currency: 'AUD',
     archivedAt: null,
     institutionId: null,
+    balance: {
+      balanceCents: 0,
+      asOf: '2026-09-05',
+      basis: 'transactions',
+      anchor: null,
+      inconsistent: false,
+    },
     ...overrides,
   };
 }
