@@ -120,16 +120,24 @@ describe('buildCreateValues', () => {
     });
   });
 
-  it('writes null for every absent nullable key, so no column default applies', () => {
+  it('omits absent nullable keys so a column default, if any, applies (POPS-3020)', () => {
     const values = buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput());
 
-    expect(values).toMatchObject({
-      brand: null,
-      notes: null,
-      condition: null,
-      replacementValue: null,
-      purchasePrice: null,
-    });
+    expect(Object.keys(values)).not.toContain('brand');
+    expect(Object.keys(values)).not.toContain('notes');
+    expect(Object.keys(values)).not.toContain('condition');
+    expect(Object.keys(values)).not.toContain('replacementValue');
+    expect(Object.keys(values)).not.toContain('purchasePrice');
+  });
+
+  it('writes null through when the caller explicitly supplies it', () => {
+    const values = buildCreateValues(
+      'item-1',
+      '2026-09-06T00:00:00.000Z',
+      createInput({ brand: null, replacementValue: null })
+    );
+
+    expect(values).toMatchObject({ brand: null, replacementValue: null });
   });
 
   it('derives the purchase transaction URI from the id', () => {

@@ -11,6 +11,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
@@ -90,6 +91,18 @@ describe('items REST — CRUD happy paths', () => {
     expect(created.data.model).toBeNull();
     expect(created.data.locationId).toBeNull();
     expect(created.data.replacementValue).toBeNull();
+  });
+
+  it('applies the column default for condition when create omits it', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Toaster' });
+
+    const [row] = inventoryDb.db
+      .select({ condition: homeInventory.condition })
+      .from(homeInventory)
+      .where(eq(homeInventory.id, created.data.id))
+      .all();
+    expect(row?.condition).toBe('good');
   });
 
   it('clears a nullable field when explicit null is supplied', async () => {

@@ -6,8 +6,14 @@ import type { CreateInventoryItemInput } from './types.js';
 type InventoryInsert = typeof homeInventory.$inferInsert;
 
 /**
- * Keys passed straight through as string|null. An absent key is written as
- * `null` rather than left out, so create never falls back to a column default.
+ * Keys passed straight through as string|null.
+ *
+ * - absent (`undefined`) means "let the column default apply" — the key is
+ *   left out of the insert payload entirely; for a column with no
+ *   `.default()` in the schema this still lands as `NULL`, so omitting is
+ *   behaviourally identical to writing `null` for every key here except
+ *   `condition`, the one column that declares a default.
+ * - explicit `null` means "no value", written through as `NULL`.
  */
 const CREATE_NULLABLE_STRING_KEYS = [
   'brand',
@@ -62,6 +68,8 @@ function setNullableKeys<K extends string, V extends string | number>(
   keys: readonly K[]
 ): void {
   for (const key of keys) {
-    values[key] = input[key] ?? null;
+    const value = input[key];
+    if (value === undefined) continue;
+    values[key] = value;
   }
 }
