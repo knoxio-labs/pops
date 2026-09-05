@@ -129,16 +129,6 @@ run = "tsx libs/module-registry/scripts/build.ts"
 description = "Regenerate every pillar's OpenAPI snapshot + typed client (fans out to each pillar's build codegen)"
 run = "mise run run-all build"
 
-# The design playground's iPhone frame paints colours generated from the iOS
-# app's asset catalogue. A pillar may not read `clients/` (ADR-043), so the
-# generator — like the fixture tasks below — spans both units from here rather
-# than living inside either. CI regenerates and diffs; this is how you make the
-# diff go away.
-[tasks."design:ios-tokens"]
-description = "Regenerate the design playground's iOS colour tokens from the app's asset catalogue"
-dir = "{{config_root}}"
-run = "node scripts/design-ios-tokens.mjs"
-
 # The iOS app's UI-level flow needs a running BFM, and neither unit may reach
 # into the other (ADR-043) — so, like the fixture tasks below, the task that
 # spans both lives here. It boots a real `@pops/bfm` against a temporary

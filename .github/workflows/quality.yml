@@ -431,26 +431,6 @@ jobs:
       - name: Every colour in frontend source comes from a design token
         run: node scripts/ci/check-design-tokens.mjs
 
-  ios-design-tokens:
-    name: iOS design tokens match the asset catalogue
-    # The playground's iPhone frame paints colours generated from the iOS
-    # app's own Colors.xcassets. Generated-and-checked-in is only safe if
-    # something notices when the two disagree: without this job a colorset
-    # edit lands in the app, the playground keeps painting the old value, and
-    # the frame quietly stops being a picture of the product. Regenerate and
-    # diff, so it fails for either cause — an asset changed without running
-    # the generator, or the sheet hand-edited. JSON and CSS only, no deps.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Gate self-test (proves the guard catches a changed colorset)
-        run: node scripts/ci/check-ios-design-tokens.mjs --self-test
-      - name: The generated sheet matches the catalogue
-        run: node scripts/ci/check-ios-design-tokens.mjs
-
   pillar-registration:
     name: Every pillar registers on boot
     # The shell renders its production nginx conf from the live registry and

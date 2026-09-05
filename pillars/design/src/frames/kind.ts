@@ -12,14 +12,13 @@
  */
 /** The one list. `FrameKind` derives from it, and so does the schema that
  *  validates a screen's declared default. */
-export const FRAME_KINDS = ['none', 'web', 'ios'] as const;
+export const FRAME_KINDS = ['none', 'web'] as const;
 
 export type FrameKind = (typeof FRAME_KINDS)[number];
 
 const LABELS: Record<FrameKind, string> = {
   none: 'No frame',
   web: 'POPS web',
-  ios: 'iPhone',
 };
 
 export function frameLabel(kind: FrameKind): string {

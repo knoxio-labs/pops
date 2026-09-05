@@ -11,8 +11,8 @@ describe('frame kind', () => {
 
   it('decodes a known kind and rejects everything else', () => {
     expect(decodeFrame('web')).toBe('web');
-    expect(decodeFrame('ios')).toBe('ios');
     expect(decodeFrame('none')).toBe('none');
+    expect(decodeFrame('ios')).toBe('none');
     expect(decodeFrame('android')).toBe('none');
     expect(decodeFrame('')).toBe('none');
     expect(decodeFrame(null)).toBe('none');

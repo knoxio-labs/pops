@@ -77,7 +77,6 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/check-title-icon-consistency.mjs`          | `quality.yml` → `title-icon-consistency`                                        | Per-app `routes.tsx` and `nav.ts`, page source                 |
 | `scripts/ci/check-control-characters.mjs`           | `quality.yml` → `control-characters`                                            | Every tracked file, raw bytes                                  |
 | `scripts/ci/check-design-tokens.mjs`                | `quality.yml` → `design-tokens`                                                 | Frontend TS/TSX/CSS source, class strings                      |
-| `scripts/ci/check-ios-design-tokens.mjs`            | `quality.yml` → `ios-design-tokens`                                             | `Colors.xcassets` JSON, the generated CSS sheet                |
 | `scripts/ci/check-pillar-registration.mjs`          | `quality.yml` → `pillar-registration`                                           | Pillar server source, the SDK's `known-pillar-id.ts`           |
 | `scripts/ci/check-icon-only-buttons.mjs`            | `quality.yml` → `icon-only-buttons`                                             | TSX source                                                     |
 | `scripts/ci/check-icon-dynamic-import.mjs`          | `quality.yml` → `icon-dynamic-import`                                           | TS/TSX source, dynamic `import()`/`require()` call sites       |
