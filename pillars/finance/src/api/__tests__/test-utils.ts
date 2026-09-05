@@ -37,6 +37,7 @@ import type { Account } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
 import type { Checkpoint } from '../modules/checkpoints-types.js';
 import type { Currency } from '../modules/currencies-types.js';
+import type { Nudge } from '../modules/data-quality-types.js';
 import type {
   GiftCardDetails,
   RevealedGiftCardSecretResponse,
@@ -678,6 +679,9 @@ export function makeClient(app: Express) {
         call<{ result: ProcessImportOutput; affectedCount: number }>((r) =>
           r.post('/imports/reevaluate-pending').send(body)
         ),
+    },
+    dataQuality: {
+      nudges: () => call<{ data: Nudge[] }>((r) => r.get('/data-quality/nudges')),
     },
   };
 }
