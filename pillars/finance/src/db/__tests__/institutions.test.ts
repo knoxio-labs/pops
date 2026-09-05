@@ -9,6 +9,7 @@ import {
   InstitutionInUseError,
   InstitutionMergeSameInstitutionError,
   InstitutionNotFoundError,
+  LogoBlobNotFoundError,
 } from '../errors.js';
 import { getAccount, createAccount } from '../services/accounts.js';
 import {
@@ -20,6 +21,7 @@ import {
   mergeInstitutions,
   updateInstitution,
 } from '../services/institutions.js';
+import { createLogoBlob, getLogoBlob } from '../services/logo-blobs.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
@@ -192,6 +194,20 @@ describe('deleteInstitution', () => {
 
     expect(() => deleteInstitution(db, created.id)).toThrow(InstitutionInUseError);
   });
+
+  it("deletes the institution's logo_blobs row along with it (POPS-2867)", () => {
+    const db = freshDb();
+    const blob = createLogoBlob(db, { contentType: 'image/png', data: Buffer.from('logo-bytes') });
+    const created = createInstitution(db, {
+      name: 'Westpac',
+      colour: '#d5001c',
+      logoAssetId: blob.id,
+    });
+
+    deleteInstitution(db, created.id);
+
+    expect(() => getLogoBlob(db, blob.id)).toThrow(LogoBlobNotFoundError);
+  });
 });
 
 describe('mergeInstitutions', () => {
@@ -237,6 +253,33 @@ describe('mergeInstitutions', () => {
 
     expect(survivor.colour).toBe('#0033a0');
     expect(survivor.logoAssetId).toBe('asset-target');
+  });
+
+  it("deletes the source institution's logo_blobs row, keeping the target's (POPS-2867)", () => {
+    const db = freshDb();
+    const sourceBlob = createLogoBlob(db, {
+      contentType: 'image/png',
+      data: Buffer.from('source-logo'),
+    });
+    const targetBlob = createLogoBlob(db, {
+      contentType: 'image/png',
+      data: Buffer.from('target-logo'),
+    });
+    const source = createInstitution(db, {
+      name: 'A.N.Z.',
+      colour: '#111111',
+      logoAssetId: sourceBlob.id,
+    });
+    const target = createInstitution(db, {
+      name: 'ANZ Bank',
+      colour: '#0033a0',
+      logoAssetId: targetBlob.id,
+    });
+
+    mergeInstitutions(db, source.id, target.id);
+
+    expect(() => getLogoBlob(db, sourceBlob.id)).toThrow(LogoBlobNotFoundError);
+    expect(getLogoBlob(db, targetBlob.id)).toBeTruthy();
   });
 
   it('merges two institutions that no account references (nothing to repoint, still deletes source)', () => {
