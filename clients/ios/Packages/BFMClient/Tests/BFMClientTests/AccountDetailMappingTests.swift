@@ -5,7 +5,7 @@ import Testing
 @testable import BFMClient
 
 @Suite("Account detail mapping")
-struct AccountDetailMappingTests {
+internal struct AccountDetailMappingTests {
     private static func repository(
         detail: String,
         transactions: String = TransactionsWire.page(TransactionsWire.row)
@@ -117,7 +117,7 @@ struct AccountDetailMappingTests {
 }
 
 @Suite("Accounts failures")
-struct AccountsFailureTests {
+internal struct AccountsFailureTests {
     @Test("a rejected token ends the session, whichever way the BFM says it")
     func endsTheSession() async throws {
         let rejected = try BFMAccountsRepository.stubbed(

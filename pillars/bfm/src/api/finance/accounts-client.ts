@@ -14,7 +14,6 @@
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
-import { FINANCE_PILLAR_ID } from './pillar.js';
 import {
   FinanceAccountGetResponseSchema,
   FinanceAccountListResponseSchema,
@@ -40,6 +39,18 @@ export type FinanceAccountsRouter = {
     history: (input: { id: string; months?: number }) => Promise<unknown>;
   };
 };
+
+/**
+ * The finance pillar id, as registered with the registry.
+ *
+ * Declared here AND in `client.ts` rather than shared between them, because
+ * `check-cross-pillar-expectations.mjs` resolves a `gateway.call` target from
+ * the calling file alone: a module-level `const` bound to a literal is
+ * decidable, an import is not. Sharing one definition would make every call in
+ * this file unpinnable and cost the seam its per-operation coverage — see that
+ * script's `resolveProducerId`.
+ */
+export const FINANCE_PILLAR_ID = 'finance';
 
 /**
  * Rows requested per {@link FinanceAccountsRouter.accounts.list} call — the

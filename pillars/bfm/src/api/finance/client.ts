@@ -17,7 +17,6 @@ import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { getAccountDetail, listAccounts, resolveAccountName } from './accounts-client.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
-import { FINANCE_PILLAR_ID } from './pillar.js';
 import {
   FinanceTransactionGetResponseSchema,
   FinanceTransactionListResponseSchema,
@@ -34,7 +33,6 @@ import type {
   MobileTransactionsPage,
 } from '../../contract/rest-schemas.js';
 
-export { FINANCE_PILLAR_ID } from './pillar.js';
 export type { FinanceAccountsRouter } from './accounts-client.js';
 
 /**
@@ -57,6 +55,9 @@ export type FinanceTransactionsRouter = {
     get: (input: { id: string }) => Promise<unknown>;
   };
 };
+
+/** The finance pillar id — see `accounts-client.ts` for why there are two. */
+export const FINANCE_PILLAR_ID = 'finance';
 
 export interface ListTransactionsRequest {
   /** Rows to return. The caller has already clamped this to the contract's cap. */

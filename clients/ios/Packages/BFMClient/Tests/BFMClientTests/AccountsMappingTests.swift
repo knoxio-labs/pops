@@ -5,7 +5,7 @@ import Testing
 @testable import BFMClient
 
 @Suite("Accounts list mapping")
-struct AccountsMappingTests {
+internal struct AccountsMappingTests {
     @Test("a row becomes an account in the app's own vocabulary")
     func mapsARow() async throws {
         let repository = try BFMAccountsRepository.stubbed(
