@@ -145,11 +145,13 @@ describe('BalanceCard provenance', () => {
     expect(screen.queryByText(/As of/)).not.toBeInTheDocument();
   });
 
-  it('links out to the checkpoints page rather than listing them here', () => {
+  it('links out to the checkpoints page under the shell prefix that mounts it', () => {
+    // `routes.tsx` declares its paths relative to the shell's `/finance/*`
+    // mount, so an in-app link that omits the prefix matches no route at all.
     renderCard({ account: account({ id: 'a7' }) });
     expect(screen.getByRole('link', { name: 'Checkpoints' })).toHaveAttribute(
       'href',
-      '/accounts/a7/checkpoints'
+      '/finance/accounts/a7/checkpoints'
     );
   });
 });

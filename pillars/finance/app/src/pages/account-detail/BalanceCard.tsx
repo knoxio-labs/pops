@@ -83,7 +83,7 @@ export function BalanceCard({ account, currency }: { account: Account; currency:
             {provenanceLine(account, balance)}
             {' · '}
             <Link
-              to={`/accounts/${account.id}/checkpoints`}
+              to={`/finance/accounts/${account.id}/checkpoints`}
               className="underline underline-offset-2 hover:text-foreground"
             >
               Checkpoints
