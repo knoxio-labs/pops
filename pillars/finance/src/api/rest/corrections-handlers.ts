@@ -178,7 +178,7 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       runHttp(() => ({
         status: 200 as const,
         body: {
-          data: applyCorrectionChangeSet(db, body.changeSet).map(toCorrection),
+          data: applyCorrectionChangeSet(db, body.changeSet).rows.map(toCorrection),
           message: 'ChangeSet applied',
         },
       })),

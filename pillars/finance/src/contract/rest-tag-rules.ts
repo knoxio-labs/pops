@@ -20,6 +20,10 @@ import { z } from 'zod';
 
 import { ERR_RESPONSES, MessageSchema, PaginationMetaSchema } from './rest-schemas.js';
 import {
+  ResolveTagRuleAddCollisionsBody,
+  ResolveTagRuleAddCollisionsResultSchema,
+} from './rest-tag-rules-collisions.js';
+import {
   MaxPreviewItems,
   PreviewInputTransactionSchema,
   TagRuleApplyExistingBody,
@@ -136,6 +140,14 @@ export const financeTagRulesContract = c.router({
     responses: { 200: TagRuleChangeSetProposalSchema, ...ERR_RESPONSES },
     summary:
       'Propose a tag-rule ChangeSet from a tag-edit signal (deterministic, with impact preview)',
+  },
+  resolveAddCollisions: {
+    method: 'POST',
+    path: '/tag-rules/resolve-add-collisions',
+    body: ResolveTagRuleAddCollisionsBody,
+    responses: { 200: ResolveTagRuleAddCollisionsResultSchema, ...ERR_RESPONSES },
+    summary:
+      "For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955)",
   },
   preview: {
     method: 'POST',

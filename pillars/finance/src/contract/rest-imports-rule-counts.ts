@@ -14,14 +14,14 @@ export const RulesAppliedSchema = z.object({
 });
 
 /**
- * Created-vs-reinforced split for a commit's tag-rule `add` ops.
+ * Created-vs-reinforced split for a commit's `add` ops, shared by tag rules
+ * (POPS-2755) and correction rules (POPS-2954).
  *
- * An `add` resolving to an existing `(pattern, matchType, entityId)` merges
- * into that rule instead of creating one. Reporting both as adds is what made
- * a merge into a rule the batch never created indistinguishable from a create
- * (POPS-2755).
+ * An `add` resolving to an existing rule key merges into that rule instead of
+ * creating one. Reporting both as adds is what made a merge into a rule the
+ * batch never created indistinguishable from a create.
  */
-export const TagRuleWritesSchema = z.object({
+export const RuleWriteCountsSchema = z.object({
   inserted: z.number().int().nonnegative(),
   reinforced: z.number().int().nonnegative(),
 });

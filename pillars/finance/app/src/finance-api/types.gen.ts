@@ -5595,6 +5595,10 @@ export type ImportsCommitImportResponses = {
         deltaCents: number;
         id: string;
       }>;
+      correctionRuleWrites?: {
+        inserted: number;
+        reinforced: number;
+      };
       entitiesCreated: number;
       failedDetails: Array<{
         checksum: string | null;
@@ -8057,6 +8061,101 @@ export type TagRulesRejectResponses = {
 };
 
 export type TagRulesRejectResponse = TagRulesRejectResponses[keyof TagRulesRejectResponses];
+
+export type TagRulesResolveAddCollisionsData = {
+  /**
+   * Body
+   */
+  body?: {
+    changeSets: Array<{
+      ops: Array<
+        | {
+            data: {
+              confidence?: number;
+              descriptionPattern: string;
+              entityId?: string | null;
+              isActive?: boolean;
+              matchType: 'exact' | 'contains' | 'regex';
+              priority?: number;
+              tags: Array<string>;
+            };
+            op: 'add';
+          }
+        | {
+            data: {
+              confidence?: number;
+              entityId?: string | null;
+              isActive?: boolean;
+              priority?: number;
+              tags?: Array<string>;
+            };
+            id: string;
+            op: 'edit';
+          }
+        | {
+            id: string;
+            op: 'disable';
+          }
+        | {
+            id: string;
+            op: 'remove';
+          }
+      >;
+      reason?: string;
+      source?: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/tag-rules/resolve-add-collisions';
+};
+
+export type TagRulesResolveAddCollisionsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TagRulesResolveAddCollisionsError =
+  TagRulesResolveAddCollisionsErrors[keyof TagRulesResolveAddCollisionsErrors];
+
+export type TagRulesResolveAddCollisionsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    collisions: Array<
+      Array<{
+        existingTags: Array<string>;
+        ruleId: string;
+      } | null>
+    >;
+  };
+};
+
+export type TagRulesResolveAddCollisionsResponse =
+  TagRulesResolveAddCollisionsResponses[keyof TagRulesResolveAddCollisionsResponses];
 
 export type TagRulesVocabularyData = {
   body?: never;

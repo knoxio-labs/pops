@@ -3,6 +3,7 @@ import {
   OP_BADGE,
   opDisplayLabel,
   type TagRuleChangeSetOp,
+  tagRuleOpBadge,
   tagRuleOpDisplayLabel,
 } from './op-helpers';
 import { Section } from './Section';
@@ -12,6 +13,7 @@ import type {
   PendingEntity,
   PendingTagRuleChangeSet,
 } from '../../../store/importStore';
+import type { TagRuleAddCollision } from './useTagRuleAddCollisions';
 
 interface OpRowProps {
   badge: (typeof OP_BADGE)[string] | undefined;
@@ -93,30 +95,39 @@ export function ClassificationRulesSection({
 export function TagRulesSection({
   pendingTagRuleChangeSets,
   totalTagRuleOps,
+  collisions,
 }: {
   pendingTagRuleChangeSets: PendingTagRuleChangeSet[];
   totalTagRuleOps: number;
+  /**
+   * `collisions[i][j]` for `pendingTagRuleChangeSets[i].changeSet.ops[j]` —
+   * `undefined` while the server-side check (POPS-2955) has not resolved
+   * yet, in which case every `add` renders as a plain ADD.
+   */
+  collisions?: TagRuleAddCollision[][];
 }) {
   if (totalTagRuleOps === 0) return null;
   return (
     <Section title="Tag Rule Changes" count={totalTagRuleOps}>
       <div className="space-y-3">
-        {pendingTagRuleChangeSets.map((pcs) => (
+        {pendingTagRuleChangeSets.map((pcs, pcsIndex) => (
           <div key={pcs.tempId} className="space-y-1">
             {pcs.changeSet.source && (
               <p className="text-xs text-muted-foreground">Source: {pcs.changeSet.source}</p>
             )}
             <ul className="space-y-1">
-              {pcs.changeSet.ops.map((op) => {
+              {pcs.changeSet.ops.map((op, opIndex) => {
                 const rowKey =
                   op.op === 'add'
                     ? `${pcs.tempId}-add-${op.data.descriptionPattern}`
                     : `${pcs.tempId}-${op.op}-${op.id}`;
+                const collision = collisions?.[pcsIndex]?.[opIndex];
+                const typedOp = op as TagRuleChangeSetOp;
                 return (
                   <OpRow
                     key={rowKey}
-                    badge={OP_BADGE[op.op]}
-                    label={tagRuleOpDisplayLabel(op as TagRuleChangeSetOp)}
+                    badge={tagRuleOpBadge(typedOp, collision)}
+                    label={tagRuleOpDisplayLabel(typedOp, collision)}
                     rowKey={rowKey}
                   />
                 );

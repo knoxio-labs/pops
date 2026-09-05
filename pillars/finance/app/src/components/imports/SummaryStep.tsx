@@ -177,6 +177,7 @@ export function SummaryStep() {
       <RuleBreakdown
         rulesApplied={commitResult.rulesApplied}
         tagRuleWrites={commitResult.tagRuleWrites}
+        correctionRuleWrites={commitResult.correctionRuleWrites}
         totalRules={totalRules}
       />
       <RetroactiveSection count={commitResult.retroactiveReclassifications} />

@@ -6,7 +6,11 @@
  * threaded in, so their inner service calls nest as savepoints rather than
  * opening transactions of their own.
  */
-import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
+import {
+  applyChangeSet,
+  dropUnusableAddOps,
+  type CorrectionRuleWriteCounts,
+} from '../corrections/index.js';
 import { applyTagRuleChangeSet, type TagRuleWriteCounts } from '../tag-rules/service.js';
 import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
 
@@ -20,20 +24,40 @@ export interface RuleApplyCounts {
   remove: number;
 }
 
+export interface CorrectionChangeSetPhaseResult {
+  /** Every correction ChangeSet op applied, by kind — the long-standing total. */
+  counts: RuleApplyCounts;
+  /** Of the `add` ops, how many minted a rule against how many merged into one. */
+  writes: CorrectionRuleWriteCounts;
+}
+
+/**
+ * Apply the batch's correction ChangeSets, counting created rules apart from
+ * reinforced ones.
+ *
+ * An `add` op that resolves to an existing `(pattern, matchType)` merges into
+ * that rule rather than creating one (POPS-2954, mirroring the tag-rule fix
+ * in `applyTagRuleChangeSetsPhase` below). Both used to be counted only as
+ * `counts.add`, which does not say which ones landed on a rule the batch did
+ * not create.
+ */
 export function applyChangeSetsPhase(
   tx: FinanceDb,
   payload: CommitPayload,
   tempIdMap: Map<string, string>
-): RuleApplyCounts {
+): CorrectionChangeSetPhaseResult {
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
+  const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
   for (const cs of payload.changeSets) {
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
     const sanitized = dropUnusableAddOps(resolved);
     if (sanitized.ops.length === 0) continue;
-    applyChangeSet(tx, sanitized);
+    const applied = applyChangeSet(tx, sanitized);
     for (const op of sanitized.ops) counts[op.op]++;
+    writes.inserted += applied.writes.inserted;
+    writes.reinforced += applied.writes.reinforced;
   }
-  return counts;
+  return { counts, writes };
 }
 
 export interface TagRulePhaseResult {
