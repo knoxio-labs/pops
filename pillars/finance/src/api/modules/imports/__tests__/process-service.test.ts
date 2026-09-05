@@ -59,7 +59,7 @@ function parsed(description: string, checksum: string): ParsedTransaction {
     date: '2026-01-01',
     description,
     amount: -20,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: description,
     checksum,
   };

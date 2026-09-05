@@ -15,7 +15,7 @@ function makeProcessed(
     date: '2026-02-06',
     description: `TXN ${checksum}`,
     amount: -12.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: `{"checksum":"${checksum}"}`,
     checksum,
     entity: { matchType: 'none' },

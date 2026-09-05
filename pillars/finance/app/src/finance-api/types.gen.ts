@@ -4889,7 +4889,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -4898,6 +4897,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -4955,7 +4955,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -4964,6 +4963,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5021,7 +5021,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5030,6 +5029,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5087,7 +5087,6 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5096,6 +5095,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5289,7 +5289,6 @@ export type ImportsCommitImportData = {
       };
     }>;
     transactions: Array<{
-      account: string;
       accountId?: string;
       amount: number;
       balanceCents?: number;
@@ -5298,6 +5297,7 @@ export type ImportsCommitImportData = {
       country?: string;
       date: string;
       description: string;
+      dialectAccountLabel: string;
       entityId?: string;
       entityName?: string;
       foreignAmountMinor?: number;
@@ -5475,7 +5475,6 @@ export type ImportsProcessImportData = {
    */
   body?: {
     transactions: Array<{
-      account: string;
       accountId?: string;
       amount: number;
       balanceCents?: number;
@@ -5484,6 +5483,7 @@ export type ImportsProcessImportData = {
       country?: string;
       date: string;
       description: string;
+      dialectAccountLabel: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
       fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
@@ -5604,7 +5604,6 @@ export type ImportsGetImportProgressResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5613,6 +5612,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5670,7 +5670,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5679,6 +5678,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5736,7 +5736,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5745,6 +5744,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -5802,7 +5802,6 @@ export type ImportsGetImportProgressResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -5811,6 +5810,7 @@ export type ImportsGetImportProgressResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6018,7 +6018,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         totalOutputTokens: number;
       };
       failed: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6027,6 +6026,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6084,7 +6084,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       matched: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6093,6 +6092,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6150,7 +6150,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       skipped: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6159,6 +6158,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;
@@ -6216,7 +6216,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           | 'fee';
       }>;
       uncertain: Array<{
-        account: string;
         accountId?: string;
         amount: number;
         balanceCents?: number;
@@ -6225,6 +6224,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         country?: string;
         date: string;
         description: string;
+        dialectAccountLabel: string;
         entity: {
           confidence?: number;
           entityId?: string;

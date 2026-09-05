@@ -10,7 +10,7 @@ function makeTxn(checksum: string, description = 'WOOLWORTHS'): ParsedTransactio
     date: '2026-01-15',
     description,
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: `{"checksum":"${checksum}"}`,
     checksum,
   };

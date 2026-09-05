@@ -19,7 +19,7 @@ function makeTransaction(checksum: string, suggested: string[]): ConfirmedTransa
     date: '2026-03-01',
     description: `TXN ${checksum}`,
     amount: -12.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum,
     tags: [...suggested],

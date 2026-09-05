@@ -42,7 +42,7 @@ function transaction(overrides: Partial<ParsedTransaction> = {}): ParsedTransact
     date: '2026-02-13',
     description: 'WOOLWORTHS 1234',
     amount: -42.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: 'chk-1',
     ...overrides,

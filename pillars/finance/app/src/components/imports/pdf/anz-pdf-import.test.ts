@@ -106,7 +106,7 @@ describe('importAnzPdfStatements', () => {
       description: 'ALDI STORES - MARRICKV',
       location: 'Marrickville',
       amount: -42.1,
-      account: 'ANZ Credit Card',
+      dialectAccountLabel: 'ANZ Credit Card',
     });
   });
 

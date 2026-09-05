@@ -93,7 +93,7 @@ function closingBalanceCandidates(
     if (row.balanceCents === undefined) continue;
     if (failedChecksums.has(row.checksum)) continue;
 
-    const accountId = resolveImportAccountId(db, row.account, row.accountId);
+    const accountId = resolveImportAccountId(db, row.dialectAccountLabel, row.accountId);
     const existing = byAccount.get(accountId);
     if (existing !== undefined && row.date < existing.date) continue;
 

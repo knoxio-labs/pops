@@ -24,7 +24,7 @@ const makeTransaction = (
   }
 ): ConfirmedTransaction => ({
   date: '2026-02-20',
-  account: 'Amex',
+  dialectAccountLabel: 'Amex',
   rawRow: '{}',
   checksum: Math.random().toString(36).slice(2),
   tags: [],

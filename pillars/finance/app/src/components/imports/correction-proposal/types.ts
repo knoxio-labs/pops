@@ -89,6 +89,12 @@ export interface TriggeringTransactionContext {
   description: string;
   amount: number;
   date: string;
+  /**
+   * The real account id (POPS-2840) when the row's picked one; the
+   * bank-dialect label ("Amex") only as a fallback for a pre-account-step
+   * caller (POPS-2872). `AccountLabel` resolves either against the live
+   * accounts list.
+   */
   account: string;
   location?: string | null;
   previousEntityName?: string | null;

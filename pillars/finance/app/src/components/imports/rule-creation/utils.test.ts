@@ -10,7 +10,7 @@ function txn(overrides: Partial<ConfirmedTransaction> & { description: string })
   return {
     date: '2026-09-01',
     amount: -12.34,
-    account: 'anz-checking',
+    dialectAccountLabel: 'anz-checking',
     rawRow: overrides.description,
     tags: ['Streaming'],
     ...overrides,
