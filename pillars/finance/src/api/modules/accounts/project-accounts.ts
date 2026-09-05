@@ -1,9 +1,9 @@
 /**
  * Project account rows to their wire shape, resolving the two things a row
  * does not carry: the contact display name (live from contacts, POPS-2771)
- * and the checkpoint-anchored balance (ADR-051).
+ * the checkpoint-anchored balance (ADR-051) and the import status (POPS-2917).
  *
- * Both are resolved for the WHOLE set at once. `balancesFor` costs three
+ * All three are resolved for the WHOLE set at once. `balancesFor` costs three
  * grouped queries regardless of how many accounts are on the page, where a
  * per-row `balanceAsOf` would cost a handful each; `resolveAccountEntityDisplays`
  * already batched its side. Every accounts response — the list, one account, a
@@ -11,9 +11,11 @@
  */
 import {
   balancesFor,
+  importStatusFor,
   resolveAccountEntityDisplays,
   today,
   type AccountBalance,
+  type ImportStatus,
 } from '../../../db/index.js';
 import { toAccount, type Account } from '../accounts-types.js';
 
@@ -36,6 +38,16 @@ const NO_BALANCE: AccountBalance = {
   inconsistent: false,
 };
 
+/** Same standing as {@link NO_BALANCE}: what an account never imported into says. */
+const NO_IMPORT_STATUS: ImportStatus = {
+  lastImportAt: null,
+  lastBatchId: null,
+  newestTransactionDate: null,
+  span: null,
+  cadenceDays: null,
+  source: null,
+};
+
 /** Batched projections of account rows to their wire shape. */
 export interface AccountProjector {
   many: (rows: AccountRow[], date?: string) => Promise<Account[]>;
@@ -45,19 +57,22 @@ export interface AccountProjector {
 export function makeAccountProjector(db: FinanceDb, contacts: ContactsClient): AccountProjector {
   async function many(rows: AccountRow[], date = today()): Promise<Account[]> {
     const displays = await resolveAccountEntityDisplays(contacts, rows);
-    const balances = balancesFor(
-      db,
-      rows.map((row) => row.id),
-      date
-    );
+    const ids = rows.map((row) => row.id);
+    const balances = balancesFor(db, ids, date);
+    const statuses = importStatusFor(db, ids);
     return rows.map((row) =>
-      toAccount(row, displays.get(row.id) ?? NOT_A_PERSON, balances.get(row.id) ?? NO_BALANCE)
+      toAccount(
+        row,
+        displays.get(row.id) ?? NOT_A_PERSON,
+        balances.get(row.id) ?? NO_BALANCE,
+        statuses.get(row.id) ?? NO_IMPORT_STATUS
+      )
     );
   }
 
   async function one(row: AccountRow): Promise<Account> {
     const [account] = await many([row]);
-    return account ?? toAccount(row, NOT_A_PERSON, NO_BALANCE);
+    return account ?? toAccount(row, NOT_A_PERSON, NO_BALANCE, NO_IMPORT_STATUS);
   }
 
   return { many, one };

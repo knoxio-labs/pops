@@ -7,6 +7,7 @@ import type { AccountKind } from '../../contract/account-kind.js';
 import type {
   AccountBalance,
   AccountEntityDisplay,
+  ImportStatus,
   AccountMergePreview,
   AccountRow,
   CreateAccountInput,
@@ -30,6 +31,8 @@ export interface Account {
   entityDisplayNameStale: boolean;
   /** What the account holds today, checkpoint-anchored (ADR-051). */
   balance: AccountBalance;
+  /** When the account last got data and how it is fed (POPS-2917). */
+  importStatus: ImportStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,10 +63,12 @@ export interface UpdateAccountBody {
 export function toAccount(
   row: AccountRow,
   entityDisplay: AccountEntityDisplay,
-  balance: AccountBalance
+  balance: AccountBalance,
+  importStatus: ImportStatus
 ): Account {
   return {
     balance,
+    importStatus,
     id: row.id,
     name: row.name,
     institutionId: row.institutionId,

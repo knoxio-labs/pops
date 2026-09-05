@@ -180,7 +180,7 @@ export function makeTagRulesHandlers(db: FinanceDb) {
           for (const tag of body.acceptedNewTags) {
             if (tag.trim()) tagVocabularyService.upsertVocabularyTag(db, tag.trim(), 'user');
           }
-          const rules = applyTagRuleChangeSet(db, body.changeSet);
+          const { rules } = applyTagRuleChangeSet(db, body.changeSet);
           return { status: 200 as const, body: { rules } };
         } catch (err) {
           translateTagRuleError(err);

@@ -87,6 +87,8 @@ export const TransactionSnapshotSchema = z.object({
    * existed still restores; absent reads as null.
    */
   importBatchId: z.string().nullable().optional(),
+  /** True while the source still reports the row as unsettled (POPS-30). */
+  pending: z.boolean().optional(),
 });
 
 export const CreateTransactionBody = z.object({

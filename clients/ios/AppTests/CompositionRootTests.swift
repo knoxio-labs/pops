@@ -1,6 +1,8 @@
 import AppCore
 import Auth
 import BFMClient
+import FeatureAccounts
+import FeatureTransactions
 import Foundation
 import Testing
 
@@ -47,6 +49,11 @@ internal struct CompositionRootTests {
         #expect(bound.transactions is BFMTransactionsRepository)
         #expect(bound.pairing is BFMDevicePairingService)
         #expect(bound.receiptCapture is BFMReceiptCaptureRepository)
+        #expect(bound.purchases is BFMPurchasesRepository)
+        // `accounts` is here for exactly the reason `receiptCapture` is: it was
+        // the seam left unbound with a comment explaining why, and the comment
+        // outlived the reason (POPS-2848).
+        #expect(bound.accounts is BFMAccountsRepository)
     }
 
     /// Pairing is bound before there is a BFM to bind anything else to — the
@@ -117,6 +124,42 @@ internal struct CompositionRootTests {
     @Test("this build can draw the transactions feature")
     func renderableListIsNotEmpty() {
         #expect(RootFeature.renderable.contains(.transactions))
+    }
+
+    /// Registering a module is what makes it reachable — binding a repository
+    /// for it is not enough, and neither is the BFM naming it. Both halves of
+    /// POPS-2848 have to hold for the tab to appear.
+    @Test("this build can draw the accounts feature")
+    func accountsIsRenderable() {
+        #expect(RootFeature.renderable.contains(FeatureAccounts.feature))
+    }
+
+    /// Two `NavigationStack`s bound to one `[Route]` are one stack rendered
+    /// twice. This was unobservable while transactions was the only feature
+    /// that drew a stack, and became a real defect the moment accounts did.
+    @Test("each feature's stack has a navigation path of its own")
+    func routersAreNotShared() {
+        let root = composition()
+
+        let transactions = root.router(for: FeatureTransactions.feature)
+        let accounts = root.router(for: FeatureAccounts.feature)
+
+        #expect(transactions !== accounts)
+        accounts.send(.push(.accountDetail(id: "acc-1")))
+        #expect(accounts.path == [.accountDetail(id: "acc-1")])
+        #expect(transactions.path.isEmpty)
+    }
+
+    /// A `Router()` per body evaluation is a router the screen keeps sending
+    /// taps to while the stack renders another — the reason these are held on
+    /// the composition root at all.
+    @Test("a feature's router is the same instance every time it is asked for")
+    func routersAreStable() {
+        let root = composition()
+
+        #expect(
+            root.router(for: FeatureAccounts.feature)
+                === root.router(for: FeatureAccounts.feature))
     }
 
     /// `.invalid` is reserved by RFC 6761, so nothing built from this can reach

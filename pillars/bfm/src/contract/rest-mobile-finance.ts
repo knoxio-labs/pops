@@ -9,7 +9,7 @@ import {
   MobilePageLimit,
 } from './rest-mobile-responses.js';
 import {
-  MobileAccountSchema,
+  MobileAccountDetailSchema,
   MobileAccountsPageSchema,
   MobileTransactionDetailSchema,
   MobileTransactionsPageSchema,
@@ -30,6 +30,18 @@ export const mobileFinanceContract = c.router({
        * unmodified and must never construct one.
        */
       cursor: z.string().optional(),
+      /**
+       * Narrow the page to one account, for the account dashboard's recent
+       * rows. Absent means every account, which is what the transactions
+       * screen asks for.
+       *
+       * It pages exactly like the unfiltered list — the cursor is an anchor in
+       * the ordering, not an offset — but a cursor minted under one
+       * `accountId` and replayed under another names a position in a
+       * different sequence. The app never does this: a filter change starts a
+       * fresh page.
+       */
+      accountId: z.string().optional(),
     }),
     responses: {
       200: MobileTransactionsPageSchema,
@@ -71,13 +83,13 @@ export const mobileFinanceContract = c.router({
     path: '/mobile/finance/accounts/:id',
     pathParams: z.object({ id: z.string() }),
     responses: {
-      200: MobileAccountSchema,
+      200: MobileAccountDetailSchema,
       ...MOBILE_REQUEST_RESPONSES,
       ...MOBILE_PERIMETER_RESPONSES,
       404: MobileUpstreamErrorSchema,
       ...MOBILE_UPSTREAM_RESPONSES,
     },
-    summary: 'One account, for whatever the phone can build a dashboard from today',
+    summary: 'One account and its month-end balance history, for the dashboard screen',
     metadata: requires('finance.accounts.read'),
   },
 });

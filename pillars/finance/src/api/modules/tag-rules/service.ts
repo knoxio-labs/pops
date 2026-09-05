@@ -53,10 +53,30 @@ export function toTagRule(row: TransactionTagRuleRow): TagRule {
   };
 }
 
-function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp): void {
+/**
+ * How many rules a ChangeSet apply actually created, against how many it
+ * merged into rules that already existed.
+ *
+ * An `add` op resolving to an existing `(pattern, matchType, entityId)` is a
+ * reinforcement, not a create. Counting the two together is what let an import
+ * commit record 20 rules added when some of them were merges into rules the
+ * batch did not create (POPS-2755).
+ */
+export interface TagRuleWriteCounts {
+  inserted: number;
+  reinforced: number;
+}
+
+/** Result of applying a tag-rule ChangeSet: the full rule set, and what the `add` ops did. */
+export interface TagRuleChangeSetApplyResult {
+  rules: TagRule[];
+  writes: TagRuleWriteCounts;
+}
+
+function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp, writes: TagRuleWriteCounts): void {
   switch (op.op) {
-    case 'add':
-      transactionTagRulesService.createTransactionTagRule(tx, {
+    case 'add': {
+      const { outcome } = transactionTagRulesService.createOrReinforceTransactionTagRule(tx, {
         descriptionPattern: op.data.descriptionPattern,
         matchType: op.data.matchType,
         entityId: op.data.entityId ?? null,
@@ -65,7 +85,10 @@ function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp): void {
         isActive: op.data.isActive ?? true,
         priority: op.data.priority ?? 0,
       });
+      if (outcome === 'inserted') writes.inserted++;
+      else writes.reinforced++;
       return;
+    }
     case 'edit':
       transactionTagRulesService.updateTransactionTagRule(tx, op.id, {
         entityId: op.data.entityId,
@@ -83,10 +106,14 @@ function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp): void {
   }
 }
 
-export function applyTagRuleChangeSet(db: FinanceDb, changeSet: TagRuleChangeSet): TagRule[] {
+export function applyTagRuleChangeSet(
+  db: FinanceDb,
+  changeSet: TagRuleChangeSet
+): TagRuleChangeSetApplyResult {
+  const writes: TagRuleWriteCounts = { inserted: 0, reinforced: 0 };
   return db.transaction((tx) => {
-    for (const op of changeSet.ops) applyOp(tx, op);
-    return transactionTagRulesService.listTransactionTagRules(tx).map(toTagRule);
+    for (const op of changeSet.ops) applyOp(tx, op, writes);
+    return { rules: transactionTagRulesService.listTransactionTagRules(tx).map(toTagRule), writes };
   });
 }
 

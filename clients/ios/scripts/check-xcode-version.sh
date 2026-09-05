@@ -33,6 +33,11 @@ die() {
     exit 1
 }
 
+# This script's own directory, so `self-test` can read `clients/ios/mise.toml`
+# regardless of where it was invoked from — mise runs tasks with the unit as
+# cwd, a developer running it by hand may not.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # "Xcode 26.6\nBuild version 17A5305d" -> "26.6". Takes the tool's stdout as
 # an argument rather than shelling out, so self-test can feed it fixtures.
 parse_installed_version() {
@@ -41,6 +46,11 @@ parse_installed_version() {
 
 # The message this file exists to produce, addressed at both versions by
 # name — the whole point of POPS-1436 over the silence that preceded it.
+# The opt-in task `report_mismatch` points at. Named here rather than inlined
+# so the self-test can prove `clients/ios/mise.toml` still defines it — a
+# message naming a task that no longer exists is worse than no message.
+OPT_IN_FORMAT_TASK="format:unpinned"
+
 report_mismatch() {
     local pinned="$1" actual="$2"
     {
@@ -53,6 +63,12 @@ report_mismatch() {
         printf '                      match how Xcode is installed on this machine, e.g.:\n'
         printf '                        sudo xcode-select -s /Applications/Xcode_%s.app/Contents/Developer\n' \
             "$pinned"
+        printf '\n'
+        printf '                      If you have to act on this toolchain\47s advisory lint findings\n'
+        printf '                      before you can install %s, ask for it by name:\n' "$pinned"
+        printf '                        mise run -C clients/ios %s\n' "$OPT_IN_FORMAT_TASK"
+        printf '                      That still runs the rule-list drift check the wrapper exists\n'
+        printf '                      for; a hand-written `xcrun swift-format format` does not.\n'
     } >&2
 }
 
@@ -134,8 +150,22 @@ cmd_self_test() {
     expect "mismatch message omitted the local version (27.0)." \
         grep -q '27\.0' <<<"$message" || status=1
 
+    # 5. The message names the opt-in route out. POPS-2912: without it, the
+    #    only way to act on advisory findings was a hand-written `xcrun
+    #    swift-format format`, which skips the wrapper's rule-list drift
+    #    check — the bypass ran around the guard instead of through it.
+    expect "mismatch message omitted the opt-in task ($OPT_IN_FORMAT_TASK)." \
+        grep -qF "$OPT_IN_FORMAT_TASK" <<<"$message" || status=1
+
+    # 6. And that task actually exists. A message naming a task mise does not
+    #    define sends the reader somewhere worse than the hand-written
+    #    invocation it is trying to replace.
+    local manifest="${SCRIPT_DIR}/../mise.toml"
+    expect "clients/ios/mise.toml defines no [tasks.\"$OPT_IN_FORMAT_TASK\"]." \
+        grep -qF "[tasks.\"$OPT_IN_FORMAT_TASK\"]" "$manifest" || status=1
+
     if [ "$status" -eq 0 ]; then
-        printf 'check-xcode-version: parsing and the mismatch message both hold.\n'
+        printf 'check-xcode-version: parsing, the mismatch message, and the opt-in task all hold.\n'
     fi
     return "$status"
 }

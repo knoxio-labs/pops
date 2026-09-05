@@ -43,7 +43,12 @@ export type PdfFailure = Exclude<PdfExtraction, { outcome: 'text' }>;
  * is the specific mistake this shape prevents. Finance exposes no query for an
  * account's date span yet, so today's answer is always `known: false`.
  */
-export type AccountCoverage = { known: true; interval: DateInterval } | { known: false };
+/**
+ * What the account already holds. `known` without an `interval` is an empty
+ * account — checked, nothing to withhold — which is a different answer from
+ * `known: false`, where the check could not run at all.
+ */
+export type AccountCoverage = { known: true; interval?: DateInterval } | { known: false };
 
 export interface AnzPdfStatementImport {
   plan: AnzPdfImportPlan;

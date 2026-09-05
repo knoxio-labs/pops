@@ -79,6 +79,37 @@ public struct BFMTransactionsRepository: TransactionsRepository {
     }
 }
 
+extension BFMTransactionsRepository {
+    /// The newest rows for one account, for the account dashboard's card.
+    ///
+    /// Internal rather than on ``TransactionsRepository``: the protocol is the
+    /// transactions *screen's* seam and that screen never filters. Widening it
+    /// would put an argument on every conforming fake for one caller in one
+    /// other module — so ``BFMAccountsRepository`` composes this type instead,
+    /// which is also what keeps the wire-row mapping in one place.
+    ///
+    /// A cursor rejection cannot arise: none is sent. A failure here reaches
+    /// the caller, which decides whether an account dashboard without its
+    /// recent rows is still worth drawing.
+    internal func recentTransactions(forAccount id: Account.ID, limit: Int) async throws
+        -> [Transaction]
+    {
+        let output: ListTransactions.Output
+        do {
+            output = try await client.generated.mobileFinance_listTransactions(
+                query: .init(limit: limit, accountId: id)
+            )
+        } catch let error as ClientError {
+            throw Self.failure(error, operation: ListTransactions.id)
+        }
+
+        guard case .page(let page) = try outcome(of: output) else {
+            throw RepositoryError.contractMismatch
+        }
+        return page.transactions
+    }
+}
+
 /// A page, or the one refusal that is answered rather than thrown.
 private enum PageOutcome {
     case page(TransactionPage)
@@ -186,30 +217,10 @@ extension BFMTransactionsRepository {
         )
     }
 
-    /// `YYYY-MM-DD` and nothing else, as the instant that day begins in the
-    /// given zone.
-    ///
-    /// The contract types `date` as a bare string with no `format`, so the
-    /// generator emits a `String` and something has to decide what it means.
-    /// This is the strictest reading that matches what the BFM already enforces
-    /// on the way in, and being strict is the point: a producer that started
-    /// sending a full timestamp arrives as a contract mismatch, loudly, rather
-    /// than as dates that are silently a few hours out.
-    ///
-    /// The round trip is what makes it strict. `ISO8601FormatStyle` restricted
-    /// to date components parses a leading `2026-03-05` happily and ignores
-    /// whatever follows it, so parsing alone accepts a timestamp; formatting
-    /// the result back and requiring the same bytes does not.
+    /// The rule about what a date-only wire value means lives in
+    /// ``ISO8601Day``, which the accounts repository reads too.
     private static func day(from raw: String, in timeZone: TimeZone) -> Date? {
-        let style = Date.ISO8601FormatStyle(dateSeparator: .dash, timeZone: timeZone)
-            .year()
-            .month()
-            .day()
-
-        guard let parsed = try? Date(raw, strategy: style), style.format(parsed) == raw else {
-            return nil
-        }
-        return parsed
+        ISO8601Day.parse(raw, in: timeZone)
     }
 
     /// The wire carries money as a JSON number, so the generator hands over a

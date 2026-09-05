@@ -97,7 +97,16 @@ done
 '''
 
 [tasks.test]
-description = "Run every unit's test suite (fan-out; each unit's test depends on its own build AND any pillar it imports a compiled dist from — POPS-2631)"
+description = "Run every unit's test suite plus the root-owned scripts/ suite (fan-out; each unit's test depends on its own build AND any pillar it imports a compiled dist from — POPS-2631)"
+# `depends` on `test:scripts` because the `run-all` fan-out cannot reach it:
+# `scripts/` is root-owned tooling with no mise.toml of its own. Without this
+# the task that reads as "run every test in the workspace" ran every test
+# except the ones gating the CI guards, and a full local green could still be
+# rejected by the pre-push hook or CI's `Scripts tests` job (POPS-2763). The
+# hook only runs `test:scripts` when the push touches `scripts/`, which is
+# right for the hook and wrong as the only safety net — a change elsewhere
+# can falsify what a `scripts/` guard observes. It costs ~7 seconds.
+depends = ["test:scripts"]
 run = "mise run run-all test"
 
 [tasks."test:coverage"]
@@ -111,6 +120,14 @@ description = "Build-check the compiled graph (tsc -b) then fan out to source un
 # (no .tsbuildinfo) — it only passed when the graph was already built. `tsc -b`
 # type-checks during the (incremental) build and is cold-safe; emitted dist is
 # gitignored. This is what makes the pre-push hook pass on fresh clones/worktrees.
+#
+# `depends` on `typecheck:scripts` for the same reason `test` depends on
+# `test:scripts`: neither `tsc -b tsconfig.build.json` (which references only
+# libs/* and pillars/*) nor the `run-all` fan-out reaches `scripts/`, so the
+# umbrella task claimed a completeness it did not have (POPS-2763). The
+# scripts/ projects carry no project references and import nothing from the
+# compiled graph, so they type-check correctly before `tsc -b` runs.
+depends = ["typecheck:scripts"]
 run = "tsc -b tsconfig.build.json && mise run run-all typecheck"
 
 [tasks.dev]
@@ -247,11 +264,15 @@ run = "mise run test"
 [tasks."test:scripts"]
 description = "Run the root-owned scripts/ test suite (gates CI checks under scripts/)"
 # `scripts/` is root-owned tooling (CI guards, extractability checks) that is
-# never extracted into a unit, so it has no per-unit mise.toml and is invisible
-# to the `run-all` fan-out. The root `vitest.config.ts` includes only
-# `scripts/**/*.test.ts`; this task is the entry point both CI and the
-# `.husky/pre-push` hook run (the hook only when the push touches `scripts/`,
-# via `scripts/pre-push-scope.mjs`'s `decideScripts`).
+# never extracted into a unit, so it has no per-unit mise.toml and the
+# `run-all` fan-out cannot see it. The root `vitest.config.ts` includes only
+# `scripts/**/*.test.ts`. This task is the entry point CI, the `.husky/pre-push`
+# hook and the umbrella `test` task all run. The hook runs it only when the
+# push touches `scripts/` (via `scripts/pre-push-scope.mjs`'s `decideScripts`),
+# which is correct for the hook and was once the ONLY net: `mise run test`
+# skipped this suite entirely, so a change elsewhere that falsified what a
+# guard observes was invisible locally and first failed in CI (POPS-2763).
+# `[tasks.test]` now depends on this task, which closes that.
 run = "vitest run scripts/"
 
 [tasks."typecheck:scripts"]
@@ -262,9 +283,9 @@ description = "Type-check the root-owned scripts/ test projects (gates CI checks
 # `tsc -b tsconfig.build.json` (references only libs/* and pillars/*) nor the
 # `run-all` fan-out (scripts/ has no mise.toml) ever reaches — vitest's esbuild
 # transform runs these tests without type-checking them. This task is the
-# entry point both CI and the `.husky/pre-push` hook run, mirroring
-# `test:scripts` above for the identical blind spot in typechecking rather
-# than testing.
+# entry point CI, the `.husky/pre-push` hook and the umbrella `typecheck` task
+# all run, mirroring `test:scripts` above for the identical hole in
+# typechecking rather than testing; `[tasks.typecheck]` depends on it.
 run = [
   "tsc --noEmit -p scripts/__tests__/tsconfig.json",
   "tsc --noEmit -p scripts/ci/__tests__/tsconfig.json",

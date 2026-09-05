@@ -1,0 +1,8 @@
+name: Imports status and history shape
+question: Should status and history be two panels, or one timeline whose head is
+  the status?
+status: active
+screen: finance/account-imports
+variants:
+  panels: panels
+  timeline: timeline

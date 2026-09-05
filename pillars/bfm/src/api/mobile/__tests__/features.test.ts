@@ -31,6 +31,14 @@ describe('deriving features from pillar reachability', () => {
     }
   );
 
+  // The accounts screens read finance, so the phone must be told they are gone
+  // when finance is — not left offering a tab that 502s on open (POPS-2848).
+  it('ties the accounts surface to finance, like transactions', () => {
+    const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'unavailable' }));
+
+    expect(derived).toContainEqual({ id: 'accounts', reachability: 'unavailable' });
+  });
+
   it('lists every known feature even when the federation reports nothing', () => {
     const derived = deriveFeatures([]);
 

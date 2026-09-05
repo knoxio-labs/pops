@@ -1079,6 +1079,47 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(rule?.description_pattern).toBe('TAG_RULE_TEST');
   });
 
+  it('counts a rule it created apart from one it merged into (POPS-2755)', async () => {
+    const c = client();
+    const curated = () =>
+      c.imports.commitImport({
+        tagRuleChangeSets: [stagedTagRule('SPLIT_COUNT', ['FirstTag'], ['FirstTag'])],
+        transactions: [confirmed({ description: 'SPLIT_COUNT 1', checksum: 'commit-split-a' })],
+      });
+
+    const first = await curated();
+    expect(first.data.tagRuleWrites).toEqual({ inserted: 1, reinforced: 0 });
+
+    const second = await c.imports.commitImport({
+      tagRuleChangeSets: [
+        stagedTagRule('SPLIT_COUNT', ['SecondTag'], ['SecondTag']),
+        stagedTagRule('SPLIT_COUNT_NEW', ['ThirdTag'], ['ThirdTag']),
+      ],
+      transactions: [confirmed({ description: 'SPLIT_COUNT 2', checksum: 'commit-split-b' })],
+    });
+
+    // Two add ops, but only one of them created a rule.
+    expect(second.data.tagRulesApplied).toBe(2);
+    expect(second.data.tagRuleWrites).toEqual({ inserted: 1, reinforced: 1 });
+  });
+
+  it('an add op merges into a rule the batch did not create, never replacing its tags (POPS-2755)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      tagRuleChangeSets: [
+        stagedTagRule('HUNGRY JACKS', ['Fast Food', 'Dining'], ['Fast Food', 'Dining']),
+      ],
+      transactions: [confirmed({ description: 'HUNGRY JACKS 1', checksum: 'commit-hj-a' })],
+    });
+
+    await c.imports.commitImport({
+      tagRuleChangeSets: [stagedTagRule('HUNGRY JACKS', ['Cairns 2026'], ['Cairns 2026'])],
+      transactions: [confirmed({ description: 'HUNGRY JACKS 2', checksum: 'commit-hj-b' })],
+    });
+
+    expect(tagRuleTags()).toEqual(['Fast Food', 'Dining', 'Cairns 2026']);
+  });
+
   it('stages a wizard tag rule as one unused row — confidence 0.95, no usage counters (POPS-2597)', async () => {
     const c = client();
     await c.imports.commitImport({

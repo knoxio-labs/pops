@@ -16,3 +16,13 @@ run = "playwright test"
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
+
+[env]
+# mise's `_.path` interpolates `config_root` per config FILE, so the root
+# mise.toml only ever contributes the workspace-hoisted bin dir. `vite` and
+# `playwright` are this unit's own dependencies and pnpm links them into
+# `pillars/shell/node_modules/.bin`, which nothing put on PATH — so every
+# bare `vite` above resolved to nothing and `mise run openapi:generate`
+# (which is `run-all build`) died here, taking every unit discovered after
+# `pillars/shell` with it (POPS-2715).
+_.path = ["{{config_root}}/node_modules/.bin"]

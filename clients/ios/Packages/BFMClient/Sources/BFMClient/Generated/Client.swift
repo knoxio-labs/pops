@@ -827,7 +827,7 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// One account, for whatever the phone can build a dashboard from today
+    /// One account and its month-end balance history, for the dashboard screen
     ///
     /// - Remark: HTTP `GET /mobile/finance/accounts/{id}`.
     /// - Remark: Generated from `#/paths//mobile/finance/accounts/{id}/get(mobileFinance.getAccount)`.
@@ -1074,6 +1074,13 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "cursor",
                     value: input.query.cursor
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "accountId",
+                    value: input.query.accountId
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,

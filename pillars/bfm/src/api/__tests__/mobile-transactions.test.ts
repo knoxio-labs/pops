@@ -177,6 +177,24 @@ describe('cursor pagination', () => {
     });
   });
 
+  it('narrows the page to one account when asked, and to none when not (POPS-2848)', async () => {
+    const { app, token, fake } = openWithRows([
+      financeRow({ id: 'txn-up', date: '2026-03-05', accountId: 'acc-up-everyday' }),
+      financeRow({ id: 'txn-amex', date: '2026-03-04', accountId: 'acc-amex' }),
+    ]);
+
+    const everything = await get(app, token, LIST_PATH);
+    const oneAccount = await get(app, token, `${LIST_PATH}?accountId=acc-amex`);
+
+    expect(everything.body.data.map((row: { id: string }) => row.id)).toEqual([
+      'txn-up',
+      'txn-amex',
+    ]);
+    expect(oneAccount.body.data.map((row: { id: string }) => row.id)).toEqual(['txn-amex']);
+    expect(fake.listCalls[0]?.accountId).toBeUndefined();
+    expect(fake.listCalls[1]?.accountId).toBe('acc-amex');
+  });
+
   it('never serves the probe row it over-fetched', async () => {
     const { app, token } = openWithRows(seededRows);
 

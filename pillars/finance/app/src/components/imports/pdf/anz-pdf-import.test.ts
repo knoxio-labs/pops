@@ -170,6 +170,13 @@ describe('importAnzPdfStatements', () => {
     expect(statement.plan.withheld).toEqual([]);
   });
 
+  it('counts the check as run, withholding nothing, for an account known to be empty', async () => {
+    const statement = await importOne(statementPdf([GROCER, REFUND]), { known: true });
+    expect(statement.coverageChecked).toBe(true);
+    expect(statement.plan.withheld).toEqual([]);
+    expect(statement.plan.importable).toHaveLength(2);
+  });
+
   it('withholds a row the account already covers, and itemises it', async () => {
     const statement = await importOne(statementPdf([GROCER, REFUND]), {
       known: true,

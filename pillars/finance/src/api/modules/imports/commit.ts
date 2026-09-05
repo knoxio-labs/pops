@@ -65,9 +65,8 @@ import {
   tagVocabularyService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
-import { applyTagRuleChangeSet } from '../tag-rules/service.js';
 import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
+import { applyChangeSetsPhase, applyTagRuleChangeSetsPhase } from './commit-changesets.js';
 import { mintImportCheckpointsPhase } from './commit-checkpoint.js';
 import { transactionColumns } from './commit-columns.js';
 import {
@@ -77,7 +76,6 @@ import {
 import { expandLoanRepaymentRow } from './commit-loan-split.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
 import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
-import { resolveChangeSetTempIds, resolveTagRuleChangeSetTempIds } from './commit-temp-resolver.js';
 import {
   assertPersistableEntityId,
   COMMIT_TEMP_ENTITY_PREFIX,
@@ -93,48 +91,11 @@ import type {
   ImportWarning,
 } from './types.js';
 
-interface RuleApplyCounts {
-  add: number;
-  edit: number;
-  disable: number;
-  remove: number;
-}
-
 /** The previously recorded result for `commitKey`, re-validated against the
  * wire contract, or `undefined` if this key has never been committed. */
 function readCommittedResult(db: FinanceDb, commitKey: string): CommitResult | undefined {
   const json = importCommitsService.findCommittedResultJson(db, commitKey);
   return json === undefined ? undefined : CommitResultSchema.parse(json);
-}
-
-function applyChangeSetsPhase(
-  tx: FinanceDb,
-  payload: CommitPayload,
-  tempIdMap: Map<string, string>
-): RuleApplyCounts {
-  const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
-  for (const cs of payload.changeSets) {
-    const resolved = resolveChangeSetTempIds(cs, tempIdMap);
-    const sanitized = dropUnusableAddOps(resolved);
-    if (sanitized.ops.length === 0) continue;
-    applyChangeSet(tx, sanitized);
-    for (const op of sanitized.ops) counts[op.op]++;
-  }
-  return counts;
-}
-
-function applyTagRuleChangeSetsPhase(
-  tx: FinanceDb,
-  tagRuleChangeSets: CommitPayload['tagRuleChangeSets'],
-  tempIdMap: Map<string, string>
-): number {
-  let tagRulesApplied = 0;
-  for (const entry of tagRuleChangeSets) {
-    const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
-    applyTagRuleChangeSet(tx, resolved);
-    tagRulesApplied += resolved.ops.length;
-  }
-  return tagRulesApplied;
 }
 
 interface WriteTxnsResult {
@@ -283,7 +244,7 @@ export async function commitImport(
       enqueueOutboxCandidatesPhase(tx, outboxCandidates);
       applyCommitTagVocabulary(tx, tagPlan);
       const rulesApplied = applyChangeSetsPhase(tx, payload, tempIdMap);
-      const tagRulesApplied = applyTagRuleChangeSetsPhase(tx, tagPlan.tagRuleChangeSets, tempIdMap);
+      const tagRulePhase = applyTagRuleChangeSetsPhase(tx, tagPlan.tagRuleChangeSets, tempIdMap);
       const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);
 
       const retroactiveReclassifications = reclassifyExistingTransactions(
@@ -296,7 +257,8 @@ export async function commitImport(
       const result: CommitResult = {
         entitiesCreated,
         rulesApplied,
-        tagRulesApplied,
+        tagRulesApplied: tagRulePhase.applied,
+        tagRuleWrites: tagRulePhase.writes,
         transactionsImported: writeResult.imported,
         transactionsFailed: writeResult.failed,
         failedDetails: writeResult.failedDetails,

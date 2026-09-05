@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { NO_BALANCE } from '../../test-utils.js';
+import { NO_BALANCE, NO_IMPORT_STATUS } from '../../test-utils.js';
 import { AccountCard } from './AccountCard';
 
 import type { Currency } from './account-subtotals';
@@ -37,6 +37,7 @@ function account(overrides: Partial<Account>): Account {
     entityDisplayName: null,
     entityDisplayNameStale: false,
     balance: NO_BALANCE,
+    importStatus: NO_IMPORT_STATUS,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

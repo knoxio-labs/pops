@@ -44,6 +44,7 @@ internal enum RootCopy {
     internal static func name(of feature: MobileFeature) -> String {
         switch feature {
         case .transactions: "Transactions"
+        case .accounts: "Accounts"
         case .receiptCapture: "Receipts"
         default: feature.rawValue
         }
@@ -55,6 +56,7 @@ internal enum RootCopy {
     internal static func symbol(for feature: MobileFeature) -> String {
         switch feature {
         case .transactions: "list.bullet.rectangle"
+        case .accounts: "building.columns"
         case .receiptCapture: "doc.text.viewfinder"
         default: "square.grid.2x2"
         }

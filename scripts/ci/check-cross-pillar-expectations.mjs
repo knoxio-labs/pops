@@ -240,7 +240,7 @@ export const EXPECTATIONS = [
     // list — see `ACCOUNT_LIST_LIMIT`. Losing it would silently fall back to
     // finance's smaller default page and the phone would never see the rest.
     query: ['limit'],
-    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
   },
   {
     consumer: 'bfm',
@@ -250,7 +250,32 @@ export const EXPECTATIONS = [
     method: 'get',
     query: [],
     pathParams: ['id'],
-    usedBy: 'pillars/bfm/src/api/finance/client.ts',
+    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'institutions.list',
+    path: '/institutions',
+    method: 'get',
+    // No query at all: bfm reads the whole list once and indexes it by id, so
+    // there is nothing here to lose. It resolves the name behind an account's
+    // `institutionId`, which finance's account row does not carry.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'checkpoints.history',
+    path: '/accounts/{id}/balance-history',
+    method: 'get',
+    // `months` is sent explicitly rather than left to finance's default, so
+    // the series the phone charts cannot change under it — see
+    // `BALANCE_HISTORY_MONTHS`. Losing it silently reshapes the trend.
+    query: ['months'],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
   },
   {
     consumer: 'bfm',
@@ -893,12 +918,12 @@ export function scanSource(source) {
       i++;
       continue;
     }
-    if (c === "'") {
+    if (c === "'" && opensQuoteAt(code, i)) {
       mode = 'single';
       i++;
       continue;
     }
-    if (c === '"') {
+    if (c === '"' && opensQuoteAt(code, i)) {
       mode = 'double';
       i++;
       continue;
@@ -949,6 +974,39 @@ export function scanSource(source) {
  * @param {number} index
  * @returns {boolean}
  */
+/**
+ * Whether the quote at `index` opens a string literal, or is an apostrophe
+ * (or quote) sitting in JSX text content.
+ *
+ * A quote GLUED to a word is prose. Nothing else is: after whitespace, `=`,
+ * `(`, `,`, `:`, `[`, `{`, an operator, or the start of the file, it opens a
+ * literal exactly as it always did — so ordinary code, and a genuinely
+ * unterminated string, are unaffected.
+ *
+ * There is deliberately no keyword allowlist here. `return'x'` is legal
+ * JavaScript, and an earlier version of this fix admitted a quote glued to
+ * any keyword for that reason — but English possessives end in those same
+ * words. `someone else's account`, `the import's mapping step` and
+ * `an opt-in's default` all reduce to a keyword immediately before the
+ * apostrophe, and each one reopened the exact failure this function exists
+ * to close. Prose is the common case in JSX and the keyword-glued literal is
+ * a shape `pnpm format:check` (a required gate) will not let into the tree,
+ * so the ambiguity is resolved in favour of prose without exception.
+ *
+ * The cost is stated rather than hidden: an unterminated literal that is
+ * glued to a word — `return'oops` — is read as prose and not reported. It
+ * cannot be committed here, and every unterminated string that can be is
+ * still caught.
+ *
+ * @param {readonly string[]} code
+ * @param {number} index
+ * @returns {boolean}
+ */
+function opensQuoteAt(code, index) {
+  const previous = code[index - 1];
+  return previous === undefined || !/[\w$]/u.test(previous);
+}
+
 function opensRegexAt(code, index) {
   let i = index - 1;
   while (i >= 0 && /\s/u.test(code[i])) i--;
@@ -2550,11 +2608,21 @@ function selfTest() {
     'discovery must find the sanctioned direct-fetch calls in the live tree; finding none is a ' +
       'broken detector that would report OK over the next hand-rolled cross-pillar call'
   );
+  // Counted across bfm's whole finance leg rather than per file. Pinning one
+  // path made this assertion fail the day that leg was split in two, which said
+  // nothing about whether discovery still followed the wrapper — the claim being
+  // made is about resolution, not about file layout.
+  const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    sites.filter((s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts')
-      .length === 4,
+    bfmFinanceSites.length === 6,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these four calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these six calls resolve their producer through gateway.call, not pillar()'
+  );
+  assert(
+    new Set(bfmFinanceSites.map((s) => s.file)).size === 2,
+    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from both ' +
+      'halves of its finance leg, and a scan that found only the transactions half would still ' +
+      'satisfy the count above'
   );
   assert(
     sites.filter((s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts').length === 2,

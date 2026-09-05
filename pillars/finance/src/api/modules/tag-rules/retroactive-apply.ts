@@ -43,7 +43,7 @@ import {
   transactionTagRulesService,
   transactions,
 } from '../../../db/index.js';
-import { exceedsFacetCardinality, parseStoredTags } from '../../../db/tag-facets.js';
+import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 
 import type { MatchableDescription } from '../../../contract/pattern-match.js';
 
@@ -59,19 +59,14 @@ function mergeTags(
   ruleId: string,
   transactionId: string
 ): string[] {
-  const merged = [...existing];
-  for (const tag of ruleTags) {
-    if (merged.includes(tag)) continue;
-    if (exceedsFacetCardinality(merged, tag)) {
-      console.warn(
-        `[tag-rules] rule ${ruleId} not applying ${JSON.stringify(tag)} to transaction ` +
-          `${transactionId}: the row already carries a value on that single-valued facet`
-      );
-      continue;
-    }
-    merged.push(tag);
+  const { tags, dropped } = mergeTagsWithinFacetLimits(existing, ruleTags);
+  for (const tag of dropped) {
+    console.warn(
+      `[tag-rules] rule ${ruleId} not applying ${JSON.stringify(tag)} to transaction ` +
+        `${transactionId}: the row already carries a value on that single-valued facet`
+    );
   }
-  return merged;
+  return tags;
 }
 
 interface BatchTxn {

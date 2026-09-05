@@ -53,6 +53,23 @@ export type AccountsListResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -170,6 +187,23 @@ export type AccountsCreateResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -261,6 +295,23 @@ export type AccountsReorderResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -351,6 +402,23 @@ export type AccountsDeleteResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -436,6 +504,23 @@ export type AccountsGetResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -550,6 +635,23 @@ export type AccountsUpdateResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -1085,6 +1187,217 @@ export type GiftCardDetailsRevealResponses = {
 
 export type GiftCardDetailsRevealResponse =
   GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
+
+export type AccountImportsGetConfigData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/import-config';
+};
+
+export type AccountImportsGetConfigErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsGetConfigError =
+  AccountImportsGetConfigErrors[keyof AccountImportsGetConfigErrors];
+
+export type AccountImportsGetConfigResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      createdAt: string;
+      dialectId: string | null;
+      expectedCadenceDays: number | null;
+      externalAccountRef: string | null;
+      parserId: string | null;
+      provider: 'up' | null;
+      secretRef: string | null;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      updatedAt: string;
+    };
+  };
+};
+
+export type AccountImportsGetConfigResponse =
+  AccountImportsGetConfigResponses[keyof AccountImportsGetConfigResponses];
+
+export type AccountImportsWriteConfigData = {
+  /**
+   * Body
+   */
+  body?: {
+    dialectId?: string | null;
+    expectedCadenceDays?: number | null;
+    externalAccountRef?: string | null;
+    parserId?: string | null;
+    provider?: 'up' | null;
+    secretRef?: string | null;
+    sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/import-config';
+};
+
+export type AccountImportsWriteConfigErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsWriteConfigError =
+  AccountImportsWriteConfigErrors[keyof AccountImportsWriteConfigErrors];
+
+export type AccountImportsWriteConfigResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      createdAt: string;
+      dialectId: string | null;
+      expectedCadenceDays: number | null;
+      externalAccountRef: string | null;
+      parserId: string | null;
+      provider: 'up' | null;
+      secretRef: string | null;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountImportsWriteConfigResponse =
+  AccountImportsWriteConfigResponses[keyof AccountImportsWriteConfigResponses];
+
+export type AccountImportsListBatchesData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    limit?: number;
+    before?: string;
+  };
+  url: '/accounts/{id}/imports';
+};
+
+export type AccountImportsListBatchesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsListBatchesError =
+  AccountImportsListBatchesErrors[keyof AccountImportsListBatchesErrors];
+
+export type AccountImportsListBatchesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      checkpointId: string | null;
+      commitKey: string | null;
+      createdAt: string;
+      dateFrom: string | null;
+      dateTo: string | null;
+      id: string;
+      parserVersion: string | null;
+      rowCount: number;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      sourceRef: string | null;
+    }>;
+    nextBefore: string | null;
+  };
+};
+
+export type AccountImportsListBatchesResponse =
+  AccountImportsListBatchesResponses[keyof AccountImportsListBatchesResponses];
 
 export type LoanListOffsetLinksData = {
   body?: never;
@@ -1659,6 +1972,23 @@ export type AccountsMergeResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -1762,6 +2092,23 @@ export type AccountsPreviewMergeResponses = {
         entityDisplayNameStale: boolean;
         entityId: string | null;
         id: string;
+        importStatus: {
+          cadenceDays: number | null;
+          lastBatchId: string | null;
+          lastImportAt: string | null;
+          newestTransactionDate: string | null;
+          source: {
+            dialectId?: string;
+            kind: 'csv-dialect' | 'pdf-statement' | 'api';
+            parserId?: string;
+            parserVersion?: string;
+            provider?: 'up';
+          } | null;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+        };
         institutionId: string | null;
         kind:
           | 'checking'
@@ -1798,6 +2145,23 @@ export type AccountsPreviewMergeResponses = {
         entityDisplayNameStale: boolean;
         entityId: string | null;
         id: string;
+        importStatus: {
+          cadenceDays: number | null;
+          lastBatchId: string | null;
+          lastImportAt: string | null;
+          newestTransactionDate: string | null;
+          source: {
+            dialectId?: string;
+            kind: 'csv-dialect' | 'pdf-statement' | 'api';
+            parserId?: string;
+            parserVersion?: string;
+            provider?: 'up';
+          } | null;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+        };
         institutionId: string | null;
         kind:
           | 'checking'
@@ -4582,7 +4946,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -4594,6 +4958,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -4648,7 +5013,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -4660,6 +5025,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -4714,7 +5080,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -4726,6 +5092,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -4780,7 +5147,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -4792,6 +5159,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -4971,12 +5339,13 @@ export type ImportsCommitImportData = {
       entityName?: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
-      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
       fxFeeCents?: number;
       location?: string;
       matchConfidence?: number;
       matchRuleId?: string;
       matchType?: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
+      pending?: boolean;
       rawRow: string;
       suggestedTags?: Array<{
         isNew?: boolean;
@@ -5062,6 +5431,10 @@ export type ImportsCommitImportResponses = {
         disable: number;
         edit: number;
         remove: number;
+      };
+      tagRuleWrites?: {
+        inserted: number;
+        reinforced: number;
       };
       tagRulesApplied: number;
       transactionsFailed: number;
@@ -5151,9 +5524,10 @@ export type ImportsProcessImportData = {
       description: string;
       foreignAmountMinor?: number;
       foreignCurrency?: string;
-      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+      fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
       fxFeeCents?: number;
       location?: string;
+      pending?: boolean;
       rawRow: string;
     }>;
   };
@@ -5295,7 +5669,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5307,6 +5681,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5361,7 +5736,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5373,6 +5748,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5427,7 +5803,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5439,6 +5815,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5493,7 +5870,7 @@ export type ImportsGetImportProgressResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5505,6 +5882,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5711,7 +6089,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5723,6 +6101,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5777,7 +6156,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5789,6 +6168,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5843,7 +6223,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5855,6 +6235,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -5909,7 +6290,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         error?: string;
         foreignAmountMinor?: number;
         foreignCurrency?: string;
-        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'unavailable';
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
@@ -5921,6 +6302,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
           confidence: number;
@@ -7891,7 +8273,7 @@ export type TransactionsListResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -7999,7 +8381,7 @@ export type TransactionsCreateResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -8085,7 +8467,7 @@ export type TransactionsRestoreData = {
     entityName: string | null;
     foreignAmountMinor: number | null;
     foreignCurrency: string | null;
-    fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+    fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
     fxFeeCents: number | null;
     id: string;
     importBatchId?: string | null;
@@ -8105,6 +8487,7 @@ export type TransactionsRestoreData = {
       | null;
     notes: string | null;
     notionId: string | null;
+    pending?: boolean;
     rawRow: string | null;
     relatedTransactionId: string | null;
     tags: string;
@@ -8168,7 +8551,7 @@ export type TransactionsRestoreResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -8281,7 +8664,7 @@ export type TransactionsDeleteResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       importBatchId?: string | null;
@@ -8301,6 +8684,7 @@ export type TransactionsDeleteResponses = {
         | null;
       notes: string | null;
       notionId: string | null;
+      pending?: boolean;
       rawRow: string | null;
       relatedTransactionId: string | null;
       tags: string;
@@ -8374,7 +8758,7 @@ export type TransactionsGetResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -8476,7 +8860,7 @@ export type TransactionsUpdateResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;
@@ -8561,7 +8945,7 @@ export type TransactionsUnlinkTransferResponses = {
       entityName: string | null;
       foreignAmountMinor: number | null;
       foreignCurrency: string | null;
-      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'unavailable' | null;
+      fxCaptureSource: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable' | null;
       fxFeeCents: number | null;
       id: string;
       lastEditedTime: string;

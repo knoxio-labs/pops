@@ -148,6 +148,80 @@
                           "id": {
                             "type": "string"
                           },
+                          "importStatus": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "cadenceDays": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "lastBatchId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "lastImportAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "newestTransactionDate": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "source": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "dialectId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["csv-dialect", "pdf-statement", "api"],
+                                    "type": "string"
+                                  },
+                                  "parserId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "parserVersion": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "provider": {
+                                    "enum": ["up"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind"],
+                                "type": "object"
+                              },
+                              "span": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "from": {
+                                    "type": "string"
+                                  },
+                                  "to": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["from", "to"],
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "lastImportAt",
+                              "lastBatchId",
+                              "newestTransactionDate",
+                              "span",
+                              "cadenceDays",
+                              "source"
+                            ],
+                            "type": "object"
+                          },
                           "institutionId": {
                             "nullable": true,
                             "type": "string"
@@ -187,6 +261,7 @@
                           "entityDisplayName",
                           "entityDisplayNameStale",
                           "balance",
+                          "importStatus",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -358,6 +433,80 @@
                         "id": {
                           "type": "string"
                         },
+                        "importStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cadenceDays": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "lastBatchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastImportAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "newestTransactionDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "source": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "dialectId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["csv-dialect", "pdf-statement", "api"],
+                                  "type": "string"
+                                },
+                                "parserId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "parserVersion": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
+                            "span": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["from", "to"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "lastImportAt",
+                            "lastBatchId",
+                            "newestTransactionDate",
+                            "span",
+                            "cadenceDays",
+                            "source"
+                          ],
+                          "type": "object"
+                        },
                         "institutionId": {
                           "nullable": true,
                           "type": "string"
@@ -397,6 +546,7 @@
                         "entityDisplayName",
                         "entityDisplayNameStale",
                         "balance",
+                        "importStatus",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -627,6 +777,80 @@
                           "id": {
                             "type": "string"
                           },
+                          "importStatus": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "cadenceDays": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "lastBatchId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "lastImportAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "newestTransactionDate": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "source": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "dialectId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["csv-dialect", "pdf-statement", "api"],
+                                    "type": "string"
+                                  },
+                                  "parserId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "parserVersion": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "provider": {
+                                    "enum": ["up"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind"],
+                                "type": "object"
+                              },
+                              "span": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "from": {
+                                    "type": "string"
+                                  },
+                                  "to": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["from", "to"],
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "lastImportAt",
+                              "lastBatchId",
+                              "newestTransactionDate",
+                              "span",
+                              "cadenceDays",
+                              "source"
+                            ],
+                            "type": "object"
+                          },
                           "institutionId": {
                             "nullable": true,
                             "type": "string"
@@ -666,6 +890,7 @@
                           "entityDisplayName",
                           "entityDisplayNameStale",
                           "balance",
+                          "importStatus",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -862,6 +1087,80 @@
                         "id": {
                           "type": "string"
                         },
+                        "importStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cadenceDays": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "lastBatchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastImportAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "newestTransactionDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "source": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "dialectId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["csv-dialect", "pdf-statement", "api"],
+                                  "type": "string"
+                                },
+                                "parserId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "parserVersion": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
+                            "span": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["from", "to"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "lastImportAt",
+                            "lastBatchId",
+                            "newestTransactionDate",
+                            "span",
+                            "cadenceDays",
+                            "source"
+                          ],
+                          "type": "object"
+                        },
                         "institutionId": {
                           "nullable": true,
                           "type": "string"
@@ -901,6 +1200,7 @@
                         "entityDisplayName",
                         "entityDisplayNameStale",
                         "balance",
+                        "importStatus",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1081,6 +1381,80 @@
                         "id": {
                           "type": "string"
                         },
+                        "importStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cadenceDays": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "lastBatchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastImportAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "newestTransactionDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "source": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "dialectId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["csv-dialect", "pdf-statement", "api"],
+                                  "type": "string"
+                                },
+                                "parserId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "parserVersion": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
+                            "span": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["from", "to"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "lastImportAt",
+                            "lastBatchId",
+                            "newestTransactionDate",
+                            "span",
+                            "cadenceDays",
+                            "source"
+                          ],
+                          "type": "object"
+                        },
                         "institutionId": {
                           "nullable": true,
                           "type": "string"
@@ -1120,6 +1494,7 @@
                         "entityDisplayName",
                         "entityDisplayNameStale",
                         "balance",
+                        "importStatus",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1351,6 +1726,80 @@
                         "id": {
                           "type": "string"
                         },
+                        "importStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cadenceDays": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "lastBatchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastImportAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "newestTransactionDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "source": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "dialectId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["csv-dialect", "pdf-statement", "api"],
+                                  "type": "string"
+                                },
+                                "parserId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "parserVersion": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
+                            "span": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["from", "to"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "lastImportAt",
+                            "lastBatchId",
+                            "newestTransactionDate",
+                            "span",
+                            "cadenceDays",
+                            "source"
+                          ],
+                          "type": "object"
+                        },
                         "institutionId": {
                           "nullable": true,
                           "type": "string"
@@ -1390,6 +1839,7 @@
                         "entityDisplayName",
                         "entityDisplayNameStale",
                         "balance",
+                        "importStatus",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -2758,6 +3208,589 @@
         },
         "summary": "Decrypt and return the plaintext number/PIN once; audited",
         "tags": ["giftCardDetails"]
+      }
+    },
+    "/accounts/{id}/import-config": {
+      "get": {
+        "operationId": "accountImports.getConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "dialectId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "expectedCadenceDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "externalAccountRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "parserId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "provider": {
+                          "enum": ["up", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "secretRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sourceKind": {
+                          "enum": ["csv-dialect", "pdf-statement", "api"],
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "accountId",
+                        "sourceKind",
+                        "dialectId",
+                        "parserId",
+                        "provider",
+                        "externalAccountRef",
+                        "expectedCadenceDays",
+                        "secretRef",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "How an account expects to be fed; 404 for an account with no config",
+        "tags": ["accountImports"]
+      },
+      "put": {
+        "operationId": "accountImports.writeConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "dialectId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "expectedCadenceDays": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "externalAccountRef": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "parserId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "provider": {
+                    "enum": ["up", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "secretRef": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "sourceKind": {
+                    "enum": ["csv-dialect", "pdf-statement", "api"],
+                    "type": "string"
+                  }
+                },
+                "required": ["sourceKind"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "dialectId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "expectedCadenceDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "externalAccountRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "parserId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "provider": {
+                          "enum": ["up", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "secretRef": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sourceKind": {
+                          "enum": ["csv-dialect", "pdf-statement", "api"],
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "accountId",
+                        "sourceKind",
+                        "dialectId",
+                        "parserId",
+                        "provider",
+                        "externalAccountRef",
+                        "expectedCadenceDays",
+                        "secretRef",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["data", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "422"
+          }
+        },
+        "summary": "Create or replace an account’s import config; 422s a config missing what its kind needs (a dialect, a parser or a provider)",
+        "tags": ["accountImports"]
+      }
+    },
+    "/accounts/{id}/imports": {
+      "get": {
+        "operationId": "accountImports.listBatches",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 500,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "checkpointId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "commitKey": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "dateFrom": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "dateTo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "parserVersion": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "rowCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceKind": {
+                            "enum": ["csv-dialect", "pdf-statement", "api"],
+                            "type": "string"
+                          },
+                          "sourceRef": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "accountId",
+                          "sourceKind",
+                          "sourceRef",
+                          "parserVersion",
+                          "commitKey",
+                          "rowCount",
+                          "dateFrom",
+                          "dateTo",
+                          "checkpointId",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextBefore": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["data", "nextBefore"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "List the import batches that fed an account, newest first, paginated on createdAt",
+        "tags": ["accountImports"]
       }
     },
     "/accounts/{id}/loan-offset-links": {
@@ -4149,6 +5182,80 @@
                         "id": {
                           "type": "string"
                         },
+                        "importStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cadenceDays": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "lastBatchId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "lastImportAt": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "newestTransactionDate": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "source": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "dialectId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["csv-dialect", "pdf-statement", "api"],
+                                  "type": "string"
+                                },
+                                "parserId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "parserVersion": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            },
+                            "span": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["from", "to"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "lastImportAt",
+                            "lastBatchId",
+                            "newestTransactionDate",
+                            "span",
+                            "cadenceDays",
+                            "source"
+                          ],
+                          "type": "object"
+                        },
                         "institutionId": {
                           "nullable": true,
                           "type": "string"
@@ -4188,6 +5295,7 @@
                         "entityDisplayName",
                         "entityDisplayNameStale",
                         "balance",
+                        "importStatus",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -4433,6 +5541,80 @@
                             "id": {
                               "type": "string"
                             },
+                            "importStatus": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "cadenceDays": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "lastBatchId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "lastImportAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "newestTransactionDate": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "dialectId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": ["csv-dialect", "pdf-statement", "api"],
+                                      "type": "string"
+                                    },
+                                    "parserId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "parserVersion": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "provider": {
+                                      "enum": ["up"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind"],
+                                  "type": "object"
+                                },
+                                "span": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "from": {
+                                      "type": "string"
+                                    },
+                                    "to": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["from", "to"],
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "lastImportAt",
+                                "lastBatchId",
+                                "newestTransactionDate",
+                                "span",
+                                "cadenceDays",
+                                "source"
+                              ],
+                              "type": "object"
+                            },
                             "institutionId": {
                               "nullable": true,
                               "type": "string"
@@ -4472,6 +5654,7 @@
                             "entityDisplayName",
                             "entityDisplayNameStale",
                             "balance",
+                            "importStatus",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -4555,6 +5738,80 @@
                             "id": {
                               "type": "string"
                             },
+                            "importStatus": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "cadenceDays": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "lastBatchId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "lastImportAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "newestTransactionDate": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "dialectId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": ["csv-dialect", "pdf-statement", "api"],
+                                      "type": "string"
+                                    },
+                                    "parserId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "parserVersion": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "provider": {
+                                      "enum": ["up"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind"],
+                                  "type": "object"
+                                },
+                                "span": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "from": {
+                                      "type": "string"
+                                    },
+                                    "to": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["from", "to"],
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "lastImportAt",
+                                "lastBatchId",
+                                "newestTransactionDate",
+                                "span",
+                                "cadenceDays",
+                                "source"
+                              ],
+                              "type": "object"
+                            },
                             "institutionId": {
                               "nullable": true,
                               "type": "string"
@@ -4594,6 +5851,7 @@
                             "entityDisplayName",
                             "entityDisplayNameStale",
                             "balance",
+                            "importStatus",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -12149,7 +13407,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -12203,6 +13461,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -12382,7 +13643,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -12436,6 +13697,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -12615,7 +13879,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -12669,6 +13933,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -12848,7 +14115,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -12902,6 +14169,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -13643,7 +14913,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                           "type": "string"
                         },
                         "fxFeeCents": {
@@ -13675,6 +14945,9 @@
                             "none"
                           ],
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "type": "string"
@@ -13871,6 +15144,23 @@
                             }
                           },
                           "required": ["add", "edit", "disable", "remove"],
+                          "type": "object"
+                        },
+                        "tagRuleWrites": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "inserted": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "reinforced": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["inserted", "reinforced"],
                           "type": "object"
                         },
                         "tagRulesApplied": {
@@ -14188,7 +15478,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                           "type": "string"
                         },
                         "fxFeeCents": {
@@ -14198,6 +15488,9 @@
                         },
                         "location": {
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "type": "string"
@@ -14498,7 +15791,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -14552,6 +15845,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -14731,7 +16027,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -14785,6 +16081,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -14964,7 +16263,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -15018,6 +16317,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -15197,7 +16499,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -15251,6 +16553,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -15863,7 +17168,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -15917,6 +17222,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16096,7 +17404,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -16150,6 +17458,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16329,7 +17640,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -16383,6 +17694,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -16562,7 +17876,7 @@
                                 "type": "string"
                               },
                               "fxCaptureSource": {
-                                "enum": ["amex-columns", "anz-descriptor", "unavailable"],
+                                "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable"],
                                 "type": "string"
                               },
                               "fxFeeCents": {
@@ -16616,6 +17930,9 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "pending": {
+                                "type": "boolean"
                               },
                               "rawRow": {
                                 "type": "string"
@@ -21712,7 +23029,13 @@
                             "type": "string"
                           },
                           "fxCaptureSource": {
-                            "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                            "enum": [
+                              "amex-columns",
+                              "anz-descriptor",
+                              "up-api",
+                              "unavailable",
+                              null
+                            ],
                             "nullable": true,
                             "type": "string"
                           },
@@ -22013,7 +23336,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -22306,7 +23629,7 @@
                     "type": "string"
                   },
                   "fxCaptureSource": {
-                    "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                    "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                     "nullable": true,
                     "type": "string"
                   },
@@ -22363,6 +23686,9 @@
                   "notionId": {
                     "nullable": true,
                     "type": "string"
+                  },
+                  "pending": {
+                    "type": "boolean"
                   },
                   "rawRow": {
                     "nullable": true,
@@ -22467,7 +23793,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -22763,7 +24089,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -22820,6 +24146,9 @@
                         "notionId": {
                           "nullable": true,
                           "type": "string"
+                        },
+                        "pending": {
+                          "type": "boolean"
                         },
                         "rawRow": {
                           "nullable": true,
@@ -23013,7 +24342,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -23294,7 +24623,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },
@@ -23520,7 +24849,7 @@
                           "type": "string"
                         },
                         "fxCaptureSource": {
-                          "enum": ["amex-columns", "anz-descriptor", "unavailable", null],
+                          "enum": ["amex-columns", "anz-descriptor", "up-api", "unavailable", null],
                           "nullable": true,
                           "type": "string"
                         },

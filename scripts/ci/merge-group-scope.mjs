@@ -37,9 +37,19 @@
  * `**` spanning segments — is the same one `.github/workflows/ci-gate.yml`
  * implements inline for its `PATH_FILTERS` mirror. That copy exists because the
  * gate job has no checkout and so cannot import this file;
- * `scripts/ci/__tests__/ci-gate-path-filters.test.ts` holds the two
- * implementations to the same answers. Anything outside the subset (`?`,
- * `[...]`, a leading `!`) raises here rather than being matched literally.
+ * `scripts/ci/__tests__/merge-group-scope.test.ts` holds the two
+ * implementations to the same answers on every pattern the scoped workflows
+ * declare. Anything outside the subset (`?`, `[...]`, a leading `!`) raises
+ * here rather than being matched literally.
+ *
+ * The gate has since grown ONE thing this has not: a leading `!` as a
+ * list-level exclusion, for `fe-test-e2e.yml`'s design carve-out (POPS-2782).
+ * That is deliberate rather than drift. This script scopes `merge_group`, and
+ * `paths:` is not a legal filter on that event, so an exclusion here would be
+ * scoping the queue lane by a rule the queue does not have — the one place a
+ * wrong "not selected" merges an unbuilt commit. Neither workflow this script
+ * scopes declares an exclusion, and if one starts, the raise below is a red
+ * gate rather than a silent skip.
  *
  * Usage:
  *   node scripts/ci/merge-group-scope.mjs \

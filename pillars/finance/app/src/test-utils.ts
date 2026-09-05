@@ -34,3 +34,13 @@ export const NO_BALANCE = {
   anchor: null,
   inconsistent: false,
 } as const;
+
+/** The import status every account carries on the wire (POPS-2917): an account never imported into. */
+export const NO_IMPORT_STATUS = {
+  lastImportAt: null,
+  lastBatchId: null,
+  newestTransactionDate: null,
+  span: null,
+  cadenceDays: null,
+  source: null,
+} as const;

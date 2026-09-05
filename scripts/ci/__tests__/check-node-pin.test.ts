@@ -179,6 +179,88 @@ describe('collectDockerfilePins', () => {
   });
 });
 
+/**
+ * POPS-2788. A pillar is not one image — `pillars/design` ships `Dockerfile`
+ * and `Dockerfile.api`. The collector used to join the literal name
+ * `Dockerfile` onto each pillar directory, so a second image was invisible:
+ * the first one it did read satisfied the "some image declares a pin" floor,
+ * and the unread one never entered the disagreement check. The guard reported
+ * clean either way, which is why its own self-test could not find this.
+ */
+describe('collectDockerfilePins — a pillar shipping more than one image', () => {
+  function twoImagePillar(first: string, second: string): string {
+    const root = makeFixture({});
+    const pillar = join(root, 'pillars', 'design');
+    mkdirSync(pillar, { recursive: true });
+    writeFileSync(join(pillar, 'Dockerfile'), first);
+    writeFileSync(join(pillar, 'Dockerfile.api'), second);
+    return root;
+  }
+
+  it('reads the suffixed image as well as the plain one', () => {
+    const root = twoImagePillar('FROM node:24-alpine\n', 'FROM node:24-slim\n');
+    try {
+      const sources = collectDockerfilePins(root).map((pin) => pin.source);
+      expect(sources).toContain(join('pillars', 'design', 'Dockerfile'));
+      expect(sources).toContain(join('pillars', 'design', 'Dockerfile.api'));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a drift planted in the SECOND image', () => {
+    // The violating input the pre-fix guard swallowed: `Dockerfile` agrees
+    // with the fleet, `Dockerfile.api` does not.
+    const root = twoImagePillar('FROM node:24-alpine\n', 'FROM node:22-slim\n');
+    try {
+      const { violations } = checkNodePin(root);
+      expect(violations.some((v) => v.includes('disagree'))).toBe(true);
+      expect(violations.join('\n')).toContain('Dockerfile.api');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports an unreadable major in the second image too', () => {
+    const root = twoImagePillar('FROM node:24-alpine\n', 'FROM node:lts-slim\n');
+    try {
+      expect(
+        checkNodePin(root).violations.some(
+          (v) => v.includes('no readable major') && v.includes('Dockerfile.api')
+        )
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a pillar whose only image is a suffixed one, rather than reading it as absent', () => {
+    const root = makeFixture({});
+    rmSync(join(root, 'pillars', 'finance', 'Dockerfile'));
+    writeFileSync(join(root, 'pillars', 'finance', 'Dockerfile.api'), 'FROM node:24-slim\n');
+    try {
+      const { violations } = checkNodePin(root);
+      expect(violations).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores a directory that merely starts with "Dockerfile"', () => {
+    const root = makeFixture({});
+    mkdirSync(join(root, 'pillars', 'finance', 'Dockerfile.d'), { recursive: true });
+    try {
+      expect(() => collectDockerfilePins(root)).not.toThrow();
+      expect(collectDockerfilePins(root).map((pin) => pin.expression)).toEqual([
+        '24-slim',
+        '24-slim',
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('checkNodePin — fixture tree', () => {
   it('passes when every pin names the same major', () => {
     const root = makeFixture({});
@@ -443,6 +525,15 @@ describe('against the live repo', () => {
     expect(sources).toContain('package.json engines.node');
     expect(sources.some((source) => source.startsWith('.github/workflows/'))).toBe(true);
     expect(sources.some((source) => source.endsWith('Dockerfile'))).toBe(true);
+  });
+
+  it('collects the design pillar’s SECOND image, which really exists', () => {
+    // Pinned to the real tree on purpose: this is the file the guard did not
+    // open. A fixture proves the collector can read two images; only this
+    // proves it reads the two the repo actually ships.
+    const sources = collectPins(repoRoot).pins.map((pin) => pin.source);
+    expect(sources).toContain(join('pillars', 'design', 'Dockerfile'));
+    expect(sources).toContain(join('pillars', 'design', 'Dockerfile.api'));
   });
 
   it('root package.json declares engines.node', () => {

@@ -28,6 +28,11 @@ export const IMPORT_PROVIDERS = ['up'] as const;
 /** One member of {@link IMPORT_PROVIDERS}. */
 export type ImportProvider = (typeof IMPORT_PROVIDERS)[number];
 
+/** Whether a stored ref names a provider this pillar has a client for. */
+export function isImportProvider(value: string): value is ImportProvider {
+  return (IMPORT_PROVIDERS as readonly string[]).includes(value);
+}
+
 /**
  * What a commit says about where its rows came from, recorded verbatim on the
  * `import_batches` row it writes. Optional on the wire so a client predating

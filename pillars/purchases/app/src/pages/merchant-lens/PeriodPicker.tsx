@@ -23,14 +23,8 @@ export function PeriodPicker({ value, onChange, now }: Props): ReactElement {
 
   return (
     <div className="max-w-xs">
-      {/*
-        `aria-label` rather than the `label` prop alone: `Select` renders its
-        label as a sibling with no `htmlFor`, so the control itself has no
-        accessible name and a screen reader announces a bare combobox.
-      */}
       <Select
         label={label}
-        aria-label={label}
         options={options}
         value={value}
         onChange={(event) => onChange(parsePeriodSelection(event.target.value))}

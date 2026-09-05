@@ -14,8 +14,6 @@
  */
 import {
   accountCheckpointsService,
-  accountsService,
-  AccountNotFoundError,
   balanceAsOf,
   balanceHistory,
   checkpointDelta,
@@ -26,6 +24,7 @@ import {
 import { toCheckpoint } from '../modules/checkpoints-types.js';
 import { ConflictError, NotFoundError, UnprocessableEntityError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
+import { requireAccount } from './require-account.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -34,16 +33,6 @@ import type { financeCheckpointsContract } from '../../contract/rest-checkpoints
 type Req = ServerInferRequest<typeof financeCheckpointsContract>;
 
 const DEFAULT_HISTORY_MONTHS = 12;
-
-/** 404 unless the account exists; returns it so callers can read `archivedAt`. */
-function requireAccount(db: FinanceDb, id: string) {
-  try {
-    return accountsService.getAccount(db, id);
-  } catch (err) {
-    if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', id);
-    throw err;
-  }
-}
 
 export function makeCheckpointsHandlers(db: FinanceDb) {
   return {
