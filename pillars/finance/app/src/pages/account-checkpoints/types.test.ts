@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { toISODate } from '../../lib/local-date';
 import { checkpointFormSchema, isInconsistent, today } from './types';
 
 describe('isInconsistent', () => {
@@ -55,7 +56,7 @@ describe('checkpointFormSchema', () => {
   });
 
   it('refuses a future date', () => {
-    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const tomorrow = toISODate(new Date(Date.now() + 86_400_000));
     const result = checkpointFormSchema('asset').safeParse({
       amount: '100',
       asOf: tomorrow,
