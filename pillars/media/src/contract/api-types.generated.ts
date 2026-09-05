@@ -9188,6 +9188,8 @@ export interface operations {
                 leavingGb: number;
                 removableCount: number;
                 skippedForOvershoot: {
+                  abandonWeight: number;
+                  abandonedProgress: number | null;
                   /** @enum {string} */
                   ageAnchor: 'acquired' | 'watched' | 'unknown';
                   ageDays: number;
@@ -9204,6 +9206,8 @@ export interface operations {
                   watchCount: number;
                 }[];
                 toMark: {
+                  abandonWeight: number;
+                  abandonedProgress: number | null;
                   /** @enum {string} */
                   ageAnchor: 'acquired' | 'watched' | 'unknown';
                   ageDays: number;
@@ -9220,6 +9224,8 @@ export interface operations {
                   watchCount: number;
                 }[];
                 topRanked: {
+                  abandonWeight: number;
+                  abandonedProgress: number | null;
                   /** @enum {string} */
                   ageAnchor: 'acquired' | 'watched' | 'unknown';
                   ageDays: number;

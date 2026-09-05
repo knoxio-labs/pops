@@ -14525,6 +14525,13 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "abandonWeight": {
+                                    "type": "number"
+                                  },
+                                  "abandonedProgress": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  },
                                   "ageAnchor": {
                                     "enum": ["acquired", "watched", "unknown"],
                                     "type": "string"
@@ -14576,7 +14583,9 @@
                                   "watchCount",
                                   "quality",
                                   "qualitySource",
-                                  "keepWeight"
+                                  "keepWeight",
+                                  "abandonedProgress",
+                                  "abandonWeight"
                                 ],
                                 "type": "object"
                               },
@@ -14586,6 +14595,13 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "abandonWeight": {
+                                    "type": "number"
+                                  },
+                                  "abandonedProgress": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  },
                                   "ageAnchor": {
                                     "enum": ["acquired", "watched", "unknown"],
                                     "type": "string"
@@ -14637,7 +14653,9 @@
                                   "watchCount",
                                   "quality",
                                   "qualitySource",
-                                  "keepWeight"
+                                  "keepWeight",
+                                  "abandonedProgress",
+                                  "abandonWeight"
                                 ],
                                 "type": "object"
                               },
@@ -14647,6 +14665,13 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "abandonWeight": {
+                                    "type": "number"
+                                  },
+                                  "abandonedProgress": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  },
                                   "ageAnchor": {
                                     "enum": ["acquired", "watched", "unknown"],
                                     "type": "string"
@@ -14698,7 +14723,9 @@
                                   "watchCount",
                                   "quality",
                                   "qualitySource",
-                                  "keepWeight"
+                                  "keepWeight",
+                                  "abandonedProgress",
+                                  "abandonWeight"
                                 ],
                                 "type": "object"
                               },

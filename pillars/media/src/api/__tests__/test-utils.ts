@@ -642,6 +642,8 @@ interface RankedMovieWire {
   quality: number;
   qualitySource: string;
   keepWeight: number;
+  abandonedProgress: number | null;
+  abandonWeight: number;
 }
 
 interface RemovalPreviewWire {
