@@ -33,6 +33,7 @@ import {
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
+import { makeTagRuleCollisionHandlers } from './tag-rules-collision-handlers.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -192,5 +193,7 @@ export function makeTagRulesHandlers(db: FinanceDb) {
         recordTagRuleRejection(db, { changeSet: body.changeSet, feedback: body.feedback });
         return { status: 200 as const, body: { message: 'Rejection recorded' } };
       }),
+
+    ...makeTagRuleCollisionHandlers(db),
   };
 }

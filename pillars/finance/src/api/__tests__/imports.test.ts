@@ -1041,6 +1041,70 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(rules.map((r) => r.description_pattern)).toEqual(['GOOD RULE']);
   });
 
+  it('counts a correction rule it created apart from one it merged into, and never blanks the merged tags (POPS-2954)', async () => {
+    const c = client();
+
+    const first = await c.imports.commitImport({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION',
+                matchType: 'contains',
+                transactionType: 'purchase',
+                tags: ['venue:cafe'],
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [confirmed({ checksum: 'commit-correction-split-a' })],
+    });
+    expect(first.data.rulesApplied).toEqual({ add: 1, edit: 0, disable: 0, remove: 0 });
+    expect(first.data.correctionRuleWrites).toEqual({ inserted: 1, reinforced: 0 });
+
+    const second = await c.imports.commitImport({
+      changeSets: [
+        {
+          ops: [
+            // Merges into the rule the first commit created — no tags of its
+            // own, so the merge must leave `venue:cafe` alone rather than
+            // blanking it (the defect this ticket fixes).
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION',
+                matchType: 'contains',
+                transactionType: 'purchase',
+              },
+            },
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'SPLIT_CORRECTION_NEW',
+                matchType: 'contains',
+                transactionType: 'purchase',
+                tags: ['occasion:birthday'],
+              },
+            },
+          ],
+        },
+      ],
+      transactions: [confirmed({ checksum: 'commit-correction-split-b' })],
+    });
+
+    // Two add ops, but only one of them created a rule.
+    expect(second.data.rulesApplied).toEqual({ add: 2, edit: 0, disable: 0, remove: 0 });
+    expect(second.data.correctionRuleWrites).toEqual({ inserted: 1, reinforced: 1 });
+
+    const merged = financeDb.raw
+      .prepare('SELECT tags FROM transaction_corrections WHERE description_pattern = ?')
+      .get('SPLIT_CORRECTION') as { tags: string };
+    expect(JSON.parse(merged.tags)).toEqual(['venue:cafe']);
+  });
+
   it('applies pending tag-rule ChangeSets during commit', async () => {
     const c = client();
     const res = await c.imports.commitImport({

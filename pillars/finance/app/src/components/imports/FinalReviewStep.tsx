@@ -100,6 +100,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
     pendingEntities,
     pendingChangeSets,
     pendingTagRuleChangeSets,
+    tagRuleAddCollisions,
     totalOps,
     totalTagRuleOps,
     txnBreakdown,
@@ -120,6 +121,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
       <TagRulesSection
         pendingTagRuleChangeSets={pendingTagRuleChangeSets}
         totalTagRuleOps={totalTagRuleOps}
+        collisions={tagRuleAddCollisions}
       />
       <TransactionsSection txnBreakdown={txnBreakdown} accountName={accountName} />
       <TagAssignmentsSection

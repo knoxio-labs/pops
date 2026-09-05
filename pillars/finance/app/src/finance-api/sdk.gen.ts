@@ -262,6 +262,9 @@ import type {
   TagRulesRejectData,
   TagRulesRejectErrors,
   TagRulesRejectResponses,
+  TagRulesResolveAddCollisionsData,
+  TagRulesResolveAddCollisionsErrors,
+  TagRulesResolveAddCollisionsResponses,
   TagRulesUpdateData,
   TagRulesUpdateErrors,
   TagRulesUpdateResponses,
@@ -1701,6 +1704,29 @@ export const tagRulesReject = <ThrowOnError extends boolean = false>(
 ): RequestResult<TagRulesRejectResponses, TagRulesRejectErrors, ThrowOnError> =>
   (options?.client ?? client).post<TagRulesRejectResponses, TagRulesRejectErrors, ThrowOnError>({
     url: '/tag-rules/reject',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955)
+ */
+export const tagRulesResolveAddCollisions = <ThrowOnError extends boolean = false>(
+  options?: Options<TagRulesResolveAddCollisionsData, ThrowOnError>
+): RequestResult<
+  TagRulesResolveAddCollisionsResponses,
+  TagRulesResolveAddCollisionsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    TagRulesResolveAddCollisionsResponses,
+    TagRulesResolveAddCollisionsErrors,
+    ThrowOnError
+  >({
+    url: '/tag-rules/resolve-add-collisions',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -1095,6 +1095,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/tag-rules/resolve-add-collisions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** For each add op in each ChangeSet, whether it would create a rule or merge into one that already exists, and that rule's current tags (POPS-2955) */
+    post: operations['tagRules.resolveAddCollisions'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tag-rules/vocabulary': {
     parameters: {
       query?: never;
@@ -7873,6 +7890,10 @@ export interface operations {
                 deltaCents: number;
                 id: string;
               }[];
+              correctionRuleWrites?: {
+                inserted: number;
+                reinforced: number;
+              };
               entitiesCreated: number;
               failedDetails: {
                 checksum: string | null;
@@ -10842,6 +10863,121 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'tagRules.resolveAddCollisions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          changeSets: {
+            ops: (
+              | {
+                  data: {
+                    confidence?: number;
+                    descriptionPattern: string;
+                    entityId?: string | null;
+                    isActive?: boolean;
+                    /**
+                     * @default exact
+                     * @enum {string}
+                     */
+                    matchType: 'exact' | 'contains' | 'regex';
+                    priority?: number;
+                    tags: string[];
+                  };
+                  /** @enum {string} */
+                  op: 'add';
+                }
+              | {
+                  data: {
+                    confidence?: number;
+                    entityId?: string | null;
+                    isActive?: boolean;
+                    priority?: number;
+                    tags?: string[];
+                  };
+                  id: string;
+                  /** @enum {string} */
+                  op: 'edit';
+                }
+              | {
+                  id: string;
+                  /** @enum {string} */
+                  op: 'disable';
+                }
+              | {
+                  id: string;
+                  /** @enum {string} */
+                  op: 'remove';
+                }
+            )[];
+            reason?: string;
+            source?: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            collisions: ({
+              existingTags: string[];
+              ruleId: string;
+            } | null)[][];
           };
         };
       };
