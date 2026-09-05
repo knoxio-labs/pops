@@ -683,6 +683,43 @@ description = "Rewrite the Swift sources with swift-format (the fixer for half o
 depends = ["verify:xcode-version"]
 run = "mise run swift-format format"
 
+# The opt-in POPS-1725 left missing. `lint` on a mismatched Xcode is advisory
+# and exits non-zero, and its findings are often exactly CI's — measured on
+# pin 26.6 against Xcode 27 Beta 2, the same 17 findings across the same 6
+# files, confirmed by CI twice. But `format` above refuses outright, so the
+# only way to act on a believed finding was a hand-written
+#
+#   xcrun swift-format format --in-place --configuration .swift-format <files>
+#
+# which is precisely what the wrapper exists to stop people writing — and it
+# skips the rule-list drift check `[tasks."swift-format"]` performs. The
+# bypass ran AROUND the guard, and the mismatch message did not even mention
+# it, so each contributor reinvented it.
+#
+# This runs the bypass THROUGH the guard instead. The load-bearing property is
+# the drift check, not the pin: rewriting on an unpinned toolchain whose rule
+# list matches `.swift-format` is a different risk from one whose does not,
+# and today both were pushed outside the wrapper together. So the version
+# check still runs and still prints, in full — it just does not veto, because
+# you asked for this task by name. `format` with no opt-in is untouched.
+[tasks."format:unpinned"]
+description = "Rewrite with swift-format on an Xcode that does not match the pin — still runs the rule-list drift check"
+run = '''
+set -u
+# The script's own self-test still vetoes: it covers the parsing and the
+# message, neither of which the toolchain version has any bearing on, so a
+# failure there is a real defect rather than the mismatch being opted into.
+scripts/check-xcode-version.sh self-test || exit 1
+
+if ! scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION"; then
+  printf '\nformat:unpinned: proceeding on the toolchain above, by explicit request.\n' >&2
+  printf '                 The rule-list drift check below still applies, and still refuses.\n' >&2
+  printf '                 Read the diff before committing: these are this toolchain\47s rules.\n\n' >&2
+fi
+
+mise run swift-format format
+'''
+
 # SwiftLint's analyzer rules (`unused_declaration`, `unused_import`) need a
 # full compiler log, which `swiftlint lint` never produces — that is why they
 # live here and not in `lint` above. The log comes from `build:for-testing`,
