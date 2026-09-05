@@ -64,10 +64,25 @@ export const woolworthsReading: ExtractedReceipt = {
     { id: 'w2', description: 'Sourdough loaf', amount: '6.00' },
     { id: 'w3', description: 'Royal gala apples', amount: '7.84', unitNote: '$4.90/kg' },
     { id: 'w4', description: 'Free range eggs 12pk', amount: '9.20' },
+    { id: 'w5', description: 'Greek yoghurt 1kg', amount: '5.50' },
+    { id: 'w6', description: 'Baby spinach 120g', amount: '3.20' },
+    { id: 'w7', description: 'Scotch fillet', amount: '12.00', unitNote: '$39.00/kg' },
+    { id: 'w8', description: 'Cherry tomatoes 250g', amount: '4.80' },
+    { id: 'w9', description: 'Tinned chickpeas', amount: '2.90', quantity: 2 },
+    { id: 'w10', description: 'Extra virgin olive oil 500ml', amount: '6.60' },
+    { id: 'w11', description: 'Parmigiano wedge', amount: '8.50' },
+    { id: 'w12', description: 'Laundry liquid 1L', amount: '5.00' },
   ],
   unreadableNotes: ['The line under the eggs is torn away.'],
 };
 
+/**
+ * The twelve lines above come to 76.04, and with the adjustments (+7.66 tax,
+ * -2.00 discount, +0.03 surcharge) to 81.73 — 2.50 short of the 84.23 the
+ * receipt printed. The arithmetic has to hold: a reviewer looking at the
+ * needs-review screen adds the visible column up, and a mismatch this fixture
+ * only claims is one the screen cannot be judged on.
+ */
 export const woolworthsFailures: GateFailure[] = [
   {
     kind: 'sumMismatch',

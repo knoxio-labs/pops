@@ -2,6 +2,7 @@ import { PopsDivider } from '@/frames/ios/fields';
 import { PopsCard } from '@/frames/ios/primitives';
 import { IosSectionHeader } from '@/kit/ios-controls';
 import { deltaWording, GATE_LABEL, lineQualifier, RECEIPT_COPY } from '@/kit/ios-receipt-copy';
+import { adjustmentRows } from '@/kit/ios-receipt-draft-rules';
 import { TriangleAlert } from 'lucide-react';
 
 import type { ExtractedReceipt, GateFailure, ReceiptLine } from '@/fixtures/receipts';
@@ -58,15 +59,6 @@ function Figure({
   );
 }
 
-function adjustments(reading: ExtractedReceipt): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  if (reading.tax) rows.push({ label: 'Tax', value: reading.tax });
-  for (const value of reading.discounts) rows.push({ label: 'Discounts', value });
-  for (const value of reading.surcharges) rows.push({ label: 'Surcharges', value });
-  if (reading.shipping) rows.push({ label: 'Shipping', value: reading.shipping });
-  return rows;
-}
-
 function Identity({ reading }: { reading: ExtractedReceipt }) {
   const stamp = [reading.purchasedOn, reading.purchasedAt].filter(Boolean).join(' ');
   return (
@@ -87,7 +79,7 @@ function Identity({ reading }: { reading: ExtractedReceipt }) {
 }
 
 export function ReceiptReading({ reading }: { reading: ExtractedReceipt }) {
-  const rows = adjustments(reading);
+  const rows = adjustmentRows(reading);
   return (
     <section className="space-y-2">
       <IosSectionHeader>{RECEIPT_COPY.whatRead}</IosSectionHeader>

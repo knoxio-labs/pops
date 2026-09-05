@@ -3,6 +3,7 @@ import { PopsActionBar, PopsButton } from '@/frames/ios/primitives';
 import { PopsStatusHeader } from '@/frames/ios/state-views';
 import { deltaWording, photoCountLine, RECEIPT_COPY, reviewMessage } from '@/kit/ios-receipt-copy';
 import { Identity, Items, PaperHints, Totals } from '@/kit/ios-receipt-draft-form';
+import { isSaveable } from '@/kit/ios-receipt-draft-rules';
 import { ReceiptPages } from '@/kit/ios-receipt-pages';
 import { TriangleAlert } from 'lucide-react';
 
@@ -90,7 +91,9 @@ export function ReceiptDraft({
         <Totals reading={reading} reconciliation={reconciliation} delta={delta} />
       </div>
       <PopsActionBar>
-        <PopsButton prominence="prominent">Save purchase</PopsButton>
+        <PopsButton prominence="prominent" disabled={!isSaveable(reading)}>
+          Save purchase
+        </PopsButton>
         {pages > 0 ? <PopsButton>{RECEIPT_COPY.another}</PopsButton> : null}
       </PopsActionBar>
     </div>

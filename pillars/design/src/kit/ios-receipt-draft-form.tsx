@@ -2,6 +2,7 @@ import { PopsDivider, PopsTextField } from '@/frames/ios/fields';
 import { PopsButton } from '@/frames/ios/primitives';
 import { itemCountLine } from '@/kit/ios-receipt-copy';
 import { DraftLineRow, DraftSection, ReconciliationNote } from '@/kit/ios-receipt-draft-parts';
+import { adjustmentRows, lineProblem } from '@/kit/ios-receipt-draft-rules';
 import { TriangleAlert } from 'lucide-react';
 
 import type { ExtractedReceipt } from '@/fixtures/receipts';
@@ -81,23 +82,20 @@ export function Items({ reading }: { reading: ExtractedReceipt }) {
         {reading.lines.map((line, index) => (
           <div key={line.id} className="space-y-4">
             {index > 0 ? <PopsDivider /> : null}
-            <DraftLineRow line={line} />
+            <DraftLineRow
+              line={line}
+              amountNote={
+                lineProblem(line)
+                  ? { kind: 'problem', text: 'An amount is needed, or remove the line.' }
+                  : undefined
+              }
+            />
           </div>
         ))}
         <PopsButton>Add an item</PopsButton>
       </div>
     </DraftSection>
   );
-}
-
-/** Only the adjustments the receipt actually stated — never four empty rows. */
-function adjustments(reading: ExtractedReceipt): { label: string; value: string }[] {
-  return [
-    ...(reading.tax === undefined ? [] : [{ label: 'Tax', value: reading.tax }]),
-    ...reading.discounts.map((value) => ({ label: 'Discounts', value })),
-    ...reading.surcharges.map((value) => ({ label: 'Surcharges', value })),
-    ...(reading.shipping === undefined ? [] : [{ label: 'Shipping', value: reading.shipping }]),
-  ];
 }
 
 export function Totals({
@@ -109,7 +107,7 @@ export function Totals({
   reconciliation: Reconciliation;
   delta?: string;
 }) {
-  const rows = adjustments(reading);
+  const rows = adjustmentRows(reading);
   return (
     <DraftSection label="What it came to">
       <div className="space-y-4">
