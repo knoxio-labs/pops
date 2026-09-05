@@ -24,7 +24,8 @@
  * every transaction repoints onto `targetId` and the source row is deleted
  * outright — the one exception to "accounts are never deleted" (POPS-2808),
  * since by then nothing references it. Irreversible, so `previewMerge`
- * exists to show the transaction count and resulting balance first.
+ * exists to show the transaction count, checkpoint count, and resulting
+ * balance first.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
@@ -99,6 +100,7 @@ export const AccountMergePreviewSchema = z.object({
   source: AccountSchema,
   target: AccountSchema,
   transactionCount: z.number().int(),
+  checkpointCount: z.number().int(),
   resultingBalanceCents: z.number().int(),
   hasGiftCardDetailsConflict: z.boolean(),
 });

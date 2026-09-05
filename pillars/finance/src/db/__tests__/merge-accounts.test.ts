@@ -97,6 +97,35 @@ describe('previewAccountMerge', () => {
     expect(preview.resultingBalanceCents).toBe(0);
   });
 
+  it("reports the source checkpoint count, not the target's", () => {
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -100_000,
+      asOf: '2025-12-01',
+      source: 'manual',
+    });
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -110_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+
+    const preview = previewAccountMerge(db, AMEX_ID, ANZ_ID);
+    expect(preview.checkpointCount).toBe(2);
+  });
+
+  it('reports zero checkpoints for two accounts with none', () => {
+    const preview = previewAccountMerge(db, AMEX_ID, ANZ_ID);
+    expect(preview.checkpointCount).toBe(0);
+  });
+
   it('throws AccountMergeCheckpointCollisionError when both sides carry a same-day machine checkpoint, naming the date', () => {
     insertCheckpoint(db, {
       accountId: AMEX_ID,
@@ -310,6 +339,29 @@ describe('mergeAccounts', () => {
     const after = balanceAsOf(db, ANZ_ID);
     expect(after.basis).toBe('checkpoint');
     expect(after.balanceCents).toBe(previewed);
+  });
+
+  it('repoints the source checkpoints onto the target so they survive the source delete (acceptance criterion)', () => {
+    insertCheckpoint(db, {
+      accountId: AMEX_ID,
+      balanceCents: -100_000,
+      asOf: '2025-12-01',
+      source: 'manual',
+      note: 'read off the app',
+    });
+    insertCheckpoint(db, {
+      accountId: ANZ_ID,
+      balanceCents: -50_000,
+      asOf: '2025-12-31',
+      source: 'manual',
+    });
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    expect(listCheckpoints(db, AMEX_ID)).toHaveLength(0);
+    const survivorCheckpoints = listCheckpoints(db, ANZ_ID);
+    expect(survivorCheckpoints).toHaveLength(2);
+    expect(survivorCheckpoints.find((row) => row.note === 'read off the app')).toBeDefined();
   });
 
   it('refuses a same-day machine collision and writes nothing', () => {
