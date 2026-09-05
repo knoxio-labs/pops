@@ -49,13 +49,15 @@ else
   without_repo_locating_git_env pnpm typecheck
 
   if [ "$scripts_decision" = run ]; then
-    # `mise run typecheck` never reaches scripts/ (no mise.toml there for the
-    # run-all fan-out, and tsconfig.build.json's `references` stop at libs/*
-    # and pillars/*), but quality.yml's scripts-tests job gates it in CI
-    # regardless — run the same two tasks here so a scripts/-touching push
-    # can't pass locally and still fail there.
+    # Only `test:scripts` is needed here. `pnpm typecheck` above already runs
+    # `typecheck:scripts` — `[tasks.typecheck]` depends on it since POPS-2763
+    # — so invoking it again type-checked the four scripts/ tsconfig projects
+    # twice on every scripts/-touching push. `[tasks.test]` gained the same
+    # dependency, but this hook never runs the umbrella `test` task, so the
+    # scripts suite still has to be asked for by name: quality.yml's
+    # scripts-tests job gates it in CI, and a scripts/-touching push must not
+    # pass locally and fail there.
     without_repo_locating_git_env mise run test:scripts
-    without_repo_locating_git_env mise run typecheck:scripts
   fi
 fi
 
