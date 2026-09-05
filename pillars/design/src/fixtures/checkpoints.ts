@@ -53,6 +53,28 @@ export const checkpointsByAccountId: Record<string, Checkpoint[]> = {
       expectedBalance: -208_920,
     },
   ],
+  a4: [
+    {
+      id: 'c6',
+      accountId: 'a4',
+      balance: 2_980_000,
+      asOf: '2026-06-30',
+      source: 'import',
+      note: 'ANZ statement closing balance',
+      expectedBalance: 2_981_200,
+    },
+    { id: 'c7', accountId: 'a4', balance: 3_120_000, asOf: '2026-09-01', source: 'manual' },
+  ],
+  a5: [
+    {
+      id: 'c8',
+      accountId: 'a5',
+      balance: 8_500,
+      asOf: '2026-08-20',
+      source: 'manual',
+      note: 'Counted the notes and coins',
+    },
+  ],
 };
 
 /** The account page's newest-first order; every history list reads this way. */
@@ -60,7 +82,20 @@ export function checkpointsFor(accountId: string): Checkpoint[] {
   return (checkpointsByAccountId[accountId] ?? []).toSorted((a, b) => b.asOf.localeCompare(a.asOf));
 }
 
-/** The most recent checkpoint, if the account has one flagged as disagreeing with the ledger. */
+/**
+ * The date the balance was last true as of: the newest checkpoint's, else
+ * whatever the account record carries. On the wire this is one field; the
+ * fixtures keep both so accounts without checkpoint data still show a date.
+ */
+export function balanceAsOf(account: { id: string; balanceAsOf?: string }): string | undefined {
+  return checkpointsFor(account.id)[0]?.asOf ?? account.balanceAsOf;
+}
+
+/**
+ * The most recent checkpoint, if it disagrees with the ledger. Only the
+ * latest one counts: an older flagged checkpoint followed by a consistent
+ * newer one has been re-anchored, and the account is not in question.
+ */
 export function inconsistentCheckpoint(accountId: string): Checkpoint | undefined {
   const [latest] = checkpointsFor(accountId);
   return latest?.expectedBalance !== undefined ? latest : undefined;

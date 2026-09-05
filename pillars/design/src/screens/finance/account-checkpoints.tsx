@@ -101,7 +101,7 @@ function addCheckpointState() {
 }
 
 export const states: ScreenStates = {
-  empty: detail('a4'),
+  empty: detail('a11'),
   inconsistent: detail('a2'),
   'add-checkpoint': addCheckpointState,
 };

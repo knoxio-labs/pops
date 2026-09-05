@@ -1,7 +1,7 @@
 import { insightsByAccountId } from '@/fixtures/account-insights';
 import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
-import { checkpointsFor } from '@/fixtures/checkpoints';
+import { balanceAsOf } from '@/fixtures/checkpoints';
 import { formatBalance } from '@/fixtures/currencies';
 import { importRows } from '@/fixtures/import-review';
 import { DashboardHeader } from '@/kit/account-dashboard-header';
@@ -58,14 +58,9 @@ export function balanceCaption(account: Account): string {
  * `checkpointable`, and the feature does not.
  */
 export function asOfLine(account: Account): string {
-  if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  const external = ACCOUNT_KINDS[account.kind].checkpointable;
-  if (checkpointsFor(account.id).length > 0) {
-    return external
-      ? 'Derived from transactions since the last checkpoint'
-      : 'Derived from transactions since you last counted it';
-  }
-  return external
+  const asOf = balanceAsOf(account);
+  if (asOf) return `As of ${day(asOf)}`;
+  return ACCOUNT_KINDS[account.kind].checkpointable
     ? 'Derived from transactions; never checked against the bank'
     : 'Derived from transactions; never counted';
 }

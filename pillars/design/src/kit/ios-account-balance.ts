@@ -1,5 +1,5 @@
 import { ACCOUNT_KINDS, sideNoun } from '@/fixtures/account-kinds';
-import { checkpointsFor } from '@/fixtures/checkpoints';
+import { balanceAsOf } from '@/fixtures/checkpoints';
 import { currenciesByCode, formatBalance } from '@/fixtures/currencies';
 import { institutionsById } from '@/fixtures/institutions';
 
@@ -74,12 +74,11 @@ export function accountSubtitle(account: Account): string {
 
 /** When the number was last true, phrased so a derived balance never claims to be checked. */
 export function asOfNote(account: Account): string {
-  if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
-  const external = ACCOUNT_KINDS[account.kind].checkpointable;
-  if (checkpointsFor(account.id).length > 0) {
-    return external ? 'Since the last checkpoint' : 'Since you last counted it';
-  }
-  return external ? 'Never checked against the bank' : 'Never counted';
+  const asOf = balanceAsOf(account);
+  if (asOf) return `As of ${day(asOf)}`;
+  return ACCOUNT_KINDS[account.kind].checkpointable
+    ? 'Never checked against the bank'
+    : 'Never counted';
 }
 
 export { day as iosDay };
