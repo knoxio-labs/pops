@@ -50,7 +50,8 @@ function useHydrationGate(setStatus: (status: ResumeStatus) => void): void {
  * copy. Cross-session mounts (refresh, new tab) rehydrate from IndexedDB and
  * offer Resume/Discard with the resume step clamped to satisfied
  * prerequisites; same-session navigation keeps live in-memory state untouched.
- * A clear broadcast from another tab resets a still-resumable wizard here.
+ * A clear broadcast from another tab resets a still-resumable wizard here,
+ * and with it the `resumed` flag: what is left is a fresh wizard.
  */
 export function useImportResume(): {
   status: ResumeStatus;
@@ -70,6 +71,7 @@ export function useImportResume(): {
       subscribeImportCleared(() => {
         if (!hasResumableImport(useImportStore.getState())) return;
         useImportStore.getState().reset();
+        setResumed(false);
         setStatus('ready');
         toast.info(t('import.resumeClearedElsewhere'));
       }),

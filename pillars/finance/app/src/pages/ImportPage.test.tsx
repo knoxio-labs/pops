@@ -21,6 +21,7 @@ import {
   createMemoryPersistStorage,
   type MemoryPersistStorage,
 } from '../store/import-persist.test-helpers';
+import { clearPersistedImport } from '../store/import-store-lifecycle';
 import {
   IMPORT_PERSIST_KEY,
   IMPORT_PERSIST_VERSION,
@@ -224,6 +225,33 @@ describe('ImportPage', () => {
       await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
       expect(useImportStore.getState().accountId).toBe('acc-amex');
       expect(useImportStore.getState().accountName).toBe('Amex');
+    });
+
+    it('stays out of a resumed run with no account yet', async () => {
+      seedResumableAtStepTwo();
+      renderImportPage('/finance/import?account=acc-1');
+      await screen.findByText('Resume import?');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+
+      expect(screen.getByText('Map Columns')).toBeInTheDocument();
+      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
+      await new Promise((res) => setTimeout(res, 20));
+      expect(useImportStore.getState().accountId).toBeNull();
+    });
+
+    it('applies once another tab clears the resumed run, since what is left is fresh', async () => {
+      seedResumableAtStepTwo();
+      renderImportPage('/finance/import?account=acc-1');
+      await screen.findByText('Resume import?');
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
+      expect(useImportStore.getState().accountId).toBeNull();
+
+      clearPersistedImport(true);
+
+      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
+      expect(useImportStore.getState().currentStep).toBe(1);
     });
 
     it('applies after a persisted run is discarded, since that starts fresh', async () => {
