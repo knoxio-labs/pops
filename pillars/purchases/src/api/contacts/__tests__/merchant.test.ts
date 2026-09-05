@@ -18,7 +18,7 @@ import {
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
-const entity = (id: string, name: string) => ({ id, name });
+const entity = (id: string, name: string, aliases: string[] = []) => ({ id, name, aliases });
 
 const handleReturning = (value: unknown): PillarHandle<ContactsRouter> =>
   ({
@@ -118,6 +118,41 @@ describe('choosing among candidates', () => {
   it('answers nothing when nothing matches', () => {
     expect(chooseMerchant('Bunnings Warehouse', [entity('e1', 'Coles')])).toBeNull();
     expect(chooseMerchant('Bunnings Warehouse', [])).toBeNull();
+  });
+
+  it('resolves a merchant reachable only by an alias', () => {
+    // POPS-2700 widened contacts to match aliases; nothing here matches on
+    // name, so a fix that still ranks on `.name` alone answers null.
+    const chosen = chooseMerchant('Maccas', [
+      entity('e1', 'Coles'),
+      entity('e2', "McDonald's", ['Maccas']),
+    ]);
+    expect(chosen).toBe('e2');
+  });
+
+  it('lets a name match outrank an alias-only match', () => {
+    // Two candidates both qualify, but not in the same tier: e1 matches
+    // by name, e2 only by alias. The name match wins outright rather than
+    // the pair reading as an ambiguity that resolves to no match.
+    const chosen = chooseMerchant('Maccas', [
+      entity('e1', 'Maccas'),
+      entity('e2', "McDonald's", ['Maccas']),
+    ]);
+    expect(chosen).toBe('e1');
+  });
+
+  it('still refuses to choose when two candidates tie within the winning tier', () => {
+    const chosen = chooseMerchant('Maccas', [
+      entity('e1', 'Maccas Drive Thru'),
+      entity('e2', 'Maccas Express'),
+    ]);
+    expect(chosen).toBeNull();
+
+    const aliasTie = chooseMerchant('Maccas', [
+      entity('e1', "McDonald's", ['Maccas']),
+      entity('e2', 'Golden Arches Co', ['Maccas']),
+    ]);
+    expect(aliasTie).toBeNull();
   });
 });
 
