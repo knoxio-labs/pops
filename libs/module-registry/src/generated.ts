@@ -824,6 +824,35 @@ export const MODULES = [
             ],
           },
           {
+            id: 'upSync',
+            title: 'Up Bank sync',
+            description:
+              'Scheduled pull of every account fed by the Up API. Each account still needs its own import config naming the Up account and the secret holding the token.',
+            fields: [
+              {
+                key: 'finance.upSync.enabled',
+                label: 'Scheduled sync',
+                type: 'toggle',
+                default: 'false',
+                description:
+                  'Off by default because a sync with no token has nothing to do. Turning it on takes effect within a minute; turning it off lets a sync already in flight finish.',
+              },
+              {
+                key: 'finance.upSync.intervalMinutes',
+                label: 'Sync interval (minutes)',
+                type: 'number',
+                default: '360',
+                description:
+                  'Minutes between passes. Up settles held transactions overnight, so a few passes a day catch both the new rows and the settlements; below five minutes only spends API quota on an account that has not changed.',
+                validation: {
+                  min: 5,
+                  max: 1440,
+                  message: 'Use 5-1440 minutes.',
+                },
+              },
+            ],
+          },
+          {
             id: 'financePagination',
             title: 'Pagination',
             description: 'Default page sizes for finance list endpoints.',
