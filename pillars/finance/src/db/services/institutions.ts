@@ -163,8 +163,7 @@ export function isInstitutionInUse(db: FinanceDb, id: string): boolean {
 /**
  * Delete an institution. Throws `InstitutionNotFoundError` if missing, or
  * `InstitutionInUseError` if {@link isInstitutionInUse} finds a referencing
- * row — currently unreachable (see {@link isInstitutionInUse}), kept so the
- * refusal path exists ahead of POPS-2767.
+ * row — e.g. an `accounts.institution_id` foreign key (POPS-2767).
  */
 export function deleteInstitution(db: FinanceDb, id: string): void {
   getInstitution(db, id);
