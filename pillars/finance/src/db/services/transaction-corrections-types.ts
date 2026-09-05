@@ -127,14 +127,24 @@ export function wouldUpdateLeaveTagsOnly(
   });
 }
 
-function assertPatternCompiles(pattern: string, matchType: TransactionCorrectionMatchType): void {
-  if (matchType === 'regex' && !isValidRegexPattern(pattern)) {
-    throw new InvalidPatternError(pattern);
+/**
+ * Refuse a `(pattern, matchType)` pair that no matcher could ever fire, in
+ * whichever of the two ways the match type allows.
+ *
+ * The two are mutually exclusive by construction, which is why they are one
+ * function rather than two called in sequence: a `regex` pattern is stored
+ * verbatim and can only fail by not compiling (POPS-2600), and an
+ * `exact`/`contains` pattern always compiles and can only fail by normalising
+ * to the empty string (POPS-3001). Every write boundary needs both questions
+ * asked, so neither one is a check a caller can be trusted to remember on its
+ * own.
+ */
+function assertPatternUsable(pattern: string, matchType: TransactionCorrectionMatchType): void {
+  if (matchType === 'regex') {
+    if (!isValidRegexPattern(pattern)) throw new InvalidPatternError(pattern);
+    return;
   }
-}
-
-function assertPatternMatchable(pattern: string, matchType: TransactionCorrectionMatchType): void {
-  if (matchType !== 'regex' && normalizePatternForStorage(pattern, matchType).length === 0) {
+  if (normalizePatternForStorage(pattern, matchType).length === 0) {
     throw new UnmatchablePatternError(pattern);
   }
 }
@@ -163,8 +173,7 @@ export function storablePattern(
   pattern: string,
   matchType: TransactionCorrectionMatchType
 ): string {
-  assertPatternCompiles(pattern, matchType);
-  assertPatternMatchable(pattern, matchType);
+  assertPatternUsable(pattern, matchType);
   return normalizePatternForStorage(pattern, matchType);
 }
 
@@ -198,8 +207,7 @@ export function assertPatchLeavesUsablePattern(
 ): void {
   if (input.descriptionPattern !== undefined) return;
   if (input.matchType === undefined || input.matchType === existing.matchType) return;
-  assertPatternCompiles(existing.descriptionPattern, effectiveMatchType);
-  assertPatternMatchable(existing.descriptionPattern, effectiveMatchType);
+  assertPatternUsable(existing.descriptionPattern, effectiveMatchType);
 }
 
 /**
