@@ -58,20 +58,62 @@
  * FAILURE MODES ARE LOUD. Every path where the guard cannot answer — an
  * unresolvable base ref, no merge base (a shallow clone), a `git diff` that
  * failed, a file `git show` refused, an `.oxlintrc.json` shape it does not
- * model — prints to stderr and exits non-zero. "Nothing to ask" (HEAD is the
- * base branch itself) is the single case that passes quietly.
+ * model, a `$GITHUB_STEP_SUMMARY` it was handed and could not write — prints
+ * to stderr and exits non-zero. "Nothing to ask" (HEAD is the base branch
+ * itself) is the single case that passes quietly.
+ *
+ * WHY IT REPORTS EVERY TOUCHED FILE, INCLUDING THE ONES THAT ARE FINE
+ * (POPS-3026). The projection above answers "does THIS branch cross the cap",
+ * which is not the same question as "can this branch and the one merging
+ * beside it cross it together". Three merge groups were ejected on 2026-09-05
+ * on `pillars/finance/src/db/index.ts:269:39 File has too many lines (201)` —
+ * runs 33985405778, 33985300153 and 33985299312 — with nothing surfacing on
+ * any of the PRs in them. Neither contributing PR was over the cap on its own;
+ * the file was AT 200 and two branches each added a line.
+ *
+ * The merge queue's projected head is reachable from exactly one of the three
+ * lanes this guard runs in, and it is the lane where knowing is already too
+ * late:
+ *
+ *   - `merge_group`: the checkout IS the projected head, so the projection
+ *     above is exact. It is also the lane where the ejection happens — this
+ *     guard did fail in all three runs above, seconds before oxlint said the
+ *     same thing. Detecting it here does not prevent it.
+ *   - `pull_request`: the group does not exist yet. Which PRs share a group is
+ *     decided at enqueue time, after these checks run, and the other PR may not
+ *     even be open. No ref reachable from the checkout describes it.
+ *   - `.husky/pre-push`: offline, and the branch has not been pushed.
+ *
+ * So the answer is not a better projection, it is refusing to be silent. Every
+ * touched linted file gets a line with its projected count and its REMAINING
+ * headroom — a file at 200/200 says "0 lines of headroom left" on a green run
+ * — and near-cap files are additionally emitted as GitHub annotations and a
+ * step-summary table, which are visible on a passing check where a `console.warn`
+ * buried in a green job's log is not. A PR that consumes a capped file's last
+ * line now says so where its author and reviewer will see it, which is the
+ * only signal available before the group forms. Cross-PR projection at
+ * `pull_request` time (enumerating other open PRs' heads over the API) is
+ * POPS-3028, and is a different guard: it needs network and a token, neither of
+ * which this Tier A / pre-push guard has.
  *
  * TIER — install-free (Tier A, ADR-045 amendment). Reads `.oxlintrc.json`
  * with `JSON.parse` and shells out to `git`; no third-party import at any
  * depth.
  *
  * Usage:
- *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>]
+ *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>] [--repo <dir>]
  *   node scripts/ci/check-line-budget-headroom.mjs --self-test
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -639,10 +681,12 @@ function verdictStatus(count, max, headroom) {
  * @param {string} params.cwd
  * @param {string} params.baseRef Local or `origin/<ref>`-resolved branch name.
  * @param {number} params.headroom
- * @returns {{ verdicts: FileVerdict[], skippedReason?: string, fatal?: boolean }}
+ * @returns {{ verdicts: FileVerdict[], resolvedBase?: string, skippedReason?: string, fatal?: boolean }}
  *   `skippedReason` with `fatal: true` means the question could not be
  *   answered and the caller must not read a pass into it; without `fatal` it
- *   means there was genuinely nothing to ask.
+ *   means there was genuinely nothing to ask. `resolvedBase` is the ref the
+ *   projection actually used, which the report names so a reader can tell
+ *   `origin/main` from a stale local `main`.
  */
 export function evaluate({ cwd, baseRef, headroom }) {
   const configPath = join(repoRoot, '.oxlintrc.json');
@@ -808,59 +852,227 @@ export function evaluate({ cwd, baseRef, headroom }) {
   if (unreadable.length > 0) {
     return {
       verdicts,
+      resolvedBase,
       skippedReason: `git could not read ${unreadable.length} touched file(s): ${unreadable.join('; ')}`,
       fatal: true,
     };
   }
 
-  return { verdicts };
+  return { verdicts, resolvedBase };
 }
 
 /**
- * @param {FileVerdict[]} verdicts
- * @returns {boolean} true if there were no failures.
+ * Lines of cap left after this branch lands. Negative means over.
+ *
+ * @param {FileVerdict} v
+ * @returns {number}
  */
-function report(verdicts) {
-  const failures = verdicts.filter((v) => v.status === 'fail');
-  const warnings = verdicts.filter((v) => v.status === 'warn' || v.status === 'new-file');
+export function headroomLeft(v) {
+  return v.max - v.approxCount;
+}
 
-  if (failures.length === 0 && warnings.length === 0) {
-    console.log(
-      'OK — no touched file is projected over its oxlint max-lines cap on the target branch.'
+/**
+ * `0 lines of headroom left` is spelled out rather than folded into a
+ * "within N of the cap" phrase, because zero is the number that matters and a
+ * reader skimming a green log has to be able to see it without arithmetic.
+ *
+ * @param {FileVerdict} v
+ * @returns {string}
+ */
+function marginPhrase(v) {
+  const left = headroomLeft(v);
+  if (left < 0) return `${-left} OVER the ${v.max}-line cap`;
+  if (left === 0) return `0 lines of headroom left against the ${v.max}-line cap`;
+  return `${left} line${left === 1 ? '' : 's'} of headroom left against the ${v.max}-line cap`;
+}
+
+/**
+ * One human-readable sentence per touched file, whatever its status.
+ *
+ * The headroom is stated as a NUMBER OF LINES LEFT rather than only as a
+ * pass/fail, because the collision POPS-3026 is about is invisible to
+ * pass/fail: `0 lines of headroom left` on a green run is the whole signal a
+ * PR author gets that the next PR beside theirs will eject the merge group.
+ *
+ * @param {FileVerdict} v
+ * @returns {string}
+ */
+export function describeVerdict(v) {
+  const margin = marginPhrase(v);
+  const provenance =
+    v.status === 'new-file' || v.baseHeadCount === 0
+      ? 'new to the target branch'
+      : `target currently ${v.baseHeadCount}, this branch ${v.branchDelta >= 0 ? '+' : ''}${v.branchDelta}`;
+  return `${v.file}: ~${v.approxCount} lines once this lands (${provenance}) — ${margin}.`;
+}
+
+/**
+ * Workflow-command escaping for the message half of an annotation.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeAnnotationData(text) {
+  return text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+}
+
+/**
+ * Workflow-command escaping for a PROPERTY value (`file=…`), which additionally
+ * has to survive `,` and `:` — those terminate the property list and the
+ * command name. `git` hands this guard raw paths (`core.quotePath=false`), so a
+ * filename holding a comma would otherwise split one annotation into a broken
+ * pair and drop the finding on the floor.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function escapeAnnotationProperty(text) {
+  return escapeAnnotationData(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
+}
+
+/**
+ * The GitHub Actions annotations for a set of verdicts, in output order.
+ *
+ * An annotation is the only channel that shows a near-cap file on a check
+ * that PASSES: it lands in the Checks tab and, for a file in the diff, beside
+ * the line in Files changed. A `console.warn` in a green job's log does not,
+ * which is how the 2026-09-05 ejections were invisible until someone ran
+ * `gh run list --event merge_group`.
+ *
+ * @param {FileVerdict[]} verdicts
+ * @returns {string[]}
+ */
+export function annotationsFor(verdicts) {
+  return verdicts
+    .filter((v) => v.status !== 'ok')
+    .map((v) => {
+      const level = v.status === 'fail' ? 'error' : 'warning';
+      const file = escapeAnnotationProperty(v.file);
+      return `::${level} file=${file},title=Line budget::${escapeAnnotationData(describeVerdict(v))}`;
+    });
+}
+
+/**
+ * The step-summary table. Every touched file appears, tightest headroom
+ * first, so "nothing near the cap" is a table a reader can see rather than an
+ * absence they have to trust.
+ *
+ * @param {FileVerdict[]} verdicts
+ * @param {string} baseRef
+ * @returns {string}
+ */
+export function summaryMarkdown(verdicts, baseRef) {
+  const rows = verdicts
+    .map(
+      (v) =>
+        `| \`${v.file}\` | ${v.approxCount} | ${v.max} | ${headroomLeft(v)} | ${v.status.toUpperCase()} |`
+    )
+    .join('\n');
+  return [
+    '### Line-budget headroom',
+    '',
+    `Every linted file this branch touches, projected onto \`${baseRef}\`. ` +
+      'Headroom is how many counted lines the file has left before oxlint `max-lines` rejects it — ' +
+      'a file at 0 is one line away from ejecting a merge group (POPS-3026).',
+    '',
+    '| File | Projected | Cap | Headroom | Status |',
+    '| --- | ---: | ---: | ---: | --- |',
+    rows,
+    '',
+  ].join('\n');
+}
+
+/**
+ * Fixed-width so the per-file lines stay in columns when a run mixes them.
+ *
+ * @type {Record<FileVerdict['status'], string>}
+ */
+const STATUS_LABEL = { fail: 'FAIL', warn: 'WARN', 'new-file': 'WARN', ok: 'OK  ' };
+
+/**
+ * @typedef {object} ReportChannels
+ * @property {(line: string) => void} [out]
+ * @property {(line: string) => void} [err]
+ * @property {Record<string, string | undefined>} [env]
+ */
+
+/**
+ * Prints the per-file report, emits annotations, and appends the step-summary
+ * table. Returns true when nothing failed AND everything it was asked to
+ * report actually got reported — a `$GITHUB_STEP_SUMMARY` it cannot write is
+ * a reporting channel that dropped the finding, which for a guard whose
+ * remaining job IS reporting is a failure, not a footnote.
+ *
+ * @param {FileVerdict[]} verdicts
+ * @param {string} baseRef The ref the projection used.
+ * @param {ReportChannels} [channels]
+ * @returns {boolean}
+ */
+export function report(verdicts, baseRef, channels = {}) {
+  const out = channels.out ?? ((line) => console.log(line));
+  const err = channels.err ?? ((line) => console.error(line));
+  const env = channels.env ?? process.env;
+
+  if (verdicts.length === 0) {
+    out(
+      'check-line-budget-headroom: this branch touches no file the oxlint max-lines cap ' +
+        'applies to — nothing to project.'
     );
     return true;
   }
 
-  for (const v of warnings) {
-    if (v.status === 'new-file') {
-      console.warn(
-        `WARN  ${v.file}: new file at ${v.approxCount} lines, within ${v.max - v.approxCount} of the ${v.max}-line cap.`
+  // Tightest first: the file most likely to collide with a sibling PR is the
+  // one a reader must not have to scroll for.
+  const ordered = [...verdicts].sort(
+    (a, b) => headroomLeft(a) - headroomLeft(b) || a.file.localeCompare(b.file)
+  );
+  const failures = ordered.filter((v) => v.status === 'fail');
+  const nearCap = ordered.filter((v) => v.status === 'warn' || v.status === 'new-file');
+
+  out(
+    `check-line-budget-headroom: ${ordered.length} linted file(s) touched, projected onto ${baseRef}.`
+  );
+  for (const v of ordered) {
+    out(`  ${STATUS_LABEL[v.status]}  ${describeVerdict(v)}`);
+  }
+
+  for (const line of annotationsFor(ordered)) out(line);
+
+  let reported = true;
+  const summaryPath = env.GITHUB_STEP_SUMMARY;
+  if (summaryPath !== undefined && summaryPath.length > 0) {
+    try {
+      appendFileSync(summaryPath, summaryMarkdown(ordered, baseRef), 'utf8');
+    } catch (error) {
+      err(
+        `check-line-budget-headroom: cannot answer — GITHUB_STEP_SUMMARY is set to ` +
+          `"${summaryPath}" but could not be written ` +
+          `(${error instanceof Error ? error.message.split('\n')[0] : String(error)}). ` +
+          'The per-file table above is the finding; a reporting channel that silently drops it ' +
+          'is the ADR-045 failure mode.'
       );
-    } else {
-      console.warn(
-        `WARN  ${v.file}: ~${v.approxCount} lines once this lands on top of the target branch ` +
-          `(target currently ${v.baseHeadCount}, this branch ${v.branchDelta >= 0 ? '+' : ''}${v.branchDelta}) — within ${v.max - v.approxCount} of the ${v.max}-line cap.`
-      );
+      reported = false;
     }
   }
 
-  for (const v of failures) {
-    console.error(
-      `FAIL  ${v.file}: ~${v.approxCount} lines once this lands on top of the target branch ` +
-        `(target currently ${v.baseHeadCount}, this branch ${v.branchDelta >= 0 ? '+' : ''}${v.branchDelta}) — ` +
-        `${v.approxCount - v.max} over the ${v.max}-line oxlint cap.`
+  if (nearCap.length > 0 && failures.length === 0) {
+    out(
+      `\n${nearCap.length} file(s) above are close enough to the cap that one more line lands them ` +
+        'over it. Two PRs that each add a line to the same near-cap file both pass their own ' +
+        'checks and then eject the whole merge group together (POPS-3026) — split the file now ' +
+        'rather than buying a line back.'
     );
   }
 
   if (failures.length > 0) {
-    console.error(
+    err(
       '\nA rebase onto the target branch would push this file over its oxlint `max-lines` cap ' +
         'even though this branch alone stays under it. Split the file before pushing — see ' +
         'docs/architecture/adr-045-guards-must-prove-they-report.md.'
     );
   }
 
-  return failures.length === 0;
+  return failures.length === 0 && reported;
 }
 
 /**
@@ -872,9 +1084,21 @@ function run() {
   const baseRef = baseIdx >= 0 ? args[baseIdx + 1] : 'main';
   const headroomIdx = args.indexOf('--headroom');
   const headroom = headroomIdx >= 0 ? Number(args[headroomIdx + 1]) : DEFAULT_HEADROOM;
+  // `--repo` exists so the guard's own tests can run the BINARY against a
+  // planted fixture rather than only calling `evaluate()` in-process. A test
+  // that exercises the pure core and trusts the wiring is exactly the shape
+  // ADR-045 rejects: the wiring is where a report gets dropped. It also makes
+  // the guard usable from a sibling worktree. `.oxlintrc.json` is still read
+  // from THIS repo — the cap under test is always the real one.
+  const repoIdx = args.indexOf('--repo');
+  const cwd = repoIdx >= 0 ? args[repoIdx + 1] : repoRoot;
 
   if (baseRef === undefined || baseRef.length === 0 || baseRef.startsWith('--')) {
     console.error('check-line-budget-headroom: --base needs a ref (e.g. --base main).');
+    return false;
+  }
+  if (cwd === undefined || cwd.length === 0 || cwd.startsWith('--')) {
+    console.error('check-line-budget-headroom: --repo needs a directory.');
     return false;
   }
   if (!Number.isFinite(headroom) || headroom < 0) {
@@ -883,14 +1107,14 @@ function run() {
   }
 
   if (
-    !existsSync(join(repoRoot, '.git')) &&
-    tryGit(['rev-parse', '--show-toplevel'], repoRoot) === undefined
+    !existsSync(join(cwd, '.git')) &&
+    tryGit(['rev-parse', '--show-toplevel'], cwd) === undefined
   ) {
     console.error('check-line-budget-headroom: not inside a git repository.');
     return false;
   }
 
-  const { verdicts, skippedReason, fatal } = evaluate({ cwd: repoRoot, baseRef, headroom });
+  const { verdicts, resolvedBase, skippedReason, fatal } = evaluate({ cwd, baseRef, headroom });
   if (skippedReason !== undefined) {
     // A guard that cannot answer says so on stderr and exits non-zero. The
     // alternative — a friendly line on stdout and exit 0 — is the shape
@@ -899,7 +1123,7 @@ function run() {
     if (fatal === true) {
       // Whatever it DID manage to judge still prints: a file it could not read
       // does not un-find the file it already projected over the cap.
-      if (verdicts.length > 0) report(verdicts);
+      if (verdicts.length > 0) report(verdicts, resolvedBase ?? baseRef);
       console.error(`check-line-budget-headroom: cannot answer — ${skippedReason}.`);
       return false;
     }
@@ -907,7 +1131,7 @@ function run() {
     return true;
   }
 
-  return report(verdicts);
+  return report(verdicts, resolvedBase ?? baseRef);
 }
 
 /**
@@ -1182,13 +1406,106 @@ function selfTest() {
     rmSync(moved, { recursive: true, force: true });
   }
 
+  // --- the reporting half: a file with NO headroom left must say so out loud --
+  // The projection can be perfect and the run still useless, because the
+  // collision POPS-3026 is about happens between two PRs that each pass. The
+  // only signal available before the merge group forms is what a GREEN run
+  // says about the files it touched, so these checks assert the text, the
+  // annotation and the step-summary row — not the exit code, which is 0 for
+  // every one of them.
+  const reporting = tmpRepo();
+  try {
+    const body = (n, tag = 'x') =>
+      `${Array.from({ length: n }, (_, i) => `const ${tag}${i} = 1;`).join('\n')}\n`;
+
+    // `atCap.ts` lands at exactly 200 — under the cap, over nothing, and one
+    // line from ejecting a merge group. `roomy.ts` is nowhere near it.
+    writeManyAndCommit(
+      reporting,
+      [
+        { file: 'atCap.ts', content: body(199) },
+        { file: 'roomy.ts', content: body(10, 'r') },
+      ],
+      'ancestor: atCap.ts at 199, roomy.ts at 10'
+    );
+    execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: reporting, env: gitEnv() });
+    writeManyAndCommit(
+      reporting,
+      [
+        { file: 'atCap.ts', content: body(200) },
+        { file: 'roomy.ts', content: body(11, 'r') },
+      ],
+      'feature: consume the last line of atCap.ts'
+    );
+
+    const { verdicts } = evaluate({ cwd: reporting, baseRef: 'main', headroom: DEFAULT_HEADROOM });
+    const atCap = verdicts.find((v) => v.file === 'atCap.ts');
+    checks['a file taken to exactly the cap is a warning, not a pass'] =
+      atCap?.status === 'warn' && atCap.approxCount === 200 && headroomLeft(atCap) === 0;
+
+    const summaryPath = join(reporting, 'step-summary.md');
+    /** @type {string[]} */
+    const out = [];
+    /** @type {string[]} */
+    const err = [];
+    const passed = report(verdicts, 'origin/main', {
+      out: (line) => out.push(line),
+      err: (line) => err.push(line),
+      env: { GITHUB_STEP_SUMMARY: summaryPath },
+    });
+    const stdout = out.join('\n');
+
+    checks['a zero-headroom file still exits 0 — the report is the only signal'] = passed;
+    checks['the report names the zero-headroom file and how much is left'] =
+      stdout.includes('atCap.ts') && stdout.includes('0 lines of headroom left');
+    checks['a file that is FINE is still reported, with its remaining headroom'] =
+      stdout.includes('roomy.ts') && /roomy\.ts[^\n]*\d+ lines of headroom left/.test(stdout);
+    checks['the near-cap file is emitted as a GitHub annotation on a passing run'] = out.some((l) =>
+      l.startsWith('::warning file=atCap.ts,')
+    );
+    checks['a file with room to spare is not annotated'] = !out.some((l) =>
+      l.startsWith('::warning file=roomy.ts,')
+    );
+    checks['the passing run explains the two-PR collision it cannot see'] =
+      stdout.includes('POPS-3026');
+
+    const summary = readFileSync(summaryPath, 'utf8');
+    checks['the step summary carries a row per touched file'] =
+      summary.includes('| `atCap.ts` | 200 | 200 | 0 | WARN |') &&
+      summary.includes('| `roomy.ts` |');
+
+    // Degenerate: the summary channel is present but unwritable. A guard whose
+    // remaining job is reporting must not report success when a channel it was
+    // handed dropped the finding.
+    /** @type {string[]} */
+    const brokenErr = [];
+    const brokenSummary = report(verdicts, 'origin/main', {
+      out: () => {},
+      err: (line) => brokenErr.push(line),
+      env: { GITHUB_STEP_SUMMARY: join(reporting, 'no-such-dir', 'summary.md') },
+    });
+    checks['an unwritable step summary fails rather than passing quietly'] =
+      !brokenSummary && brokenErr.join('\n').includes('cannot answer');
+
+    // Degenerate: nothing linted was touched. "Found nothing" is a finding and
+    // prints as one (ADR-045), not as the same OK a clean projection prints.
+    /** @type {string[]} */
+    const emptyOut = [];
+    report([], 'origin/main', { out: (line) => emptyOut.push(line), err: () => {}, env: {} });
+    checks['an empty touched-file set says so rather than reading as a clean projection'] = emptyOut
+      .join('\n')
+      .includes('touches no file');
+  } finally {
+    rmSync(reporting, { recursive: true, force: true });
+  }
+
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
     console.log(
       `self-test OK (${Object.keys(checks).length} checks) — guard catches a branch tipped over ` +
         'the cap by a target branch that moved underneath it, resolves the merge-group ref ' +
-        'spelling, reports rather than skips when it cannot answer, and does not exempt what ' +
-        'oxlint caps.'
+        'spelling, reports rather than skips when it cannot answer, does not exempt what ' +
+        'oxlint caps, and says out loud how much headroom every touched file has left.'
     );
   } else {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
@@ -1260,9 +1577,10 @@ function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
-      'Usage: node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>] [--self-test]\n' +
+      'Usage: node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>] [--repo <dir>] [--self-test]\n' +
         "Projects every linted file this branch touches onto the target branch's current tip and\n" +
-        'warns/fails when the projected line count approaches or crosses the oxlint max-lines cap.'
+        'reports each one’s remaining headroom, failing when the projected line count crosses the\n' +
+        'oxlint max-lines cap and annotating when it merely approaches it.'
     );
     process.exit(2);
   }
