@@ -107,19 +107,19 @@ export function useCompletionHandler(state: ProcessingState): void {
 }
 
 export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolean): void {
-  const { parsedTransactions, accountName } = useImportStore();
+  const { parsedTransactions } = useImportStore();
   const { mutate, isPending, isSuccess } = state.processImportMutation;
 
   // The guard must always see this render's latest transactions/mutation
-  // status, but the effect itself must only re-fire on the real triggers
-  // (transaction count, accountName) — not on every isPending/isSuccess flip
-  // (that would immediately re-trigger a just-failed mutation, looping) nor
-  // on `parsedTransactions`' array identity (the import store hands back a
-  // new array reference on every read, so depending on it directly would
+  // status, but the effect itself must only re-fire on the real trigger
+  // (transaction count) — not on every isPending/isSuccess flip (that would
+  // immediately re-trigger a just-failed mutation, looping) nor on
+  // `parsedTransactions`' array identity (the import store hands back a new
+  // array reference on every read, so depending on it directly would
   // re-fire — and re-mutate — on every render). A ref lets the effect read
   // fresh values without either watching them.
-  const latestRef = useRef({ parsedTransactions, accountName, isPending, isSuccess });
-  latestRef.current = { parsedTransactions, accountName, isPending, isSuccess };
+  const latestRef = useRef({ parsedTransactions, isPending, isSuccess });
+  latestRef.current = { parsedTransactions, isPending, isSuccess };
 
   useEffect(() => {
     const latest = latestRef.current;
@@ -129,7 +129,7 @@ export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolea
       !latest.isPending &&
       !latest.isSuccess
     ) {
-      mutate({ transactions: latest.parsedTransactions, account: latest.accountName });
+      mutate({ transactions: latest.parsedTransactions });
     }
-  }, [parsedTransactions.length, hasAlreadyProcessed, accountName, mutate]);
+  }, [parsedTransactions.length, hasAlreadyProcessed, mutate]);
 }

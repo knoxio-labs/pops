@@ -73,13 +73,12 @@ beforeEach(() => {
 });
 
 describe('ProcessingStep', () => {
-  it('auto-triggers processImport on mount with the parsed transactions and the picked account as the body', async () => {
+  it('auto-triggers processImport on mount with the parsed transactions as the body', async () => {
     render(renderStep());
     await waitFor(() =>
       expect(mockProcessImport).toHaveBeenCalledWith({
         body: {
           transactions: [{ date: '2026-01-01', description: 'Test', amount: -50 }],
-          account: 'ANZ Everyday',
         },
       })
     );
@@ -138,7 +137,6 @@ describe('ProcessingStep', () => {
     expect(mockProcessImport).toHaveBeenLastCalledWith({
       body: {
         transactions: [{ date: '2026-01-01', description: 'Test', amount: -50 }],
-        account: 'ANZ Everyday',
       },
     });
   });

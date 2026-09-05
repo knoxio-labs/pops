@@ -7516,7 +7516,6 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          account: string;
           transactions: {
             account: string;
             accountId?: string;

@@ -181,7 +181,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
 
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'WOOLWORTHS 1234', checksum: 'match-1' })],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -197,7 +196,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
 
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'WOOLIES METRO', checksum: 'alias-1' })],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -210,7 +208,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
 
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'WOOLWORTHS 1234', checksum: 'down-1' })],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -223,7 +220,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     const c = client();
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'ZZZ UNKNOWN VENDOR 9', checksum: 'nomatch-1' })],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -252,7 +248,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
         parsed({ description: 'DUPLICATE', checksum: 'dup-checksum' }),
         parsed({ description: 'FRESH ROW', checksum: 'fresh-checksum' }),
       ],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -273,7 +268,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
         parsed({ description: 'TRANSFER TO SAVINGS', amount: -2300, checksum: 'xfer-1' }),
         parsed({ description: 'BPAY PAYMENT TO AGL', amount: -8900, checksum: 'xfer-2' }),
       ],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
@@ -293,7 +287,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
           checksum: 'inbound-1',
         }),
       ],
-      account: 'Amex',
     });
 
     // #3607 removed the loose keyword heuristic that guessed a type from any
@@ -309,7 +302,7 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
 
   it('returns an empty bucketed result for an empty batch', async () => {
     const c = client();
-    const { sessionId } = await c.imports.processImport({ transactions: [], account: 'Amex' });
+    const { sessionId } = await c.imports.processImport({ transactions: [] });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.matched).toEqual([]);
     expect(result.uncertain).toEqual([]);
@@ -322,7 +315,6 @@ describe('imports.processImport — session poll + live-fetch matching', () => {
     await expect(
       c.imports.processImport({
         transactions: [parsed({ date: '13/02/2026' })],
-        account: 'Amex',
       })
     ).rejects.toMatchObject({ status: 400 });
   });
@@ -342,7 +334,6 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
       transactions: [
         parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-1' }),
       ],
-      account: 'Amex',
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -366,7 +357,6 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
 
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'LOAN OFFSET SWEEP 8842', checksum: 'sweep-1' })],
-      account: 'Amex',
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -390,7 +380,6 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
 
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'ROUND UP TO SAVER 22', checksum: 'roundup-1' })],
-      account: 'Amex',
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -418,7 +407,6 @@ describe('imports.processImport — correction rule usage telemetry (#3626)', ()
       transactions: [
         parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-usage-1' }),
       ],
-      account: 'Amex',
     });
     await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -435,7 +423,6 @@ describe('imports.processImport — correction rule usage telemetry (#3626)', ()
       transactions: [
         parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'preview-usage-1' }),
       ],
-      account: 'Amex',
     });
     await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -490,7 +477,6 @@ describe('tag-rule usage telemetry — read-only lookups never count as usage', 
       transactions: [
         parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'tag-preview-usage-1' }),
       ],
-      account: 'Amex',
     });
     await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
@@ -559,7 +545,6 @@ describe('imports.applyChangeSetAndReevaluate', () => {
   async function uncertainSession(c: ReturnType<typeof client>, checksum: string) {
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'ACME SUPPLIES 1234', checksum })],
-      account: 'Amex',
     });
     const before = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(before.uncertain).toHaveLength(1);
@@ -640,7 +625,6 @@ describe('imports.reevaluateWithPendingRules', () => {
   async function uncertainSession(c: ReturnType<typeof client>, checksum: string) {
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'ACME SUPPLIES 1234', checksum })],
-      account: 'Amex',
     });
     await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     return sessionId;
@@ -679,7 +663,6 @@ describe('imports.reevaluateWithPendingRules', () => {
 
     const probe = await c.imports.processImport({
       transactions: [parsed({ description: 'ACME SUPPLIES 9999', checksum: 'reeval-probe' })],
-      account: 'Amex',
     });
     const probeResult = await waitForImportCompletion<ProcessImportOutput>(c, probe.sessionId);
     expect(probeResult.uncertain.some((t) => t.checksum === 'reeval-probe')).toBe(true);
@@ -2001,7 +1984,6 @@ describe('imports — AI seam', () => {
     const c = client();
     const { sessionId } = await c.imports.processImport({
       transactions: [parsed({ description: 'COMPLETELY UNSEEN VENDOR', checksum: 'ai-seam-1' })],
-      account: 'Amex',
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
     expect(result.uncertain[0]?.entity.matchType).toBe('none');

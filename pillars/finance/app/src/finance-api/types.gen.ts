@@ -5106,7 +5106,6 @@ export type ImportsProcessImportData = {
    * Body
    */
   body?: {
-    account: string;
     transactions: Array<{
       account: string;
       accountId?: string;
