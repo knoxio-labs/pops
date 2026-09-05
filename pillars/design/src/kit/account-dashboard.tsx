@@ -6,6 +6,7 @@ import { formatBalance } from '@/fixtures/currencies';
 import { importRows } from '@/fixtures/import-review';
 import { DashboardHeader } from '@/kit/account-dashboard-header';
 import { CheckpointInconsistencyBadge } from '@/kit/checkpoint-inconsistency-badge';
+import { ImportFedByLine } from '@/kit/import-fed-by-line';
 import { modulesFor } from '@/kit/insights';
 import { balanceTone } from '@/kit/ledger-tone';
 import { Sparkline } from '@/kit/sparkline';
@@ -103,6 +104,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
               Checkpoints
             </a>
           </p>
+          <ImportFedByLine account={account} />
         </div>
         {history.length > 1 && (
           <div className="space-y-1">
