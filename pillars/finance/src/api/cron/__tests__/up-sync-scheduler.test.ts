@@ -260,8 +260,17 @@ describe('startUpSyncScheduler', () => {
       disabledPollMs: 2,
       readSettings: reads,
     });
-    await new Promise((res) => setTimeout(res, 30));
-    await handle.stop();
-    expect(reads.mock.calls.length).toBeGreaterThanOrEqual(2);
+    try {
+      // Waiting for the second read rather than sleeping a fixed 30ms: the
+      // assertion is about the scheduler re-reading, not about how fast a
+      // loaded box gets round to it. A full-workspace run starves the event
+      // loop enough that only one tick lands in 30ms (POPS-3006).
+      await vi.waitFor(() => expect(reads.mock.calls.length).toBeGreaterThanOrEqual(2), {
+        timeout: 5_000,
+        interval: 5,
+      });
+    } finally {
+      await handle.stop();
+    }
   });
 });
