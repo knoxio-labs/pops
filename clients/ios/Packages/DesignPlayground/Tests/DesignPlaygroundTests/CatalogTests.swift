@@ -9,7 +9,7 @@ import Testing
 /// passes on one nobody has.
 @Suite("Catalog")
 @MainActor
-struct CatalogTests {
+internal struct CatalogTests {
     @Test("Every surface offers at least one state")
     func surfacesHaveStates() {
         for surface in Catalog.surfaces {

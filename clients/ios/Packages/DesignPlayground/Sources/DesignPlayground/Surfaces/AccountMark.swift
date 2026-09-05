@@ -7,7 +7,7 @@ import SwiftUI
 /// It carries the kind, not the institution, because at this size a bank's
 /// logo is a coloured smudge and the kind is the thing that changes how the
 /// number should be read.
-struct AccountMark: View {
+internal struct AccountMark: View {
     let account: Account
     var size: CGFloat = 34
 

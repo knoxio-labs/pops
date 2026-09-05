@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 /// The screens tab: every surface, grouped by area.
-struct SurfaceBrowser: View {
+internal struct SurfaceBrowser: View {
     @State private var staged: DesignSurface?
 
     var body: some View {

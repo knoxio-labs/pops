@@ -8,7 +8,7 @@ import SwiftUI
 /// own `NavigationStack`, and a stack inside the browser's stack means the
 /// inner one wins while the outer one silently does nothing — the same trap
 /// `ContentView` documents in the app itself.
-struct StageView: View {
+internal struct StageView: View {
     let surface: DesignSurface
     @State private var settings: StageSettings
     @State private var inspectorExpanded = false
@@ -25,8 +25,18 @@ struct StageView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            stage
+        stage
+            .background(Color.popsBackground)
+    }
+
+    /// The surface itself. Every override is applied here rather than on the
+    /// whole cover so the inspector keeps the reader's own appearance and text
+    /// size — an inspector rendered at AX5 in dark, because the surface is,
+    /// would be unusable at exactly the sizes it is there to explore.
+    private var stage: some View {
+        ChromeHost(settings: settings, title: surface.title, backdrop: surface.backdrop) {
+            currentState
+        } inspector: {
             InspectorView(
                 surface: surface,
                 settings: $settings,
@@ -38,20 +48,6 @@ struct StageView: View {
             // puts the search field there too) is the drag's job.
             .padding(.bottom, settings.chrome.showsTabBar ? 58 : 0)
         }
-        .background(Color.popsBackground)
-    }
-
-    /// The surface itself. Every override is applied here rather than on the
-    /// whole cover so the inspector keeps the reader's own appearance and text
-    /// size — an inspector rendered at AX5 in dark, because the surface is,
-    /// would be unusable at exactly the sizes it is there to explore.
-    private var stage: some View {
-        ChromeHost(chrome: settings.chrome, title: surface.title) {
-            currentState
-        }
-        .environment(\.colorScheme, settings.appearance.colorScheme)
-        .environment(\.dynamicTypeSize, settings.typeSize)
-        .environment(\.layoutDirection, settings.rightToLeft ? .rightToLeft : .leftToRight)
         // Keyed on everything that changes the tree's shape. `NavigationStack`
         // and `TabView` keep internal state that outlives a swap between them,
         // and a surface that came back with the previous chrome's scroll

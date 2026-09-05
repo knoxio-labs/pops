@@ -1,7 +1,21 @@
 import DesignSystem
 import SwiftUI
 
-/// Draws a surface inside the navigation chrome it is being reviewed in.
+extension View {
+    /// The conditions the surface is being reviewed under.
+    ///
+    /// Applied to the chrome and the surface together — a dark review wants a
+    /// dark navigation bar — and deliberately *not* to the inspector, which
+    /// has to stay readable while it is being used to look at AX5 in dark.
+    func surfaceEnvironment(_ settings: StageSettings) -> some View {
+        environment(\.colorScheme, settings.appearance.colorScheme)
+            .environment(\.dynamicTypeSize, settings.typeSize)
+            .environment(\.layoutDirection, settings.rightToLeft ? .rightToLeft : .leftToRight)
+    }
+}
+
+/// Draws a surface inside the navigation chrome it is being reviewed in, with
+/// the playground's own inspector placed where that chrome allows.
 ///
 /// Every case here is a *real* system container rather than a drawing of one.
 /// That is the whole reason this playground is a native app: a `NavigationStack`
@@ -10,25 +24,43 @@ import SwiftUI
 /// brings detents and a grabber. None of those can be approximated — they are
 /// where the platform's glass comes from, and a review that draws its own
 /// version of them has reviewed a picture.
-struct ChromeHost<Content: View>: View {
-    let chrome: Chrome
+internal struct ChromeHost<Content: View, Inspector: View>: View {
+    let settings: StageSettings
     let title: String
+    /// What the sheet is presented over, when the surface supplies one.
+    let backdrop: (@MainActor () -> AnyView)?
     @ViewBuilder let content: Content
+    /// Placed by the chrome rather than over it. A `.sheet` is a system
+    /// presentation and renders above everything in the presenting view's
+    /// `ZStack`, so an inspector overlaid on the stage is simply unreachable
+    /// behind one — under that chrome it has to go inside the sheet.
+    @ViewBuilder let inspector: Inspector
+
+    private var chrome: Chrome { settings.chrome }
 
     var body: some View {
         switch chrome {
         case .bare:
-            content
+            overlaid { content }
         case .navigation:
-            navigationStack(large: false)
+            overlaid { navigationStack(large: false) }
         case .navigationLarge:
-            navigationStack(large: true)
+            overlaid { navigationStack(large: true) }
         case .tabbed:
-            tabs { content }
+            overlaid { tabs { content } }
         case .navigationAndTabs:
-            tabs { navigationStack(large: true) }
+            overlaid { tabs { navigationStack(large: true) } }
         case .sheet:
             sheetPresentation
+        }
+    }
+
+    /// The ordinary placement: the inspector floats over the whole stage, and
+    /// only what is under it carries the review conditions.
+    private func overlaid<Inner: View>(@ViewBuilder inner: () -> Inner) -> some View {
+        ZStack(alignment: .bottom) {
+            inner().surfaceEnvironment(settings)
+            inspector
         }
     }
 
@@ -61,21 +93,30 @@ struct ChromeHost<Content: View>: View {
     private var sheetPresentation: some View {
         ZStack {
             Color.popsBackground.ignoresSafeArea()
-            VStack(spacing: PopsSpacing.md) {
-                Text("Behind the sheet")
-                    .font(.popsTitle)
-                    .foregroundStyle(Color.popsMutedForeground)
-                ForEach(0..<6, id: \.self) { index in
-                    PopsRow(title: "Row \(index + 1)", subtitle: "Content the sheet covers")
-                        .padding(.horizontal, PopsSpacing.lg)
+            if let backdrop {
+                backdrop()
+            } else {
+                VStack(spacing: PopsSpacing.md) {
+                    Text("Behind the sheet")
+                        .font(.popsTitle)
+                        .foregroundStyle(Color.popsMutedForeground)
+                    ForEach(0..<6, id: \.self) { index in
+                        PopsRow(title: "Row \(index + 1)", subtitle: "Content the sheet covers")
+                            .padding(.horizontal, PopsSpacing.lg)
+                    }
                 }
             }
         }
+        .surfaceEnvironment(settings)
         .sheet(isPresented: .constant(true)) {
-            NavigationStack {
-                content
-                    .navigationTitle(title)
-                    .playgroundTitleDisplay(large: false)
+            ZStack(alignment: .bottom) {
+                NavigationStack {
+                    content
+                        .navigationTitle(title)
+                        .playgroundTitleDisplay(large: false)
+                }
+                .surfaceEnvironment(settings)
+                inspector
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)

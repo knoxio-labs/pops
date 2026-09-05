@@ -10,7 +10,7 @@ import SwiftUI
 /// material and not a token — the argument is the part worth carrying, because
 /// it is what stops the next person from "fixing" it.
 @MainActor
-enum ComponentCatalog {
+internal enum ComponentCatalog {
     static let all: [DesignComponent] = [
         button, card, row, actionBar, textField, statusHeader, divider, states,
     ]
@@ -19,7 +19,8 @@ enum ComponentCatalog {
         id: "pops-button",
         name: "PopsButton",
         synopsis:
-            "Two weights. Outline is the default — the weight a screen can carry several of without any claiming to be the one to press. Filled is for the one action a screen exists to offer, at most one per screen.",
+            "Two weights. Outline is the default — the weight a screen can carry several of without any claiming to "
+            + "be the one to press. Filled is for the one action a screen exists to offer, at most one per screen.",
         states: [
             DesignState("prominent", "Prominent") {
                 PopsButton("Photograph a receipt", prominence: .prominent) {}
@@ -40,7 +41,8 @@ enum ComponentCatalog {
         id: "pops-card",
         name: "PopsCard",
         synopsis:
-            "A raised container that owns its surface, padding and radius so no screen picks its own, and stretches to the available width so a column of cards lines up.",
+            "A raised container that owns its surface, padding and radius so no screen picks its own, and stretches "
+            + "to the available width so a column of cards lines up.",
         states: [
             DesignState.standard {
                 PopsCard {
@@ -66,7 +68,8 @@ enum ComponentCatalog {
         id: "pops-row",
         name: "PopsRow",
         synopsis:
-            "A headline, an optional supporting line, optional trailing content. Draws no background of its own so it composes inside a card, a List, or straight onto the background.",
+            "A headline, an optional supporting line, optional trailing content. Draws no background of its own so "
+            + "it composes inside a card, a List, or straight onto the background.",
         states: [
             DesignState.standard {
                 VStack(spacing: PopsSpacing.zero) {
@@ -98,7 +101,9 @@ enum ComponentCatalog {
         id: "pops-action-bar",
         name: "PopsActionBar",
         synopsis:
-            "The actions a screen ends in, attached with .safeAreaInset so content scrolls under it. Its background is a system material rather than a token, deliberately: a material is what makes content visibly pass behind the bar, which a flat fill cannot do.",
+            "The actions a screen ends in, attached with .safeAreaInset so content scrolls under it. Its background "
+            + "is a system material rather than a token, deliberately: a material is what makes content visibly pass "
+            + "behind the bar, which a flat fill cannot do.",
         states: [
             DesignState.standard {
                 ScrollView {
@@ -122,7 +127,9 @@ enum ComponentCatalog {
         id: "pops-text-field",
         name: "PopsTextField",
         synopsis:
-            "A labelled field with an optional note under it. A hint says the value may want attention; a problem says it is not usable as it stands, and the two borrow their colours from PopsStatusHeader so a field and a banner agree.",
+            "A labelled field with an optional note under it. A hint says the value may want attention; a problem "
+            + "says it is not usable as it stands, and the two borrow their colours from PopsStatusHeader so a field "
+            + "and a banner agree.",
         states: [
             DesignState.standard { FieldSample(note: nil) },
             DesignState("hint", "With a hint") {
@@ -138,7 +145,8 @@ enum ComponentCatalog {
         id: "pops-status-header",
         name: "PopsStatusHeader",
         synopsis:
-            "The banner at the top of a screen that reports what happened. Four tones: it worked, it needs a person, it failed, or it is a fact the reader did not cause.",
+            "The banner at the top of a screen that reports what happened. Four tones: it worked, it needs a "
+            + "person, it failed, or it is a fact the reader did not cause.",
         states: PopsStatusHeader.Tone.allCases.map { tone in
             DesignState(String(describing: tone), String(describing: tone).capitalized) {
                 PopsStatusHeader(
@@ -171,7 +179,8 @@ enum ComponentCatalog {
         id: "state-views",
         name: "State views",
         synopsis:
-            "The three whole-screen states, which share a body so they cannot drift apart. The error's retry is not decoration: without a way to ask again, recovering means force-quitting.",
+            "The three whole-screen states, which share a body so they cannot drift apart. The error's retry is not "
+            + "decoration: without a way to ask again, recovering means force-quitting.",
         states: [
             DesignState("loading", "Loading") {
                 LoadingStateView(message: "Loading transactions…")

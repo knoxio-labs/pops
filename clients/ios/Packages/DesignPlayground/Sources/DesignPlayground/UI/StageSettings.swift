@@ -8,7 +8,7 @@ import SwiftUI
 /// surface gives you the conditions its author chose, not the ones you last
 /// happened to leave on, which is what stops a review from silently being
 /// about the wrong appearance.
-struct StageSettings {
+internal struct StageSettings {
     var stateID: String
     var chrome: Chrome
     var appearance: Appearance = .light

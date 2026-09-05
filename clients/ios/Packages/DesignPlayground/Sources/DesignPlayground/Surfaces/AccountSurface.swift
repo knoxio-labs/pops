@@ -10,7 +10,7 @@ import SwiftUI
 /// it reads as the screen's single verb instead of one of a pair — and here it
 /// is drawn in the real material rather than the CSS approximation the web
 /// playground had to invent for it.
-struct AccountSurface: View {
+internal struct AccountSurface: View {
     let account: Account
     /// Whether the ledger disagrees with the most recent checkpoint. A fixture
     /// flag rather than a computation: what this screen is designed against is

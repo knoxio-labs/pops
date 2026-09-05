@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The components tab: every DesignSystem primitive, and every shape it comes
 /// in.
-struct ComponentBrowser: View {
+internal struct ComponentBrowser: View {
     @State private var staged: DesignSurface?
 
     var body: some View {

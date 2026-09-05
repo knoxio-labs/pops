@@ -26,7 +26,7 @@ import SwiftUI
 /// mistake. The playground works with the phone in flight mode, on a plane,
 /// or considerably further away.
 @MainActor
-enum Catalog {
+internal enum Catalog {
     static let surfaces: [DesignSurface] = [
         DesignSurface(
             id: SurfaceID(area: "accounts", slug: "list"),
@@ -83,6 +83,48 @@ enum Catalog {
             ]
         ),
         DesignSurface(
+            id: SurfaceID(area: "accounts", slug: "picker"),
+            title: "Account picker",
+            synopsis:
+                "Choosing the account a transaction is filed against, over the transaction itself.",
+            chrome: .sheet,
+            states: [
+                DesignState.standard {
+                    AccountPickerSurface(
+                        accounts: Fixtures.activeAccounts, selected: Fixtures.amex.id)
+                },
+                DesignState("searching", "Searching") {
+                    AccountPickerSurface(
+                        accounts: Fixtures.activeAccounts, selected: Fixtures.amex.id,
+                        focusSearch: true)
+                },
+                DesignState("archived", "Archived revealed") {
+                    AccountPickerSurface(accounts: Fixtures.allAccounts, selected: Fixtures.amex.id)
+                },
+            ],
+            backdrop: { NewTransactionBackdrop() }
+        ),
+        DesignSurface(
+            id: SurfaceID(area: "receipts", slug: "receipt"),
+            title: "Receipt",
+            synopsis: "What was read off a photographed receipt, and what can be done with it.",
+            chrome: .navigation,
+            states: [
+                DesignState.standard { ReceiptSurface() },
+                DesignState("loading", "Reading") {
+                    LoadingStateView(message: "Reading the receipt\u{2026}")
+                },
+                DesignState("empty", "Nothing read") {
+                    EmptyStateView(message: "No lines were read from this receipt.")
+                },
+                DesignState("error", "Unreadable") {
+                    ErrorStateView(
+                        message: "The receipt could not be read.", retryTitle: "Try again"
+                    ) {}
+                },
+            ]
+        ),
+        DesignSurface(
             id: SurfaceID(area: "shell", slug: "states"),
             title: "Whole-screen states",
             synopsis: "What a screen shows when it has nothing, is waiting, or failed.",
@@ -102,91 +144,7 @@ enum Catalog {
         ),
     ]
 
-    static let experiments: [DesignExperiment] = [
-        DesignExperiment(
-            id: "accounts-list-shape",
-            question: "Does the accounts list read better as rows or as a card grid?",
-            subject: SurfaceID(area: "accounts", slug: "list"),
-            variants: [
-                DesignVariant(
-                    id: "rows",
-                    title: "Rows",
-                    note:
-                        "A system List. Keeps the subtitle, gets search and swipe actions for free.",
-                    surface: DesignSurface(
-                        id: SurfaceID(area: "accounts", slug: "list"),
-                        title: "Accounts",
-                        chrome: .navigationAndTabs,
-                        states: [
-                            DesignState.standard {
-                                AccountsListSurface(accounts: Fixtures.allAccounts)
-                            }
-                        ]
-                    )
-                ),
-                DesignVariant(
-                    id: "grid",
-                    title: "Card grid",
-                    note: "Two tiles per row. Scans faster; loses who the account is with.",
-                    surface: DesignSurface(
-                        id: SurfaceID(area: "accounts", slug: "list"),
-                        title: "Accounts",
-                        chrome: .navigationAndTabs,
-                        states: [
-                            DesignState.standard {
-                                AccountsGridSurface(accounts: Fixtures.allAccounts)
-                            }
-                        ]
-                    )
-                ),
-            ]
-        ),
-        DesignExperiment(
-            id: "account-mark-identity",
-            question:
-                "Does an account read faster led by its kind, or by the institution it is held at?",
-            subject: SurfaceID(area: "accounts", slug: "list"),
-            status: .decided(
-                variant: "institution",
-                rationale:
-                    "Institution-led, decided on the web 2026-09-03. The phone has not adopted it — `AccountMark` still leads with the kind glyph, which is what the Kind-led variant here is."
-            ),
-            variants: [
-                DesignVariant(
-                    id: "kind",
-                    title: "Kind-led",
-                    note:
-                        "A glyph for the kind, tinted by whether the balance is an asset or a liability. What iOS draws today.",
-                    surface: DesignSurface(
-                        id: SurfaceID(area: "accounts", slug: "list"),
-                        title: "Accounts",
-                        chrome: .navigation,
-                        states: [
-                            DesignState.standard {
-                                List(Fixtures.activeAccounts) { AccountListRow(account: $0) }
-                            }
-                        ]
-                    )
-                ),
-                DesignVariant(
-                    id: "institution",
-                    title: "Institution-led",
-                    note:
-                        "Initials on the institution's own tint, kind demoted to the subtitle. The variant the web chose.",
-                    surface: DesignSurface(
-                        id: SurfaceID(area: "accounts", slug: "list"),
-                        title: "Accounts",
-                        chrome: .navigation,
-                        states: [
-                            DesignState.standard {
-                                List(Fixtures.activeAccounts) { InstitutionLedRow(account: $0) }
-                            }
-                        ]
-                    )
-                ),
-            ]
-        ),
-    ]
+    static let experiments: [DesignExperiment] = ExperimentCatalog.all
 
     static let components: [DesignComponent] = ComponentCatalog.all
 

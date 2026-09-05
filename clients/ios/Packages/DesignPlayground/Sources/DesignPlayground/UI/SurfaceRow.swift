@@ -7,7 +7,7 @@ import SwiftUI
 /// half of what a surface *is* here — two surfaces with the same content and
 /// different chrome are two different designs, and a browser that hid that
 /// would make them look like duplicates.
-struct SurfaceRow: View {
+internal struct SurfaceRow: View {
     let surface: DesignSurface
 
     var body: some View {

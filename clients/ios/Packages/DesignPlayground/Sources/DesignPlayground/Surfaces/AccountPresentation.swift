@@ -14,7 +14,7 @@ import SwiftUI
 /// Presentation only. There is no lookup, no fetch and no rule here that
 /// decides anything about an account; every function below turns a value the
 /// caller already has into words.
-enum AccountPresentation {
+internal enum AccountPresentation {
     /// Ledger-signed, always: positive is money you can use, negative is money
     /// you owe, and the tone follows the sign directly rather than the kind.
     enum Tone {
@@ -96,7 +96,7 @@ enum AccountPresentation {
     /// than in the contract.
     static func label(for kind: AccountKind) -> String {
         switch kind {
-        case .checking: "Everyday"
+        case .checking: "Checking"
         case .savings: "Savings"
         case .creditCard: "Credit card"
         case .cash: "Cash"
@@ -106,7 +106,7 @@ enum AccountPresentation {
         case .loan: "Loan"
         case .novatedLease: "Novated lease"
         case .crypto: "Crypto"
-        default: "Account"
+        default: "Other"
         }
     }
 

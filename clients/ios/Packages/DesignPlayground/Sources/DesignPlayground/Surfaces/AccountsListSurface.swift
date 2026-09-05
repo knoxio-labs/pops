@@ -12,7 +12,7 @@ import SwiftUI
 /// collapses it. That difference is the entire argument for this app — the
 /// two controls that were the most code in the facsimile are the two that are
 /// now free, and they are also the two that carry the platform's glass.
-struct AccountsListSurface: View {
+internal struct AccountsListSurface: View {
     let accounts: [Account]
     @State private var searchText = ""
     @State private var showArchived = false
@@ -80,7 +80,7 @@ struct AccountsListSurface: View {
 /// The name truncates and the balance does not, which is the trade this width
 /// forces — an account with no room for its name is still identified by its
 /// mark, and a balance cut in half identifies nothing.
-struct AccountListRow: View {
+internal struct AccountListRow: View {
     let account: Account
 
     var body: some View {

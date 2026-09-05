@@ -7,7 +7,7 @@ import SwiftUI
 /// glass rather than a filled panel, for one reason — the surface has to keep
 /// the whole device. A review of a screen at 393pt conducted in 393 minus a
 /// control strip is a review of a screen that does not exist.
-struct InspectorView: View {
+internal struct InspectorView: View {
     let surface: DesignSurface
     @Binding var settings: StageSettings
     @Binding var expanded: Bool
@@ -109,22 +109,22 @@ struct InspectorView: View {
     private var panel: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if surface.states.count > 1 {
-                chipRow(title: "State", items: surface.states.map { ($0.id, $0.title, nil) }) {
-                    id in
-                    settings.stateID = id
-                } isOn: {
-                    $0 == settings.stateID
-                }
+                chipRow(
+                    title: "State",
+                    items: surface.states.map { Chip(id: $0.id, title: $0.title) },
+                    isOn: { $0 == settings.stateID },
+                    select: { settings.stateID = $0 }
+                )
             }
 
             chipRow(
                 title: "Chrome",
-                items: Chrome.allCases.map { ($0.rawValue, $0.title, $0.symbol) }
-            ) { id in
-                if let chrome = Chrome(rawValue: id) { settings.chrome = chrome }
-            } isOn: {
-                $0 == settings.chrome.rawValue
-            }
+                items: Chrome.allCases.map {
+                    Chip(id: $0.rawValue, title: $0.title, symbol: $0.symbol)
+                },
+                isOn: { $0 == settings.chrome.rawValue },
+                select: { if let chrome = Chrome(rawValue: $0) { settings.chrome = chrome } }
+            )
 
             appearanceAndDirection
             typeSizeSlider
@@ -198,15 +198,15 @@ struct InspectorView: View {
 
     private func chipRow(
         title: String,
-        items: [(id: String, title: String, symbol: String?)],
-        select: @escaping (String) -> Void,
-        isOn: @escaping (String) -> Bool
+        items: [Chip],
+        isOn: @escaping (String) -> Bool,
+        select: @escaping (String) -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             label(title)
             ScrollView(.horizontal) {
                 HStack(spacing: PopsSpacing.sm) {
-                    ForEach(items, id: \.id) { item in
+                    ForEach(items) { item in
                         chip(item.title, symbol: item.symbol, isOn: isOn(item.id)) {
                             select(item.id)
                         }
@@ -237,4 +237,13 @@ struct InspectorView: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+/// One switchable option in the inspector. A named type rather than a tuple:
+/// three members is past where a tuple stops explaining itself, and these are
+/// built at two call sites that would otherwise have to agree by position.
+internal struct Chip: Identifiable {
+    internal let id: String
+    internal let title: String
+    internal var symbol: String?
 }

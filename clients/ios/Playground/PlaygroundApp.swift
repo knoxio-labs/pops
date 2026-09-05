@@ -14,7 +14,7 @@ import SwiftUI
 /// networking call would need `BFMClient`, and adding it to
 /// `DesignPlayground/Package.swift` is a change a reviewer would see.
 @main
-struct PopsPlaygroundApp: App {
+internal struct PopsPlaygroundApp: App {
     var body: some Scene {
         WindowGroup {
             PlaygroundRootView()

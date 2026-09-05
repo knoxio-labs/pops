@@ -147,3 +147,30 @@ extension Fixtures {
     /// two records and not a property of one.
     public static let disagreeingCheckpoints: Set<String> = [amex.id]
 }
+
+extension Fixtures {
+    /// One receipt, as read off a photograph. Display strings rather than a
+    /// domain type: the playground has no `ExtractedReceipt`, it has the words
+    /// a screen draws.
+    public struct Receipt: Sendable {
+        public let merchant: String
+        public let when: String
+        public let total: String
+        public let lines: [RecentLine]
+    }
+
+    /// A foreign-currency receipt on purpose — the amount column has to cope
+    /// with a symbol that is not the account's.
+    public static let receipt = Receipt(
+        merchant: "Continente",
+        when: "2 September · 14:08",
+        total: "€19.68",
+        lines: [
+            RecentLine(title: "Oat milk, 1L", when: "2 × €1.79", amount: "€3.58", isCredit: false),
+            RecentLine(title: "Sourdough", when: "Bakery", amount: "€4.20", isCredit: false),
+            RecentLine(
+                title: "Coffee beans, 500g", when: "Ground in store", amount: "€11.90",
+                isCredit: false),
+        ]
+    )
+}

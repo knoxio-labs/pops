@@ -9,7 +9,7 @@ import SwiftUI
 /// at 393pt there is width for two. What it costs is the subtitle: who the
 /// account is with does not fit beside everything else, so a grid identifies
 /// by mark and name alone.
-struct AccountsGridSurface: View {
+internal struct AccountsGridSurface: View {
     let accounts: [Account]
 
     private let columns = [

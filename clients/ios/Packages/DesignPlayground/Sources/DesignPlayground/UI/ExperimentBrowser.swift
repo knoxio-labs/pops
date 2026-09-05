@@ -7,7 +7,7 @@ import SwiftUI
 /// What was chosen, and why, is the part worth keeping — a design decision
 /// with no record of the alternative is one that gets relitigated every time
 /// somebody new looks at the screen.
-struct ExperimentBrowser: View {
+internal struct ExperimentBrowser: View {
     @State private var staged: DesignSurface?
 
     var body: some View {

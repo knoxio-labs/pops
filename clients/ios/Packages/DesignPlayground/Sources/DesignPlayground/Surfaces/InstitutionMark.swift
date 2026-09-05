@@ -8,7 +8,7 @@ import SwiftUI
 /// The answer `account-chip-identity` chose on the web (2026-09-03) — "the
 /// logo where one exists, initials on the brand colour where it does not".
 /// There are no logos in this app, so this is the initials half of it.
-struct InstitutionMark: View {
+internal struct InstitutionMark: View {
     let account: Account
     var size: CGFloat = 34
 
@@ -47,7 +47,7 @@ struct InstitutionMark: View {
 /// it. Everything else about the row is `AccountListRow`'s — the difference
 /// between the two variants has to be the mark and nothing else, or the
 /// comparison is about two changes at once.
-struct InstitutionLedRow: View {
+internal struct InstitutionLedRow: View {
     let account: Account
 
     var body: some View {
