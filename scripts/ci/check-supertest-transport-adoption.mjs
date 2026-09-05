@@ -43,9 +43,13 @@
  *     pillar must still DECLARE supertest. A pillar that dropped the dependency
  *     is reported rather than silently ban-free.
  *
- * The specifier set is derived from each pillar's `package.json` rather than
+ * The specifier set is derived from each pillar's manifests rather than
  * hardcoded, so a dependency alias (`"http-probe": "npm:supertest"`) is banned
- * under its alias too instead of walking straight past a specifier ban.
+ * under its alias too instead of walking straight past a specifier ban. All of
+ * them, plural: nine pillars carry a second manifest at
+ * `pillars/<id>/app/package.json`, and the source walk covers that tree, so an
+ * alias declared there has to be read or the ban has a hole exactly the width
+ * of the app directory (POPS-2788).
  *
  * Reads TS/JS source and JSON, pulls in no third-party dependency at any depth
  * (Tier A, ADR-045).
@@ -189,43 +193,96 @@ export function walkSourceFiles(root) {
 }
 
 /**
+ * Every `package.json` inside a pillar, nearest first.
+ *
+ * A pillar is not one workspace package: nine of them carry a second manifest
+ * at `pillars/<id>/app/package.json`, and the source walk below covers that
+ * tree too. Deriving the banned specifiers from the root manifest alone would
+ * scan a file for an alias declared in a manifest this guard never opened
+ * (POPS-2788). The same `SKIP_DIRECTORIES` apply, so no vendored manifest
+ * under `node_modules` is ever read.
+ *
+ * @param {string} pillarRoot Absolute path to `pillars/<id>`.
+ * @returns {string[]} Absolute paths, shallowest first.
+ */
+export function pillarManifests(pillarRoot) {
+  /** @type {string[]} */
+  const found = [];
+  /** @type {string[]} */
+  const queue = [pillarRoot];
+  while (queue.length > 0) {
+    const dir = /** @type {string} */ (queue.shift());
+    /** @type {import('node:fs').Dirent[]} */
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      // A directory that cannot be read is reported by `walkSourceFiles`,
+      // which walks the same tree — reporting it twice adds no information.
+      continue;
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRECTORIES.has(entry.name)) queue.push(full);
+      } else if (entry.isFile() && entry.name === 'package.json') {
+        found.push(full);
+      }
+    }
+  }
+  return found;
+}
+
+/**
  * The specifiers a pillar may not name: the package itself plus any dependency
- * aliased onto it. Subpaths of each are banned by the caller.
+ * aliased onto it, in ANY of the pillar's manifests. Subpaths of each are
+ * banned by the caller.
  *
  * @param {string} pillarRoot Absolute path to `pillars/<id>`.
  * @returns {{ specifiers: Set<string>, declared: boolean, error: string | null }}
  */
 export function bannedSpecifiers(pillarRoot) {
-  const manifestPath = join(pillarRoot, 'package.json');
-  /** @type {unknown} */
-  let manifest;
-  try {
-    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  } catch (err) {
+  const manifestPaths = pillarManifests(pillarRoot);
+  const rootManifest = join(pillarRoot, 'package.json');
+  if (!manifestPaths.includes(rootManifest)) {
     return {
       specifiers: new Set([BANNED_PACKAGE]),
       declared: false,
-      error: `${toPosix(relative(repoRoot, manifestPath))} could not be read or parsed: ${
-        /** @type {Error} */ (err).message
-      }`,
+      error: `${toPosix(relative(repoRoot, rootManifest))} is missing, so this pillar's banned specifiers cannot be derived.`,
     };
   }
 
   const specifiers = new Set([BANNED_PACKAGE]);
   let declared = false;
-  const record = /** @type {Record<string, unknown>} */ (manifest ?? {});
-  for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) {
-    const deps = record[field];
-    if (typeof deps !== 'object' || deps === null) continue;
-    for (const [name, spec] of Object.entries(deps)) {
-      if (name === BANNED_PACKAGE) {
-        declared = true;
-        continue;
-      }
-      if (typeof spec !== 'string') continue;
-      if (spec === `npm:${BANNED_PACKAGE}` || spec.startsWith(`npm:${BANNED_PACKAGE}@`)) {
-        specifiers.add(name);
-        declared = true;
+  for (const manifestPath of manifestPaths) {
+    /** @type {unknown} */
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    } catch (err) {
+      return {
+        specifiers: new Set([BANNED_PACKAGE]),
+        declared: false,
+        error: `${toPosix(relative(repoRoot, manifestPath))} could not be read or parsed: ${
+          /** @type {Error} */ (err).message
+        }`,
+      };
+    }
+
+    const record = /** @type {Record<string, unknown>} */ (manifest ?? {});
+    for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+      const deps = record[field];
+      if (typeof deps !== 'object' || deps === null) continue;
+      for (const [name, spec] of Object.entries(deps)) {
+        if (name === BANNED_PACKAGE) {
+          declared = true;
+          continue;
+        }
+        if (typeof spec !== 'string') continue;
+        if (spec === `npm:${BANNED_PACKAGE}` || spec.startsWith(`npm:${BANNED_PACKAGE}@`)) {
+          specifiers.add(name);
+          declared = true;
+        }
       }
     }
   }
@@ -280,7 +337,7 @@ export function collectViolations(root) {
     if (error !== null) violations.push(error);
     else if (!declared) {
       violations.push(
-        `${pillar.id} no longer declares \`${BANNED_PACKAGE}\` in pillars/${pillar.id}/package.json. ` +
+        `${pillar.id} no longer declares \`${BANNED_PACKAGE}\` in any manifest under pillars/${pillar.id}. ` +
           'This guard bans a package the pillar cannot resolve, which is a ban over nothing. ' +
           'Either restore the dependency or retire this pillar from PILLARS in this guard.'
       );
@@ -519,6 +576,30 @@ function selfTestCases() {
           aliasName: 'http-probe',
         });
         writeFile(root, victim, `import request from 'http-probe';\nrequest(1);\n`);
+      },
+      expect: caught,
+    },
+    {
+      name: 'a dependency aliased in the pillar’s SECOND manifest, imported from app source',
+      // POPS-2788: the source walk covers `pillars/<id>/app`, so the alias
+      // list has to be derived from the manifest that lives there too. Reading
+      // only the root manifest walked straight past this import.
+      arrange: (root) => {
+        writeCleanFixture(root);
+        const id = /** @type {PillarSpec} */ (PILLARS[2]).id;
+        writeFile(
+          root,
+          `pillars/${id}/app/package.json`,
+          JSON.stringify({
+            name: `@pops/app-${id}`,
+            devDependencies: { 'http-probe': 'npm:supertest' },
+          })
+        );
+        writeFile(
+          root,
+          `pillars/${id}/app/src/planted.test.ts`,
+          `import request from 'http-probe';\nrequest(1);\n`
+        );
       },
       expect: caught,
     },

@@ -14,7 +14,12 @@
  *   - `mise.ci.toml`        `[tools] node`      — what `MISE_ENV=ci` uses
  *   - `package.json`        `engines.node`      — what pnpm refuses to run under
  *   - the workflows         `node-version:`     — what CI actually runs
- *   - each pillar Dockerfile `FROM node:<major>` — what the images ship
+ *   - every pillar image  `FROM node:<major>` — what the images ship
+ *
+ * "Every pillar image" is literal: a pillar may ship more than one, and
+ * `pillars/design` does (`Dockerfile` and `Dockerfile.api`). See
+ * `isDockerfileName` below — this guard read only the first of them until
+ * POPS-2788.
  *
  * When they drift, "green locally" and "green in CI" stop being the same claim,
  * and the failure is a silent behavioural difference rather than an error.
@@ -60,7 +65,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseTomlSection } from './check-mise-tool-overrides.mjs';
@@ -99,7 +104,30 @@ export function nodeMajor(expression) {
  */
 
 /**
+ * True for a file name this collector treats as a pillar image definition:
+ * `Dockerfile` and any `Dockerfile.<suffix>` beside it.
+ *
+ * A pillar is NOT one image. `pillars/design` ships two — a static nginx one
+ * for the playground and `Dockerfile.api` for its comment API — and
+ * `docker-build.yml` builds both by discovering `-name Dockerfile -o -name
+ * 'Dockerfile.*'`. This predicate is that same discovery, so an image the
+ * fleet ships cannot be one this guard never opened.
+ *
+ * @param {string} name
+ * @returns {boolean}
+ */
+export function isDockerfileName(name) {
+  return name === 'Dockerfile' || name.startsWith('Dockerfile.');
+}
+
+/**
  * Collect every `FROM node:<tag>` base image across the repo's Dockerfiles.
+ *
+ * Every image in a pillar directory is read, not just the one named
+ * `Dockerfile`. Reading one of two is worse than reading neither: the pin it
+ * does see satisfies the "some Dockerfile declares a pin" floor below, so the
+ * unread one is absent from the disagreement check while the guard reports
+ * clean — a second image is free to drift off the fleet's major forever.
  *
  * @param {string} root
  * @returns {PinSite[]}
@@ -111,15 +139,21 @@ export function collectDockerfilePins(root) {
   if (!existsSync(pillarsDir)) return pins;
   for (const entry of readdirSync(pillarsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const dockerfile = join(pillarsDir, entry.name, 'Dockerfile');
-    if (!existsSync(dockerfile)) continue;
-    const source = readFileSync(dockerfile, 'utf8');
-    for (const match of source.matchAll(/^FROM\s+node:(\S+)/gmu)) {
-      pins.push({
-        source: relative(root, dockerfile),
-        expression: match[1],
-        major: nodeMajor(match[1]),
-      });
+    const pillarDir = join(pillarsDir, entry.name);
+    const names = readdirSync(pillarDir, { withFileTypes: true })
+      .filter((file) => !file.isDirectory() && isDockerfileName(file.name))
+      .map((file) => file.name)
+      .toSorted((a, b) => a.localeCompare(b));
+    for (const name of names) {
+      const dockerfile = join(pillarDir, name);
+      const source = readFileSync(dockerfile, 'utf8');
+      for (const match of source.matchAll(/^FROM\s+node:(\S+)/gmu)) {
+        pins.push({
+          source: relative(root, dockerfile),
+          expression: match[1],
+          major: nodeMajor(match[1]),
+        });
+      }
     }
   }
   return pins;
@@ -405,7 +439,10 @@ export function checkNodePin(root) {
         'workflows are outside the coherence check rather than agreeing with it.'
     );
   }
-  if (!pins.some((pin) => pin.source.endsWith('Dockerfile'))) {
+  // `endsWith('Dockerfile')` would be satisfied by `Dockerfile` alone and blind
+  // to a pillar that ships only a suffixed image — the same one-image
+  // assumption the collector above no longer makes.
+  if (!pins.some((pin) => isDockerfileName(basename(pin.source)))) {
     violations.push(
       'No pillar Dockerfile declares a `FROM node:<tag>` base image. Either pillars/ moved, ' +
         'or the images now derive their Node another way — either way the shipped runtime is ' +
@@ -481,6 +518,13 @@ function selfTest() {
       'true',
     // A tree the collectors cannot see must fail, not agree with itself.
     emptyTreeIsReported(),
+    // A pillar's SECOND image drifting off the fleet's major must be reported.
+    // The first image agrees with everything, so this is the shape that used
+    // to pass: the guard opened one file and never learned the other existed.
+    secondImageDriftIsReported(),
+    // And a pillar that ships only a suffixed image must still satisfy the
+    // "some image declares a pin" floor rather than reading as an empty tree.
+    suffixedOnlyImageSatisfiesTheFloor(),
     // Nor may an unreadable declaration site quietly agree with the others.
     unparseableWorkflowIsReported(),
     // A `[settings]` table that is present but is not a table is a failure only
@@ -631,6 +675,54 @@ function unparseableWorkflowIsReported() {
     );
     const { problems } = collectWorkflowPins(dir);
     return problems.some((p) => p.includes('could not be parsed'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A pillar shipping two images, the second on a different major.
+ *
+ * @param {string} dir
+ * @param {string} first
+ * @param {string} second
+ */
+function writeTwoImagePillar(dir, first, second) {
+  writeCoherentFixture(
+    dir,
+    'jobs:\n  a:\n    steps:\n      - with:\n          node-version: "24"\n'
+  );
+  const pillar = join(dir, 'pillars', 'design');
+  mkdirSync(pillar, { recursive: true });
+  writeFileSync(join(pillar, 'Dockerfile'), first, 'utf8');
+  writeFileSync(join(pillar, 'Dockerfile.api'), second, 'utf8');
+}
+
+/** @returns {boolean} */
+function secondImageDriftIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-second-image-'));
+  try {
+    writeTwoImagePillar(dir, 'FROM node:24-alpine\n', 'FROM node:22-slim\n');
+    const { violations } = checkNodePin(dir);
+    return violations.some((v) => v.includes('disagree') && v.includes('Dockerfile.api'));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** @returns {boolean} */
+function suffixedOnlyImageSatisfiesTheFloor() {
+  const dir = mkdtempSync(join(tmpdir(), 'node-pin-suffixed-only-'));
+  try {
+    writeCoherentFixture(
+      dir,
+      'jobs:\n  a:\n    steps:\n      - with:\n          node-version: "24"\n'
+    );
+    const pillar = join(dir, 'pillars', 'design');
+    mkdirSync(pillar, { recursive: true });
+    writeFileSync(join(pillar, 'Dockerfile.api'), 'FROM node:24-slim\n', 'utf8');
+    const { violations } = checkNodePin(dir);
+    return !violations.some((v) => v.includes('declares a `FROM node:'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
