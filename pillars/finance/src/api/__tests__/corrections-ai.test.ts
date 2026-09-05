@@ -288,7 +288,7 @@ describe('corrections.proposeChangeSet', () => {
 
   it('adapts the signal from prior rejection feedback (AI interpret) and flags the follow-up', async () => {
     feedbackMap.set(
-      feedbackKey({ matchType: 'contains', normalizedPattern: 'WOOLWORTHS' }),
+      feedbackKey({ matchType: 'contains', descriptionPattern: 'WOOLWORTHS' }),
       JSON.stringify({
         createdAt: '2026-01-01T00:00:00.000Z',
         userEmail: 'u',
@@ -328,9 +328,39 @@ describe('corrections.proposeChangeSet', () => {
     expect(addOp?.op).toBe('add');
   });
 
+  it("does not replay one regex rule's rejection against another (POPS-3002)", async () => {
+    feedbackMap.set(
+      feedbackKey({ matchType: 'regex', descriptionPattern: 'WOOLWORTHS \\d{4}' }),
+      JSON.stringify({
+        createdAt: '2026-01-01T00:00:00.000Z',
+        userEmail: 'u',
+        feedback: 'too broad — use exact',
+        changeSet: {
+          ops: [
+            { op: 'add', data: { descriptionPattern: 'WOOLWORTHS \\d{4}', matchType: 'regex' } },
+          ],
+        },
+        impactSummary: null,
+      })
+    );
+    __setClaudeCompleterForTests(completerReturning({}));
+
+    const res = await client().corrections.proposeChangeSet({
+      signal: {
+        descriptionPattern: 'WOOLWORTHS \\d{2}',
+        matchType: 'regex',
+        entityName: 'Woolworths',
+        transactionType: 'purchase',
+        tags: ['groceries'],
+      },
+    });
+
+    expect(res.rationale).not.toContain('Follow-up after rejection feedback');
+  });
+
   it('tolerates prose the model appended around the adapted-signal JSON (CF018/#3624)', async () => {
     feedbackMap.set(
-      feedbackKey({ matchType: 'contains', normalizedPattern: 'WOOLWORTHS' }),
+      feedbackKey({ matchType: 'contains', descriptionPattern: 'WOOLWORTHS' }),
       JSON.stringify({
         createdAt: '2026-01-01T00:00:00.000Z',
         userEmail: 'u',
@@ -426,7 +456,7 @@ describe('corrections.rejectChangeSet', () => {
     });
     expect(res.message).toBe('ChangeSet rejected');
     const stored = feedbackMap.get(
-      feedbackKey({ matchType: 'contains', normalizedPattern: 'WOOLWORTHS' })
+      feedbackKey({ matchType: 'contains', descriptionPattern: 'WOOLWORTHS' })
     );
     expect(stored).toBeDefined();
     expect(JSON.parse(stored ?? '{}')).toMatchObject({ feedback: 'too broad' });
@@ -460,9 +490,35 @@ describe('corrections.rejectChangeSet', () => {
       },
       feedback: 'too broad',
     });
-    const key = feedbackKey({ matchType: 'contains', normalizedPattern: 'WOOLWORTHS' });
+    const key = feedbackKey({ matchType: 'contains', descriptionPattern: 'WOOLWORTHS' });
     const stored = getBulk(financeDb.db, [key])[key];
     expect(stored).toBeDefined();
     expect(JSON.parse(stored ?? '{}')).toMatchObject({ feedback: 'too broad' });
+  });
+});
+
+describe('feedbackKey — regex patterns keep their identity (POPS-3002)', () => {
+  it('gives two regexes differing only in a quantifier distinct keys', () => {
+    const four = feedbackKey({ matchType: 'regex', descriptionPattern: 'WOOLWORTHS \\d{4}' });
+    const two = feedbackKey({ matchType: 'regex', descriptionPattern: 'WOOLWORTHS \\d{2}' });
+    expect(four).not.toBe(two);
+  });
+
+  it('gives \\d and \\D distinct keys', () => {
+    expect(feedbackKey({ matchType: 'regex', descriptionPattern: '\\d{4}' })).not.toBe(
+      feedbackKey({ matchType: 'regex', descriptionPattern: '\\D{4}' })
+    );
+  });
+
+  it('carries a regex through verbatim rather than normalising it', () => {
+    expect(feedbackKey({ matchType: 'regex', descriptionPattern: 'WOOLWORTHS \\d{4}' })).toBe(
+      'corrections.changeSetRejections:regex:WOOLWORTHS \\d{4}'
+    );
+  });
+
+  it('still normalises an exact/contains pattern, so existing keys are unchanged', () => {
+    expect(feedbackKey({ matchType: 'contains', descriptionPattern: '  woolworths 1234  ' })).toBe(
+      'corrections.changeSetRejections:contains:WOOLWORTHS'
+    );
   });
 });
