@@ -78,21 +78,40 @@ describe('tagRuleLedgerMatchStatus', () => {
   it('runs the real predicate, not a substring reimplementation — post-normalisation match required', () => {
     // "MICROSOFT STORE" is not a substring of "MICROSOFT*STORE" until both
     // sides are run through the shared normaliser (POPS-2758's failure shape).
-    seedTransaction(harness.raw, { description: 'MICROSOFT*STORE' });
+    seedTransaction(harness.raw, { description: 'MICROSOFT*STORE', entityId: 'ent-microsoft' });
     const snapshot = loadTagRuleLedgerSnapshot(harness.db);
 
     expect(
-      tagRuleLedgerMatchStatus(rule({ descriptionPattern: 'MICROSOFT STORE' }), snapshot)
+      tagRuleLedgerMatchStatus(
+        rule({ descriptionPattern: 'MICROSOFT STORE', entityId: 'ent-microsoft' }),
+        snapshot
+      )
     ).toBe('broken');
   });
 
-  it('reports "broken" for an unscoped rule that matches nothing in a non-empty ledger', () => {
+  it('reports "unused", never "broken", for an unscoped rule against a full ledger — the write path accepts exactly this rule', () => {
+    // createOrReinforceTransactionTagRule deliberately admits a well-formed
+    // unscoped pattern that matches nothing today, because a rule written
+    // ahead of a merchant's first import is legitimate. Badging it dead here
+    // would contradict the write path that let it through — and since a real
+    // ledger is never empty, that would be the common case, not an edge one.
     seedTransaction(harness.raw, { description: 'COLES 5678' });
     const snapshot = loadTagRuleLedgerSnapshot(harness.db);
 
     expect(
       tagRuleLedgerMatchStatus(rule({ descriptionPattern: 'NEVERGONNAMATCH' }), snapshot)
-    ).toBe('broken');
+    ).toBe('unused');
+  });
+
+  it('does not badge an unscoped rule as broken however many unrelated entities the ledger holds', () => {
+    seedTransaction(harness.raw, { description: 'COLES 5678', entityId: 'ent-coles' });
+    seedTransaction(harness.raw, { description: 'WOOLWORTHS 11', entityId: 'ent-woolies' });
+    seedTransaction(harness.raw, { description: 'ALDI 22', entityId: 'ent-aldi' });
+    const snapshot = loadTagRuleLedgerSnapshot(harness.db);
+
+    expect(
+      tagRuleLedgerMatchStatus(rule({ descriptionPattern: 'BRAND NEW MERCHANT' }), snapshot)
+    ).toBe('unused');
   });
 
   it('reports "unused" for an unscoped rule when the ledger is empty', () => {

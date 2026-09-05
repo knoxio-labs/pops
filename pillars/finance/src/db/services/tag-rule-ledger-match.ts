@@ -32,14 +32,20 @@ import type { TagRuleMatchType } from './transaction-tag-rules-types.js';
  * A rule's relationship to the current ledger:
  *
  * - `'matched'` — its pattern matches at least one transaction.
- * - `'unused'` — it matches none, but that has a benign explanation: it is
- *   scoped to an entity with no transactions in the ledger at all (a
- *   legitimate rule written ahead of that merchant's first import), or the
- *   ledger itself is empty. Not broken — just not applicable yet.
- * - `'broken'` — it matches none, and there is no such explanation: an
- *   unscoped rule against a non-empty ledger with nothing for it, or an
- *   entity-scoped rule whose own entity has transactions and none of them
- *   match. This is the POPS-2758 failure shape.
+ * - `'unused'` — it matches none, and nothing in the ledger says it should
+ *   have. An unscoped rule is always this, however full the ledger is: the
+ *   write path deliberately accepts a well-formed pattern that matches
+ *   nothing today, because a rule written ahead of a merchant's first import
+ *   is legitimate and indistinguishable from a dead one until that import
+ *   arrives. Badging it as dead would contradict the write path that let it
+ *   through. A rule scoped to an entity with no transactions yet is `unused`
+ *   for the same reason.
+ * - `'broken'` — it matches none, and the ledger holds the evidence that it
+ *   should have: the rule names an entity, that entity HAS transactions, and
+ *   the pattern fires on none of them. That is the POPS-2758 failure shape —
+ *   a pattern taken from the entity name rather than the bank descriptor —
+ *   and it is the only case where matching nothing is provably wrong rather
+ *   than merely unproven.
  */
 export type TagRuleLedgerMatchStatus = 'matched' | 'unused' | 'broken';
 
@@ -84,10 +90,9 @@ export function tagRuleLedgerMatchStatus(
   );
   if (matches) return 'matched';
 
-  const entityHasLedgerTransactions =
-    rule.entityId === null
-      ? snapshot.rows.length > 0
-      : snapshot.rows.some((row) => row.entityId === rule.entityId);
+  if (rule.entityId === null) return 'unused';
+
+  const entityHasLedgerTransactions = snapshot.rows.some((row) => row.entityId === rule.entityId);
 
   return entityHasLedgerTransactions ? 'broken' : 'unused';
 }
