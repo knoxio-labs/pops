@@ -10,6 +10,24 @@
  * forbid them outright; reality is we still carry a grandfathered set from the
  * tRPC→REST migration.
  *
+ * Two of the kinds are NOT single-line, because the same defeat is routinely
+ * spelled across two. `Record<string, unknown>` is comparable to essentially
+ * every object type, so a value staged in one and asserted out of it buys
+ * exactly what `as unknown as` buys, with neither line containing a hatch:
+ *
+ *     const out: Record<string, unknown> = {};      // no `as` here
+ *     for (const k of KEYS) out[k] = input[k];
+ *     return out as Partial<Insert>;                // target is a normal type
+ *
+ * That pair sat in the inventory item write path for a release while the gate
+ * reported "5 hatches, baseline 5, unchanged" (POPS-3019). The load-bearing
+ * word is *staged*: the bag is BUILT here — declared wide, then populated by
+ * property or index write — and only then asserted onto a type nothing proved
+ * it has. A `Record<string, unknown>` that merely RECEIVES a value (a JSON
+ * boundary, a parsed body, a dynamic parameter) is not this and is not
+ * counted; see `WIDE_TYPE` and `isStagedContainer` for exactly where the line
+ * sits, and `--self-test` for the negative fixtures that pin it.
+ *
  * This gate makes that set a one-way ratchet, exactly like the dep-cruiser
  * known-violations baseline (EX-3): the count of hatches per (file, kind) may
  * only ever stay flat or SHRINK. A PR that adds a new hatch — or grows the
@@ -99,6 +117,126 @@ function isScannable(relPath) {
 }
 
 /**
+ * A type so wide that asserting it onto anything else is unchecked: TS compares
+ * for *comparability*, not assignability, and every object type is comparable
+ * to these. Staging a value in one is how you spend an `as unknown as` without
+ * writing one.
+ */
+const WIDE_TYPE = String.raw`(?:any|unknown|object|Record\s*<\s*(?:string|PropertyKey)\s*,\s*(?:unknown|any)\s*>)`;
+
+/**
+ * Assertion targets that are NOT a narrowing back to a specific type, and so
+ * do not close the laundering loop. `const` is a genuine narrowing; the other
+ * four are already counted by their own single-line kinds, and counting them
+ * again here would double-charge one cast.
+ */
+const NON_NARROWING_TARGET = String.raw`(?:const|any|unknown|never)\b|Record\s*<\s*(?:string|PropertyKey)\s*,\s*(?:unknown|any)\s*>|object\b`;
+
+/** `const|let|var NAME: <wide>` whose initializer opens a literal container. */
+const WIDE_LITERAL_DECL_RE = new RegExp(
+  String.raw`\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*:\s*${WIDE_TYPE}\s*=\s*[[{]`,
+  'g'
+);
+
+/** `const|let|var NAME: <wide>` with any (or no) initializer. */
+const WIDE_DECL_RE = new RegExp(
+  String.raw`\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*:\s*${WIDE_TYPE}\s*[=;]`,
+  'g'
+);
+
+/**
+ * `(target as Record<string, unknown>)[key] = value` — the inline sibling. It
+ * widens a typed object at the point of writing into it, so the key and the
+ * value are both checked against the bag rather than against the column. Same
+ * defeat, one line, and `update-builder.ts` carried it (POPS-3019).
+ */
+const WRITE_THROUGH_RE = new RegExp(
+  String.raw`\(\s*[A-Za-z_$][\w$]*\s+as\s+${WIDE_TYPE}\s*\)\s*(?:\[[^\]\n]*\]|\.[\w$]+)\s*(?:\+\+|--|[-+*/%|&^]?=(?!=))`,
+  'g'
+);
+
+/** Escape a captured identifier for literal use in a RegExp (`$` is a metachar). */
+function escapeForRegExp(name) {
+  return name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+}
+
+/**
+ * Blank out lines the file itself presents as comments, keeping the line count
+ * so reported positions stay honest. Same heuristic the single-line kinds use,
+ * so a docstring showing the pattern is not read as code in either.
+ * @param {string} text
+ */
+function stripCommentLines(text) {
+  return text
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('*') || trimmed.startsWith('//') || trimmed.startsWith('/*')
+        ? ''
+        : line;
+    })
+    .join('\n');
+}
+
+/**
+ * Is `name` a container this file BUILDS, rather than one it receives?
+ *
+ * This is the whole false-positive story. A wide binding that is only ever read
+ * — `const parsed: unknown = JSON.parse(body)`, a dynamic payload, a validator's
+ * input — is legitimate and stays uncounted no matter what is asserted from it.
+ * A wide binding that is populated by property or index write, or seeded with a
+ * literal, is a staging bag; asserting it onto a real type is the hatch.
+ *
+ * @param {string} code comment-stripped source
+ * @param {string} name
+ */
+function isStagedContainer(code, name) {
+  const id = escapeForRegExp(name);
+  const seededWithLiteral = new RegExp(
+    String.raw`\b(?:const|let|var)\s+${id}\s*:\s*${WIDE_TYPE}\s*=\s*[[{]`
+  );
+  const writtenThrough = new RegExp(
+    String.raw`(?<![\w$])${id}\s*(?:\[[^\]\n]*\]|\.[\w$]+)\s*(?:\+\+|--|[-+*/%|&^]?=(?!=))`
+  );
+  return seededWithLiteral.test(code) || writtenThrough.test(code);
+}
+
+/**
+ * Count the multi-line laundering kinds in a whole file.
+ *
+ * Deliberate limits, so the header is not read as a promise the matcher cannot
+ * keep: only `const`/`let`/`var` bindings are treated as staging (a wide
+ * *parameter* asserted in its own body is the same defeat and is NOT counted),
+ * and binding identity is per-file rather than per-scope, so two same-named
+ * locals in one file are one subject.
+ *
+ * @param {string} text
+ * @returns {{ 'wide staging cast': number, 'wide write-through cast': number }}
+ */
+function countLaunderedCasts(text) {
+  const code = stripCommentLines(text);
+
+  const declared = new Set();
+  for (const m of code.matchAll(WIDE_LITERAL_DECL_RE)) declared.add(m[1]);
+  for (const m of code.matchAll(WIDE_DECL_RE)) declared.add(m[1]);
+
+  let staging = 0;
+  for (const name of declared) {
+    if (!isStagedContainer(code, name)) continue;
+    const assertedOut = new RegExp(
+      String.raw`(?<![\w$])${escapeForRegExp(name)}\s+as\s+(?!${NON_NARROWING_TARGET})`,
+      'g'
+    );
+    staging += [...code.matchAll(assertedOut)].length;
+  }
+
+  return {
+    'wide staging cast': staging,
+    'wide write-through cast': [...code.matchAll(WRITE_THROUGH_RE)].length,
+  };
+}
+
+/**
  * Count escape hatches per kind in a single file's text.
  * @param {string} text
  * @returns {Record<string, number>}
@@ -113,6 +251,9 @@ export function countHatchesInText(text) {
     for (const { kind, match } of HATCH_KINDS) {
       if (match(rawLine, isComment)) counts[kind] = (counts[kind] ?? 0) + 1;
     }
+  }
+  for (const [kind, n] of Object.entries(countLaunderedCasts(text))) {
+    if (n > 0) counts[kind] = n;
   }
   return counts;
 }
@@ -293,6 +434,106 @@ function runSelfTest() {
     process.exit(1);
   }
 
+  // The shape POPS-3019 was filed about, verbatim from the pre-fix
+  // `create-builder.ts` / `update-builder.ts`. Asserting only that the gate
+  // exits zero would pass with these matchers deleted, which is the failure
+  // mode ADR-045 exists to stop: pin the reported COUNT, both ways.
+  const launderedPositives = [
+    [
+      'staged, populated, asserted back',
+      'const out: Record<string, unknown> = {};\nfor (const k of KEYS) out[k] = input[k] ?? null;\nreturn out as Partial<Insert>;',
+      'wide staging cast',
+      1,
+    ],
+    [
+      'staged twice in one file',
+      'function a() {\n  const out: Record<string, unknown> = {};\n  out.x = 1;\n  return out as Foo;\n}\nfunction b() {\n  const out: Record<string, unknown> = {};\n  out.y = 2;\n  return out as Bar;\n}',
+      'wide staging cast',
+      2,
+    ],
+    [
+      'staged via `any` rather than a Record',
+      'let acc: any = {};\nacc.total = 1;\nexport default acc as Totals;',
+      'wide staging cast',
+      1,
+    ],
+    [
+      'write-through widening at the assignment site',
+      'const updates: InventoryUpdate = {};\n(updates as Record<string, unknown>)[key] = value ?? null;',
+      'wide write-through cast',
+      1,
+    ],
+  ];
+  for (const [label, source, kind, expected] of launderedPositives) {
+    const got = countHatchesInText(source)[kind] ?? 0;
+    if (got !== expected) {
+      console.error(
+        `✗ self-test: laundered-cast case "${label}" reported ${got} "${kind}", expected ${expected}. ` +
+          'A cast can now be spent through a staging variable without the ratchet seeing it (POPS-3019).'
+      );
+      process.exit(1);
+    }
+  }
+
+  // A matcher that flags every `Record<string, unknown>` is worse than none:
+  // people learn to ignore it and baseline the noise. These are the legitimate
+  // uses it must stay silent on — all of them RECEIVE a value rather than
+  // build one, which is precisely where `isStagedContainer` draws the line.
+  const launderedNegatives = [
+    [
+      'a parsed JSON boundary, narrowed once',
+      'const parsed: unknown = JSON.parse(body);\nreturn parsed as Config;',
+    ],
+    [
+      'a wide bag that is returned as itself',
+      'const meta: Record<string, unknown> = {};\nmeta.trace = id;\nreturn meta;',
+    ],
+    [
+      'a wide bag narrowed with `as const`',
+      'const flags: Record<string, unknown> = {};\nflags.on = true;\nreturn flags as const;',
+    ],
+    [
+      'a different identifier carrying the assertion',
+      'const bag: Record<string, unknown> = {};\nbag.k = 1;\nreturn other as Config;',
+    ],
+    [
+      'an identifier that merely starts with the staged name',
+      'const bag: Record<string, unknown> = {};\nbag.k = 1;\nreturn bagged as Config;',
+    ],
+    [
+      'a dynamic parameter, never staged',
+      'function f(input: Record<string, unknown>) {\n  return Object.keys(input);\n}',
+    ],
+    ['a type alias, not a binding', 'type Json = Record<string, unknown>;\nconst x = y as Json;'],
+    [
+      'an equality test, not a write',
+      'const probe: unknown = read();\nif (probe.kind === "a") return probe as Node;',
+    ],
+    [
+      'a read through a widening cast, rather than a write',
+      'const seg = (current as Record<string, unknown>)[key];',
+    ],
+    [
+      'a cast an existing single-line kind already charges for',
+      'const out: Record<string, unknown> = {};\nout.k = 1;\nreturn out as unknown as Foo;',
+    ],
+    [
+      'the pattern shown inside a docstring',
+      '/**\n * const out: Record<string, unknown> = {};\n * out.k = 1;\n * return out as Foo;\n */\nexport const ok = 1;',
+    ],
+  ];
+  for (const [label, source] of launderedNegatives) {
+    const counts = countHatchesInText(source);
+    const noise = counts['wide staging cast'] ?? counts['wide write-through cast'];
+    if (noise) {
+      console.error(
+        `✗ self-test: false positive on "${label}" — ${JSON.stringify(counts)}. A guard people ` +
+          'learn to ignore is worse than none; tighten the matcher rather than baselining the noise.'
+      );
+      process.exit(1);
+    }
+  }
+
   const existing = 'pillars/demo/src/existing.ts';
   const baseline = { [existing]: { 'as any': 1, 'as never': 2 } };
 
@@ -329,8 +570,9 @@ function runSelfTest() {
   }
 
   console.log(
-    `✔ self-test: scanner read ${scanned} file(s); gate flags new files, grown counts and new ` +
-      'kinds, and passes an unchanged or shrunk tree.'
+    `✔ self-test: scanner read ${scanned} file(s); counts ${launderedPositives.length} laundered-cast ` +
+      `shapes and stays silent on ${launderedNegatives.length} legitimate wide-type uses; gate flags ` +
+      'new files, grown counts and new kinds, and passes an unchanged or shrunk tree.'
   );
 }
 
