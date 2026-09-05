@@ -23,7 +23,7 @@ internal enum ShellDegradation: Hashable, Sendable {
 /// reviewed here is the construction the app actually ships. The reason
 /// `ContentView` needs the inset — a stack takes the banner's height off the
 /// top of its `TabView`, carrying the tab bar up with it — is not visible in
-/// this surface, which renders no tab bar; `ContentViewFeatureSwitchingTests`
+/// this surface, which renders no tab bar; `ContentViewTabSwitcherTests`
 /// covers that.
 internal struct ShellContentView: View {
     let degradation: ShellDegradation
