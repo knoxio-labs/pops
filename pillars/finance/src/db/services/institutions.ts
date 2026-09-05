@@ -16,6 +16,7 @@ import {
 } from '../errors.js';
 import { institutions } from '../schema.js';
 import { isInstitutionNameConflict } from './institution-conflict.js';
+import { deleteLogoBlob } from './logo-blobs.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -164,12 +165,21 @@ export function isInstitutionInUse(db: FinanceDb, id: string): boolean {
  * Delete an institution. Throws `InstitutionNotFoundError` if missing, or
  * `InstitutionInUseError` if {@link isInstitutionInUse} finds a referencing
  * row — e.g. an `accounts.institution_id` foreign key (POPS-2767).
+ *
+ * `logo_blobs` has no `institution_id` column, so it is invisible to
+ * {@link isInstitutionInUse} and {@link tablesWithInstitutionIdColumn} — the
+ * institution's `logoAssetId` is deleted explicitly, in the same transaction,
+ * so a deleted institution never leaves its logo bytes behind (POPS-2867).
  */
 export function deleteInstitution(db: FinanceDb, id: string): void {
-  getInstitution(db, id);
+  const institution = getInstitution(db, id);
   if (isInstitutionInUse(db, id)) throw new InstitutionInUseError(id);
-  const result = db.delete(institutions).where(eq(institutions.id, id)).run();
-  if (result.changes === 0) throw new InstitutionNotFoundError(id);
+
+  db.transaction((tx) => {
+    const result = tx.delete(institutions).where(eq(institutions.id, id)).run();
+    if (result.changes === 0) throw new InstitutionNotFoundError(id);
+    if (institution.logoAssetId) deleteLogoBlob(tx, institution.logoAssetId);
+  });
 }
 
 /**
@@ -184,7 +194,11 @@ export function deleteInstitution(db: FinanceDb, id: string): void {
  * Blending or prompting for a per-field choice would only be worth it if
  * institutions carried more identity than a name/colour/logo triple; for
  * this shape, "the institution you kept is the one you see" is simpler to
- * reason about than a partial merge of two logos or two colours.
+ * reason about than a partial merge of two logos or two colours. The
+ * source's `logo_blobs` row (if any) is deleted alongside it — that table has
+ * no `institution_id` column, so it is invisible to
+ * {@link tablesWithInstitutionIdColumn} and needs its own explicit cleanup in
+ * the same transaction, or its bytes would be orphaned forever (POPS-2867).
  *
  * Throws `InstitutionNotFoundError` if either id is unknown, or
  * `InstitutionMergeSameInstitutionError` if `sourceId === targetId` — merging
@@ -196,7 +210,7 @@ export function mergeInstitutions(
   sourceId: string,
   targetId: string
 ): InstitutionRow {
-  getInstitution(db, sourceId);
+  const source = getInstitution(db, sourceId);
   getInstitution(db, targetId);
 
   if (sourceId === targetId) throw new InstitutionMergeSameInstitutionError(sourceId);
@@ -208,6 +222,7 @@ export function mergeInstitutions(
       );
     }
     tx.delete(institutions).where(eq(institutions.id, sourceId)).run();
+    if (source.logoAssetId) deleteLogoBlob(tx, source.logoAssetId);
   });
 
   return getInstitution(db, targetId);
