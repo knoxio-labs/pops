@@ -330,6 +330,13 @@
       "when": 1781913600040,
       "tag": "0095_correction_rules_account_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1781913600041,
+      "tag": "0096_import_sessions",
+      "breakpoints": true
     }
   ]
 }

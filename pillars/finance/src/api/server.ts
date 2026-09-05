@@ -22,6 +22,7 @@ import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 import { openFinanceDb } from '../db/index.js';
 import { createFinanceApiApp } from './app.js';
 import { createContactsClient } from './contacts/client.js';
+import { startImportSessionSweeper } from './cron/import-session-sweeper.js';
 import { createPillarOwnerUriLookup } from './cron/pillar-lookup.js';
 import { startReconcileContactsOutboxWorker } from './cron/reconcile-contacts-outbox.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
@@ -30,6 +31,7 @@ import { startReconcilePairedTransfersWorker } from './cron/reconcile-paired-tra
 import { startUpSyncScheduler } from './cron/up-sync-scheduler.js';
 import { resolveFinanceSqlitePath } from './finance-sqlite-path.js';
 import { buildFinanceCapabilityReporter, buildFinanceManifest } from './manifest.js';
+import { failInterruptedImportSessions, flushAllProgress } from './modules/imports/index.js';
 import { configureFinanceServerSdk } from './pillars/sdk-config.js';
 
 function resolvePort(): number {
@@ -57,6 +59,15 @@ const financeDb = openFinanceDb(resolveFinanceSqlitePath());
 // is available: this pillar's own contract surface needs none, and the legs
 // that do each say `no-credential` instead of degrading into `unavailable`.
 configureFinanceServerSdk();
+
+// An import session the previous process was still running cannot be
+// resumed — its work lived in that process — so it is marked failed now,
+// before the wizard can poll it, with a message the client's recovery path
+// acts on (POPS-2449).
+const interrupted = failInterruptedImportSessions(financeDb.db);
+if (interrupted.length > 0) {
+  console.warn('[finance-api] import sessions interrupted by restart', { interrupted });
+}
 
 const contacts = createContactsClient();
 const app = createFinanceApiApp({
@@ -120,6 +131,11 @@ const upSyncHandle = startUpSyncScheduler({
   logger: reconcileLogger,
 });
 
+const importSessionSweeperHandle = startImportSessionSweeper({
+  db: financeDb.db,
+  logger: reconcileLogger,
+});
+
 const server = app.listen(port, () => {
   console.warn(`[finance-api] Listening on port ${port}`);
 });
@@ -142,11 +158,13 @@ function shutdown(signal: NodeJS.Signals): void {
   reconcileOutboxHandle.stop();
   reconcileEntityOrphansHandle.stop();
   reconcilePairedTransfersHandle.stop();
+  importSessionSweeperHandle.stop();
   void shutdownPillar({
     label: 'finance-api',
     steps: [
       { name: 'deregister', run: () => pillarHandle?.stop() },
       { name: 'up-sync', run: () => upSyncHandle.stop() },
+      { name: 'import-sessions', run: () => flushAllProgress(financeDb.db) },
     ],
     server,
     closeDb: () => financeDb.raw.close(),

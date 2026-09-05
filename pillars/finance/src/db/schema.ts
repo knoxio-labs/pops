@@ -29,6 +29,7 @@ export { accountImportConfig } from './schema/account-import-config.js';
 export { institutions } from './schema/institutions.js';
 export { logoBlobs } from './schema/logo-blobs.js';
 export { loanOffsetLinks } from './schema/loan-offset-links.js';
+export { importSessions } from './schema/import-sessions.js';
 export { loanRateHistory } from './schema/loan-rate-history.js';
 export { loanTerms } from './schema/loan-terms.js';
 export { tagRuleRejections } from './schema/tag-rule-rejections.js';
