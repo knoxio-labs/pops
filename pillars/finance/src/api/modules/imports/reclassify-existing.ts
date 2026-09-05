@@ -50,6 +50,7 @@ const RECLASSIFY_BATCH_SIZE = 500;
 interface BatchTxn {
   id: string;
   description: string;
+  accountId: string;
   entityId: string | null;
   type: string;
   location: string | null;
@@ -149,6 +150,10 @@ function fetchBatch(db: FinanceDb, excludedChecksums: string[], offset: number):
     .select({
       id: transactions.id,
       description: transactions.description,
+      // Selected so the retroactive pass narrows to the same account scope the
+      // live import does — a rule scoped to one account must not be replayed
+      // across the whole ledger (POPS-2593).
+      accountId: transactions.accountId,
       entityId: transactions.entityId,
       type: transactions.type,
       location: transactions.location,
@@ -201,7 +206,7 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
 
     for (const txn of batch) {
       if (txn.matchType === 'manual') continue;
-      const match = findMatchingCorrectionFromRules(txn.description, allRules);
+      const match = findMatchingCorrectionFromRules(txn.description, allRules, txn.accountId);
       if (!match) continue;
       if (resolveCorrectionApplyStatus(match.correction) !== 'matched') continue;
       const updates = buildRetroactiveApplyUpdates(txn, match.correction);
@@ -246,7 +251,7 @@ interface SingleRuleApplyArgs {
 function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
   const { db, ruleId, dryRun, allRules, result } = args;
 
-  const match = findMatchingCorrectionFromRules(txn.description, allRules);
+  const match = findMatchingCorrectionFromRules(txn.description, allRules, txn.accountId);
   if (!match || match.correction.id !== ruleId) return;
 
   result.matched++;

@@ -52,6 +52,7 @@ import {
   entityPrecreateOutbox,
   giftCardSecretReveals,
   importBatches,
+  transactionCorrections,
   transactions,
 } from '../schema.js';
 import { balanceAsOf } from './account-balance.js';
@@ -260,6 +261,20 @@ export function mergeAccounts(db: FinanceDb, sourceId: string, targetId: string)
     tx.update(giftCardSecretReveals)
       .set({ accountId: targetId })
       .where(eq(giftCardSecretReveals.accountId, sourceId))
+      .run();
+
+    // A rule narrowed to the source account follows it to the survivor
+    // (POPS-2593). This is not merely tidiness: `transaction_corrections`
+    // .account_id is a real FK with `no action` on delete, so without this
+    // statement the `DELETE FROM accounts` below is refused outright and the
+    // whole merge fails — verified by removing it and watching the merge throw
+    // `FOREIGN KEY constraint failed`. Two rules that meet on the same
+    // (pattern, matchType) here are left as two rows: the upsert identity is
+    // not a unique index, and silently discarding one operator-authored
+    // classification is worse than showing both in the rule browser.
+    tx.update(transactionCorrections)
+      .set({ accountId: targetId })
+      .where(eq(transactionCorrections.accountId, sourceId))
       .run();
 
     try {

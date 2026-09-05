@@ -2522,6 +2522,7 @@ export type CorrectionsListResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2563,6 +2564,7 @@ export type CorrectionsCreateOrUpdateData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     descriptionPattern: string;
     entityId?: string | null;
     entityName?: string | null;
@@ -2623,6 +2625,7 @@ export type CorrectionsCreateOrUpdateResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2724,6 +2727,7 @@ export type CorrectionsApplyChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -2749,6 +2753,7 @@ export type CorrectionsApplyChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -2827,6 +2832,7 @@ export type CorrectionsApplyChangeSetResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -2864,6 +2870,7 @@ export type CorrectionsFindMatchData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     description: string;
     minConfidence: number;
   };
@@ -2908,6 +2915,7 @@ export type CorrectionsFindMatchResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -3017,6 +3025,7 @@ export type CorrectionsListMergedData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -3042,6 +3051,7 @@ export type CorrectionsListMergedData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;
@@ -3121,6 +3131,7 @@ export type CorrectionsListMergedResponses = {
    */
   200: {
     data: Array<{
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -3167,6 +3178,7 @@ export type CorrectionsPreviewChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3192,6 +3204,7 @@ export type CorrectionsPreviewChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3234,6 +3247,7 @@ export type CorrectionsPreviewChangeSetData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -3259,6 +3273,7 @@ export type CorrectionsPreviewChangeSetData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;
@@ -3297,6 +3312,7 @@ export type CorrectionsPreviewChangeSetData = {
       };
     }>;
     transactions: Array<{
+      accountId?: string;
       checksum?: string;
       description: string;
     }>;
@@ -3511,6 +3527,7 @@ export type CorrectionsProposeChangeSetResponses = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3536,6 +3553,7 @@ export type CorrectionsProposeChangeSetResponses = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3624,6 +3642,7 @@ export type CorrectionsProposeChangeSetResponses = {
     rationale: string;
     targetRules: {
       [key: string]: {
+        accountId: string | null;
         confidence: number;
         createdAt: string;
         descriptionPattern: string;
@@ -3665,6 +3684,7 @@ export type CorrectionsRejectChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3690,6 +3710,7 @@ export type CorrectionsRejectChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3810,6 +3831,7 @@ export type CorrectionsReviseChangeSetData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3835,6 +3857,7 @@ export type CorrectionsReviseChangeSetData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -3940,6 +3963,7 @@ export type CorrectionsReviseChangeSetResponses = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -3965,6 +3989,7 @@ export type CorrectionsReviseChangeSetResponses = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -4004,6 +4029,7 @@ export type CorrectionsReviseChangeSetResponses = {
     rationale: string;
     targetRules: {
       [key: string]: {
+        accountId: string | null;
         confidence: number;
         createdAt: string;
         descriptionPattern: string;
@@ -4203,6 +4229,7 @@ export type CorrectionsGetResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -4238,6 +4265,7 @@ export type CorrectionsUpdateData = {
    * Body
    */
   body?: {
+    accountId?: string | null;
     confidence?: number;
     descriptionPattern?: string;
     entityId?: string | null;
@@ -4301,6 +4329,7 @@ export type CorrectionsUpdateResponses = {
    */
   200: {
     data: {
+      accountId: string | null;
       confidence: number;
       createdAt: string;
       descriptionPattern: string;
@@ -4766,6 +4795,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -4791,6 +4821,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -5178,6 +5209,7 @@ export type ImportsCommitImportData = {
       ops: Array<
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern: string;
               entityId?: string | null;
@@ -5203,6 +5235,7 @@ export type ImportsCommitImportData = {
           }
         | {
             data: {
+              accountId?: string | null;
               confidence?: number;
               descriptionPattern?: string;
               entityId?: string | null;
@@ -5905,6 +5938,7 @@ export type ImportsReevaluateWithPendingRulesData = {
         ops: Array<
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern: string;
                 entityId?: string | null;
@@ -5930,6 +5964,7 @@ export type ImportsReevaluateWithPendingRulesData = {
             }
           | {
               data: {
+                accountId?: string | null;
                 confidence?: number;
                 descriptionPattern?: string;
                 entityId?: string | null;

@@ -31,6 +31,7 @@ function rule(id: string, priority: number): CorrectionRule {
   return {
     id,
     descriptionPattern: id.toUpperCase(),
+    accountId: null,
     matchType: 'exact',
     entityId: null,
     entityName: null,

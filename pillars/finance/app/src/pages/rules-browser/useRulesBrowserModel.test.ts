@@ -30,6 +30,7 @@ function makeCorrection(overrides: Partial<Correction> = {}): Correction {
   return {
     id: 'rule-1',
     descriptionPattern: 'WOOLWORTHS',
+    accountId: null,
     matchType: 'exact',
     entityId: 'entity-1',
     entityName: 'Woolworths',

@@ -41,6 +41,7 @@ describe('newClientId', () => {
 const fakeRule: CorrectionRule = {
   id: 'rule-1',
   descriptionPattern: 'SOME PATTERN',
+  accountId: null,
   matchType: 'contains',
   entityId: 'ent-1',
   entityName: 'Entity One',

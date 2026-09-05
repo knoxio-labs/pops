@@ -155,6 +155,7 @@ export function reapplyCorrectionToMatched(
   const winner = findAllMatchingCorrectionFromRules(
     tx.description,
     ctx.rules,
+    tx.accountId ?? null,
     ctx.minConfidence
   )[0];
   if (!winner || correctionOutcomeBucket(winner) !== 'matched') {

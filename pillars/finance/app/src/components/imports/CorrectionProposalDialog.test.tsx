@@ -193,6 +193,7 @@ function makeRule(overrides: Partial<CorrectionRule> = {}): CorrectionRule {
   return {
     id: 'rule-1',
     descriptionPattern: 'WOOLWORTHS',
+    accountId: null,
     matchType: 'contains',
     entityId: null,
     entityName: 'Woolworths',

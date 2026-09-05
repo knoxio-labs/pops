@@ -41,6 +41,7 @@ const TRANSACTION_CORRECTIONS_DDL = `
 CREATE TABLE transaction_corrections (
   id text PRIMARY KEY NOT NULL,
   description_pattern text NOT NULL,
+  account_id text,
   match_type text DEFAULT 'exact' NOT NULL,
   entity_id text,
   entity_name text,
@@ -55,6 +56,7 @@ CREATE TABLE transaction_corrections (
   last_used_at text
 );
 CREATE INDEX idx_corrections_pattern ON transaction_corrections (description_pattern);
+CREATE INDEX idx_corrections_account ON transaction_corrections (account_id);
 CREATE INDEX idx_corrections_priority ON transaction_corrections (priority);
 CREATE INDEX idx_corrections_confidence ON transaction_corrections (confidence);
 CREATE INDEX idx_corrections_times_applied ON transaction_corrections (times_applied);
@@ -739,7 +741,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       priority: 1,
     });
 
-    const matches = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Coffee 42');
+    const matches = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Coffee 42', null);
     expect(matches.map((m) => m.id)).toEqual(['rule-a', 'rule-b', 'rule-z']);
   });
 
@@ -755,8 +757,12 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       confidence: 0.65,
     });
 
-    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', 0.7)).toHaveLength(1);
-    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', 0.6)).toHaveLength(2);
+    expect(
+      findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null, 0.7)
+    ).toHaveLength(1);
+    expect(
+      findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null, 0.6)
+    ).toHaveLength(2);
   });
 
   it('ignores inactive rules', () => {
@@ -766,7 +772,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       confidence: 0.9,
       isActive: 0,
     });
-    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee')).toEqual([]);
+    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null)).toEqual([]);
   });
 
   it('honours contains and regex matchType semantics', () => {
@@ -785,11 +791,12 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
 
     const containsHit = findAllMatchingTransactionCorrectionsFromDb(
       harness.db,
-      'morning coffee at home'
+      'morning coffee at home',
+      null
     );
     expect(containsHit.map((r) => r.id)).toEqual(['contains-rule']);
 
-    const regexHit = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Starbucks');
+    const regexHit = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Starbucks', null);
     expect(regexHit.map((r) => r.id)).toEqual(['regex-rule']);
   });
 
@@ -799,7 +806,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       matchType: 'regex',
       confidence: 0.9,
     });
-    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'anything')).toEqual([]);
+    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'anything', null)).toEqual([]);
   });
 
   it('returns an empty array when nothing matches', () => {
@@ -808,7 +815,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       matchType: 'exact',
       confidence: 0.9,
     });
-    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'restaurant')).toEqual([]);
+    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'restaurant', null)).toEqual([]);
   });
 });
 
@@ -838,7 +845,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       confidence: 0.99,
     });
 
-    const matches = findAllMatchingTransactionCorrections(harness.db, 'coffee');
+    const matches = findAllMatchingTransactionCorrections(harness.db, 'coffee', null);
     expect(matches.map((m) => m.id)).toEqual(['exact-rule', 'contains-rule', 'regex-rule']);
   });
 
@@ -865,7 +872,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       timesApplied: 5,
     });
 
-    const matches = findAllMatchingTransactionCorrections(harness.db, 'coffee');
+    const matches = findAllMatchingTransactionCorrections(harness.db, 'coffee', null);
     expect(matches.map((m) => m.id)).toEqual([
       'high-conf-high-uses',
       'high-conf-low-uses',
@@ -892,7 +899,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       confidence: 0.9,
       isActive: 0,
     });
-    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee')).toEqual([]);
+    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee', null)).toEqual([]);
   });
 
   it('excludes sub-floor rules by default and includes them at the floor', () => {
@@ -909,9 +916,9 @@ describe('findAllMatchingTransactionCorrections', () => {
       confidence: MIN_MATCH_CONFIDENCE - 0.01,
     });
 
-    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee').map((m) => m.id)).toEqual([
-      'at-floor',
-    ]);
+    expect(
+      findAllMatchingTransactionCorrections(harness.db, 'coffee', null).map((m) => m.id)
+    ).toEqual(['at-floor']);
   });
 
   it('surfaces sub-floor rules when the caller lowers minConfidence', () => {
@@ -922,9 +929,9 @@ describe('findAllMatchingTransactionCorrections', () => {
       confidence: MIN_MATCH_CONFIDENCE - 0.01,
     });
 
-    expect(findAllMatchingTransactionCorrections(harness.db, 'coffee', 0).map((m) => m.id)).toEqual(
-      ['below-floor']
-    );
+    expect(
+      findAllMatchingTransactionCorrections(harness.db, 'coffee', null, 0).map((m) => m.id)
+    ).toEqual(['below-floor']);
   });
 
   it('silently drops regex rules with invalid patterns', () => {
@@ -933,7 +940,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       matchType: 'regex',
       confidence: 0.9,
     });
-    expect(findAllMatchingTransactionCorrections(harness.db, 'anything')).toEqual([]);
+    expect(findAllMatchingTransactionCorrections(harness.db, 'anything', null)).toEqual([]);
   });
 
   it('returns an empty array when nothing matches', () => {
@@ -942,7 +949,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       matchType: 'exact',
       confidence: 0.9,
     });
-    expect(findAllMatchingTransactionCorrections(harness.db, 'restaurant')).toEqual([]);
+    expect(findAllMatchingTransactionCorrections(harness.db, 'restaurant', null)).toEqual([]);
   });
 });
 

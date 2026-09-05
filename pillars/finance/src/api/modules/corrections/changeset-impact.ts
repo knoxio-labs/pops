@@ -22,6 +22,9 @@ import type {
 interface CandidateTransaction {
   id: string;
   description: string;
+  /** Carried so the impact preview resolves the winning rule under the same
+   * account scope the live matcher would use (POPS-2593). */
+  accountId: string;
   tags: string | null;
 }
 
@@ -51,6 +54,7 @@ function fetchCandidates(
   const columns = {
     id: transactions.id,
     description: transactions.description,
+    accountId: transactions.accountId,
     tags: transactions.tags,
   };
 
@@ -163,13 +167,23 @@ function buildImpactItem(
   const txTags = parseCorrectionTags(candidate.tags ?? '[]');
   const before = withTagsMerged(
     outcomeFromMatch(
-      findMatchingCorrectionFromRules(candidate.description, rulesBefore, minConfidence)
+      findMatchingCorrectionFromRules(
+        candidate.description,
+        rulesBefore,
+        candidate.accountId,
+        minConfidence
+      )
     ),
     txTags
   );
   const after = withTagsMerged(
     outcomeFromMatch(
-      findMatchingCorrectionFromRules(candidate.description, rulesAfter, minConfidence)
+      findMatchingCorrectionFromRules(
+        candidate.description,
+        rulesAfter,
+        candidate.accountId,
+        minConfidence
+      )
     ),
     txTags
   );

@@ -6794,6 +6794,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -6861,6 +6865,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -6987,6 +6992,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "descriptionPattern": {
                     "minLength": 1,
                     "type": "string"
@@ -7054,6 +7064,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -7121,6 +7135,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -7378,6 +7393,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -7453,6 +7473,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -7587,6 +7612,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -7654,6 +7683,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -7766,6 +7796,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "description": {
                     "minLength": 1,
                     "type": "string"
@@ -7795,6 +7830,10 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -7862,6 +7901,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -8172,6 +8212,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8247,6 +8292,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8387,6 +8437,10 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -8454,6 +8508,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -8594,6 +8649,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -8669,6 +8729,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -8806,6 +8871,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -8881,6 +8951,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -9007,6 +9082,10 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
                         "checksum": {
                           "type": "string"
                         },
@@ -9501,6 +9580,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -9576,6 +9660,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -9863,6 +9952,10 @@
                       "additionalProperties": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -9930,6 +10023,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -10051,6 +10145,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10126,6 +10225,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10454,6 +10558,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10529,6 +10638,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -10742,6 +10856,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -10817,6 +10936,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -10939,6 +11063,10 @@
                       "additionalProperties": {
                         "additionalProperties": false,
                         "properties": {
+                          "accountId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "confidence": {
                             "type": "number"
                           },
@@ -11006,6 +11134,7 @@
                         "required": [
                           "id",
                           "descriptionPattern",
+                          "accountId",
                           "matchType",
                           "entityId",
                           "entityName",
@@ -11421,6 +11550,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -11488,6 +11621,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -11602,6 +11736,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "confidence": {
                     "maximum": 1,
                     "minimum": 0.7,
@@ -11674,6 +11813,10 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "accountId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "confidence": {
                           "type": "number"
                         },
@@ -11741,6 +11884,7 @@
                       "required": [
                         "id",
                         "descriptionPattern",
+                        "accountId",
                         "matchType",
                         "entityId",
                         "entityName",
@@ -12915,6 +13059,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -12990,6 +13139,11 @@
                                 "data": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "accountId": {
+                                      "minLength": 1,
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0.7,
@@ -14275,6 +14429,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -14350,6 +14509,11 @@
                                   "data": {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "accountId": {
+                                        "minLength": 1,
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
                                       "confidence": {
                                         "maximum": 1,
                                         "minimum": 0.7,
@@ -16656,6 +16820,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
@@ -16731,6 +16900,11 @@
                                       "data": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "accountId": {
+                                            "minLength": 1,
+                                            "nullable": true,
+                                            "type": "string"
+                                          },
                                           "confidence": {
                                             "maximum": 1,
                                             "minimum": 0.7,
