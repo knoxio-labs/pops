@@ -9,7 +9,7 @@ import { isValidRegexPattern, normalizePatternForStorage } from '../../contract/
  * normaliser are re-exported from `contract/pattern-match.ts` — the one
  * definition every match path shares (POPS-2600) — rather than redeclared.
  */
-import { InvalidPatternError } from '../errors.js';
+import { InvalidPatternError, UnmatchablePatternError } from '../errors.js';
 import { parseStoredTags } from '../tag-facets.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
@@ -135,20 +135,34 @@ function assertPatternCompiles(pattern: string, matchType: TransactionCorrection
 
 /**
  * Store-form of a pattern: normalised for `exact`/`contains`, verbatim for
- * `regex` — and rejected outright when a `regex` pattern doesn't compile.
+ * `regex` — and rejected outright when a `regex` pattern doesn't compile, or
+ * when an `exact`/`contains` pattern normalises to nothing.
  *
  * Corrections used to normalise unconditionally, which uppercased regex
  * metacharacters (`\d` -> `\D`, `\s` -> `\S`), stripped digits out of
  * quantifiers (`a{2,3}` -> `a{,}`) and deleted the `.` wildcard, so every
  * regex correction was corrupted on write (POPS-2600). Tag rules already
  * guarded this; corrections did not.
+ *
+ * The empty-normalisation guard is the same asymmetry one table later: an
+ * all-digit or whitespace-only `exact`/`contains` pattern normalises to `''`,
+ * which `patternMatchesDescription` answers `false` for unconditionally, so
+ * the row is active and structurally unable to fire. `transaction_tag_rules`
+ * has refused that since POPS-2942 and corrections never did (POPS-3001).
+ * See {@link UnmatchablePatternError} for why the guard stops at an empty
+ * normalisation and does not also refuse a pattern that merely matches zero
+ * rows in today's ledger.
  */
 export function storablePattern(
   pattern: string,
   matchType: TransactionCorrectionMatchType
 ): string {
   assertPatternCompiles(pattern, matchType);
-  return normalizePatternForStorage(pattern, matchType);
+  const normalized = normalizePatternForStorage(pattern, matchType);
+  if (matchType !== 'regex' && normalized.length === 0) {
+    throw new UnmatchablePatternError(pattern);
+  }
+  return normalized;
 }
 
 /**

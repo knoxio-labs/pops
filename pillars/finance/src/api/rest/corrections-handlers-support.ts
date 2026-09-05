@@ -6,7 +6,8 @@
  * / `transactions` tables — no HTTP concerns beyond translating the package's
  * `TransactionCorrectionNotFoundError` to the in-tree `NotFoundError` (→ 404)
  * and `TagsOnlyCorrectionError` (CF061/#3650) / `InvalidPatternError`
- * (POPS-2600) to `ValidationError` (→ 400).
+ * (POPS-2600) / `UnmatchablePatternError` (POPS-3001) to `ValidationError`
+ * (→ 400).
  */
 import { desc } from 'drizzle-orm';
 
@@ -21,6 +22,7 @@ import {
   InvalidPatternError,
   TagsOnlyCorrectionError,
   TransactionCorrectionNotFoundError,
+  UnmatchablePatternError,
   transactionCorrectionsService,
   transactions,
 } from '../../db/index.js';
@@ -197,7 +199,11 @@ export function translateCorrectionError(err: unknown, id?: string): never {
   if (err instanceof TransactionCorrectionNotFoundError) {
     throw new NotFoundError('Correction', id ?? err.id);
   }
-  if (err instanceof TagsOnlyCorrectionError || err instanceof InvalidPatternError) {
+  if (
+    err instanceof TagsOnlyCorrectionError ||
+    err instanceof InvalidPatternError ||
+    err instanceof UnmatchablePatternError
+  ) {
     throw new ValidationError(err.message);
   }
   throw err;

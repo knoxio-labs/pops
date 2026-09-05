@@ -1,7 +1,8 @@
 /**
- * `proposeChangeSet` (signal → add/edit ChangeSet + DB-scanned impact, adapting
- * to prior rejection feedback) and `reviseChangeSet` (free-text AI revision).
- * Ported from the monolith `core/corrections/handlers/{compute-changeset,ai-revise}.ts`.
+ * `proposeChangeSet`: signal → add/edit ChangeSet + DB-scanned impact,
+ * adapting to prior rejection feedback. Ported from the monolith
+ * `core/corrections/handlers/compute-changeset.ts`. The free-text revision
+ * half lives in `ai-revise.ts`.
  *
  * A signal with no `entityId`/`transactionType` and non-empty `tags` never
  * reaches `buildAddChangeSet` — `proposeChangeSetFromCorrectionSignal` rejects
@@ -11,22 +12,15 @@
  */
 import { and, eq } from 'drizzle-orm';
 
-import { ChangeSetSchema, type ChangeSet } from '../../../contract/rest-corrections.js';
+import { type ChangeSet } from '../../../contract/rest-corrections.js';
 import {
   type FinanceDb,
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
 import { ValidationError } from '../../shared/errors.js';
-import { extractJsonFromReply } from '../ai-json.js';
 import { interpretRejectionFeedback, loadLatestRejectedFeedback } from './ai-feedback.js';
-import { getClaudeCompleter } from './ai-runtime.js';
-import {
-  buildTargetRulesMap,
-  type ChangeSetProposal,
-  type Correction,
-  type CorrectionSignal,
-} from './ai-types.js';
+import { buildTargetRulesMap, type ChangeSetProposal, type CorrectionSignal } from './ai-types.js';
 import { buildAddChangeSet, buildEditChangeSet } from './changeset-builders.js';
 import { computeChangeSetImpact } from './changeset-impact.js';
 import { type CorrectionRow } from './types.js';
@@ -134,88 +128,4 @@ export async function proposeChangeSetFromCorrectionSignal(
     preview: { counts: impact.counts, affected: impact.affected },
     targetRules: buildTargetRulesMap(changeSet, impact.rulesBefore),
   };
-}
-
-export interface ReviseArgs {
-  signal: CorrectionSignal;
-  currentChangeSet: ChangeSet;
-  instruction: string;
-  triggeringTransactions: { checksum?: string; description: string }[];
-}
-
-export interface ReviseResult {
-  changeSet: ChangeSet;
-  rationale: string;
-  targetRules: Record<string, Correction>;
-}
-
-export function buildRevisePrompt(args: ReviseArgs, sanitizedInstruction: string): string {
-  const triggeringLines = args.triggeringTransactions
-    .slice(0, 100)
-    .map((t, i) => `${i + 1}. "${t.description}"`)
-    .join('\n');
-  return `You are refining a bundled correction-rule ChangeSet for a personal finance app.
-
-A ChangeSet is { "source"?: string, "reason"?: string, "ops": Op[] } with at least one op. Each op is one of:
-- { "op": "add", "data": { "descriptionPattern": string, "matchType": "exact"|"contains"|"regex", "entityId"?, "entityName"?, "location"?, "tags"?, "transactionType"?, "confidence"?, "isActive"? } }
-- { "op": "edit", "id": string, "data": { same fields, all optional, no descriptionPattern/matchType } }
-- { "op": "disable", "id": string }
-- { "op": "remove", "id": string }
-Preserve existing ids on edit/disable/remove; do not invent ids. Normalize patterns to uppercase with digits stripped.
-
-originalSignal: ${JSON.stringify(args.signal)}
-
-triggeringTransactions:
-${triggeringLines || '(none provided)'}
-
-currentChangeSet:
-${JSON.stringify(args.currentChangeSet, null, 2)}
-
-instruction: ${JSON.stringify(sanitizedInstruction)}
-
-Return ONLY: {"changeSet": <revised ChangeSet>, "rationale": "<one-line explanation>"}`;
-}
-
-function parseReviseResult(text: string): { changeSet: ChangeSet; rationale: string } {
-  const jsonSlice = extractJsonFromReply(text);
-  if (jsonSlice === null) {
-    throw new Error('reviseChangeSet: AI returned no JSON object');
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonSlice);
-  } catch (cause) {
-    throw new Error('reviseChangeSet: AI returned invalid JSON', { cause });
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('reviseChangeSet: AI response was not a JSON object');
-  }
-  const container = parsed as Record<string, unknown>;
-  const changeSet = ChangeSetSchema.safeParse(container['changeSet']);
-  if (!changeSet.success) {
-    throw new Error('reviseChangeSet: AI returned a ChangeSet that failed schema validation');
-  }
-  const rationaleRaw = container['rationale'];
-  const rationale =
-    typeof rationaleRaw === 'string' && rationaleRaw.trim().length > 0
-      ? rationaleRaw.trim()
-      : 'ChangeSet revised by AI helper';
-  return { changeSet: changeSet.data, rationale };
-}
-
-export async function reviseChangeSet(db: FinanceDb, args: ReviseArgs): Promise<ReviseResult> {
-  const rulesBefore = db.select().from(transactionCorrections).all();
-  const sanitizedInstruction = args.instruction.trim().slice(0, 2000);
-  if (sanitizedInstruction.length === 0)
-    throw new Error('reviseChangeSet: instruction must be non-empty');
-
-  const text = await getClaudeCompleter()({
-    prompt: buildRevisePrompt(args, sanitizedInstruction),
-    maxTokens: 2000,
-    operation: 'revise-changeset',
-  });
-  if (!text) throw new Error('reviseChangeSet: AI unavailable');
-
-  const { changeSet, rationale } = parseReviseResult(text);
-  return { changeSet, rationale, targetRules: buildTargetRulesMap(changeSet, rulesBefore) };
 }

@@ -63,6 +63,24 @@ export function normalizePatternForStorage(pattern: string, matchType: PatternMa
   return matchType === 'regex' ? pattern : normalizeDescription(pattern);
 }
 
+/**
+ * {@link normalizePatternForStorage}'s contract for one match type, worded for
+ * an AI prompt that asks a model to write a pattern.
+ *
+ * Lives here, beside the function whose behaviour it describes, because the
+ * one prompt that restated it from memory got it wrong in the one direction
+ * that corrupts: it told the model to uppercase and digit-strip every
+ * pattern, `regex` included, which is precisely what storing a regex verbatim
+ * exists to avoid (POPS-3000, the same defect POPS-2704 fixed on the propose
+ * path). A caller renders the rule for the match types actually in play
+ * rather than restating any of it.
+ */
+export function describePatternStorageRule(matchType: PatternMatchType): string {
+  return matchType === 'regex'
+    ? 'A "regex" pattern is stored verbatim and tested against the raw description: write it exactly as it must run, and never uppercase it or strip its digits — that would corrupt \\d, \\s and quantifiers such as a{2,3}.'
+    : 'An "exact" or "contains" pattern is tested against a normalised description: write it uppercase with digits stripped.';
+}
+
 const warnedInvalidPatterns = new Set<string>();
 
 function warnOnceInvalidPattern(pattern: string): void {
