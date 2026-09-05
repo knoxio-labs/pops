@@ -12,7 +12,7 @@
 # are embedded into the binary at compile time via `sqlx::migrate!`, so the
 # runtime image needs neither the migrations directory nor sqlx-cli.
 
-FROM rust:1.97.1-slim-bookworm AS builder
+FROM rust:1.98.0-slim-bookworm AS builder
 WORKDIR /build
 
 # System deps for the build: rustls pulls its own crypto (no OpenSSL), so only
