@@ -1,5 +1,6 @@
 import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
 
+import type { NullableColumnKeys } from './nullable-column-keys.js';
 import type { UpdateInventoryItemInput } from './types.js';
 
 type InventoryUpdate = Partial<typeof homeInventory.$inferInsert>;
@@ -26,13 +27,13 @@ const NULLABLE_STRING_KEYS = [
   'assetId',
   'notes',
   'locationId',
-] as const satisfies ReadonlyArray<keyof UpdateInventoryItemInput & keyof InventoryUpdate>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateInventoryItemInput, string>>;
 
 const NULLABLE_NUMBER_KEYS = [
   'replacementValue',
   'resaleValue',
   'purchasePrice',
-] as const satisfies ReadonlyArray<keyof UpdateInventoryItemInput & keyof InventoryUpdate>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateInventoryItemInput, number>>;
 
 /**
  * Build the partial update payload for an inventory item from the input.
@@ -75,16 +76,16 @@ function assignItemName(updates: InventoryUpdate, input: UpdateInventoryItemInpu
   return true;
 }
 
-function assignNullableKeys(
-  updates: InventoryUpdate,
-  input: UpdateInventoryItemInput,
-  keys: ReadonlyArray<keyof UpdateInventoryItemInput & keyof InventoryUpdate>
+function assignNullableKeys<K extends string, V extends string | number>(
+  updates: Partial<Record<K, V | null>>,
+  input: Readonly<Partial<Record<K, V | null>>>,
+  keys: readonly K[]
 ): boolean {
   let touched = false;
   for (const key of keys) {
     const value = input[key];
     if (value === undefined) continue;
-    (updates as Record<string, unknown>)[key] = value ?? null;
+    updates[key] = value;
     touched = true;
   }
   return touched;
