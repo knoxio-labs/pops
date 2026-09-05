@@ -134,7 +134,11 @@ export async function extractPdfText(bytes: ArrayBuffer): Promise<PdfExtraction>
       data: new Uint8Array(bytes),
       // Nothing here draws a page, so the document's fonts are never needed;
       // leaving them off keeps a statement's embedded font programs from being
-      // installed into the document for no reason.
+      // installed into the document for no reason. No `standardFontDataUrl`
+      // for the same reason (POPS-2540): the run widths the line reconstruction
+      // measures come from pdf.js's built-in core-font metrics, not from a font
+      // program, and bundling `pdfjs-dist/standard_fonts/` into the shell would
+      // cross the package boundary for data nothing here reads.
       disableFontFace: true,
     });
     const document = await loadingTask.promise;
