@@ -2,9 +2,11 @@ import AppCore
 import SwiftUI
 
 /// The one kind-specific fact card a dashboard shows, if the kind has one and
-/// the data supports it — mirroring
-/// `pillars/design/src/kit/ios-account-facts.tsx`'s dispatch exactly. A kind
-/// with no fact module renders nothing, not an empty card.
+/// the data supports it.
+///
+/// A kind with no fact module renders nothing, not an empty card: a card
+/// whose only content is its own heading tells the reader the app has
+/// something to say and then does not say it.
 internal struct AccountFactsView: View {
     internal let detail: AccountDetail
 

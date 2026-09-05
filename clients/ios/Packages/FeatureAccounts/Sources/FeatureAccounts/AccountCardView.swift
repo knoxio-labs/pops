@@ -2,10 +2,9 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// One account, as a tile in the list's two-column grid — mirroring
-/// `pillars/design/src/screens/mobile/accounts.tsx`'s `AccountCard`: a mark, a
-/// name and a balance carried at once rather than in a table row, because a
-/// 393pt screen has the width for two of them side by side.
+/// One account, as a tile in the list's two-column grid: a mark, a name and a
+/// balance carried at once rather than in a table row, because a 393pt screen
+/// has the width for two of them side by side.
 ///
 /// The name and kind label truncate to one line each; the balance does not —
 /// the same protection ``AccountRowView`` gives it, and for the same reason.

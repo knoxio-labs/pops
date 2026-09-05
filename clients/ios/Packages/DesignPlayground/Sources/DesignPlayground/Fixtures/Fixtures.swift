@@ -83,6 +83,21 @@ public enum Fixtures {
         transactionCount: 31
     )
 
+    /// Checkpointable and never checked. The only fixture that reaches
+    /// ``AccountPresentation/provenance(_:)``'s "Never checked against the
+    /// bank" branch: every other checkpointable account here carries a
+    /// `balanceAsOf`, and the kinds that do not carry one are all
+    /// non-checkpointable, so without this that branch is undrawable.
+    public static let unchecked = Account(
+        id: "acc-unchecked",
+        name: "Orange Everyday",
+        kind: .checking,
+        balance: money(31_500),
+        archived: false,
+        institutionName: "ING",
+        transactionCount: 0
+    )
+
     public static let marta = Account(
         id: "acc-marta",
         name: "Marta",

@@ -1,9 +1,7 @@
 import AppCore
 
-/// The accounts list, split the way
-/// `pillars/design/src/screens/mobile/accounts.tsx` sections it: Held and Owed
-/// by the sign of the balance, and Archived — shown only when asked for —
-/// beneath both.
+/// The accounts list, split into Held and Owed by the sign of the balance,
+/// with Archived — shown only when asked for — beneath both.
 ///
 /// A pure value built from ``AccountsListState/loaded(_:)`` plus whatever the
 /// screen's own search text and archived-visibility toggle are, rather than a

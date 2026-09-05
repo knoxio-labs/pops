@@ -99,6 +99,9 @@ internal enum Catalog {
                     AccountSurface(account: Fixtures.giftCard)
                 },
                 DesignState("never-checked", "Never checked") {
+                    AccountSurface(account: Fixtures.unchecked)
+                },
+                DesignState("never-counted", "Never counted") {
                     AccountSurface(account: Fixtures.euros)
                 },
                 DesignState("long-name", "Name that truncates") {
