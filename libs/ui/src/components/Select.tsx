@@ -3,7 +3,7 @@
  * Native select with custom styling to match design system
  */
 import { type VariantProps } from 'class-variance-authority';
-import { forwardRef, type ReactNode, type SelectHTMLAttributes, useState } from 'react';
+import { forwardRef, type ReactNode, type SelectHTMLAttributes, useId, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { containerVariants, selectVariants } from './Select.variants';
@@ -38,6 +38,7 @@ export interface SelectProps
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) => {
   const {
+    id,
     className,
     containerClassName,
     variant,
@@ -55,14 +56,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) =>
     ...selectAttrs
   } = props;
   const [isFocused, setIsFocused] = useState(false);
+  const generatedId = useId();
+  const selectId = id ?? generatedId;
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      {label && (
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1">
-          {label}
-        </label>
-      )}
+      <SelectLabel htmlFor={selectId} label={label} />
       <SelectShell
         variant={variant}
         size={size}
@@ -75,6 +74,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) =>
       >
         <select
           ref={ref}
+          id={selectId}
           className={cn(selectVariants({ size, centered, className }))}
           onFocus={(e) => {
             setIsFocused(true);
@@ -96,6 +96,18 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>((props, ref) =>
     </div>
   );
 });
+
+function SelectLabel({ htmlFor, label }: { htmlFor: string; label?: string }) {
+  if (!label) return null;
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1"
+    >
+      {label}
+    </label>
+  );
+}
 
 function SelectOptions({
   options,

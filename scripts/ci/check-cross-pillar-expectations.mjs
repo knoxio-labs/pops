@@ -893,12 +893,12 @@ export function scanSource(source) {
       i++;
       continue;
     }
-    if (c === "'") {
+    if (c === "'" && opensQuoteAt(code, i)) {
       mode = 'single';
       i++;
       continue;
     }
-    if (c === '"') {
+    if (c === '"' && opensQuoteAt(code, i)) {
       mode = 'double';
       i++;
       continue;
@@ -949,6 +949,39 @@ export function scanSource(source) {
  * @param {number} index
  * @returns {boolean}
  */
+/**
+ * Whether the quote at `index` opens a string literal, or is an apostrophe
+ * (or quote) sitting in JSX text content.
+ *
+ * A quote GLUED to a word is prose. Nothing else is: after whitespace, `=`,
+ * `(`, `,`, `:`, `[`, `{`, an operator, or the start of the file, it opens a
+ * literal exactly as it always did — so ordinary code, and a genuinely
+ * unterminated string, are unaffected.
+ *
+ * There is deliberately no keyword allowlist here. `return'x'` is legal
+ * JavaScript, and an earlier version of this fix admitted a quote glued to
+ * any keyword for that reason — but English possessives end in those same
+ * words. `someone else's account`, `the import's mapping step` and
+ * `an opt-in's default` all reduce to a keyword immediately before the
+ * apostrophe, and each one reopened the exact failure this function exists
+ * to close. Prose is the common case in JSX and the keyword-glued literal is
+ * a shape `pnpm format:check` (a required gate) will not let into the tree,
+ * so the ambiguity is resolved in favour of prose without exception.
+ *
+ * The cost is stated rather than hidden: an unterminated literal that is
+ * glued to a word — `return'oops` — is read as prose and not reported. It
+ * cannot be committed here, and every unterminated string that can be is
+ * still caught.
+ *
+ * @param {readonly string[]} code
+ * @param {number} index
+ * @returns {boolean}
+ */
+function opensQuoteAt(code, index) {
+  const previous = code[index - 1];
+  return previous === undefined || !/[\w$]/u.test(previous);
+}
+
 function opensRegexAt(code, index) {
   let i = index - 1;
   while (i >= 0 && /\s/u.test(code[i])) i--;

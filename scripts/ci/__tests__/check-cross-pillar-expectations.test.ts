@@ -114,6 +114,38 @@ describe('scanSource — what is code and what is prose', () => {
     expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", typeArg: 'R', line: 2 }]);
   });
 
+  it('does not lose its place on a contraction in JSX text', () => {
+    // POPS-2850: `points aren't counted` in pillars/design/src/screens/
+    // finance/accounts.tsx read the apostrophe as a string opener, found no
+    // close, and failed the whole gate for that file. Worked around at the
+    // time by rewording the prose.
+    const scanned = scanSource(
+      "const A = () => <p>points aren't counted</p>;\nconst h = pillar<R>('lists');"
+    );
+    expect(scanned.unterminated).toBeNull();
+    expect(findPillarCalls(scanned)).toEqual([{ argument: "'lists'", typeArg: 'R', line: 2 }]);
+  });
+
+  it.each([
+    ["the user's balance", 'a possessive'],
+    ["it's not counted", 'a contraction of "is"'],
+    ['the "best" option', 'double quotes around a word'],
+  ])('treats %j in JSX text as prose (%s)', (text) => {
+    expect(scanSource(`const A = () => <p>${text}</p>;`).unterminated).toBeNull();
+  });
+
+  it.each([
+    "someone else's account",
+    "the import's mapping step",
+    "an opt-in's default",
+    "the new's feed",
+  ])('treats %j as prose even though it ends in a keyword', (text) => {
+    // The first version of this fix kept a keyword allowlist so `return'x'`
+    // would still open a literal. English possessives end in those same
+    // words, so every one of these reopened POPS-2850 for a different word.
+    expect(scanSource(`const A = () => <p>${text}</p>;`).unterminated).toBeNull();
+  });
+
   it('reports rather than tolerates an unterminated block comment', () => {
     expect(scanSource('/* never closed').unterminated).toBe('block comment');
   });
