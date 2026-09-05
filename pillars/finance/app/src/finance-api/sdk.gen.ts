@@ -41,6 +41,21 @@ import type {
   BudgetsUpdateData,
   BudgetsUpdateErrors,
   BudgetsUpdateResponses,
+  CheckpointsBalanceData,
+  CheckpointsBalanceErrors,
+  CheckpointsBalanceResponses,
+  CheckpointsCreateData,
+  CheckpointsCreateErrors,
+  CheckpointsCreateResponses,
+  CheckpointsHistoryData,
+  CheckpointsHistoryErrors,
+  CheckpointsHistoryResponses,
+  CheckpointsListData,
+  CheckpointsListErrors,
+  CheckpointsListResponses,
+  CheckpointsRemoveData,
+  CheckpointsRemoveErrors,
+  CheckpointsRemoveResponses,
   CorrectionsAdjustConfidenceData,
   CorrectionsAdjustConfidenceErrors,
   CorrectionsAdjustConfidenceResponses,
@@ -377,6 +392,79 @@ export const accountsUpdate = <ThrowOnError extends boolean = false>(
 ): RequestResult<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError> =>
   (options.client ?? client).patch<AccountsUpdateResponses, AccountsUpdateErrors, ThrowOnError>({
     url: '/accounts/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * An account’s balance as of a date (default today), and what it was anchored on
+ */
+export const checkpointsBalance = <ThrowOnError extends boolean = false>(
+  options: Options<CheckpointsBalanceData, ThrowOnError>
+): RequestResult<CheckpointsBalanceResponses, CheckpointsBalanceErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    CheckpointsBalanceResponses,
+    CheckpointsBalanceErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/balance', ...options });
+
+/**
+ * Month-end balances for the last `months` months (default 12), oldest first
+ */
+export const checkpointsHistory = <ThrowOnError extends boolean = false>(
+  options: Options<CheckpointsHistoryData, ThrowOnError>
+): RequestResult<CheckpointsHistoryResponses, CheckpointsHistoryErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    CheckpointsHistoryResponses,
+    CheckpointsHistoryErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/balance-history', ...options });
+
+/**
+ * List an account’s checkpoints, newest first, each with what the ledger predicted for it
+ */
+export const checkpointsList = <ThrowOnError extends boolean = false>(
+  options: Options<CheckpointsListData, ThrowOnError>
+): RequestResult<CheckpointsListResponses, CheckpointsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<CheckpointsListResponses, CheckpointsListErrors, ThrowOnError>({
+    url: '/accounts/{id}/checkpoints',
+    ...options,
+  });
+
+/**
+ * Record a balance read off the bank or counted by hand; always source manual. 422s a future date or an archived account
+ */
+export const checkpointsCreate = <ThrowOnError extends boolean = false>(
+  options: Options<CheckpointsCreateData, ThrowOnError>
+): RequestResult<CheckpointsCreateResponses, CheckpointsCreateErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    CheckpointsCreateResponses,
+    CheckpointsCreateErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/checkpoints',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete a manual checkpoint; 409s an import or statement one, which is corrected by recording a newer checkpoint rather than removing what a file said
+ */
+export const checkpointsRemove = <ThrowOnError extends boolean = false>(
+  options: Options<CheckpointsRemoveData, ThrowOnError>
+): RequestResult<CheckpointsRemoveResponses, CheckpointsRemoveErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    CheckpointsRemoveResponses,
+    CheckpointsRemoveErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/checkpoints/{checkpointId}',
     ...options,
     headers: {
       'Content-Type': 'application/json',

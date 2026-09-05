@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_BALANCE } from '../test-utils.js';
 import { AccountDetailPage } from './AccountDetailPage';
 
 import type {
@@ -55,6 +56,7 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    balance: NO_BALANCE,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

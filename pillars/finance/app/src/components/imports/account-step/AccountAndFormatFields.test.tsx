@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useImportStore } from '../../../store/importStore';
+import { NO_BALANCE } from '../../../test-utils.js';
 import { AccountAndFormatFields } from './AccountAndFormatFields';
 
 import type { Account, Institution } from '../../../pages/accounts/types';
@@ -52,6 +53,7 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    balance: NO_BALANCE,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

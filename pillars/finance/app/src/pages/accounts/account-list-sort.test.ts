@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { NO_BALANCE } from '../../test-utils.js';
 import { isAccountSort, sortAccounts } from './account-list-sort';
 
 import type { Account } from './types';
@@ -16,6 +17,7 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    balance: NO_BALANCE,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

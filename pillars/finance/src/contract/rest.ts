@@ -1,7 +1,7 @@
 /**
  * REST contract for the finance pillar — ts-rest single source of truth.
  *
- * Composes the domain sub-routers (wishlist, budgets, accounts,
+ * Composes the domain sub-routers (wishlist, budgets, accounts, checkpoints,
  * giftCardDetails, loan, currencies, institutions, transactions, tagRules,
  * corrections, imports) into the public wire surface.
  * `generateOpenApi(financeContract, …)` projects this to
@@ -15,6 +15,7 @@ import { initContract } from '@ts-rest/core';
 
 import { financeAccountsContract } from './rest-accounts.js';
 import { financeBudgetsContract } from './rest-budgets.js';
+import { financeCheckpointsContract } from './rest-checkpoints.js';
 import { financeCorrectionsContract } from './rest-corrections.js';
 import { financeCurrenciesContract } from './rest-currencies.js';
 import { financeEntityUsageContract } from './rest-entity-usage.js';
@@ -37,6 +38,7 @@ export const financeContract = c.router(
     currencies: financeCurrenciesContract,
     institutions: financeInstitutionsContract,
     accounts: financeAccountsContract,
+    checkpoints: financeCheckpointsContract,
     giftCardDetails: financeGiftCardDetailsContract,
     loan: financeLoanContract,
     transactions: financeTransactionsContract,

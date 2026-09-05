@@ -32,8 +32,10 @@ import type { AddressInfo } from 'node:net';
 import type { Express } from 'express';
 
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
+import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
 import type { Account } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
+import type { Checkpoint } from '../modules/checkpoints-types.js';
 import type { Currency } from '../modules/currencies-types.js';
 import type {
   GiftCardDetails,
@@ -464,6 +466,22 @@ export function makeClient(app: Express) {
         call<{ data: Account; message: string }>((r) => r.delete(`/accounts/${id}`)),
       reorder: (body: { accounts: { id: string; displayOrder: number }[] }) =>
         call<{ data: Account[]; message: string }>((r) => r.post('/accounts/reorder').send(body)),
+    },
+    checkpoints: {
+      list: (accountId: string) =>
+        call<{ data: Checkpoint[] }>((r) => r.get(`/accounts/${accountId}/checkpoints`)),
+      create: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: Checkpoint; message: string }>((r) =>
+          r.post(`/accounts/${accountId}/checkpoints`).send(body)
+        ),
+      remove: (accountId: string, checkpointId: string) =>
+        call<undefined>((r) => r.delete(`/accounts/${accountId}/checkpoints/${checkpointId}`)),
+      balance: (accountId: string, query: { asOf?: string } = {}) =>
+        call<{ data: AccountBalance }>((r) => r.get(`/accounts/${accountId}/balance`).query(query)),
+      history: (accountId: string, query: { months?: number } = {}) =>
+        call<{ data: BalanceHistoryPoint[] }>((r) =>
+          r.get(`/accounts/${accountId}/balance-history`).query(query)
+        ),
     },
     giftCardDetails: {
       get: (accountId: string) =>
