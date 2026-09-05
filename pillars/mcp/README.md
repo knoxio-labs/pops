@@ -7,7 +7,7 @@ MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, 
 - **Inbound auth:** `POST /mcp` requires `Authorization: Bearer <MCP_INBOUND_TOKEN>` when `MCP_INBOUND_TOKEN` is set; `/health` and `/ready` stay open. See `src/auth.ts` for the unset-token behaviour.
 - **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
-The tool surface — 43 tools over the `inventory`, `finance`, `contacts`, `media`, `cerebrum` and `purchases` pillars — lives in [`src/tools/`](src/tools/README.md).
+The tool surface — 45 tools over the `inventory`, `finance`, `contacts`, `media`, `cerebrum` and `purchases` pillars — lives in [`src/tools/`](src/tools/README.md).
 
 ## Prerequisites
 
