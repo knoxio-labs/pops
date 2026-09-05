@@ -82,7 +82,7 @@ describe('recoverImportSession', () => {
 
     await expect(recovery).resolves.toBe('recovered-1');
     expect(processMock).toHaveBeenCalledExactlyOnceWith({
-      body: { transactions: [parsed], account: 'ING' },
+      body: { transactions: [parsed] },
     });
     expect(progressMock).toHaveBeenCalledTimes(2);
     expect(useImportStore.getState().processSessionId).toBe('recovered-1');

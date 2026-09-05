@@ -80,7 +80,6 @@ describe('imports — AI categorizer wired (F2)', () => {
           checksum: 'ai-row-1',
         },
       ],
-      account: 'Amex',
     });
 
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);

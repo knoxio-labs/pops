@@ -164,7 +164,6 @@ describe('ImportPage', () => {
     expect(processMock).toHaveBeenCalledWith({
       body: {
         transactions: [expect.objectContaining({ checksum: 'a' })],
-        account: 'Amex',
       },
     });
   });

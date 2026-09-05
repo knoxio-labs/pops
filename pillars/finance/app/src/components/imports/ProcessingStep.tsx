@@ -51,7 +51,7 @@ function shouldShowContinue(progressData: unknown): boolean {
  * Now with real-time progress updates via polling
  */
 export function ProcessingStep() {
-  const { parsedTransactions, accountName, nextStep } = useImportStore();
+  const { parsedTransactions, nextStep } = useImportStore();
   const hasAlreadyProcessed = useHasAlreadyProcessed();
   const state = useProcessingMutations();
   useCompletionHandler(state);
@@ -65,7 +65,7 @@ export function ProcessingStep() {
   const completedWarnings = getCompletedWarnings(progressQuery.data);
   const handleRetry = () => {
     processImportMutation.reset();
-    processImportMutation.mutate({ transactions: parsedTransactions, account: accountName });
+    processImportMutation.mutate({ transactions: parsedTransactions });
   };
   const isFailure = processImportMutation.isError || progressQuery.data?.status === 'failed';
 

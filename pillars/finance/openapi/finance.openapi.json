@@ -13904,10 +13904,6 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "account": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
                   "transactions": {
                     "items": {
                       "additionalProperties": false,
@@ -13984,7 +13980,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["transactions", "account"],
+                "required": ["transactions"],
                 "type": "object"
               }
             }

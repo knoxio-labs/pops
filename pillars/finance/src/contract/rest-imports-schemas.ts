@@ -152,7 +152,6 @@ export const ProcessImportOutputSchema = z.object({
 
 export const ProcessImportInputSchema = z.object({
   transactions: z.array(ParsedTransactionSchema),
-  account: z.string().min(1),
 });
 
 export const CreateEntityInputSchema = z.object({ name: z.string().min(1).max(200) });
