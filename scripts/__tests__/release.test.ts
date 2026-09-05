@@ -191,7 +191,32 @@ function runRelease({
 /** The tag shapes this repo actually carries alongside its releases. */
 const NOISE_TAGS = ['build-172', 'build-1810', 'v1', 'v2', 'v1.2.3-rc.1', 'v1.2.3.4'] as const;
 
-describe('fixture isolation', () => {
+/**
+ * The budget for any test that calls {@link runRelease}.
+ *
+ * Every such test builds a throwaway git repository — an `execFileSync('git',
+ * ...)` child process per tag and per commit — and then shells out to
+ * `release.sh`, which runs `git` again. Idle, that is 560-1460ms each; the
+ * cost is process spawning and disk, so it scales with whatever else the
+ * machine is doing rather than with anything the test asserts.
+ *
+ * Vitest's 5000ms default is therefore the wrong bound for all of them, and
+ * has now been observed failing three of them under load: "picks the highest
+ * strict semver tag out of the real tag zoo" at 5669ms with a load average of
+ * ~360 (POPS-3003), then "ignores a type keyword that is not the subject
+ * prefix" and "groups commits by type and links the compare range" at ~416
+ * (POPS-3017). Budgeting one test at a time was losing to the rate at which
+ * the next one surfaced, so this is applied to every describe block that
+ * shells out, once.
+ *
+ * The global timeout is deliberately NOT raised: a test that does not spawn a
+ * process has no business taking five seconds, and the `release.yml wiring`
+ * block below — which only reads a YAML file, 0-2ms per test — keeps the
+ * default so that a regression there still shows up as a timeout.
+ */
+const RUNS_RELEASE_SH_TIMEOUT_MS = 20_000;
+
+describe('fixture isolation', { timeout: RUNS_RELEASE_SH_TIMEOUT_MS }, () => {
   // This suite runs inside the husky `pre-push` hook, which git invokes with
   // GIT_DIR and GIT_INDEX_FILE exported. Spreading `process.env` there pointed
   // the fixture's `git init` at the real repository: `core.bare` flipped to
@@ -236,7 +261,7 @@ describe('fixture isolation', () => {
   });
 });
 
-describe('release.sh — previous-tag resolution', () => {
+describe('release.sh — previous-tag resolution', { timeout: RUNS_RELEASE_SH_TIMEOUT_MS }, () => {
   // This fixture creates nine tags (the six-tag `NOISE_TAGS` zoo plus three
   // release tags), each an `execFileSync('git', ['tag', '-a', ...])` child
   // process, before `release.sh` itself shells out to `git tag --list` and
@@ -245,20 +270,14 @@ describe('release.sh — previous-tag resolution', () => {
   // parallel worktrees — clocked at 5669ms against the default budget with a
   // load average of ~360 from concurrent workspace typechecks (POPS-3003).
   // The bound is on the machine's load, not on anything this test asserts.
-  const REAL_TAG_ZOO_TIMEOUT_MS = 20_000;
-
-  it(
-    'picks the highest strict semver tag out of the real tag zoo',
-    () => {
-      const { outputs } = runRelease({
-        tags: [...NOISE_TAGS, 'v0.406.1', 'v1.0.0', 'v1.1.0'],
-        commits: [{ subject: 'feat(finance): add a thing' }],
-      });
-      expect(outputs.previous).toBe('v1.1.0');
-      expect(outputs.version).toBe('1.2.0');
-    },
-    REAL_TAG_ZOO_TIMEOUT_MS
-  );
+  it('picks the highest strict semver tag out of the real tag zoo', () => {
+    const { outputs } = runRelease({
+      tags: [...NOISE_TAGS, 'v0.406.1', 'v1.0.0', 'v1.1.0'],
+      commits: [{ subject: 'feat(finance): add a thing' }],
+    });
+    expect(outputs.previous).toBe('v1.1.0');
+    expect(outputs.version).toBe('1.2.0');
+  });
 
   it('does not mistake a 4-segment or pre-release tag for a release', () => {
     const { outputs } = runRelease({
@@ -279,7 +298,7 @@ describe('release.sh — previous-tag resolution', () => {
   });
 });
 
-describe('release.sh — bump computation', () => {
+describe('release.sh — bump computation', { timeout: RUNS_RELEASE_SH_TIMEOUT_MS }, () => {
   it('bumps minor on a feat', () => {
     expect(
       runRelease({ tags: ['v1.4.2'], commits: [{ subject: 'feat(ai): thing' }] }).outputs.version
@@ -357,7 +376,7 @@ describe('release.sh — bump computation', () => {
   });
 });
 
-describe('release.sh — release notes', () => {
+describe('release.sh — release notes', { timeout: RUNS_RELEASE_SH_TIMEOUT_MS }, () => {
   it('groups commits by type and links the compare range', () => {
     const { notes } = runRelease({
       tags: ['v1.4.2'],
