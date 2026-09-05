@@ -167,7 +167,13 @@ export interface RankingInput {
    * not tmdbId, unlike `acquiredAt`.
    */
   abandonedProgress?: ReadonlyMap<number, number>;
-  /** Movies acquired within this many days carry no pressure at all. */
+  /**
+   * Movies whose *effective* age is under this carry no pressure at all — not
+   * movies acquired within it. The window is applied to the age
+   * {@link rankForRemoval} computes, and that clock anchors to the later of
+   * acquisition and the last completed watch, so a film watched last week is
+   * inside the window however long it has been on disk.
+   */
   graceDays: number;
   /** Defaults to {@link DEFAULT_TUNING} when the caller has no stored values. */
   tuning?: RotationTuning;

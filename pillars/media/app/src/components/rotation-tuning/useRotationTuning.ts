@@ -73,7 +73,7 @@ export const TUNING_FIELDS = [
     min: 0,
     max: 90,
     step: 1,
-    hint: 'A film downloaded this recently is never removed, whatever it scores.',
+    hint: 'A film downloaded — or watched — this recently is never removed, whatever it scores.',
   },
 ] as const;
 
