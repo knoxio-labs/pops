@@ -15,6 +15,13 @@
       "when": 1787270400000,
       "tag": "0001_device_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788652800000,
+      "tag": "0002_device_capability_mode",
+      "breakpoints": true
     }
   ]
 }

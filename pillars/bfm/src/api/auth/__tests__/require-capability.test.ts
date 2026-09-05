@@ -152,6 +152,47 @@ describe('a device asking for something its grant does not cover', () => {
     expect(res.status).not.toBe(403);
   });
 
+  it('reaches a capability added after it paired, when it tracks the default grant', async () => {
+    // The row a handset paired in 2026-08 carries: the vocabulary of that day,
+    // with no `finance.accounts.read` in it. The gate must resolve the grant
+    // against the running build rather than against the column, or the app
+    // offers an Accounts tab that answers 403 (POPS-2928).
+    const app = open();
+    const row = deviceRow({
+      capabilities: serialiseDeviceCapabilities([
+        MOBILE_SESSION_CAPABILITY,
+        'finance.transactions.read',
+        'purchases.receipts.write',
+      ]),
+      capabilityMode: 'tracks-default',
+    });
+    app.db.insert(devices).values(row).run();
+    const { token } = mintAccessToken(row.id, app.accessTokenSigningKey);
+
+    const res = await requestOn(app.app, (r) =>
+      r.get('/mobile/finance/accounts').set('Authorization', `Bearer ${token}`)
+    );
+
+    // The finance leg is unreachable in the harness, so past the gate is an
+    // upstream failure rather than a 200 — the refusal it is NOT is the 403.
+    expect(res.status).not.toBe(403);
+  });
+
+  it('still refuses a capability an explicit grant omits, however wide the default set is', async () => {
+    // The other direction of the same change: re-resolving must not undo a
+    // narrowing. This grant names the session capability and nothing else,
+    // while the default set holds `finance.accounts.read`.
+    const app = open();
+    const device = pairedDevice(app, [MOBILE_SESSION_CAPABILITY]);
+
+    const res = await requestOn(app.app, (r) =>
+      r.get('/mobile/finance/accounts').set('Authorization', device.authorization)
+    );
+
+    expect(res.status).toBe(403);
+    expect(res.body.capability).toBe('finance.accounts.read');
+  });
+
   it('does not gate a path the contract never declared', async () => {
     // A typo must reach the router's own 404. Refusing here would make every
     // wrong path read as a permissions problem.
