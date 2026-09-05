@@ -237,14 +237,28 @@ describe('fixture isolation', () => {
 });
 
 describe('release.sh — previous-tag resolution', () => {
-  it('picks the highest strict semver tag out of the real tag zoo', () => {
-    const { outputs } = runRelease({
-      tags: [...NOISE_TAGS, 'v0.406.1', 'v1.0.0', 'v1.1.0'],
-      commits: [{ subject: 'feat(finance): add a thing' }],
-    });
-    expect(outputs.previous).toBe('v1.1.0');
-    expect(outputs.version).toBe('1.2.0');
-  });
+  // This fixture creates nine tags (the six-tag `NOISE_TAGS` zoo plus three
+  // release tags), each an `execFileSync('git', ['tag', '-a', ...])` child
+  // process, before `release.sh` itself shells out to `git tag --list` and
+  // sorts the result. That is comfortably under vitest's 5000ms default on an
+  // idle machine but not under concurrent load from sibling CI jobs or
+  // parallel worktrees — clocked at 5669ms against the default budget with a
+  // load average of ~360 from concurrent workspace typechecks (POPS-3003).
+  // The bound is on the machine's load, not on anything this test asserts.
+  const REAL_TAG_ZOO_TIMEOUT_MS = 20_000;
+
+  it(
+    'picks the highest strict semver tag out of the real tag zoo',
+    () => {
+      const { outputs } = runRelease({
+        tags: [...NOISE_TAGS, 'v0.406.1', 'v1.0.0', 'v1.1.0'],
+        commits: [{ subject: 'feat(finance): add a thing' }],
+      });
+      expect(outputs.previous).toBe('v1.1.0');
+      expect(outputs.version).toBe('1.2.0');
+    },
+    REAL_TAG_ZOO_TIMEOUT_MS
+  );
 
   it('does not mistake a 4-segment or pre-release tag for a release', () => {
     const { outputs } = runRelease({
