@@ -51,12 +51,12 @@ internal struct InspectorView: View {
         HStack(spacing: PopsSpacing.md) {
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(width: 28, height: 28)
+                    .font(.popsSubheadline.weight(.semibold))
+                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
             }
             .accessibilityLabel("Close")
 
-            Divider().frame(height: 18)
+            Divider().frame(height: PopsSpacing.xl)
 
             Button {
                 expanded.toggle()
@@ -71,7 +71,7 @@ internal struct InspectorView: View {
                             .foregroundStyle(Color.popsAccent)
                     }
                     Image(systemName: expanded ? "chevron.down" : "chevron.up")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.popsSectionLabel)
                         .foregroundStyle(Color.popsMutedForeground)
                 }
                 .frame(maxWidth: .infinity)
@@ -130,7 +130,7 @@ internal struct InspectorView: View {
             typeSizeSlider
         }
         .padding(PopsSpacing.lg)
-        .playgroundGlass(in: .rect(cornerRadius: 26))
+        .playgroundGlass(in: .capsule)
         .padding(.bottom, PopsSpacing.sm)
     }
 
@@ -223,7 +223,7 @@ internal struct InspectorView: View {
         Button(action: action) {
             HStack(spacing: PopsSpacing.xs) {
                 if let symbol {
-                    Image(systemName: symbol).font(.system(size: 11, weight: .semibold))
+                    Image(systemName: symbol).font(.popsSectionLabel)
                 }
                 Text(title).font(.popsCaption)
             }

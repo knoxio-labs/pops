@@ -7,10 +7,20 @@ extension View {
     /// Applied to the chrome and the surface together — a dark review wants a
     /// dark navigation bar — and deliberately *not* to the inspector, which
     /// has to stay readable while it is being used to look at AX5 in dark.
+    /// `colorScheme` is applied only when the reader has chosen one, which is
+    /// why ``Appearance/system`` is a branch rather than a value passed
+    /// through: writing the device's current scheme back into the environment
+    /// looks identical until the device changes appearance under a stage that
+    /// has quietly pinned the old one.
+    @ViewBuilder
     func surfaceEnvironment(_ settings: StageSettings) -> some View {
-        environment(\.colorScheme, settings.appearance.colorScheme)
-            .environment(\.dynamicTypeSize, settings.typeSize)
+        let sized = environment(\.dynamicTypeSize, settings.typeSize)
             .environment(\.layoutDirection, settings.rightToLeft ? .rightToLeft : .leftToRight)
+        if let scheme = settings.appearance.colorScheme {
+            sized.environment(\.colorScheme, scheme)
+        } else {
+            sized
+        }
     }
 }
 

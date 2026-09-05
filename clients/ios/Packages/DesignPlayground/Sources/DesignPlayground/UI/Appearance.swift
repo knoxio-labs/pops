@@ -6,7 +6,13 @@ import SwiftUI
 /// `.preferredColorScheme`, which reaches the whole window: the point is to
 /// flip the *surface* while the playground's own chrome stays where the
 /// reader put it, and to be able to see both at once on a wide device.
+///
+/// ``system`` is the default and is an *absence* of an override rather than a
+/// third value to apply — a surface opened without touching this control is
+/// drawn in whatever the device is set to, which is the only setting under
+/// which what a reviewer sees is what a user would see.
 public enum Appearance: String, CaseIterable, Identifiable, Sendable {
+    case system
     case light
     case dark
 
@@ -14,6 +20,7 @@ public enum Appearance: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
+        case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
         }
@@ -21,22 +28,19 @@ public enum Appearance: String, CaseIterable, Identifiable, Sendable {
 
     public var symbol: String {
         switch self {
+        case .system: "iphone"
         case .light: "sun.max"
         case .dark: "moon"
         }
     }
 
-    public var colorScheme: ColorScheme {
+    /// `nil` for ``system``, which is what makes it an absence: the stage
+    /// applies no `colorScheme` at all and the surface inherits the device's.
+    public var colorScheme: ColorScheme? {
         switch self {
+        case .system: nil
         case .light: .light
         case .dark: .dark
-        }
-    }
-
-    public var flipped: Appearance {
-        switch self {
-        case .light: .dark
-        case .dark: .light
         }
     }
 }

@@ -3,20 +3,17 @@ import DesignSystem
 import SwiftUI
 
 /// The account mark led by the institution rather than by the kind: initials
-/// on the institution's own tint, and the kind demoted to the subtitle.
-///
-/// The answer `account-chip-identity` chose on the web (2026-09-03) — "the
-/// logo where one exists, initials on the brand colour where it does not".
-/// There are no logos in this app, so this is the initials half of it.
+/// on a tint drawn from the existing semantic palette, and the kind demoted to
+/// the subtitle — the "institution-led" variant.
 internal struct InstitutionMark: View {
-    let account: Account
-    var size: CGFloat = 34
+    internal let account: Account
+    internal var size: CGFloat = 34
 
-    var body: some View {
+    internal var body: some View {
         let tint = Self.tint(for: initialsSource)
         return Text(initials)
-            .font(.system(size: size * 0.36, weight: .semibold))
-            .foregroundStyle(.white)
+            .font(.popsSubheadline.weight(.semibold))
+            .foregroundStyle(Color.popsBackground)
             .frame(width: size, height: size)
             .background(tint, in: .rect(cornerRadius: PopsRadius.control))
             .accessibilityHidden(true)
@@ -34,32 +31,35 @@ internal struct InstitutionMark: View {
         return words.compactMap { $0.first.map(String.init) }.joined().uppercased()
     }
 
-    /// A stable hue per institution, derived from the name so two accounts at
-    /// the same bank always mark the same and no list has to be told which
-    /// colour to use.
+    /// A stable pick per institution, from the existing semantic palette
+    /// rather than a computed hue — the real design (`account-chip-identity`,
+    /// decided on the web 2026-09-03) draws a brand colour this app has
+    /// nowhere to read from, and a token catalogue with one entry per
+    /// institution is not a catalogue. Stable because it is derived from the
+    /// name: two accounts at the same bank still mark the same.
     private static func tint(for name: String) -> Color {
-        let hue = Double(abs(name.hashValue) % 360) / 360
-        return Color(hue: hue, saturation: 0.55, brightness: 0.62)
+        let palette: [Color] = [.popsAccent, .popsWarning, .popsSuccess, .popsDestructive]
+        return palette[abs(name.hashValue) % palette.count]
     }
 }
 
-/// A list row that leads with the institution mark, for the variant that uses
-/// it. Everything else about the row is `AccountListRow`'s — the difference
-/// between the two variants has to be the mark and nothing else, or the
+/// A list row that leads with the institution mark — the "institution-led"
+/// variant's row. Everything else about it is ``AccountListRow``'s: the
+/// difference between the two has to be the mark and nothing else, or the
 /// comparison is about two changes at once.
 internal struct InstitutionLedRow: View {
-    let account: Account
+    internal let account: Account
 
-    var body: some View {
-        let reading = AccountPresentation.read(account)
+    internal var body: some View {
+        let reading = AccountExperimentPresentation.read(account)
         return HStack(spacing: PopsSpacing.md) {
             InstitutionMark(account: account)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(account.name)
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
                     .lineLimit(1)
-                Text(AccountPresentation.label(for: account.kind))
+                Text(AccountExperimentPresentation.label(for: account.kind))
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsMutedForeground)
                     .lineLimit(1)

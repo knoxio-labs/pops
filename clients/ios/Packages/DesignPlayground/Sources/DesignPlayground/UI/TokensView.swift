@@ -48,7 +48,7 @@ internal struct TokensView: View {
                 }
                 Section("Type") {
                     ForEach(styles, id: \.name) { style in
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                             Text(style.name)
                                 .font(.popsCaption)
                                 .foregroundStyle(Color.popsMutedForeground)
@@ -78,15 +78,15 @@ internal struct TokensView: View {
                     .fill(Color.popsBackground)
                 RoundedRectangle(cornerRadius: PopsRadius.control)
                     .fill(color)
-                    .padding(6)
+                    .padding(PopsSpacing.sm)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
             .overlay(
                 RoundedRectangle(cornerRadius: PopsRadius.control)
                     .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
             )
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(name)
                     .font(.popsMonospacedCaption)
                     .foregroundStyle(Color.popsForeground)
@@ -94,7 +94,7 @@ internal struct TokensView: View {
                     .font(.popsCaption)
                     .foregroundStyle(color)
                     .padding(.horizontal, PopsSpacing.sm)
-                    .padding(.vertical, 2)
+                    .padding(.vertical, PopsSpacing.xs)
                     .background(Color.popsSurface, in: .capsule)
             }
             Spacer()
@@ -103,7 +103,7 @@ internal struct TokensView: View {
     }
 
     private func metric(_ name: String, values: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             Text(name)
                 .font(.popsMonospacedCaption)
                 .foregroundStyle(Color.popsForeground)

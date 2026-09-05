@@ -2,22 +2,22 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// The accounts list as a two-column card grid rather than as rows.
+/// The competing answer in the `accounts-list-shape` experiment: the accounts
+/// list as a two-column card grid rather than as rows.
 ///
-/// The competing answer in the list-shape experiment. A tile carries a mark, a
-/// name and a balance at once, which is the "scannable at a glance" bet — and
-/// at 393pt there is width for two. What it costs is the subtitle: who the
-/// account is with does not fit beside everything else, so a grid identifies
-/// by mark and name alone.
+/// A tile carries a mark, a name and a balance at once, which is the
+/// "scannable at a glance" bet — and at 393pt there is width for two. What it
+/// costs is the subtitle: who the account is with does not fit beside
+/// everything else, so a grid identifies by mark and name alone.
 internal struct AccountsGridSurface: View {
-    let accounts: [Account]
+    internal let accounts: [Account]
 
     private let columns = [
         GridItem(.flexible(), spacing: PopsSpacing.md),
         GridItem(.flexible(), spacing: PopsSpacing.md),
     ]
 
-    var body: some View {
+    internal var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: PopsSpacing.lg, pinnedViews: [.sectionHeaders])
             {
@@ -44,16 +44,16 @@ internal struct AccountsGridSurface: View {
     }
 
     private func tile(_ account: Account) -> some View {
-        let reading = AccountPresentation.read(account)
+        let reading = AccountExperimentPresentation.read(account)
         return VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             AccountMark(account: account, size: 30)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(account.name)
                     .font(.popsSubheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.popsForeground)
                     .lineLimit(2)
-                Text(AccountPresentation.label(for: account.kind))
+                Text(AccountExperimentPresentation.label(for: account.kind))
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
                     .lineLimit(1)

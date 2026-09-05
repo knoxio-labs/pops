@@ -1,7 +1,3 @@
-import AppCore
-import DesignSystem
-import SwiftUI
-
 /// Everything the playground can show.
 ///
 /// ## Why this is a hand-written list
@@ -48,90 +44,8 @@ internal enum Catalog {
         + TransactionsSurfaces.surfaces
         + PurchasesSurfaces.surfaces
         + ReceiptSurfaces.surfaces
-        + accountSurfaces
+        + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
-
-    private static let accountSurfaces: [DesignSurface] = [
-        DesignSurface(
-            id: SurfaceID(area: "accounts", slug: "list"),
-            title: "Accounts",
-            synopsis: "Every account, sectioned by whether the balance is yours or owed.",
-            chrome: .navigationAndTabs,
-            states: [
-                DesignState.standard {
-                    AccountsListSurface(accounts: Fixtures.activeAccounts)
-                },
-                DesignState("archived", "With archived") {
-                    AccountsListSurface(accounts: Fixtures.allAccounts)
-                },
-                DesignState("empty", "Empty") {
-                    EmptyStateView(
-                        message:
-                            "No accounts yet. Accounts are created on the desktop; this is where they are read."
-                    )
-                },
-                DesignState("one", "Single account") {
-                    AccountsListSurface(accounts: [Fixtures.everyday])
-                },
-            ]
-        ),
-        DesignSurface(
-            id: SurfaceID(area: "accounts", slug: "account"),
-            title: "Account",
-            synopsis:
-                "One account: identity, the headline balance, and where the number came from.",
-            chrome: .navigation,
-            states: [
-                DesignState.standard {
-                    AccountSurface(account: Fixtures.everyday)
-                },
-                DesignState("liability", "Liability") {
-                    AccountSurface(
-                        account: Fixtures.amex,
-                        checkpointDisagrees: Fixtures.disagreeingCheckpoints.contains(
-                            Fixtures.amex.id)
-                    )
-                },
-                DesignState("person", "Person ledger") {
-                    AccountSurface(account: Fixtures.marta)
-                },
-                DesignState("stored-value", "Gift card") {
-                    AccountSurface(account: Fixtures.giftCard)
-                },
-                DesignState("never-checked", "Never checked") {
-                    AccountSurface(account: Fixtures.unchecked)
-                },
-                DesignState("never-counted", "Never counted") {
-                    AccountSurface(account: Fixtures.euros)
-                },
-                DesignState("long-name", "Name that truncates") {
-                    AccountSurface(account: Fixtures.mortgage)
-                },
-            ]
-        ),
-        DesignSurface(
-            id: SurfaceID(area: "accounts", slug: "picker"),
-            title: "Account picker",
-            synopsis:
-                "Choosing the account a transaction is filed against, over the transaction itself.",
-            chrome: .sheet,
-            states: [
-                DesignState.standard {
-                    AccountPickerSurface(
-                        accounts: Fixtures.activeAccounts, selected: Fixtures.amex.id)
-                },
-                DesignState("searching", "Searching") {
-                    AccountPickerSurface(
-                        accounts: Fixtures.activeAccounts, selected: Fixtures.amex.id,
-                        focusSearch: true)
-                },
-                DesignState("archived", "Archived revealed") {
-                    AccountPickerSurface(accounts: Fixtures.allAccounts, selected: Fixtures.amex.id)
-                },
-            ],
-            backdrop: { NewTransactionBackdrop() }
-        ),
-    ]
 
     static let experiments: [DesignExperiment] = ExperimentCatalog.all
 

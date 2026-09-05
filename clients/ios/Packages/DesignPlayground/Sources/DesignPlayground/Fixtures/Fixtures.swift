@@ -84,8 +84,8 @@ public enum Fixtures {
     )
 
     /// Checkpointable and never checked. The only fixture that reaches
-    /// ``AccountPresentation/provenance(_:)``'s "Never checked against the
-    /// bank" branch: every other checkpointable account here carries a
+    /// `AccountPresentation.asOfNote(_:)`'s "Never checked against a
+    /// statement" branch: every other checkpointable account here carries a
     /// `balanceAsOf`, and the kinds that do not carry one are all
     /// non-checkpointable, so without this that branch is undrawable.
     public static let unchecked = Account(
@@ -156,9 +156,4 @@ extension Fixtures {
             isCredit: false),
         RecentLine(title: "Refund — Uniqlo", when: "29 Aug", amount: "+$79.95", isCredit: true),
     ]
-
-    /// The accounts whose latest checkpoint disagrees with the ledger. A set
-    /// rather than a field on `Account`, because disagreement is a fact about
-    /// two records and not a property of one.
-    public static let disagreeingCheckpoints: Set<String> = [amex.id]
 }

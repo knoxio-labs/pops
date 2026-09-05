@@ -215,7 +215,15 @@ targets:
     type: application
     platform: iOS
     sources:
-      - Playground
+      # Same treatment `Pops` needs and for the same reason: XcodeGen 2.46
+      # predates Icon Composer, so it walks into the `.icon` bundle as a
+      # source directory unless it is excluded and named once as a file.
+      - path: Playground
+        excludes:
+          - PlaygroundIcon.icon/**
+      - path: Playground/PlaygroundIcon.icon
+        type: file
+        buildPhase: resources
     dependencies:
       - package: DesignPlayground
     configFiles:
@@ -229,6 +237,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         # So it is distinguishable from `Pops` on a home screen that has both.
         INFOPLIST_KEY_CFBundleDisplayName: Pops Design
+        ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
         MARKETING_VERSION: '0.1.0'
         CURRENT_PROJECT_VERSION: '1'

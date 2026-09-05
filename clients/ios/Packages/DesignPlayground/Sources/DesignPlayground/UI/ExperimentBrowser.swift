@@ -61,7 +61,7 @@ internal struct ExperimentBrowser: View {
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
         case .decided(let variant, let rationale):
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text("Chose \(experiment.variants.first { $0.id == variant }?.title ?? variant)")
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsSuccess)

@@ -11,7 +11,7 @@ import SwiftUI
 internal struct StageSettings {
     var stateID: String
     var chrome: Chrome
-    var appearance: Appearance = .light
+    var appearance: Appearance = .system
     var typeSize: DynamicTypeSize = .playgroundDefault
     var rightToLeft = false
 
@@ -20,7 +20,7 @@ internal struct StageSettings {
     /// are looking at AX5 in dark and reports it as a bug.
     func isModified(from surface: DesignSurface) -> Bool {
         chrome != surface.chrome
-            || appearance != .light
+            || appearance != .system
             || typeSize != .playgroundDefault
             || rightToLeft
     }

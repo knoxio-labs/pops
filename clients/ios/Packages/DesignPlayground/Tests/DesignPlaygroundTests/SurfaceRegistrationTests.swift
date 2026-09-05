@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import DesignPlayground
@@ -66,5 +67,34 @@ internal struct SurfaceRegistrationTests {
             unregistered.isEmpty,
             "built but unreachable: \(unregistered.sorted().joined(separator: ", "))"
         )
+    }
+}
+
+/// The stage opens in whatever the device is set to.
+///
+/// A playground that defaults to light shows every reviewer the same screen
+/// regardless of their device, and the one thing it is for is showing what a
+/// user would see.
+@Suite("Stage defaults")
+internal struct StageDefaultsTests {
+    @Test("a surface opens following the device, not a pinned appearance")
+    func appearanceDefaultsToSystem() {
+        let settings = StageSettings(stateID: "default", chrome: .navigation)
+
+        #expect(settings.appearance == .system)
+        #expect(settings.appearance.colorScheme == nil)
+    }
+
+    @Test("following the device is not counted as a modification")
+    func systemAppearanceIsNotAModification() {
+        let surface = DesignSurface(
+            id: SurfaceID(area: "test", slug: "surface"),
+            title: "Test",
+            chrome: .navigation,
+            states: [DesignState.standard { EmptyView() }]
+        )
+        let settings = StageSettings(stateID: "default", chrome: .navigation)
+
+        #expect(!settings.isModified(from: surface))
     }
 }

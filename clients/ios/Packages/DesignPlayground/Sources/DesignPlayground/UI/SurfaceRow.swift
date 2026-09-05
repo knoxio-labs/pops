@@ -33,12 +33,12 @@ internal struct SurfaceRow: View {
 
     private func badge(_ text: String, symbol: String) -> some View {
         HStack(spacing: PopsSpacing.xs) {
-            Image(systemName: symbol).font(.system(size: 10))
+            Image(systemName: symbol).font(.popsCaption)
             Text(text).font(.popsCaption)
         }
         .foregroundStyle(Color.popsMutedForeground)
         .padding(.horizontal, PopsSpacing.sm)
-        .padding(.vertical, 2)
+        .padding(.vertical, PopsSpacing.xs)
         .background(Color.popsSeparator.opacity(0.3), in: .capsule)
     }
 }
