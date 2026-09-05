@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { INVENTORY_CONDITIONS } from '../../contract/types/condition.js';
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { homeInventory } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
@@ -102,7 +103,19 @@ describe('items REST — CRUD happy paths', () => {
       .from(homeInventory)
       .where(eq(homeInventory.id, created.data.id))
       .all();
-    expect(row?.condition).toBe('good');
+    expect(row?.condition).toBe('Good');
+  });
+
+  it('defaults condition to a value the edit form can preselect', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Kettle' });
+
+    const [row] = inventoryDb.db
+      .select({ condition: homeInventory.condition })
+      .from(homeInventory)
+      .where(eq(homeInventory.id, created.data.id))
+      .all();
+    expect(INVENTORY_CONDITIONS).toContain(row?.condition);
   });
 
   it('clears a nullable field when explicit null is supplied', async () => {
