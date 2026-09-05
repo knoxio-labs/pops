@@ -34,7 +34,8 @@ export {
 // AI cluster (C1-b)
 export { analyzeCorrection } from './ai-analyze.js';
 export { generateRules } from './ai-generate-rules.js';
-export { proposeChangeSetFromCorrectionSignal, reviseChangeSet } from './ai-propose.js';
+export { proposeChangeSetFromCorrectionSignal } from './ai-propose.js';
+export { reviseChangeSet } from './ai-revise.js';
 export {
   persistRejectedChangeSetFeedback,
   loadLatestRejectedFeedback,

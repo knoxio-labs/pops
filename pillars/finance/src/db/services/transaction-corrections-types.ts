@@ -9,7 +9,7 @@ import { isValidRegexPattern, normalizePatternForStorage } from '../../contract/
  * normaliser are re-exported from `contract/pattern-match.ts` — the one
  * definition every match path shares (POPS-2600) — rather than redeclared.
  */
-import { InvalidPatternError } from '../errors.js';
+import { InvalidPatternError, UnmatchablePatternError } from '../errors.js';
 import { parseStoredTags } from '../tag-facets.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
@@ -127,27 +127,53 @@ export function wouldUpdateLeaveTagsOnly(
   });
 }
 
-function assertPatternCompiles(pattern: string, matchType: TransactionCorrectionMatchType): void {
-  if (matchType === 'regex' && !isValidRegexPattern(pattern)) {
-    throw new InvalidPatternError(pattern);
+/**
+ * Refuse a `(pattern, matchType)` pair that no matcher could ever fire, in
+ * whichever of the two ways the match type allows.
+ *
+ * The two are mutually exclusive by construction, which is why they are one
+ * function rather than two called in sequence: a `regex` pattern is stored
+ * verbatim and can only fail by not compiling (POPS-2600), and an
+ * `exact`/`contains` pattern always compiles and can only fail by normalising
+ * to the empty string (POPS-3001). Every write boundary needs both questions
+ * asked, so neither one is a check a caller can be trusted to remember on its
+ * own.
+ */
+function assertPatternUsable(pattern: string, matchType: TransactionCorrectionMatchType): void {
+  if (matchType === 'regex') {
+    if (!isValidRegexPattern(pattern)) throw new InvalidPatternError(pattern);
+    return;
+  }
+  if (normalizePatternForStorage(pattern, matchType).length === 0) {
+    throw new UnmatchablePatternError(pattern);
   }
 }
 
 /**
  * Store-form of a pattern: normalised for `exact`/`contains`, verbatim for
- * `regex` — and rejected outright when a `regex` pattern doesn't compile.
+ * `regex` — and rejected outright when a `regex` pattern doesn't compile, or
+ * when an `exact`/`contains` pattern normalises to nothing.
  *
  * Corrections used to normalise unconditionally, which uppercased regex
  * metacharacters (`\d` -> `\D`, `\s` -> `\S`), stripped digits out of
  * quantifiers (`a{2,3}` -> `a{,}`) and deleted the `.` wildcard, so every
  * regex correction was corrupted on write (POPS-2600). Tag rules already
  * guarded this; corrections did not.
+ *
+ * The empty-normalisation guard is the same asymmetry one table later: an
+ * all-digit or whitespace-only `exact`/`contains` pattern normalises to `''`,
+ * which `patternMatchesDescription` answers `false` for unconditionally, so
+ * the row is active and structurally unable to fire. `transaction_tag_rules`
+ * has refused that since POPS-2942 and corrections never did (POPS-3001).
+ * See {@link UnmatchablePatternError} for why the guard stops at an empty
+ * normalisation and does not also refuse a pattern that merely matches zero
+ * rows in today's ledger.
  */
 export function storablePattern(
   pattern: string,
   matchType: TransactionCorrectionMatchType
 ): string {
-  assertPatternCompiles(pattern, matchType);
+  assertPatternUsable(pattern, matchType);
   return normalizePatternForStorage(pattern, matchType);
 }
 
@@ -157,24 +183,31 @@ export function storablePattern(
  *
  * `matchType` and `descriptionPattern` are independently optional, so
  * `PATCH { matchType: 'regex' }` alone re-interprets the row's existing
- * pattern as a regular expression without ever passing it through
- * {@link storablePattern}. A stored `exact` pattern is only normalised, not
- * escaped — `normalizeDescription` leaves parens and brackets intact — so
- * `T(ARGET` would become a `regex` row that compiles nowhere and can never
- * fire, the exact failure `InvalidPatternError` exists to prevent.
+ * pattern under a match type it never passed through {@link storablePattern}
+ * for. Both of that function's guards can be tripped this way, in opposite
+ * directions:
+ *
+ * - `exact` -> `regex`: a stored `exact` pattern is only normalised, not
+ *   escaped — `normalizeDescription` leaves parens and brackets intact — so
+ *   `T(ARGET` becomes a `regex` row that compiles nowhere, the failure
+ *   `InvalidPatternError` exists to prevent.
+ * - `regex` -> `exact`/`contains`: a `regex` pattern of `1234` is a working
+ *   rule matching those digits literally, and normalises to `''` the moment
+ *   it is reinterpreted, the failure `UnmatchablePatternError` exists to
+ *   prevent (POPS-3001).
  *
  * Only a *change* of match type is checked: a PATCH that leaves `matchType`
  * alone must stay able to edit (or disable) a legacy row whose pattern was
- * already uncompilable when it was written.
+ * already unusable when it was written.
  */
-export function assertPatchLeavesCompilablePattern(
+export function assertPatchLeavesUsablePattern(
   input: UpdateTransactionCorrectionInput,
   existing: TransactionCorrectionRow,
   effectiveMatchType: TransactionCorrectionMatchType
 ): void {
   if (input.descriptionPattern !== undefined) return;
   if (input.matchType === undefined || input.matchType === existing.matchType) return;
-  assertPatternCompiles(existing.descriptionPattern, effectiveMatchType);
+  assertPatternUsable(existing.descriptionPattern, effectiveMatchType);
 }
 
 /**
@@ -203,7 +236,7 @@ export function buildCorrectionUpdates(
   const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
   const effectiveMatchType = input.matchType ?? existing.matchType;
 
-  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
+  assertPatchLeavesUsablePattern(input, existing, effectiveMatchType);
 
   if (input.descriptionPattern !== undefined) {
     updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);

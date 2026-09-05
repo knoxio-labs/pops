@@ -19,6 +19,7 @@ import {
   type FinanceDb,
   transactionCorrections,
   transactionCorrectionsService,
+  UnmatchablePatternError,
 } from '../../../db/index.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
@@ -41,6 +42,18 @@ function assertNotTagsOnly(op: Extract<ChangeSetOp, { op: 'add' }>): void {
       'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
     );
   }
+}
+
+/**
+ * Would this `add` op store an `exact`/`contains` pattern that normalises to
+ * the empty string — `'1234'`, `'  '` — which `patternMatchesDescription`
+ * refuses unconditionally, leaving an active rule nothing can ever fire
+ * (POPS-3001)? `transaction_tag_rules` has refused this since POPS-2942;
+ * corrections never did.
+ */
+function normalisesToNothing(op: Extract<ChangeSetOp, { op: 'add' }>): boolean {
+  if (op.data.matchType === 'regex') return false;
+  return normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType).length === 0;
 }
 
 function findExistingCorrectionByKey(
@@ -68,13 +81,17 @@ function unusableAddOpReason(op: Extract<ChangeSetOp, { op: 'add' }>): string | 
   if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
     return 'the regex pattern does not compile, so no matcher could ever fire it (POPS-2600)';
   }
+  if (normalisesToNothing(op)) {
+    return 'the pattern normalises to the empty string, which never matches a description (POPS-3001)';
+  }
   return null;
 }
 
 /**
  * Drop any `add` op that could only ever produce a rule that never fires —
- * tags-only (CF061/#3650) or an uncompilable `regex` pattern (POPS-2600) —
- * logging a warning for each one dropped.
+ * tags-only (CF061/#3650), an uncompilable `regex` pattern (POPS-2600) or a
+ * pattern that normalises to nothing (POPS-3001) — logging a warning for each
+ * one dropped.
  *
  * Used by the import-commit path (`imports/commit.ts`), which bundles the
  * ChangeSet apply together with entity creation and every transaction insert
@@ -86,8 +103,8 @@ function unusableAddOpReason(op: Extract<ChangeSetOp, { op: 'add' }>): string | 
  * would be far worse than losing the rule.
  *
  * The standalone `corrections.applyChangeSet` REST endpoint is unaffected: it
- * still rejects both shapes outright, since nothing is at stake there but the
- * rule set itself.
+ * still rejects every one of those shapes outright, since nothing is at stake
+ * there but the rule set itself.
  */
 export function dropUnusableAddOps(changeSet: ChangeSet): ChangeSet {
   const ops = changeSet.ops.filter((op) => {
@@ -198,6 +215,10 @@ function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): 
 function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   assertNotTagsOnly(op);
   assertPatternCompiles(op);
+  if (normalisesToNothing(op)) {
+    const unmatchable = new UnmatchablePatternError(op.data.descriptionPattern);
+    throw new ValidationError(unmatchable.pattern, unmatchable.message);
+  }
 
   const normalized = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
   const existing = findExistingCorrectionByKey(tx, op.data.matchType, normalized);
