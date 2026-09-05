@@ -191,6 +191,24 @@ describe('BalanceCard trend', () => {
     });
     renderCard({ account: account({ balance: anchored(428_140) }) });
 
+    expect(await screen.findByText('Up $281.40 over 1 month')).toBeInTheDocument();
+    expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Balance over 1 month');
+  });
+
+  it('counts the gaps between month-ends, not the readings', async () => {
+    // Three month-end readings are two months apart. Counting the readings
+    // themselves would claim a month that never elapsed.
+    checkpointsHistory.mockResolvedValue({
+      data: {
+        data: [
+          { month: '2026-07', balanceCents: 400_000 },
+          { month: '2026-08', balanceCents: 410_000 },
+          { month: '2026-09', balanceCents: 428_140 },
+        ],
+      },
+    });
+    renderCard({ account: account({ balance: anchored(428_140) }) });
+
     expect(await screen.findByText('Up $281.40 over 2 months')).toBeInTheDocument();
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Balance over 2 months');
   });
@@ -206,7 +224,7 @@ describe('BalanceCard trend', () => {
     });
     renderCard({ account: account({ kind: 'credit-card', balance: anchored(-213_755) }) });
 
-    expect(await screen.findByText('Down $337.55 over 2 months')).toBeInTheDocument();
+    expect(await screen.findByText('Down $337.55 over 1 month')).toBeInTheDocument();
     expect(screen.getByRole('img')).toHaveClass('text-destructive');
   });
 });

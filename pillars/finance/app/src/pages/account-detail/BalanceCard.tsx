@@ -3,7 +3,7 @@ import { TriangleAlert } from 'lucide-react';
 import { centsToDollars, formatBalance, type CurrencyFormat } from '@pops/finance';
 import { Badge, balanceTone, Card, CardContent, cn, Sparkline } from '@pops/ui';
 
-import { balanceCaption, provenanceLine, trendLine } from './balance-card-copy';
+import { balanceCaption, provenanceLine, trendLine, trendSpan } from './balance-card-copy';
 import { useBalanceHistory } from './useBalanceHistory';
 
 import type { Account } from '../accounts/types';
@@ -43,7 +43,7 @@ function BalanceTrend({
       <Sparkline
         points={points.map((point) => ({ label: point.month, value: point.balanceCents }))}
         className={tone}
-        label={`Balance over ${points.length} months`}
+        label={`Balance over ${trendSpan(points.length - 1)}`}
       />
       <p className="text-xs text-muted-foreground">
         {trendLine(points, (cents) => formatBalance(centsToDollars(cents), currency))}

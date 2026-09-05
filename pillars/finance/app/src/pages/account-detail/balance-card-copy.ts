@@ -54,5 +54,16 @@ export function trendLine(
   format: (amount: number) => string
 ): string {
   const change = (points.at(-1)?.balanceCents ?? 0) - (points.at(0)?.balanceCents ?? 0);
-  return `${change >= 0 ? 'Up' : 'Down'} ${format(Math.abs(change))} over ${points.length} months`;
+  const direction = change >= 0 ? 'Up' : 'Down';
+  return `${direction} ${format(Math.abs(change))} over ${trendSpan(points.length - 1)}`;
+}
+
+/**
+ * How far apart the ends of a monthly series are, in whole months. Readings
+ * are month-ends, so N of them span N-1 months: two month-ends are one month
+ * apart. Shared with the sparkline's own label so the caption and the
+ * accessible name can never disagree about the same series.
+ */
+export function trendSpan(months: number): string {
+  return months === 1 ? '1 month' : `${months} months`;
 }
