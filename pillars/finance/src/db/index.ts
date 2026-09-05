@@ -47,9 +47,7 @@ export {
   type UpdateTransactionTagRuleInput,
   type TagRuleListQuery,
   type TagRuleListResult,
-  type TagRuleForLedgerMatch,
   type TagRuleLedgerMatchStatus,
-  type TagRuleLedgerSnapshot,
 } from './services/transaction-tag-rules.js';
 
 export * as transactionsService from './services/transactions.js';
