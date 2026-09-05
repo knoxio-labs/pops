@@ -18,4 +18,10 @@ public enum FeatureReceiptCapture {
     /// modules rather than a list of strings it has to keep in step with
     /// them.
     public static let feature: MobileFeature = .receiptCapture
+
+    /// The tab bar's label for this feature.
+    public static let displayName = "Receipts"
+
+    /// The tab bar's icon for this feature.
+    public static let symbolName = "doc.text.viewfinder"
 }

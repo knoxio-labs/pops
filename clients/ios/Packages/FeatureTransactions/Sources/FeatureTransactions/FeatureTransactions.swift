@@ -20,4 +20,10 @@ public enum FeatureTransactions {
     /// with the code that makes it good — the root then holds a list of modules
     /// rather than a list of strings it has to keep in step with them.
     public static let feature: MobileFeature = .transactions
+
+    /// The tab bar's label for this feature.
+    public static let displayName = "Transactions"
+
+    /// The tab bar's icon for this feature.
+    public static let symbolName = "list.bullet.rectangle"
 }
