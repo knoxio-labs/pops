@@ -29,7 +29,7 @@ import type { ImportRow } from '@/fixtures/import-review';
 
 const signed = (row: ImportRow) => (row.type === 'debit' ? -row.amountCents : row.amountCents);
 
-const day = (iso: string) =>
+export const day = (iso: string) =>
   new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
 /**
@@ -38,7 +38,7 @@ const day = (iso: string) =>
  * exception: a minus sign cannot say who is owed, so that one keeps a sentence
  * naming the contact.
  */
-function balanceCaption(account: Account): string {
+export function balanceCaption(account: Account): string {
   const kind = ACCOUNT_KINDS[account.kind];
   const who = account.contact ?? account.name;
   if (account.kind === 'person') {
@@ -49,7 +49,7 @@ function balanceCaption(account: Account): string {
   return `${kind.label} balance`;
 }
 
-function asOfLine(account: Account): string {
+export function asOfLine(account: Account): string {
   if (account.balanceAsOf) return `As of ${day(account.balanceAsOf)}`;
   if (!ACCOUNT_KINDS[account.kind].checkpointable) {
     return 'No external balance to check against — derived from transactions';
@@ -63,7 +63,7 @@ function asOfLine(account: Account): string {
  * zero stays red — it is a negative number getting less negative, and it is
  * still debt.
  */
-function trendLine(account: Account, history: BalancePoint[]): string {
+export function trendLine(account: Account, history: BalancePoint[]): string {
   const change = (history.at(-1)?.balance ?? 0) - (history.at(0)?.balance ?? 0);
   const direction = change >= 0 ? 'Up' : 'Down';
   return `${direction} ${formatBalance(Math.abs(change), account.currency)} over 12 months`;
@@ -97,7 +97,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
   );
 }
 
-function ModuleGrid({ account, insight }: { account: Account; insight?: AccountInsight }) {
+export function ModuleGrid({ account, insight }: { account: Account; insight?: AccountInsight }) {
   const modules = modulesFor(account.kind);
   if (!insight || modules.length === 0) return null;
   return (
@@ -116,7 +116,7 @@ function ModuleGrid({ account, insight }: { account: Account; insight?: AccountI
   );
 }
 
-function RecentTransactions({ account }: { account: Account }) {
+export function RecentTransactions({ account }: { account: Account }) {
   return (
     <section className="space-y-2">
       <div className="flex items-baseline justify-between gap-4">

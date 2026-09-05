@@ -1,0 +1,8 @@
+name: Account checkpoints
+question: Does checkpoint history read as part of the balance card, or as its
+  own section with a dedicated entry point?
+status: active
+screen: finance/account
+variants:
+  inline: inline
+  separate: separate
