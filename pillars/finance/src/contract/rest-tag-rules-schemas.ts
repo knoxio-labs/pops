@@ -10,10 +10,13 @@ export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
 
 /**
  * A tag rule's relationship to the current ledger (POPS-2941): `matched` has
- * fired or would fire, `unused` matches nothing but has a benign explanation
- * (its entity has no transactions yet, or the ledger is empty), `broken`
- * matches nothing and has no such explanation — the POPS-2758 failure shape.
- * See `tag-rule-ledger-match.ts` for the full reasoning.
+ * fired or would fire; `unused` matches nothing and nothing says it should
+ * have — every unscoped rule is `unused` however full the ledger is, as is a
+ * rule whose entity has no transactions yet; `broken` matches nothing and the
+ * ledger holds the evidence that it should have — the rule names an entity,
+ * that entity has transactions, and none of them match. That last is the
+ * POPS-2758 failure shape, and the only case a consumer may present as an
+ * error. See `tag-rule-ledger-match.ts` for the full reasoning.
  */
 export const TagRuleLedgerMatchStatusSchema = z.enum(['matched', 'unused', 'broken']);
 
