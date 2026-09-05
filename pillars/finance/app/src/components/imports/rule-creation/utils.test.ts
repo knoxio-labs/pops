@@ -102,4 +102,32 @@ describe('computeProposals pattern derivation', () => {
       computeProposals([txn({ description: 'MICROSOFT*STORE', entityId: 'e1', tags: [] })])
     ).toEqual([]);
   });
+
+  it('excludes a trip: tag from the proposal even when it is on every row of the group', () => {
+    const [proposal] = computeProposals([
+      txn({
+        description: 'HUNGRY JACKS SYDNEY',
+        entityId: 'e1',
+        entityName: 'Hungry Jacks',
+        tags: ['Fast Food', 'trip:cairns-2026'],
+      }),
+      txn({
+        description: 'HUNGRY JACKS SYDNEY',
+        entityId: 'e1',
+        entityName: 'Hungry Jacks',
+        checksum: 'x2',
+        tags: ['Fast Food', 'trip:cairns-2026'],
+      }),
+    ]);
+
+    expect(proposal!.tags).toEqual(['Fast Food']);
+  });
+
+  it('drops the proposal entirely when a trip: tag was the only common tag', () => {
+    expect(
+      computeProposals([
+        txn({ description: 'SIMBA CAR HIRE', entityId: 'e1', tags: ['trip:cairns-2026'] }),
+      ])
+    ).toEqual([]);
+  });
 });

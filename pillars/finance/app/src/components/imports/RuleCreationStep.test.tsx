@@ -64,15 +64,22 @@ describe('RuleCreationStep', () => {
     expect(screen.getByText(/2 transactions/i)).toBeInTheDocument();
   });
 
-  it('proposals are checked by default', () => {
+  it('a proposal backed by only one transaction is not checked by default', () => {
     storeState.confirmedTransactions = [makeTxn()];
+    render(<RuleCreationStep />);
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).not.toBeChecked();
+  });
+
+  it('a proposal backed by more than one transaction is checked by default', () => {
+    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
     render(<RuleCreationStep />);
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
   });
 
   it('creates rules for checked proposals on confirm', () => {
-    storeState.confirmedTransactions = [makeTxn()];
+    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
     render(<RuleCreationStep />);
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
@@ -83,15 +90,31 @@ describe('RuleCreationStep', () => {
     expect(call.changeSet.ops[0].data.tags).toEqual(['Groceries']);
   });
 
+  it('carries the proposal tags as acceptedNewTags, so they gain vocabulary standing', () => {
+    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
+    const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
+    expect(call.acceptedNewTags).toEqual(['Groceries']);
+  });
+
   it('unchecking a proposal excludes it from rule creation', () => {
     storeState.confirmedTransactions = [
       makeTxn({ entityId: 'e1', entityName: 'Woolworths' }),
+      makeTxn({ entityId: 'e1', entityName: 'Woolworths', checksum: 'w2' }),
       makeTxn({
         entityId: 'e2',
         entityName: 'Ampol',
         description: 'AMPOL FOODARY 4521 ROZELLE',
         tags: ['Charging', 'EV'],
         checksum: 'x2',
+      }),
+      makeTxn({
+        entityId: 'e2',
+        entityName: 'Ampol',
+        description: 'AMPOL FOODARY 4521 ROZELLE',
+        tags: ['Charging', 'EV'],
+        checksum: 'x3',
       }),
     ];
     render(<RuleCreationStep />);
