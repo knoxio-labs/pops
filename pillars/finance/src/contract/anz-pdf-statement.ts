@@ -38,6 +38,7 @@
  * the assumption recoverable by hand if a partial CSV import ever breaks it.
  * Nothing is merged, nothing is dropped unnamed.
  */
+import { dollarsToCents } from '../money.js';
 import { parseAnzDescription } from './anz-description.js';
 import { ANZ_STATEMENT_ROW } from './anz-statement-line.js';
 import { buildImportDedupKey } from './import-dedup.js';
@@ -73,6 +74,23 @@ function toSignedAmount(printed: string, isCredit: boolean): number | undefined 
   return isCredit ? value : -value;
 }
 
+/**
+ * The running balance, in cents and UNSIGNED — this parser has no notion of
+ * the account's ledger convention, so it stores the printed figure as-is
+ * (POPS-2882). Signing it happens at commit, once the account's `kind` is
+ * known (`commit-checkpoint.ts`).
+ */
+function toBalanceCents(printed: string): number | undefined {
+  const value = Number(printed.replaceAll(',', ''));
+  return Number.isFinite(value) ? dollarsToCents(value) : undefined;
+}
+
+/** The balance's own `CR`/`DR` suffix, trimmed to the bare marker. */
+function toBalanceMarker(printed: string | undefined): 'CR' | 'DR' | undefined {
+  const trimmed = printed?.trim();
+  return trimmed === 'CR' || trimmed === 'DR' ? trimmed : undefined;
+}
+
 /** What this parser recovered from one statement's extracted text. */
 export interface AnzPdfStatement {
   transactions: ParsedTransaction[];
@@ -105,7 +123,16 @@ function toTransaction(
 ): ParsedTransaction | undefined {
   const match = ANZ_STATEMENT_ROW.exec(line);
   if (!match) return undefined;
-  const [, , printedDate, rawDescription = '', printedAmount = '', credit] = match;
+  const [
+    ,
+    ,
+    printedDate,
+    rawDescription = '',
+    printedAmount = '',
+    credit,
+    printedBalance,
+    balanceMarker,
+  ] = match;
   const date = toIsoDate(printedDate ?? '');
   const amount = toSignedAmount(printedAmount, credit !== undefined);
   if (date === undefined || amount === undefined) return undefined;
@@ -131,6 +158,8 @@ function toTransaction(
     foreignCurrency: foreignCharge?.currency,
     fxFeeCents: foreignCharge?.feeCents,
     fxCaptureSource: 'anz-descriptor',
+    balanceCents: toBalanceCents(printedBalance ?? ''),
+    balanceMarker: toBalanceMarker(balanceMarker),
     rawRow: JSON.stringify({ source: 'anz-pdf-statement', line }),
     checksum: options.hashDedupKey(dedupKey),
   };

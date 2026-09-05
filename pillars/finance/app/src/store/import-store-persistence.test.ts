@@ -58,6 +58,7 @@ function makeCommitResult(): CommitResult {
     transactionsFailed: 0,
     failedDetails: [],
     retroactiveReclassifications: 0,
+    checkpoints: [],
   };
 }
 

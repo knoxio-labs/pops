@@ -67,6 +67,7 @@ import {
 import { type ContactsClient } from '../../contacts/client.js';
 import { applyChangeSet, dropUnusableAddOps } from '../corrections/index.js';
 import { applyTagRuleChangeSet } from '../tag-rules/service.js';
+import { mintImportCheckpointsPhase } from './commit-checkpoint.js';
 import { transactionColumns } from './commit-columns.js';
 import {
   enqueueOutboxCandidatesPhase,
@@ -243,6 +244,16 @@ export async function commitImport(
 
       pairTransfersPhase(tx, writeResult.insertedIds);
 
+      const failedChecksums = new Set(
+        writeResult.failedDetails.map((d) => d.checksum).filter((c): c is string => c !== null)
+      );
+      const { checkpoints, warnings } = mintImportCheckpointsPhase(
+        tx,
+        payload.transactions,
+        failedChecksums,
+        commitKey
+      );
+
       const result: CommitResult = {
         entitiesCreated,
         rulesApplied,
@@ -251,6 +262,8 @@ export async function commitImport(
         transactionsFailed: writeResult.failed,
         failedDetails: writeResult.failedDetails,
         retroactiveReclassifications,
+        ...(warnings.length > 0 ? { warnings } : {}),
+        checkpoints,
       };
 
       if (commitKey) importCommitsService.recordCommit(tx, commitKey, result);

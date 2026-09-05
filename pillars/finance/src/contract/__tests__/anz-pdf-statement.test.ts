@@ -64,6 +64,29 @@ describe('parseAnzPdfStatementText', () => {
     expect(amounts).toEqual([-20.4, -20.4, -100, 500]);
   });
 
+  describe('closing-balance capture (POPS-2882)', () => {
+    it("captures every row's running balance in cents, unsigned", () => {
+      const balances = parse().transactions.map((t) => t.balanceCents);
+      expect(balances).toEqual([102_040, 104_080, 114_080, 64_080]);
+    });
+
+    it('leaves balanceMarker unset for a row with no CR/DR suffix on the balance', () => {
+      expect(parse().transactions[0]?.balanceMarker).toBeUndefined();
+    });
+
+    it('reports the last row in the file as the closing balance candidate', () => {
+      const last = parse().transactions.at(-1);
+      expect(last).toMatchObject({ date: '2025-05-18', balanceCents: 64_080 });
+    });
+
+    it('captures the balance-in-credit marker, unsigned', () => {
+      const overpaid = parse(
+        '20/05/2025 18/05/2025 4821 PAYMENT RECEIVED THANK YOU 500.00 CR 640.80 CR'
+      ).transactions[0];
+      expect(overpaid).toMatchObject({ balanceCents: 64_080, balanceMarker: 'CR' });
+    });
+  });
+
   describe('reuse of the shared description parser', () => {
     it('derives exactly what the CSV path derives from the same raw description', () => {
       const foreign = parse().transactions[2];

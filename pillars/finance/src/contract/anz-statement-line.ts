@@ -11,15 +11,21 @@
 
 /**
  * A full transaction row: date processed, date of transaction, card last four,
- * description, amount, an optional `CR` marking money in, and the balance.
+ * description, amount, an optional `CR` marking money in, the running
+ * balance, and that balance's own optional `CR`/`DR` marker (POPS-2882).
  *
  * Foreign-currency and fee supplementary rows carry no card number and so do
  * not match, which is how they are skipped. The description group is lazy so
  * the trailing figures bind to amount and balance even when the description
  * itself ends in a foreign-currency trailer.
+ *
+ * The balance is captured raw and unsigned here — this module knows nothing
+ * of the account it belongs to, so signing it against the account's ledger
+ * convention is the caller's job (`anz-pdf-statement.ts` at parse time stores
+ * it unsigned; `commit-checkpoint.ts` signs it at commit time).
  */
 export const ANZ_STATEMENT_ROW =
-  /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+\d{4}\s+(.+?)\s+([\d,]+\.\d{2})(\s+CR)?\s+[\d,]+\.\d{2}$/;
+  /^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+\d{4}\s+(.+?)\s+([\d,]+\.\d{2})(\s+CR)?\s+([\d,]+\.\d{2})(\s+CR|\s+DR)?$/;
 
 /**
  * The description column of one statement line, or nothing when the line is not

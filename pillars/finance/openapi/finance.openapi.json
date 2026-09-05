@@ -11922,6 +11922,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -12145,6 +12154,15 @@
                               },
                               "amount": {
                                 "type": "number"
+                              },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
                               },
                               "checksum": {
                                 "type": "string"
@@ -12370,6 +12388,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -12594,6 +12621,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -12817,7 +12853,11 @@
                                 "type": "string"
                               },
                               "type": {
-                                "enum": ["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"],
+                                "enum": [
+                                  "AI_CATEGORIZATION_UNAVAILABLE",
+                                  "AI_API_ERROR",
+                                  "CHECKPOINT_MISMATCH"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -13367,6 +13407,15 @@
                         "amount": {
                           "type": "number"
                         },
+                        "balanceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "balanceMarker": {
+                          "enum": ["CR", "DR"],
+                          "type": "string"
+                        },
                         "checksum": {
                           "type": "string"
                         },
@@ -13507,6 +13556,27 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "checkpoints": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "deltaCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "id": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "accountId", "deltaCents"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "entitiesCreated": {
                           "maximum": 9007199254740991,
                           "minimum": 0,
@@ -13575,6 +13645,33 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "warnings": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "affectedCount": {
+                                "type": "number"
+                              },
+                              "details": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "enum": [
+                                  "AI_CATEGORIZATION_UNAVAILABLE",
+                                  "AI_API_ERROR",
+                                  "CHECKPOINT_MISMATCH"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["type", "message"],
+                            "type": "object"
+                          },
+                          "type": "array"
                         }
                       },
                       "required": [
@@ -13819,6 +13916,15 @@
                         },
                         "amount": {
                           "type": "number"
+                        },
+                        "balanceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "balanceMarker": {
+                          "enum": ["CR", "DR"],
+                          "type": "string"
                         },
                         "checksum": {
                           "type": "string"
@@ -14087,6 +14193,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -14310,6 +14425,15 @@
                               },
                               "amount": {
                                 "type": "number"
+                              },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
                               },
                               "checksum": {
                                 "type": "string"
@@ -14535,6 +14659,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -14759,6 +14892,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -14982,7 +15124,11 @@
                                 "type": "string"
                               },
                               "type": {
-                                "enum": ["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"],
+                                "enum": [
+                                  "AI_CATEGORIZATION_UNAVAILABLE",
+                                  "AI_API_ERROR",
+                                  "CHECKPOINT_MISMATCH"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -15402,6 +15548,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -15625,6 +15780,15 @@
                               },
                               "amount": {
                                 "type": "number"
+                              },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
                               },
                               "checksum": {
                                 "type": "string"
@@ -15850,6 +16014,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -16074,6 +16247,15 @@
                               "amount": {
                                 "type": "number"
                               },
+                              "balanceCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "balanceMarker": {
+                                "enum": ["CR", "DR"],
+                                "type": "string"
+                              },
                               "checksum": {
                                 "type": "string"
                               },
@@ -16297,7 +16479,11 @@
                                 "type": "string"
                               },
                               "type": {
-                                "enum": ["AI_CATEGORIZATION_UNAVAILABLE", "AI_API_ERROR"],
+                                "enum": [
+                                  "AI_CATEGORIZATION_UNAVAILABLE",
+                                  "AI_API_ERROR",
+                                  "CHECKPOINT_MISMATCH"
+                                ],
                                 "type": "string"
                               }
                             },

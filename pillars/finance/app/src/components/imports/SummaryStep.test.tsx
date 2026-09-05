@@ -185,4 +185,27 @@ describe('SummaryStep', () => {
     fireEvent.click(screen.getByText('View Transactions'));
     expect(mockNavigate).toHaveBeenCalledWith('/finance/transactions');
   });
+
+  it('renders a checkpoint-mismatch warning when the commit result carries one (POPS-2882)', () => {
+    storeState = {
+      commitResult: makeCommitResult({
+        warnings: [
+          {
+            type: 'CHECKPOINT_MISMATCH',
+            message: "Ledger disagrees with ANZ Credit Card's statement closing balance",
+            affectedCount: 1,
+            details: 'expected -1500c, statement says -4000c (Δ -2500c)',
+          },
+        ],
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(screen.getByText('Checkpoint Mismatch')).toBeDefined();
+  });
+
+  it('renders no warnings section when the commit result carries none', () => {
+    render(<SummaryStep />);
+    expect(screen.queryByText('Checkpoint Mismatch')).toBeNull();
+  });
 });

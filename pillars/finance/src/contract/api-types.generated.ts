@@ -6768,6 +6768,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -6840,6 +6843,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -6912,6 +6918,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -6984,6 +6993,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -7057,7 +7069,7 @@ export interface operations {
                 details?: string;
                 message: string;
                 /** @enum {string} */
-                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
               }[];
             };
           };
@@ -7271,6 +7283,9 @@ export interface operations {
             account: string;
             accountId?: string;
             amount: number;
+            balanceCents?: number;
+            /** @enum {string} */
+            balanceMarker?: 'CR' | 'DR';
             checksum: string;
             country?: string;
             date: string;
@@ -7328,6 +7343,11 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              checkpoints?: {
+                accountId: string;
+                deltaCents: number;
+                id: string;
+              }[];
               entitiesCreated: number;
               failedDetails: {
                 checksum: string | null;
@@ -7343,6 +7363,13 @@ export interface operations {
               tagRulesApplied: number;
               transactionsFailed: number;
               transactionsImported: number;
+              warnings?: {
+                affectedCount?: number;
+                details?: string;
+                message: string;
+                /** @enum {string} */
+                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
+              }[];
             };
             message: string;
           };
@@ -7474,6 +7501,9 @@ export interface operations {
             account: string;
             accountId?: string;
             amount: number;
+            balanceCents?: number;
+            /** @enum {string} */
+            balanceMarker?: 'CR' | 'DR';
             checksum: string;
             country?: string;
             date: string;
@@ -7586,6 +7616,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -7658,6 +7691,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -7730,6 +7766,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -7802,6 +7841,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -7875,7 +7917,7 @@ export interface operations {
                 details?: string;
                 message: string;
                 /** @enum {string} */
-                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
               }[];
             };
             sessionId: string;
@@ -8046,6 +8088,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -8118,6 +8163,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -8190,6 +8238,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -8262,6 +8313,9 @@ export interface operations {
                 account: string;
                 accountId?: string;
                 amount: number;
+                balanceCents?: number;
+                /** @enum {string} */
+                balanceMarker?: 'CR' | 'DR';
                 checksum: string;
                 country?: string;
                 date: string;
@@ -8335,7 +8389,7 @@ export interface operations {
                 details?: string;
                 message: string;
                 /** @enum {string} */
-                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR';
+                type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
               }[];
             };
           };

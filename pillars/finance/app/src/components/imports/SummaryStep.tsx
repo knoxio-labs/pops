@@ -5,6 +5,7 @@ import { Button, EmptyState, SummaryCard } from '@pops/ui';
 
 import { clearPersistedImport } from '../../store/import-store-lifecycle';
 import { useImportStore } from '../../store/importStore';
+import { ImportWarningBanner } from './ImportWarningBanner';
 
 import type { CommitResult } from '@pops/finance';
 
@@ -132,6 +133,24 @@ function RuleBreakdown({
   );
 }
 
+function CommitWarnings({ warnings }: { warnings: NonNullable<CommitResult['warnings']> }) {
+  if (warnings.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      {warnings.map((warning, index) => (
+        // A commit spanning two accounts raises one CHECKPOINT_MISMATCH each,
+        // so `type` alone is not unique and the second account's banner would
+        // collide with the first — the position disambiguates them.
+        <ImportWarningBanner
+          key={`${warning.type}:${String(index)}`}
+          warning={warning}
+          affectedHint=""
+        />
+      ))}
+    </div>
+  );
+}
+
 function RetroactiveSection({ count }: { count: number }) {
   return (
     <div className="border rounded-lg p-4">
@@ -184,6 +203,7 @@ export function SummaryStep() {
       <SummaryHeader />
       <SummaryCards commitResult={commitResult} totalRules={totalRules} />
       {commitResult.failedDetails && <FailedDetailsList details={commitResult.failedDetails} />}
+      {commitResult.warnings && <CommitWarnings warnings={commitResult.warnings} />}
       <RuleBreakdown rulesApplied={commitResult.rulesApplied} totalRules={totalRules} />
       <RetroactiveSection count={commitResult.retroactiveReclassifications} />
       <FooterActions
