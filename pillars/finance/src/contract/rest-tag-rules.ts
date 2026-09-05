@@ -38,6 +38,7 @@ import {
   TagRuleSchema,
   TagRuleSignalSchema,
   TagRuleUpdateSchema,
+  TagRuleWithLedgerStatusSchema,
 } from './rest-tag-rules-schemas.js';
 
 export {
@@ -58,10 +59,14 @@ export const financeTagRulesContract = c.router({
     path: '/tag-rules',
     query: TagRuleListQuery,
     responses: {
-      200: z.object({ data: z.array(TagRuleSchema), pagination: PaginationMetaSchema }),
+      200: z.object({
+        data: z.array(TagRuleWithLedgerStatusSchema),
+        pagination: PaginationMetaSchema,
+      }),
       ...ERR_RESPONSES,
     },
-    summary: 'List tag rules with optional matchType/isActive/minConfidence filters and pagination',
+    summary:
+      'List tag rules with optional matchType/isActive/minConfidence filters and pagination; each row carries its ledgerMatchStatus (POPS-2941)',
   },
   vocabulary: {
     method: 'GET',
@@ -93,8 +98,8 @@ export const financeTagRulesContract = c.router({
     method: 'GET',
     path: '/tag-rules/:id',
     pathParams: z.object({ id: z.string() }),
-    responses: { 200: z.object({ data: TagRuleSchema }), ...ERR_RESPONSES },
-    summary: 'Get a single tag rule by id',
+    responses: { 200: z.object({ data: TagRuleWithLedgerStatusSchema }), ...ERR_RESPONSES },
+    summary: 'Get a single tag rule by id, with its ledgerMatchStatus (POPS-2941)',
   },
   update: {
     method: 'PATCH',

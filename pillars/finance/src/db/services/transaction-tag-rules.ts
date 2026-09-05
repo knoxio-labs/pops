@@ -33,6 +33,13 @@ export {
   findUnreachableTransactionTagRules,
   type TagRuleConflictGroup,
 } from './transaction-tag-rules-audit.js';
+export {
+  loadTagRuleLedgerSnapshot,
+  tagRuleLedgerMatchStatus,
+  type TagRuleForLedgerMatch,
+  type TagRuleLedgerMatchStatus,
+  type TagRuleLedgerSnapshot,
+} from './tag-rule-ledger-match.js';
 
 export type {
   CreateTransactionTagRuleInput,

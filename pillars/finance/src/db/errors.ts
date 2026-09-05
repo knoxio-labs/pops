@@ -132,6 +132,34 @@ export class InvalidPatternError extends Error {
 }
 
 /**
+ * A tag-rule write whose `exact`/`contains` pattern normalises to the empty
+ * string — e.g. `'42'` or `'  '`, since {@link normalizeDescription} strips
+ * digits and collapses whitespace. `patternMatchesDescription` special-cases
+ * an empty normalised pattern to always return `false`, so a row like this
+ * cannot ever fire no matter what the ledger holds tomorrow (POPS-2942).
+ *
+ * This is deliberately narrower than "matches nothing in the ledger today":
+ * that condition is true of any legitimately forward-looking rule written
+ * ahead of a new merchant's first transaction, and refusing it would be a
+ * worse bug than the one this guards against. An empty normalised pattern has
+ * no such legitimate reading — it is unmatchable regardless of what rows
+ * exist or ever will — so it is the only case refused at the write boundary.
+ * See `pillars/finance/README.md` for the fuller reasoning and POPS-2941 for
+ * the ledger-visibility half of this pair.
+ */
+export class UnmatchablePatternError extends Error {
+  override readonly name = 'UnmatchablePatternError' as const;
+  readonly pattern: string;
+
+  constructor(pattern: string) {
+    super(
+      `Pattern normalises to empty and can never match a description: ${JSON.stringify(pattern)}`
+    );
+    this.pattern = pattern;
+  }
+}
+
+/**
  * An `account_import_config` row that names a source kind without the field
  * that kind needs to act — a `csv-dialect` with no dialect, an `api` with no
  * provider (POPS-2916). Refused at the write so the imports page never shows

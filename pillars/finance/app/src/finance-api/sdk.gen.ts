@@ -1652,7 +1652,7 @@ export const settingsResetKey = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List tag rules with optional matchType/isActive/minConfidence filters and pagination
+ * List tag rules with optional matchType/isActive/minConfidence filters and pagination; each row carries its ledgerMatchStatus (POPS-2941)
  */
 export const tagRulesList = <ThrowOnError extends boolean = false>(
   options?: Options<TagRulesListData, ThrowOnError>
@@ -1802,7 +1802,7 @@ export const tagRulesDelete = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Get a single tag rule by id
+ * Get a single tag rule by id, with its ledgerMatchStatus (POPS-2941)
  */
 export const tagRulesGet = <ThrowOnError extends boolean = false>(
   options: Options<TagRulesGetData, ThrowOnError>

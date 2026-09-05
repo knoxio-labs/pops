@@ -271,6 +271,11 @@ interface TagRule {
   lastUsedAt: string | null;
 }
 
+/** {@link TagRule} plus the ledger-match verdict `list`/`get` add (POPS-2941). */
+interface TagRuleWithLedgerStatus extends TagRule {
+  ledgerMatchStatus: 'matched' | 'unused' | 'broken';
+}
+
 interface Correction {
   id: string;
   descriptionPattern: string;
@@ -583,8 +588,11 @@ export function makeClient(app: Express) {
     },
     tagRules: {
       list: (query: TagRuleListQuery = {}) =>
-        call<{ data: TagRule[]; pagination: Pagination }>((r) => r.get('/tag-rules').query(query)),
-      get: (id: string) => call<{ data: TagRule }>((r) => r.get(`/tag-rules/${id}`)),
+        call<{ data: TagRuleWithLedgerStatus[]; pagination: Pagination }>((r) =>
+          r.get('/tag-rules').query(query)
+        ),
+      get: (id: string) =>
+        call<{ data: TagRuleWithLedgerStatus }>((r) => r.get(`/tag-rules/${id}`)),
       update: (id: string, data: Record<string, unknown>) =>
         call<{ data: TagRule; message: string }>((r) => r.patch(`/tag-rules/${id}`).send(data)),
       disable: (id: string) => call<{ message: string }>((r) => r.post(`/tag-rules/${id}/disable`)),

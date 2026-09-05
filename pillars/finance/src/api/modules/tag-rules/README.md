@@ -39,6 +39,15 @@ It used to hardcode `before` to `[]` and materialize only the ChangeSet's `add` 
 
 The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed, and the same predicate — `contract/pattern-match.ts`'s `patternMatchesDescription` — decides every verdict, including which representation a match type is tested against: `regex` against the raw description, `exact` and `contains` against the normalised one (POPS-2640). This module used to carry its own copy in a local `pattern-match.ts`; six such copies existed across the pillar and the browser app and disagreed on case folding, digit stripping and the regex `i` flag, so a preview could promise a match production would skip (POPS-2600). `preview.ts`'s header explains why a naive uppercase-only comparison diverges from production.
 
+## A pattern that can never match
+
+Two failure modes exist for a stored rule, and they get different treatment:
+
+- **Unconditionally unmatchable** — an `exact`/`contains` pattern that normalises to the empty string (e.g. `'42'`, since `normalizeDescription` strips digits). `patternMatchesDescription` hard-codes an empty normalised pattern to `false`, so a row like this cannot fire no matter what the ledger holds tomorrow. `createOrReinforceTransactionTagRule` (`../../../db/services/transaction-tag-rules-write.ts`) refuses this at the write boundary with `UnmatchablePatternError` (-> 400), the same treatment `InvalidPatternError` already gives an uncompilable regex (POPS-2600/POPS-2942).
+- **Matches nothing in today's ledger** — a well-formed pattern with zero current matches. This is _not_ refused: it is exactly what a rule written ahead of a new merchant's first transaction looks like, and refusing it would break a legitimate use in order to catch an illegitimate one. Refusing here would be a worse bug than the one being prevented (POPS-2758's actual failure was the first kind wearing the second one's clothes — a pattern derived from the entity name that could never match its own merchant's descriptor, not a forward-looking rule).
+
+The second case still needs to be visible, just not blocked: `../../../db/services/tag-rule-ledger-match.ts`'s `tagRuleLedgerMatchStatus` classifies every rule the Tag Rules browser lists as `matched`, `unused` (no ledger data yet — the ahead-of-time case, told apart by whether the rule's own `entityId` has any transactions) or `broken` (data exists and none of it matches — the POPS-2758 shape). It runs `patternMatchesDescription` — the one matcher above, never a reimplementation — over one `transactions` fetch shared across every rule on the page, so a page of N rules costs one table scan, not N (POPS-2941).
+
 ## Where things live
 
 | Concern                                  | File                                 |

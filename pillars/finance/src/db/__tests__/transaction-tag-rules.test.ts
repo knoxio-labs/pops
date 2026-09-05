@@ -24,7 +24,7 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { TransactionTagRuleNotFoundError } from '../errors.js';
+import { TransactionTagRuleNotFoundError, UnmatchablePatternError } from '../errors.js';
 import { tagVocabulary, transactionTagRules } from '../schema.js';
 import { upsertVocabularyTag } from '../services/tag-vocabulary.js';
 import {
@@ -487,6 +487,56 @@ describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', (
     });
 
     expect(created.descriptionPattern).toBe('^WOOLWORTHS\\s+\\d{2,4}$');
+  });
+});
+
+describe('createTransactionTagRule — refuses an unconditionally unmatchable pattern (POPS-2942)', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  it('refuses an all-digit exact pattern — normalisation strips digits to nothing', () => {
+    expect(() =>
+      createTransactionTagRule(harness.db, {
+        descriptionPattern: '42',
+        matchType: 'exact',
+        tags: ['Shopping'],
+      })
+    ).toThrow(UnmatchablePatternError);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(0);
+  });
+
+  it('refuses a whitespace-only contains pattern', () => {
+    expect(() =>
+      createTransactionTagRule(harness.db, {
+        descriptionPattern: '   ',
+        matchType: 'contains',
+        tags: ['Shopping'],
+      })
+    ).toThrow(UnmatchablePatternError);
+  });
+
+  it('does not refuse a well-formed pattern merely because nothing in the ledger matches it yet', () => {
+    // The write path has no ledger to consult and no notion of "yet" — a rule
+    // written ahead of a new merchant's first transaction is legitimate, and
+    // this guard must not collateral-damage it (POPS-2942 is deliberately
+    // narrower than "matches nothing today").
+    const created = createTransactionTagRule(harness.db, {
+      descriptionPattern: 'BRAND NEW MERCHANT',
+      matchType: 'contains',
+      tags: ['Shopping'],
+    });
+    expect(created.descriptionPattern).toBe('BRAND NEW MERCHANT');
+  });
+
+  it("does not apply the empty-pattern guard to regex — an uncompilable regex is InvalidPatternError's job, not this one", () => {
+    const created = createTransactionTagRule(harness.db, {
+      descriptionPattern: '.*',
+      matchType: 'regex',
+      tags: ['Shopping'],
+    });
+    expect(created.descriptionPattern).toBe('.*');
   });
 });
 

@@ -20,6 +20,7 @@ import {
   transactionTagRulesService,
   InvalidPatternError,
   TransactionTagRuleNotFoundError,
+  UnmatchablePatternError,
 } from '../../db/index.js';
 import { TAG_FACETS } from '../../db/tag-facets.js';
 import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
@@ -38,8 +39,40 @@ import { makeTagRuleCollisionHandlers } from './tag-rules-collision-handlers.js'
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { financeTagRulesContract } from '../../contract/rest-tag-rules.js';
+import type { TagRuleLedgerMatchStatus } from '../../db/index.js';
+import type { TagRule } from '../modules/tag-rules/service.js';
 
 type Req = ServerInferRequest<typeof financeTagRulesContract>;
+
+/** {@link TagRule} plus its ledger-match verdict (POPS-2941). */
+type TagRuleWithLedgerStatus = TagRule & { ledgerMatchStatus: TagRuleLedgerMatchStatus };
+
+/**
+ * Annotate rules with whether their pattern matches anything in the ledger.
+ *
+ * One `loadTagRuleLedgerSnapshot` fetch for the whole call, reused across
+ * every rule passed in — the cost the `list`/`get` handlers pay is one
+ * `transactions` scan per request, not one per rule (POPS-2941).
+ */
+function withLedgerMatchStatus(
+  db: FinanceDb,
+  rules: readonly TagRule[]
+): TagRuleWithLedgerStatus[] {
+  const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
+  return rules.map((rule) => ({
+    ...rule,
+    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
+  }));
+}
+
+/** {@link withLedgerMatchStatus} for the single-rule `get` response. */
+function withLedgerMatchStatusOne(db: FinanceDb, rule: TagRule): TagRuleWithLedgerStatus {
+  const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
+  return {
+    ...rule,
+    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
+  };
+}
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
@@ -50,7 +83,7 @@ function translateTagRuleError(err: unknown, id?: string): never {
   if (err instanceof TransactionTagRuleNotFoundError) {
     throw new NotFoundError('TagRule', id ?? err.id);
   }
-  if (err instanceof InvalidPatternError) {
+  if (err instanceof InvalidPatternError || err instanceof UnmatchablePatternError) {
     throw new ValidationError(err.message);
   }
   throw err;
@@ -76,7 +109,10 @@ export function makeTagRulesHandlers(db: FinanceDb) {
         });
         return {
           status: 200 as const,
-          body: { data: rows.map(toTagRule), pagination: paginationMeta(total, limit, offset) },
+          body: {
+            data: withLedgerMatchStatus(db, rows.map(toTagRule)),
+            pagination: paginationMeta(total, limit, offset),
+          },
         };
       }),
 
@@ -104,7 +140,10 @@ export function makeTagRulesHandlers(db: FinanceDb) {
       runHttp(() => {
         try {
           const row = transactionTagRulesService.getTransactionTagRule(db, params.id);
-          return { status: 200 as const, body: { data: toTagRule(row) } };
+          return {
+            status: 200 as const,
+            body: { data: withLedgerMatchStatusOne(db, toTagRule(row)) },
+          };
         } catch (err) {
           translateTagRuleError(err, params.id);
         }

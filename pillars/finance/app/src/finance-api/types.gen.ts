@@ -7516,6 +7516,7 @@ export type TagRulesListResponses = {
       id: string;
       isActive: boolean;
       lastUsedAt: string | null;
+      ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
       priority: number;
       tags: Array<string>;
@@ -8281,6 +8282,7 @@ export type TagRulesGetResponses = {
       id: string;
       isActive: boolean;
       lastUsedAt: string | null;
+      ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
       priority: number;
       tags: Array<string>;

@@ -8,7 +8,7 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 
-import { InvalidPatternError } from '../errors.js';
+import { InvalidPatternError, UnmatchablePatternError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
 import {
@@ -139,7 +139,11 @@ export interface TagRuleWriteResult {
  * character including metacharacters (`\d` -> `\D`, `\s` -> `\S`), which
  * would silently corrupt the pattern. An uncompilable `regex` pattern throws
  * `InvalidPatternError` (-> 400) instead of being stored as a rule that can
- * never fire (POPS-2600).
+ * never fire (POPS-2600). An `exact`/`contains` pattern that normalises to
+ * the empty string throws `UnmatchablePatternError` (-> 400) for the same
+ * reason (POPS-2942) — see that error's docstring for why this guard stops
+ * there and does not also refuse a pattern that merely matches zero rows in
+ * today's ledger.
  */
 export function createTransactionTagRule(
   db: FinanceDb,
@@ -165,6 +169,9 @@ export function createOrReinforceTransactionTagRule(
     throw new InvalidPatternError(input.descriptionPattern);
   }
   const normalized = normalizePatternForStorage(input.descriptionPattern, input.matchType);
+  if (input.matchType !== 'regex' && normalized.length === 0) {
+    throw new UnmatchablePatternError(input.descriptionPattern);
+  }
   const entityId = input.entityId ?? null;
 
   const existing = findExistingTagRule(db, input.matchType, normalized, entityId);
