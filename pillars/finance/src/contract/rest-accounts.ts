@@ -30,6 +30,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ACCOUNT_KINDS } from './account-kind.js';
+import { AccountBalanceSchema } from './rest-checkpoints-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 const c = initContract();
@@ -46,6 +47,12 @@ export const AccountSchema = z.object({
   entityId: z.string().nullable(),
   entityDisplayName: z.string().nullable(),
   entityDisplayNameStale: z.boolean(),
+  /**
+   * What the account holds today, checkpoint-anchored (ADR-051). Read-only,
+   * and never a stored column: `basis` says whether it is a real balance or
+   * the sum of whatever happens to have been imported.
+   */
+  balance: AccountBalanceSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });

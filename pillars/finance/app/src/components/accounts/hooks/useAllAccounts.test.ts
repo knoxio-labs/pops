@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { NO_BALANCE } from '../../../test-utils.js';
 import { useAllAccounts } from './useAllAccounts';
 
 const mockAccountsList = vi.fn();
@@ -30,6 +31,7 @@ const EVERYDAY = {
   entityId: null,
   entityDisplayName: null,
   entityDisplayNameStale: false,
+  balance: NO_BALANCE,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };

@@ -57,6 +57,75 @@ export interface paths {
     patch: operations['accounts.update'];
     trace?: never;
   };
+  '/accounts/{id}/balance': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** An account’s balance as of a date (default today), and what it was anchored on */
+    get: operations['checkpoints.balance'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/balance-history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Month-end balances for the last `months` months (default 12), oldest first */
+    get: operations['checkpoints.history'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/checkpoints': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List an account’s checkpoints, newest first, each with what the ledger predicted for it */
+    get: operations['checkpoints.list'];
+    put?: never;
+    /** Record a balance read off the bank or counted by hand; always source manual. 422s a future date or an archived account */
+    post: operations['checkpoints.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/checkpoints/{checkpointId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a manual checkpoint; 409s an import or statement one, which is corrected by recording a newer checkpoint rather than removing what a file said */
+    delete: operations['checkpoints.remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/accounts/{id}/gift-card-details': {
     parameters: {
       query?: never;
@@ -1250,6 +1319,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1327,6 +1409,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1437,6 +1532,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1526,6 +1634,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1619,6 +1740,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1733,6 +1867,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -1802,6 +1949,393 @@ export interface operations {
       };
       /** @description 422 */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'checkpoints.balance': {
+    parameters: {
+      query?: {
+        asOf?: string;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              anchor: {
+                asOf: string;
+                checkpointId: string;
+                /** @enum {string} */
+                source: 'manual' | 'import' | 'statement';
+              } | null;
+              asOf: string;
+              balanceCents: number;
+              /** @enum {string} */
+              basis: 'checkpoint' | 'transactions';
+              inconsistent: boolean;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'checkpoints.history': {
+    parameters: {
+      query?: {
+        months?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              balanceCents: number;
+              month: string;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'checkpoints.list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              asOf: string;
+              balanceCents: number;
+              createdAt: string;
+              deltaCents: number | null;
+              expectedBalanceCents: number | null;
+              id: string;
+              note: string | null;
+              /** @enum {string} */
+              source: 'manual' | 'import' | 'statement';
+              sourceRef: string | null;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'checkpoints.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          asOf: string;
+          balanceCents: number;
+          note?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              asOf: string;
+              balanceCents: number;
+              createdAt: string;
+              deltaCents: number | null;
+              expectedBalanceCents: number | null;
+              id: string;
+              note: string | null;
+              /** @enum {string} */
+              source: 'manual' | 'import' | 'statement';
+              sourceRef: string | null;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'checkpoints.remove': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        checkpointId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 204 */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -2735,6 +3269,19 @@ export interface operations {
           'application/json': {
             data: {
               archivedAt: string | null;
+              balance: {
+                anchor: {
+                  asOf: string;
+                  checkpointId: string;
+                  /** @enum {string} */
+                  source: 'manual' | 'import' | 'statement';
+                } | null;
+                asOf: string;
+                balanceCents: number;
+                /** @enum {string} */
+                basis: 'checkpoint' | 'transactions';
+                inconsistent: boolean;
+              };
               createdAt: string;
               currency: string;
               displayOrder: number;
@@ -2847,6 +3394,19 @@ export interface operations {
               resultingBalanceCents: number;
               source: {
                 archivedAt: string | null;
+                balance: {
+                  anchor: {
+                    asOf: string;
+                    checkpointId: string;
+                    /** @enum {string} */
+                    source: 'manual' | 'import' | 'statement';
+                  } | null;
+                  asOf: string;
+                  balanceCents: number;
+                  /** @enum {string} */
+                  basis: 'checkpoint' | 'transactions';
+                  inconsistent: boolean;
+                };
                 createdAt: string;
                 currency: string;
                 displayOrder: number;
@@ -2873,6 +3433,19 @@ export interface operations {
               };
               target: {
                 archivedAt: string | null;
+                balance: {
+                  anchor: {
+                    asOf: string;
+                    checkpointId: string;
+                    /** @enum {string} */
+                    source: 'manual' | 'import' | 'statement';
+                  } | null;
+                  asOf: string;
+                  balanceCents: number;
+                  /** @enum {string} */
+                  basis: 'checkpoint' | 'transactions';
+                  inconsistent: boolean;
+                };
                 createdAt: string;
                 currency: string;
                 displayOrder: number;

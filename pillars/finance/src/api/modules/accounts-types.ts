@@ -5,6 +5,7 @@
  */
 import type { AccountKind } from '../../contract/account-kind.js';
 import type {
+  AccountBalance,
   AccountEntityDisplay,
   AccountMergePreview,
   AccountRow,
@@ -27,6 +28,8 @@ export interface Account {
    * couldn't be reached to refresh it. `null` for a non-`person` account. */
   entityDisplayName: string | null;
   entityDisplayNameStale: boolean;
+  /** What the account holds today, checkpoint-anchored (ADR-051). */
+  balance: AccountBalance;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,8 +57,13 @@ export interface UpdateAccountBody {
 
 /** Map a SQLite row (plus its resolved contact display, from
  * `resolveAccountEntityDisplays`) to the API response shape. */
-export function toAccount(row: AccountRow, entityDisplay: AccountEntityDisplay): Account {
+export function toAccount(
+  row: AccountRow,
+  entityDisplay: AccountEntityDisplay,
+  balance: AccountBalance
+): Account {
   return {
+    balance,
     id: row.id,
     name: row.name,
     institutionId: row.institutionId,
@@ -105,15 +113,20 @@ export interface AccountMergePreviewBody {
   hasGiftCardDetailsConflict: boolean;
 }
 
-/** Map a merge preview (plus its two accounts' resolved contact displays) to the API response shape. */
+/**
+ * Map a merge preview to the API response shape. The two accounts arrive
+ * already projected — they need a contact display and a balance each, and
+ * resolving those is the handler's job so one page of accounts and one
+ * preview go through the same batched path.
+ */
 export function toAccountMergePreviewBody(
   preview: AccountMergePreview,
-  sourceDisplay: AccountEntityDisplay,
-  targetDisplay: AccountEntityDisplay
+  source: Account,
+  target: Account
 ): AccountMergePreviewBody {
   return {
-    source: toAccount(preview.source, sourceDisplay),
-    target: toAccount(preview.target, targetDisplay),
+    source,
+    target,
     transactionCount: preview.transactionCount,
     resultingBalanceCents: preview.resultingBalanceCents,
     hasGiftCardDetailsConflict: preview.hasGiftCardDetailsConflict,

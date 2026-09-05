@@ -35,6 +35,17 @@ export type AccountsListResponses = {
   200: {
     data: Array<{
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -141,6 +152,17 @@ export type AccountsCreateResponses = {
   201: {
     data: {
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -221,6 +243,17 @@ export type AccountsReorderResponses = {
   200: {
     data: Array<{
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -300,6 +333,17 @@ export type AccountsDeleteResponses = {
   200: {
     data: {
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -374,6 +418,17 @@ export type AccountsGetResponses = {
   200: {
     data: {
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -477,6 +532,17 @@ export type AccountsUpdateResponses = {
   200: {
     data: {
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -505,6 +571,316 @@ export type AccountsUpdateResponses = {
 };
 
 export type AccountsUpdateResponse = AccountsUpdateResponses[keyof AccountsUpdateResponses];
+
+export type CheckpointsBalanceData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    asOf?: string;
+  };
+  url: '/accounts/{id}/balance';
+};
+
+export type CheckpointsBalanceErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CheckpointsBalanceError = CheckpointsBalanceErrors[keyof CheckpointsBalanceErrors];
+
+export type CheckpointsBalanceResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      anchor: {
+        asOf: string;
+        checkpointId: string;
+        source: 'manual' | 'import' | 'statement';
+      } | null;
+      asOf: string;
+      balanceCents: number;
+      basis: 'checkpoint' | 'transactions';
+      inconsistent: boolean;
+    };
+  };
+};
+
+export type CheckpointsBalanceResponse =
+  CheckpointsBalanceResponses[keyof CheckpointsBalanceResponses];
+
+export type CheckpointsHistoryData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    months?: number;
+  };
+  url: '/accounts/{id}/balance-history';
+};
+
+export type CheckpointsHistoryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CheckpointsHistoryError = CheckpointsHistoryErrors[keyof CheckpointsHistoryErrors];
+
+export type CheckpointsHistoryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      balanceCents: number;
+      month: string;
+    }>;
+  };
+};
+
+export type CheckpointsHistoryResponse =
+  CheckpointsHistoryResponses[keyof CheckpointsHistoryResponses];
+
+export type CheckpointsListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/checkpoints';
+};
+
+export type CheckpointsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CheckpointsListError = CheckpointsListErrors[keyof CheckpointsListErrors];
+
+export type CheckpointsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      asOf: string;
+      balanceCents: number;
+      createdAt: string;
+      deltaCents: number | null;
+      expectedBalanceCents: number | null;
+      id: string;
+      note: string | null;
+      source: 'manual' | 'import' | 'statement';
+      sourceRef: string | null;
+    }>;
+  };
+};
+
+export type CheckpointsListResponse = CheckpointsListResponses[keyof CheckpointsListResponses];
+
+export type CheckpointsCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    asOf: string;
+    balanceCents: number;
+    note?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/checkpoints';
+};
+
+export type CheckpointsCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CheckpointsCreateError = CheckpointsCreateErrors[keyof CheckpointsCreateErrors];
+
+export type CheckpointsCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      accountId: string;
+      asOf: string;
+      balanceCents: number;
+      createdAt: string;
+      deltaCents: number | null;
+      expectedBalanceCents: number | null;
+      id: string;
+      note: string | null;
+      source: 'manual' | 'import' | 'statement';
+      sourceRef: string | null;
+    };
+    message: string;
+  };
+};
+
+export type CheckpointsCreateResponse =
+  CheckpointsCreateResponses[keyof CheckpointsCreateResponses];
+
+export type CheckpointsRemoveData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+    checkpointId: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/checkpoints/{checkpointId}';
+};
+
+export type CheckpointsRemoveErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CheckpointsRemoveError = CheckpointsRemoveErrors[keyof CheckpointsRemoveErrors];
+
+export type CheckpointsRemoveResponses = {
+  /**
+   * 204
+   */
+  204: {
+    message: string;
+  };
+};
+
+export type CheckpointsRemoveResponse =
+  CheckpointsRemoveResponses[keyof CheckpointsRemoveResponses];
 
 export type GiftCardDetailsGetData = {
   body?: never;
@@ -1265,6 +1641,17 @@ export type AccountsMergeResponses = {
   200: {
     data: {
       archivedAt: string | null;
+      balance: {
+        anchor: {
+          asOf: string;
+          checkpointId: string;
+          source: 'manual' | 'import' | 'statement';
+        } | null;
+        asOf: string;
+        balanceCents: number;
+        basis: 'checkpoint' | 'transactions';
+        inconsistent: boolean;
+      };
       createdAt: string;
       currency: string;
       displayOrder: number;
@@ -1356,6 +1743,17 @@ export type AccountsPreviewMergeResponses = {
       resultingBalanceCents: number;
       source: {
         archivedAt: string | null;
+        balance: {
+          anchor: {
+            asOf: string;
+            checkpointId: string;
+            source: 'manual' | 'import' | 'statement';
+          } | null;
+          asOf: string;
+          balanceCents: number;
+          basis: 'checkpoint' | 'transactions';
+          inconsistent: boolean;
+        };
         createdAt: string;
         currency: string;
         displayOrder: number;
@@ -1381,6 +1779,17 @@ export type AccountsPreviewMergeResponses = {
       };
       target: {
         archivedAt: string | null;
+        balance: {
+          anchor: {
+            asOf: string;
+            checkpointId: string;
+            source: 'manual' | 'import' | 'statement';
+          } | null;
+          asOf: string;
+          balanceCents: number;
+          basis: 'checkpoint' | 'transactions';
+          inconsistent: boolean;
+        };
         createdAt: string;
         currency: string;
         displayOrder: number;

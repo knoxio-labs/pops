@@ -11,12 +11,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  balanceAsOf,
-  balanceHistory,
   checkpointDelta,
   dayBefore,
   isAccountInconsistent,
-} from '../services/account-balance.js';
+} from '../services/account-balance-anchor.js';
+import { balanceHistory } from '../services/account-balance-history.js';
+import { balanceAsOf } from '../services/account-balance.js';
 import { insertCheckpoint } from '../services/account-checkpoints.js';
 import { createAccount } from '../services/accounts.js';
 import { createTransaction } from '../services/transactions.js';

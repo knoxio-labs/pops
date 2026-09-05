@@ -12,6 +12,7 @@ import { type OpenedFinanceDb } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
 import { makeAccountsHandlers } from './accounts-handlers.js';
 import { makeBudgetsHandlers } from './budgets-handlers.js';
+import { makeCheckpointsHandlers } from './checkpoints-handlers.js';
 import { makeCorrectionsHandlers } from './corrections-handlers.js';
 import { makeCurrenciesHandlers } from './currencies-handlers.js';
 import { makeEntityUsageHandlers } from './entity-usage-handlers.js';
@@ -38,6 +39,7 @@ export function makeFinanceRestHandlers(deps: {
     currencies: makeCurrenciesHandlers(db),
     institutions: makeInstitutionsHandlers(db),
     accounts: makeAccountsHandlers(db, deps.contacts),
+    checkpoints: makeCheckpointsHandlers(db),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts),
