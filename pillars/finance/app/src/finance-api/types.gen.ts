@@ -53,6 +53,23 @@ export type AccountsListResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -170,6 +187,23 @@ export type AccountsCreateResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -261,6 +295,23 @@ export type AccountsReorderResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -351,6 +402,23 @@ export type AccountsDeleteResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -436,6 +504,23 @@ export type AccountsGetResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -550,6 +635,23 @@ export type AccountsUpdateResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -1085,6 +1187,217 @@ export type GiftCardDetailsRevealResponses = {
 
 export type GiftCardDetailsRevealResponse =
   GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
+
+export type AccountImportsGetConfigData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/import-config';
+};
+
+export type AccountImportsGetConfigErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsGetConfigError =
+  AccountImportsGetConfigErrors[keyof AccountImportsGetConfigErrors];
+
+export type AccountImportsGetConfigResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      createdAt: string;
+      dialectId: string | null;
+      expectedCadenceDays: number | null;
+      externalAccountRef: string | null;
+      parserId: string | null;
+      provider: 'up' | null;
+      secretRef: string | null;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      updatedAt: string;
+    };
+  };
+};
+
+export type AccountImportsGetConfigResponse =
+  AccountImportsGetConfigResponses[keyof AccountImportsGetConfigResponses];
+
+export type AccountImportsWriteConfigData = {
+  /**
+   * Body
+   */
+  body?: {
+    dialectId?: string | null;
+    expectedCadenceDays?: number | null;
+    externalAccountRef?: string | null;
+    parserId?: string | null;
+    provider?: 'up' | null;
+    secretRef?: string | null;
+    sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/import-config';
+};
+
+export type AccountImportsWriteConfigErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 422
+   */
+  422: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsWriteConfigError =
+  AccountImportsWriteConfigErrors[keyof AccountImportsWriteConfigErrors];
+
+export type AccountImportsWriteConfigResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      createdAt: string;
+      dialectId: string | null;
+      expectedCadenceDays: number | null;
+      externalAccountRef: string | null;
+      parserId: string | null;
+      provider: 'up' | null;
+      secretRef: string | null;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type AccountImportsWriteConfigResponse =
+  AccountImportsWriteConfigResponses[keyof AccountImportsWriteConfigResponses];
+
+export type AccountImportsListBatchesData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    limit?: number;
+    before?: string;
+  };
+  url: '/accounts/{id}/imports';
+};
+
+export type AccountImportsListBatchesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type AccountImportsListBatchesError =
+  AccountImportsListBatchesErrors[keyof AccountImportsListBatchesErrors];
+
+export type AccountImportsListBatchesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      checkpointId: string | null;
+      commitKey: string | null;
+      createdAt: string;
+      dateFrom: string | null;
+      dateTo: string | null;
+      id: string;
+      parserVersion: string | null;
+      rowCount: number;
+      sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+      sourceRef: string | null;
+    }>;
+    nextBefore: string | null;
+  };
+};
+
+export type AccountImportsListBatchesResponse =
+  AccountImportsListBatchesResponses[keyof AccountImportsListBatchesResponses];
 
 export type LoanListOffsetLinksData = {
   body?: never;
@@ -1659,6 +1972,23 @@ export type AccountsMergeResponses = {
       entityDisplayNameStale: boolean;
       entityId: string | null;
       id: string;
+      importStatus: {
+        cadenceDays: number | null;
+        lastBatchId: string | null;
+        lastImportAt: string | null;
+        newestTransactionDate: string | null;
+        source: {
+          dialectId?: string;
+          kind: 'csv-dialect' | 'pdf-statement' | 'api';
+          parserId?: string;
+          parserVersion?: string;
+          provider?: 'up';
+        } | null;
+        span: {
+          from: string;
+          to: string;
+        } | null;
+      };
       institutionId: string | null;
       kind:
         | 'checking'
@@ -1762,6 +2092,23 @@ export type AccountsPreviewMergeResponses = {
         entityDisplayNameStale: boolean;
         entityId: string | null;
         id: string;
+        importStatus: {
+          cadenceDays: number | null;
+          lastBatchId: string | null;
+          lastImportAt: string | null;
+          newestTransactionDate: string | null;
+          source: {
+            dialectId?: string;
+            kind: 'csv-dialect' | 'pdf-statement' | 'api';
+            parserId?: string;
+            parserVersion?: string;
+            provider?: 'up';
+          } | null;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+        };
         institutionId: string | null;
         kind:
           | 'checking'
@@ -1798,6 +2145,23 @@ export type AccountsPreviewMergeResponses = {
         entityDisplayNameStale: boolean;
         entityId: string | null;
         id: string;
+        importStatus: {
+          cadenceDays: number | null;
+          lastBatchId: string | null;
+          lastImportAt: string | null;
+          newestTransactionDate: string | null;
+          source: {
+            dialectId?: string;
+            kind: 'csv-dialect' | 'pdf-statement' | 'api';
+            parserId?: string;
+            parserVersion?: string;
+            provider?: 'up';
+          } | null;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+        };
         institutionId: string | null;
         kind:
           | 'checking'

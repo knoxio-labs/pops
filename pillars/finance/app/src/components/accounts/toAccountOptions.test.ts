@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { NO_BALANCE } from '../../test-utils.js';
+import { NO_BALANCE, NO_IMPORT_STATUS } from '../../test-utils.js';
 import { toAccountOptions } from './toAccountOptions';
 
 import type { ApiAccount, ApiInstitution } from './toAccountOptions';
@@ -18,6 +18,7 @@ function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
     entityDisplayName: null,
     entityDisplayNameStale: false,
     balance: NO_BALANCE,
+    importStatus: NO_IMPORT_STATUS,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

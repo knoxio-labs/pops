@@ -33,6 +33,7 @@ import type { Express } from 'express';
 
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
 import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
+import type { ImportBatch, ImportConfig } from '../modules/account-imports-types.js';
 import type { Account, AccountMergePreviewBody } from '../modules/accounts-types.js';
 import type { Budget } from '../modules/budgets-types.js';
 import type { Checkpoint } from '../modules/checkpoints-types.js';
@@ -490,6 +491,18 @@ export function makeClient(app: Express) {
       history: (accountId: string, query: { months?: number } = {}) =>
         call<{ data: BalanceHistoryPoint[] }>((r) =>
           r.get(`/accounts/${accountId}/balance-history`).query(query)
+        ),
+    },
+    accountImports: {
+      listBatches: (accountId: string, query: { limit?: number; before?: string } = {}) =>
+        call<{ data: ImportBatch[]; nextBefore: string | null }>((r) =>
+          r.get(`/accounts/${accountId}/imports`).query(query)
+        ),
+      getConfig: (accountId: string) =>
+        call<{ data: ImportConfig }>((r) => r.get(`/accounts/${accountId}/import-config`)),
+      writeConfig: (accountId: string, body: Record<string, unknown>) =>
+        call<{ data: ImportConfig; message: string }>((r) =>
+          r.put(`/accounts/${accountId}/import-config`).send(body)
         ),
     },
     giftCardDetails: {

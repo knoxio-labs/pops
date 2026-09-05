@@ -135,6 +135,7 @@ export { isCheckpointConflict } from './services/checkpoint-conflict.js';
 
 export * as importBatchesService from './services/import-batches.js';
 export * as accountImportConfigService from './services/account-import-config.js';
+export { importStatusFor, type DateSpan, type ImportStatus } from './services/import-status.js';
 
 export { resolveAccountIdByName, resolveImportAccountId } from './services/account-lookup.js';
 

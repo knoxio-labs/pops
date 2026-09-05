@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { NO_BALANCE } from '../test-utils.js';
+import { NO_BALANCE, NO_IMPORT_STATUS } from '../test-utils.js';
 import { AccountCheckpointsPage } from './AccountCheckpointsPage';
 
 import type { CheckpointsListResponse } from '../finance-api/index.js';
@@ -45,6 +45,7 @@ function account(overrides: Partial<Account>): Account {
     entityDisplayName: null,
     entityDisplayNameStale: false,
     balance: NO_BALANCE,
+    importStatus: NO_IMPORT_STATUS,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

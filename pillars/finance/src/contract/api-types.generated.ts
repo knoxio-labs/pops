@@ -161,6 +161,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/{id}/import-config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** How an account expects to be fed; 404 for an account with no config */
+    get: operations['accountImports.getConfig'];
+    /** Create or replace an account’s import config; 422s a config missing what its kind needs (a dialect, a parser or a provider) */
+    put: operations['accountImports.writeConfig'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/imports': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the import batches that fed an account, newest first, paginated on createdAt */
+    get: operations['accountImports.listBatches'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/accounts/{id}/loan-offset-links': {
     parameters: {
       query?: never;
@@ -1356,6 +1391,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1446,6 +1500,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1569,6 +1642,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1671,6 +1763,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1777,6 +1888,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1904,6 +2034,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -2624,6 +2773,267 @@ export interface operations {
       };
     };
   };
+  'accountImports.getConfig': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              createdAt: string;
+              dialectId: string | null;
+              expectedCadenceDays: number | null;
+              externalAccountRef: string | null;
+              parserId: string | null;
+              /** @enum {string|null} */
+              provider: 'up' | null;
+              secretRef: string | null;
+              /** @enum {string} */
+              sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+              updatedAt: string;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accountImports.writeConfig': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          dialectId?: string | null;
+          expectedCadenceDays?: number | null;
+          externalAccountRef?: string | null;
+          parserId?: string | null;
+          /** @enum {string|null} */
+          provider?: 'up' | null;
+          secretRef?: string | null;
+          /** @enum {string} */
+          sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              createdAt: string;
+              dialectId: string | null;
+              expectedCadenceDays: number | null;
+              externalAccountRef: string | null;
+              parserId: string | null;
+              /** @enum {string|null} */
+              provider: 'up' | null;
+              secretRef: string | null;
+              /** @enum {string} */
+              sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 422 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'accountImports.listBatches': {
+    parameters: {
+      query?: {
+        limit?: number;
+        before?: string;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              checkpointId: string | null;
+              commitKey: string | null;
+              createdAt: string;
+              dateFrom: string | null;
+              dateTo: string | null;
+              id: string;
+              parserVersion: string | null;
+              rowCount: number;
+              /** @enum {string} */
+              sourceKind: 'csv-dialect' | 'pdf-statement' | 'api';
+              sourceRef: string | null;
+            }[];
+            nextBefore: string | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'loan.listOffsetLinks': {
     parameters: {
       query?: {
@@ -3306,6 +3716,25 @@ export interface operations {
               entityDisplayNameStale: boolean;
               entityId: string | null;
               id: string;
+              importStatus: {
+                cadenceDays: number | null;
+                lastBatchId: string | null;
+                lastImportAt: string | null;
+                newestTransactionDate: string | null;
+                source: {
+                  dialectId?: string;
+                  /** @enum {string} */
+                  kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                  parserId?: string;
+                  parserVersion?: string;
+                  /** @enum {string} */
+                  provider?: 'up';
+                } | null;
+                span: {
+                  from: string;
+                  to: string;
+                } | null;
+              };
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -3432,6 +3861,25 @@ export interface operations {
                 entityDisplayNameStale: boolean;
                 entityId: string | null;
                 id: string;
+                importStatus: {
+                  cadenceDays: number | null;
+                  lastBatchId: string | null;
+                  lastImportAt: string | null;
+                  newestTransactionDate: string | null;
+                  source: {
+                    dialectId?: string;
+                    /** @enum {string} */
+                    kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                    parserId?: string;
+                    parserVersion?: string;
+                    /** @enum {string} */
+                    provider?: 'up';
+                  } | null;
+                  span: {
+                    from: string;
+                    to: string;
+                  } | null;
+                };
                 institutionId: string | null;
                 /** @enum {string} */
                 kind:
@@ -3471,6 +3919,25 @@ export interface operations {
                 entityDisplayNameStale: boolean;
                 entityId: string | null;
                 id: string;
+                importStatus: {
+                  cadenceDays: number | null;
+                  lastBatchId: string | null;
+                  lastImportAt: string | null;
+                  newestTransactionDate: string | null;
+                  source: {
+                    dialectId?: string;
+                    /** @enum {string} */
+                    kind: 'csv-dialect' | 'pdf-statement' | 'api';
+                    parserId?: string;
+                    parserVersion?: string;
+                    /** @enum {string} */
+                    provider?: 'up';
+                  } | null;
+                  span: {
+                    from: string;
+                    to: string;
+                  } | null;
+                };
                 institutionId: string | null;
                 /** @enum {string} */
                 kind:

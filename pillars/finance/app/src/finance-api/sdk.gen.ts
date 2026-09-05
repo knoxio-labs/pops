@@ -4,6 +4,15 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  AccountImportsGetConfigData,
+  AccountImportsGetConfigErrors,
+  AccountImportsGetConfigResponses,
+  AccountImportsListBatchesData,
+  AccountImportsListBatchesErrors,
+  AccountImportsListBatchesResponses,
+  AccountImportsWriteConfigData,
+  AccountImportsWriteConfigErrors,
+  AccountImportsWriteConfigResponses,
   AccountsCreateData,
   AccountsCreateErrors,
   AccountsCreateResponses,
@@ -523,6 +532,57 @@ export const giftCardDetailsReveal = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * How an account expects to be fed; 404 for an account with no config
+ */
+export const accountImportsGetConfig = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsGetConfigData, ThrowOnError>
+): RequestResult<AccountImportsGetConfigResponses, AccountImportsGetConfigErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    AccountImportsGetConfigResponses,
+    AccountImportsGetConfigErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/import-config', ...options });
+
+/**
+ * Create or replace an account’s import config; 422s a config missing what its kind needs (a dialect, a parser or a provider)
+ */
+export const accountImportsWriteConfig = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsWriteConfigData, ThrowOnError>
+): RequestResult<
+  AccountImportsWriteConfigResponses,
+  AccountImportsWriteConfigErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    AccountImportsWriteConfigResponses,
+    AccountImportsWriteConfigErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/import-config',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List the import batches that fed an account, newest first, paginated on createdAt
+ */
+export const accountImportsListBatches = <ThrowOnError extends boolean = false>(
+  options: Options<AccountImportsListBatchesData, ThrowOnError>
+): RequestResult<
+  AccountImportsListBatchesResponses,
+  AccountImportsListBatchesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    AccountImportsListBatchesResponses,
+    AccountImportsListBatchesErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/imports', ...options });
 
 /**
  * List a loan account’s offset links, closed ones included unless active=true

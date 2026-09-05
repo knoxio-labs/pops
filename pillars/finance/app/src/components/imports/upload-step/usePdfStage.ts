@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 
+import { unwrap } from '../../../finance-api-helpers.js';
+import { accountsGet } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
 import { readAnzPdfUpload } from '../pdf/anz-pdf-import';
 
-import type { AnzPdfStatementImport } from '../pdf/anz-pdf-import';
+import type { AccountCoverage, AnzPdfStatementImport } from '../pdf/anz-pdf-import';
 
 /**
  * The wizard step a PDF import lands on.
@@ -18,6 +20,24 @@ export interface PdfStage {
   statement: AnzPdfStatementImport | null;
   clear: () => void;
   run: (files: File[]) => Promise<void>;
+}
+
+/**
+ * What the account already holds, read off its import status (POPS-2917).
+ *
+ * A read that fails degrades to "not checked", so the findings panel says the
+ * overlap check did not run. It must not degrade to "nothing to check": that
+ * is what an empty account honestly says, and the two would otherwise be
+ * spelled the same way.
+ */
+async function coverageOf(accountId: string): Promise<AccountCoverage> {
+  try {
+    const { data } = unwrap(await accountsGet({ path: { id: accountId } }));
+    const span = data.importStatus.span;
+    return span ? { known: true, interval: span } : { known: true };
+  } catch {
+    return { known: false };
+  }
 }
 
 /**
@@ -57,9 +77,7 @@ export function usePdfStage(
         setError('No account selected — go back and pick one before uploading a statement.');
         return;
       }
-      // Finance cannot yet say what dates this account already holds, so the
-      // overlap check does not run and the findings panel says so.
-      const decision = await readAnzPdfUpload(files, { known: false }, accountId);
+      const decision = await readAnzPdfUpload(files, await coverageOf(accountId), accountId);
       setIsProcessing(false);
       if (decision.kind === 'error') {
         setError(decision.message);
