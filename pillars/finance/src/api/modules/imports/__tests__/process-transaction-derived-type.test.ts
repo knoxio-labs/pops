@@ -125,6 +125,7 @@ describe('classifyWithoutAi — descriptor-derived types', () => {
     const rule: CorrectionRow = {
       id: 'rule-1',
       descriptionPattern: 'INTEREST CHARGES',
+      accountId: null,
       matchType: 'contains',
       entityId: null,
       entityName: null,

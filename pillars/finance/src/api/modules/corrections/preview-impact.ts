@@ -42,6 +42,8 @@ export interface ChangeSetPreviewSummary {
 export interface PreviewTransaction {
   checksum?: string;
   description: string;
+  /** Account scope for the match, when the caller knows it (POPS-2593). */
+  accountId?: string;
 }
 
 export function summarizeMatch(match: CorrectionMatchResult | null): CorrectionMatchSummary {
@@ -69,10 +71,20 @@ export function previewChangeSetImpact(args: {
 
   const diffs: ChangeSetPreviewDiff[] = args.transactions.map((t) => {
     const before = summarizeMatch(
-      findMatchingCorrectionFromRules(t.description, args.rules, args.minConfidence)
+      findMatchingCorrectionFromRules(
+        t.description,
+        args.rules,
+        t.accountId ?? null,
+        args.minConfidence
+      )
     );
     const after = summarizeMatch(
-      findMatchingCorrectionFromRules(t.description, rulesAfter, args.minConfidence)
+      findMatchingCorrectionFromRules(
+        t.description,
+        rulesAfter,
+        t.accountId ?? null,
+        args.minConfidence
+      )
     );
     const changed =
       before.matched !== after.matched ||

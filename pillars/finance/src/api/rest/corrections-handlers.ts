@@ -67,6 +67,7 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
         const matches = transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb(
           db,
           body.description,
+          body.accountId ?? null,
           body.minConfidence
         );
         const first = matches[0];

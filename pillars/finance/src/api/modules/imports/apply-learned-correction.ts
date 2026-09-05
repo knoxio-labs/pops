@@ -155,8 +155,19 @@ function resolveApplyResult(
 }
 
 /**
- * Match `transaction.description` against the correction rule set and apply
- * the winning rule.
+ * Match `transaction.description` against the correction rule set — narrowed
+ * to `transaction.accountId`'s scope — and apply the winning rule.
+ *
+ * The account is what lets two banks posting an identical description each
+ * keep their own rule (POPS-2593): a rule scoped to another account is never
+ * a candidate here, and a rule scoped to THIS account outranks a global one
+ * whatever their priorities.
+ *
+ * `accountId` is optional on `ParsedTransaction` (a caller predating the
+ * account-step, POPS-2852), and absent it degrades to `null` — every rule is a
+ * candidate, which is exactly the behaviour this path had before the scope
+ * existed. An import that cannot say which account it is for gets the old
+ * global matching, not an empty rule set.
  *
  * `rules`, when supplied, is matched in-memory (`findAllMatchingCorrectionFromRules`)
  * instead of re-querying the DB — the fetch-once-per-run path (CF040/#3664):
@@ -187,10 +198,16 @@ export function applyLearnedCorrection(
   const { transaction, minConfidence, rules } = args;
 
   const allMatchingRules = rules
-    ? findAllMatchingCorrectionFromRules(transaction.description, rules, minConfidence)
+    ? findAllMatchingCorrectionFromRules(
+        transaction.description,
+        rules,
+        transaction.accountId ?? null,
+        minConfidence
+      )
     : transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb(
         db,
         transaction.description,
+        transaction.accountId ?? null,
         minConfidence
       );
 

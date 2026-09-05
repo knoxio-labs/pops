@@ -67,6 +67,10 @@ export function buildAddChangeSet(args: BuildArgs): ChangeSet {
         op: 'add',
         data: {
           descriptionPattern: args.normalizedPattern,
+          // Always global. A proposal never narrows a rule to one account:
+          // narrower is worse by default, and only an operator who has decided
+          // a merchant is genuinely account-specific should opt in (POPS-2593).
+          accountId: null,
           matchType: args.matchType,
           entityId: args.effectiveSignal.entityId ?? null,
           entityName: args.effectiveSignal.entityName ?? null,

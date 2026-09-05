@@ -3925,6 +3925,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4013,6 +4014,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           descriptionPattern: string;
           entityId?: string | null;
           entityName?: string | null;
@@ -4049,6 +4051,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4211,6 +4214,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -4243,6 +4247,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -4296,6 +4301,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4379,6 +4385,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           description: string;
           /** @default 0.7 */
           minConfidence: number;
@@ -4394,6 +4401,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4566,6 +4574,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -4598,6 +4607,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -4652,6 +4662,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -4744,6 +4755,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -4776,6 +4788,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -4824,6 +4837,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -4856,6 +4870,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -4899,6 +4914,7 @@ export interface operations {
             };
           }[];
           transactions: {
+            accountId?: string;
             checksum?: string;
             description: string;
           }[];
@@ -5118,6 +5134,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -5150,6 +5167,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -5245,6 +5263,7 @@ export interface operations {
             rationale: string;
             targetRules: {
               [key: string]: {
+                accountId: string | null;
                 confidence: number;
                 createdAt: string;
                 descriptionPattern: string;
@@ -5332,6 +5351,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -5364,6 +5384,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -5505,6 +5526,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -5537,6 +5559,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -5619,6 +5642,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -5651,6 +5675,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;
@@ -5695,6 +5720,7 @@ export interface operations {
             rationale: string;
             targetRules: {
               [key: string]: {
+                accountId: string | null;
                 confidence: number;
                 createdAt: string;
                 descriptionPattern: string;
@@ -5869,6 +5895,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -6021,6 +6048,7 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          accountId?: string | null;
           confidence?: number;
           descriptionPattern?: string;
           entityId?: string | null;
@@ -6055,6 +6083,7 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              accountId: string | null;
               confidence: number;
               createdAt: string;
               descriptionPattern: string;
@@ -6667,6 +6696,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -6699,6 +6729,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -7146,6 +7177,7 @@ export interface operations {
             ops: (
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern: string;
                     entityId?: string | null;
@@ -7178,6 +7210,7 @@ export interface operations {
                 }
               | {
                   data: {
+                    accountId?: string | null;
                     confidence?: number;
                     descriptionPattern?: string;
                     entityId?: string | null;
@@ -8006,6 +8039,7 @@ export interface operations {
               ops: (
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern: string;
                       entityId?: string | null;
@@ -8038,6 +8072,7 @@ export interface operations {
                   }
                 | {
                     data: {
+                      accountId?: string | null;
                       confidence?: number;
                       descriptionPattern?: string;
                       entityId?: string | null;

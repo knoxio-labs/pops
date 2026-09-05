@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { useAllAccounts } from '../../../components/accounts/hooks/useAllAccounts';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { correctionsCreateOrUpdate, correctionsUpdate } from '../../../finance-api/index.js';
 import { useAllEntities } from '../../../lib/useAllEntities';
@@ -17,6 +18,7 @@ interface UseRuleFormStateOptions {
 
 interface CreateRulePayload {
   descriptionPattern: string;
+  accountId: string | null;
   matchType: MatchType;
   entityId: string | null;
   entityName: string | null;
@@ -26,6 +28,7 @@ interface CreateRulePayload {
 
 interface UpdateRulePayload {
   descriptionPattern: string;
+  accountId: string | null;
   matchType: MatchType;
   entityId: string | null;
   entityName: string | null;
@@ -114,6 +117,7 @@ function buildSubmit({ editingRule, createMutation, updateMutation, entityNameOf
         id: editingRule.id,
         data: {
           descriptionPattern: values.descriptionPattern,
+          accountId: values.accountId,
           matchType: values.matchType,
           ...entity,
           tags: values.tags,
@@ -125,6 +129,7 @@ function buildSubmit({ editingRule, createMutation, updateMutation, entityNameOf
     }
     createMutation.mutate({
       descriptionPattern: values.descriptionPattern,
+      accountId: values.accountId,
       matchType: values.matchType,
       ...entity,
       tags: values.tags,
@@ -160,6 +165,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
   const { createMutation, updateMutation } = useRuleMutations(onClose);
   const entitiesQuery = useAllEntities();
   const entities = (entitiesQuery.data?.data ?? []).map((e) => ({ id: e.id, name: e.name }));
+  const { accounts } = useAllAccounts();
 
   const handleAdd = useCallback(() => {
     setEditingRule(null);
@@ -171,6 +177,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
       setEditingRule(rule);
       form.reset({
         descriptionPattern: rule.descriptionPattern,
+        accountId: rule.accountId,
         matchType: rule.matchType,
         entityId: rule.entityId ?? null,
         tags: rule.tags,
@@ -185,6 +192,7 @@ export function useRuleFormState({ onClose }: UseRuleFormStateOptions) {
     form,
     editingRule,
     entities,
+    accounts: accounts ?? [],
     handleAdd,
     handleEdit,
     onSubmit: buildSubmit({

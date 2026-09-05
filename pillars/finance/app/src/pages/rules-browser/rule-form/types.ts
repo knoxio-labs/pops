@@ -15,6 +15,13 @@ import type { MatchType } from '../types';
  */
 export const RuleFormSchema = z.object({
   descriptionPattern: z.string().min(1, 'Pattern is required'),
+  /**
+   * Optional account scope (POPS-2593). `null` — the default — is "any
+   * account", which is what every rule was before the field existed and what
+   * every proposal still produces. Set it only for a merchant that genuinely
+   * differs per account, such as two banks both posting `LATE FEE`.
+   */
+  accountId: z.string().nullable(),
   matchType: z.enum(['exact', 'contains', 'regex']),
   entityId: z.string().nullable().optional(),
   tags: z.array(z.string()),
@@ -26,6 +33,7 @@ export type RuleFormValues = z.infer<typeof RuleFormSchema>;
 
 export const DEFAULT_RULE_FORM_VALUES: RuleFormValues = {
   descriptionPattern: '',
+  accountId: null,
   matchType: 'contains',
   entityId: null,
   tags: [],

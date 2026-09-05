@@ -17,6 +17,7 @@ function rule(
 ): CorrectionRule {
   return {
     matchType: 'exact',
+    accountId: null,
     entityId: null,
     entityName: null,
     location: null,

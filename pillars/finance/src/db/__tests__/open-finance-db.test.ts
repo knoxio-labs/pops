@@ -100,10 +100,25 @@ describe('openFinanceDb', () => {
 
       // The entity_id FK on transactions/corrections/tag-rules is gone — a row
       // referencing a non-local (contacts) entity id now inserts cleanly.
+      // Asserted per-column rather than as "no FKs at all": corrections gained
+      // an unrelated account_id FK in 0094, and an emptiness check would have
+      // read that as the entity mirror coming back.
       for (const table of ['transaction_corrections', 'transaction_tag_rules']) {
-        const fks = raw.prepare(`PRAGMA foreign_key_list(${table})`).all();
-        expect(fks).toEqual([]);
+        const fks = raw.prepare(`PRAGMA foreign_key_list(${table})`).all() as {
+          from: string;
+        }[];
+        expect(fks.find((fk) => fk.from === 'entity_id')).toBeUndefined();
       }
+
+      // The 0094 account scope is a real FK onto accounts, not free text
+      // (POPS-2593).
+      const correctionFks = raw
+        .prepare('PRAGMA foreign_key_list(transaction_corrections)')
+        .all() as {
+        from: string;
+        table: string;
+      }[];
+      expect(correctionFks.find((fk) => fk.from === 'account_id')?.table).toBe('accounts');
 
       // transactions keeps the 0083 account_id → accounts FK and the 0093
       // import_batch_id → import_batches link — no trace of the dropped

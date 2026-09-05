@@ -18,6 +18,7 @@ import {
   accountGiftCardDetails,
   accounts,
   entityPrecreateOutbox,
+  transactionCorrections,
   transactions,
 } from '../schema.js';
 import { balanceAsOf } from '../services/account-balance.js';
@@ -439,5 +440,69 @@ describe('mergeAccounts import records (POPS-2916)', () => {
 
     expect(getImportConfig(db, ANZ_ID)).toMatchObject({ sourceKind: 'api', provider: 'up' });
     expect(getImportConfig(db, AMEX_ID)).toBeUndefined();
+  });
+});
+
+describe('mergeAccounts correction-rule scopes (POPS-2593)', () => {
+  let db: FinanceDb;
+
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  function seedScopedRule(id: string, accountId: string | null): void {
+    db.insert(transactionCorrections)
+      .values({
+        id,
+        descriptionPattern: 'LATE FEE',
+        accountId,
+        matchType: 'exact',
+        entityId: 'ent-bank',
+        entityName: 'Bank',
+        tags: '[]',
+        isActive: true,
+        confidence: 0.95,
+        priority: 0,
+      })
+      .run();
+  }
+
+  function scopeOf(id: string): string | null | undefined {
+    return db.select().from(transactionCorrections).where(eq(transactionCorrections.id, id)).get()
+      ?.accountId;
+  }
+
+  it('moves a rule scoped to the source onto the survivor', () => {
+    seedScopedRule('scoped', AMEX_ID);
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    // Not just tidiness: the scope is a real FK with `no action` on delete,
+    // so without the repoint the merge's DELETE of the source account is
+    // refused and the whole merge throws.
+    expect(scopeOf('scoped')).toBe(ANZ_ID);
+  });
+
+  it('leaves a global rule and a rule already on the survivor alone', () => {
+    seedScopedRule('global', null);
+    seedScopedRule('on-target', ANZ_ID);
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    expect(scopeOf('global')).toBeNull();
+    expect(scopeOf('on-target')).toBe(ANZ_ID);
+  });
+
+  it('keeps both rules when the two accounts each scoped the same pattern', () => {
+    seedScopedRule('from-source', AMEX_ID);
+    seedScopedRule('on-target', ANZ_ID);
+
+    mergeAccounts(db, AMEX_ID, ANZ_ID);
+
+    // The upsert identity is not a unique index, so the merge does not have to
+    // pick a winner — and silently discarding an operator-authored
+    // classification would be worse than showing both in the rule browser.
+    expect(scopeOf('from-source')).toBe(ANZ_ID);
+    expect(scopeOf('on-target')).toBe(ANZ_ID);
   });
 });

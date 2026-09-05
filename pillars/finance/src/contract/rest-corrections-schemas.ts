@@ -19,9 +19,18 @@ export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
  * contract re-exports this rather than declaring its own. */
 export const TransactionTypeSchema = z.enum(TRANSACTION_TYPES);
 
+/**
+ * Optional `accounts.id` the rule is narrowed to. `null`/omitted is a global
+ * rule matching every account — the default, and the only thing any proposal
+ * surface ever emits (POPS-2593). A narrower rule is worse by default, so
+ * nothing but an operator's explicit pick sets this.
+ */
+const CorrectionAccountScope = z.string().min(1).nullable().optional();
+
 /** Body of a correction `add` op (create-shape + ChangeSet-only confidence/isActive). */
 export const CreateCorrectionSchema = z.object({
   descriptionPattern: z.string().min(1),
+  accountId: CorrectionAccountScope,
   matchType: MatchTypeSchema.default('exact'),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
@@ -34,6 +43,7 @@ export const CreateCorrectionSchema = z.object({
 /** Body of a correction `edit` op (all fields optional patch). */
 export const UpdateCorrectionSchema = z.object({
   descriptionPattern: z.string().min(1).optional(),
+  accountId: CorrectionAccountScope,
   matchType: MatchTypeSchema.optional(),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),
@@ -74,6 +84,7 @@ export type ChangeSet = z.infer<typeof ChangeSetSchema>;
 export const CorrectionSchema = z.object({
   id: z.string(),
   descriptionPattern: z.string(),
+  accountId: z.string().nullable(),
   matchType: MatchTypeSchema,
   entityId: z.string().nullable(),
   entityName: z.string().nullable(),
@@ -99,6 +110,12 @@ export const CorrectionListQuery = z.object({
 
 export const FindMatchBody = z.object({
   description: z.string().min(1),
+  /**
+   * Account the probed description belongs to. Omitted/`null` means the caller
+   * has none in hand and sees every rule, scoped or not — narrowing to
+   * global-only would under-report which rules the string hits (POPS-2593).
+   */
+  accountId: z.string().min(1).nullable().optional(),
   minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
 });
 
@@ -166,6 +183,14 @@ const PendingChangeSetSchema = z.object({ changeSet: ChangeSetSchema });
 const PreviewChangeSetTransactionSchema = z.object({
   checksum: z.string().optional(),
   description: z.string().min(1),
+  /**
+   * Account this row belongs to, so the diff resolves the winning rule under
+   * the same scope the live matcher would (POPS-2593). Optional: the wizard
+   * previews rows it has not committed yet and may not have an id for. Omitted
+   * ⇒ every rule is a candidate, which over-reports rather than under-reports
+   * a scoped rule's reach.
+   */
+  accountId: z.string().min(1).optional(),
 });
 
 export const PreviewChangeSetBody = z.object({
