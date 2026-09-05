@@ -8,7 +8,12 @@
  *
  * Nothing here writes to the database or mutates Radarr.
  */
-import { type MediaDb, type MovieSizeMap, rotationRemovalQueries } from '../../db/index.js';
+import {
+  type MediaDb,
+  type MovieSizeMap,
+  rotationRemovalQueries,
+  watchProgressService,
+} from '../../db/index.js';
 import { type RadarrClient } from '../clients/arr/index.js';
 import {
   calculateRemovalDeficit,
@@ -79,6 +84,8 @@ function describe(
     quality: candidate.quality,
     qualitySource: candidate.qualitySource,
     keepWeight: candidate.keepWeight,
+    abandonedProgress: candidate.abandonedProgress,
+    abandonWeight: candidate.abandonWeight,
   };
 }
 
@@ -116,7 +123,18 @@ export async function planRemoval(
 
   const downloadingIds = await getDownloadingTmdbIds(client);
   const eligible = rotationRemovalQueries.getEligibleForRemoval(db, movieSizes, downloadingIds);
-  const ranked = rankForRemoval({ candidates: eligible, acquiredAt, graceDays, tuning });
+  const abandonedProgress = watchProgressService.progressByMediaId(
+    db,
+    'movie',
+    eligible.map((movie) => movie.id)
+  );
+  const ranked = rankForRemoval({
+    candidates: eligible,
+    acquiredAt,
+    abandonedProgress,
+    graceDays,
+    tuning,
+  });
   const removable = removableOnly(ranked);
   const counts = { eligibleCount: eligible.length, removableCount: removable.length };
   const rankOf = new Map(ranked.map((candidate, index) => [candidate.tmdbId, index + 1]));

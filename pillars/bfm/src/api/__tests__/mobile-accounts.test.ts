@@ -19,6 +19,7 @@ import {
   createMalformedAccountsFake,
   type AccountFakeRow,
   type AccountsFake,
+  type AccountsFakeExtras,
 } from './accounts-fake.js';
 import { createTestApp, type TestApp } from './harness.js';
 import { requestOn } from './test-http.js';
@@ -51,12 +52,15 @@ function openWith(factory: PillarHandleFactory): { app: Express; token: string }
   return { app: created.app, token };
 }
 
-function openWithRows(rows: readonly AccountFakeRow[]): {
+function openWithRows(
+  rows: readonly AccountFakeRow[],
+  extras: AccountsFakeExtras = {}
+): {
   app: Express;
   token: string;
   fake: AccountsFake;
 } {
-  const fake = createAccountsFake(rows);
+  const fake = createAccountsFake(rows, undefined, extras);
   return { ...openWith(fake.factory), fake };
 }
 
@@ -75,9 +79,11 @@ describe('the account row is mobile-shaped', () => {
     expect(Object.keys(res.body.data[0]).toSorted()).toEqual([
       'archived',
       'balance',
+      'contact',
       'currency',
       'id',
       'institutionId',
+      'institutionName',
       'kind',
       'name',
     ]);
@@ -189,7 +195,7 @@ describe('getting one account', () => {
     const res = await get(app, token, `${LIST_PATH}/acc-2`);
 
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('Savings');
+    expect(res.body.account.name).toBe('Savings');
   });
 
   it('is a typed 404 for an id finance does not have', async () => {
@@ -301,5 +307,123 @@ describe('the perimeter still applies', () => {
 
     expect(res.status).toBe(403);
     expect(fake.listCalls).toHaveLength(0);
+  });
+});
+
+describe('the institution behind an account (POPS-2848)', () => {
+  it('resolves the name finance holds against the id on the row', async () => {
+    const { app, token } = openWithRows([accountRow({ id: 'acc-1', institutionId: 'inst-anz' })], {
+      institutions: [
+        { id: 'inst-up', name: 'Up' },
+        { id: 'inst-anz', name: 'ANZ' },
+      ],
+    });
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].institutionName).toBe('ANZ');
+  });
+
+  it('leaves the name null for an id the institutions list does not contain', async () => {
+    const { app, token } = openWithRows([accountRow({ id: 'acc-1', institutionId: 'inst-gone' })], {
+      institutions: [{ id: 'inst-up', name: 'Up' }],
+    });
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].institutionId).toBe('inst-gone');
+    expect(res.body.data[0].institutionName).toBeNull();
+  });
+
+  it('still serves every balance when the institutions lookup does not come back', async () => {
+    const { app, token } = openWithRows(
+      [
+        accountRow({
+          id: 'acc-1',
+          institutionId: 'inst-anz',
+          balance: {
+            balanceCents: -213_755,
+            asOf: '2026-09-02',
+            basis: 'checkpoint',
+            anchor: { checkpointId: 'chk-1', asOf: '2026-09-02', source: 'manual' },
+            inconsistent: false,
+          },
+        }),
+      ],
+      { institutionsFailWith: { kind: 'unavailable', pillar: 'finance' } }
+    );
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].balance.balanceCents).toBe(-213_755);
+    expect(res.body.data[0].institutionName).toBeNull();
+  });
+
+  it('does not ask finance for institutions when no account is held at one', async () => {
+    const { app, token, fake } = openWithRows([
+      accountRow({ id: 'cash', kind: 'cash', institutionId: null }),
+    ]);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(fake.institutionCalls).toHaveLength(0);
+  });
+
+  it("carries a person ledger's contact through as `contact`", async () => {
+    const { app, token } = openWithRows([
+      accountRow({ id: 'acc-jo', kind: 'person', entityDisplayName: 'Jo' }),
+    ]);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data[0].contact).toBe('Jo');
+  });
+});
+
+describe("one account's balance history (POPS-2848)", () => {
+  it('carries the month-end series finance answers with, oldest first', async () => {
+    const { app, token, fake } = openWithRows([accountRow({ id: 'acc-1' })], {
+      history: {
+        'acc-1': [
+          { month: '2026-07', balanceCents: 1_000 },
+          { month: '2026-08', balanceCents: 2_500 },
+        ],
+      },
+    });
+
+    const res = await get(app, token, `${LIST_PATH}/acc-1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.history).toEqual([
+      { month: '2026-07', balanceCents: 1_000 },
+      { month: '2026-08', balanceCents: 2_500 },
+    ]);
+    expect(fake.historyCalls).toEqual([{ id: 'acc-1', months: 12 }]);
+  });
+
+  it('is an empty series, not a failure, when the history lookup does not come back', async () => {
+    const { app, token } = openWithRows([accountRow({ id: 'acc-1', name: 'Everyday' })], {
+      historyFailWith: { kind: 'unavailable', pillar: 'finance' },
+    });
+
+    const res = await get(app, token, `${LIST_PATH}/acc-1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.account.name).toBe('Everyday');
+    expect(res.body.history).toEqual([]);
+  });
+
+  it('is not fetched at all when the account itself is not found', async () => {
+    const { app, token, fake } = openWithRows([]);
+
+    const res = await get(app, token, `${LIST_PATH}/missing`);
+
+    expect(res.status).toBe(404);
+    expect(fake.historyCalls).toHaveLength(0);
   });
 });

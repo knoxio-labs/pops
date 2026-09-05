@@ -42,6 +42,7 @@ export interface ListCall {
   limit?: number;
   beforeDate?: string;
   beforeId?: string;
+  accountId?: string;
 }
 
 /** A full finance account row, as finance's REST layer serves one. */
@@ -52,6 +53,7 @@ export interface FinanceFakeAccountRow {
   currency: string;
   archivedAt: string | null;
   institutionId: string | null;
+  entityDisplayName: string | null;
   balance: {
     balanceCents: number;
     asOf: string;
@@ -70,6 +72,7 @@ export function financeAccountRow(
     currency: 'AUD',
     archivedAt: null,
     institutionId: null,
+    entityDisplayName: null,
     balance: {
       balanceCents: 0,
       asOf: '2026-09-05',
@@ -136,6 +139,8 @@ function readListCall(input: unknown): ListCall {
       'beforeDate' in input && typeof input.beforeDate === 'string' ? input.beforeDate : undefined,
     beforeId:
       'beforeId' in input && typeof input.beforeId === 'string' ? input.beforeId : undefined,
+    accountId:
+      'accountId' in input && typeof input.accountId === 'string' ? input.accountId : undefined,
   };
 }
 
@@ -145,6 +150,42 @@ function readListCall(input: unknown): ListCall {
  * `failWith` short-circuits every call with one SDK failure, for the
  * degradation paths.
  */
+/**
+ * What finance's `transactions.list` would answer for one call: the account
+ * filter, the total order, the keyset anchor and the page, in that order.
+ *
+ * Outside {@link createFinanceFake} rather than inside it because it closes
+ * over nothing — every input is an argument — and because a fake whose paging
+ * is a nested closure is a fake nobody reads before trusting.
+ */
+function selectPage(
+  store: readonly FinanceFakeRow[],
+  input: ListCall
+): { data: FinanceFakeRow[]; pagination: FinanceFakePagination } {
+  const ordered = store
+    .filter((row) => input.accountId === undefined || row.accountId === input.accountId)
+    .toSorted(compareRows);
+  const anchor =
+    input.beforeDate !== undefined && input.beforeId !== undefined
+      ? { date: input.beforeDate, id: input.beforeId }
+      : undefined;
+  const matched =
+    anchor === undefined ? ordered : ordered.filter((row) => isAfterAnchor(row, anchor));
+  const limit = input.limit ?? 50;
+
+  return {
+    data: matched.slice(0, limit),
+    pagination: { total: matched.length, limit, offset: 0, hasMore: matched.length > limit },
+  };
+}
+
+interface FinanceFakePagination {
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
 export function createFinanceFake(
   rows: readonly FinanceFakeRow[],
   failWith?: Exclude<CallResult<unknown>, { kind: 'ok' }>,
@@ -159,23 +200,7 @@ export function createFinanceFake(
     listCalls.push(input);
     if (failWith !== undefined) return Promise.resolve(failWith);
 
-    const ordered = store.toSorted(compareRows);
-    const anchor =
-      input.beforeDate !== undefined && input.beforeId !== undefined
-        ? { date: input.beforeDate, id: input.beforeId }
-        : undefined;
-    const matched =
-      anchor === undefined ? ordered : ordered.filter((row) => isAfterAnchor(row, anchor));
-    const limit = input.limit ?? 50;
-    const page = matched.slice(0, limit);
-
-    return Promise.resolve({
-      kind: 'ok',
-      value: {
-        data: page,
-        pagination: { total: matched.length, limit, offset: 0, hasMore: matched.length > limit },
-      },
-    });
+    return Promise.resolve({ kind: 'ok', value: selectPage(store, input) });
   };
 
   const get = (input: unknown): Promise<CallResult<unknown>> => {

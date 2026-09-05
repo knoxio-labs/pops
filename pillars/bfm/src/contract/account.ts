@@ -38,10 +38,58 @@ export const MobileAccountSchema = z.object({
   archived: z.boolean(),
   /** `institutions` id this account is held at, or `null` for cash and person accounts. */
   institutionId: z.string().nullable(),
+  /**
+   * The institution's display name, resolved by bfm against finance's
+   * institutions list (POPS-2803) — finance's account row carries only the id.
+   *
+   * `null` covers two different facts, and `institutionId` is what separates
+   * them: a null id means the account has no institution, while a present id
+   * with a null name means the lookup did not come back. A caller that only
+   * draws a mark can treat both the same, which is why the resolution failing
+   * does not fail the account.
+   */
+  institutionName: z.string().nullable(),
+  /**
+   * Who a person ledger is with — finance's `entityDisplayName`, resolved
+   * live from contacts on its side. `null` for every other kind.
+   */
+  contact: z.string().nullable(),
   balance: MobileAccountBalanceSchema,
 });
 
 export type MobileAccount = z.infer<typeof MobileAccountSchema>;
+
+/**
+ * One month-end balance, oldest-first within a series. Ledger-signed like
+ * {@link MobileAccountBalanceSchema}, and carrying no `basis` of its own:
+ * finance derives the whole series from the same checkpoint anchor the
+ * current balance uses, so a series is as trustworthy as the balance beside
+ * it and not point-by-point.
+ */
+export const MobileAccountBalancePointSchema = z.object({
+  /** ISO month, `YYYY-MM`. */
+  month: z.string(),
+  balanceCents: z.number().int(),
+});
+
+export type MobileAccountBalancePoint = z.infer<typeof MobileAccountBalancePointSchema>;
+
+/**
+ * One account and the history behind it, for the phone's account dashboard.
+ *
+ * Separate from {@link MobileAccountSchema} so the list route stays one call:
+ * the history is a second call into finance per account, which is affordable
+ * for the one account somebody opened and not for every account they have.
+ *
+ * `history` is empty rather than absent when finance has nothing to chart, so
+ * a caller renders no trend rather than distinguishing two kinds of nothing.
+ */
+export const MobileAccountDetailSchema = z.object({
+  account: MobileAccountSchema,
+  history: z.array(MobileAccountBalancePointSchema),
+});
+
+export type MobileAccountDetail = z.infer<typeof MobileAccountDetailSchema>;
 
 /**
  * Every account the list screen shows.

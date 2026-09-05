@@ -42,8 +42,8 @@ export const MOBILE_CAPABILITIES = [
   'finance.transactions.read',
   /**
    * Read every account this device can see, active and archived alike — the
-   * accounts list and whatever a dashboard can build from today's fields
-   * (POPS-2848 tracks the rest, blocked on finance getting a balance).
+   * accounts list, and the balance, provenance and month-end history behind
+   * one account's dashboard.
    */
   'finance.accounts.read',
   /**

@@ -116,6 +116,7 @@ export function transactionColumns(
     ...foreignChargeColumns(txn),
     rawRow: txn.rawRow,
     checksum: txn.checksum,
+    pending: txn.pending ?? false,
     matchType: provenance.matchType,
     matchRuleId: provenance.matchRuleId,
     matchConfidence: provenance.matchConfidence,

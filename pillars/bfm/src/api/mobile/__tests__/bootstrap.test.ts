@@ -81,6 +81,7 @@ describe('a federation that is entirely healthy', () => {
     ]);
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -146,6 +147,7 @@ describe('a federation that is half-broken', () => {
     ]);
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -164,6 +166,7 @@ describe('a federation that is half-broken', () => {
 
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'unavailable' },
+      { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -187,6 +190,7 @@ describe('a federation that is half-broken', () => {
 
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -202,6 +206,7 @@ describe('a federation that is half-broken', () => {
 
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'healthy' },
       { id: 'receipt-capture', reachability: 'healthy' },
     ]);
@@ -220,6 +225,7 @@ describe('a federation that is half-broken', () => {
     expect(payload.pillars).toEqual([{ id: 'finance', reachability: 'contract-mismatch' }]);
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'contract-mismatch' },
+      { id: 'accounts', reachability: 'contract-mismatch' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -241,6 +247,7 @@ describe('a registry serving something less than the truth', () => {
     expect(payload.registry.source).toBe('stale-fallback');
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);
@@ -262,6 +269,7 @@ describe('a registry serving something less than the truth', () => {
     expect(payload.pillars).toEqual([]);
     expect(payload.features).toEqual([
       { id: 'transactions', reachability: 'unavailable' },
+      { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
     ]);

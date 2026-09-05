@@ -72,6 +72,8 @@ export const transactions = sqliteTable(
      * a row committed before batches were recorded, and for one entered by
      * hand; nothing infers a batch for those.
      */
+    /** Still unsettled at the source (POPS-30); only an API importer ever sets it. */
+    pending: integer('pending', { mode: 'boolean' }).notNull().default(false),
     importBatchId: text('import_batch_id'),
   },
   (table) => [

@@ -142,8 +142,10 @@ extension Account {
         institutionName: String? = "Fake Bank",
         contact: String? = nil,
         balanceAsOf: Date? = Date(timeIntervalSince1970: 0),
+        balanceBasis: BalanceBasis = .checkpoint,
+        balanceInconsistent: Bool = false,
         expiresOn: Date? = nil,
-        transactionCount: Int = 12
+        transactionCount: Int? = 12
     ) -> Account {
         Account(
             id: id,
@@ -154,6 +156,8 @@ extension Account {
             institutionName: institutionName,
             contact: contact,
             balanceAsOf: balanceAsOf,
+            balanceBasis: balanceBasis,
+            balanceInconsistent: balanceInconsistent,
             expiresOn: expiresOn,
             transactionCount: transactionCount
         )

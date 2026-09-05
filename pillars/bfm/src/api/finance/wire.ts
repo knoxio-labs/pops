@@ -21,6 +21,7 @@ import { MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 
 import type {
   MobileAccount,
+  MobileAccountBalancePoint,
   MobileTransaction,
   MobileTransactionDetail,
 } from '../../contract/rest-schemas.js';
@@ -140,6 +141,14 @@ export const FinanceAccountRowSchema = z.object({
   currency: z.string(),
   archivedAt: z.string().nullable(),
   institutionId: z.string().nullable(),
+  /**
+   * Finance resolves this from contacts for a `person` account and leaves it
+   * null for every other kind. bfm passes it through as `contact` without
+   * reading `entityDisplayNameStale` beside it: the phone has no editing
+   * surface where a stale name could be corrected, so the flag would be a
+   * fact it could only display.
+   */
+  entityDisplayName: z.string().nullable(),
   balance: FinanceAccountBalanceSchema,
 });
 
@@ -153,8 +162,41 @@ export const FinanceAccountGetResponseSchema = z.object({
   data: FinanceAccountRowSchema,
 });
 
-/** Finance record → mobile record. `archivedAt` collapses to a plain boolean. */
-export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
+/**
+ * The subset of finance's `InstitutionSchema` bfm reads (POPS-2803). The
+ * brand colour and logo asset are deliberately not carried: the phone's mark
+ * draws initials on a neutral surface and has nowhere to put either
+ * (POPS-2923).
+ */
+export const FinanceInstitutionRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export const FinanceInstitutionListResponseSchema = z.object({
+  data: z.array(FinanceInstitutionRowSchema),
+});
+
+/** Finance's month-end series, as returned by `accounts/:id/balance-history`. */
+export const FinanceBalanceHistoryResponseSchema = z.object({
+  data: z.array(z.object({ month: z.string(), balanceCents: z.number().int() })),
+});
+
+export type FinanceBalanceHistoryResponse = z.infer<typeof FinanceBalanceHistoryResponseSchema>;
+
+/**
+ * Finance record → mobile record. `archivedAt` collapses to a plain boolean.
+ *
+ * `institutionName` is passed in rather than read off the row because finance
+ * carries only the id: the caller holds whatever the institutions lookup
+ * produced, and `null` from a failed lookup is indistinguishable here from
+ * `null` for an account that has no institution. `institutionId` is on the
+ * mobile record precisely so a consumer that cares can still tell them apart.
+ */
+export function toMobileAccount(
+  row: FinanceAccountRow,
+  institutionName: string | null
+): MobileAccount {
   return {
     id: row.id,
     name: row.name,
@@ -162,6 +204,8 @@ export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
     currency: row.currency,
     archived: row.archivedAt !== null,
     institutionId: row.institutionId,
+    institutionName,
+    contact: row.entityDisplayName,
     balance: {
       balanceCents: row.balance.balanceCents,
       asOf: row.balance.asOf,
@@ -169,4 +213,18 @@ export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
       inconsistent: row.balance.inconsistent,
     },
   };
+}
+
+/**
+ * Finance's month-end series → the mobile one. A pass-through today; it
+ * exists so the phone's history shape is stated in this file alongside every
+ * other wire mapping rather than being finance's shape by coincidence.
+ */
+export function toMobileBalancePoints(
+  response: FinanceBalanceHistoryResponse
+): MobileAccountBalancePoint[] {
+  return response.data.map((point) => ({
+    month: point.month,
+    balanceCents: point.balanceCents,
+  }));
 }

@@ -49,6 +49,7 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
       const outcome = await deps.finance.listTransactions({
         limit: query.limit ?? DEFAULT_PAGE_LIMIT,
         cursor,
+        accountId: query.accountId ?? null,
       });
 
       // Not an empty page. An empty page says "you have no transactions",

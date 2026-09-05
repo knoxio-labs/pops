@@ -1284,13 +1284,14 @@ describe('against the live repo', () => {
     expect(checkWrapperRegistrations(repoRoot, PILLAR_CALL_WRAPPERS)).toEqual([]);
   });
 
+  // Counted across bfm's whole finance leg rather than per file: pinning one
+  // path made this fail the day that leg was split in two, which says nothing
+  // about whether discovery still follows the wrapper.
   it("discovers bfm's finance calls through PillarGateway.call, not a literal pillar() token", () => {
     const { sites } = liveTree;
-    const bfmFinanceSites = sites.filter(
-      (s) => s.consumer === 'bfm' && s.file === 'pillars/bfm/src/api/finance/client.ts'
-    );
-    expect(bfmFinanceSites).toHaveLength(4);
-    expect(bfmFinanceSites.every((s) => s.producer === 'finance')).toBe(true);
+    const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
+    expect(bfmFinanceSites).toHaveLength(6);
+    expect(new Set(bfmFinanceSites.map((s) => s.file)).size).toBe(2);
   });
 
   it('would report an unpinned seam reached only through the gateway wrapper', () => {

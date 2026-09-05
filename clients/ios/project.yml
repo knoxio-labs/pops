@@ -88,6 +88,7 @@ targets:
       - package: FeatureReceiptCapture
       - package: FeaturePurchases
       - package: FeatureTransactions
+      - package: FeatureAccounts
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
     # rather than relying on Xcode autocreating one into xcuserdata. This list is
     # what makes `xcodebuild test` run anything at all — an empty one leaves the

@@ -4,9 +4,13 @@ import { MobileCaptureMetadataSchema } from './capture.js';
 import { MobileReceiptPartSchema } from './receipt.js';
 
 export {
+  MobileAccountBalancePointSchema,
+  MobileAccountDetailSchema,
   MobileAccountSchema,
   MobileAccountsPageSchema,
   type MobileAccount,
+  type MobileAccountBalancePoint,
+  type MobileAccountDetail,
   type MobileAccountsPage,
 } from './account.js';
 
@@ -482,7 +486,12 @@ export type MobileFeatureId = z.infer<typeof MobileFeatureIdSchema>;
  * exhaustiveness now. Never used as the wire schema — see
  * `MobileFeatureIdSchema` for why.
  */
-export const MOBILE_FEATURE_IDS = ['transactions', 'purchases', 'receipt-capture'] as const;
+export const MOBILE_FEATURE_IDS = [
+  'transactions',
+  'accounts',
+  'purchases',
+  'receipt-capture',
+] as const;
 
 export type KnownMobileFeatureId = (typeof MOBILE_FEATURE_IDS)[number];
 

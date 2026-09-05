@@ -77,6 +77,8 @@ export interface InsertImportTransactionInput {
   fxFeeCents?: number | null;
   /** Which capture path read (or could not read) this row's foreign charge — see schema doc. */
   fxCaptureSource?: FxCaptureSource | null;
+  /** Unsettled at the source (POPS-30); false for every file import. */
+  pending?: boolean;
   rawRow?: string;
   checksum?: string;
   /** How the entity assignment was produced (CF057/#3658) — nullable, see schema doc. */
@@ -100,6 +102,63 @@ const CHECKSUM_BATCH_SIZE = 500;
  * Batched at 500 per IN-list to stay under SQLite's `SQLITE_MAX_VARIABLE_NUMBER`
  * limit (default 999).
  */
+/** What a settled source row overwrites on the pending row it matches. */
+export interface SettleImportedTransactionInput {
+  date: string;
+  amountCents: number;
+  rawRow: string;
+}
+
+/** A stored row as the settle check sees it. */
+export interface StoredChecksumRow {
+  id: string;
+  pending: boolean;
+}
+
+/** The stored rows behind `checksums`, keyed by checksum, for the settle check (POPS-30). */
+export function findTransactionsByChecksums(
+  db: FinanceDb,
+  checksums: readonly string[]
+): Map<string, StoredChecksumRow> {
+  if (checksums.length === 0) return new Map();
+  const rows = db
+    .select({
+      id: transactions.id,
+      checksum: transactions.checksum,
+      pending: transactions.pending,
+    })
+    .from(transactions)
+    .where(inArray(transactions.checksum, [...checksums]))
+    .all();
+  const byChecksum = new Map<string, StoredChecksumRow>();
+  for (const row of rows) {
+    if (row.checksum !== null) byChecksum.set(row.checksum, row);
+  }
+  return byChecksum;
+}
+
+/**
+ * A held row came back settled: overwrite the three things a settlement can
+ * change and clear the flag. Nothing a person may have edited — entity, tags,
+ * notes — is touched.
+ */
+export function settleImportedTransaction(
+  db: FinanceDb,
+  id: string,
+  input: SettleImportedTransactionInput
+): void {
+  db.update(transactions)
+    .set({
+      date: input.date,
+      amountCents: input.amountCents,
+      rawRow: input.rawRow,
+      pending: false,
+      lastEditedTime: new Date().toISOString(),
+    })
+    .where(eq(transactions.id, id))
+    .run();
+}
+
 export function findExistingChecksums(db: FinanceDb, checksums: string[]): Set<string> {
   if (checksums.length === 0) return new Set();
 
@@ -182,6 +241,35 @@ export function buildDefaultTagsByEntity(contacts: ContactEntity[]): Map<string,
  * Throws `ImportTransactionPersistError` if the row is not readable after the
  * insert — a defensive check against silent SQLite write failures.
  */
+/** The wire optionals collapsed to their column defaults. */
+function optionalColumns(input: InsertImportTransactionInput): {
+  country: string | null;
+  foreignAmountMinor: number | null;
+  foreignCurrency: string | null;
+  fxFeeCents: number | null;
+  fxCaptureSource: FxCaptureSource | null;
+  checksum: string | null;
+  rawRow: string | null;
+  pending: boolean;
+  matchType: InsertImportTransactionInput['matchType'] | null;
+  matchRuleId: string | null;
+  matchConfidence: number | null;
+} {
+  return {
+    country: input.country ?? null,
+    foreignAmountMinor: input.foreignAmountMinor ?? null,
+    foreignCurrency: input.foreignCurrency ?? null,
+    fxFeeCents: input.fxFeeCents ?? null,
+    fxCaptureSource: input.fxCaptureSource ?? null,
+    checksum: input.checksum ?? null,
+    rawRow: input.rawRow ?? null,
+    pending: input.pending ?? false,
+    matchType: input.matchType ?? null,
+    matchRuleId: input.matchRuleId ?? null,
+    matchConfidence: input.matchConfidence ?? null,
+  };
+}
+
 export function insertImportTransaction(
   db: FinanceDb,
   input: InsertImportTransactionInput
@@ -201,17 +289,8 @@ export function insertImportTransaction(
       entityId: input.entityId,
       entityName: input.entityName,
       location: input.location,
-      country: input.country ?? null,
-      foreignAmountMinor: input.foreignAmountMinor ?? null,
-      foreignCurrency: input.foreignCurrency ?? null,
-      fxFeeCents: input.fxFeeCents ?? null,
-      fxCaptureSource: input.fxCaptureSource ?? null,
-      checksum: input.checksum ?? null,
-      rawRow: input.rawRow ?? null,
+      ...optionalColumns(input),
       lastEditedTime: now,
-      matchType: input.matchType ?? null,
-      matchRuleId: input.matchRuleId ?? null,
-      matchConfidence: input.matchConfidence ?? null,
     })
     .run();
 

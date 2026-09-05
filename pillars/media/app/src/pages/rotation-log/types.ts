@@ -16,6 +16,8 @@ export interface MarkedMovie {
   quality?: number;
   qualitySource?: 'elo' | 'tmdb' | 'blended' | 'none';
   keepWeight?: number;
+  abandonedProgress?: number | null;
+  abandonWeight?: number;
 }
 
 export interface LogDetails {

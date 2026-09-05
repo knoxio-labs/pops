@@ -158,7 +158,7 @@ export const mobileFinanceListAccounts = <ThrowOnError extends boolean = false>(
   >({ url: '/mobile/finance/accounts', ...options });
 
 /**
- * One account, for whatever the phone can build a dashboard from today
+ * One account and its month-end balance history, for the dashboard screen
  */
 export const mobileFinanceGetAccount = <ThrowOnError extends boolean = false>(
   options: Options<MobileFinanceGetAccountData, ThrowOnError>

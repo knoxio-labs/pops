@@ -7,9 +7,12 @@
  * and keeping it out of this layer is what stops a stored cadence creeping
  * in beside the derived one.
  *
- * Rows are APPEND-ONLY. There is no update and no delete primitive: a batch
- * is what an import did, and undoing an import is a transaction-level
- * operation that would leave this row true as a record of the attempt.
+ * Rows are APPEND-ONLY. There is no delete primitive, and the one update is
+ * {@link attachCheckpoint}: a batch is what an import did, and undoing an
+ * import is a transaction-level operation that would leave this row true as a
+ * record of the attempt. The checkpoint link is filled after the fact only
+ * for an API sync, whose checkpoint is minted from the provider's balance
+ * once the commit has landed (POPS-30).
  */
 import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 
@@ -104,6 +107,11 @@ export function listBatchesForAccount(
   if (rows.length <= options.limit) return { items: rows };
   const items = rows.slice(0, options.limit);
   return { items, nextBefore: items[items.length - 1]?.createdAt };
+}
+
+/** Name the checkpoint a batch's source minted, when it was minted after the commit. */
+export function attachCheckpoint(db: FinanceDb, batchId: string, checkpointId: string): void {
+  db.update(importBatches).set({ checkpointId }).where(eq(importBatches.id, batchId)).run();
 }
 
 /** The account's newest batch, or undefined when it has never been fed through one. */

@@ -210,6 +210,7 @@ const PARSED_KEYS = {
   fxCaptureSource: true,
   balanceCents: true,
   balanceMarker: true,
+  pending: true,
   rawRow: true,
   checksum: true,
 } satisfies Record<keyof ParsedTransaction, true>;

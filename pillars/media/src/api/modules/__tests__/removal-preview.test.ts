@@ -245,6 +245,7 @@ describe('the persisted breakdown', () => {
         ageDays: number;
         quality: number;
         keepWeight: number;
+        abandonWeight: number;
       }[];
     };
 
