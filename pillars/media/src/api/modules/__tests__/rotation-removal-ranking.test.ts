@@ -110,6 +110,22 @@ describe('age', () => {
     expect(ranked?.pressure).toBe(0);
   });
 
+  it('puts a long-held movie back inside the grace window when it was just watched', () => {
+    // The window is applied to the effective age, so the watch anchor pulls a
+    // 600-day-old file back under a 30-day grace. Pinned because the setting
+    // reads as a download-age window and is not one, and because how large a
+    // share of the library it removes from consideration is a live question
+    // for the re-fit (POPS-2730).
+    const held = candidate('Held', { watchCount: 1, lastWatchedAt: daysAgo(5) });
+    const acquired = new Map([[held.tmdbId, daysAgo(600)]]);
+
+    const [ranked] = rank([held], { acquired, graceDays: 30 });
+    expect(ranked?.ageAnchor).toBe('watched');
+    expect(ranked?.ageDays).toBe(5);
+    expect(ranked?.pressure).toBe(0);
+    expect(removableOnly(rank([held], { acquired, graceDays: 30 }))).toEqual([]);
+  });
+
   it('scores a movie with no acquisition date and no watch at zero rather than guessing', () => {
     const unknown = candidate('Unknown');
 
