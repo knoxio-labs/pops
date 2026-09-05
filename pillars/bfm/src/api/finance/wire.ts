@@ -111,10 +111,26 @@ export function toMobileTransactionDetail(
 }
 
 /**
+ * The subset of finance's `AccountBalanceSchema` bfm reads — everything
+ * except `anchor`, which names a checkpoint the phone has no use for
+ * (POPS-2884). `basis` is pinned, unlike `kind` below: finance adding a third
+ * basis would mean bfm is silently mislabelling a balance it does not
+ * understand, which is worse than the row failing to decode.
+ */
+export const FinanceAccountBalanceSchema = z.object({
+  balanceCents: z.number().int(),
+  asOf: z.string(),
+  basis: z.enum(['checkpoint', 'transactions']),
+  inconsistent: z.boolean(),
+});
+
+export type FinanceAccountBalance = z.infer<typeof FinanceAccountBalanceSchema>;
+
+/**
  * The subset of finance's `AccountSchema` bfm reads.
  *
- * No balance, no transaction count — finance's own wire schema has neither
- * yet (POPS-2750). `kind` stays an open string for the same reason as
+ * No transaction count — finance's own wire schema carries none. `kind`
+ * stays an open string for the same reason as
  * {@link FinanceTransactionRowSchema.shape.type}.
  */
 export const FinanceAccountRowSchema = z.object({
@@ -124,6 +140,7 @@ export const FinanceAccountRowSchema = z.object({
   currency: z.string(),
   archivedAt: z.string().nullable(),
   institutionId: z.string().nullable(),
+  balance: FinanceAccountBalanceSchema,
 });
 
 export type FinanceAccountRow = z.infer<typeof FinanceAccountRowSchema>;
@@ -145,5 +162,11 @@ export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
     currency: row.currency,
     archived: row.archivedAt !== null,
     institutionId: row.institutionId,
+    balance: {
+      balanceCents: row.balance.balanceCents,
+      asOf: row.balance.asOf,
+      basis: row.balance.basis,
+      inconsistent: row.balance.inconsistent,
+    },
   };
 }

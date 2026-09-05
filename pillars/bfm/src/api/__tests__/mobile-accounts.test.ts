@@ -74,6 +74,7 @@ describe('the account row is mobile-shaped', () => {
     expect(Object.keys(res.body).toSorted()).toEqual(['data']);
     expect(Object.keys(res.body.data[0]).toSorted()).toEqual([
       'archived',
+      'balance',
       'currency',
       'id',
       'institutionId',
@@ -82,12 +83,57 @@ describe('the account row is mobile-shaped', () => {
     ]);
   });
 
-  it('carries no balance — finance has none to give yet (POPS-2750)', async () => {
-    const { app, token } = openWithRows([accountRow({ id: 'acc-1' })]);
+  it('carries a checkpoint-anchored liability balance negative, with anchor stripped', async () => {
+    const { app, token } = openWithRows([
+      accountRow({
+        id: 'amex',
+        kind: 'credit-card',
+        balance: {
+          balanceCents: -213_755,
+          asOf: '2026-09-02',
+          basis: 'checkpoint',
+          anchor: { checkpointId: 'chk-1', asOf: '2026-09-02', source: 'manual' },
+          inconsistent: false,
+        },
+      }),
+    ]);
 
     const res = await get(app, token, LIST_PATH);
 
-    expect(res.body.data[0]['balance']).toBeUndefined();
+    expect(Object.keys(res.body.data[0].balance).toSorted()).toEqual([
+      'asOf',
+      'balanceCents',
+      'basis',
+      'inconsistent',
+    ]);
+    expect(res.body.data[0].balance).toMatchObject({
+      balanceCents: -213_755,
+      basis: 'checkpoint',
+    });
+  });
+
+  it('passes through a transactions-basis balance unflattened', async () => {
+    const { app, token } = openWithRows([
+      accountRow({
+        id: 'cash',
+        balance: {
+          balanceCents: 780_64,
+          asOf: '2026-09-05',
+          basis: 'transactions',
+          anchor: null,
+          inconsistent: true,
+        },
+      }),
+    ]);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.body.data[0].balance).toEqual({
+      balanceCents: 780_64,
+      asOf: '2026-09-05',
+      basis: 'transactions',
+      inconsistent: true,
+    });
   });
 
   it('collapses archivedAt to a plain boolean', async () => {
