@@ -1,6 +1,7 @@
 import { insightsByAccountId } from '@/fixtures/account-insights';
 import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { accounts as allAccounts } from '@/fixtures/accounts';
+import { inconsistentCheckpoint } from '@/fixtures/checkpoints';
 import { currenciesByCode, formatBalance } from '@/fixtures/currencies';
 import { PopsGlassButton, StateView } from '@/frames/ios/primitives';
 import {
@@ -64,9 +65,17 @@ function Header({ account }: { account: Account }) {
         {account.archived ? <IosTag>Archived</IosTag> : null}
       </div>
       <div className="space-y-1">
-        <p className="ios-section-label uppercase" style={{ color: 'var(--ios-muted-foreground)' }}>
-          {balanceCaption(account)}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p
+            className="ios-section-label uppercase"
+            style={{ color: 'var(--ios-muted-foreground)' }}
+          >
+            {balanceCaption(account)}
+          </p>
+          {inconsistentCheckpoint(account.id) ? (
+            <IosTag tone="destructive">Disagrees with a checkpoint</IosTag>
+          ) : null}
+        </div>
         <p className="ios-amount" style={{ color: iosTone(reading.tone) }}>
           {reading.amount}
         </p>
@@ -133,6 +142,7 @@ export const states: ScreenStates = {
   'gift-card': () => <State id="a6" />,
   person: () => <State id="a7" />,
   points: () => <State id="a9" />,
+  inconsistent: () => <State id="a2" />,
 };
 
 export default function AccountScreen() {
