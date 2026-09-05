@@ -9,9 +9,12 @@ import type { ProcessedTransaction } from '@pops/finance';
 
 import type { TransactionGroup as TransactionGroupType } from '../../../lib/transaction-utils';
 
+export type GroupVariant = 'matched' | 'uncertain' | 'failed';
+
 interface GroupBulkActionsProps {
   group: TransactionGroupType;
   existence: EntityExistence;
+  variant: GroupVariant;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
   onToggleEntitySelector: () => void;
 }
@@ -21,12 +24,17 @@ interface GroupBulkActionsProps {
  * different existing merchant or naming one that doesn't exist yet — is the
  * single picker behind "Choose entity". Choosing and creating were two buttons
  * leading to two surfaces for what is one decision.
+ *
+ * A matched group has nothing left to accept — its rows already carry the
+ * entity in the header — so the only action is to move the whole group
+ * somewhere else (POPS-2448).
  */
 function GroupBulkActions(props: GroupBulkActionsProps) {
-  const { group, existence, onAcceptAll, onToggleEntitySelector } = props;
+  const { group, existence, variant, onAcceptAll, onToggleEntitySelector } = props;
+  const matched = variant === 'matched';
   return (
     <div className="flex gap-2">
-      {group.aiSuggestion && (
+      {!matched && group.aiSuggestion && (
         <AcceptEntityButton
           existence={existence}
           scope="all"
@@ -35,7 +43,7 @@ function GroupBulkActions(props: GroupBulkActionsProps) {
         />
       )}
       <Button variant="outline" size="sm" onClick={onToggleEntitySelector}>
-        Choose entity...
+        {matched ? 'Reassign all...' : 'Choose entity...'}
       </Button>
     </div>
   );
@@ -49,7 +57,9 @@ export interface GroupHeaderProps extends GroupBulkActionsProps {
 export function GroupHeader(props: GroupHeaderProps) {
   const { group, isExpanded, totalAmount } = props;
   return (
-    <div className={`p-4 ${group.aiSuggestion ? 'bg-app-accent/10' : 'bg-muted'}`}>
+    <div
+      className={`p-4 ${group.aiSuggestion && props.variant !== 'matched' ? 'bg-app-accent/10' : 'bg-muted'}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <CollapsibleTrigger
@@ -61,7 +71,9 @@ export function GroupHeader(props: GroupHeaderProps) {
               aria-hidden="true"
             />
             <div className="flex items-center gap-2 min-w-0">
-              {group.aiSuggestion && <Sparkles className="w-5 h-5 shrink-0 text-app-accent" />}
+              {group.aiSuggestion && props.variant !== 'matched' && (
+                <Sparkles className="w-5 h-5 shrink-0 text-app-accent" />
+              )}
               <h3 className="font-semibold text-lg truncate">{group.entityName}</h3>
             </div>
           </CollapsibleTrigger>

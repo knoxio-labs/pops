@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { cleanDescription, findSimilarTransactions } from './transaction-utils';
+import {
+  cleanDescription,
+  findSimilarTransactions,
+  groupTransactionsByEntity,
+} from './transaction-utils';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -62,5 +66,29 @@ describe('findSimilarTransactions', () => {
 
     expect(cleanDescription('1234')).toBe('');
     expect(findSimilarTransactions(reference, [other])).toEqual([]);
+  });
+});
+
+describe('groupTransactionsByEntity — order', () => {
+  const learned = { entityId: 'e1', entityName: 'Woolworths', matchType: 'learned' as const };
+  const guessed = { entityId: 'e2', entityName: 'Coles', matchType: 'ai' as const };
+  const rows = [
+    makeTransaction('a', 'WOOLWORTHS 1', { entity: learned }),
+    makeTransaction('b', 'WOOLWORTHS 2', { entity: learned }),
+    makeTransaction('c', 'COLES 1', { entity: guessed }),
+  ];
+
+  it('puts an AI-suggested group first by default, where a guess is waiting', () => {
+    expect(groupTransactionsByEntity(rows).map((g) => g.entityName)).toEqual([
+      'Coles',
+      'Woolworths',
+    ]);
+  });
+
+  it('orders by size alone when asked, for a bucket with nothing waiting (POPS-2448)', () => {
+    expect(groupTransactionsByEntity(rows, 'size').map((g) => g.entityName)).toEqual([
+      'Woolworths',
+      'Coles',
+    ]);
   });
 });

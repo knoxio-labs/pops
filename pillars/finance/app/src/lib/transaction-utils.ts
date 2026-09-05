@@ -46,10 +46,20 @@ export function findSimilarTransactions(
 }
 
 /**
+ * How grouped transactions are ordered. `ai-first` puts the groups an AI
+ * guess produced ahead of the rest, then larger groups first — right where
+ * a guess is waiting to be accepted. `size` is count-descending only, for a
+ * bucket where nothing is waiting and the only thing to find is the biggest
+ * merchant (the matched tab, POPS-2448).
+ */
+export type GroupOrder = 'ai-first' | 'size';
+
+/**
  * Group transactions by AI-suggested entity name
  */
 export function groupTransactionsByEntity(
-  transactions: ProcessedTransaction[]
+  transactions: ProcessedTransaction[],
+  order: GroupOrder = 'ai-first'
 ): TransactionGroup[] {
   const groups = new Map<string, TransactionGroup>();
 
@@ -67,9 +77,8 @@ export function groupTransactionsByEntity(
     if (group) group.transactions.push(transaction);
   }
 
-  // Sort: AI suggestions first, then by transaction count descending
   return Array.from(groups.values()).toSorted((a, b) => {
-    if (a.aiSuggestion !== b.aiSuggestion) return a.aiSuggestion ? -1 : 1;
+    if (order === 'ai-first' && a.aiSuggestion !== b.aiSuggestion) return a.aiSuggestion ? -1 : 1;
     return b.transactions.length - a.transactions.length;
   });
 }

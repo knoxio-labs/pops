@@ -20,6 +20,7 @@ export interface ReviewTabsProps {
     failed: ProcessedTransaction[];
     skipped: ProcessedTransaction[];
   };
+  matchedGroups: ReturnType<typeof groupTransactionsByEntity>;
   uncertainGroups: ReturnType<typeof groupTransactionsByEntity>;
   failedGroups: ReturnType<typeof groupTransactionsByEntity>;
   viewMode: ViewMode;
@@ -60,7 +61,14 @@ function buildTabSharedProps(props: ReviewTabsProps) {
 }
 
 export function ReviewTabs(props: ReviewTabsProps) {
-  const { activeTab, onTabChange, localTransactions, uncertainGroups, failedGroups } = props;
+  const {
+    activeTab,
+    onTabChange,
+    localTransactions,
+    matchedGroups,
+    uncertainGroups,
+    failedGroups,
+  } = props;
   const tabSharedProps = buildTabSharedProps(props);
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
@@ -68,13 +76,8 @@ export function ReviewTabs(props: ReviewTabsProps) {
       <TabsContent value="matched" className="mt-4">
         <MatchedTab
           transactions={localTransactions.matched}
-          onEdit={props.handleEdit}
-          onEntitySelect={props.handleEntitySelect}
-          onCreateEntityWithName={props.handleCreateEntityWithName}
-          editingTransaction={props.editingTransaction}
-          onSaveEdit={props.handleSaveEdit}
-          onCancelEdit={props.handleCancelEdit}
-          entities={props.entities}
+          groups={matchedGroups}
+          {...tabSharedProps}
         />
       </TabsContent>
       <TabsContent value="uncertain" className="mt-4">

@@ -138,6 +138,10 @@ export function useTransactionReview() {
     () => localTransactions.uncertain.length + localTransactions.failed.length,
     [localTransactions]
   );
+  const matchedGroups = useMemo(
+    () => groupTransactionsByEntity(localTransactions.matched, 'size'),
+    [localTransactions.matched]
+  );
   const uncertainGroups = useMemo(
     () => groupTransactionsByEntity(localTransactions.uncertain),
     [localTransactions.uncertain]
@@ -156,6 +160,7 @@ export function useTransactionReview() {
     activeTab,
     handleTabChange,
     unresolvedCount,
+    matchedGroups,
     uncertainGroups,
     failedGroups,
     isReevaluating,

@@ -11,6 +11,7 @@ import { TransactionCard } from './TransactionCard';
 import type { ProcessedTransaction } from '@pops/finance';
 
 import type { TransactionGroup as TransactionGroupType } from '../../lib/transaction-utils';
+import type { GroupVariant } from './transaction-group/GroupHeader';
 
 interface TransactionGroupProps {
   group: TransactionGroupType;
@@ -32,7 +33,7 @@ interface TransactionGroupProps {
   ) => void;
   onCancelEdit?: () => void;
   entities?: Array<{ id: string; name: string }>;
-  variant?: 'uncertain' | 'failed';
+  variant?: GroupVariant;
 }
 
 interface BulkEntitySelectorProps {
@@ -89,7 +90,7 @@ interface TransactionListProps {
   onAcceptAiSuggestion: TransactionGroupProps['onAcceptAiSuggestion'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
-  variant: 'uncertain' | 'failed';
+  variant: GroupVariant;
 }
 
 function TransactionList(props: TransactionListProps) {
@@ -144,6 +145,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
           isExpanded={isExpanded}
           totalAmount={totalAmount}
           existence={existence}
+          variant={variant}
           onAcceptAll={props.onAcceptAll}
           onToggleEntitySelector={() => setShowEntitySelector((v) => !v)}
         />
