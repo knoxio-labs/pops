@@ -1,3 +1,5 @@
+import { assignNullableKeys } from '@pops/pillar-sdk/db';
+
 import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
 
 import type { NullableColumnKeys } from './nullable-column-keys.js';
@@ -56,20 +58,8 @@ export function buildCreateValues(
     ),
   };
 
-  setNullableKeys(values, input, CREATE_NULLABLE_STRING_KEYS);
-  setNullableKeys(values, input, CREATE_NULLABLE_NUMBER_KEYS);
+  assignNullableKeys(values, input, CREATE_NULLABLE_STRING_KEYS);
+  assignNullableKeys(values, input, CREATE_NULLABLE_NUMBER_KEYS);
 
   return values;
-}
-
-function setNullableKeys<K extends string, V extends string | number>(
-  values: Partial<Record<K, V | null>>,
-  input: Readonly<Partial<Record<K, V | null>>>,
-  keys: readonly K[]
-): void {
-  for (const key of keys) {
-    const value = input[key];
-    if (value === undefined) continue;
-    values[key] = value;
-  }
 }

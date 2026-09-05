@@ -1,3 +1,5 @@
+import { assignNullableKeys } from '@pops/pillar-sdk/db';
+
 import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
 
 import type { NullableColumnKeys } from './nullable-column-keys.js';
@@ -74,21 +76,6 @@ function assignItemName(updates: InventoryUpdate, input: UpdateInventoryItemInpu
   if (input.itemName === undefined) return false;
   updates.itemName = input.itemName;
   return true;
-}
-
-function assignNullableKeys<K extends string, V extends string | number>(
-  updates: Partial<Record<K, V | null>>,
-  input: Readonly<Partial<Record<K, V | null>>>,
-  keys: readonly K[]
-): boolean {
-  let touched = false;
-  for (const key of keys) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = value;
-    touched = true;
-  }
-  return touched;
 }
 
 function assignBooleanFlags(updates: InventoryUpdate, input: UpdateInventoryItemInput): boolean {

@@ -1,6 +1,8 @@
 /** Movies CRUD against the media pillar's SQLite via drizzle. */
 import { and, count, desc, eq, like, type SQL, sql } from 'drizzle-orm';
 
+import { assignNullableKeys, setNullableKeys, type NullableColumnKeys } from '@pops/pillar-sdk/db';
+
 import { MovieConflictError, MovieNotFoundError } from '../errors.js';
 import { movies } from '../schema.js';
 import { isMoviesTmdbIdUniqueViolation } from './movies-unique-violation.js';
@@ -75,77 +77,79 @@ export interface UpdateMovieInput {
   genres?: string[];
 }
 
-const MOVIE_NULLABLE_INSERT_KEYS = [
+type MovieInsert = typeof movies.$inferInsert;
+type MovieUpdate = Partial<typeof movies.$inferSelect>;
+
+const MOVIE_NULLABLE_INSERT_STRING_KEYS = [
   'imdbId',
   'originalTitle',
   'overview',
   'tagline',
   'releaseDate',
-  'runtime',
   'status',
   'originalLanguage',
-  'budget',
-  'revenue',
   'posterPath',
   'backdropPath',
   'logoPath',
   'posterOverridePath',
+] as const satisfies ReadonlyArray<NullableColumnKeys<CreateMovieInput, MovieInsert, string>>;
+
+const MOVIE_NULLABLE_INSERT_NUMBER_KEYS = [
+  'runtime',
+  'budget',
+  'revenue',
   'voteAverage',
   'voteCount',
-] as const satisfies ReadonlyArray<keyof CreateMovieInput & keyof typeof movies.$inferInsert>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<CreateMovieInput, MovieInsert, number>>;
 
-function buildMovieInsertValues(input: CreateMovieInput): typeof movies.$inferInsert {
-  const values: Record<string, unknown> = {
+function buildMovieInsertValues(input: CreateMovieInput): MovieInsert {
+  const values: MovieInsert = {
     tmdbId: input.tmdbId,
     title: input.title,
     genres: JSON.stringify(input.genres ?? []),
   };
-  for (const key of MOVIE_NULLABLE_INSERT_KEYS) {
-    values[key] = input[key] ?? null;
-  }
-  return values as typeof movies.$inferInsert;
+  setNullableKeys(values, input, MOVIE_NULLABLE_INSERT_STRING_KEYS);
+  setNullableKeys(values, input, MOVIE_NULLABLE_INSERT_NUMBER_KEYS);
+  return values;
 }
 
-const MOVIE_REQUIRED_UPDATE_KEYS = ['tmdbId', 'title'] as const satisfies ReadonlyArray<
-  keyof UpdateMovieInput & keyof typeof movies.$inferSelect
->;
-
-const MOVIE_NULLABLE_UPDATE_KEYS = [
+const MOVIE_NULLABLE_UPDATE_STRING_KEYS = [
   'imdbId',
   'originalTitle',
   'overview',
   'tagline',
   'releaseDate',
-  'runtime',
   'status',
   'originalLanguage',
-  'budget',
-  'revenue',
   'posterPath',
   'backdropPath',
   'logoPath',
   'posterOverridePath',
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateMovieInput, MovieUpdate, string>>;
+
+const MOVIE_NULLABLE_UPDATE_NUMBER_KEYS = [
+  'runtime',
+  'budget',
+  'revenue',
   'voteAverage',
   'voteCount',
-] as const satisfies ReadonlyArray<keyof UpdateMovieInput & keyof typeof movies.$inferSelect>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateMovieInput, MovieUpdate, number>>;
 
-function buildMovieUpdate(input: UpdateMovieInput): Partial<typeof movies.$inferSelect> | null {
-  const updates: Record<string, unknown> = {};
+function buildMovieUpdate(input: UpdateMovieInput): MovieUpdate | null {
+  const updates: MovieUpdate = {};
   let touched = false;
 
-  for (const key of MOVIE_REQUIRED_UPDATE_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = value;
+  if (input.tmdbId !== undefined) {
+    updates.tmdbId = input.tmdbId;
+    touched = true;
+  }
+  if (input.title !== undefined) {
+    updates.title = input.title;
     touched = true;
   }
 
-  for (const key of MOVIE_NULLABLE_UPDATE_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = value ?? null;
-    touched = true;
-  }
+  if (assignNullableKeys(updates, input, MOVIE_NULLABLE_UPDATE_STRING_KEYS)) touched = true;
+  if (assignNullableKeys(updates, input, MOVIE_NULLABLE_UPDATE_NUMBER_KEYS)) touched = true;
 
   if (input.genres !== undefined) {
     updates.genres = JSON.stringify(input.genres);
@@ -154,7 +158,7 @@ function buildMovieUpdate(input: UpdateMovieInput): Partial<typeof movies.$infer
 
   if (!touched) return null;
   updates.updatedAt = new Date().toISOString();
-  return updates as Partial<typeof movies.$inferSelect>;
+  return updates;
 }
 
 /** List movies with optional filters. Ordered by `release_date DESC`. */

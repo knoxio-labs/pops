@@ -1,6 +1,8 @@
 /** TV shows CRUD against the media pillar's SQLite via drizzle. */
 import { and, asc, count, eq, like, type SQL } from 'drizzle-orm';
 
+import { assignNullableKeys, setNullableKeys, type NullableColumnKeys } from '@pops/pillar-sdk/db';
+
 import { TvShowConflictError, TvShowNotFoundError } from '../errors.js';
 import { tvShows } from '../schema.js';
 
@@ -74,91 +76,91 @@ export interface UpdateTvShowInput {
   networks?: string[];
 }
 
-const TV_SHOW_NULLABLE_INSERT_KEYS = [
+type TvShowInsert = typeof tvShows.$inferInsert;
+type TvShowUpdate = Partial<typeof tvShows.$inferSelect>;
+
+const TV_SHOW_NULLABLE_INSERT_STRING_KEYS = [
   'originalName',
   'overview',
   'firstAirDate',
   'lastAirDate',
   'status',
   'originalLanguage',
-  'numberOfSeasons',
-  'numberOfEpisodes',
-  'episodeRunTime',
   'posterPath',
   'backdropPath',
   'logoPath',
   'posterOverridePath',
+] as const satisfies ReadonlyArray<NullableColumnKeys<CreateTvShowInput, TvShowInsert, string>>;
+
+const TV_SHOW_NULLABLE_INSERT_NUMBER_KEYS = [
+  'numberOfSeasons',
+  'numberOfEpisodes',
+  'episodeRunTime',
   'voteAverage',
   'voteCount',
-] as const satisfies ReadonlyArray<keyof CreateTvShowInput & keyof typeof tvShows.$inferInsert>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<CreateTvShowInput, TvShowInsert, number>>;
 
-function buildTvShowInsertValues(input: CreateTvShowInput): typeof tvShows.$inferInsert {
-  const values: Record<string, unknown> = {
+function buildTvShowInsertValues(input: CreateTvShowInput): TvShowInsert {
+  const values: TvShowInsert = {
     tvdbId: input.tvdbId,
     name: input.name,
     genres: input.genres ? JSON.stringify(input.genres) : null,
     networks: input.networks ? JSON.stringify(input.networks) : null,
   };
-  for (const key of TV_SHOW_NULLABLE_INSERT_KEYS) {
-    values[key] = input[key] ?? null;
-  }
-  return values as typeof tvShows.$inferInsert;
+  setNullableKeys(values, input, TV_SHOW_NULLABLE_INSERT_STRING_KEYS);
+  setNullableKeys(values, input, TV_SHOW_NULLABLE_INSERT_NUMBER_KEYS);
+  return values;
 }
 
-const TV_SHOW_REQUIRED_UPDATE_KEYS = ['tvdbId', 'name'] as const satisfies ReadonlyArray<
-  keyof UpdateTvShowInput & keyof typeof tvShows.$inferSelect
->;
-
-const TV_SHOW_NULLABLE_UPDATE_KEYS = [
+const TV_SHOW_NULLABLE_UPDATE_STRING_KEYS = [
   'originalName',
   'overview',
   'firstAirDate',
   'lastAirDate',
   'status',
   'originalLanguage',
-  'numberOfSeasons',
-  'numberOfEpisodes',
-  'episodeRunTime',
   'posterPath',
   'backdropPath',
   'logoPath',
   'posterOverridePath',
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateTvShowInput, TvShowUpdate, string>>;
+
+const TV_SHOW_NULLABLE_UPDATE_NUMBER_KEYS = [
+  'numberOfSeasons',
+  'numberOfEpisodes',
+  'episodeRunTime',
   'voteAverage',
   'voteCount',
-] as const satisfies ReadonlyArray<keyof UpdateTvShowInput & keyof typeof tvShows.$inferSelect>;
+] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateTvShowInput, TvShowUpdate, number>>;
 
-const TV_SHOW_JSON_UPDATE_KEYS = ['genres', 'networks'] as const satisfies ReadonlyArray<
-  keyof UpdateTvShowInput & keyof typeof tvShows.$inferSelect
->;
-
-function buildTvShowUpdate(input: UpdateTvShowInput): Partial<typeof tvShows.$inferSelect> | null {
-  const updates: Record<string, unknown> = {};
+function buildTvShowUpdate(input: UpdateTvShowInput): TvShowUpdate | null {
+  const updates: TvShowUpdate = {};
   let touched = false;
 
-  for (const key of TV_SHOW_REQUIRED_UPDATE_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = value;
+  if (input.tvdbId !== undefined) {
+    updates.tvdbId = input.tvdbId;
+    touched = true;
+  }
+  if (input.name !== undefined) {
+    updates.name = input.name;
     touched = true;
   }
 
-  for (const key of TV_SHOW_NULLABLE_UPDATE_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = value ?? null;
+  if (assignNullableKeys(updates, input, TV_SHOW_NULLABLE_UPDATE_STRING_KEYS)) touched = true;
+  if (assignNullableKeys(updates, input, TV_SHOW_NULLABLE_UPDATE_NUMBER_KEYS)) touched = true;
+
+  if (input.genres !== undefined) {
+    updates.genres = JSON.stringify(input.genres);
     touched = true;
   }
-
-  for (const key of TV_SHOW_JSON_UPDATE_KEYS) {
-    const value = input[key];
-    if (value === undefined) continue;
-    updates[key] = JSON.stringify(value);
+  if (input.networks !== undefined) {
+    updates.networks = JSON.stringify(input.networks);
     touched = true;
   }
 
   if (!touched) return null;
   updates.updatedAt = new Date().toISOString();
-  return updates as Partial<typeof tvShows.$inferSelect>;
+  return updates;
 }
 
 /** List TV shows with optional filters. Ordered by `name ASC`. */
