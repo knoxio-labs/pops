@@ -46,7 +46,7 @@ function rows(count: number): ParsedTransaction[] {
     date: '2026-01-01',
     description: `WOOLWORTHS ${2000 + i}`,
     amount: -20 - i,
-    account: 'ANZ Credit Card',
+    dialectAccountLabel: 'ANZ Credit Card',
     rawRow: `row-${i}`,
     checksum: `sum-${i}`,
   }));

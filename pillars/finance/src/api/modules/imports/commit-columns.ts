@@ -103,7 +103,7 @@ export function transactionColumns(
   const tags = txn.tags ?? [];
   return {
     description: txn.description,
-    account: txn.account,
+    dialectAccountLabel: txn.dialectAccountLabel,
     accountId: txn.accountId,
     amountCents: dollarsToCents(txn.amount),
     date: txn.date,

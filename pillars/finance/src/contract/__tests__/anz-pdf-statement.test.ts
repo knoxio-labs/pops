@@ -21,7 +21,7 @@ import { buildImportDedupKey } from '../import-dedup.js';
 const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
 
 const OPTIONS: AnzPdfStatementOptions = {
-  account: 'ANZ Credit Card',
+  dialectAccountLabel: 'ANZ Credit Card',
   accountId: 'acc-anz-credit-card',
   hashDedupKey: sha256,
 };

@@ -75,7 +75,7 @@ describe('imports — AI categorizer wired (F2)', () => {
           date: '2026-01-01',
           description: 'ALDI STORES 4823',
           amount: -50,
-          account: 'Amex',
+          dialectAccountLabel: 'Amex',
           rawRow: 'ALDI STORES 4823,-50',
           checksum: 'ai-row-1',
         },

@@ -110,7 +110,7 @@ function validateRow(
       date: parsedDate,
       description,
       amount: parsedAmount,
-      account: dialectId,
+      dialectAccountLabel: dialectId,
       accountId,
       location,
       country,

@@ -183,7 +183,7 @@ export async function importAnzPdfStatements(
     }
     pageCount += extraction.pageCount;
     const statement = parseAnzPdfStatementText(extraction.text, {
-      account: ACCOUNT,
+      dialectAccountLabel: ACCOUNT,
       accountId,
       hashDedupKey,
     });

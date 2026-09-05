@@ -188,7 +188,7 @@ function makeTransaction(
 ): ConfirmedTransaction {
   return {
     date: '2026-03-01',
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: Math.random().toString(36).slice(2),
     tags: [],

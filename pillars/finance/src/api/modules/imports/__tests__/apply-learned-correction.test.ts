@@ -43,7 +43,7 @@ function transaction(overrides: Partial<ParsedTransaction> = {}): ParsedTransact
     date: '2026-02-13',
     description: 'SPOTIFY AB SYDNEY',
     amount: -12.99,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: crypto.randomUUID(),
     ...overrides,

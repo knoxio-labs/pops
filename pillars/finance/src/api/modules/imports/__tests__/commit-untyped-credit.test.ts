@@ -26,7 +26,7 @@ function row(overrides: Partial<ConfirmedRow> = {}): ConfirmedRow {
     date: '2026-06-12',
     description: 'APPLE.COM/BILL',
     amount: -19.99,
-    account: 'ANZ Credit Card',
+    dialectAccountLabel: 'ANZ Credit Card',
     rawRow: '{}',
     checksum: 'checksum-1',
     ...overrides,

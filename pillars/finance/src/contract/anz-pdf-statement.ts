@@ -100,7 +100,7 @@ export interface AnzPdfStatement {
 
 export interface AnzPdfStatementOptions {
   /** Account name stored on every transaction, as the ledger names this card. */
-  account: string;
+  dialectAccountLabel: string;
   /**
    * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
    * this import — see `column-map/validation.ts`'s identical parameter. Used
@@ -150,7 +150,7 @@ function toTransaction(
     date,
     description,
     amount,
-    account: options.account,
+    dialectAccountLabel: options.dialectAccountLabel,
     accountId: options.accountId,
     location,
     country,

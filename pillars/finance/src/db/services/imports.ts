@@ -53,10 +53,10 @@ export interface EntityMaps {
 /** Mutable subset accepted on `insertImportTransaction`. */
 export interface InsertImportTransactionInput {
   description: string;
-  account: string;
+  dialectAccountLabel: string;
   /**
    * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
-   * this import. Preferred over `account` when supplied — see
+   * this import. Preferred over `dialectAccountLabel` when supplied — see
    * {@link resolveAccountIdentity}. Optional so a caller with no picker (a
    * legacy client, or a fixture predating it) can still resolve by name.
    */
@@ -171,7 +171,7 @@ export function buildDefaultTagsByEntity(contacts: ContactEntity[]): Map<string,
  * lives above the persistence layer; this primitive only writes the row.
  *
  * `accountId` is resolved via {@link resolveImportAccountId} rather than
- * name-matching `account` on its own (POPS-2852). Before the import wizard's
+ * name-matching `dialectAccountLabel` on its own (POPS-2852). Before the import wizard's
  * account-step (POPS-2840) gave every row a real `accountId`, this had no
  * choice but to name-match the bank/dialect label against `accounts.name`,
  * which silently mis-resolved whenever two real accounts happened to share a
@@ -193,7 +193,7 @@ export function insertImportTransaction(
     .values({
       id,
       description: input.description,
-      accountId: resolveImportAccountId(db, input.account, input.accountId),
+      accountId: resolveImportAccountId(db, input.dialectAccountLabel, input.accountId),
       amountCents: input.amountCents,
       date: input.date,
       type: input.type,
