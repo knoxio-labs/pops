@@ -742,37 +742,6 @@ const REGEX_PRECEDING_KEYWORDS = new Set([
 ]);
 
 /**
- * Keywords a quote can legally follow and still open a string literal.
- *
- * A quote glued to the end of a word is ambiguous in a file that contains
- * JSX. `return'x'` opens a literal; `aren't` in JSX text content is prose,
- * and reading its apostrophe as a literal opener sends the scan looking for
- * a close that never comes — it then reports the whole file as ending inside
- * an unterminated string (POPS-2850, hit by `points aren't counted` in
- * `pillars/design/src/screens/finance/accounts.tsx`).
- *
- * This is the same ambiguity `opensRegexAt` resolves for `/`, and it is
- * resolved the same way: the word before the quote decides. Everything not
- * in this set is a value or plain prose, and a quote cannot follow a value.
- * The regex list is the base — the module-syntax keywords are added because
- * `from'x'` and `export default'x'` are legal where `from /x/` is not.
- *
- * A file this repo would actually commit never glues a quote to a keyword:
- * `pnpm format:check` is a required gate and oxfmt writes the space. The
- * list is here so the scanner stays correct on source that predates the
- * formatter or arrives from outside it, not because the shape is expected.
- */
-const QUOTE_PRECEDING_KEYWORDS = new Set([
-  ...REGEX_PRECEDING_KEYWORDS,
-  'as',
-  'default',
-  'export',
-  'from',
-  'import',
-  'satisfies',
-]);
-
-/**
  * @typedef {object} ScannedSource
  * @property {string} code      Comments blanked; string bodies intact.
  * @property {string} scannable Comments AND literal bodies blanked.
@@ -984,14 +953,25 @@ export function scanSource(source) {
  * Whether the quote at `index` opens a string literal, or is an apostrophe
  * (or quote) sitting in JSX text content.
  *
- * Only a quote GLUED to a word is ambiguous. Anything else — after
- * whitespace, `=`, `(`, `,`, `:`, `[`, `{`, an operator, or the start of the
- * file — opens a literal exactly as it always did, so ordinary code and a
- * genuinely unterminated string are unaffected.
+ * A quote GLUED to a word is prose. Nothing else is: after whitespace, `=`,
+ * `(`, `,`, `:`, `[`, `{`, an operator, or the start of the file, it opens a
+ * literal exactly as it always did — so ordinary code, and a genuinely
+ * unterminated string, are unaffected.
  *
- * When it is glued, the preceding word decides: a keyword means a literal
- * (`return'x'`), anything else means prose (`aren't`, `the user's`). A value
- * cannot be followed by a string literal, so there is no third case.
+ * There is deliberately no keyword allowlist here. `return'x'` is legal
+ * JavaScript, and an earlier version of this fix admitted a quote glued to
+ * any keyword for that reason — but English possessives end in those same
+ * words. `someone else's account`, `the import's mapping step` and
+ * `an opt-in's default` all reduce to a keyword immediately before the
+ * apostrophe, and each one reopened the exact failure this function exists
+ * to close. Prose is the common case in JSX and the keyword-glued literal is
+ * a shape `pnpm format:check` (a required gate) will not let into the tree,
+ * so the ambiguity is resolved in favour of prose without exception.
+ *
+ * The cost is stated rather than hidden: an unterminated literal that is
+ * glued to a word — `return'oops` — is read as prose and not reported. It
+ * cannot be committed here, and every unterminated string that can be is
+ * still caught.
  *
  * @param {readonly string[]} code
  * @param {number} index
@@ -999,11 +979,7 @@ export function scanSource(source) {
  */
 function opensQuoteAt(code, index) {
   const previous = code[index - 1];
-  if (previous === undefined || !/[\w$]/u.test(previous)) return true;
-
-  let start = index - 1;
-  while (start >= 0 && /[\w$]/u.test(code[start])) start--;
-  return QUOTE_PRECEDING_KEYWORDS.has(code.slice(start + 1, index).join(''));
+  return previous === undefined || !/[\w$]/u.test(previous);
 }
 
 function opensRegexAt(code, index) {

@@ -134,12 +134,16 @@ describe('scanSource — what is code and what is prose', () => {
     expect(scanSource(`const A = () => <p>${text}</p>;`).unterminated).toBeNull();
   });
 
-  it('still opens a literal for a quote glued to a keyword', () => {
-    // `return'x'` is legal, if unformattable-to by oxfmt. The word before the
-    // quote is what separates it from prose, so the keyword case must survive.
-    const scanned = scanSource("function f() { return'a pillar(\\'never\\') mention'; }");
-    expect(scanned.unterminated).toBeNull();
-    expect(findPillarCalls(scanned)).toHaveLength(0);
+  it.each([
+    "someone else's account",
+    "the import's mapping step",
+    "an opt-in's default",
+    "the new's feed",
+  ])('treats %j as prose even though it ends in a keyword', (text) => {
+    // The first version of this fix kept a keyword allowlist so `return'x'`
+    // would still open a literal. English possessives end in those same
+    // words, so every one of these reopened POPS-2850 for a different word.
+    expect(scanSource(`const A = () => <p>${text}</p>;`).unterminated).toBeNull();
   });
 
   it('reports rather than tolerates an unterminated block comment', () => {
