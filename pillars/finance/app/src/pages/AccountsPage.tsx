@@ -29,7 +29,7 @@ export function AccountsPage() {
   const accounts = state.accounts.data?.data ?? [];
   const institutions = state.institutions.data?.data ?? [];
   const currencies = state.currencies.data?.data ?? [];
-  const filters = useAccountListFilters(accounts, institutions);
+  const filters = useAccountListFilters(accounts, institutions, currencies);
   // The grid tints and subtotals by currency kind — a points balance is
   // neutral and stays out of the fiat totals. `currencies` is its own query
   // with no ordering against `accounts`, so rendering on accounts alone would

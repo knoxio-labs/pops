@@ -53,7 +53,7 @@ function account(overrides: Partial<Account>): Account {
 }
 
 function Harness({ accounts, currencies }: { accounts: Account[]; currencies: Currency[] }) {
-  const filters = useAccountListFilters(accounts, []);
+  const filters = useAccountListFilters(accounts, [], []);
   return (
     <AccountsGrid
       isLoading={false}

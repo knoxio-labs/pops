@@ -1,5 +1,6 @@
 import { ACCOUNT_KINDS } from '@pops/finance';
 
+import type { Currency } from './account-subtotals';
 import type { Account } from './types';
 
 /**
@@ -28,27 +29,51 @@ function kindThenName(a: Account, b: Account): number {
   return kindDiff !== 0 ? kindDiff : a.name.localeCompare(b.name);
 }
 
-const COMPARATORS: Record<AccountSort, (a: Account, b: Account) => number> = {
-  kind: kindThenName,
-  // Cents only compare within one currency: AUD against EUR needs a rate that
-  // does not exist here, and points are not money at all — the same refusal
-  // `account-subtotals.ts` makes when it declines to blend a total. So the
-  // currency is the primary key and the balance orders within it, which keeps
-  // a 900,000-point balance from outranking every dollar account on the page.
-  balance: (a, b) =>
-    a.currency === b.currency
-      ? b.balance.balanceCents - a.balance.balanceCents
-      : a.currency.localeCompare(b.currency),
-  name: (a, b) => a.name.localeCompare(b.name),
-  recent: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
-};
+/**
+ * Cents only compare within one currency: AUD against EUR needs a rate that
+ * does not exist here, and points are not money at all — the same refusal
+ * `account-subtotals.ts` makes when it declines to blend a total. So points
+ * sink below every money account whatever their code sorts as, currencies
+ * group among themselves, and the balance orders only inside a group.
+ *
+ * A code absent from `currencies` counts as money, matching
+ * `currencyFormat`'s fiat fallback — an unknown code is far likelier to be a
+ * currency this render has yet to see than a points scheme.
+ */
+function byBalanceWithinCurrency(currencies: Currency[]): (a: Account, b: Account) => number {
+  const kindByCode = new Map(currencies.map((c) => [c.code, c.kind]));
+  const isPoints = (account: Account): boolean => {
+    const kind = kindByCode.get(account.currency);
+    return kind === 'points';
+  };
+  return (a, b) => {
+    if (isPoints(a) !== isPoints(b)) return isPoints(a) ? 1 : -1;
+    if (a.currency !== b.currency) return a.currency.localeCompare(b.currency);
+    return b.balance.balanceCents - a.balance.balanceCents;
+  };
+}
+
+function comparators(
+  currencies: Currency[]
+): Record<AccountSort, (a: Account, b: Account) => number> {
+  return {
+    kind: kindThenName,
+    balance: byBalanceWithinCurrency(currencies),
+    name: (a, b) => a.name.localeCompare(b.name),
+    recent: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
+  };
+}
 
 /** Narrows a raw ComboboxSelect value to a known sort, for the string the widget hands back. */
 export function isAccountSort(value: string): value is AccountSort {
-  return value in COMPARATORS;
+  return ACCOUNT_SORT_OPTIONS.some((option) => option.value === value);
 }
 
-/** Accounts sorted per the chosen order. */
-export function sortAccounts(accounts: Account[], sort: AccountSort): Account[] {
-  return accounts.toSorted(COMPARATORS[sort]);
+/** Accounts sorted per the chosen order; `currencies` is what tells the balance sort what is money. */
+export function sortAccounts(
+  accounts: Account[],
+  sort: AccountSort,
+  currencies: Currency[]
+): Account[] {
+  return accounts.toSorted(comparators(currencies)[sort]);
 }
