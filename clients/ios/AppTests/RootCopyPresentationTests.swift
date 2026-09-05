@@ -1,8 +1,5 @@
 import AppCore
-import FeatureAccounts
 import FeaturePurchases
-import FeatureReceiptCapture
-import FeatureTransactions
 import Testing
 
 @testable import Pops
