@@ -10,13 +10,24 @@
  * than filtered after, so an archived account's frozen history never even
  * reaches `checkpointDelta`.
  *
- * Reuses `checkpointDelta` directly rather than `isAccountInconsistent`
- * (which only reports the boolean) because the feed needs the delta value
- * itself — recomputing it a second way would risk the two ever disagreeing.
+ * `balancesFor` answers "which accounts disagree with a checkpoint" for every
+ * active account in three grouped queries, so only the accounts it flags pay
+ * for the extra reads that produce the delta itself. A flagged account is
+ * rare by nature — that is the whole point of the feed — so the cost is three
+ * queries plus a handful, not four per account however many there are.
+ *
+ * The delta comes from `checkpointDelta` rather than being recomputed here,
+ * because the feed needs the value and not just the boolean `balancesFor`
+ * carries; two implementations of the same arithmetic could drift apart.
+ *
+ * An anchored balance is read as of today, and a checkpoint cannot be dated
+ * in the future, so the anchor `balancesFor` picks is the account's latest
+ * checkpoint — the one `inconsistent` is a statement about.
  */
 import {
   accountCheckpointsService,
   accountsService,
+  balancesFor,
   checkpointDelta,
   type FinanceDb,
 } from '../../db/index.js';
@@ -38,8 +49,15 @@ function checkpointInconsistencyNudges(db: FinanceDb): Nudge[] {
     offset: 0,
   });
 
+  const balances = balancesFor(
+    db,
+    accounts.map((account) => account.id)
+  );
+
   const nudges: Nudge[] = [];
   for (const account of accounts) {
+    if (balances.get(account.id)?.inconsistent !== true) continue;
+
     const latest = accountCheckpointsService.latestCheckpoint(db, account.id);
     if (latest === undefined) continue;
 

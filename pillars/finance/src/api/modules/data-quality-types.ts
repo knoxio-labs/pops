@@ -4,8 +4,7 @@
  * schemas.ts`); this file keeps only the row → response projection and its
  * TS shape, the same split `checkpoints-types.ts` makes for checkpoints.
  */
-import type { AccountRow } from '../../db/index.js';
-import type { AccountCheckpointRow } from '../../db/services/account-checkpoints.js';
+import type { AccountCheckpointRow, AccountRow } from '../../db/index.js';
 
 /** An account whose latest checkpoint disagrees with the ledger. */
 export interface CheckpointInconsistencyNudge {
