@@ -31,7 +31,7 @@ describe('FrameShell keyboard forwarding', () => {
       configurable: true,
     });
     render(
-      <MemoryRouter initialEntries={['/frame/s/mobile/receipt-detail']}>
+      <MemoryRouter initialEntries={['/frame/s/finance/accounts']}>
         <FrameShell />
       </MemoryRouter>
     );

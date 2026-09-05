@@ -5,10 +5,9 @@ import SwiftUI
 /// One account in a list or in the picker: mark, name, who it is with, and the
 /// ledger-signed balance.
 ///
-/// The name truncates and the balance does not — the same trade
-/// `pillars/design/src/kit/ios-account-row.tsx` makes and for the same reason:
-/// an account with no room left for its name is still identified by its mark,
-/// and a balance cut in half identifies nothing. `.lineLimit(1)` sits on the
+/// The name truncates and the balance does not: an account with no room left
+/// for its name is still identified by its mark, and a balance cut in half
+/// identifies nothing. `.lineLimit(1)` sits on the
 /// name only; the balance carries no line limit and no `minimumScaleFactor`,
 /// so it is what grows at the accessibility Dynamic Type sizes rather than
 /// what gets clipped by them — Dynamic Type risk 1 in POPS-2811.

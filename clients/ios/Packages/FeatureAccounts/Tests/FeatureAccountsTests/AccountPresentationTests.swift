@@ -4,10 +4,9 @@ import Testing
 
 @testable import FeatureAccounts
 
-/// Mirrors `pillars/design/src/kit/ios-account-balance.ts`'s own test
-/// coverage: the sign of the balance drives the tone directly, a `side:
-/// either` account gets the counterparty note, and points never take a money
-/// tone regardless of sign.
+/// The three claims ``BalanceTone`` makes: the sign of the balance drives the
+/// tone directly, a `side: either` account gets the counterparty note, and
+/// points never take a money tone regardless of sign.
 @Suite("Account presentation")
 internal struct AccountPresentationTests {
     private let presentation = AccountPresentation(locale: Locale(identifier: "en_AU"))

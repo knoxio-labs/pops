@@ -34,7 +34,7 @@ import Foundation
 /// the model read. `purchase_capture` already carries per-field provenance;
 /// human correction is a third origin, and this is the shape it is carried in
 /// on the handset.
-internal struct ReceiptDraft: Hashable, Sendable {
+public struct ReceiptDraft: Hashable, Sendable {
     internal var merchant: ReceiptDraftValue
     internal var address: ReceiptDraftValue
     /// As printed, verbatim. Not parsed into a `Date`: the extractor

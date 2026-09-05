@@ -28,9 +28,8 @@ public final class AccountsListViewModel {
     public var searchText = ""
 
     /// Whether the Archived section is showing. Off by default: the screen
-    /// opens on the active list, the same call
-    /// `pillars/design/src/screens/mobile/accounts.tsx`'s default export
-    /// makes.
+    /// opens on the active list, because an archived account is one somebody
+    /// has already said they are done with.
     public var showArchived = false
 
     private let repository: any AccountsRepository

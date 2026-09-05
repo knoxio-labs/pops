@@ -61,6 +61,8 @@ packages:
     path: Packages/FeatureTransactions
   FeatureAccounts:
     path: Packages/FeatureAccounts
+  DesignPlayground:
+    path: Packages/DesignPlayground
 
 targets:
   Pops:
@@ -119,6 +121,7 @@ targets:
         - package: FeaturePurchases/FeaturePurchasesTests
         - package: FeatureTransactions/FeatureTransactionsTests
         - package: FeatureAccounts/FeatureAccountsTests
+        - package: DesignPlayground/DesignPlaygroundTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,
     # so doing so would silently win over the developer's own value.
@@ -197,4 +200,46 @@ targets:
         # host-and-tests wherever bundle IDs are listed. XcodeGen would
         # otherwise derive `com.knoxiolabs.PopsTests` from the target name.
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.tests
+        CODE_SIGN_STYLE: Automatic
+
+  # The design playground: a second installable app, sharing the DesignSystem
+  # with `Pops` and sharing nothing else.
+  #
+  # It is a separate target rather than a screen inside `Pops` for the reason
+  # its own `PlaygroundApp.swift` gives — the playground must not be able to
+  # reach a network, and the only way to make that a fact rather than a promise
+  # is to keep it out of a binary that links `BFMClient`. It also means the
+  # thing installed on a reviewer's phone carries no pairing, no keychain entry
+  # and no BFM host.
+  PopsPlayground:
+    type: application
+    platform: iOS
+    sources:
+      # Same treatment `Pops` needs and for the same reason: XcodeGen 2.46
+      # predates Icon Composer, so it walks into the `.icon` bundle as a
+      # source directory unless it is excluded and named once as a file.
+      - path: Playground
+        excludes:
+          - PlaygroundIcon.icon/**
+      - path: Playground/PlaygroundIcon.icon
+        type: file
+        buildPhase: resources
+    dependencies:
+      - package: DesignPlayground
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    scheme: {}
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # So it is distinguishable from `Pops` on a home screen that has both.
+        INFOPLIST_KEY_CFBundleDisplayName: Pops Design
+        ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
+        MARKETING_VERSION: '0.1.0'
+        CURRENT_PROJECT_VERSION: '1'
+        TARGETED_DEVICE_FAMILY: '1'
         CODE_SIGN_STYLE: Automatic

@@ -10,11 +10,12 @@ import Foundation
 /// puts what the paper could not say — and the two most common reasons to
 /// open this screen are a receipt whose items are named unhelpfully and one
 /// whose items are not named at all.
-internal struct ReceiptDraftPresentation: Sendable {
+public struct ReceiptDraftPresentation: Sendable {
+    public init() {}
+
     /// A form pre-filled from what the model read, with the gate's complaints
     /// attached to the fields they name.
-    internal func draft(extracted: ExtractedReceipt, failures: [ReceiptGateFailure]) -> ReceiptDraft
-    {
+    public func draft(extracted: ExtractedReceipt, failures: [ReceiptGateFailure]) -> ReceiptDraft {
         let attached = hints(failures)
         return ReceiptDraft(
             merchant: ReceiptDraftValue(extracted: extracted.merchantName),
@@ -39,7 +40,7 @@ internal struct ReceiptDraftPresentation: Sendable {
     /// One blank line rather than none: a purchase with no items is possible
     /// and an empty items section with nothing in it to type into is a
     /// section the reader has to discover an "Add" control for.
-    internal func blankDraft(currency: String?) -> ReceiptDraft {
+    public func blankDraft(currency: String?) -> ReceiptDraft {
         ReceiptDraft(
             merchant: ReceiptDraftValue(extracted: nil),
             address: ReceiptDraftValue(extracted: nil),

@@ -2,9 +2,9 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// How large an ``AccountMarkView`` draws, mirroring the three sizes
-/// `pillars/design/src/kit/ios-account-mark.tsx` names for a list row, a
-/// picker row and an account's own header.
+/// How large an ``AccountMarkView`` draws. Three sizes rather than a free
+/// dimension, one per place a mark appears: a list row, a picker row, and an
+/// account's own header.
 internal enum AccountMarkSize {
     case small
     case medium

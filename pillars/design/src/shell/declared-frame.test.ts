@@ -27,13 +27,13 @@ describe('declaredFrame', () => {
   });
 
   it('reads the frame a screen declares', () => {
-    const catalog = catalogOf([screen('mobile/receipt-detail', 'ios')]);
-    expect(frameAt(catalog, '/s/mobile/receipt-detail')).toBe('ios');
+    const catalog = catalogOf([screen('finance/account-detail', 'web')]);
+    expect(frameAt(catalog, '/s/finance/account-detail')).toBe('web');
   });
 
   it('is undefined for an address that resolves to no screen', () => {
-    const catalog = catalogOf([screen('mobile/receipt-detail', 'ios')]);
-    expect(frameAt(catalog, '/s/mobile/does-not-exist')).toBeUndefined();
+    const catalog = catalogOf([screen('finance/account-detail', 'web')]);
+    expect(frameAt(catalog, '/s/finance/does-not-exist')).toBeUndefined();
   });
 
   it('is undefined off a screen address entirely', () => {
@@ -41,17 +41,17 @@ describe('declaredFrame', () => {
   });
 
   it('lets a flow step override the flow it belongs to', () => {
-    const step = screen('mobile/onboarding/scan', 'none');
-    const catalog = catalogOf([screen('mobile/onboarding', 'ios', [step])]);
+    const step = screen('finance/import-wizard/scan', 'none');
+    const catalog = catalogOf([screen('finance/import-wizard', 'web', [step])]);
     // The step is the surface on the canvas, and it declares `none` — which
-    // is a declaration, not an absence, so it beats the flow's `ios`.
-    expect(frameAt(catalog, '/s/mobile/onboarding', '?step=scan')).toBe('none');
+    // is a declaration, not an absence, so it beats the flow's `web`.
+    expect(frameAt(catalog, '/s/finance/import-wizard', '?step=scan')).toBe('none');
   });
 
   it('falls back to the flow for a step that declares nothing', () => {
-    const step = screen('mobile/onboarding/scan');
-    const catalog = catalogOf([screen('mobile/onboarding', 'ios', [step])]);
-    expect(frameAt(catalog, '/s/mobile/onboarding', '?step=scan')).toBe('ios');
+    const step = screen('finance/import-wizard/scan');
+    const catalog = catalogOf([screen('finance/import-wizard', 'web', [step])]);
+    expect(frameAt(catalog, '/s/finance/import-wizard', '?step=scan')).toBe('web');
   });
 
   it('falls back to the experiment when its variant screen declares nothing', () => {
@@ -76,29 +76,31 @@ describe('declaredFrame', () => {
       screen: 'finance/import-review',
       frame: 'web',
       variants: [
-        { id: 'cards', name: 'Card grid', screens: [screen('finance/import-review', 'ios')] },
+        { id: 'cards', name: 'Card grid', screens: [screen('finance/import-review', 'none')] },
       ],
     };
     const catalog = catalogOf([screen('finance/import-review')], [experiment]);
-    expect(frameAt(catalog, '/x/density/cards/s/finance/import-review')).toBe('ios');
+    // `none` rather than a second frame: the variant and the experiment must
+    // disagree or this passes on a resolver that ignored the variant entirely.
+    expect(frameAt(catalog, '/x/density/cards/s/finance/import-review')).toBe('none');
   });
 });
 
 describe('surfaceKeyOf', () => {
   it('is stable across a state change, so a hand-picked frame survives it', () => {
-    expect(surfaceKeyOf(parseAddress('/s/mobile/receipt-detail', '?state=empty'))).toBe(
-      surfaceKeyOf(parseAddress('/s/mobile/receipt-detail'))
+    expect(surfaceKeyOf(parseAddress('/s/finance/account-detail', '?state=empty'))).toBe(
+      surfaceKeyOf(parseAddress('/s/finance/account-detail'))
     );
   });
 
   it('is stable across a step change within one flow', () => {
-    expect(surfaceKeyOf(parseAddress('/s/mobile/onboarding', '?step=scan'))).toBe(
-      surfaceKeyOf(parseAddress('/s/mobile/onboarding', '?step=review'))
+    expect(surfaceKeyOf(parseAddress('/s/finance/import-wizard', '?step=scan'))).toBe(
+      surfaceKeyOf(parseAddress('/s/finance/import-wizard', '?step=review'))
     );
   });
 
   it('changes when the screen changes', () => {
-    expect(surfaceKeyOf(parseAddress('/s/mobile/receipt-detail'))).not.toBe(
+    expect(surfaceKeyOf(parseAddress('/s/finance/account-detail'))).not.toBe(
       surfaceKeyOf(parseAddress('/s/finance/import-review'))
     );
   });
@@ -111,8 +113,8 @@ describe('surfaceKeyOf', () => {
 });
 
 describe('the checked-in design surface', () => {
-  it('opens the iOS screen in the phone without touching the dock', () => {
+  it('opens a screen that declares a frame inside it, without touching the dock', () => {
     const catalog = buildCatalog();
-    expect(frameAt(catalog, '/s/mobile/receipt-detail')).toBe('ios');
+    expect(frameAt(catalog, '/s/finance/accounts')).toBe('web');
   });
 });

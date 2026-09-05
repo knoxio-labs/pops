@@ -28,7 +28,7 @@ import SwiftUI
 /// unlanded decision. Building the form against a seam is the shape that
 /// survives it; building a confirm-before-save flow that squeezed inside the
 /// current rule is the shape that would have to be thrown away.
-internal struct ReceiptDraftView: View {
+public struct ReceiptDraftView: View {
     @State private var draft: ReceiptDraft
 
     private let title: String
@@ -51,7 +51,7 @@ internal struct ReceiptDraftView: View {
     ///   - secondaryAction: the other thing that can be done here, at the
     ///     standard weight beside the prominent Save.
     ///   - save: called with the draft as it stands.
-    internal init(
+    public init(
         draft: ReceiptDraft,
         title: String,
         subtitle: String,
@@ -71,13 +71,13 @@ internal struct ReceiptDraftView: View {
 
     /// What happened to the receipt this form was read off, as the glyph and
     /// the colour the screen opens with.
-    internal struct Status: Hashable, Sendable {
+    public struct Status: Hashable, Sendable {
         internal let tone: PopsStatusHeader.Tone
         internal let heading: String
         internal let message: String
         internal let caption: String?
 
-        internal init(
+        public init(
             tone: PopsStatusHeader.Tone, heading: String, message: String, caption: String? = nil
         ) {
             self.tone = tone
@@ -87,17 +87,17 @@ internal struct ReceiptDraftView: View {
         }
     }
 
-    internal struct SecondaryAction {
+    public struct SecondaryAction {
         internal let title: String
         internal let action: () -> Void
 
-        internal init(title: String, action: @escaping () -> Void) {
+        public init(title: String, action: @escaping () -> Void) {
             self.title = title
             self.action = action
         }
     }
 
-    internal var body: some View {
+    public var body: some View {
         ScrollView {
             content
                 .padding(PopsSpacing.lg)

@@ -4,9 +4,10 @@ import SwiftUI
 
 /// Ledger-signed, always: positive is money you can use, negative is money you
 /// owe, and the colour follows that sign directly rather than the account's
-/// kind. This mirrors `pillars/design/src/kit/ios-account-balance.ts` exactly —
-/// the two must not drift, because a phone that reads a debt as a credit is
-/// not a rendering bug, it is wrong about someone's money.
+/// kind. Tone is derived here and nowhere else: a second place deciding it
+/// from the kind instead of the sign would eventually disagree, and a phone
+/// that reads a debt as a credit is not a rendering bug, it is wrong about
+/// someone's money.
 internal enum BalanceTone: Hashable, Sendable {
     case positive
     case negative

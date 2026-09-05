@@ -1,8 +1,7 @@
 import AppCore
 
 /// The account picker's own split: everything matching a search, active
-/// accounts first and archived ones in their own section beneath — mirroring
-/// `pillars/design/src/screens/mobile/account-picker.tsx`'s `PickerList`.
+/// accounts first and archived ones in their own section beneath.
 ///
 /// Kept apart from ``AccountsSections`` because the two screens split
 /// differently on purpose: the list groups by what a balance *is* (held or
