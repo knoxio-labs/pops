@@ -21,16 +21,21 @@ internal struct AccountsMappingTests {
         #expect(account.archived == false)
     }
 
-    /// The wire carries no count, so inventing one — a zero especially — would
-    /// put "0 transactions" under a balance of $1,250 (POPS-2924).
-    @Test("carries no transaction count, because the wire has none")
-    func carriesNoTransactionCount() async throws {
+    /// The wire now carries a real count (POPS-2924) — finance's own literal
+    /// row count for the account, not a value this mapper invents.
+    @Test("carries the wire's transaction count through, zero included")
+    func carriesTransactionCount() async throws {
         let repository = try BFMAccountsRepository.stubbed(
-            StubTransport(status: .ok, json: AccountsWire.page(AccountsWire.account())))
-
+            StubTransport(
+                status: .ok, json: AccountsWire.page(AccountsWire.account(transactionCount: 412))))
         let account = try #require(try await repository.accounts().first)
+        #expect(account.transactionCount == 412)
 
-        #expect(account.transactionCount == nil)
+        let empty = try BFMAccountsRepository.stubbed(
+            StubTransport(
+                status: .ok, json: AccountsWire.page(AccountsWire.account(transactionCount: 0))))
+        let emptyAccount = try #require(try await empty.accounts().first)
+        #expect(emptyAccount.transactionCount == 0)
     }
 
     @Test("a checkpoint-anchored balance is distinguishable from a derived one")

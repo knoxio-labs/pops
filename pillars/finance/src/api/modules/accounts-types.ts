@@ -33,6 +33,12 @@ export interface Account {
   balance: AccountBalance;
   /** When the account last got data and how it is fed (POPS-2917). */
   importStatus: ImportStatus;
+  /**
+   * Every transaction on this account — pending or settled, transfer or
+   * not (POPS-2924). Not scoped to `balance.asOf`: it is the account's
+   * historical size, not a reading as of a date.
+   */
+  transactionCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,17 +64,29 @@ export interface UpdateAccountBody {
   archivedAt?: string | null;
 }
 
+/**
+ * The three things a row does not itself carry and `project-accounts.ts`
+ * resolves per response: the checkpoint-anchored balance, the import status,
+ * and the transaction count. Grouped into one parameter so `toAccount` stays
+ * under this codebase's parameter cap as the set of derived reads grows.
+ */
+export interface AccountDerivedFields {
+  balance: AccountBalance;
+  importStatus: ImportStatus;
+  transactionCount: number;
+}
+
 /** Map a SQLite row (plus its resolved contact display, from
- * `resolveAccountEntityDisplays`) to the API response shape. */
+ * `resolveAccountEntityDisplays`, and its derived fields) to the API response shape. */
 export function toAccount(
   row: AccountRow,
   entityDisplay: AccountEntityDisplay,
-  balance: AccountBalance,
-  importStatus: ImportStatus
+  derived: AccountDerivedFields
 ): Account {
   return {
-    balance,
-    importStatus,
+    balance: derived.balance,
+    importStatus: derived.importStatus,
+    transactionCount: derived.transactionCount,
     id: row.id,
     name: row.name,
     institutionId: row.institutionId,

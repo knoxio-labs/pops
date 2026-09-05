@@ -86,6 +86,20 @@ describe('the account row is mobile-shaped', () => {
       'institutionName',
       'kind',
       'name',
+      'transactionCount',
+    ]);
+  });
+
+  it('passes finance transactionCount through unchanged, including zero', async () => {
+    const { app, token } = openWithRows([
+      accountRow({ id: 'acc-1', transactionCount: 412 }),
+      accountRow({ id: 'acc-2', transactionCount: 0 }),
+    ]);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.body.data.map((a: { transactionCount: number }) => a.transactionCount)).toEqual([
+      412, 0,
     ]);
   });
 

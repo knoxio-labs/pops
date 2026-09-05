@@ -356,6 +356,7 @@ export type MobileFinanceListAccountsResponses = {
       institutionName: string | null;
       kind: string;
       name: string;
+      transactionCount: number;
     }>;
   };
 };
@@ -484,6 +485,7 @@ export type MobileFinanceGetAccountResponses = {
       institutionName: string | null;
       kind: string;
       name: string;
+      transactionCount: number;
     };
     history: Array<{
       balanceCents: number;

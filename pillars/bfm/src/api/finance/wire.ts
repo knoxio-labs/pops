@@ -130,8 +130,7 @@ export type FinanceAccountBalance = z.infer<typeof FinanceAccountBalanceSchema>;
 /**
  * The subset of finance's `AccountSchema` bfm reads.
  *
- * No transaction count — finance's own wire schema carries none. `kind`
- * stays an open string for the same reason as
+ * `kind` stays an open string for the same reason as
  * {@link FinanceTransactionRowSchema.shape.type}.
  */
 export const FinanceAccountRowSchema = z.object({
@@ -150,6 +149,8 @@ export const FinanceAccountRowSchema = z.object({
    */
   entityDisplayName: z.string().nullable(),
   balance: FinanceAccountBalanceSchema,
+  /** Every transaction on the account (POPS-2924) — finance's own literal count. */
+  transactionCount: z.number().int(),
 });
 
 export type FinanceAccountRow = z.infer<typeof FinanceAccountRowSchema>;
@@ -206,6 +207,7 @@ export function toMobileAccount(
     institutionId: row.institutionId,
     institutionName,
     contact: row.entityDisplayName,
+    transactionCount: row.transactionCount,
     balance: {
       balanceCents: row.balance.balanceCents,
       asOf: row.balance.asOf,

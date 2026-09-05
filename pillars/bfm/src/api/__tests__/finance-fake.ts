@@ -54,6 +54,7 @@ export interface FinanceFakeAccountRow {
   archivedAt: string | null;
   institutionId: string | null;
   entityDisplayName: string | null;
+  transactionCount: number;
   balance: {
     balanceCents: number;
     asOf: string;
@@ -73,6 +74,7 @@ export function financeAccountRow(
     archivedAt: null,
     institutionId: null,
     entityDisplayName: null,
+    transactionCount: 0,
     balance: {
       balanceCents: 0,
       asOf: '2026-09-05',
