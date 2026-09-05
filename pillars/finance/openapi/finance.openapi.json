@@ -14967,6 +14967,23 @@
                           "required": ["add", "edit", "disable", "remove"],
                           "type": "object"
                         },
+                        "tagRuleWrites": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "inserted": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "reinforced": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["inserted", "reinforced"],
+                          "type": "object"
+                        },
                         "tagRulesApplied": {
                           "maximum": 9007199254740991,
                           "minimum": 0,

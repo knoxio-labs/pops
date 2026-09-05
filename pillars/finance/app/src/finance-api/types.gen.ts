@@ -5394,6 +5394,10 @@ export type ImportsCommitImportResponses = {
         edit: number;
         remove: number;
       };
+      tagRuleWrites?: {
+        inserted: number;
+        reinforced: number;
+      };
       tagRulesApplied: number;
       transactionsFailed: number;
       transactionsImported: number;

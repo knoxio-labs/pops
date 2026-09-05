@@ -6,6 +6,7 @@ import { Button, EmptyState, SummaryCard } from '@pops/ui';
 import { clearPersistedImport } from '../../store/import-store-lifecycle';
 import { useImportStore } from '../../store/importStore';
 import { ImportWarningBanner } from './ImportWarningBanner';
+import { RuleBreakdown } from './SummaryRuleBreakdown';
 
 import type { CommitResult } from '@pops/finance';
 
@@ -102,37 +103,6 @@ function FailedDetailsList({ details }: { details: NonNullable<CommitResult['fai
   );
 }
 
-function RuleBreakdown({
-  rulesApplied,
-  totalRules,
-}: {
-  rulesApplied: CommitResult['rulesApplied'];
-  totalRules: number;
-}) {
-  if (totalRules === 0) return null;
-  const items: Array<[number, string]> = [
-    [rulesApplied.add, 'Added'],
-    [rulesApplied.edit, 'Edited'],
-    [rulesApplied.disable, 'Disabled'],
-    [rulesApplied.remove, 'Removed'],
-  ];
-  return (
-    <div className="border rounded-lg p-4">
-      <h3 className="text-sm font-semibold mb-2">Rule Breakdown</h3>
-      <div className="grid grid-cols-4 gap-2 text-sm text-center">
-        {items.map(([count, label]) =>
-          count > 0 ? (
-            <div key={label}>
-              <div className="font-medium">{count}</div>
-              <div className="text-xs text-muted-foreground">{label}</div>
-            </div>
-          ) : null
-        )}
-      </div>
-    </div>
-  );
-}
-
 function CommitWarnings({ warnings }: { warnings: NonNullable<CommitResult['warnings']> }) {
   if (warnings.length === 0) return null;
   return (
@@ -204,7 +174,11 @@ export function SummaryStep() {
       <SummaryCards commitResult={commitResult} totalRules={totalRules} />
       {commitResult.failedDetails && <FailedDetailsList details={commitResult.failedDetails} />}
       {commitResult.warnings && <CommitWarnings warnings={commitResult.warnings} />}
-      <RuleBreakdown rulesApplied={commitResult.rulesApplied} totalRules={totalRules} />
+      <RuleBreakdown
+        rulesApplied={commitResult.rulesApplied}
+        tagRuleWrites={commitResult.tagRuleWrites}
+        totalRules={totalRules}
+      />
       <RetroactiveSection count={commitResult.retroactiveReclassifications} />
       <FooterActions
         onReset={() => {

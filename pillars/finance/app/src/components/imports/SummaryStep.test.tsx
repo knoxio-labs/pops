@@ -209,3 +209,37 @@ describe('SummaryStep', () => {
     expect(screen.queryByText('Checkpoint Mismatch')).toBeNull();
   });
 });
+
+describe('tag-rule write breakdown (POPS-2755)', () => {
+  it('names the rules it merged into separately from the ones it created', () => {
+    storeState = {
+      commitResult: makeCommitResult({
+        tagRulesApplied: 3,
+        tagRuleWrites: { inserted: 1, reinforced: 2 },
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(
+      screen.getByText(/1 tag rule created, 2 merged into rules that already existed/i)
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing when every add op created a rule', () => {
+    storeState = {
+      commitResult: makeCommitResult({
+        tagRulesApplied: 2,
+        tagRuleWrites: { inserted: 2, reinforced: 0 },
+      }),
+      reset: mockReset,
+    };
+    render(<SummaryStep />);
+    expect(screen.queryByText(/merged into/i)).not.toBeInTheDocument();
+  });
+
+  it('says nothing for a commit recorded before the field existed', () => {
+    storeState = { commitResult: makeCommitResult({ tagRulesApplied: 2 }), reset: mockReset };
+    render(<SummaryStep />);
+    expect(screen.queryByText(/merged into/i)).not.toBeInTheDocument();
+  });
+});
