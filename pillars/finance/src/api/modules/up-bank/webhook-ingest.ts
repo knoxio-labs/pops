@@ -18,6 +18,16 @@
  * `TRANSACTION_DELETED` writes nothing on purpose: a deletion is reconciled
  * by the next batch sync, which sees the row missing from the range, rather
  * than by trusting a single event to remove ledger history.
+ *
+ * Deliveries for one transaction are serialised. Up sends CREATED and
+ * SETTLED back to back for an instantly settled purchase, and redelivers on
+ * a slow ack; the router acks and hands each event off without waiting, so
+ * two of them can be in flight together. The checksum check and the write
+ * are separated by the contacts and matcher calls, and nothing in the table
+ * makes a checksum unique, so two concurrent ingests of one transaction
+ * would each see no row and each write one. Chaining them per transaction id
+ * makes the second one run after the first has committed, where it finds the
+ * row and settles or skips it.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -103,42 +113,72 @@ async function writeRow(
   return { kind: 'duplicate', accountId };
 }
 
+function serialisedBy(): <T>(key: string, run: () => Promise<T>) => Promise<T> {
+  const inFlight = new Map<string, Promise<void>>();
+  return (key, run) => {
+    const previous = inFlight.get(key) ?? Promise.resolve();
+    const next = previous.then(run);
+    const settled = next.then(
+      () => undefined,
+      () => undefined
+    );
+    inFlight.set(key, settled);
+    void settled.then(() => {
+      if (inFlight.get(key) === settled) inFlight.delete(key);
+    });
+    return next;
+  };
+}
+
+interface IngestContext {
+  db: FinanceDb;
+  contacts: ContactsClient;
+  clientFor: (secretRef: string) => UpBankClient;
+}
+
 /** Build the ingest for one pillar process; each event resolves to what it did. */
 export function makeUpWebhookIngest(
   db: FinanceDb,
   contacts: ContactsClient,
   deps: UpWebhookIngestDeps = {}
 ): UpWebhookIngest {
-  const clientFor = deps.clientFor ?? defaultClientFor;
-  return async (event) => {
-    if (event.transactionId === undefined) return { kind: 'ignored', reason: 'no transaction id' };
-    if (event.eventType === 'TRANSACTION_DELETED') {
-      return { kind: 'deleted', transactionId: event.transactionId };
+  const ctx: IngestContext = { db, contacts, clientFor: deps.clientFor ?? defaultClientFor };
+  const serialised = serialisedBy();
+  return (event) => {
+    if (event.transactionId === undefined) {
+      return Promise.resolve({ kind: 'ignored', reason: 'no transaction id' });
     }
-    if (event.eventType === undefined || !INGESTED_EVENTS.has(event.eventType)) {
-      return { kind: 'ignored', reason: `event ${event.eventType ?? 'unknown'} is not ingested` };
-    }
-
-    const configs = accountImportConfigService.listImportConfigsByProvider(db, 'up');
-    const secretRefs = [...new Set(configs.flatMap((c) => (c.secretRef ? [c.secretRef] : [])))];
-    if (secretRefs.length === 0) {
-      return { kind: 'ignored', reason: 'no account fed by Up names a secret' };
-    }
-
-    const txn = await fetchAcrossTokens(secretRefs, event.transactionId, clientFor);
-    if (txn === null) {
-      return {
-        kind: 'ignored',
-        reason: `transaction ${event.transactionId} not found under any token`,
-      };
-    }
-
-    const upAccountId = txn.relationships.account.data.id;
-    const config = configs.find((c) => c.externalAccountRef === upAccountId);
-    if (config === undefined) return { kind: 'unmapped', upAccountId, transactionId: txn.id };
-
-    const account = accountsService.getAccount(db, config.accountId);
-    const mapped = toParsedTransaction(txn, { accountId: account.id, accountLabel: account.name });
-    return writeRow(db, contacts, account.id, mapped);
+    const transactionId = event.transactionId;
+    return serialised(transactionId, () => ingestTransaction(ctx, event.eventType, transactionId));
   };
+}
+
+async function ingestTransaction(
+  { db, contacts, clientFor }: IngestContext,
+  eventType: string | undefined,
+  transactionId: string
+): Promise<UpWebhookOutcome> {
+  if (eventType === 'TRANSACTION_DELETED') return { kind: 'deleted', transactionId };
+  if (eventType === undefined || !INGESTED_EVENTS.has(eventType)) {
+    return { kind: 'ignored', reason: `event ${eventType ?? 'unknown'} is not ingested` };
+  }
+
+  const configs = accountImportConfigService.listImportConfigsByProvider(db, 'up');
+  const secretRefs = [...new Set(configs.flatMap((c) => (c.secretRef ? [c.secretRef] : [])))];
+  if (secretRefs.length === 0) {
+    return { kind: 'ignored', reason: 'no account fed by Up names a secret' };
+  }
+
+  const txn = await fetchAcrossTokens(secretRefs, transactionId, clientFor);
+  if (txn === null) {
+    return { kind: 'ignored', reason: `transaction ${transactionId} not found under any token` };
+  }
+
+  const upAccountId = txn.relationships.account.data.id;
+  const config = configs.find((c) => c.externalAccountRef === upAccountId);
+  if (config === undefined) return { kind: 'unmapped', upAccountId, transactionId: txn.id };
+
+  const account = accountsService.getAccount(db, config.accountId);
+  const mapped = toParsedTransaction(txn, { accountId: account.id, accountLabel: account.name });
+  return writeRow(db, contacts, account.id, mapped);
 }

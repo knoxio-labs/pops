@@ -108,6 +108,57 @@ describe('makeUpWebhookIngest', () => {
     expect(batches()).toHaveLength(1);
   });
 
+  it('two deliveries in flight together for one transaction land one row', async () => {
+    configure(accountId);
+    const { client } = customer([
+      upTransaction({ id: 'txn-1', cents: -1_250, createdAt: '2026-09-05T09:00:00+10:00' }),
+    ]);
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const slow: UpBankClient = {
+      ...client,
+      getTransaction: async (id) => {
+        await gate;
+        return client.getTransaction(id);
+      },
+    };
+    const ingest = ingestWith({ UP_TOKEN: slow });
+
+    const first = ingest(created);
+    const second = ingest({ eventType: 'TRANSACTION_SETTLED', transactionId: 'txn-1' });
+    release();
+
+    expect((await first).kind).toBe('imported');
+    expect((await second).kind).toBe('duplicate');
+    expect(storedRows()).toHaveLength(1);
+    expect(batches()).toHaveLength(1);
+  });
+
+  it('a failed delivery does not block the next one for the same transaction', async () => {
+    configure(accountId);
+    const { client } = customer([
+      upTransaction({ id: 'txn-1', cents: -1_250, createdAt: '2026-09-05T09:00:00+10:00' }),
+    ]);
+    let calls = 0;
+    const flaky: UpBankClient = {
+      ...client,
+      getTransaction: async (id) => {
+        calls += 1;
+        if (calls === 1) throw new UpBankApiError(500, `/transactions/${id}`);
+        return client.getTransaction(id);
+      },
+    };
+    const ingest = ingestWith({ UP_TOKEN: flaky });
+
+    const first = ingest(created);
+    const second = ingest(created);
+    await expect(first).rejects.toBeInstanceOf(UpBankApiError);
+    expect((await second).kind).toBe('imported');
+    expect(storedRows()).toHaveLength(1);
+  });
+
   it('settles a held row in place on TRANSACTION_SETTLED, once', async () => {
     configure(accountId);
     const held = upTransaction({
