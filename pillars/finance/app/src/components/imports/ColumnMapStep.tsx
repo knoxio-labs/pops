@@ -3,8 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Label, Select as UiSelect } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
+import { bankDialect, type BankDialect } from './bank-dialect';
 import { NoDetectionNotice } from './column-map/NoDetectionNotice';
-import { autoDetectColumns, isEmptyColumnMap, type ColumnMap } from './column-map/parsers';
+import {
+  autoDetectColumns,
+  hasRequiredColumns,
+  isEmptyColumnMap,
+  type ColumnMap,
+} from './column-map/parsers';
 import { PreviewTable } from './column-map/PreviewTable';
 import { validateAllRows } from './column-map/validation';
 
@@ -18,13 +24,24 @@ const COLUMN_FIELDS: Array<{ key: keyof ColumnMap; label: string; required: bool
 interface FieldsProps {
   headers: string[];
   localColumnMap: ColumnMap;
+  dialect: BankDialect;
   onChange: (field: keyof ColumnMap, value: string) => void;
 }
 
-function ColumnMapFields({ headers, localColumnMap, onChange }: FieldsProps) {
+/**
+ * A bank that splits the amount across two columns (ING) has nothing for an
+ * Amount field to point at — the dialect names the two columns and the
+ * validator combines them — so the field is not offered rather than left
+ * required and unmappable.
+ */
+function fieldsFor(dialect: BankDialect) {
+  return dialect.splitAmount ? COLUMN_FIELDS.filter((f) => f.key !== 'amount') : COLUMN_FIELDS;
+}
+
+function ColumnMapFields({ headers, localColumnMap, dialect, onChange }: FieldsProps) {
   return (
     <div className="space-y-4">
-      {COLUMN_FIELDS.map((field) => {
+      {fieldsFor(dialect).map((field) => {
         const isInvalid = field.required && !localColumnMap[field.key];
         return (
           <div key={field.key} className="flex items-center gap-4">
@@ -175,6 +192,7 @@ function useColumnMapState() {
   return {
     headers,
     rows,
+    dialect: bankDialect(dialectId),
     localColumnMap,
     validationErrors,
     isValidating,
@@ -190,11 +208,7 @@ function useColumnMapState() {
 export function ColumnMapStep() {
   const s = useColumnMapState();
   const previewRows = useMemo(() => s.rows.slice(0, 10), [s.rows]);
-  const disabled =
-    s.isValidating ||
-    !s.localColumnMap.date ||
-    !s.localColumnMap.description ||
-    !s.localColumnMap.amount;
+  const disabled = s.isValidating || !hasRequiredColumns(s.localColumnMap, s.dialect);
   return (
     <div className="space-y-6">
       <div>
@@ -207,9 +221,10 @@ export function ColumnMapStep() {
       <ColumnMapFields
         headers={s.headers}
         localColumnMap={s.localColumnMap}
+        dialect={s.dialect}
         onChange={s.handleColumnChange}
       />
-      <PreviewTable rows={previewRows} columnMap={s.localColumnMap} />
+      <PreviewTable rows={previewRows} columnMap={s.localColumnMap} dialect={s.dialect} />
       <ValidationErrors errors={s.validationErrors} />
       <StepFooter
         isValidating={s.isValidating}

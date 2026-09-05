@@ -170,7 +170,7 @@ describe('ANZ credit card — foreign-charge capture provenance', () => {
   });
 
   it('declares a bank whose export carries no foreign detail as unavailable', () => {
-    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'ING', 'acc-test');
+    const { parsedTransactions } = validateAllRows([PURCHASE], columnMap, 'Up', 'acc-test');
 
     expect(parsedTransactions[0]?.fxCaptureSource).toBe('unavailable');
   });

@@ -40,10 +40,18 @@ describe('validateAllRows — account (#3608)', () => {
   });
 
   it('threads through every supported bank', () => {
-    for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'ING', 'Up'] as const) {
+    for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'Up'] as const) {
       const result = validateAllRows([baseRow], columnMap, bank, 'acc-test');
       expect(result.parsedTransactions[0]?.dialectAccountLabel).toBe(bank);
     }
+    // ING states the amount in two columns, so it reads its own row shape (POPS-29).
+    const ing = validateAllRows(
+      [{ ...baseRow, Amount: '', Credit: '', Debit: '42.50' }],
+      columnMap,
+      'ING',
+      'acc-test'
+    );
+    expect(ing.parsedTransactions[0]?.dialectAccountLabel).toBe('ING');
   });
 });
 
