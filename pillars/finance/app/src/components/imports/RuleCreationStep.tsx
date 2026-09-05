@@ -119,16 +119,26 @@ function StepFooter({
   );
 }
 
+/**
+ * A single supporting transaction is not evidence a tag belongs to the
+ * merchant rather than the occasion (POPS-2756) — pre-checking only the
+ * proposals more than one row backs keeps the least deliberate path in the
+ * wizard from being the one that skips the confirmation every other path has.
+ */
+function defaultChecked(proposals: RuleProposal[]): string[] {
+  return proposals.filter((p) => p.affectsCount > 1).map((p) => p.id);
+}
+
 export function RuleCreationStep() {
   const confirmedTransactions = useImportStore((s) => s.confirmedTransactions);
   const addPendingTagRuleChangeSet = useImportStore((s) => s.addPendingTagRuleChangeSet);
   const nextStep = useImportStore((s) => s.nextStep);
   const prevStep = useImportStore((s) => s.prevStep);
   const proposals = useMemo(() => computeProposals(confirmedTransactions), [confirmedTransactions]);
-  const [checked, setChecked] = useState<Set<string>>(() => new Set(proposals.map((p) => p.id)));
+  const [checked, setChecked] = useState<Set<string>>(() => new Set(defaultChecked(proposals)));
 
   useEffect(() => {
-    setChecked(new Set(proposals.map((p) => p.id)));
+    setChecked(new Set(defaultChecked(proposals)));
   }, [proposals]);
 
   function toggle(id: string) {
@@ -142,7 +152,11 @@ export function RuleCreationStep() {
 
   function handleCreate() {
     for (const proposal of proposals.filter((p) => checked.has(p.id))) {
-      addPendingTagRuleChangeSet({ changeSet: buildChangeSet(proposal), source: 'import-batch' });
+      addPendingTagRuleChangeSet({
+        changeSet: buildChangeSet(proposal),
+        source: 'import-batch',
+        acceptedNewTags: proposal.tags,
+      });
     }
     nextStep();
   }

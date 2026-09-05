@@ -6,6 +6,8 @@ import {
   type TagRuleChangeSet,
 } from '@pops/finance';
 
+import { parseTag } from '../../../lib/tags';
+
 export interface RuleProposal {
   id: string;
   entityId: string | null;
@@ -30,10 +32,22 @@ function groupByEntity(txns: ConfirmedTransaction[]): Map<string, EntityGroup> {
   return groups;
 }
 
+/**
+ * Open-facet axes that name an occasion in the person's life rather than a
+ * property of the merchant (POPS-2756). A holiday tag true of every row in an
+ * import batch is still true of the trip, not of `HUNGRY JACKS` — the next
+ * purchase there happens nowhere near Cairns. Excluded outright, regardless
+ * of how consistently they appear within one group, because a batch import
+ * has no visibility into whether they would hold on the merchant's next
+ * appearance.
+ */
+const EPISODIC_TAG_FACETS = new Set(['trip', 'project', 'hobby']);
+
 function commonTagsForGroup(group: EntityGroup): string[] {
   const counts = new Map<string, number>();
   for (const txn of group.txns) {
     for (const tag of new Set(txn.tags ?? [])) {
+      if (EPISODIC_TAG_FACETS.has(parseTag(tag).facet ?? '')) continue;
       counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
   }
