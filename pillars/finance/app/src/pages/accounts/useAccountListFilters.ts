@@ -4,6 +4,7 @@ import { ACCOUNT_KINDS, type AccountKind } from '@pops/finance';
 
 import { sortAccounts, type AccountSort } from './account-list-sort';
 
+import type { Currency } from './account-subtotals';
 import type { Account, Institution } from './types';
 
 function searchText(account: Account, institutionsById: Map<string, Institution>): string {
@@ -39,7 +40,11 @@ function describe(total: number, shown: number, archived: number, narrowed: bool
  * household's account count sits far below the API's page cap — the same
  * reasoning `useAllAccounts` documents for the picker's "fetch everything".
  */
-export function useAccountListFilters(accounts: Account[], institutions: Institution[]) {
+export function useAccountListFilters(
+  accounts: Account[],
+  institutions: Institution[],
+  currencies: Currency[]
+) {
   const [query, setQuery] = useState('');
   const [kinds, setKinds] = useState<AccountKind[]>([]);
   const [showArchived, setShowArchived] = useState(false);
@@ -51,7 +56,8 @@ export function useAccountListFilters(accounts: Account[], institutions: Institu
     accounts.filter(
       (a) => (showArchived || a.archivedAt === null) && matches(a, query, kinds, institutionsById)
     ),
-    sort
+    sort,
+    currencies
   );
   const archivedCount = accounts.filter((a) => a.archivedAt !== null).length;
 

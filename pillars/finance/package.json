@@ -4,6 +4,10 @@
   "private": true,
   "files": [
     "dist/contract/**",
+    "dist/money.js",
+    "dist/money.d.ts",
+    "dist/money.js.map",
+    "dist/money.d.ts.map",
     "openapi/finance.openapi.json",
     "prompt-catalog.json"
   ],

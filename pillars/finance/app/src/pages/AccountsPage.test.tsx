@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -105,6 +105,60 @@ describe('AccountsPage', () => {
     expect(screen.getByText('Rainy day')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Checking', pressed: false })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Savings', pressed: false })).toBeInTheDocument();
+  });
+
+  it('holds the grid until currencies resolve, so no balance is tinted or totalled as the wrong kind', async () => {
+    // `accounts` and `currencies` are independent queries with no ordering
+    // between them. Rendering on `accounts` alone falls back to fiat/2dp for
+    // every account until the second lands, so a points balance would flash
+    // in a money tone and be summed into a dollar subtotal.
+    mockLists([account({ id: 'a1', name: 'Everyday' })]);
+    let releaseCurrencies!: () => void;
+    currenciesList.mockReturnValue(
+      new Promise((resolve) => {
+        releaseCurrencies = () =>
+          resolve({
+            data: {
+              data: [
+                {
+                  code: 'AUD',
+                  name: 'Australian Dollar',
+                  symbol: '$',
+                  decimals: 2,
+                  kind: 'fiat',
+                  createdAt: '',
+                },
+              ],
+            },
+            error: undefined,
+          });
+      })
+    );
+
+    renderPage();
+    await waitFor(() => expect(accountsList).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.queryByText('Everyday')).not.toBeInTheDocument();
+
+    releaseCurrencies();
+    expect(await screen.findByText('Everyday')).toBeInTheDocument();
+  });
+
+  it('shows the error panel when currencies fail even though accounts loaded', async () => {
+    // Without currencies the grid has no kind, symbol or decimals to format
+    // by, so it would render every points balance as dollars and sum it into
+    // a money subtotal. A failed currencies query is a failed page.
+    mockLists([account({ id: 'a1', name: 'Everyday' })]);
+    currenciesList.mockRejectedValue(new Error('currencies exploded'));
+
+    renderPage();
+
+    expect(await screen.findByText('Failed to load accounts')).toBeInTheDocument();
+    expect(screen.getByText('currencies exploded')).toBeInTheDocument();
+    expect(screen.queryByText('Everyday')).not.toBeInTheDocument();
   });
 
   it('shows the no-results empty state when a search matches nothing, and clears back to the full list', async () => {
