@@ -3,7 +3,11 @@ import {
   scopePreviewTransactions,
 } from '../correction-proposal-shared';
 
-import type { LocalOp, PreviewChangeSetOutput } from '../correction-proposal-shared';
+import type {
+  LocalOp,
+  PreviewChangeSetOutput,
+  PreviewTransactionEntry,
+} from '../correction-proposal-shared';
 
 export const EMPTY_PREVIEW_SUMMARY = {
   total: 0,
@@ -34,7 +38,7 @@ export function subsetPreview(diffs: PreviewChangeSetOutput['diffs']): PreviewCh
 
 interface ScopeArgs {
   ops: LocalOp[];
-  sessionTxns: Array<{ checksum?: string; description: string }>;
+  sessionTxns: PreviewTransactionEntry[];
   dbTxns: Array<{ checksum?: string; description: string }>;
 }
 

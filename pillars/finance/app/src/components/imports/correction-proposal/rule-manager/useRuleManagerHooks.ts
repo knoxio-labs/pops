@@ -9,10 +9,12 @@ import { usePreviewEffects } from '../../hooks/usePreviewEffects';
 import { useBrowseRules } from './useBrowseRules';
 import { useBrowseSelection } from './useBrowseSelection';
 
+import type { PreviewTransactionEntry } from '../types';
+
 export interface RuleManagerInputs {
   open: boolean;
   minConfidence: number;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
 }
 
 function useDialogState(open: boolean) {

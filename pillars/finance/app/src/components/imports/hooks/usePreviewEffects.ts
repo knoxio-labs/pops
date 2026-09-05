@@ -23,6 +23,7 @@ import type {
   LocalOp,
   PreviewChangeSetInput,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   ServerChangeSet,
 } from '../correction-proposal-shared';
 
@@ -33,7 +34,7 @@ export interface UsePreviewEffectsOptions {
   localOps: LocalOp[];
   selectedOp: LocalOp | null;
   minConfidence: number;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   /** Optional: existing DB transactions to include in browse-mode preview. */
   dbTransactions?: Array<{ checksum?: string | null; description: string }>;
   pendingChangeSets: Array<{ changeSet: ServerChangeSet }>;

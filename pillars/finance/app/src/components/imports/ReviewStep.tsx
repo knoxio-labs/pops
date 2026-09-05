@@ -8,11 +8,26 @@ import { useReviewStepHooks } from './review/useReviewStepHooks';
 
 import type { LocalTxState } from './hooks/local-tx-reconcile';
 
-/** Flatten every bucket to the `{ checksum, description }` list the dialogs preview against. */
+/**
+ * Flatten every bucket to the `{ checksum, description, accountId }` list the
+ * dialogs preview against.
+ *
+ * `accountId` is carried per row rather than dropped (POPS-2975): a row whose
+ * account-step (POPS-2840) resolved one narrows the preview to the rules that
+ * account can actually see, exactly like the live matcher does at commit
+ * time. A row with no resolved account (still possible for a caller
+ * predating POPS-2852) omits it, which the pillar reads as "no account in
+ * hand" and previews against every rule — the same conservative,
+ * over-report-rather-than-under-report behaviour as before this fix. Rows
+ * are never forced to agree on one account before narrowing: each is scoped
+ * independently, so one row's known account can never hide or misreport
+ * another row's.
+ */
 function toPreviewList(local: LocalTxState) {
   return [...local.matched, ...local.uncertain, ...local.failed, ...local.skipped].map((t) => ({
     checksum: t.checksum,
     description: t.description,
+    ...(t.accountId !== undefined && { accountId: t.accountId }),
   }));
 }
 

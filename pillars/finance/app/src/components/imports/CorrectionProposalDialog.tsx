@@ -1,5 +1,6 @@
 import {
   type CorrectionSignal,
+  type PreviewTransactionEntry,
   type ServerChangeSet,
   type TriggeringTransactionContext,
 } from './correction-proposal-shared';
@@ -14,6 +15,7 @@ export type {
   LocalOp,
   OpKind,
   PreviewChangeSetOutput,
+  PreviewTransactionEntry,
   TriggeringTransactionContext,
 } from './correction-proposal-shared';
 export {
@@ -40,7 +42,7 @@ export interface CorrectionProposalDialogProps {
   sessionId: string;
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   minConfidence?: number;
   /** True while the proposal signal is still being generated (analysis in flight). */
   generating?: boolean;

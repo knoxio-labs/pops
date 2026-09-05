@@ -12,6 +12,7 @@ import { usePreviewEffects } from '../../hooks/usePreviewEffects';
 
 import type {
   CorrectionSignal,
+  PreviewTransactionEntry,
   ProposeChangeSetOutput,
   ServerChangeSet,
   TriggeringTransactionContext,
@@ -23,7 +24,7 @@ export interface CorrectionProposalWorkflowProps {
   sessionId: string;
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
-  previewTransactions: Array<{ checksum?: string; description: string }>;
+  previewTransactions: PreviewTransactionEntry[];
   minConfidence: number;
   /** True while the proposal signal is still being generated (analysis in flight). */
   generating?: boolean;
