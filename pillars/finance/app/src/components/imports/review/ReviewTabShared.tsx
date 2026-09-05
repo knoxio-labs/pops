@@ -10,6 +10,8 @@ import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { ViewMode } from '../hooks/useTransactionReview';
 
+export type ReviewTabVariant = 'matched' | 'uncertain' | 'failed';
+
 export interface ReviewTabBaseProps {
   transactions: ProcessedTransaction[];
   groups: ReturnType<typeof groupTransactionsByEntity>;
@@ -63,7 +65,7 @@ export function GroupedView({
   variant,
   props,
 }: {
-  variant: 'failed' | 'uncertain';
+  variant: ReviewTabVariant;
   props: ReviewTabBaseProps;
 }) {
   return (
@@ -94,7 +96,7 @@ export function ListView({
   variant,
   props,
 }: {
-  variant: 'failed' | 'uncertain';
+  variant: ReviewTabVariant;
   props: ReviewTabBaseProps;
 }) {
   return (

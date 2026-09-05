@@ -1,62 +1,26 @@
 import { EmptyStateTab } from '@pops/ui';
 
-import { EditableTransactionCard } from '../EditableTransactionCard';
-import { TransactionCard } from '../TransactionCard';
-
-import type { ProcessedTransaction } from '../../../store/importStore';
-
-interface MatchedTabProps {
-  transactions: ProcessedTransaction[];
-  onEdit: (t: ProcessedTransaction) => void;
-  onEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
-  onCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
-  editingTransaction: ProcessedTransaction | null;
-  onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
-  onCancelEdit: () => void;
-  entities?: Array<{ id: string; name: string }>;
-}
+import { GroupedView, ListView, type ReviewTabBaseProps, ViewModeToggle } from './ReviewTabShared';
 
 /**
- * Matched tab - read-only list
+ * Matched tab (POPS-2448). A real import puts most of its rows here — a
+ * two-year card export is over three thousand — and a flat list of that
+ * length can only be scrolled past, not reviewed. Grouped by entity and
+ * collapsed by default, a wrong match is one header to spot and one
+ * "Reassign all" to fix, instead of one card per occurrence. The list view
+ * is still there for reading rows in date order.
  */
-export function MatchedTab({
-  transactions,
-  onEdit,
-  onEntitySelect,
-  onCreateEntityWithName,
-  editingTransaction,
-  onSaveEdit,
-  onCancelEdit,
-  entities,
-}: MatchedTabProps) {
-  if (transactions.length === 0) {
+export function MatchedTab(props: ReviewTabBaseProps) {
+  if (props.transactions.length === 0) {
     return <EmptyStateTab message="No matched transactions" />;
   }
-
   return (
-    <div className="space-y-3">
-      {transactions.map((t, idx) =>
-        editingTransaction === t ? (
-          <EditableTransactionCard
-            key={idx}
-            transaction={t}
-            onSave={onSaveEdit}
-            onCancel={onCancelEdit}
-            entities={entities}
-          />
-        ) : (
-          <TransactionCard
-            key={idx}
-            transaction={t}
-            onEdit={onEdit}
-            onEntitySelect={onEntitySelect}
-            onCreateEntityWithName={onCreateEntityWithName}
-            entities={entities}
-            readonly={false}
-            showMatchType={true}
-            variant="matched"
-          />
-        )
+    <div className="space-y-4">
+      <ViewModeToggle viewMode={props.viewMode} onViewModeChange={props.onViewModeChange} />
+      {props.viewMode === 'grouped' ? (
+        <GroupedView variant="matched" props={props} />
+      ) : (
+        <ListView variant="matched" props={props} />
       )}
     </div>
   );

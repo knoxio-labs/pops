@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -51,6 +51,7 @@ const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockSetConfirmedTransactions = vi.fn();
 const mockFindSimilar = vi.fn(() => []);
+const mockSetProcessedTransactions = vi.fn();
 const mockAddPendingEntity = vi.fn();
 const mockAddPendingChangeSet = vi.fn();
 
@@ -70,7 +71,7 @@ vi.mock('../../store/importStore', () => {
     processedTransactions: mockProcessedTransactions,
     setConfirmedTransactions: mockSetConfirmedTransactions,
     processSessionId: '11111111-1111-1111-1111-111111111111',
-    setProcessedTransactions: vi.fn(),
+    setProcessedTransactions: mockSetProcessedTransactions,
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
     findSimilar: mockFindSimilar,
@@ -89,7 +90,7 @@ vi.mock('../../store/importStore', () => {
   hook.getState = () => ({
     pendingChangeSets: mockPendingChangeSets,
     pendingEntities: mockPendingEntities,
-    setProcessedTransactions: vi.fn(),
+    setProcessedTransactions: mockSetProcessedTransactions,
     processSessionId: '11111111-1111-1111-1111-111111111111',
     manuallyResolvedChecksums: [],
     markChecksumsResolved: vi.fn(),
@@ -632,7 +633,10 @@ describe('ReviewStep — rule-matched edit proposal flow', () => {
     mockProcessedTransactions = { matched: [tx], uncertain: [], failed: [], skipped: [] };
     render(reviewStepTree());
 
-    // Click edit and save (mocked EditableTransactionCard emits Save Once)
+    // The matched tab groups by default (POPS-2448); the card is in the list view.
+    fireEvent.click(
+      within(screen.getByTestId('tab-matched')).getByRole('button', { name: 'List' })
+    );
     fireEvent.click(screen.getByLabelText(`Edit ${tx.description}`));
     fireEvent.click(screen.getByTestId(`save-edit-${tx.description}`));
 
@@ -913,6 +917,32 @@ describe('ReviewStep — AI correction analysis', () => {
         })
       );
     });
+  });
+});
+
+describe('ReviewStep — matched tab grouping (POPS-2448)', () => {
+  it('groups the matched bucket and reassigns a group through the bulk path', async () => {
+    const tx1 = makeTx('WOOLWORTHS 1', { status: 'matched' });
+    const tx2 = makeTx('WOOLWORTHS 2', { status: 'matched' });
+    mockProcessedTransactions = { matched: [tx1, tx2], uncertain: [], failed: [], skipped: [] };
+
+    render(reviewStepTree());
+
+    const matchedTab = screen.getByTestId('tab-matched');
+    expect(within(matchedTab).getByTestId('group-Woolworths')).toBeInTheDocument();
+    expect(within(matchedTab).queryByTestId('tx-WOOLWORTHS 1')).not.toBeInTheDocument();
+
+    fireEvent.click(within(matchedTab).getByTestId('bulk-assign-Woolworths'));
+
+    await vi.waitFor(() => {
+      expect(lastProposalDialogProps).not.toBeNull();
+    });
+    expect(mockSetProcessedTransactions).toHaveBeenCalled();
+    const last = mockSetProcessedTransactions.mock.calls.at(-1)?.[0] as {
+      matched: Array<{ entity?: { entityId?: string; matchType?: string } }>;
+    };
+    expect(last.matched.map((t) => t.entity?.entityId)).toEqual(['ent-1', 'ent-1']);
+    expect(last.matched.map((t) => t.entity?.matchType)).toEqual(['manual', 'manual']);
   });
 });
 

@@ -62,6 +62,7 @@ export function ReviewStep() {
         activeTab={review.activeTab}
         onTabChange={review.handleTabChange}
         localTransactions={review.localTransactions}
+        matchedGroups={review.matchedGroups}
         uncertainGroups={review.uncertainGroups}
         failedGroups={review.failedGroups}
         viewMode={review.viewMode}
