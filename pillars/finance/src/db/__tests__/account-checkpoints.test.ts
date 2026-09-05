@@ -15,6 +15,7 @@ import {
   earliestCheckpointAfter,
   getCheckpoint,
   insertCheckpoint,
+  isCheckpointConflict,
   latestCheckpointAtOrBefore,
   listCheckpoints,
 } from '../services/account-checkpoints.js';
@@ -65,15 +66,41 @@ describe('insertCheckpoint', () => {
       source: 'import',
       sourceRef: 'commit-1',
     });
-    expect(() =>
+    let thrown: unknown;
+    try {
       insertCheckpoint(db, {
         accountId,
         balanceCents: 2000,
         asOf: '2026-01-01',
         source: 'import',
         sourceRef: 'commit-2',
-      })
-    ).toThrow(/UNIQUE/i);
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeDefined();
+    expect(isCheckpointConflict(thrown)).toBe(true);
+    expect(listCheckpoints(db, accountId)).toHaveLength(1);
+  });
+
+  it('does not read an unrelated failure as a checkpoint conflict', () => {
+    let thrown: unknown;
+    try {
+      insertCheckpoint(db, {
+        accountId: 'no-such-account',
+        balanceCents: 1000,
+        asOf: '2026-01-01',
+        source: 'manual',
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeDefined();
+    expect(isCheckpointConflict(thrown)).toBe(false);
+    expect(isCheckpointConflict(new Error('UNIQUE constraint failed: budgets.name'))).toBe(false);
+    expect(isCheckpointConflict(undefined)).toBe(false);
   });
 
   it('accepts a second manual row for the same account and date', () => {
@@ -195,6 +222,32 @@ describe('earliestCheckpointAfter', () => {
 
   it('is undefined after the last checkpoint', () => {
     expect(earliestCheckpointAfter(db, accountId, '2026-06-30')).toBeUndefined();
+  });
+
+  it('breaks a same-date tie the same way the backward lookup does — newest wins', () => {
+    const mistake = insertCheckpoint(db, {
+      accountId: otherAccountId,
+      balanceCents: 500,
+      asOf: '2026-08-20',
+      source: 'manual',
+    });
+    db.run(
+      sql`UPDATE account_checkpoints SET created_at = '2026-08-20T09:00:00.000Z' WHERE id = ${mistake.id}`
+    );
+    const correction = insertCheckpoint(db, {
+      accountId: otherAccountId,
+      balanceCents: 520,
+      asOf: '2026-08-20',
+      source: 'manual',
+    });
+    db.run(
+      sql`UPDATE account_checkpoints SET created_at = '2026-08-20T10:00:00.000Z' WHERE id = ${correction.id}`
+    );
+
+    // Anchoring from either side has to land on the same row, or the account
+    // has two balances for one day depending on the direction of the question.
+    expect(earliestCheckpointAfter(db, otherAccountId, '2026-08-19')?.balanceCents).toBe(520);
+    expect(latestCheckpointAtOrBefore(db, otherAccountId, '2026-08-20')?.balanceCents).toBe(520);
   });
 });
 

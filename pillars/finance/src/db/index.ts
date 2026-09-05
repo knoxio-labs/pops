@@ -118,6 +118,8 @@ export type {
   InsertCheckpointInput,
 } from './services/account-checkpoints.js';
 
+export { isCheckpointConflict } from './services/checkpoint-conflict.js';
+
 export { resolveAccountIdByName, resolveImportAccountId } from './services/account-lookup.js';
 
 export * as giftCardDetailsService from './services/gift-card-details.js';

@@ -15,12 +15,15 @@ import { and, asc, desc, eq, gt, lte } from 'drizzle-orm';
 
 import { CheckpointSourceNotDeletableError } from '../errors.js';
 import { accountCheckpoints } from '../schema.js';
+import { isCheckpointConflict } from './checkpoint-conflict.js';
 
 import type { CheckpointSource } from '../../contract/checkpoint.js';
 import type { FinanceDb } from './internal.js';
 
 /** Raw drizzle row shape for `account_checkpoints`. */
 export type AccountCheckpointRow = typeof accountCheckpoints.$inferSelect;
+
+export { isCheckpointConflict };
 
 /**
  * Fields accepted by {@link insertCheckpoint}.
@@ -43,9 +46,11 @@ export interface InsertCheckpointInput {
 /**
  * Append a checkpoint.
  *
- * Throws the underlying SQLite constraint error when a non-`manual` row would
- * duplicate `(accountId, asOf, source)` — re-importing the same statement must
- * not double a checkpoint. Two `manual` rows on one day are legal.
+ * Throws when a non-`manual` row would duplicate `(accountId, asOf, source)` —
+ * re-importing the same statement must not double a checkpoint. That throw is
+ * an expected outcome rather than a fault, so callers test it with
+ * {@link isCheckpointConflict} instead of matching on the driver's message.
+ * Two `manual` rows on one day are legal.
  */
 export function insertCheckpoint(
   db: FinanceDb,
@@ -101,6 +106,12 @@ export function latestCheckpointAtOrBefore(
  * The earliest checkpoint strictly after `date` — what a balance for a date
  * before the account's first checkpoint derives backwards from, so a
  * twelve-month trend is anchored rather than net flow.
+ *
+ * A same-date tie is broken by the NEWEST `created_at`, the same way
+ * {@link latestCheckpointAtOrBefore} breaks it. Anchoring in either direction
+ * has to land on the same row, or a mistaken count and its same-day correction
+ * would give one account two balances for one day depending on which side the
+ * question came from.
  */
 export function earliestCheckpointAfter(
   db: FinanceDb,
@@ -111,7 +122,7 @@ export function earliestCheckpointAfter(
     .select()
     .from(accountCheckpoints)
     .where(and(eq(accountCheckpoints.accountId, accountId), gt(accountCheckpoints.asOf, date)))
-    .orderBy(asc(accountCheckpoints.asOf), asc(accountCheckpoints.createdAt))
+    .orderBy(asc(accountCheckpoints.asOf), desc(accountCheckpoints.createdAt))
     .limit(1)
     .get();
 }
