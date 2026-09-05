@@ -1,9 +1,11 @@
 import { insightsByAccountId } from '@/fixtures/account-insights';
 import { ACCOUNT_KINDS } from '@/fixtures/account-kinds';
 import { type Account } from '@/fixtures/accounts';
+import { checkpointsFor } from '@/fixtures/checkpoints';
 import { formatBalance } from '@/fixtures/currencies';
 import { importRows } from '@/fixtures/import-review';
 import { DashboardHeader } from '@/kit/account-dashboard-header';
+import { CheckpointInconsistencyBadge } from '@/kit/checkpoint-inconsistency-badge';
 import { modulesFor } from '@/kit/insights';
 import { balanceTone } from '@/kit/ledger-tone';
 import { Sparkline } from '@/kit/sparkline';
@@ -54,7 +56,9 @@ export function asOfLine(account: Account): string {
   if (!ACCOUNT_KINDS[account.kind].checkpointable) {
     return 'No external balance to check against — derived from transactions';
   }
-  return 'Derived from transactions; never checked against a statement';
+  return checkpointsFor(account.id).length > 0
+    ? 'Derived from transactions since the last checkpoint'
+    : 'Derived from transactions; no checkpoint yet';
 }
 
 /**
@@ -72,18 +76,33 @@ export function trendLine(account: Account, history: BalancePoint[]): string {
 function BalanceCard({ account, insight }: { account: Account; insight?: AccountInsight }) {
   const history = insight?.history ?? [];
   const tone = balanceTone(account);
+  const checkpointable = ACCOUNT_KINDS[account.kind].checkpointable;
   return (
     <Card>
       <CardContent className="grid gap-6 pt-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-1">
-          <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            {balanceCaption(account)}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs tracking-wide text-muted-foreground uppercase">
+              {balanceCaption(account)}
+            </p>
+            <CheckpointInconsistencyBadge account={account} />
+          </div>
           <p className={cn('text-4xl font-semibold tabular-nums', tone)}>
             {formatBalance(account.balance, account.currency)}
           </p>
           <p className="text-xs text-muted-foreground">
             {asOfLine(account)} · {account.transactionCount.toLocaleString('en-AU')} transactions
+            {checkpointable && (
+              <>
+                {' · '}
+                <a
+                  href={`#/accounts/${account.id}/checkpoints`}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Checkpoints
+                </a>
+              </>
+            )}
           </p>
         </div>
         {history.length > 1 && (
