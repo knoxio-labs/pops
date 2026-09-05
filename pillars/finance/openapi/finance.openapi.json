@@ -12804,6 +12804,48 @@
                               "href"
                             ],
                             "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "type": "string"
+                              },
+                              "daysStale": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "href": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["stale-account"],
+                                "type": "string"
+                              },
+                              "newestTransactionDate": {
+                                "type": "string"
+                              },
+                              "thresholdDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "accountId",
+                              "accountName",
+                              "newestTransactionDate",
+                              "daysStale",
+                              "thresholdDays",
+                              "href"
+                            ],
+                            "type": "object"
                           }
                         ]
                       },
@@ -12818,7 +12860,7 @@
             "description": "200"
           }
         },
-        "summary": "Data-quality nudges for the dashboard panel — one per account with a checkpoint inconsistency, largest |delta| first",
+        "summary": "Data-quality nudges for the dashboard panel — checkpoint inconsistencies (largest |delta| first), then accounts stale past their own import cadence (most overdue first)",
         "tags": ["dataQuality"]
       }
     },

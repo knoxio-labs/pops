@@ -8,7 +8,8 @@
  * no longer in question, so it contributes nothing here. Archived accounts
  * are excluded at the source (`listAccounts({ archived: false })`) rather
  * than filtered after, so an archived account's frozen history never even
- * reaches `checkpointDelta`.
+ * reaches `checkpointDelta` — nor the staleness read (POPS-2890), which
+ * shares the same account list.
  *
  * `balancesFor` answers "which accounts disagree with a checkpoint" for every
  * active account in three grouped queries, so only the accounts it flags pay
@@ -29,9 +30,15 @@ import {
   accountsService,
   balancesFor,
   checkpointDelta,
+  type AccountRow,
   type FinanceDb,
 } from '../../db/index.js';
-import { toCheckpointInconsistencyNudge, type Nudge } from '../modules/data-quality-types.js';
+import {
+  toCheckpointInconsistencyNudge,
+  toStaleAccountNudge,
+  type CheckpointInconsistencyNudge,
+} from '../modules/data-quality-types.js';
+import { staleAccounts } from '../modules/data-quality/stale-accounts.js';
 import { runHttp } from './error-mapping.js';
 
 /**
@@ -42,19 +49,24 @@ import { runHttp } from './error-mapping.js';
  */
 const EVERY_ACTIVE_ACCOUNT = Number.MAX_SAFE_INTEGER;
 
-function checkpointInconsistencyNudges(db: FinanceDb): Nudge[] {
-  const { rows: accounts } = accountsService.listAccounts(db, {
+function activeAccounts(db: FinanceDb): AccountRow[] {
+  return accountsService.listAccounts(db, {
     archived: false,
     limit: EVERY_ACTIVE_ACCOUNT,
     offset: 0,
-  });
+  }).rows;
+}
 
+function checkpointInconsistencyNudges(
+  db: FinanceDb,
+  accounts: readonly AccountRow[]
+): CheckpointInconsistencyNudge[] {
   const balances = balancesFor(
     db,
     accounts.map((account) => account.id)
   );
 
-  const nudges: Nudge[] = [];
+  const nudges: CheckpointInconsistencyNudge[] = [];
   for (const account of accounts) {
     if (balances.get(account.id)?.inconsistent !== true) continue;
 
@@ -70,14 +82,24 @@ function checkpointInconsistencyNudges(db: FinanceDb): Nudge[] {
   return nudges;
 }
 
+/**
+ * Inconsistencies first, largest |delta| first; then stale accounts, most
+ * overdue relative to their own cadence first. The two kinds have no common
+ * unit to rank across, and a ledger that contradicts a bank statement is the
+ * more urgent fact — a stale account is behind, an inconsistent one is wrong.
+ */
 export function makeDataQualityHandlers(db: FinanceDb) {
   return {
     nudges: () =>
       runHttp(() => {
-        const data = checkpointInconsistencyNudges(db).toSorted(
+        const accounts = activeAccounts(db);
+        const inconsistencies = checkpointInconsistencyNudges(db, accounts).toSorted(
           (a, b) => Math.abs(b.deltaCents) - Math.abs(a.deltaCents)
         );
-        return { status: 200 as const, body: { data } };
+        const stale = staleAccounts(db, accounts).map(({ account, staleness }) =>
+          toStaleAccountNudge(account, staleness)
+        );
+        return { status: 200 as const, body: { data: [...inconsistencies, ...stale] } };
       }),
   };
 }
