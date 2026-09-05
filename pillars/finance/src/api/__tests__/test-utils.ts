@@ -182,7 +182,7 @@ interface TransactionSnapshot {
   id: string;
   notionId: string | null;
   description: string;
-  account: string;
+  accountId: string;
   amount: number;
   date: string;
   type: string;
@@ -215,7 +215,6 @@ export interface BudgetQuery {
 
 export interface TransactionQuery {
   search?: string;
-  account?: string;
   accountId?: string;
   startDate?: string;
   endDate?: string;
