@@ -8,7 +8,7 @@ CREATE TABLE `home_inventory` (
 	`room` text,
 	`location` text,
 	`type` text,
-	`condition` text DEFAULT 'good',
+	`condition` text DEFAULT 'Good',
 	`in_use` integer,
 	`deductible` integer,
 	`purchase_date` text,
