@@ -126,3 +126,99 @@ describe('matchesPathFilter (as embedded in ci-gate.yml)', () => {
     ).toBe(true);
   });
 });
+
+describe('exclusions (a leading "!") in a PATH_FILTERS entry', () => {
+  it('reads the design carve-out in the real "E2E Tests" mirror', async () => {
+    const { PATH_FILTERS } = await runEmbeddedScript();
+    expect(PATH_FILTERS['E2E Tests']).toContain('!pillars/design/**');
+  });
+
+  it('excludes a design-surface-only diff that "pillars/**" would otherwise select', async () => {
+    // The defect: `pillars/design/src/screens/**` is selected by `pillars/**`,
+    // so before exclusions existed the shell's Playwright lane ran on every
+    // design iteration. It must now read as a genuine path-filter exclusion.
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(
+      matchesPathFilter('E2E Tests', [
+        'pillars/design/src/screens/AccountDetails.tsx',
+        'pillars/design/src/experiments/balance-card.json',
+      ])
+    ).toBe(false);
+  });
+
+  it('excludes the rest of the design pillar too, not just its surface', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(matchesPathFilter('E2E Tests', ['pillars/design/Dockerfile.api'])).toBe(false);
+    expect(matchesPathFilter('E2E Tests', ['pillars/design/package.json'])).toBe(false);
+  });
+
+  it('still selects when another pillar changed alongside the design one', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(
+      matchesPathFilter('E2E Tests', [
+        'pillars/design/src/screens/AccountDetails.tsx',
+        'pillars/finance/src/index.ts',
+      ])
+    ).toBe(true);
+  });
+
+  it('still selects a change to the lane’s own workflow file', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(matchesPathFilter('E2E Tests', ['.github/workflows/fe-test-e2e.yml'])).toBe(true);
+  });
+
+  it('drops only what the exclusion names, leaving its siblings selected', async () => {
+    const { matchesPathFilter } = await runEmbeddedScript();
+    expect(matchesPathFilter('E2E Tests', ['pillars/designs/src/index.ts'])).toBe(true);
+    expect(matchesPathFilter('E2E Tests', ['libs/ui/src/index.ts'])).toBe(true);
+  });
+});
+
+describe('exclusion semantics on synthetic filters (the degenerate cases)', () => {
+  /**
+   * `matchesPathFilter` closes over `PATH_FILTERS`, so a synthetic entry
+   * exercises the real deployed matcher on shapes no gated workflow declares
+   * yet. Each run re-evaluates the script body, so the additions never leak
+   * between tests.
+   */
+  it('selects nothing at all when the filter is only exclusions', async () => {
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['!docs/**'];
+    expect(matchesPathFilter('Synthetic', ['docs/README.md'])).toBe(false);
+    expect(matchesPathFilter('Synthetic', ['pillars/finance/src/index.ts'])).toBe(false);
+  });
+
+  it('is a no-op when the exclusion matches nothing in the diff', async () => {
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['pillars/**', '!libs/**'];
+    expect(matchesPathFilter('Synthetic', ['pillars/finance/src/index.ts'])).toBe(true);
+  });
+
+  it('lets a later positive pattern re-select what an exclusion dropped', async () => {
+    // GitHub walks the list in order and the LAST matching pattern decides.
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['pillars/**', '!pillars/design/**', 'pillars/design/nginx/**'];
+    expect(matchesPathFilter('Synthetic', ['pillars/design/nginx/default.conf'])).toBe(true);
+    expect(matchesPathFilter('Synthetic', ['pillars/design/src/api/server.ts'])).toBe(false);
+  });
+
+  it('does not let an exclusion order-swap change a positive-only answer', async () => {
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['!pillars/design/**', 'pillars/**'];
+    // The positive comes last, so it wins — the exclusion is inert here.
+    expect(matchesPathFilter('Synthetic', ['pillars/design/src/index.ts'])).toBe(true);
+  });
+
+  it('keeps returning null for an unknown diff regardless of exclusions', async () => {
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['pillars/**', '!pillars/design/**'];
+    expect(matchesPathFilter('Synthetic', null)).toBeNull();
+  });
+
+  it('treats an exclusion of everything as selecting nothing', async () => {
+    const { matchesPathFilter, PATH_FILTERS } = await runEmbeddedScript();
+    PATH_FILTERS['Synthetic'] = ['pillars/**', '!**'];
+    expect(matchesPathFilter('Synthetic', ['pillars/finance/src/index.ts'])).toBe(false);
+    expect(matchesPathFilter('Synthetic', [])).toBe(false);
+  });
+});
