@@ -77,7 +77,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
             <CheckpointHistory account={account} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              No checkpoints yet — add one when you've confirmed this balance against the bank.
+              No checkpoints yet — add one when you&apos;ve confirmed this balance against the bank.
             </p>
           )}
         </CardContent>
