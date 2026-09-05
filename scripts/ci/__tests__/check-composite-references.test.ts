@@ -298,13 +298,26 @@ describe('checkPillar — the composite/references degenerate case', () => {
 });
 
 describe('scanRepo against the real repo tree', () => {
-  it('reports zero failures — every pillar already declares what it imports', () => {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const repoRoot = resolve(here, '..', '..', '..');
-    const { pillarCount, failures } = scanRepo(repoRoot);
-    expect(pillarCount).toBeGreaterThan(0);
-    expect(failures).toEqual([]);
-  });
+  // scanRepo walks every pillar and lib under the real repo, reading and
+  // AST-parsing each source file to find @pops/* imports — cost scales with
+  // the size of the tree. Comfortably under vitest's 5000ms default on an
+  // idle machine but not under concurrent load from sibling CI jobs or
+  // parallel worktrees — clocked at 2361ms against a load average of ~416
+  // (POPS-3017), which leaves little headroom as the tree grows. The bound
+  // is on the machine's load, not on anything this test asserts.
+  const SCAN_REPO_TIMEOUT_MS = 30_000;
+
+  it(
+    'reports zero failures — every pillar already declares what it imports',
+    () => {
+      const here = dirname(fileURLToPath(import.meta.url));
+      const repoRoot = resolve(here, '..', '..', '..');
+      const { pillarCount, failures } = scanRepo(repoRoot);
+      expect(pillarCount).toBeGreaterThan(0);
+      expect(failures).toEqual([]);
+    },
+    SCAN_REPO_TIMEOUT_MS
+  );
 });
 
 describe('empty-discovery reporting (ADR-045)', () => {

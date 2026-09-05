@@ -278,26 +278,44 @@ describe('runTarget — reports rather than silently passing on a degenerate run
 });
 
 describe('POPS-2216 — a filter that matches nothing must not pass vacuously', () => {
-  it('pnpm --filter <bogus> --fail-if-no-match exits non-zero against the real pnpm binary', () => {
-    expect(() =>
-      execFileSync(
-        'pnpm',
-        [
-          '--filter',
-          '@pops/does-not-exist-openapi-drift-vitest',
-          '--fail-if-no-match',
-          'generate:openapi',
-        ],
-        { cwd: repoRoot, stdio: 'pipe' }
-      )
-    ).toThrow();
-  });
+  // Both tests here shell a real `pnpm`/`node` child process against the
+  // whole workspace: pnpm has to resolve its `--filter` against every
+  // package in the repo before it can report no match, and the guard
+  // self-test spawns its own `node` process on top of that. Cost scales with
+  // the number of packages in the workspace, comfortably under vitest's
+  // 5000ms default on an idle machine but not under concurrent load from
+  // sibling CI jobs or parallel worktrees — clocked at 2548ms and 2210ms
+  // respectively against a load average of ~416 (POPS-3017).
+  const REAL_WORKSPACE_TIMEOUT_MS = 30_000;
 
-  it('the guard self-test includes the fail-if-no-match and real-runner clearOutput checks', () => {
-    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
-    expect(stdout).toContain('fail-if-no-match exits');
-    expect(stdout).toContain('realRunner.clearOutput clears the committed file');
-  });
+  it(
+    'pnpm --filter <bogus> --fail-if-no-match exits non-zero against the real pnpm binary',
+    () => {
+      expect(() =>
+        execFileSync(
+          'pnpm',
+          [
+            '--filter',
+            '@pops/does-not-exist-openapi-drift-vitest',
+            '--fail-if-no-match',
+            'generate:openapi',
+          ],
+          { cwd: repoRoot, stdio: 'pipe' }
+        )
+      ).toThrow();
+    },
+    REAL_WORKSPACE_TIMEOUT_MS
+  );
+
+  it(
+    'the guard self-test includes the fail-if-no-match and real-runner clearOutput checks',
+    () => {
+      const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+      expect(stdout).toContain('fail-if-no-match exits');
+      expect(stdout).toContain('realRunner.clearOutput clears the committed file');
+    },
+    REAL_WORKSPACE_TIMEOUT_MS
+  );
 });
 
 describe('the live repo', () => {
@@ -380,10 +398,21 @@ describe('the guard CLI', () => {
     }
   });
 
-  it('its self-test passes, including the independent real-repo pin', () => {
-    const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
-    expect(stdout).toContain(
-      `self-test OK — discovers exactly the ${EXPECTED_TARGETS.length} pillars EXPECTED_TARGETS pins`
-    );
-  });
+  // The self-test's real-repo pin calls discoverOpenApiTargets(repoRoot),
+  // which walks every pillar's package.json looking for the generator
+  // command — cost scales with the number of pillars. Clocked at 2579ms
+  // against a load average of ~416 (POPS-3017), the same class as the two
+  // budgeted above in this file.
+  const SELF_TEST_TIMEOUT_MS = 30_000;
+
+  it(
+    'its self-test passes, including the independent real-repo pin',
+    () => {
+      const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
+      expect(stdout).toContain(
+        `self-test OK — discovers exactly the ${EXPECTED_TARGETS.length} pillars EXPECTED_TARGETS pins`
+      );
+    },
+    SELF_TEST_TIMEOUT_MS
+  );
 });

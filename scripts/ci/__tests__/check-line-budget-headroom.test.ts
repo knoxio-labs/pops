@@ -302,16 +302,32 @@ describe('evaluate() end-to-end against a throwaway git repo', () => {
 });
 
 describe('the guard self-test', () => {
-  it('passes against the real repo tree', () => {
-    expect(() =>
-      execFileSync(
-        'node',
-        [join(repoRoot, 'scripts', 'ci', 'check-line-budget-headroom.mjs'), '--self-test'],
-        {
-          cwd: repoRoot,
-          stdio: 'pipe',
-        }
-      )
-    ).not.toThrow();
-  });
+  // The self-test builds two throwaway git repos and drives roughly twenty
+  // `git`/node child-process calls through them (see `selfTest()` in
+  // check-line-budget-headroom.mjs), on top of the child `node --self-test`
+  // process itself. That is comfortably under vitest's 5000ms default on an
+  // idle machine but not under concurrent load from sibling CI jobs or
+  // parallel worktrees — clocked at 6831ms (POPS-3017) and again at 6096ms
+  // against the default budget with a load average of ~365-416. The bound is
+  // on the machine's load, not on anything this test asserts, so it matches
+  // the pattern already used for RESOLVE_ALL_UNITS_TIMEOUT_MS and
+  // REAL_TAG_ZOO_TIMEOUT_MS.
+  const SELF_TEST_TIMEOUT_MS = 20_000;
+
+  it(
+    'passes against the real repo tree',
+    () => {
+      expect(() =>
+        execFileSync(
+          'node',
+          [join(repoRoot, 'scripts', 'ci', 'check-line-budget-headroom.mjs'), '--self-test'],
+          {
+            cwd: repoRoot,
+            stdio: 'pipe',
+          }
+        )
+      ).not.toThrow();
+    },
+    SELF_TEST_TIMEOUT_MS
+  );
 });
