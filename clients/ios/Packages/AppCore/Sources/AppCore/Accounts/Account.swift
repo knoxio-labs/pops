@@ -48,12 +48,13 @@ public struct Account: Hashable, Sendable, Identifiable {
     public let balanceInconsistent: Bool
     /// Gift cards only.
     public let expiresOn: Date?
-    /// How many transactions this account holds, when the source knows.
+    /// How many transactions this account holds — every row finance has for
+    /// it, pending and transfer rows included (POPS-2924).
     ///
-    /// Optional because the mobile wire does not carry it: finance's accounts
-    /// schema has no count on it either (only its merge preview does), so a
-    /// number here would have to be invented. A screen drops the clause rather
-    /// than showing a zero that reads as "no transactions" (POPS-2924).
+    /// Optional so a repository or fixture that has none to report can leave
+    /// it out rather than inventing a number; a screen drops the clause
+    /// rather than showing a zero that reads as "no transactions". The BFM
+    /// wire itself always carries a real count.
     public let transactionCount: Int?
 
     public init(

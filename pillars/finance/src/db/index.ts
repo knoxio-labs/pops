@@ -114,6 +114,8 @@ export { balanceHistory, type BalancePoint } from './services/account-balance-hi
 
 export { balanceAsOf, balancesFor } from './services/account-balance.js';
 
+export { transactionCountsFor } from './services/account-transaction-count.js';
+
 export {
   checkpointDelta,
   dayBefore,

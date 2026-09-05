@@ -1476,6 +1476,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             }[];
             pagination: {
@@ -1585,6 +1586,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             };
             message: string;
@@ -1727,6 +1729,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             }[];
             message: string;
@@ -1848,6 +1851,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             };
           };
@@ -1973,6 +1977,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             };
             message: string;
@@ -2119,6 +2124,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             };
             message: string;
@@ -3801,6 +3807,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              transactionCount: number;
               updatedAt: string;
             };
             message: string;
@@ -3946,6 +3953,7 @@ export interface operations {
                   | 'crypto'
                   | 'other';
                 name: string;
+                transactionCount: number;
                 updatedAt: string;
               };
               target: {
@@ -4004,6 +4012,7 @@ export interface operations {
                   | 'crypto'
                   | 'other';
                 name: string;
+                transactionCount: number;
                 updatedAt: string;
               };
               transactionCount: number;

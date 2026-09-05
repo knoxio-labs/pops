@@ -443,3 +443,101 @@ describe('accounts — merge preview (POPS-2883)', () => {
     });
   });
 });
+
+describe('accounts — transactionCount (POPS-2924)', () => {
+  it('reports 0 for an account with no transactions, on both list and get', async () => {
+    const created = await client().accounts.create({
+      name: 'Empty',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+
+    expect(created.data.transactionCount).toBe(0);
+
+    const fetched = await client().accounts.get(created.data.id);
+    expect(fetched.data.transactionCount).toBe(0);
+
+    const { data } = await client().accounts.list();
+    expect(data.find((a) => a.id === created.data.id)?.transactionCount).toBe(0);
+  });
+
+  it('counts every transaction on the account, including pending rows and transfers', async () => {
+    const created = await client().accounts.create({
+      name: 'Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+    });
+    const accountId = created.data.id;
+
+    await client().transactions.create({
+      description: 'Coffee',
+      accountId,
+      amount: -5,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Still settling',
+      accountId,
+      amount: -10,
+      date: '2026-01-02',
+      type: 'purchase',
+      pending: true,
+    });
+    await client().transactions.create({
+      description: 'To savings',
+      accountId,
+      amount: -100,
+      date: '2026-01-03',
+      type: 'transfer',
+    });
+
+    const fetched = await client().accounts.get(accountId);
+    expect(fetched.data.transactionCount).toBe(3);
+  });
+
+  it('keeps counting after the account is archived', async () => {
+    const created = await client().accounts.create({
+      name: 'Closed Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    await client().transactions.create({
+      description: 'Last purchase',
+      accountId: created.data.id,
+      amount: -20,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+
+    await client().accounts.delete(created.data.id);
+
+    const fetched = await client().accounts.get(created.data.id);
+    expect(fetched.data.archivedAt).not.toBeNull();
+    expect(fetched.data.transactionCount).toBe(1);
+  });
+
+  it("does not leak one account's transactions into another's count", async () => {
+    const a = await client().accounts.create({ name: 'Alpha', kind: 'cash', currency: 'AUD' });
+    const b = await client().accounts.create({ name: 'Beta', kind: 'cash', currency: 'AUD' });
+    await client().transactions.create({
+      description: 'Alpha spend',
+      accountId: a.data.id,
+      amount: -5,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Alpha spend 2',
+      accountId: a.data.id,
+      amount: -5,
+      date: '2026-01-02',
+      type: 'purchase',
+    });
+
+    const fetchedA = await client().accounts.get(a.data.id);
+    const fetchedB = await client().accounts.get(b.data.id);
+    expect(fetchedA.data.transactionCount).toBe(2);
+    expect(fetchedB.data.transactionCount).toBe(0);
+  });
+});

@@ -55,6 +55,12 @@ export const MobileAccountSchema = z.object({
    */
   contact: z.string().nullable(),
   balance: MobileAccountBalanceSchema,
+  /**
+   * Every transaction on this account (POPS-2924) — finance's own literal
+   * row count, pending and transfer rows included. Not scoped to
+   * `balance.asOf`.
+   */
+  transactionCount: z.number().int(),
 });
 
 export type MobileAccount = z.infer<typeof MobileAccountSchema>;

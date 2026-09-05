@@ -146,6 +146,7 @@ private struct AccountWire {
     let asOf: String
     let isCheckpointAnchored: Bool
     let inconsistent: Bool
+    let transactionCount: Int
 }
 
 extension BFMAccountsRepository {
@@ -162,7 +163,8 @@ extension BFMAccountsRepository {
                 balanceCents: wire.balance.balanceCents,
                 asOf: wire.balance.asOf,
                 isCheckpointAnchored: wire.balance.basis == .checkpoint,
-                inconsistent: wire.balance.inconsistent
+                inconsistent: wire.balance.inconsistent,
+                transactionCount: wire.transactionCount
             ))
     }
 
@@ -179,7 +181,8 @@ extension BFMAccountsRepository {
                 balanceCents: wire.balance.balanceCents,
                 asOf: wire.balance.asOf,
                 isCheckpointAnchored: wire.balance.basis == .checkpoint,
-                inconsistent: wire.balance.inconsistent
+                inconsistent: wire.balance.inconsistent,
+                transactionCount: wire.transactionCount
             ))
     }
 
@@ -208,7 +211,8 @@ extension BFMAccountsRepository {
             contact: wire.contact,
             balanceAsOf: balanceAsOf,
             balanceBasis: wire.isCheckpointAnchored ? .checkpoint : .transactions,
-            balanceInconsistent: wire.inconsistent
+            balanceInconsistent: wire.inconsistent,
+            transactionCount: wire.transactionCount
         )
     }
 }

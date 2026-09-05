@@ -688,6 +688,11 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "transactionCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
                           }
                         },
                         "required": [
@@ -699,7 +704,8 @@
                           "institutionId",
                           "institutionName",
                           "contact",
-                          "balance"
+                          "balance",
+                          "transactionCount"
                         ],
                         "type": "object"
                       },
@@ -972,6 +978,11 @@
                         },
                         "name": {
                           "type": "string"
+                        },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
                         }
                       },
                       "required": [
@@ -983,7 +994,8 @@
                         "institutionId",
                         "institutionName",
                         "contact",
-                        "balance"
+                        "balance",
+                        "transactionCount"
                       ],
                       "type": "object"
                     },

@@ -2857,6 +2857,8 @@ internal enum Operations {
                             internal var kind: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/name`.
                             internal var name: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/DataPayload/transactionCount`.
+                            internal var transactionCount: Swift.Int
                             /// Creates a new `DataPayloadPayload`.
                             ///
                             /// - Parameters:
@@ -2869,6 +2871,7 @@ internal enum Operations {
                             ///   - institutionName:
                             ///   - kind:
                             ///   - name:
+                            ///   - transactionCount:
                             internal init(
                                 archived: Swift.Bool,
                                 balance: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.DataPayloadPayload.BalancePayload,
@@ -2878,7 +2881,8 @@ internal enum Operations {
                                 institutionId: Swift.String? = nil,
                                 institutionName: Swift.String? = nil,
                                 kind: Swift.String,
-                                name: Swift.String
+                                name: Swift.String,
+                                transactionCount: Swift.Int
                             ) {
                                 self.archived = archived
                                 self.balance = balance
@@ -2889,6 +2893,7 @@ internal enum Operations {
                                 self.institutionName = institutionName
                                 self.kind = kind
                                 self.name = name
+                                self.transactionCount = transactionCount
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case archived
@@ -2900,6 +2905,7 @@ internal enum Operations {
                                 case institutionName
                                 case kind
                                 case name
+                                case transactionCount
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -2939,6 +2945,10 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .name
                                 )
+                                self.transactionCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .transactionCount
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "archived",
                                     "balance",
@@ -2948,7 +2958,8 @@ internal enum Operations {
                                     "institutionId",
                                     "institutionName",
                                     "kind",
-                                    "name"
+                                    "name",
+                                    "transactionCount"
                                 ])
                             }
                         }
@@ -3908,6 +3919,8 @@ internal enum Operations {
                             internal var kind: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/name`.
                             internal var name: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/transactionCount`.
+                            internal var transactionCount: Swift.Int
                             /// Creates a new `AccountPayload`.
                             ///
                             /// - Parameters:
@@ -3920,6 +3933,7 @@ internal enum Operations {
                             ///   - institutionName:
                             ///   - kind:
                             ///   - name:
+                            ///   - transactionCount:
                             internal init(
                                 archived: Swift.Bool,
                                 balance: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload,
@@ -3929,7 +3943,8 @@ internal enum Operations {
                                 institutionId: Swift.String? = nil,
                                 institutionName: Swift.String? = nil,
                                 kind: Swift.String,
-                                name: Swift.String
+                                name: Swift.String,
+                                transactionCount: Swift.Int
                             ) {
                                 self.archived = archived
                                 self.balance = balance
@@ -3940,6 +3955,7 @@ internal enum Operations {
                                 self.institutionName = institutionName
                                 self.kind = kind
                                 self.name = name
+                                self.transactionCount = transactionCount
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case archived
@@ -3951,6 +3967,7 @@ internal enum Operations {
                                 case institutionName
                                 case kind
                                 case name
+                                case transactionCount
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -3990,6 +4007,10 @@ internal enum Operations {
                                     Swift.String.self,
                                     forKey: .name
                                 )
+                                self.transactionCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .transactionCount
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "archived",
                                     "balance",
@@ -3999,7 +4020,8 @@ internal enum Operations {
                                     "institutionId",
                                     "institutionName",
                                     "kind",
-                                    "name"
+                                    "name",
+                                    "transactionCount"
                                 ])
                             }
                         }

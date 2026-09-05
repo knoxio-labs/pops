@@ -1,19 +1,23 @@
 /**
- * Project account rows to their wire shape, resolving the two things a row
- * does not carry: the contact display name (live from contacts, POPS-2771)
- * the checkpoint-anchored balance (ADR-051) and the import status (POPS-2917).
+ * Project account rows to their wire shape, resolving the things a row does
+ * not carry: the contact display name (live from contacts, POPS-2771), the
+ * checkpoint-anchored balance (ADR-051), the import status (POPS-2917), and
+ * the transaction count (POPS-2924).
  *
- * All three are resolved for the WHOLE set at once. `balancesFor` costs three
+ * All four are resolved for the WHOLE set at once. `balancesFor` costs three
  * grouped queries regardless of how many accounts are on the page, where a
  * per-row `balanceAsOf` would cost a handful each; `resolveAccountEntityDisplays`
- * already batched its side. Every accounts response — the list, one account, a
- * merge preview — goes through here so none of them can drift into an N+1.
+ * already batched its side, and `transactionCountsFor` is one more grouped
+ * query rather than a count per row. Every accounts response — the list, one
+ * account, a merge preview — goes through here so none of them can drift
+ * into an N+1.
  */
 import {
   balancesFor,
   importStatusFor,
   resolveAccountEntityDisplays,
   today,
+  transactionCountsFor,
   type AccountBalance,
   type ImportStatus,
 } from '../../../db/index.js';
@@ -60,19 +64,26 @@ export function makeAccountProjector(db: FinanceDb, contacts: ContactsClient): A
     const ids = rows.map((row) => row.id);
     const balances = balancesFor(db, ids, date);
     const statuses = importStatusFor(db, ids);
+    const transactionCounts = transactionCountsFor(db, ids);
     return rows.map((row) =>
-      toAccount(
-        row,
-        displays.get(row.id) ?? NOT_A_PERSON,
-        balances.get(row.id) ?? NO_BALANCE,
-        statuses.get(row.id) ?? NO_IMPORT_STATUS
-      )
+      toAccount(row, displays.get(row.id) ?? NOT_A_PERSON, {
+        balance: balances.get(row.id) ?? NO_BALANCE,
+        importStatus: statuses.get(row.id) ?? NO_IMPORT_STATUS,
+        transactionCount: transactionCounts.get(row.id) ?? 0,
+      })
     );
   }
 
   async function one(row: AccountRow): Promise<Account> {
     const [account] = await many([row]);
-    return account ?? toAccount(row, NOT_A_PERSON, NO_BALANCE, NO_IMPORT_STATUS);
+    return (
+      account ??
+      toAccount(row, NOT_A_PERSON, {
+        balance: NO_BALANCE,
+        importStatus: NO_IMPORT_STATUS,
+        transactionCount: 0,
+      })
+    );
   }
 
   return { many, one };

@@ -84,6 +84,7 @@ export type AccountsListResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     }>;
     pagination: {
@@ -218,6 +219,7 @@ export type AccountsCreateResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     };
     message: string;
@@ -326,6 +328,7 @@ export type AccountsReorderResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     }>;
     message: string;
@@ -433,6 +436,7 @@ export type AccountsDeleteResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     };
     message: string;
@@ -535,6 +539,7 @@ export type AccountsGetResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     };
   };
@@ -666,6 +671,7 @@ export type AccountsUpdateResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     };
     message: string;
@@ -2003,6 +2009,7 @@ export type AccountsMergeResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      transactionCount: number;
       updatedAt: string;
     };
     message: string;
@@ -2123,6 +2130,7 @@ export type AccountsPreviewMergeResponses = {
           | 'crypto'
           | 'other';
         name: string;
+        transactionCount: number;
         updatedAt: string;
       };
       target: {
@@ -2176,6 +2184,7 @@ export type AccountsPreviewMergeResponses = {
           | 'crypto'
           | 'other';
         name: string;
+        transactionCount: number;
         updatedAt: string;
       };
       transactionCount: number;

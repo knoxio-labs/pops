@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { NO_BALANCE, NO_IMPORT_STATUS } from '../../test-utils.js';
+import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../../test-utils.js';
 import { BalanceCard } from './BalanceCard';
 
 import type { CurrencyFormat } from '@pops/finance';
@@ -33,6 +33,7 @@ function account(overrides: Partial<Account>): Account {
     entityDisplayNameStale: false,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
+    transactionCount: NO_TRANSACTION_COUNT,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

@@ -44,3 +44,6 @@ export const NO_IMPORT_STATUS = {
   cadenceDays: null,
   source: null,
 } as const;
+
+/** The transaction count every account carries on the wire (POPS-2924): an account with none on it. */
+export const NO_TRANSACTION_COUNT = 0;

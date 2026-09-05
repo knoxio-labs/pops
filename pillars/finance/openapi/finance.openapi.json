@@ -245,6 +245,11 @@
                           "name": {
                             "type": "string"
                           },
+                          "transactionCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
                           "updatedAt": {
                             "type": "string"
                           }
@@ -262,6 +267,7 @@
                           "entityDisplayNameStale",
                           "balance",
                           "importStatus",
+                          "transactionCount",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -530,6 +536,11 @@
                         "name": {
                           "type": "string"
                         },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "updatedAt": {
                           "type": "string"
                         }
@@ -547,6 +558,7 @@
                         "entityDisplayNameStale",
                         "balance",
                         "importStatus",
+                        "transactionCount",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -874,6 +886,11 @@
                           "name": {
                             "type": "string"
                           },
+                          "transactionCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
                           "updatedAt": {
                             "type": "string"
                           }
@@ -891,6 +908,7 @@
                           "entityDisplayNameStale",
                           "balance",
                           "importStatus",
+                          "transactionCount",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -1184,6 +1202,11 @@
                         "name": {
                           "type": "string"
                         },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "updatedAt": {
                           "type": "string"
                         }
@@ -1201,6 +1224,7 @@
                         "entityDisplayNameStale",
                         "balance",
                         "importStatus",
+                        "transactionCount",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1478,6 +1502,11 @@
                         "name": {
                           "type": "string"
                         },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "updatedAt": {
                           "type": "string"
                         }
@@ -1495,6 +1524,7 @@
                         "entityDisplayNameStale",
                         "balance",
                         "importStatus",
+                        "transactionCount",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1823,6 +1853,11 @@
                         "name": {
                           "type": "string"
                         },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "updatedAt": {
                           "type": "string"
                         }
@@ -1840,6 +1875,7 @@
                         "entityDisplayNameStale",
                         "balance",
                         "importStatus",
+                        "transactionCount",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -5279,6 +5315,11 @@
                         "name": {
                           "type": "string"
                         },
+                        "transactionCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
                         "updatedAt": {
                           "type": "string"
                         }
@@ -5296,6 +5337,7 @@
                         "entityDisplayNameStale",
                         "balance",
                         "importStatus",
+                        "transactionCount",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -5638,6 +5680,11 @@
                             "name": {
                               "type": "string"
                             },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
                             "updatedAt": {
                               "type": "string"
                             }
@@ -5655,6 +5702,7 @@
                             "entityDisplayNameStale",
                             "balance",
                             "importStatus",
+                            "transactionCount",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -5835,6 +5883,11 @@
                             "name": {
                               "type": "string"
                             },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
                             "updatedAt": {
                               "type": "string"
                             }
@@ -5852,6 +5905,7 @@
                             "entityDisplayNameStale",
                             "balance",
                             "importStatus",
+                            "transactionCount",
                             "createdAt",
                             "updatedAt"
                           ],

@@ -60,6 +60,14 @@ export const AccountSchema = z.object({
    * and derived per response; every field null for an account never imported into.
    */
   importStatus: ImportStatusSchema,
+  /**
+   * Every transaction on this account (POPS-2924) — pending or settled,
+   * transfer or not, and not scoped to `balance.asOf`: it is the account's
+   * historical size, not a reading as of a date. Read-only and derived per
+   * response, in one grouped query alongside `balance`/`importStatus`, so
+   * carrying it costs nothing extra per page.
+   */
+  transactionCount: z.number().int(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
