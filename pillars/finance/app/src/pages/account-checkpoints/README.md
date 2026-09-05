@@ -3,7 +3,9 @@
 `/accounts/:id/checkpoints` (POPS-2888) — the record behind the account page's balance: every
 checkpoint an account has taken, adding one by hand, deleting a manual mistake, and the detail
 behind an inconsistency flag. Checkpoints are plumbing (POPS-2750, POPS-2878): the account
-dashboard shows only the result — an as-of date and a flag — and this page owns the history.
+dashboard shows only the result — an as-of date and a flag — and this page owns the history. The
+balance card's "Checkpoints" link (`account-detail/BalanceCard.tsx`) is added here rather than in
+POPS-2887, so no layer ever ships a link to a route that is not yet registered.
 Design reference: `pillars/design/src/screens/finance/account-checkpoints.tsx`.
 
 ## Three server rules this page surfaces, never duplicates

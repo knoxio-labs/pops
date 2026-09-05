@@ -144,6 +144,14 @@ describe('BalanceCard provenance', () => {
     renderCard({ account: account({ kind: 'loan' }) });
     expect(screen.queryByText(/As of/)).not.toBeInTheDocument();
   });
+
+  it('links out to the checkpoints page rather than listing them here', () => {
+    renderCard({ account: account({ id: 'a7' }) });
+    expect(screen.getByRole('link', { name: 'Checkpoints' })).toHaveAttribute(
+      'href',
+      '/accounts/a7/checkpoints'
+    );
+  });
 });
 
 describe('BalanceCard inconsistency flag', () => {

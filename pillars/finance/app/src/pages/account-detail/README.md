@@ -21,9 +21,8 @@ is net flow since whatever date the import started on, and says so — worded by
 take a checkpoint and only the wording differs. There is never a placeholder date.
 
 This card is the only thing on the page that knows checkpoints exist, and it shows their _result_ —
-a date, a disagreement flag. It never lists or edits them; that is `/accounts/:id/checkpoints`
-(POPS-2888), which also carries the link to itself, so nothing here points at a route that has yet
-to exist. The flag differs from a red liability in **shape**, not colour: a badge with an icon and
+a date, a disagreement flag, a link. It never lists or edits them; that is
+`/accounts/:id/checkpoints` (POPS-2888). The flag differs from a red liability in **shape**, not colour: a badge with an icon and
 a claim, because a card that owes money is already red.
 
 The trend renders nothing at all below two points. One reading is not a trend, and drawing it as a
