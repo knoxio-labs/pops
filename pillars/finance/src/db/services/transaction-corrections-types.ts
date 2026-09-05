@@ -133,6 +133,12 @@ function assertPatternCompiles(pattern: string, matchType: TransactionCorrection
   }
 }
 
+function assertPatternMatchable(pattern: string, matchType: TransactionCorrectionMatchType): void {
+  if (matchType !== 'regex' && normalizePatternForStorage(pattern, matchType).length === 0) {
+    throw new UnmatchablePatternError(pattern);
+  }
+}
+
 /**
  * Store-form of a pattern: normalised for `exact`/`contains`, verbatim for
  * `regex` — and rejected outright when a `regex` pattern doesn't compile, or
@@ -158,11 +164,8 @@ export function storablePattern(
   matchType: TransactionCorrectionMatchType
 ): string {
   assertPatternCompiles(pattern, matchType);
-  const normalized = normalizePatternForStorage(pattern, matchType);
-  if (matchType !== 'regex' && normalized.length === 0) {
-    throw new UnmatchablePatternError(pattern);
-  }
-  return normalized;
+  assertPatternMatchable(pattern, matchType);
+  return normalizePatternForStorage(pattern, matchType);
 }
 
 /**
@@ -171,17 +174,24 @@ export function storablePattern(
  *
  * `matchType` and `descriptionPattern` are independently optional, so
  * `PATCH { matchType: 'regex' }` alone re-interprets the row's existing
- * pattern as a regular expression without ever passing it through
- * {@link storablePattern}. A stored `exact` pattern is only normalised, not
- * escaped — `normalizeDescription` leaves parens and brackets intact — so
- * `T(ARGET` would become a `regex` row that compiles nowhere and can never
- * fire, the exact failure `InvalidPatternError` exists to prevent.
+ * pattern under a match type it never passed through {@link storablePattern}
+ * for. Both of that function's guards can be tripped this way, in opposite
+ * directions:
+ *
+ * - `exact` -> `regex`: a stored `exact` pattern is only normalised, not
+ *   escaped — `normalizeDescription` leaves parens and brackets intact — so
+ *   `T(ARGET` becomes a `regex` row that compiles nowhere, the failure
+ *   `InvalidPatternError` exists to prevent.
+ * - `regex` -> `exact`/`contains`: a `regex` pattern of `1234` is a working
+ *   rule matching those digits literally, and normalises to `''` the moment
+ *   it is reinterpreted, the failure `UnmatchablePatternError` exists to
+ *   prevent (POPS-3001).
  *
  * Only a *change* of match type is checked: a PATCH that leaves `matchType`
  * alone must stay able to edit (or disable) a legacy row whose pattern was
- * already uncompilable when it was written.
+ * already unusable when it was written.
  */
-export function assertPatchLeavesCompilablePattern(
+export function assertPatchLeavesUsablePattern(
   input: UpdateTransactionCorrectionInput,
   existing: TransactionCorrectionRow,
   effectiveMatchType: TransactionCorrectionMatchType
@@ -189,6 +199,7 @@ export function assertPatchLeavesCompilablePattern(
   if (input.descriptionPattern !== undefined) return;
   if (input.matchType === undefined || input.matchType === existing.matchType) return;
   assertPatternCompiles(existing.descriptionPattern, effectiveMatchType);
+  assertPatternMatchable(existing.descriptionPattern, effectiveMatchType);
 }
 
 /**
@@ -217,7 +228,7 @@ export function buildCorrectionUpdates(
   const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
   const effectiveMatchType = input.matchType ?? existing.matchType;
 
-  assertPatchLeavesCompilablePattern(input, existing, effectiveMatchType);
+  assertPatchLeavesUsablePattern(input, existing, effectiveMatchType);
 
   if (input.descriptionPattern !== undefined) {
     updates.descriptionPattern = storablePattern(input.descriptionPattern, effectiveMatchType);

@@ -11,8 +11,12 @@
  *
  * The guard stops at an empty normalisation: a `regex` pattern of `'1234'` is
  * a valid expression matching those digits literally and stays writable, as
- * does a pattern matching nothing in today's ledger.
+ * does a pattern matching nothing in today's ledger. A PATCH that changes only
+ * `matchType` reinterprets that same pattern under a normalising type, so it
+ * is checked too — while a PATCH leaving `matchType` alone must still be able
+ * to edit or disable a legacy row that was already unusable when written.
  */
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
@@ -98,6 +102,40 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
 
     const [after] = db.select().from(transactionCorrections).all();
     expect(after?.descriptionPattern).toBe('ACME CORP');
+  });
+
+  it('refuses a PATCH that only reinterprets a working regex under a normalising match type', () => {
+    const row = createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: '1234',
+      matchType: 'regex',
+      entityId: 'ent-acme',
+      entityName: 'Acme',
+    });
+
+    expect(() => updateTransactionCorrection(db, row.id, { matchType: 'contains' })).toThrow(
+      UnmatchablePatternError
+    );
+
+    const [after] = db.select().from(transactionCorrections).all();
+    expect(after?.matchType).toBe('regex');
+  });
+
+  it('still lets a PATCH that leaves matchType alone edit a legacy unmatchable row', () => {
+    const row = createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: '1234',
+      matchType: 'regex',
+      entityId: 'ent-acme',
+      entityName: 'Acme',
+    });
+    db.update(transactionCorrections)
+      .set({ matchType: 'contains', descriptionPattern: '' })
+      .where(eq(transactionCorrections.id, row.id))
+      .run();
+
+    expect(() => updateTransactionCorrection(db, row.id, { isActive: false })).not.toThrow();
+
+    const [after] = db.select().from(transactionCorrections).all();
+    expect(after?.isActive).toBe(false);
   });
 
   it('drops rather than explodes on the import-commit path', () => {
