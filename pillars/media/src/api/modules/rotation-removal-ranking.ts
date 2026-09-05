@@ -8,8 +8,12 @@
  * over the whole eligible set.
  *
  * ```
- * pressure = effectiveAgeDays^ALPHA × RATING_SPREAD^(1−2q) / keepWeight(watches)
+ * pressure = effectiveAgeDays^ALPHA × RATING_SPREAD^(1−2q) × W_abandon / keepWeight(watches)
  * ```
+ *
+ * `W_abandon` (POPS-2728) is 1 unless the movie has an unfinished play and no
+ * later completed watch, in which case it is >1 and largest for a play put
+ * down early — see {@link abandonWeightFor}.
  *
  * Multiplicative rather than additive, and deliberately so. An additive bonus
  * is a fixed offset: a good movie and a mediocre one then accrue pressure at
@@ -83,6 +87,42 @@ const NEUTRAL_QUALITY = 0.5;
 
 const MS_PER_DAY = 86_400_000;
 
+/**
+ * How much stronger the abandoned-play multiplier is at the moment a movie is
+ * put down (`progress` near 0) than it is asymptotically as the play nears
+ * completion. Not a `RotationTuning` field yet: POPS-2578's fitted constants
+ * came from a snapshot with no partial-play data at all, so there is nothing
+ * to anchor this against until POPS-2730's re-fit, which the ticket that added
+ * this term (POPS-2728) explicitly defers to.
+ */
+const ABANDON_WEIGHT = 4;
+
+/**
+ * How fast the multiplier decays from `1 + ABANDON_WEIGHT` toward 1 as
+ * `progress` runs 0 → 1. Exponential rather than linear so it never actually
+ * reaches 1 — a play abandoned at the 99% mark is still weak evidence of
+ * rejection, not zero evidence, and the acceptance test for this term (an
+ * abandoned film outranks an otherwise identical never-opened one) has to
+ * hold at every point on the curve, not just near the rejection end.
+ */
+const ABANDON_DECAY = 2.5;
+
+/**
+ * The removal-pressure multiplier for a movie's unfinished play, or 1 (no
+ * effect) when there is nothing to score.
+ *
+ * `watchCount` wins over `progress` on purpose: a play recorded as in-progress
+ * for a movie that has since been watched to completion is a stale mirror of
+ * Plex's state (or a fresh rewatch not yet finished), and a completed watch is
+ * always the more trustworthy signal — the ranking must not call a movie
+ * abandoned when it also knows the viewer finished it.
+ */
+export function abandonWeightFor(watchCount: number, progress: number | null): number {
+  if (watchCount > 0 || progress === null) return 1;
+  const clamped = Math.min(1, Math.max(0, progress));
+  return 1 + ABANDON_WEIGHT * Math.exp(-ABANDON_DECAY * clamped);
+}
+
 /** Everything the ranking needs to know about one eligible movie. */
 export interface RemovalCandidate {
   id: number;
@@ -106,12 +146,27 @@ export interface RankedCandidate extends RemovalCandidate {
   quality: number;
   qualitySource: 'elo' | 'tmdb' | 'blended' | 'none';
   keepWeight: number;
+  /**
+   * Progress fraction of an unfinished play that counted toward
+   * {@link abandonWeightFor}, or null when none applied — either there is no
+   * recorded partial play, or a completed watch superseded it.
+   */
+  abandonedProgress: number | null;
+  /** The multiplier {@link abandonedProgress} produced; 1 when it did not apply. */
+  abandonWeight: number;
 }
 
 export interface RankingInput {
   candidates: readonly RemovalCandidate[];
   /** TMDB id → ISO acquisition timestamp, from Radarr. */
   acquiredAt: ReadonlyMap<number, string>;
+  /**
+   * Movie id → progress fraction of a currently unfinished play, from
+   * `watchProgressService.progressByMediaId`. Absent entries score no
+   * abandonment. Keyed by internal id (matching `watch_progress.mediaId`),
+   * not tmdbId, unlike `acquiredAt`.
+   */
+  abandonedProgress?: ReadonlyMap<number, number>;
   /** Movies acquired within this many days carry no pressure at all. */
   graceDays: number;
   /** Defaults to {@link DEFAULT_TUNING} when the caller has no stored values. */
@@ -228,12 +283,13 @@ function effectiveAge(candidate: RemovalCandidate, acquired: string | undefined,
  * record of a decision, it is a decoration.
  */
 export function pressureFrom(
-  parts: { ageDays: number; quality: number; keepWeight: number },
+  parts: { ageDays: number; quality: number; keepWeight: number; abandonWeight: number },
   tuning: RotationTuning
 ): number {
   return (
     (Math.pow(parts.ageDays, tuning.ageExponent) *
-      Math.pow(tuning.ratingSpread, 1 - 2 * parts.quality)) /
+      Math.pow(tuning.ratingSpread, 1 - 2 * parts.quality) *
+      parts.abandonWeight) /
     parts.keepWeight
   );
 }
@@ -250,6 +306,7 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
   const tuning = input.tuning ?? DEFAULT_TUNING;
   const now = (input.now ?? new Date()).getTime();
   const random = input.random ?? Math.random;
+  const abandonedProgress = input.abandonedProgress;
 
   const libraryMean = meanVoteAverage(candidates);
   const sortedElos = candidates
@@ -261,11 +318,16 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
     const age = effectiveAge(candidate, acquiredAt.get(candidate.tmdbId), now);
     const quality = resolveQuality(candidate, sortedElos, libraryMean);
     const keep = keepWeight(candidate.watchCount, tuning);
+    const progress = abandonedProgress?.get(candidate.id) ?? null;
+    const abandon = abandonWeightFor(candidate.watchCount, progress);
     const withinGrace = age.anchor !== 'unknown' && age.days < graceDays;
     const pressure =
       age.anchor === 'unknown' || withinGrace
         ? 0
-        : pressureFrom({ ageDays: age.days, quality: quality.value, keepWeight: keep }, tuning);
+        : pressureFrom(
+            { ageDays: age.days, quality: quality.value, keepWeight: keep, abandonWeight: abandon },
+            tuning
+          );
 
     return {
       ...candidate,
@@ -275,6 +337,8 @@ export function rankForRemoval(input: RankingInput): RankedCandidate[] {
       quality: quality.value,
       qualitySource: quality.source,
       keepWeight: keep,
+      abandonedProgress: abandon === 1 ? null : progress,
+      abandonWeight: abandon,
     };
   });
 

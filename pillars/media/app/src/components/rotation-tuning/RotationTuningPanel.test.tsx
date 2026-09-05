@@ -66,6 +66,8 @@ function ranked(tmdbId: number, title: string, rank: number, pressure: number) {
     quality: 0.3,
     qualitySource: 'blended' as const,
     keepWeight: 1,
+    abandonedProgress: null as number | null,
+    abandonWeight: 1,
   };
 }
 
@@ -157,6 +159,20 @@ describe('RotationTuningPanel', () => {
     expect(doomed).toHaveClass('font-medium');
     expect(screen.getByText('Safe For Now')).not.toHaveClass('font-medium');
     expect(screen.getByText(/would take the first 1/)).toBeInTheDocument();
+  });
+
+  it('shows the abandoned-play component when the ranking recorded one', async () => {
+    rotationSchedulerRemovalPreviewMock.mockResolvedValue(
+      previewPayload({
+        topRanked: [
+          { ...ranked(1, 'Doomed', 1, 918), abandonedProgress: 0.08, abandonWeight: 4.2 },
+        ],
+      })
+    );
+
+    renderPanel();
+
+    expect(await screen.findByText(/abandoned at 8%/)).toBeInTheDocument();
   });
 
   it('re-previews with the edited value without saving it', async () => {

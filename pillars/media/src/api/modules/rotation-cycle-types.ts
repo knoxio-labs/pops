@@ -95,6 +95,8 @@ export type PlannedRemoval = {
   quality: number;
   qualitySource: RankedCandidate['qualitySource'];
   keepWeight: number;
+  abandonedProgress: number | null;
+  abandonWeight: number;
 };
 
 const OVERSHOOT_TOLERANCE = 1.5;

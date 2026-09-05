@@ -47,6 +47,14 @@ describe('reasonFor', () => {
     expect(reasonFor({ ...SCORED, watchCount: 1 })).toContain('watched once');
   });
 
+  it('names the abandoned-play component when one was recorded', () => {
+    expect(reasonFor({ ...SCORED, abandonedProgress: 0.08 })).toContain('abandoned at 8%');
+  });
+
+  it('says nothing about abandonment when none applied', () => {
+    expect(reasonFor({ ...SCORED, abandonedProgress: null })).not.toContain('abandoned');
+  });
+
   it('has nothing to say about an entry written before the scored engine', () => {
     expect(reasonFor({ tmdbId: 11, title: 'Ancient' })).toBeNull();
   });

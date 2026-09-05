@@ -5692,6 +5692,8 @@ export type RotationSchedulerRemovalPreviewResponses = {
         leavingGb: number;
         removableCount: number;
         skippedForOvershoot: Array<{
+          abandonWeight: number;
+          abandonedProgress: number | null;
           ageAnchor: 'acquired' | 'watched' | 'unknown';
           ageDays: number;
           id: number;
@@ -5706,6 +5708,8 @@ export type RotationSchedulerRemovalPreviewResponses = {
           watchCount: number;
         }>;
         toMark: Array<{
+          abandonWeight: number;
+          abandonedProgress: number | null;
           ageAnchor: 'acquired' | 'watched' | 'unknown';
           ageDays: number;
           id: number;
@@ -5720,6 +5724,8 @@ export type RotationSchedulerRemovalPreviewResponses = {
           watchCount: number;
         }>;
         topRanked: Array<{
+          abandonWeight: number;
+          abandonedProgress: number | null;
           ageAnchor: 'acquired' | 'watched' | 'unknown';
           ageDays: number;
           id: number;

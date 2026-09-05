@@ -47,6 +47,9 @@ export function reasonFor(movie: MarkedMovie): string | null {
     );
   }
   parts.push(movie.watchCount === 1 ? 'watched once' : `watched ${movie.watchCount ?? 0}×`);
+  if (movie.abandonedProgress !== undefined && movie.abandonedProgress !== null) {
+    parts.push(`abandoned at ${Math.round(movie.abandonedProgress * 100)}%`);
+  }
   if (movie.quality !== undefined) parts.push(`quality ${movie.quality.toFixed(2)}`);
   parts.push(`pressure ${movie.pressure.toFixed(0)}`);
   return parts.join(' · ');
