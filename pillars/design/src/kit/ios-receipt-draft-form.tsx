@@ -2,7 +2,7 @@ import { PopsDivider, PopsTextField } from '@/frames/ios/fields';
 import { PopsButton } from '@/frames/ios/primitives';
 import { itemCountLine } from '@/kit/ios-receipt-copy';
 import { DraftLineRow, DraftSection, ReconciliationNote } from '@/kit/ios-receipt-draft-parts';
-import { adjustmentRows, lineProblem } from '@/kit/ios-receipt-draft-rules';
+import { adjustmentRows, lineProblem, stated } from '@/kit/ios-receipt-draft-rules';
 import { TriangleAlert } from 'lucide-react';
 
 import type { ExtractedReceipt } from '@/fixtures/receipts';
@@ -129,9 +129,9 @@ export function Totals({
           type="ios-amount"
           align="right"
           note={
-            reading.total === undefined
-              ? { kind: 'problem', text: 'A total is needed before this can be saved.' }
-              : undefined
+            stated(reading.total)
+              ? undefined
+              : { kind: 'problem', text: 'A total is needed before this can be saved.' }
           }
         />
         <ReconciliationNote state={reconciliation} suffix={delta} />

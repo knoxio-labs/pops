@@ -7,8 +7,14 @@ import type { ExtractedReceipt, ReceiptLine } from '@/fixtures/receipts';
  * to make impossible.
  */
 
-/** An extractor that read nothing gives a blank string, not an absent field. */
-const stated = (value: string | undefined): value is string =>
+/**
+ * Whether the extractor actually read a value. An extractor that read nothing
+ * gives a blank string, not an absent field, so every rule and every note in
+ * this feature has to ask the question the same way — a note that fires on
+ * `undefined` beside a rule that also catches `'   '` blocks a save without
+ * saying why.
+ */
+export const stated = (value: string | undefined): value is string =>
   value !== undefined && value.trim() !== '';
 
 export interface AdjustmentRow {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adjustmentRows, isSaveable, lineProblem } from './ios-receipt-draft-rules';
+import { adjustmentRows, isSaveable, lineProblem, stated } from './ios-receipt-draft-rules';
 
 import type { ExtractedReceipt } from '@/fixtures/receipts';
 
@@ -67,5 +67,14 @@ describe('saveable', () => {
   it('is unmoved by a blank row somebody just added', () => {
     const lines = [...base.lines, { id: 'l2', description: '', amount: '' }];
     expect(isSaveable({ ...base, lines })).toBe(true);
+  });
+});
+
+describe('stated', () => {
+  it('is the one question every rule and every note asks', () => {
+    expect(stated(undefined)).toBe(false);
+    expect(stated('')).toBe(false);
+    expect(stated('   ')).toBe(false);
+    expect(stated('0.00')).toBe(true);
   });
 });
