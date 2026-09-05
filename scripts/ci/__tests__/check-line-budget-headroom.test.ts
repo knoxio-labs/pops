@@ -372,15 +372,23 @@ describe('what a PASSING run says (POPS-3026)', () => {
    * Runs the real binary against a planted repo. `spawnSync` rather than
    * `execFileSync` so a non-zero exit is a value to assert on, not a throw
    * whose payload has to be cast back into shape.
+   *
+   * The inherited `GITHUB_STEP_SUMMARY` is dropped unless a case sets one:
+   * a GitHub runner always exports it, and the guard writes to whatever it is
+   * handed, so these fixture runs would otherwise append `atCap.ts`/`roomy.ts`
+   * tables to the REAL job's summary.
    */
   function runGuard(
     repo: string,
     extraEnv: NodeJS.ProcessEnv = {}
   ): { status: number | null; stdout: string; stderr: string } {
+    const env = gitEnv();
+    delete env['GITHUB_STEP_SUMMARY'];
+    Object.assign(env, extraEnv);
     const result = spawnSync('node', [script, '--base', 'main', '--repo', repo], {
       cwd: repoRoot,
       encoding: 'utf8',
-      env: { ...gitEnv(), ...extraEnv },
+      env,
     });
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   }
@@ -432,6 +440,25 @@ describe('what a PASSING run says (POPS-3026)', () => {
     const written = readFileSync(summary, 'utf8');
     expect(written).toContain('| `atCap.ts` | 200 | 200 | 0 | WARN |');
     expect(written).toContain('| `roomy.ts` |');
+  });
+
+  it('does not append fixture tables to a step summary it merely inherited from the runner', () => {
+    // These cases spawn the real binary, and on a GitHub runner
+    // GITHUB_STEP_SUMMARY is always exported. Inheriting it would put
+    // `atCap.ts` and `roomy.ts` rows into the summary of the job running the
+    // tests.
+    const dir = repoAtExactlyTheCap();
+    const inherited = join(dir, 'runner-summary.md');
+    writeFileSync(inherited, '');
+    const previous = process.env.GITHUB_STEP_SUMMARY;
+    process.env.GITHUB_STEP_SUMMARY = inherited;
+    try {
+      expect(runGuard(dir).status).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_STEP_SUMMARY;
+      else process.env.GITHUB_STEP_SUMMARY = previous;
+    }
+    expect(readFileSync(inherited, 'utf8')).toBe('');
   });
 
   it('fails when a step summary it was handed cannot be written, even with nothing over cap', () => {
