@@ -194,7 +194,7 @@ export async function importAnzPdfStatements(
   return {
     ok: true,
     statement: {
-      plan: planAnzPdfImport(transactions, coverage.known ? coverage.interval : undefined),
+      plan: planAnzPdfImport(transactions, coverage.known ? (coverage.interval ?? null) : null),
       unrecognisedRows,
       coverageChecked: coverage.known,
       pageCount,

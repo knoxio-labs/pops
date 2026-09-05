@@ -211,20 +211,22 @@ export interface AnzPdfImportPlan {
   refusal?: ImportRefusal;
 }
 
-function isCovered(date: string, coverage: DateInterval | undefined): boolean {
-  return coverage !== undefined && date >= coverage.from && date <= coverage.to;
+function isCovered(date: string, coverage: DateInterval | null): boolean {
+  return coverage !== null && date >= coverage.from && date <= coverage.to;
 }
 
 /**
  * Split parsed statement rows into what may be imported and what the account
  * already covers from another source.
  *
- * `coverage` is the inclusive span of the account's existing transactions;
- * omitting it means the account has none and every row is importable.
+ * `coverage` is the inclusive span of the account's existing transactions,
+ * and it is required (POPS-2504): `null` says out loud that the account has
+ * none and every row is importable. A caller that has not asked cannot spell
+ * that the same way as a caller that asked and found nothing.
  */
 export function planAnzPdfImport(
   transactions: readonly ParsedTransaction[],
-  coverage?: DateInterval
+  coverage: DateInterval | null
 ): AnzPdfImportPlan {
   const importable: ParsedTransaction[] = [];
   const withheld: WithheldTransaction[] = [];
