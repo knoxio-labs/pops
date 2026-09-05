@@ -79,14 +79,20 @@ describe('RuleCreationStep', () => {
     expect(mockNextStep).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
     expect(call.changeSet.ops[0].op).toBe('add');
-    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('woolworths');
+    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('WOOLWORTHS SYDNEY');
     expect(call.changeSet.ops[0].data.tags).toEqual(['Groceries']);
   });
 
   it('unchecking a proposal excludes it from rule creation', () => {
     storeState.confirmedTransactions = [
       makeTxn({ entityId: 'e1', entityName: 'Woolworths' }),
-      makeTxn({ entityId: 'e2', entityName: 'Ampol', tags: ['Charging', 'EV'], checksum: 'x2' }),
+      makeTxn({
+        entityId: 'e2',
+        entityName: 'Ampol',
+        description: 'AMPOL FOODARY 4521 ROZELLE',
+        tags: ['Charging', 'EV'],
+        checksum: 'x2',
+      }),
     ];
     render(<RuleCreationStep />);
     const checkboxes = screen.getAllByRole('checkbox');
@@ -94,7 +100,7 @@ describe('RuleCreationStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
-    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('ampol');
+    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('AMPOL FOODARY ROZELLE');
   });
 
   it('skip advances without creating rules', () => {
