@@ -111,6 +111,13 @@ export {
 
 export { getAccountBalanceBefore } from './services/account-balance.js';
 
+export * as accountCheckpointsService from './services/account-checkpoints.js';
+
+export type {
+  AccountCheckpointRow,
+  InsertCheckpointInput,
+} from './services/account-checkpoints.js';
+
 export { resolveAccountIdByName, resolveImportAccountId } from './services/account-lookup.js';
 
 export * as giftCardDetailsService from './services/gift-card-details.js';

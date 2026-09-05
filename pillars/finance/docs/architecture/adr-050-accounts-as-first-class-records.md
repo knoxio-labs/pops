@@ -50,6 +50,15 @@ by/owes), `created_at`, `updated_at`. There is no opening-balance column of
 any kind — an account's balance is always the sum of the transactions it
 carries, never a stored number that can drift from that sum.
 
+> **Amended by [ADR-051](./adr-051-balances-are-checkpoint-anchored.md)
+> (2026-09-05).** That holds only for an account whose history is complete
+> from inception, which none of ours are; summing a partial import gives net
+> flow, not a balance. A balance is now the nearest `account_checkpoints` row
+> plus the transactions since it. `accounts` still has no balance column of
+> any kind, so the drift this paragraph refuses is still refused — the anchor
+> lives in its own append-only table, and the earliest checkpoint is the
+> opening balance.
+
 `kind` is a discriminator only. It is a plain `text` column with no SQL CHECK
 constraint (the same convention `transactions.type` already uses — see
 migration `0065`'s header) validated against `ACCOUNT_KINDS`
