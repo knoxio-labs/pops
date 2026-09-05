@@ -25,7 +25,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   findBuilders,
@@ -449,8 +449,22 @@ describe('listSourceFiles refuses to drop what it cannot classify', () => {
 });
 
 describe('discovery against the real repo', () => {
+  // scanPillars(repoRoot) reads and classifies every source file under
+  // pillars/ and libs/ (~4300 files) — no cache, cost scales with the size of
+  // the tree. Sharing that single scan across the five tests below (instead
+  // of each test re-running its own, as this file did before POPS-3017)
+  // keeps the assertions fast; the scan itself still needs a budget wider
+  // than vitest's 5000ms default: individual re-runs were clocked up to
+  // 1373ms each under a load average of ~416, and five of those in one test
+  // file adds up under concurrent load from sibling CI jobs or parallel
+  // worktrees.
+  let scanned: ReturnType<typeof scanPillars>;
+  beforeAll(() => {
+    scanned = scanPillars(repoRoot);
+  }, 30_000);
+
   it('finds every manifest builder in the tree, attributed to the right pillar', () => {
-    const { files, read } = scanPillars(repoRoot);
+    const { files, read } = scanned;
     const found = findBuilders(files, read).map((entry) => `${entry.pillar}:${entry.builder}`);
 
     // Exact, and keyed by pillar rather than by name alone: deduping names
@@ -465,7 +479,7 @@ describe('discovery against the real repo', () => {
   });
 
   it('walks the whole pillar tree, not a fraction of it', () => {
-    const { files, unclassified } = scanPillars(repoRoot);
+    const { files, unclassified } = scanned;
 
     // The real count is ~4300. A floor of 500 would pass over an 88% loss.
     expect(files.length).toBeGreaterThan(3000);
@@ -473,7 +487,7 @@ describe('discovery against the real repo', () => {
   });
 
   it('finds every pillar that registers, and covers all of them', () => {
-    const { files, read } = scanPillars(repoRoot);
+    const { files, read } = scanned;
     const registrars = findRegistrars(files, read);
 
     expect(registrars.length).toBeGreaterThanOrEqual(12);
@@ -483,7 +497,7 @@ describe('discovery against the real repo', () => {
   });
 
   it('skips dist/ — a stale compiled copy must not stand in for source', () => {
-    expect(scanPillars(repoRoot).files.some((file) => file.includes('/dist/'))).toBe(false);
+    expect(scanned.files.some((file) => file.includes('/dist/'))).toBe(false);
   });
 
   // The Rust pillar hand-writes a ManifestPayload-shaped value and registers
@@ -497,7 +511,7 @@ describe('discovery against the real repo', () => {
   // adds an unrelated codegen script to the pillar, reporting a blind spot
   // that had not in fact been closed.
   it('is blind to the Rust contacts pillar, in both derived sets, as its header admits', () => {
-    const { files, read } = scanPillars(repoRoot);
+    const { files, read } = scanned;
 
     expect(existsSync(join(repoRoot, 'pillars', 'contacts', 'src', 'manifest.rs'))).toBe(true);
     expect(findRegistrars(files, read)).not.toContain('contacts');
@@ -510,9 +524,19 @@ describe('the guard CLI', () => {
     expect(() => execFileSync('node', [guard, '--self-test'], { stdio: 'pipe' })).not.toThrow();
   });
 
-  it('passes against the real tree', () => {
-    expect(() => execFileSync('node', [guard], { stdio: 'pipe' })).not.toThrow();
-  });
+  // Unlike --self-test (synthetic sources, no repo walk), the default run
+  // shells a child `node` process that itself calls scanPillars(repoRoot) —
+  // the same whole-tree read as the block above, paid again inside the
+  // subprocess. Clocked at 1085ms under a load average of ~416 (POPS-3017).
+  const REAL_TREE_CLI_TIMEOUT_MS = 30_000;
+
+  it(
+    'passes against the real tree',
+    () => {
+      expect(() => execFileSync('node', [guard], { stdio: 'pipe' })).not.toThrow();
+    },
+    REAL_TREE_CLI_TIMEOUT_MS
+  );
 
   it('exits 2 on --help', () => {
     try {
