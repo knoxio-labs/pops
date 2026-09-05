@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { CannotCookUncompiledRecipe } from '../errors.js';
 import { openFoodDb } from '../open-food-db.js';
-import { batches, ingredientVariants, recipeVersions } from '../schema.js';
+import { batches, ingredientVariants, recipeRuns, recipeVersions } from '../schema.js';
 import { consumeForRun, type ConsumptionNeed } from '../services/batches.js';
 import { createIngredient } from '../services/ingredients.js';
 import { type FoodDb } from '../services/ingredients.js';
@@ -377,6 +377,54 @@ describe('batch model invariants', () => {
         },
       });
       expect(result.yieldedBatch?.expiresAt).toBe('2027-01-01T00:00:00.000Z');
+    });
+
+    it('preserves an existing rating and notes when re-completed without resupplying them (POPS-3027)', () => {
+      const { recipeVersionId } = setupForCook(db);
+      const run = createRun(db, { recipeVersionId });
+      markRunComplete(db, run.id, { rating: 4, notes: 'Bit salty' });
+
+      markRunComplete(db, run.id, {});
+
+      const stored = db
+        .select({ rating: recipeRuns.rating, notes: recipeRuns.notes })
+        .from(recipeRuns)
+        .where(eq(recipeRuns.id, run.id))
+        .all()[0];
+      expect(stored?.rating).toBe(4);
+      expect(stored?.notes).toBe('Bit salty');
+    });
+
+    it('sets a fresh rating and notes on top of existing ones when resupplied (POPS-3027)', () => {
+      const { recipeVersionId } = setupForCook(db);
+      const run = createRun(db, { recipeVersionId });
+      markRunComplete(db, run.id, { rating: 4, notes: 'Bit salty' });
+
+      markRunComplete(db, run.id, { rating: 5, notes: 'Actually great reheated' });
+
+      const stored = db
+        .select({ rating: recipeRuns.rating, notes: recipeRuns.notes })
+        .from(recipeRuns)
+        .where(eq(recipeRuns.id, run.id))
+        .all()[0];
+      expect(stored?.rating).toBe(5);
+      expect(stored?.notes).toBe('Actually great reheated');
+    });
+
+    it('clears an existing rating and notes when explicitly passed null (POPS-3027)', () => {
+      const { recipeVersionId } = setupForCook(db);
+      const run = createRun(db, { recipeVersionId });
+      markRunComplete(db, run.id, { rating: 4, notes: 'Bit salty' });
+
+      markRunComplete(db, run.id, { rating: null, notes: null });
+
+      const stored = db
+        .select({ rating: recipeRuns.rating, notes: recipeRuns.notes })
+        .from(recipeRuns)
+        .where(eq(recipeRuns.id, run.id))
+        .all()[0];
+      expect(stored?.rating).toBeNull();
+      expect(stored?.notes).toBeNull();
     });
   });
 });
