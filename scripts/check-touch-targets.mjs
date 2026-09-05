@@ -143,6 +143,23 @@
  * "flag it", which a baseline absorbs for existing code and a human resolves
  * for new code by either inlining a visible class or using Button.
  *
+ * `<Button asChild><a/></Button>` (Radix's `Slot` pattern) is a special case
+ * of that same rule, not an exception to it: the `Button`'s own sizing
+ * classes are merged onto the rendered `<a>`/`<button>` at render time, so
+ * they never appear in that element's own opening tag no matter how the
+ * variant is sized. {@link isSizedByAsChildAncestor} does a BOUNDED backward
+ * scan (POPS-2579) — quote/brace-aware, capped at
+ * {@link ASCHILD_LOOKBACK} characters — for the tag immediately enclosing the
+ * raw element, and treats it as sized only when that tag both carries a
+ * truthy `asChild` prop AND is one of {@link SIZING_ASCHILD_WRAPPERS}, the
+ * primitives that have a 44px target to merge. The prop on its own proves
+ * nothing: `TooltipTrigger`, `CollapsibleTrigger` and `Badge` all use
+ * `asChild` and none of them sizes anything, so `<Badge asChild><button/>`
+ * stays a violation. Only the DIRECT wrapper counts: a raw element nested
+ * several levels inside such a wrapper, or one that is merely a later sibling
+ * after the wrapper's child already closed, still gets evaluated as unsized
+ * on its own attributes exactly as before.
+ *
  * Scope: `pillars/*\/app/src` and `pillars/shell/src` — the consumer surfaces
  * named in the ticket. `libs/ui` is deliberately NOT scanned: that is where
  * the primitives live, Chip's remove button included, and it already carries
@@ -1311,6 +1328,166 @@ function extractOpeningTag(source, startIndex) {
 }
 
 /**
+ * How far back {@link enclosingOpeningTag} scans for the `<` that opens the
+ * tag immediately enclosing a raw element, before giving up. Bounds the walk
+ * so a malformed or unusually deep file cannot turn one match into an
+ * unbounded scan of the whole source — the ticket's "bounded backward scan."
+ */
+const ASCHILD_LOOKBACK = 4000;
+
+/**
+ * The primitives whose own classes actually carry a 44px tap target, so that
+ * merging them onto a child through Radix's `Slot` genuinely sizes it.
+ *
+ * `asChild` alone proves nothing (POPS-2579). It says "render my child
+ * instead of my own element and merge my props onto it" — and most wrappers
+ * that use it, `TooltipTrigger`, `CollapsibleTrigger`, `Badge`, have no
+ * sizing of their own to merge. A `<Badge asChild><button/></Badge>` is a
+ * small pill wrapped around a raw button and is exactly the violation this
+ * gate exists to catch, so trusting the prop rather than the component would
+ * widen the blind spot instead of closing it.
+ *
+ * This is the same set the file header names as enforcing WCAG 2.5.5 for
+ * every component it wraps. A wrapper outside it leaves its child to be
+ * judged on the child's own attributes, unchanged.
+ */
+const SIZING_ASCHILD_WRAPPERS = new Set([
+  'Button',
+  'Checkbox',
+  'RadioGroupItem',
+  'Switch',
+  'TabsTrigger',
+]);
+
+/**
+ * The component name a JSX opening tag opens — `Button` for `<Button asChild>`
+ * — or `null` when the tag opens a lowercase intrinsic element such as
+ * `<div>`, which by definition carries none of the primitive sizing this
+ * scanner trusts.
+ * @param {string} tagText
+ * @returns {string | null}
+ */
+function openingTagComponentName(tagText) {
+  const match = /^<\s*([A-Z][A-Za-z0-9_]*)/.exec(tagText);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Does `tagText` — one JSX opening tag's own text, as returned by
+ * {@link extractOpeningTag}/{@link enclosingOpeningTag} — carry a truthy
+ * `asChild` prop? Bare `asChild` and `asChild={true}` both count.
+ * `asChild={false}` — the one shape the Radix `Slot` pattern itself reads as
+ * "render normally, do not merge onto a child" — deliberately does NOT: ANY
+ * other dynamic value (`asChild={isCompact}`) also does not count, which errs
+ * toward still flagging the child rather than trusting an expression this
+ * text scanner cannot evaluate — the same fail-closed direction the rest of
+ * this file takes for a shape it cannot prove.
+ * @param {string} tagText
+ * @returns {boolean}
+ */
+function hasTruthyAsChild(tagText) {
+  return /(?<![\w-])asChild(?:\s*=\s*\{\s*true\s*\})?(?=[\s/>])/.test(tagText);
+}
+
+/**
+ * The nearest JSX opening tag that immediately encloses the raw element
+ * starting at `childIndex` (the index of its `<`) — i.e. the raw element is
+ * that tag's rendered child, not a later sibling or a text node. Returns
+ * `null` when the character immediately before `childIndex` (skipping only
+ * whitespace, since formatted JSX puts a child on its own indented line) is
+ * anything else:
+ *
+ * - a self-closing tag's `/>` — that tag has no children at all;
+ * - a closing tag `</X>` — the PRECEDING sibling just closed, so this element
+ *   is a sibling of whatever wraps it, not that wrapper's child;
+ * - text, an expression boundary, or nothing (start of file).
+ *
+ * This is the bounded backward scan POPS-2579 asks for: quote- and
+ * brace-aware (so a `>` inside an attribute expression like `onClick={() =>
+ * x > 5}` cannot be mistaken for the tag's real close), capped at
+ * {@link ASCHILD_LOOKBACK} characters. It answers ONLY "what tag immediately
+ * encloses this element" — whether that tag actually carries `asChild` is
+ * {@link hasTruthyAsChild}'s job, kept separate so each stays simple.
+ * @param {string} source
+ * @param {number} childIndex
+ * @returns {string | null}
+ */
+function enclosingOpeningTag(source, childIndex) {
+  let i = childIndex - 1;
+  while (i >= 0 && /\s/.test(source[i])) i--;
+  if (i < 0 || source[i] !== '>') return null;
+  if (source[i - 1] === '/') return null;
+  const closeIndex = i;
+  const lowerBound = Math.max(0, closeIndex - ASCHILD_LOOKBACK);
+  let j = closeIndex - 1;
+  let braceDepth = 0;
+  /** @type {string | null} */
+  let quote = null;
+  let openIndex = -1;
+  while (j >= lowerBound) {
+    const ch = source[j];
+    if (quote) {
+      if (ch === quote && source[j - 1] !== '\\') quote = null;
+      j--;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch;
+      j--;
+      continue;
+    }
+    if (braceDepth === 0 && ch === '<') {
+      openIndex = j;
+      break;
+    }
+    if (ch === '}') {
+      braceDepth++;
+      j--;
+      continue;
+    }
+    if (ch === '{') {
+      braceDepth = Math.max(0, braceDepth - 1);
+      j--;
+      continue;
+    }
+    j--;
+  }
+  if (openIndex === -1) return null;
+  const tagText = source.slice(openIndex, closeIndex + 1);
+  if (tagText.startsWith('</')) return null;
+  return tagText;
+}
+
+/**
+ * Is this raw `<button`/`<a` element sized by an enclosing `asChild` wrapper
+ * (POPS-2579) — the Radix `Slot` pattern where `<Button asChild><a/></Button>`
+ * merges the `Button`'s own classes onto the rendered `<a>` at render time, so
+ * the sizing this scanner looks for on the `<a>`'s own opening tag genuinely
+ * lives one level up instead? Three things must all hold: there is an
+ * enclosing tag ({@link enclosingOpeningTag}), it carries the prop
+ * ({@link hasTruthyAsChild}), and it is a primitive that has 44px sizing to
+ * merge in the first place ({@link SIZING_ASCHILD_WRAPPERS}). The third is
+ * the one that is easy to drop and must not be: `asChild` on a
+ * `TooltipTrigger`, a `CollapsibleTrigger` or a `Badge` merges no sizing at
+ * all, so trusting the prop alone would silently pass the very shape — a
+ * small pill wrapped around a raw button — this gate exists to catch.
+ *
+ * A raw element merely nested somewhere inside such a wrapper several levels
+ * up, rather than being its immediate child, still fails: only the direct
+ * wrapper counts, mirroring how this scanner already refuses evidence from
+ * anything outside an element's own opening tag.
+ * @param {string} source
+ * @param {number} childIndex
+ * @returns {boolean}
+ */
+function isSizedByAsChildAncestor(source, childIndex) {
+  const enclosing = enclosingOpeningTag(source, childIndex);
+  if (enclosing === null || !hasTruthyAsChild(enclosing)) return false;
+  const wrapper = openingTagComponentName(enclosing);
+  return wrapper !== null && SIZING_ASCHILD_WRAPPERS.has(wrapper);
+}
+
+/**
  * @typedef {object} Violation
  * @property {string} file
  * @property {number} line
@@ -1356,7 +1533,7 @@ export function findViolations(relPath, source) {
     // element — `RecipeStepBody.tsx`-adjacent `.ts` helpers do this often.
     if (ownLine.startsWith('//') || ownLine.startsWith('*') || ownLine.startsWith('/*')) continue;
     const tagText = extractOpeningTag(source, index);
-    if (!isCompliant(tagText)) {
+    if (!isCompliant(tagText) && !isSizedByAsChildAncestor(source, index)) {
       violations.push({
         file: relPath,
         line: lineNo + 1,
@@ -1714,6 +1891,24 @@ function selfTest() {
     // were misread as 0 and combined the wrong way — an unrelated axis
     // shrunk by a real max-sm: utility must still be caught.
     '<button className="h-11 w-11 max-sm:h-6 max-sm:w-6 max-sm:min-w-0" onClick={onClick}>Row</button>',
+    // POPS-2579: asChild={false} is the one shape the Slot pattern itself
+    // reads as "render normally" — the child's own attributes are what
+    // renders, so an unsized <a> here must still be caught.
+    '<Button asChild={false}><a href="/x">link</a></Button>',
+    // POPS-2579: the <a> is a SIBLING of the asChild wrapper, not its child —
+    // the wrapper's own </Button> closes immediately before it. An ancestor
+    // several levels up (or a sibling after it) must not launder this one.
+    '<Button asChild><span /></Button>',
+    '<a href="/x" className="text-sm underline">sibling link</a>',
+    // POPS-2579: `asChild` on its own proves nothing. `TooltipTrigger` has no
+    // sizing to merge onto its child, so the raw button inside it is exactly
+    // as unsized as it looks.
+    '<TooltipTrigger asChild>',
+    '<button type="button" className="underline">more</button>',
+    // Same for `Badge` — a small pill wrapped around a raw button is the
+    // shape this gate exists to catch, not one it should launder.
+    '<Badge asChild className="cursor-pointer">',
+    '<button type="button" aria-pressed={isOn}>filter</button>',
   ].join('\n');
   const clean = [
     '<button className="size-11" onClick={onClick}><XIcon /></button>',
@@ -1776,6 +1971,16 @@ function selfTest() {
     // POPS-2279: a scoped ceiling still >= 44px applied to a cascaded
     // reading (not a substituted one) does not shrink anything.
     '<button className="h-11 w-11 sm:max-h-96 sm:max-w-96" onClick={onClick}>Row</button>',
+    // POPS-2579: the gap this ticket closes — sizing on a `Button asChild`
+    // wrapper is merged onto its rendered `<a>` child at render time, so the
+    // `<a>`'s own opening tag carries none of it. Same-line form.
+    '<Button asChild><a href="/x">inline</a></Button>',
+    // POPS-2579: the formatted, multi-line form both real fixes actually use
+    // (DocumentList.tsx, PlexConnectPanel.tsx) — the wrapper's attributes on
+    // one line, the unsized <a> on the next.
+    '<Button variant="outline" size="sm" asChild>',
+    '<a href="/x" download aria-label="Download">Download</a>',
+    '</Button>',
   ].join('\n');
 
   const dirtyHits = findViolations('pillars/x/app/src/A.tsx', dirty);
@@ -1907,6 +2112,14 @@ function selfTest() {
     ),
     'reports a real max-sm: shrink even alongside an unrelated scoped min-w-0 floor in the same regime (POPS-2282 regression control)':
       dirtyHits.some((v) => v.line === 55),
+    'reports an unsized <a> inside asChild={false} — the one shape the Slot pattern renders normally, not merged (POPS-2579)':
+      dirtyHits.some((v) => v.line === 56),
+    'reports an unsized <a> that is a SIBLING after an asChild wrapper closes, not its child (POPS-2579)':
+      dirtyHits.some((v) => v.line === 58),
+    'reports an unsized <button> under a TooltipTrigger asChild, which merges no sizing (POPS-2579)':
+      dirtyHits.some((v) => v.line === 60),
+    'reports an unsized <button> under a Badge asChild — a small pill is not a 44px target (POPS-2579)':
+      dirtyHits.some((v) => v.line === 62),
     'stays silent on a button sized via size-11': cleanHits.every(
       (v) => v.line !== 1 // line 1 of `clean` carries size-11
     ),
@@ -1954,6 +2167,10 @@ function selfTest() {
       !cleanHits.some((v) => v.line === 20),
     'stays silent on a scoped ceiling applied to a CASCADED reading (not substituted for it) that is still >= 44px (POPS-2279)':
       !cleanHits.some((v) => v.line === 21),
+    'stays silent on an unsized <a> that is the direct child of a same-line asChild wrapper (POPS-2579)':
+      !cleanHits.some((v) => v.line === 22),
+    'stays silent on the formatted multi-line asChild form both real fixes use — wrapper attrs on one line, the unsized <a> on the next (POPS-2579)':
+      !cleanHits.some((v) => v.line === 24),
     'a story is exempt': !isScannable('pillars/food/app/src/pages/X.stories.tsx'),
     'a test is exempt': !isScannable('pillars/food/app/src/pages/X.test.tsx'),
     'a __tests__ file is exempt': !isScannable('pillars/food/app/src/__tests__/x.tsx'),
