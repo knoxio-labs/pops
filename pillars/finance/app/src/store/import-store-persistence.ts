@@ -77,14 +77,20 @@ export function createImportPersistStorage(): PersistStorage<PersistedImportStat
 }
 
 /**
- * A run is worth resuming when it is uncommitted, past step 1, and has parsed
- * CSV rows — `rows`, not `parsedTransactions`, so a run parked at step 2 with
- * no column map yet still qualifies.
+ * A run is worth resuming when it is uncommitted, past step 1, and holds
+ * either raw `rows` (parked at step 2, before mapping) or `parsedTransactions`
+ * (mapping applied — `setParsedTransactions` clears `rows` via
+ * `downstreamReset`, so `rows` alone would misclassify every later step as
+ * dead).
  */
 export function hasResumableImport(
-  state: Pick<ImportStore, 'commitResult' | 'currentStep' | 'rows'>
+  state: Pick<ImportStore, 'commitResult' | 'currentStep' | 'rows' | 'parsedTransactions'>
 ): boolean {
-  return state.commitResult === null && state.currentStep > 1 && state.rows.length > 0;
+  return (
+    state.commitResult === null &&
+    state.currentStep > 1 &&
+    (state.rows.length > 0 || state.parsedTransactions.length > 0)
+  );
 }
 
 function hasCurrentProcessedResults(state: PersistedImportState): boolean {

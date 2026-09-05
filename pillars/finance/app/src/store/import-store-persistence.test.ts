@@ -106,6 +106,33 @@ describe('hasResumableImport', () => {
   it('is true deep in the wizard while uncommitted', () => {
     expect(hasResumableImport(makePersisted({ currentStep: 7, rows: [{ A: '1' }] }))).toBe(true);
   });
+
+  it('is true once parsedTransactions holds data even with no rows', () => {
+    expect(
+      hasResumableImport(
+        makePersisted({ currentStep: 3, rows: [], parsedTransactions: [makeParsed('a')] })
+      )
+    ).toBe(true);
+  });
+
+  it('offers a resume at every step of a real wizard run, including after setParsedTransactions clears rows', () => {
+    const store = useImportStore.getState();
+
+    store.setRows([{ A: '1' }]);
+    store.goToStep(2);
+    expect(hasResumableImport(useImportStore.getState())).toBe(true);
+
+    store.setParsedTransactions([makeParsed('a')]);
+    store.goToStep(3);
+    const afterMapping = useImportStore.getState();
+    expect(afterMapping.rows).toEqual([]);
+    expect(afterMapping.parsedTransactions.length).toBeGreaterThan(0);
+    expect(hasResumableImport(afterMapping)).toBe(true);
+
+    store.setConfirmedTransactions([makeParsed('a')]);
+    store.goToStep(7);
+    expect(hasResumableImport(useImportStore.getState())).toBe(true);
+  });
 });
 
 describe('clampResumeStep', () => {
