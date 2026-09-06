@@ -32,6 +32,7 @@ type ContactsEntity = {
   id: string;
   name: string;
   type: string;
+  aliases: string[];
   avatarAssetId: string | null;
 };
 
@@ -79,10 +80,21 @@ async function pageEntities(search: string): Promise<ContactsEntity[]> {
   );
 }
 
+/**
+ * Resolve a single contacts entity by exact (case-insensitive) name OR
+ * alias, mirroring `fetchByExactName` in `src/api/contacts/client.ts`: an
+ * alias counts as the entity's name, so a bank whose name matches only an
+ * existing entity's alias must resolve to that entity rather than being
+ * read as unknown and migrated into a duplicate. A name match still wins
+ * over an alias match.
+ */
 export async function findEntityByName(name: string): Promise<EntityMatch | null> {
   const matches = await pageEntities(name);
   const target = name.toLowerCase();
-  const found = matches.find((e) => e.name.toLowerCase() === target);
+  const found =
+    matches.find((e) => e.name.toLowerCase() === target) ??
+    matches.find((e) => e.aliases.some((alias) => alias.toLowerCase() === target)) ??
+    null;
   return found ? toEntityMatch(found) : null;
 }
 

@@ -232,6 +232,51 @@ describe('migrateInstitutionsToEntities', () => {
     });
   });
 
+  it('matches an existing bank entity found only via an alias, not its primary name, instead of creating a duplicate', async () => {
+    // The fake's `findEntityByName` is keyed by whatever string the real
+    // contacts `findEntityByName` would have resolved the search to — here
+    // standing in for an entity named "Commonwealth Bank" carrying "CBA" as
+    // an alias, so a lookup for "CBA" resolves to it without ever matching
+    // its primary `name` (POPS-3062 review finding: `findEntityByName` must
+    // check aliases, not just `name`).
+    const { db, contacts, deps } = setup();
+    contacts.seedNamed('cba', {
+      id: 'existing-bank',
+      type: 'bank',
+      avatarAssetId: null,
+    });
+    createInstitution(db, { name: 'CBA', colour: '#ffcc00' });
+
+    const summary = await migrateInstitutionsToEntities(deps);
+
+    expect(summary).toMatchObject({ created: 0, matched: 1, collisions: 0 });
+    expect(contacts.created).toEqual([]);
+  });
+
+  it('treats a non-bank entity found only via an alias as a collision, not a silent merge', async () => {
+    const { db, contacts, deps } = setup();
+    contacts.seedNamed('westpac', {
+      id: 'person-1',
+      type: 'person',
+      avatarAssetId: null,
+    });
+    const institution = createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
+
+    const summary = await migrateInstitutionsToEntities(deps);
+
+    expect(summary).toMatchObject({ created: 0, matched: 0, collisions: 1 });
+    expect(summary.results).toEqual([
+      {
+        institutionId: institution.id,
+        institutionName: 'Westpac',
+        outcome: 'collision',
+        entityId: null,
+        logoUploaded: false,
+      },
+    ]);
+    expect(contacts.created).toEqual([]);
+  });
+
   it('a re-run finds the collision unresolved and reports it again', async () => {
     const { db, contacts, deps } = setup();
     contacts.seedNamed('macquarie', {
