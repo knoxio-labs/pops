@@ -1,0 +1,7 @@
+name: Entity identity layout
+question: Should the entity's poster/avatar/colour compose as a banner-forward
+  profile header, or a compact accent-led header with no reserved poster space?
+status: active
+screen: contacts/entity-details
+variants:
+  compact: Compact, accent-led
