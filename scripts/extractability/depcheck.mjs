@@ -23,6 +23,7 @@ import {
   discoverUnits,
   findPhantomDeps,
   importedPackages,
+  noProofSurfaceReason,
   packageRoot,
   resolveUnit,
   rel,
@@ -49,11 +50,38 @@ function main(argv) {
     return 2;
   }
 
+  // `--all` over a tree it can no longer see reports the same ✔ as a clean
+  // one. The roots are hardcoded and skipped with `existsSync`, so a renamed
+  // `libs`/`pillars` silently empties the list rather than failing.
+  if (units.length === 0) {
+    process.stderr.write(
+      all
+        ? 'EX-1 discovered zero units under libs/ and pillars/. That is a broken scan, ' +
+            'not a clean workspace — nothing was checked.\n'
+        : 'EX-1 was given no unit to check.\n'
+    );
+    return 1;
+  }
+
   let failed = 0;
   let scannedUnits = 0;
+  let scannedFiles = 0;
+  /** @type {Array<{ unit: string; reason: string }>} */
+  const declaredEmpty = [];
+  /** @type {string[]} */
+  const silentlyEmpty = [];
   for (const unit of units) {
-    const { phantoms } = findPhantomDeps(unit);
+    const { phantoms, scanned } = findPhantomDeps(unit);
     scannedUnits += 1;
+    scannedFiles += scanned;
+    if (scanned === 0) {
+      // A unit with nothing to parse is either data (and says so) or a unit
+      // whose source the scan has stopped finding. `findPhantomDeps` returns
+      // `phantoms: []` for both, which is the guard's success value.
+      const reason = noProofSurfaceReason(unit.pkg);
+      if (reason === null) silentlyEmpty.push(unit.name);
+      else declaredEmpty.push({ unit: unit.name, reason });
+    }
     if (phantoms.length === 0) continue;
     failed += 1;
     process.stderr.write(`\n✗ ${unit.name} (${rel(cwd, unit.dir)}) — phantom dependencies:\n`);
@@ -69,6 +97,20 @@ function main(argv) {
     }
   }
 
+  if (silentlyEmpty.length > 0) {
+    process.stderr.write(
+      `\n${silentlyEmpty.length} unit(s) had no source file to scan and do not declare why:\n`
+    );
+    for (const name of silentlyEmpty) process.stderr.write(`    ${name}\n`);
+    process.stderr.write(
+      `\nEX-1 cannot report a phantom dependency in a unit it parsed nothing from, and ` +
+        `"nothing to check" and "clean" are the same answer here. Either the unit's source ` +
+        `moved, or it genuinely holds no code — in which case declare that in its ` +
+        `package.json as pops.extractability.noProofSurface, the same field EX-2 reads.\n`
+    );
+    return 1;
+  }
+
   if (failed > 0) {
     process.stderr.write(
       `\n${failed} unit(s) import undeclared packages. Declare them in the unit's package.json — ` +
@@ -76,7 +118,16 @@ function main(argv) {
     );
     return 1;
   }
-  process.stdout.write(`✔ EX-1: ${scannedUnits} unit(s) declare every imported package.\n`);
+  // The file count is the number that separates "clean" from "did not look".
+  // `findPhantomDeps` has always computed it and no caller read it, so a unit
+  // whose `src/` had moved was counted among the units that passed.
+  process.stdout.write(
+    `✔ EX-1: ${scannedUnits} unit(s) declare every imported package ` +
+      `(${scannedFiles} source file(s) parsed).\n`
+  );
+  for (const { unit, reason } of declaredEmpty) {
+    process.stdout.write(`    ${unit}: no source to scan — ${reason}\n`);
+  }
   return 0;
 }
 
