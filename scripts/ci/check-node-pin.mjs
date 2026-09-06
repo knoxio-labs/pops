@@ -90,7 +90,7 @@ export const REQUIRED_MISE_SETTINGS = { activate_aggressive: 'true' };
  */
 export function nodeMajor(expression) {
   const match = /(\d+)/u.exec(expression.trim());
-  return match === null ? null : match[1];
+  return match === null ? null : (match[1] ?? null);
 }
 
 /**
@@ -148,10 +148,12 @@ export function collectDockerfilePins(root) {
       const dockerfile = join(pillarDir, name);
       const source = readFileSync(dockerfile, 'utf8');
       for (const match of source.matchAll(/^FROM\s+node:(\S+)/gmu)) {
+        const expression = match[1];
+        if (expression === undefined) continue;
         pins.push({
           source: relative(root, dockerfile),
-          expression: match[1],
-          major: nodeMajor(match[1]),
+          expression,
+          major: nodeMajor(expression),
         });
       }
     }

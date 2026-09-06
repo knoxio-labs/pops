@@ -461,6 +461,7 @@ function selfTest() {
      */
     const has = (vs, service, kind) => vs.some((v) => v.service === service && v.kind === kind);
 
+    /** @type {Record<string, boolean>} */
     const checks = {
       // Assert the specific (service, kind) pair, not just that a label appears
       // somewhere — so a regression that drops one detection shape is caught.

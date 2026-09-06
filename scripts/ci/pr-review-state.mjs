@@ -74,7 +74,12 @@ const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*--
  * @property {Finding[]} findings
  */
 
-/** Collapse whitespace runs so reindentation does not change identity. */
+/**
+ * Collapse whitespace runs so reindentation does not change identity.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 export function normalize(text) {
   return text.replace(/\s+/gu, ' ').trim();
 }

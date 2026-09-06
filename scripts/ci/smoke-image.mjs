@@ -233,7 +233,11 @@ export function parseExposedPort(dockerfile) {
   if (ports.length > 1) {
     throw new Error(`ambiguous: ${ports.length} distinct EXPOSE ports (${ports.join(', ')})`);
   }
-  return ports[0];
+  const [port] = ports;
+  if (port === undefined) {
+    throw new Error('no EXPOSE directive — cannot tell which port to health-check');
+  }
+  return port;
 }
 
 /**

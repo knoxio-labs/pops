@@ -230,6 +230,8 @@ const GENERATED_CLIENT_RE = /\/src\/[a-z-]+-api\//;
  * Where a raw hue should usually go. Advisory only — the guard reports the
  * violation either way; this is the sentence that saves the reader a trip to
  * globals.css.
+ *
+ * @type {Record<string, string>}
  */
 const SUGGESTED_TOKEN = {
   red: 'destructive',

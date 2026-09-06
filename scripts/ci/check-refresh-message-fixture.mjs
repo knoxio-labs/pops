@@ -84,6 +84,8 @@ const BASENAME = 'refresh-message-v1.json';
  *
  * Adding a copy is adding an entry here: the equality check is pairwise against
  * the canonical one, so a third consumer needs no new code.
+ *
+ * @type {readonly import('./fixture-copies.mjs').FixtureCopy[]}
  */
 export const FIXTURE_COPIES = Object.freeze([
   Object.freeze({

@@ -675,8 +675,10 @@ function selfTestExpectedTargetSet() {
   const clean = EXPECTED_TARGETS.map(fullTargetFor);
   const missingOne = clean.slice(1);
   const droppedPkg = EXPECTED_TARGETS[0];
+  if (droppedPkg === undefined) throw new Error('EXPECTED_TARGETS is empty');
   const withExtra = [...clean, fullTargetFor('@pops/bogus')];
   const collidingTarget = clean[1];
+  if (collidingTarget === undefined) throw new Error('EXPECTED_TARGETS has fewer than 2 entries');
   const duplicatePkg = [{ ...collidingTarget, pkgDir: 'pillars/other' }, ...clean];
 
   const scenarios = {

@@ -84,8 +84,8 @@ export function extractCuratedPillarIds(source) {
         'in known-pillar-id.ts — has it been renamed or reshaped?'
     );
   }
-  const body = match[1];
-  const ids = [...body.matchAll(/'([^']+)'/gu)].map((m) => m[1]);
+  const body = match[1] ?? '';
+  const ids = [...body.matchAll(/'([^']+)'/gu)].map((m) => m[1]).filter((id) => id !== undefined);
   return ids.toSorted((a, b) => a.localeCompare(b));
 }
 

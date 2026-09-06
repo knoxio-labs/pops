@@ -457,6 +457,7 @@ export function resolveProjectFileSet(configPath) {
   }
 
   const unitDir = dirname(configPath);
+  /** @type {unknown[]} */
   let includeGlobs;
   if (includeField.present) includeGlobs = includeField.value;
   else if (filesField.present) includeGlobs = [];
@@ -509,6 +510,7 @@ const SKIPPED_DIR_NAMES = new Set(['node_modules', 'dist', '.git']);
 export function findTestFilesOnDisk(unitDir, allUnitDirs) {
   /** @type {string[]} */
   const out = [];
+  /** @param {string} dir */
   function walk(dir) {
     if (dir !== unitDir && allUnitDirs.has(dir)) return;
     /** @type {import('node:fs').Dirent[]} */
@@ -657,6 +659,10 @@ function checkExtendsResolution() {
 function checkTypecheckScriptDetection() {
   const root = mkdtempSync(join(tmpdir(), 'tests-typechecked-selftest-script-'));
   try {
+    /**
+     * @param {string} dir
+     * @param {Record<string, string>} scripts
+     */
     const write = (dir, scripts) => {
       mkdirSync(join(root, dir), { recursive: true });
       writeFileSync(join(root, dir, 'tsconfig.json'), JSON.stringify({ include: ['src'] }));
@@ -697,6 +703,10 @@ function checkTypecheckScriptDetection() {
 function checkUncoveredTestFilesDetection() {
   const root = mkdtempSync(join(tmpdir(), 'tests-typechecked-selftest-disk-'));
   try {
+    /**
+     * @param {string} dir
+     * @param {Record<string, unknown>} tsconfig
+     */
     const writeUnit = (dir, tsconfig) => {
       mkdirSync(join(root, dir), { recursive: true });
       writeFileSync(join(root, dir, 'tsconfig.json'), JSON.stringify(tsconfig));

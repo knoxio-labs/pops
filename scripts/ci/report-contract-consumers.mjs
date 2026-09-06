@@ -380,6 +380,7 @@ function selfTestFiresAndStaysSilent() {
     /** @type {string[]} */
     const copies = [];
     for (const [index, [unitKind, ...withinUnit]] of VENDOR_DIRECTORIES.entries()) {
+      if (unitKind === undefined) throw new Error(`VENDOR_DIRECTORIES[${index}] has no segments`);
       const pillarId = `producer${index}`;
       mkdirSync(join(root, 'pillars', pillarId, 'openapi'), { recursive: true });
       writeFileSync(join(root, 'pillars', pillarId, 'openapi', `${pillarId}.openapi.json`), '{}\n');

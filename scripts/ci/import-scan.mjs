@@ -106,6 +106,10 @@ export function stripComments(src) {
   while (i < n) {
     const ch = src[i];
     const next = i + 1 < n ? src[i + 1] : '';
+    if (ch === undefined) {
+      i++;
+      continue;
+    }
 
     if (ch === '/' && next === '/') {
       let j = i + 2;
@@ -186,7 +190,9 @@ export function extractSpecifiers(src) {
   /** @type {string[]} */
   const out = [];
   for (const re of IMPORT_PATTERNS) {
-    for (const m of code.matchAll(re)) out.push(m[1]);
+    for (const m of code.matchAll(re)) {
+      if (m[1] !== undefined) out.push(m[1]);
+    }
   }
   return out;
 }
@@ -206,6 +212,7 @@ export function extractSpecifiersWithLines(src) {
   for (const re of IMPORT_PATTERNS) {
     for (const m of code.matchAll(re)) {
       const specifier = m[1];
+      if (specifier === undefined) continue;
       const at = (m.index ?? 0) + m[0].lastIndexOf(specifier);
       let line = 1;
       for (let i = 0; i < at && i < code.length; i++) {

@@ -468,10 +468,20 @@ function fullTargetFor(pkgName) {
 /** @returns {boolean} */
 function selfTestExpectedTargetSet() {
   const clean = EXPECTED_TARGETS.map(fullTargetFor);
+  const [droppedTarget, collidingTarget] = clean;
+  // Every scenario below is built by removing or duplicating one of the first
+  // two expected targets, so a list that short leaves this self-test asserting
+  // nothing. Refusing outright beats a pass that proves less than it claims.
+  if (droppedTarget === undefined || collidingTarget === undefined) {
+    console.error(
+      `SELF-TEST FAILED (expected target set): EXPECTED_TARGETS holds ${clean.length} entr` +
+        'y/entries; the scenarios below need at least two.'
+    );
+    return false;
+  }
   const missingOne = clean.slice(1);
-  const droppedPkg = EXPECTED_TARGETS[0];
+  const droppedPkg = droppedTarget.pkgName;
   const withExtra = [...clean, fullTargetFor('@pops/bogus')];
-  const collidingTarget = clean[1];
   const duplicatePkg = [{ ...collidingTarget, pkgDir: 'pillars/other' }, ...clean];
 
   const scenarios = {

@@ -68,12 +68,13 @@ export const UNIT_KIND_ROOTS = ['pillars', 'libs', 'clients'];
  */
 export function resolveCanonical(copies, canonicalRoot) {
   const found = copies.filter((copy) => copy.path.startsWith(canonicalRoot));
-  if (found.length !== 1) {
+  const [only] = found;
+  if (found.length !== 1 || only === undefined) {
     throw new Error(
       `expected exactly one fixture copy under ${canonicalRoot}, found ${String(found.length)}`
     );
   }
-  return found[0];
+  return only;
 }
 
 /** Directory names a discovery walk never descends into. */

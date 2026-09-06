@@ -151,6 +151,8 @@ const repoRoot = resolve(here, '..', '..');
  * Add a row when a pillar's server starts calling another's REST API. The
  * row is the machine-checkable half of what the consumer's local router
  * type claims. The coverage check below fails the build if you forget.
+ *
+ * @type {Expectation[]}
  */
 export const EXPECTATIONS = [
   {
@@ -807,6 +809,7 @@ export function scanSource(source) {
   let mode = 'code';
   let i = 0;
 
+  /** @type {(from: number, to: number) => void} */
   const blankBoth = (from, to) => {
     for (let k = from; k < to; k++) {
       if (code[k] === '\n') continue;
@@ -814,9 +817,11 @@ export function scanSource(source) {
       scannable[k] = ' ';
     }
   };
+  /** @type {(from: number, to: number) => void} */
   const blankLiteral = (from, to) => {
     for (let k = from; k < to; k++) if (scannable[k] !== '\n') scannable[k] = ' ';
   };
+  /** @type {(unterminated: string | null) => ScannedSource} */
   const done = (unterminated) => ({
     code: code.join(''),
     scannable: scannable.join(''),
@@ -958,23 +963,6 @@ export function scanSource(source) {
 }
 
 /**
- * Whether the `/` at `index` opens a regex literal rather than dividing.
- *
- * Decided from what precedes it, which is the only thing available without a
- * parser: a regex can start only where a VALUE is expected. `<` is division
- * here on purpose — in a `.tsx` file the `/` of a `</div>` closing tag is
- * always preceded by one, and reading those as regex openers desynchronises
- * the scan across every component in the tree.
- *
- * Getting this wrong in the division direction can only produce a false call
- * site, which is loud. Getting it wrong the other way blanks real code, so
- * the ambiguous cases resolve towards division.
- *
- * @param {string[]} code Buffer scanned so far (comments already blanked).
- * @param {number} index
- * @returns {boolean}
- */
-/**
  * Whether the quote at `index` opens a string literal, or is an apostrophe
  * (or quote) sitting in JSX text content.
  *
@@ -1007,19 +995,36 @@ function opensQuoteAt(code, index) {
   return previous === undefined || !/[\w$]/u.test(previous);
 }
 
+/**
+ * Whether the `/` at `index` opens a regex literal rather than dividing.
+ *
+ * Decided from what precedes it, which is the only thing available without a
+ * parser: a regex can start only where a VALUE is expected. `<` is division
+ * here on purpose — in a `.tsx` file the `/` of a `</div>` closing tag is
+ * always preceded by one, and reading those as regex openers desynchronises
+ * the scan across every component in the tree.
+ *
+ * Getting this wrong in the division direction can only produce a false call
+ * site, which is loud. Getting it wrong the other way blanks real code, so
+ * the ambiguous cases resolve towards division.
+ *
+ * @param {string[]} code Buffer scanned so far (comments already blanked).
+ * @param {number} index
+ * @returns {boolean}
+ */
 function opensRegexAt(code, index) {
   let i = index - 1;
-  while (i >= 0 && /\s/u.test(code[i])) i--;
+  while (i >= 0 && /\s/u.test(code[i] ?? '')) i--;
   if (i < 0) return true;
 
-  const previous = code[i];
+  const previous = code[i] ?? '';
   if (previous === '>') return i > 0 && code[i - 1] === '=';
   if (previous === '<') return false;
   if (/[)\]}'"`]/u.test(previous)) return false;
   if (!/[\w$]/u.test(previous)) return true;
 
   let start = i;
-  while (start >= 0 && /[\w$]/u.test(code[start])) start--;
+  while (start >= 0 && /[\w$]/u.test(code[start] ?? '')) start--;
   return REGEX_PRECEDING_KEYWORDS.has(code.slice(start + 1, i + 1).join(''));
 }
 
@@ -1146,9 +1151,14 @@ function findCalls(scanned, token) {
   return sites;
 }
 
+/**
+ * @param {string} text
+ * @param {number} index
+ * @returns {number}
+ */
 function skipSpace(text, index) {
   let i = index;
-  while (i < text.length && /\s/u.test(text[i])) i++;
+  while (i < text.length && /\s/u.test(text[i] ?? '')) i++;
   return i;
 }
 
@@ -1159,6 +1169,8 @@ function skipSpace(text, index) {
  * such as `pillar<() => void>(…)` would otherwise close one token early and
  * the call would be dropped without a word.
  *
+ * @param {string} text
+ * @param {number} openIndex
  * @returns {number} -1 when no closer is found before the statement ends.
  */
 function matchAngle(text, openIndex) {
@@ -1177,6 +1189,8 @@ function matchAngle(text, openIndex) {
 /**
  * Offsets of the first argument inside the call opening at `openParenIndex`.
  *
+ * @param {string} text
+ * @param {number} openParenIndex
  * @returns {{ start: number, end: number } | null}
  */
 function firstArgumentSpan(text, openParenIndex) {
@@ -1198,6 +1212,11 @@ function firstArgumentSpan(text, openParenIndex) {
   return null;
 }
 
+/**
+ * @param {string} code
+ * @param {number} index
+ * @returns {number}
+ */
 function lineOf(code, index) {
   let line = 1;
   for (let i = 0; i < index; i++) if (code[i] === '\n') line++;
@@ -1226,7 +1245,7 @@ function lineOf(code, index) {
  */
 export function resolveProducerId(argument, code) {
   const literal = /^(['"])([^'"]*)\1$/u.exec(argument) ?? /^`([^`${\\]*)`$/u.exec(argument);
-  if (literal) return literal[2] ?? literal[1];
+  if (literal) return literal[2] ?? literal[1] ?? null;
 
   if (!/^[A-Za-z_$][\w$]*$/u.test(argument)) return null;
   // `$` is legal in an identifier and is a regex metacharacter, so the name
@@ -1236,7 +1255,7 @@ export function resolveProducerId(argument, code) {
     'mu'
   );
   const bound = binding.exec(code);
-  return bound ? bound[2] : null;
+  return bound?.[2] ?? null;
 }
 
 /**
@@ -1332,20 +1351,20 @@ function typeLiteralMembers(body) {
   const members = [];
   let i = 0;
   while (i < body.length) {
-    if (/\s/u.test(body[i]) || body[i] === ';' || body[i] === ',') {
+    if (/\s/u.test(body[i] ?? '') || body[i] === ';' || body[i] === ',') {
       i++;
       continue;
     }
-    if (!/[A-Za-z_$]/u.test(body[i])) {
+    if (!/[A-Za-z_$]/u.test(body[i] ?? '')) {
       i++;
       continue;
     }
     const keyStart = i;
-    while (i < body.length && /[\w$]/u.test(body[i])) i++;
+    while (i < body.length && /[\w$]/u.test(body[i] ?? '')) i++;
     const key = body.slice(keyStart, i);
-    while (i < body.length && /\s/u.test(body[i])) i++;
+    while (i < body.length && /\s/u.test(body[i] ?? '')) i++;
     if (body[i] === '?') i++;
-    while (i < body.length && /\s/u.test(body[i])) i++;
+    while (i < body.length && /\s/u.test(body[i] ?? '')) i++;
     if (body[i] !== ':') return null;
     i++;
     const valueStart = i;
@@ -1581,6 +1600,10 @@ export function discoverCallSites(root) {
   return { sites, directFetchSites, scanErrors };
 }
 
+/**
+ * @param {string} dir
+ * @returns {Generator<string>}
+ */
 function* walkSources(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -1664,7 +1687,9 @@ function operationKey(op) {
  *   pass anything naming those — which is what lets a test drive this
  *   without inventing a whole OpenAPI expectation.
  * @param {UnpinnableCallSite[]} exemptions
- * @param {KnownBrokenOperation[]} [knownBrokenOperations]
+ * @param {Array<{ consumer: string, producer: string, operationId: string }>}
+ *   [knownBrokenOperations] Read the same three fields as `expectations`, for
+ *   the same reason.
  * @returns {CoverageReport}
  */
 export function findCoverageGaps(sites, expectations, exemptions, knownBrokenOperations = []) {
@@ -1808,6 +1833,7 @@ export function checkExpectation(expectation, doc) {
   }
 
   const found = matches[0];
+  if (found === undefined) return failures;
   if (found.path !== expectation.path || found.method !== expectation.method) {
     failures.push(
       `${expectation.operationId} moved to ${found.method.toUpperCase()} ${found.path}, ` +
@@ -1869,10 +1895,18 @@ export function declaredParams(operation, pathItem, location) {
   return names;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * @param {string} producer
+ * @returns {string}
+ */
 function producerSpecPath(producer) {
   return join(repoRoot, 'pillars', producer, 'openapi', `${producer}.openapi.json`);
 }
@@ -1899,14 +1933,6 @@ export function loadProducerDoc(producer, specPath) {
   }
 }
 
-/**
- * Failures for the curated half: does every row still hold on disk, and does
- * the row itself still point at a file that exists.
- *
- * @param {string} root
- * @param {Expectation[]} expectations
- * @returns {string[]}
- */
 /**
  * Failures for the wrapper registry: does every entry's type still exist
  * where it says it does.
@@ -1961,6 +1987,14 @@ export function checkWrapperRegistrations(root, wrappers) {
   return failures;
 }
 
+/**
+ * Failures for the curated half: does every row still hold on disk, and does
+ * the row itself still point at a file that exists.
+ *
+ * @param {string} root
+ * @param {Expectation[]} expectations
+ * @returns {string[]}
+ */
 export function checkExpectations(root, expectations) {
   /** @type {string[]} */
   const failures = [];
@@ -1992,6 +2026,10 @@ export function checkExpectations(root, expectations) {
   return failures;
 }
 
+/**
+ * @param {CoverageReport} report
+ * @returns {string[]}
+ */
 function reportCoverage(report) {
   /** @type {string[]} */
   const failures = [];
@@ -2036,6 +2074,10 @@ function reportCoverage(report) {
   return failures;
 }
 
+/**
+ * @param {DirectFetchReport} report
+ * @returns {string[]}
+ */
 function reportDirectFetch(report) {
   /** @type {string[]} */
   const failures = [];
@@ -2101,6 +2143,7 @@ function run() {
 
 function selfTest() {
   const expectation = EXPECTATIONS[0];
+  assert(expectation !== undefined, 'EXPECTATIONS must not be empty');
   const good = {
     paths: {
       '/transactions': {
@@ -2241,6 +2284,7 @@ function selfTest() {
     rmSync(scratch, { recursive: true, force: true });
   }
 
+  /** @type {(over: Partial<CallSite>) => CallSite} */
   const site = (over) => ({
     consumer: 'purchases',
     producer: 'contacts',
@@ -2268,7 +2312,7 @@ function selfTest() {
         [row],
         []
       );
-      return report.unlisted.length === 1 && report.unlisted[0].operationId === 'entities.create';
+      return report.unlisted.length === 1 && report.unlisted[0]?.operationId === 'entities.create';
     })(),
     'a SECOND, unpinned operation on an already-pinned seam must be caught, not covered by the ' +
       'first operation’s row'
@@ -2338,7 +2382,7 @@ function selfTest() {
       'type ContactsRouter = { entities: { list: (i) => X; get: (i) => Y; }; };',
       'ContactsRouter'
     )
-      .toSorted()
+      ?.toSorted()
       .join(',') === 'entities.get,entities.list',
     'a two-method single-domain router type must resolve both operations'
   );
@@ -2347,7 +2391,7 @@ function selfTest() {
       'type ListsRouter = { list: { get: (i) => X; }; items: { add: (i) => Y; search: (i) => Z; }; };',
       'ListsRouter'
     )
-      .toSorted()
+      ?.toSorted()
       .join(',') === 'items.add,items.search,list.get',
     'a multi-domain router type must resolve operations from every domain'
   );
@@ -2355,7 +2399,7 @@ function selfTest() {
     resolveRouterOperations(
       'type CerebrumNudgesHandle = { nudges: { create: NudgeSink }; };',
       'CerebrumNudgesHandle'
-    ).join(',') === 'nudges.create',
+    )?.join(',') === 'nudges.create',
     'a method aliased to a named function type, not an inline arrow, must still resolve — the ' +
       'parser reads keys structurally and does not care what shape the value is'
   );
@@ -2378,7 +2422,7 @@ function selfTest() {
       "and an arrow token's own '>' must not be misread as a generic closer"
   );
   assert(
-    resolveRouterOperations('type Empty = {};', 'Empty').length === 0,
+    resolveRouterOperations('type Empty = {};', 'Empty')?.length === 0,
     'a declared-but-empty router type must resolve to zero operations, not error'
   );
   assert(
@@ -2507,6 +2551,7 @@ function selfTest() {
     'a comment merely mentioning the roster must NOT mark a file federation-aware'
   );
 
+  /** @type {(over: Partial<DirectFetchSite>) => DirectFetchSite} */
   const fetchSite = (over) => ({
     consumer: 'registry',
     file: 'pillars/registry/src/api/pillars/dispatcher.ts',
@@ -2541,7 +2586,7 @@ function selfTest() {
   const wrapperCalls = findWrapperCalls(wrapperCallSource, [wrapper]);
   assert(wrapperCalls.length === 1, 'a call through a registered wrapper must be discovered');
   assert(
-    resolveProducerId(wrapperCalls[0].argument, wrapperCallSource.code) === 'contacts',
+    resolveProducerId(wrapperCalls[0]?.argument ?? '', wrapperCallSource.code) === 'contacts',
     'a wrapper call argument must resolve the same way a literal pillar() call does'
   );
   assert(
@@ -2701,6 +2746,11 @@ function selfTest() {
   );
 }
 
+/**
+ * @param {unknown} condition
+ * @param {string} message
+ * @returns {asserts condition}
+ */
 function assert(condition, message) {
   if (!condition) {
     console.error(`self-test FAILED: ${message}`);

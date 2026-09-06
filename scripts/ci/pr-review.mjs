@@ -246,7 +246,7 @@ function fill(template, values) {
   const keys = Object.keys(values);
   if (keys.length === 0) return template;
   const pattern = new RegExp(`\\{(${keys.join('|')})\\}`, 'gu');
-  return template.replace(pattern, (_match, key) => values[key]);
+  return template.replace(pattern, (match, key) => values[key] ?? match);
 }
 
 /**
@@ -386,14 +386,25 @@ function offeredForRejudgement(path) {
   const raw = readIfPresent(path);
   if (raw === null) return [];
   try {
+    /** @type {unknown} */
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed?.offered)
-      ? parsed.offered.filter((id) => typeof id === 'string')
-      : [];
+    const offered =
+      typeof parsed === 'object' && parsed !== null
+        ? /** @type {Record<string, unknown>} */ (parsed).offered
+        : undefined;
+    return Array.isArray(offered) ? offered.filter(isString) : [];
   } catch {
     console.error('::warning::unreadable rejudge list; no carried finding will be re-judged');
     return [];
   }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+function isString(value) {
+  return typeof value === 'string';
 }
 
 /**
@@ -408,10 +419,13 @@ function offeredForRejudgement(path) {
 function modelResolvedIds(rawFindings) {
   if (rawFindings === null) return [];
   try {
+    /** @type {unknown} */
     const parsed = JSON.parse(rawFindings);
-    return Array.isArray(parsed?.resolved)
-      ? parsed.resolved.filter((id) => typeof id === 'string')
-      : [];
+    const resolved =
+      typeof parsed === 'object' && parsed !== null
+        ? /** @type {Record<string, unknown>} */ (parsed).resolved
+        : undefined;
+    return Array.isArray(resolved) ? resolved.filter(isString) : [];
   } catch {
     return [];
   }
@@ -530,7 +544,7 @@ function selfTest() {
     diff: 'DIFFBODY',
   });
   check('filled prompt carries the diff', filled.includes('DIFFBODY'));
-  check('filled prompt carries the rubric', filled.includes(RUBRIC[0]));
+  check('filled prompt carries the rubric', filled.includes(RUBRIC[0] ?? ''));
   check('filled prompt keeps the JSON shape', filled.includes('"severity"'));
   check(
     'filled prompt still asks for a cross-file remedy',
@@ -672,7 +686,10 @@ function selfTest() {
   return true;
 }
 
-/** @param {string} message */
+/**
+ * @param {string} message
+ * @returns {never}
+ */
 function usage(message) {
   console.error(`pr-review: ${message}`);
   console.error(
@@ -694,6 +711,7 @@ function parseFlags(argv) {
   const opts = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
+    if (arg === undefined) break;
     if (!arg.startsWith('--')) usage(`unexpected argument \`${arg}\``);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) usage(`\`${arg}\` needs a value`);

@@ -112,7 +112,11 @@ const ENV_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=\S*$/u;
 function stepInvokesHeyApiGenerator(step) {
   const tokens = step.split(/\s+/u).filter((token) => token.length > 0);
   let i = 0;
-  while (i < tokens.length && ENV_ASSIGNMENT.test(tokens[i])) i++;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    if (token === undefined || !ENV_ASSIGNMENT.test(token)) break;
+    i++;
+  }
   for (const wrapper of RUNNER_WRAPPERS) {
     if (wrapper.every((word, offset) => tokens[i + offset] === word)) {
       i += wrapper.length;
@@ -149,7 +153,7 @@ export function invokesHeyApiGenerator(command) {
  */
 export function extractWriteTarget(command) {
   const match = /--write\s+(\S+)/u.exec(command);
-  return match === null ? null : match[1];
+  return match === null ? null : (match[1] ?? null);
 }
 
 /** @param {string} pkgDir Relative to repo root, posix-separated. @returns {boolean} */
@@ -580,7 +584,9 @@ function fullTargetFor(expected) {
 function selfTestExpectedTargetSet() {
   const clean = EXPECTED_TARGETS.map(fullTargetFor);
   const missingOne = clean.slice(1);
-  const droppedKey = targetKey(EXPECTED_TARGETS[0]);
+  const firstExpected = EXPECTED_TARGETS[0];
+  if (firstExpected === undefined) throw new Error('EXPECTED_TARGETS must not be empty');
+  const droppedKey = targetKey(firstExpected);
   const withExtra = [
     ...clean,
     fullTargetFor({
@@ -593,6 +599,8 @@ function selfTestExpectedTargetSet() {
     index === 0 ? { ...target, inAppMatrix: !target.inAppMatrix } : target
   );
   const collidingTarget = clean[1];
+  if (collidingTarget === undefined)
+    throw new Error('EXPECTED_TARGETS must have at least 2 entries');
   const duplicateKey = [{ ...collidingTarget, pkgDir: 'pillars/other/app' }, ...clean];
 
   const scenarios = {
@@ -606,7 +614,7 @@ function selfTestExpectedTargetSet() {
     ).some((message) => message.includes('@pops/app-bogus')),
     'reports a target that moved across the app-matrix boundary': findExpectedTargetSetViolations(
       wrongMatrixFlag
-    ).some((message) => message.includes(targetKey(EXPECTED_TARGETS[0]))),
+    ).some((message) => message.includes(targetKey(firstExpected))),
     'reports two units colliding on the same key instead of silently keeping one':
       findExpectedTargetSetViolations(duplicateKey).some(
         (message) =>

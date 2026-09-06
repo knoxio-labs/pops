@@ -93,8 +93,9 @@ export function extractSidecarIds(source) {
     }
 
     const serviceKey = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(line);
-    if (serviceKey && serviceKey[1].endsWith(SIDECAR_SUFFIX)) {
-      ids.push(serviceKey[1].slice(0, -SIDECAR_SUFFIX.length));
+    const serviceName = serviceKey?.[1];
+    if (serviceName !== undefined && serviceName.endsWith(SIDECAR_SUFFIX)) {
+      ids.push(serviceName.slice(0, -SIDECAR_SUFFIX.length));
     }
   }
 

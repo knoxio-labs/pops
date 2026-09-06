@@ -99,7 +99,9 @@ export function findYieldCalls(contents) {
   const hits = [];
   const lines = contents.split('\n');
   for (let i = 0; i < lines.length; i += 1) {
-    const code = stripLineComment(lines[i]);
+    const line = lines[i];
+    if (line === undefined) continue;
+    const code = stripLineComment(line);
     if (code.includes('Task.yield()')) {
       hits.push({ line: i + 1, text: code.trim() });
     }

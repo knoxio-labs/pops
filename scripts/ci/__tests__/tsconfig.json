@@ -2,9 +2,16 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "module": "esnext",
+    // The guards run under the Node pinned in `mise.toml`, which carries the
+    // ES2025 built-ins the base config's ES2023 target does not describe —
+    // `RegExp.escape` is already called in `check-cross-pillar-expectations.mjs`
+    // and works in CI. Declaring the runtime the guards actually get is not the
+    // same as relaxing a check: every one of them is still checked, against a
+    // truer library.
+    "lib": ["ES2025"],
     "moduleResolution": "bundler",
     "allowJs": true,
-    "checkJs": false,
+    "checkJs": true,
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },

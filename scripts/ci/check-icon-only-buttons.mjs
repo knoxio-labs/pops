@@ -202,7 +202,7 @@ function attrValues(tag, attrName) {
 function stringLiteralContent(text) {
   const trimmed = text.trim();
   const match = /^(["'`])([\s\S]*)\1$/.exec(trimmed);
-  return match ? match[2] : null;
+  return match ? (match[2] ?? null) : null;
 }
 
 /**
@@ -570,15 +570,17 @@ export function findViolations(relPath, source) {
   const tagStartRe = new RegExp(`<(${BUTTON_COMPONENTS.join('|')})\\b`, 'g');
   for (const match of source.matchAll(tagStartRe)) {
     const tag = extractOpeningTag(source, match.index);
-    const sizeValues = attrValues(tag, 'size');
-    if (sizeValues.length === 0) continue;
-    const size = resolveStaticValue(sizeValues[0]);
+    const [firstSizeValue] = attrValues(tag, 'size');
+    if (firstSizeValue === undefined) continue;
+    const size = resolveStaticValue(firstSizeValue);
     if (size === null || !ICON_SIZE_RE.test(size)) continue;
     if (hasAccessibleName(tag)) continue;
+    const component = match[1];
+    if (component === undefined) continue;
     violations.push({
       file: relPath,
       line: source.slice(0, match.index).split('\n').length,
-      component: match[1],
+      component,
       size,
     });
   }
