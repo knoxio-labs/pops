@@ -39,6 +39,9 @@ pub struct Entity {
     pub default_transaction_type: Option<String>,
     pub default_tags: Vec<String>,
     pub notes: Option<String>,
+    pub avatar_asset_id: Option<String>,
+    pub poster_asset_id: Option<String>,
+    pub colour: Option<String>,
     pub last_edited_time: String,
 }
 
@@ -54,6 +57,9 @@ pub struct EntityRow {
     pub default_transaction_type: Option<String>,
     pub default_tags: Option<String>,
     pub notes: Option<String>,
+    pub avatar_asset_id: Option<String>,
+    pub poster_asset_id: Option<String>,
+    pub colour: Option<String>,
     pub last_edited_time: String,
 }
 
@@ -68,6 +74,9 @@ impl From<EntityRow> for Entity {
             default_transaction_type: row.default_transaction_type,
             default_tags: decode_default_tags(row.default_tags.as_deref()),
             notes: row.notes,
+            avatar_asset_id: row.avatar_asset_id,
+            poster_asset_id: row.poster_asset_id,
+            colour: row.colour,
             last_edited_time: row.last_edited_time,
         }
     }
@@ -160,6 +169,12 @@ pub struct CreateEntityBody {
     pub default_tags: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
+    #[serde(default)]
+    pub avatar_asset_id: Option<String>,
+    #[serde(default)]
+    pub poster_asset_id: Option<String>,
+    #[serde(default)]
+    pub colour: Option<String>,
 }
 
 /// Body accepted by `PATCH /entities/:id`. Every field is optional; a present
@@ -189,6 +204,15 @@ pub struct UpdateEntityBody {
     #[serde(default, deserialize_with = "double_option")]
     #[schema(value_type = Option<String>)]
     pub notes: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    #[schema(value_type = Option<String>)]
+    pub avatar_asset_id: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    #[schema(value_type = Option<String>)]
+    pub poster_asset_id: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    #[schema(value_type = Option<String>)]
+    pub colour: Option<Option<String>>,
 }
 
 /// Deserialize a present field into `Some(...)` even when its value is JSON
@@ -269,11 +293,40 @@ mod tests {
             default_transaction_type: None,
             default_tags: Some(r#"["x"]"#.to_string()),
             notes: None,
+            avatar_asset_id: Some("blob-1".to_string()),
+            poster_asset_id: None,
+            colour: Some("#3B82F6".to_string()),
             last_edited_time: "2026-06-21T00:00:00.000Z".to_string(),
         };
         let entity: Entity = row.into();
         assert_eq!(entity.aliases, vec!["Acme", "ACME Corp"]);
         assert_eq!(entity.default_tags, vec!["x"]);
         assert_eq!(entity.r#type, "company");
+        assert_eq!(entity.avatar_asset_id.as_deref(), Some("blob-1"));
+        assert_eq!(entity.poster_asset_id, None);
+        assert_eq!(entity.colour.as_deref(), Some("#3B82F6"));
+    }
+
+    #[test]
+    fn patch_distinguishes_absent_from_null_for_the_new_nullable_fields() {
+        let absent: UpdateEntityBody = serde_json::from_str("{}").unwrap();
+        assert_eq!(absent.avatar_asset_id, None);
+        assert_eq!(absent.poster_asset_id, None);
+        assert_eq!(absent.colour, None);
+
+        let cleared: UpdateEntityBody =
+            serde_json::from_str(r#"{"avatarAssetId":null,"posterAssetId":null,"colour":null}"#)
+                .unwrap();
+        assert_eq!(cleared.avatar_asset_id, Some(None));
+        assert_eq!(cleared.poster_asset_id, Some(None));
+        assert_eq!(cleared.colour, Some(None));
+
+        let set: UpdateEntityBody = serde_json::from_str(
+            "{\"avatarAssetId\":\"a1\",\"posterAssetId\":\"p1\",\"colour\":\"#ABCDEF\"}",
+        )
+        .unwrap();
+        assert_eq!(set.avatar_asset_id, Some(Some("a1".to_string())));
+        assert_eq!(set.poster_asset_id, Some(Some("p1".to_string())));
+        assert_eq!(set.colour, Some(Some("#ABCDEF".to_string())));
     }
 }

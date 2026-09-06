@@ -52,7 +52,8 @@ macro_rules! select_entities {
     ($tail:expr) => {
         concat!(
             "SELECT id, name, type, abn, aliases, default_transaction_type, ",
-            "default_tags, notes, last_edited_time FROM entities ",
+            "default_tags, notes, avatar_asset_id, poster_asset_id, colour, ",
+            "last_edited_time FROM entities ",
             $tail
         )
     };
@@ -139,8 +140,9 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
 
     sqlx::query(
         "INSERT INTO entities \
-         (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, last_edited_time) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+         (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, \
+          avatar_asset_id, poster_asset_id, colour, last_edited_time) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
     )
     .bind(&id)
     .bind(&body.name)
@@ -150,6 +152,9 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
     .bind(body.default_transaction_type.as_deref())
     .bind(encode_default_tags(&body.default_tags))
     .bind(body.notes.as_deref())
+    .bind(body.avatar_asset_id.as_deref())
+    .bind(body.poster_asset_id.as_deref())
+    .bind(body.colour.as_deref())
     .bind(&now)
     .execute(pool)
     .await
@@ -199,6 +204,15 @@ pub async fn update(
     }
     if let Some(tags) = &patch.default_tags {
         builder.set_nullable("default_tags", encode_default_tags(tags));
+    }
+    if let Some(avatar_asset_id) = &patch.avatar_asset_id {
+        builder.set_nullable("avatar_asset_id", avatar_asset_id.clone());
+    }
+    if let Some(poster_asset_id) = &patch.poster_asset_id {
+        builder.set_nullable("poster_asset_id", poster_asset_id.clone());
+    }
+    if let Some(colour) = &patch.colour {
+        builder.set_nullable("colour", colour.clone());
     }
 
     if !builder.is_empty() {
@@ -386,6 +400,9 @@ mod tests {
             default_transaction_type: None,
             default_tags: Vec::new(),
             notes: None,
+            avatar_asset_id: None,
+            poster_asset_id: None,
+            colour: None,
         }
     }
 
@@ -655,6 +672,33 @@ mod tests {
         create(&pool, body("Acme")).await.expect("create");
         assert!(find_by_name(&pool, "Acme").await.expect("find").is_some());
         assert!(find_by_name(&pool, "Nope").await.expect("find").is_none());
+    }
+
+    #[tokio::test]
+    async fn create_and_patch_round_trip_avatar_poster_and_colour() {
+        let pool = pool().await;
+        let mut b = body("Branded");
+        b.avatar_asset_id = Some("blob-avatar".to_string());
+        b.poster_asset_id = Some("blob-poster".to_string());
+        b.colour = Some("#3B82F6".to_string());
+        let created = create(&pool, b).await.expect("create");
+        assert_eq!(created.avatar_asset_id.as_deref(), Some("blob-avatar"));
+        assert_eq!(created.poster_asset_id.as_deref(), Some("blob-poster"));
+        assert_eq!(created.colour.as_deref(), Some("#3B82F6"));
+
+        let patch = UpdateEntityBody {
+            avatar_asset_id: Some(None),
+            colour: Some(Some("#000000".to_string())),
+            ..Default::default()
+        };
+        let updated = update(&pool, &created.id, patch).await.expect("update");
+        assert_eq!(updated.avatar_asset_id, None, "an explicit null clears it");
+        assert_eq!(
+            updated.poster_asset_id.as_deref(),
+            Some("blob-poster"),
+            "an absent field is left untouched"
+        );
+        assert_eq!(updated.colour.as_deref(), Some("#000000"));
     }
 
     #[tokio::test]
