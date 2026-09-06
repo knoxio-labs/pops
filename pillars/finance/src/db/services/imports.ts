@@ -1,12 +1,19 @@
 /**
- * Persistence helpers for the finance imports slice.
+ * Persistence for the finance imports slice, and the entry point that names
+ * all of it.
  *
- * This module holds only the pure-persistence primitives the import pipeline
- * uses against `transactions`:
+ * The write itself — one staged row becoming one `transactions` row — is here.
+ * Two groups this file used to carry were split out at POPS-3068, when it sat
+ * seven lines under the 200-line cap with two branches editing the import write
+ * path concurrently:
  *
- *   - `findExistingChecksums` — checksum dedup probe (read-only)
- *   - `buildEntityMaps`       — name + alias lookup builder over a fetched set
- *   - `insertImportTransaction` — low-level transactions insert (write)
+ *   - `import-checksums.ts`   — dedup probe, settle-check lookup, settle write
+ *   - `import-entity-maps.ts` — the pure lookup/alias builders, no DB at all
+ *
+ * They are re-exported below rather than left for callers to find, because
+ * every call site reaches this slice through the `importsService` namespace
+ * `../exports/imports.ts` builds from this module; splitting the file is not a
+ * reason to make eighteen call sites learn three names for one slice.
  *
  * The imports slice owns NO tables of its own. Entities are not mirrored in
  * finance: the matcher fetches the contact set from the contacts pillar per
@@ -16,40 +23,20 @@
  * Follows the standard service pattern: db-arg services, plain functions,
  * typed domain errors, no HTTP concerns.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { isPositiveAmountPurchase } from '../../contract/corrections-constants.js';
 import { ImportTransactionPersistError, PositiveAmountPurchaseError } from '../errors.js';
 import { transactions } from '../schema.js';
 import { resolveImportAccountId } from './account-lookup.js';
 
-import type { ContactEntity } from '../../api/contacts/client.js';
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FxCaptureSource } from '../../contract/fx-capture.js';
 import type { TransactionMatchType } from '../match-types.js';
 import type { FinanceDb } from './internal.js';
 
-/** Single entry in the entity name lookup map. */
-export interface EntityLookupEntry {
-  id: string;
-  /** Original-case entity name as stored in the contacts pillar. */
-  name: string;
-  /**
-   * Contact entity type (e.g. `company`, `person`, `government`) — used to keep
-   * personal-name PII out of AI prompts. Optional because only the live
-   * `buildEntityMaps` path (which always sets it) needs it; local matcher
-   * fixtures may omit it.
-   */
-  type?: string;
-}
-
-/** Two pre-built maps consumed by the import matching stages. */
-export interface EntityMaps {
-  /** Lowercase entity name → `{ id, name (original case) }`. */
-  entityLookup: Map<string, EntityLookupEntry>;
-  /** Lowercase alias → entity name (original case). */
-  aliasMap: Map<string, string>;
-}
+export * from './import-checksums.js';
+export * from './import-entity-maps.js';
 
 /** Mutable subset accepted on `insertImportTransaction`. */
 export interface InsertImportTransactionInput {
@@ -58,7 +45,7 @@ export interface InsertImportTransactionInput {
   /**
    * The real `accounts.id` the wizard's account-step (POPS-2840) picked for
    * this import. Preferred over `dialectAccountLabel` when supplied — see
-   * {@link resolveAccountIdentity}. Optional so a caller with no picker (a
+   * {@link resolveImportAccountId}. Optional so a caller with no picker (a
    * legacy client, or a fixture predating it) can still resolve by name.
    */
   accountId?: string;
@@ -93,173 +80,6 @@ export interface InsertImportTransactionInput {
 /** Raw drizzle row shape returned by `insertImportTransaction`. */
 export type ImportTransactionRow = typeof transactions.$inferSelect;
 
-const CHECKSUM_BATCH_SIZE = 500;
-
-/**
- * Return the subset of `checksums` that already exist in the
- * `transactions` table. Empty input returns an empty set without
- * issuing a query.
- *
- * Batched at 500 per IN-list to stay under SQLite's `SQLITE_MAX_VARIABLE_NUMBER`
- * limit (default 999).
- */
-/** What a settled source row overwrites on the pending row it matches. */
-export interface SettleImportedTransactionInput {
-  date: string;
-  amountCents: number;
-  rawRow: string;
-}
-
-/** A stored row as the settle check sees it. */
-export interface StoredChecksumRow {
-  id: string;
-  pending: boolean;
-}
-
-/** The stored rows behind `checksums`, keyed by checksum, for the settle check (POPS-30). */
-export function findTransactionsByChecksums(
-  db: FinanceDb,
-  checksums: readonly string[]
-): Map<string, StoredChecksumRow> {
-  if (checksums.length === 0) return new Map();
-  const rows = db
-    .select({
-      id: transactions.id,
-      checksum: transactions.checksum,
-      pending: transactions.pending,
-    })
-    .from(transactions)
-    .where(inArray(transactions.checksum, [...checksums]))
-    .all();
-  const byChecksum = new Map<string, StoredChecksumRow>();
-  for (const row of rows) {
-    if (row.checksum !== null) byChecksum.set(row.checksum, row);
-  }
-  return byChecksum;
-}
-
-/**
- * A held row came back settled: overwrite the three things a settlement can
- * change and clear the flag. Nothing a person may have edited — entity, tags,
- * notes — is touched.
- *
- * A settlement is the one write that changes an amount without touching the
- * type, so it is the one that can turn a coherent row into a positive
- * `purchase` (POPS-2685) without anybody choosing to. It would mean the source
- * settled a held card authorisation at the opposite sign — the original
- * classification is then wrong for the settled amount, and picking the right
- * replacement (`refund`? `reversal`?) is a decision this function has no basis
- * to make. So it refuses, and the caller decides; the row stays `pending` and
- * is offered again on the next sync rather than being lost.
- */
-export function settleImportedTransaction(
-  db: FinanceDb,
-  id: string,
-  input: SettleImportedTransactionInput
-): void {
-  const stored = db
-    .select({ type: transactions.type })
-    .from(transactions)
-    .where(eq(transactions.id, id))
-    .get();
-  if (stored !== undefined && isPositiveAmountPurchase(input.amountCents, stored.type)) {
-    throw new PositiveAmountPurchaseError(input.amountCents);
-  }
-
-  db.update(transactions)
-    .set({
-      date: input.date,
-      amountCents: input.amountCents,
-      rawRow: input.rawRow,
-      pending: false,
-      lastEditedTime: new Date().toISOString(),
-    })
-    .where(eq(transactions.id, id))
-    .run();
-}
-
-export function findExistingChecksums(db: FinanceDb, checksums: string[]): Set<string> {
-  if (checksums.length === 0) return new Set();
-
-  const existing = new Set<string>();
-  for (let i = 0; i < checksums.length; i += CHECKSUM_BATCH_SIZE) {
-    const batch = checksums.slice(i, i + CHECKSUM_BATCH_SIZE);
-    const rows = db
-      .select({ checksum: transactions.checksum })
-      .from(transactions)
-      .where(inArray(transactions.checksum, batch))
-      .all();
-    for (const row of rows) {
-      if (row.checksum) existing.add(row.checksum);
-    }
-  }
-
-  return existing;
-}
-
-/**
- * Build the entity lookup + alias maps consumed by the import matching
- * stages from a contact set fetched live from the contacts pillar. Pure —
- * no DB access; the caller fetches the set once per import run and feeds it
- * here, so the maps reflect the live contacts data with no persistent mirror.
- *
- * - Lookup keys are lowercased for O(1) case-insensitive lookups.
- * - Values preserve the original-case name for display.
- * - Aliases arrive already split into arrays from the contacts wire shape;
- *   whitespace-only aliases are dropped.
- */
-export function buildEntityMaps(contacts: ContactEntity[]): EntityMaps {
-  const entityLookup = new Map<string, EntityLookupEntry>();
-  const aliasMap = new Map<string, string>();
-
-  for (const contact of contacts) {
-    entityLookup.set(contact.name.toLowerCase(), {
-      id: contact.id,
-      name: contact.name,
-      type: contact.type,
-    });
-    for (const raw of contact.aliases) {
-      const alias = raw.trim();
-      if (alias.length === 0) continue;
-      aliasMap.set(alias.toLowerCase(), contact.name);
-    }
-  }
-
-  return { entityLookup, aliasMap };
-}
-
-/**
- * Build the `entityId → defaultTags` map the tag-suggester's entity-default
- * stage consumes, from the same fetched contact set. Pure — one in-memory map
- * per import run, no per-transaction DB read.
- */
-export function buildDefaultTagsByEntity(contacts: ContactEntity[]): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const contact of contacts) {
-    if (contact.defaultTags.length > 0) map.set(contact.id, contact.defaultTags);
-  }
-  return map;
-}
-
-/**
- * Insert a single transaction during the commit phase of an import.
- *
- * The full atomic commit pipeline (changeset application, tag-rule changesets,
- * reclassification of existing transactions) is cross-slice orchestration that
- * lives above the persistence layer; this primitive only writes the row.
- *
- * `accountId` is resolved via {@link resolveImportAccountId} rather than
- * name-matching `dialectAccountLabel` on its own (POPS-2852). Before the import wizard's
- * account-step (POPS-2840) gave every row a real `accountId`, this had no
- * choice but to name-match the bank/dialect label against `accounts.name`,
- * which silently mis-resolved whenever two real accounts happened to share a
- * dialect (two ANZ cards, say) or an account's real name did not literally
- * match the dialect string. A caller with no `accountId` — a legacy client,
- * or a fixture predating the picker — still resolves by name.
- *
- * Throws `ImportTransactionPersistError` if the row is not readable after the
- * insert — a defensive check against silent SQLite write failures.
- */
 /** The wire optionals collapsed to their column defaults. */
 function optionalColumns(input: InsertImportTransactionInput): {
   country: string | null;
@@ -289,6 +109,25 @@ function optionalColumns(input: InsertImportTransactionInput): {
   };
 }
 
+/**
+ * Insert a single transaction during the commit phase of an import.
+ *
+ * The full atomic commit pipeline (changeset application, tag-rule changesets,
+ * reclassification of existing transactions) is cross-slice orchestration that
+ * lives above the persistence layer; this primitive only writes the row.
+ *
+ * `accountId` is resolved via {@link resolveImportAccountId} rather than
+ * name-matching `dialectAccountLabel` on its own (POPS-2852). Before the import wizard's
+ * account-step (POPS-2840) gave every row a real `accountId`, this had no
+ * choice but to name-match the bank/dialect label against `accounts.name`,
+ * which silently mis-resolved whenever two real accounts happened to share a
+ * dialect (two ANZ cards, say) or an account's real name did not literally
+ * match the dialect string. A caller with no `accountId` — a legacy client,
+ * or a fixture predating the picker — still resolves by name.
+ *
+ * Throws `ImportTransactionPersistError` if the row is not readable after the
+ * insert — a defensive check against silent SQLite write failures.
+ */
 export function insertImportTransaction(
   db: FinanceDb,
   input: InsertImportTransactionInput
