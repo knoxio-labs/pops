@@ -35,7 +35,7 @@ export function EntityProfileHeader({ entity }: { entity: Entity }) {
   const colour = entityColour(entity);
   const bannerStyle = entity.poster
     ? {
-        backgroundImage: `url(${entity.poster})`,
+        backgroundImage: `url("${entity.poster}")`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -44,15 +44,15 @@ export function EntityProfileHeader({ entity }: { entity: Entity }) {
   return (
     <div>
       <div className="h-40 w-full rounded-t-lg sm:h-48" style={bannerStyle} />
-      <div className="flex flex-col gap-4 px-6 pb-2 sm:flex-row sm:items-end sm:gap-6">
+      <div className="flex flex-col gap-4 px-6 pt-3 pb-2 sm:flex-row sm:items-end sm:gap-6">
         <Avatar
           size="lg"
-          className="-mt-12 size-24 border-4 border-background shadow-sm sm:size-28"
+          className="-mt-16 size-28 border-4 border-background shadow-sm sm:size-36"
           style={colour ? { boxShadow: `0 0 0 3px ${colour.ring}` } : undefined}
         >
           {entity.avatar && <AvatarImage src={entity.avatar} alt="" />}
           <AvatarFallback
-            className="text-2xl font-medium"
+            className="text-xl font-medium sm:text-2xl"
             style={colour ? { backgroundColor: colour.tint, color: colour.swatch } : undefined}
           >
             {initials(entity.name)}

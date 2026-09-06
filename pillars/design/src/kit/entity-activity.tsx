@@ -49,7 +49,7 @@ export function EntityActivity({ entity }: { entity: Entity }) {
   const purchases: RecentPurchase[] = recentPurchasesByEntity[entity.id] ?? [];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium">Recent transactions</CardTitle>
