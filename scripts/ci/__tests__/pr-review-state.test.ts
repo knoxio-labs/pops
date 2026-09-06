@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyRejudgement,
   computeDiffRange,
   encodeState,
   emptyState,
@@ -22,6 +23,7 @@ import {
   merge,
   normalize,
   parseState,
+  rejudgeable,
   remedyFromModel,
   render,
   STATE_MARKER,
@@ -235,6 +237,161 @@ describe('computeDiffRange', () => {
 
   it('treats an empty-string last sha as no state', () => {
     expect(computeDiffRange('base', 'head', '', () => true).mode).toBe('full');
+  });
+});
+
+/**
+ * POPS-2669's exact case, kept as a fixture because it is the shape that
+ * cannot be reasoned about from the code: a one-line anchor that is *also*
+ * correct code somewhere else in the same file.
+ *
+ * On #4301 the finding was about the `edit` branch dropping an op's other
+ * field changes when every tag was declined. It was fixed, and the anchor
+ * survived in the `add` branch, where `TagRuleDataSchema.tags` is `.min(1)`
+ * and the line is required. Snippet presence said "open" forever.
+ */
+const ANCHOR = 'if (keptTags.length === 0) continue;';
+
+const FIXED_FILE = `
+  if (op.op === 'edit' && op.data.tags) {
+    const keptTags = op.data.tags.filter(isKept);
+    if (keptTags.length > 0) { ops.push({ ...op, data: { ...op.data, tags: keptTags } }); continue; }
+    const { tags: _declinedTags, ...rest } = op.data;
+    if (Object.keys(rest).length === 0) continue;
+    ops.push({ ...op, data: rest });
+    continue;
+  }
+  if (op.op === 'add') {
+    const keptTags = op.data.tags.filter(isKept);
+    ${ANCHOR}
+    ops.push({ ...op, data: { ...op.data, tags: keptTags } });
+  }
+`;
+
+function carriedFinding(over: Partial<Finding> = {}): Finding {
+  return makeFinding({
+    id: 'carried-id',
+    file: 'pillars/finance/app/src/lib/change-set.ts',
+    snippet: ANCHOR,
+    ...over,
+  });
+}
+
+describe('rejudgeable', () => {
+  it('offers an open finding whose file the diff touched', () => {
+    const f = carriedFinding();
+    expect(rejudgeable([f], [f.file]).map((x) => x.id)).toEqual(['carried-id']);
+  });
+
+  it('never offers a finding whose file the diff did not touch', () => {
+    expect(rejudgeable([carriedFinding()], ['some/other/file.ts'])).toEqual([]);
+  });
+
+  it('never offers an already-resolved finding', () => {
+    const f = carriedFinding({ status: 'resolved' });
+    expect(rejudgeable([f], [f.file])).toEqual([]);
+  });
+
+  it('offers nothing when the diff touched nothing', () => {
+    expect(rejudgeable([carriedFinding()], [])).toEqual([]);
+  });
+
+  it('matches the path exactly, so a suffix collision cannot smuggle one in', () => {
+    const f = carriedFinding({ file: 'a/b/change-set.ts' });
+    expect(rejudgeable([f], ['x/a/b/change-set.ts'])).toEqual([]);
+  });
+});
+
+describe('applyRejudgement', () => {
+  it('clears a finding the reviewer was offered and named', () => {
+    const [f] = applyRejudgement([carriedFinding()], ['carried-id'], ['carried-id'], 'sha2');
+    expect(f?.judged_absent_in).toBe('sha2');
+  });
+
+  it('ignores an id the reviewer named but was never offered', () => {
+    const [f] = applyRejudgement([carriedFinding()], [], ['carried-id'], 'sha2');
+    expect(f?.judged_absent_in).toBeNull();
+  });
+
+  it('ignores an offered id the reviewer did not name', () => {
+    const [f] = applyRejudgement([carriedFinding()], ['carried-id'], [], 'sha2');
+    expect(f?.judged_absent_in).toBeNull();
+  });
+
+  it('clears nothing at all when the reviewer named nothing', () => {
+    const findings = [carriedFinding(), carriedFinding({ id: 'other', snippet: 'x' })];
+    const out = applyRejudgement(findings, ['carried-id', 'other'], [], 'sha2');
+    expect(out.every((f) => f.judged_absent_in === null)).toBe(true);
+  });
+
+  it('leaves an already-resolved finding alone', () => {
+    const f = carriedFinding({ status: 'resolved', resolved_in: 'sha1' });
+    expect(applyRejudgement([f], ['carried-id'], ['carried-id'], 'sha2')[0]).toMatchObject({
+      status: 'resolved',
+      resolved_in: 'sha1',
+      judged_absent_in: null,
+    });
+  });
+});
+
+describe('POPS-2669 — a fixed finding whose anchor survives elsewhere', () => {
+  it('resolves once the reviewer says the defect is gone', () => {
+    const offered = rejudgeable([carriedFinding()], ['pillars/finance/app/src/lib/change-set.ts']);
+    const judged = applyRejudgement(
+      [carriedFinding()],
+      offered.map((f) => f.id),
+      ['carried-id'],
+      'sha2'
+    );
+
+    expect(verifyStatus(judged, () => FIXED_FILE, 'sha2')[0]).toMatchObject({
+      status: 'resolved',
+      resolved_in: 'sha2',
+    });
+  });
+
+  it('stays open when the reviewer did NOT clear it — the regression that must never happen', () => {
+    const judged = applyRejudgement([carriedFinding()], ['carried-id'], [], 'sha2');
+
+    expect(verifyStatus(judged, () => FIXED_FILE, 'sha2')[0]).toMatchObject({ status: 'open' });
+  });
+
+  it('reopens when the reviewer reports it again on a later push', () => {
+    const cleared = applyRejudgement([carriedFinding()], ['carried-id'], ['carried-id'], 'sha2');
+    const reReported = merge(cleared, [carriedFinding()]);
+
+    expect(verifyStatus(reReported, () => FIXED_FILE, 'sha3')[0]).toMatchObject({
+      status: 'open',
+      judged_absent_in: null,
+    });
+  });
+
+  it('still resolves the ordinary way when the anchor is gone entirely', () => {
+    expect(verifyStatus([carriedFinding()], () => 'unrelated', 'sha2')[0]).toMatchObject({
+      status: 'resolved',
+    });
+  });
+
+  it('resolves when the anchored file is gone', () => {
+    const judged = applyRejudgement([carriedFinding()], ['carried-id'], ['carried-id'], 'sha2');
+    expect(verifyStatus(judged, () => null, 'sha2')[0]).toMatchObject({ status: 'resolved' });
+  });
+
+  it('survives the state round trip, so the judgement is not lost on the next push', () => {
+    const judged = applyRejudgement([carriedFinding()], ['carried-id'], ['carried-id'], 'sha2');
+    const verified = verifyStatus(judged, () => FIXED_FILE, 'sha2');
+    const round = parseState(
+      render(
+        { version: STATE_VERSION, last_reviewed_sha: 'sha2', findings: verified },
+        'sha2',
+        'incremental'
+      )
+    );
+
+    expect(round.findings[0]).toMatchObject({ judged_absent_in: 'sha2', status: 'resolved' });
+    expect(verifyStatus(round.findings, () => FIXED_FILE, 'sha3')[0]).toMatchObject({
+      status: 'resolved',
+    });
   });
 });
 

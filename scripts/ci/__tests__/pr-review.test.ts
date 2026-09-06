@@ -68,7 +68,14 @@ function plan(base: string, head: string, priorComment?: string): { mode: string
   return { mode, prompt: mode === 'empty' ? '' : readFileSync(promptPath, 'utf8') };
 }
 
-function publish(head: string, mode: string, findings: unknown, priorComment?: string): string {
+function publish(
+  head: string,
+  mode: string,
+  findings: unknown,
+  priorComment?: string,
+  /** Pass the list `plan` wrote, as the workflow does. Omitted = nothing re-judged. */
+  withRejudge = false
+): string {
   const findingsPath = join(work, 'findings.json');
   const comment = join(work, 'prior.md');
   const out = join(work, 'comment.md');
@@ -87,8 +94,16 @@ function publish(head: string, mode: string, findings: unknown, priorComment?: s
     '--out',
     out,
     ...(priorComment === undefined ? [] : ['--comment-file', comment]),
+    ...(withRejudge ? ['--rejudge', join(work, 'review', 'rejudge.json')] : []),
   ]);
   return readFileSync(out, 'utf8');
+}
+
+/** The id of the single finding recorded in a rendered comment. */
+function findingIdOf(comment: string): string {
+  const [first] = parseState(comment).findings;
+  if (first === undefined) throw new Error('expected one finding in the comment state');
+  return first.id;
 }
 
 beforeEach(() => {
@@ -219,6 +234,149 @@ describe('a pull request reviewed across three pushes', () => {
     const after = plan(base, head, comment);
     expect(after.mode).toBe('full');
     expect(after.prompt).toContain('+c');
+  });
+});
+
+describe('a finding whose anchor survives the fix (POPS-2669)', () => {
+  const ANCHOR = 'if (keptTags.length === 0) continue;';
+  const BROKEN = [
+    'export function apply(ops) {',
+    '  const kept = [];',
+    '  for (const op of ops) {',
+    '    const keptTags = op.data.tags.filter(isKept);',
+    `    ${ANCHOR}`,
+    '    kept.push(op);',
+    '  }',
+    '  return kept;',
+    '}',
+    '',
+  ].join('\n');
+  // Fixed in the branch the finding was about; the anchor survives in the
+  // `add` branch, where it is correct and required.
+  const FIXED = [
+    'export function apply(ops) {',
+    '  const kept = [];',
+    '  for (const op of ops) {',
+    "    if (op.op === 'edit' && op.data.tags) {",
+    '      const keptTags = op.data.tags.filter(isKept);',
+    '      if (keptTags.length > 0) { kept.push({ ...op, data: { ...op.data, tags: keptTags } }); continue; }',
+    '      const { tags: _dropped, ...rest } = op.data;',
+    '      if (Object.keys(rest).length === 0) continue;',
+    '      kept.push({ ...op, data: rest });',
+    '      continue;',
+    '    }',
+    '    const keptTags = op.data.tags.filter(isKept);',
+    `    ${ANCHOR}`,
+    '    kept.push(op);',
+    '  }',
+    '  return kept;',
+    '}',
+    '',
+  ].join('\n');
+
+  const finding = {
+    file: 'change-set.js',
+    title: 'declining every tag drops the op',
+    severity: 'high',
+    snippet: ANCHOR,
+    body: 'the whole op is dropped, not just its tags',
+  };
+
+  /** Report the finding on the first push, then push the fix. */
+  function upToTheFix(): { head: string; afterFirst: string } {
+    const base = commit('README.md', 'base\n', 'base');
+    const first = commit('change-set.js', BROKEN, 'add apply');
+    const afterFirst = publish(first, 'full', { findings: [finding] }, undefined);
+    expect(afterFirst).toContain('1 open finding');
+
+    const head = commit('change-set.js', FIXED, 'fix the edit branch');
+    plan(base, head, afterFirst);
+    return { head, afterFirst };
+  }
+
+  it('offers the finding for re-judgement, because the diff touched its file', () => {
+    const base = commit('README.md', 'base\n', 'base');
+    const first = commit('change-set.js', BROKEN, 'add apply');
+    const afterFirst = publish(first, 'full', { findings: [finding] });
+    const head = commit('change-set.js', FIXED, 'fix the edit branch');
+
+    const { prompt } = plan(base, head, afterFirst);
+
+    expect(prompt).toContain('RE-JUDGE list');
+    expect(prompt).toContain('declining every tag drops the op');
+    expect(prompt).toContain('is a locator, NOT the question');
+  });
+
+  it('resolves it when the reviewer says the defect is gone, though the anchor is still there', () => {
+    const { head, afterFirst } = upToTheFix();
+    const id = findingIdOf(afterFirst);
+
+    const comment = publish(
+      head,
+      'incremental',
+      { findings: [], resolved: [id] },
+      afterFirst,
+      true
+    );
+
+    expect(comment).toContain('No open findings');
+    expect(parseState(comment).findings[0]).toMatchObject({ status: 'resolved' });
+  });
+
+  it('keeps it open when the reviewer clears nothing — the regression that must never happen', () => {
+    const { head, afterFirst } = upToTheFix();
+
+    const comment = publish(head, 'incremental', { findings: [] }, afterFirst, true);
+
+    expect(comment).toContain('1 open finding');
+  });
+
+  it('keeps it open when the id was never offered, however confidently named', () => {
+    const base = commit('README.md', 'base\n', 'base');
+    const first = commit('change-set.js', BROKEN, 'add apply');
+    const afterFirst = publish(first, 'full', { findings: [finding] });
+    const id = findingIdOf(afterFirst);
+    // A commit that does not touch the anchored file: nothing here can have
+    // fixed the finding, so `plan` offers nothing and the id is inert.
+    const head = commit('other.js', 'export const other = 1;\n', 'unrelated');
+    plan(base, head, afterFirst);
+
+    const comment = publish(
+      head,
+      'incremental',
+      { findings: [], resolved: [id] },
+      afterFirst,
+      true
+    );
+
+    expect(comment).toContain('1 open finding');
+  });
+
+  it('keeps it open when the workflow forgets to pass the offered list at all', () => {
+    const { head, afterFirst } = upToTheFix();
+    const id = findingIdOf(afterFirst);
+
+    const comment = publish(head, 'incremental', { findings: [], resolved: [id] }, afterFirst);
+
+    expect(comment).toContain('1 open finding');
+  });
+
+  it('reopens on a later push that reports it again', () => {
+    const { head, afterFirst } = upToTheFix();
+    const id = findingIdOf(afterFirst);
+    const cleared = publish(
+      head,
+      'incremental',
+      { findings: [], resolved: [id] },
+      afterFirst,
+      true
+    );
+
+    const reintroduced = commit('change-set.js', BROKEN, 'undo the fix');
+    plan(head, reintroduced, cleared);
+    const comment = publish(reintroduced, 'incremental', { findings: [finding] }, cleared, true);
+
+    expect(comment).toContain('1 open finding');
   });
 });
 

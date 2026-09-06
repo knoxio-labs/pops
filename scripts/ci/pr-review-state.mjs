@@ -51,6 +51,9 @@ const STATE_RE = new RegExp(`<!--\\s*${STATE_MARKER}:\\s*([A-Za-z0-9+/=]+)\\s*--
  * @property {'open' | 'resolved'} status recomputed each run, never remembered
  * @property {string} first_seen sha this was first reported on
  * @property {string | null} resolved_in sha it was first seen fixed on
+ * @property {string | null} judged_absent_in sha at which the reviewer was
+ *   asked whether this finding still holds and said it does not, see
+ *   {@link applyRejudgement}
  */
 
 /**
@@ -167,6 +170,7 @@ export function findingFromModel(raw, sha) {
     status: 'open',
     first_seen: sha,
     resolved_in: null,
+    judged_absent_in: null,
   };
 }
 
@@ -228,6 +232,7 @@ export function parseState(commentBody) {
       status: f.status === 'resolved' ? 'resolved' : 'open',
       first_seen: typeof f.first_seen === 'string' ? f.first_seen : '',
       resolved_in: typeof f.resolved_in === 'string' ? f.resolved_in : null,
+      judged_absent_in: typeof f.judged_absent_in === 'string' ? f.judged_absent_in : null,
     });
   }
   return {
@@ -296,7 +301,17 @@ function fileContains(readFile, path, needle) {
  *      so asking about the snippet alone answers "open" forever. That is
  *      POPS-2705, found on a PR where the fix was two commits old and the
  *      finding still blocked the merge.
- *   2. Otherwise, is the snippet still present? A finding is open exactly
+ *   2. Has the reviewer been asked, and said the defect no longer holds? Only
+ *      a finding {@link applyRejudgement} stamped this run, which happens only
+ *      for a finding whose own file the diff touched. This has to come before
+ *      the snippet question for the same reason the remedy does: the snippet
+ *      is the thing that is wrong. A one-line anchor that also occurs in
+ *      legitimate code elsewhere in the same file is still present after the
+ *      defect is fixed, so the snippet question answers "open" forever and the
+ *      finding wedges the merge gate — POPS-2669, found on #4301 where the
+ *      anchor `if (keptTags.length === 0) continue;` survived in the `add`
+ *      branch, where it is correct and required.
+ *   3. Otherwise, is the snippet still present? A finding is open exactly
  *      while the code it pointed at is there.
  *
  * A finding with neither a landed remedy nor a snippet cannot be checked
@@ -321,11 +336,65 @@ export function verifyStatus(findings, readFile, headSha) {
     ) {
       return resolved();
     }
+    if (finding.judged_absent_in !== null) return resolved();
     if (finding.snippet === null) return { ...finding };
     if (fileContains(readFile, finding.file, finding.snippet)) {
       return { ...finding, status: 'open', resolved_in: null };
     }
     return resolved();
+  });
+}
+
+/**
+ * Which carried findings this run is allowed to ask the reviewer about.
+ *
+ * A finding can only have been fixed by a commit that touched the file it is
+ * anchored to, so a finding whose file is untouched is never offered for
+ * re-judgement. That is what bounds the blast radius of the whole mechanism:
+ * the reviewer cannot resolve a finding by mistake in code it was not looking
+ * at, and the pathological outcome POPS-2669 warns about — everything
+ * resolves — needs the diff to have touched every anchored file.
+ *
+ * Anchoring is by exact path. A rename shows as a touched path under the new
+ * name and an untouched one under the old, so a renamed file's findings simply
+ * are not offered; they keep resolving the way they always did, on the snippet
+ * disappearing from a path `readFile` can no longer read.
+ *
+ * @param {Finding[]} findings
+ * @param {readonly string[]} touchedPaths repo-relative paths in this run's diff
+ * @returns {Finding[]} the open ones worth asking about, in carried order
+ */
+export function rejudgeable(findings, touchedPaths) {
+  const touched = new Set(touchedPaths);
+  return findings.filter((f) => f.status === 'open' && touched.has(f.file));
+}
+
+/**
+ * Record the reviewer's verdict on the findings it was asked to re-judge.
+ *
+ * Deliberately narrow in three ways, because the failure this can cause —
+ * a real defect silently marked resolved — is worse than the one it fixes:
+ *
+ *   - only an id in `offeredIds` can be stamped, so a hallucinated or
+ *     copy-pasted id from another PR does nothing;
+ *   - only a finding that is currently open is stamped;
+ *   - an empty or unreadable verdict stamps nothing, which leaves every
+ *     finding exactly as it was. Every way this mechanism can fail leaves the
+ *     gate closed.
+ *
+ * @param {Finding[]} findings
+ * @param {Iterable<string>} offeredIds ids `rejudgeable` produced for this run
+ * @param {Iterable<string>} resolvedIds ids the reviewer says no longer hold
+ * @param {string} headSha
+ * @returns {Finding[]}
+ */
+export function applyRejudgement(findings, offeredIds, resolvedIds, headSha) {
+  const offered = new Set(offeredIds);
+  const cleared = new Set(resolvedIds);
+  return findings.map((finding) => {
+    if (finding.status !== 'open') return { ...finding };
+    if (!offered.has(finding.id) || !cleared.has(finding.id)) return { ...finding };
+    return { ...finding, judged_absent_in: headSha };
   });
 }
 
@@ -361,6 +430,10 @@ export function merge(prior, incoming) {
     existing.remedy = finding.remedy ?? existing.remedy;
     existing.status = 'open';
     existing.resolved_in = null;
+    // Reporting it again is the reviewer contradicting its own earlier
+    // judgement that the defect was gone. The newer look wins, or a genuinely
+    // reintroduced defect could never reopen.
+    existing.judged_absent_in = null;
   }
   return order.map((id) => /** @type {Finding} */ (byId.get(id)));
 }

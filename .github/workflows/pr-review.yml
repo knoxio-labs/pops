@@ -275,6 +275,7 @@ jobs:
             --mode "${{ steps.plan.outputs.mode }}" \
             --findings "$RUNNER_TEMP/review/findings.json" \
             --comment-file "$RUNNER_TEMP/review/prior.md" \
+            --rejudge "$RUNNER_TEMP/review/rejudge.json" \
             --repo-root . \
             --out "$RUNNER_TEMP/review/comment.md"
 

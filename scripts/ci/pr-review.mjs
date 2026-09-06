@@ -46,10 +46,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  applyRejudgement,
   computeDiffRange,
   findingFromModel,
   merge,
   parseState,
+  rejudgeable,
   render,
   verifyStatus,
 } from './pr-review-state.mjs';
@@ -110,6 +112,8 @@ cost you do not see.
 
 {carried}
 
+{rejudge}
+
 Write your findings as JSON to \`{out}\` in exactly this shape:
 
 {"findings": [
@@ -142,6 +146,17 @@ anchored to; that case is already handled by \`snippet\`.
 Report an empty list if the diff is clean. An empty list is a normal outcome and
 is strongly preferred to a padded one.
 
+If you were given a RE-JUDGE list above, add a \`resolved\` key to the same JSON
+object naming the ids whose defect no longer holds:
+
+{"findings": [...], "resolved": ["<id>", "<id>"]}
+
+Judge each one by reading the current file, not the quoted snippet: the snippet
+is only an anchor, and it can still be present in code where it is correct.
+Name an id only when you have read the file and the defect described is not
+there any more. Omit \`resolved\` entirely if you clear none — an id you are
+unsure about is an id you leave out.
+
 Here is the diff:
 
 \`\`\`diff
@@ -150,6 +165,47 @@ Here is the diff:
 `;
 
 const CARRIED_NONE = 'This is the first review of this pull request.';
+
+const REJUDGE_NONE =
+  'No carried finding is up for re-judgement this run: none of them is ' +
+  'anchored to a file this diff touches, so none of them can have been fixed ' +
+  'by it. Do not add a `resolved` key.';
+
+/**
+ * Ask about the carried findings this diff could plausibly have fixed.
+ *
+ * The snippet is quoted so the reviewer knows which line the finding was
+ * anchored to, and told explicitly that the snippet is not the question —
+ * POPS-2669 is a finding whose anchor is still present in a *different* branch
+ * of the same file, where it is correct and required, so a reviewer that
+ * answers "the line is still there" reproduces the bug this exists to fix.
+ *
+ * @param {import('./pr-review-state.mjs').Finding[]} findings
+ * @returns {string}
+ */
+function rejudgeBlock(findings) {
+  if (findings.length === 0) return REJUDGE_NONE;
+  const entries = findings
+    .map((f) =>
+      [
+        `- id: ${f.id}`,
+        `  file: ${f.file}`,
+        `  title: ${f.title}`,
+        `  reported: ${f.body}`,
+        `  anchored to: ${f.snippet === null ? '(nothing — this finding is about something absent)' : f.snippet}`,
+      ].join('\n')
+    )
+    .join('\n');
+  return (
+    'RE-JUDGE list. Each finding below was reported on an earlier commit of ' +
+    'this PR and is still recorded as open, and this diff touches the file it ' +
+    'is anchored to — so it may have been fixed. Open each file and decide ' +
+    'whether the defect described is still there. The `anchored to` snippet is ' +
+    'a locator, NOT the question: it can still appear in the file in code where ' +
+    'it is correct.\n\n' +
+    entries
+  );
+}
 
 const SCOPE = {
   full: 'Review the complete diff of this pull request against its base branch.',
@@ -287,8 +343,19 @@ function cmdPlan(opts) {
   const maxBytes = Number(opts['max-diff-bytes'] ?? 180_000);
   if (diff.length > maxBytes) diff = `${diff.slice(0, maxBytes)}\n\n[diff truncated]\n`;
 
+  const touched = git(['diff', '--name-only', range], repoRoot)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  const upForRejudgement = rejudgeable(prior.findings, touched);
+  const offered = new Set(upForRejudgement.map((f) => f.id));
+  writeFileSync(join(outDir, 'rejudge.json'), JSON.stringify({ offered: [...offered] }));
+
+  // A finding up for re-judgement is deliberately kept OUT of the do-not-report
+  // list: the reviewer is being asked about it, and telling it not to mention
+  // the thing it is being asked about is how a prompt talks itself in circles.
   const carried = prior.findings
-    .filter((f) => f.status === 'open')
+    .filter((f) => f.status === 'open' && !offered.has(f.id))
     .map((f) => `${f.file}: ${f.title}`);
 
   writeFileSync(
@@ -297,10 +364,57 @@ function cmdPlan(opts) {
       scope: SCOPE[mode],
       rubric: RUBRIC.join('\n- '),
       carried: carriedBlock(carried),
+      rejudge: rejudgeBlock(upForRejudgement),
       out: findingsPath,
       diff: diff || '(no textual changes)',
     })
   );
+}
+
+/**
+ * The ids `plan` offered the reviewer for re-judgement this run.
+ *
+ * Absent or unreadable yields an empty set, so nothing can be re-judged. Every
+ * failure of this file leaves the gate exactly as closed as it was, which is
+ * the direction POPS-2669 argues for: an unread finding merging is the worse
+ * failure.
+ *
+ * @param {string | undefined} path
+ * @returns {string[]}
+ */
+function offeredForRejudgement(path) {
+  const raw = readIfPresent(path);
+  if (raw === null) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.offered)
+      ? parsed.offered.filter((id) => typeof id === 'string')
+      : [];
+  } catch {
+    console.error('::warning::unreadable rejudge list; no carried finding will be re-judged');
+    return [];
+  }
+}
+
+/**
+ * The finding ids the reviewer says no longer hold.
+ *
+ * Read from the same file as the findings so a reviewer that wrote no file, or
+ * wrote an unparseable one, clears nothing.
+ *
+ * @param {string | null} rawFindings
+ * @returns {string[]}
+ */
+function modelResolvedIds(rawFindings) {
+  if (rawFindings === null) return [];
+  try {
+    const parsed = JSON.parse(rawFindings);
+    return Array.isArray(parsed?.resolved)
+      ? parsed.resolved.filter((id) => typeof id === 'string')
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /** @param {Record<string, string>} opts */
@@ -340,7 +454,12 @@ function cmdPublish(opts) {
   }
 
   const verified = verifyStatus(
-    merge(prior.findings, incoming),
+    applyRejudgement(
+      merge(prior.findings, incoming),
+      offeredForRejudgement(opts.rejudge),
+      modelResolvedIds(rawFindings),
+      opts.head
+    ),
     commitReader(repoRoot, opts.head),
     opts.head
   );
@@ -399,13 +518,14 @@ function selfTest() {
   // Discovery floor: a reviewer prompt with no rubric and no diff placeholder
   // still renders as a perfectly plausible prompt and reviews nothing.
   check('rubric is not empty', RUBRIC.length >= 5);
-  for (const key of ['{scope}', '{rubric}', '{carried}', '{out}', '{diff}']) {
+  for (const key of ['{scope}', '{rubric}', '{carried}', '{rejudge}', '{out}', '{diff}']) {
     check(`prompt template keeps ${key}`, PROMPT_TEMPLATE.includes(key));
   }
   const filled = fill(PROMPT_TEMPLATE, {
     scope: SCOPE.full,
     rubric: RUBRIC.join('\n- '),
     carried: carriedBlock(['a.ts: t']),
+    rejudge: rejudgeBlock([finding({ id: 'abc123abc123' })]),
     out: '/tmp/f.json',
     diff: 'DIFFBODY',
   });
@@ -422,7 +542,69 @@ function selfTest() {
   );
   check(
     'filled prompt has no placeholders left',
-    !/\{(scope|rubric|carried|out|diff)\}/u.test(filled)
+    !/\{(scope|rubric|carried|rejudge|out|diff)\}/u.test(filled)
+  );
+
+  // The re-judge block is the whole POPS-2669 fix, and a prompt that quietly
+  // stopped carrying it renders as a perfectly ordinary review that never
+  // resolves anything.
+  check('filled prompt names the finding up for re-judgement', filled.includes('abc123abc123'));
+  check('filled prompt asks for the resolved key', filled.includes('"resolved"'));
+  check(
+    'filled prompt says the snippet is not the question',
+    filled.includes('is a locator, NOT the question')
+  );
+  check(
+    'an empty re-judge list tells the reviewer not to answer',
+    rejudgeBlock([]).includes('Do not add a `resolved` key')
+  );
+
+  // Only an offered id can clear a finding, and only for a file the diff
+  // touched. Both halves are what keeps a hallucinated id from resolving a
+  // real defect.
+  const carriedOpen = finding({ id: 'offered-id', file: 'a.ts' });
+  check(
+    'a finding on an untouched file is never offered',
+    rejudgeable([carriedOpen], ['b.ts']).length === 0
+  );
+  check(
+    'a finding on a touched file is offered',
+    rejudgeable([carriedOpen], ['a.ts']).length === 1
+  );
+  check(
+    'a resolved finding is never offered',
+    rejudgeable([finding({ id: 'x', status: 'resolved' })], ['a.ts']).length === 0
+  );
+  check(
+    'an unoffered id cannot clear a finding',
+    applyRejudgement([carriedOpen], [], ['offered-id'], 'sha2')[0]?.judged_absent_in === null
+  );
+  check(
+    'an offered id the reviewer named clears the finding',
+    applyRejudgement([carriedOpen], ['offered-id'], ['offered-id'], 'sha2')[0]?.judged_absent_in ===
+      'sha2'
+  );
+  check(
+    'a cleared finding resolves even while its snippet is still present',
+    verifyStatus(
+      applyRejudgement([carriedOpen], ['offered-id'], ['offered-id'], 'sha2'),
+      () => 'const x = 1;',
+      'sha2'
+    )[0]?.status === 'resolved'
+  );
+  check(
+    'a finding nobody cleared still resolves only on its snippet going away',
+    verifyStatus([carriedOpen], () => 'const x = 1;', 'sha2')[0]?.status === 'open'
+  );
+  check(
+    'reporting a cleared finding again reopens it',
+    verifyStatus(
+      merge(applyRejudgement([carriedOpen], ['offered-id'], ['offered-id'], 'sha2'), [
+        finding({ id: 'offered-id' }),
+      ]),
+      () => 'const x = 1;',
+      'sha3'
+    )[0]?.status === 'open'
   );
 
   // Status is recomputed from the tree, both directions.
@@ -484,7 +666,9 @@ function selfTest() {
     console.error(`self-test: ${failures.length} of the reviewer's invariants no longer hold.`);
     return false;
   }
-  console.log('self-test OK — state round-trips, status recomputes, prompt is complete.');
+  console.log(
+    'self-test OK — state round-trips, status recomputes, re-judgement is bounded, prompt is complete.'
+  );
   return true;
 }
 
@@ -495,6 +679,7 @@ function usage(message) {
     'Usage:\n' +
       '  node scripts/ci/pr-review.mjs plan --base <sha> --head <sha> --out-dir <d> --findings-path <f>\n' +
       '  node scripts/ci/pr-review.mjs publish --head <sha> --mode <m> --findings <f> --out <f>\n' +
+      '    [--rejudge <f>] ids `plan` offered for re-judgement; without it nothing is re-judged\n' +
       '  node scripts/ci/pr-review.mjs --self-test'
   );
   process.exit(2);
