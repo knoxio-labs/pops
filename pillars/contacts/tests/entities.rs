@@ -423,6 +423,12 @@ async fn create_assigns_a_colour_from_the_fixed_palette_and_ignores_a_client_val
         contacts::entities::colours::ENTITY_COLOURS.contains(&colour),
         "the assigned colour must be a fixed-palette entry, got {colour}"
     );
+    assert!(
+        colour.len() == 7
+            && colour.starts_with('#')
+            && colour[1..].chars().all(|c| c.is_ascii_hexdigit()),
+        "the assigned colour must be a #rrggbb hex value, got {colour}"
+    );
     assert_eq!(data["avatarAssetId"], Value::Null);
     assert_eq!(data["posterAssetId"], Value::Null);
 }
@@ -438,7 +444,7 @@ async fn generic_patch_does_not_change_colour() {
 
     let (status, body) = send(
         &app,
-        patch(&format!("/entities/{id}"), json!({ "colour": "amber" })),
+        patch(&format!("/entities/{id}"), json!({ "colour": "#e49e22" })),
     )
     .await;
     assert_eq!(

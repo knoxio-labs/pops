@@ -785,7 +785,7 @@ mod tests {
     #[tokio::test]
     async fn set_colour_on_missing_entity_is_not_found() {
         let pool = pool().await;
-        let err = set_colour(&pool, "nope", "rose").await.unwrap_err();
+        let err = set_colour(&pool, "nope", "#e04667").await.unwrap_err();
         assert!(matches!(err, RepoError::NotFound));
     }
 

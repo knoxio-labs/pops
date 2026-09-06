@@ -306,7 +306,7 @@ mod tests {
             notes: None,
             avatar_asset_id: Some("blob-1".to_string()),
             poster_asset_id: None,
-            colour: Some("rose".to_string()),
+            colour: Some("#e04667".to_string()),
             last_edited_time: "2026-06-21T00:00:00.000Z".to_string(),
         };
         let entity: Entity = row.into();
@@ -315,7 +315,7 @@ mod tests {
         assert_eq!(entity.r#type, "company");
         assert_eq!(entity.avatar_asset_id.as_deref(), Some("blob-1"));
         assert_eq!(entity.poster_asset_id, None);
-        assert_eq!(entity.colour.as_deref(), Some("rose"));
+        assert_eq!(entity.colour.as_deref(), Some("#e04667"));
     }
 
     /// POPS-3061 review finding: `avatarAssetId`/`posterAssetId` must not be
