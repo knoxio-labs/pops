@@ -29,6 +29,7 @@ const since = process.argv[2] ?? new Date().toISOString();
 const interval = Number(process.env.WATCH_INTERVAL_MS ?? 5000);
 const maxMs = Number(process.env.WATCH_MAX_MS ?? 1_800_000);
 
+/** @param {number} ms */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const startedAt = Date.now();
@@ -38,7 +39,13 @@ while (Date.now() - startedAt < maxMs) {
     out(result);
     process.exit(1);
   }
-  const threads = Array.isArray(result?.threads) ? result.threads : [];
+  const threads =
+    result !== null &&
+    typeof result === 'object' &&
+    'threads' in result &&
+    Array.isArray(result.threads)
+      ? result.threads
+      : [];
   if (threads.length > 0) {
     out({
       changed: true,

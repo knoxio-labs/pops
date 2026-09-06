@@ -173,7 +173,7 @@ export function huntId(date = new Date()) {
 }
 
 /**
- * @param {readonly [number, number, number]} loadavgTriple As returned by
+ * @param {readonly number[]} loadavgTriple As returned by
  *   `os.loadavg()`: 1-, 5- and 15-minute averages, in that order.
  * @returns {string}
  */
@@ -292,8 +292,8 @@ export function extractFailures(report) {
  * @property {number} exitCode
  * @property {string} startedAt ISO timestamp.
  * @property {string} endedAt ISO timestamp.
- * @property {readonly [number, number, number]} loadBefore
- * @property {readonly [number, number, number]} loadAfter
+ * @property {readonly number[]} loadBefore
+ * @property {readonly number[]} loadAfter
  * @property {TestFailure[]} failures
  * @property {JsonReportOutcome['status']} jsonReport What became of the JSON
  *   reporter's file — written and parsed, never written, or written and
@@ -403,8 +403,8 @@ export function describeArtifacts(dir) {
  * @property {string} stderrPath
  * @property {string} startedAt ISO timestamp.
  * @property {string} endedAt ISO timestamp.
- * @property {readonly [number, number, number]} loadBefore
- * @property {readonly [number, number, number]} loadAfter
+ * @property {readonly number[]} loadBefore
+ * @property {readonly number[]} loadAfter
  */
 
 /**

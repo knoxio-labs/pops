@@ -181,11 +181,11 @@ function findBracketClassEnd(glob, open) {
 export function globToRegExp(glob) {
   let re = '';
   for (let i = 0; i < glob.length; i++) {
-    const c = glob[i];
+    const c = glob.charAt(i);
     if (c === '*') {
-      if (glob[i + 1] === '*') {
+      if (glob.charAt(i + 1) === '*') {
         i++;
-        if (glob[i + 1] === '/') {
+        if (glob.charAt(i + 1) === '/') {
           i++;
           re += '(?:.*/)?'; // `**/` — zero or more path segments
         } else {
@@ -431,7 +431,11 @@ function selfTest() {
     { path: `${root}/libs/ui/.storybook/preview.tsx`, ext: '.tsx', hasClassName: true },
   ];
 
-  const pillarsSrc = globToRegExp(goodGlobs[0]);
+  const firstGoodGlob = goodGlobs[0];
+  if (firstGoodGlob === undefined) {
+    throw new Error('self-test: goodGlobs fixture is empty');
+  }
+  const pillarsSrc = globToRegExp(firstGoodGlob);
   const good = evaluateCoverage(goodGlobs, files);
   const stale = evaluateCoverage(staleGlobs, files);
 

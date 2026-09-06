@@ -24,7 +24,10 @@ async function api(path, init) {
   return client.call(path, init);
 }
 
-/** @param {unknown} data */
+/**
+ * @param {unknown} data
+ * @returns {import('@modelcontextprotocol/sdk/types.js').CallToolResult}
+ */
 function asResult(data) {
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 }

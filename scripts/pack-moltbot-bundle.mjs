@@ -199,7 +199,7 @@ export function parseArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (!arg.startsWith('--')) throw new Error(`unexpected argument '${arg}'`);
+    if (arg === undefined || !arg.startsWith('--')) throw new Error(`unexpected argument '${arg}'`);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) throw new Error(`${arg} needs a value`);
     flags[arg.slice(2)] = value;

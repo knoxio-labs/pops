@@ -50,6 +50,7 @@
 import { createServer } from 'node:http';
 
 import { deviceIdFrom, mintAgedAccessToken } from './aged-access-token.mjs';
+import { boundAddress } from './server-address.mjs';
 
 /** Not a path any BFM route lives under, which is what keeps the two apart. */
 const CONTROL_PREFIX = '/__e2e/';
@@ -80,6 +81,10 @@ const NOT_FORWARDED = new Set([
   'upgrade',
 ]);
 
+/**
+ * @param {string} name
+ * @returns {boolean}
+ */
 function forwardable(name) {
   return !NOT_FORWARDED.has(name.toLowerCase());
 }
@@ -94,14 +99,21 @@ function forwardable(name) {
  * attached and arrives at a host nobody here chose. This process is a local
  * harness and no flow has ever sent such a target, which is exactly why it
  * should refuse one rather than discover the exception later.
+ *
+ * @param {unknown} target
+ * @returns {target is string}
  */
 function isOriginForm(target) {
   return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
 }
 
-/** @returns {Promise<Buffer>} */
+/**
+ * @param {import('node:http').IncomingMessage} request
+ * @returns {Promise<Buffer>}
+ */
 function readBody(request) {
   return new Promise((resolve, reject) => {
+    /** @type {Buffer[]} */
     const chunks = [];
     request.on('data', (chunk) => chunks.push(chunk));
     request.on('end', () => resolve(Buffer.concat(chunks)));
@@ -130,6 +142,10 @@ function forwardedHeaders(incoming) {
  * Same shape `requireDevice` accepts, so a header this reads is one the pillar
  * would have read too.
  */
+/**
+ * @param {string | null} header
+ * @returns {string | null}
+ */
 function deviceOnRequest(header) {
   const token = /^Bearer +(?<token>\S+)$/iu.exec(header ?? '')?.groups?.['token'];
   return token === undefined ? null : deviceIdFrom(token);
@@ -144,6 +160,11 @@ function deviceOnRequest(header) {
  * would produce a 401 for a reason the flow is not testing. Leaving it alone
  * instead means the flow's `substitutions == 1` assertion fails, which is the
  * loud outcome.
+ */
+/**
+ * @param {string | null} header
+ * @param {string} secret
+ * @returns {string | null}
  */
 function agedAuthorization(header, secret) {
   const deviceId = deviceOnRequest(header);
@@ -180,6 +201,9 @@ export async function startControlPlane({
   purchases,
   host = '127.0.0.1',
 }) {
+  /**
+   * @type {{ armed: boolean, substitutions: number, refreshes: number, lastDeviceId: string | null }}
+   */
   const counters = { armed: false, substitutions: 0, refreshes: 0, lastDeviceId: null };
   const state = () => ({
     ...counters,
@@ -189,6 +213,11 @@ export async function startControlPlane({
     purchasesReachable: purchases.isReachable(),
   });
 
+  /**
+   * @param {string} method
+   * @param {string} pathname
+   * @returns {{ status: number, body: Record<string, unknown> }}
+   */
   const control = (method, pathname) => {
     if (method === 'POST' && pathname === '/__e2e/access-token/expire-next') {
       counters.armed = true;
@@ -268,6 +297,11 @@ export async function startControlPlane({
     };
   };
 
+  /**
+   * @param {import('node:http').IncomingMessage} request
+   * @param {URL} target
+   * @returns {Promise<Response>}
+   */
   const proxy = async (request, target) => {
     const headers = forwardedHeaders(request.headers);
     if (target.pathname.startsWith(AUTHENTICATED_PREFIX)) {
@@ -285,12 +319,19 @@ export async function startControlPlane({
     }
     if (request.method === 'POST' && target.pathname === REFRESH_PATH) counters.refreshes += 1;
 
-    const body =
+    const buffered =
       request.method === 'GET' || request.method === 'HEAD' ? undefined : await readBody(request);
+    // `Buffer` itself is not `BodyInit` under lib.dom's typing, though it is one
+    // at runtime (it IS a `Uint8Array`); this view is the same bytes, not a copy.
+    const body = buffered === undefined ? undefined : new Uint8Array(buffered);
     return fetch(target, { method: request.method, headers, body, redirect: 'manual' });
   };
 
   const server = createServer((request, response) => {
+    /**
+     * @param {number} status
+     * @param {Record<string, unknown>} body
+     */
     const json = (status, body) => {
       response.writeHead(status, { 'content-type': 'application/json' });
       response.end(JSON.stringify(body));
@@ -328,12 +369,14 @@ export async function startControlPlane({
       });
   });
 
-  await new Promise((resolve, reject) => {
+  /** @type {Promise<void>} */
+  const listening = new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, host, resolve);
+    server.listen(0, host, () => resolve());
   });
+  await listening;
 
-  const { port } = server.address();
+  const { port } = boundAddress(server, 'ios-e2e control plane');
   return {
     url: `http://${host}:${port}`,
     port,

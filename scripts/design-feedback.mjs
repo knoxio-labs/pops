@@ -20,7 +20,12 @@ const ENV_PATH = new URL('../.env', import.meta.url);
  */
 const LOCAL_DESIGN_API_URL = 'http://127.0.0.1:3015';
 
-/** Whether `base` is a loopback address — the local API trusts any caller. */
+/**
+ * Whether `base` is a loopback address — the local API trusts any caller.
+ *
+ * @param {string} base
+ * @returns {boolean}
+ */
 function isLocalBase(base) {
   return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/u.test(base);
 }
@@ -43,7 +48,9 @@ export function loadDotenv() {
   }
   for (const line of text.split('\n')) {
     const match = /^([A-Z0-9_]+)=(.*)$/u.exec(line.trim());
-    if (match) values[match[1]] = match[2].trim();
+    const key = match?.[1];
+    const value = match?.[2];
+    if (key !== undefined && value !== undefined) values[key] = value.trim();
   }
   return values;
 }
@@ -99,8 +106,9 @@ export function createClient(env = loadDotenv()) {
  */
 export function threadsQuery(filter = {}) {
   const params = new URLSearchParams();
-  for (const key of ['status', 'route', 'since']) {
-    if (filter[key]) params.set(key, filter[key]);
+  for (const key of /** @type {const} */ (['status', 'route', 'since'])) {
+    const value = filter[key];
+    if (value) params.set(key, value);
   }
   const query = params.toString();
   return query === '' ? '/threads' : `/threads?${query}`;

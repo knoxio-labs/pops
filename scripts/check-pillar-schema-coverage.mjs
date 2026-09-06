@@ -88,6 +88,23 @@ const repoRoot = resolve(here, '..');
  */
 
 /**
+ * The narrow slice of the better-sqlite3 `Database` surface this script
+ * touches, declared locally rather than imported from `better-sqlite3` —
+ * that package is a per-pillar dependency, not a root one, so its types are
+ * not reachable from this script's tsconfig.
+ *
+ * @typedef {object} SqliteStatement
+ * @property {(...params: unknown[]) => unknown} get
+ * @property {(...params: unknown[]) => unknown[]} all
+ */
+
+/**
+ * @typedef {object} SqliteHandle
+ * @property {(sql: string) => SqliteStatement} prepare
+ * @property {() => void} close
+ */
+
+/**
  * Discover the pillar set from disk. A pillar is any `pillars/<x>` that
  * exposes a `src/db/schema.ts` barrel — the canonical signal that it owns
  * a migrated schema surface this guard can check. No static list.
@@ -329,7 +346,7 @@ function expectedDefaultFrom(entry) {
   }
   const arg = entry.slice(open + 1, close).trim();
   const quoted = /^'([^'\\]*)'$/u.exec(arg) ?? /^"([^"\\]*)"$/u.exec(arg);
-  if (quoted) return quoted[1];
+  if (quoted && quoted[1] !== undefined) return quoted[1];
   if (/^-?\d+(?:\.\d+)?$/u.test(arg)) return arg;
   if (arg === 'true') return '1';
   if (arg === 'false') return '0';
@@ -389,6 +406,7 @@ function parseTableEntriesInFile(src, file) {
   for (const m of src.matchAll(headerRe)) {
     const symbol = m[1];
     const tableName = m[2];
+    if (symbol === undefined || tableName === undefined) continue;
     const sqliteTableIdx = src.indexOf('sqliteTable', m.index ?? 0);
     if (sqliteTableIdx < 0) continue;
     const openParen = src.indexOf('(', sqliteTableIdx);
@@ -403,7 +421,10 @@ function parseTableEntriesInFile(src, file) {
     /** @type {string[]} */
     const indexNames = [];
     const indexRe = /(?:uniqueIndex|index)\(\s*['"]([^'"]+)['"]\s*\)/g;
-    for (const im of block.matchAll(indexRe)) indexNames.push(im[1]);
+    for (const im of block.matchAll(indexRe)) {
+      const indexName = im[1];
+      if (indexName !== undefined) indexNames.push(indexName);
+    }
     out.push({
       symbol,
       tableName,
@@ -442,8 +463,10 @@ function parseColumnDefaults(block, symbol, file) {
   for (const entry of splitTopLevelCommas(columnArg.slice(braceOpen + 1, braceClose))) {
     const header = /^(\w+)\s*:\s*\w+\s*\(\s*['"]([^'"]+)['"]/u.exec(entry);
     if (!header) continue;
+    const columnName = header[2];
+    if (columnName === undefined) continue;
     const expected = expectedDefaultFrom(entry);
-    if (expected !== null) out.push({ column: header[2], expected });
+    if (expected !== null) out.push({ column: columnName, expected });
   }
   return out;
 }
@@ -517,6 +540,7 @@ function parseImports(src) {
     const from = m[3];
 
     if (isTypeOnly) continue;
+    if (clause === undefined || from === undefined) continue;
 
     if (clause.startsWith('*')) {
       out.push({ from, symbols: [], isNamespace: true });
@@ -535,7 +559,9 @@ function parseImports(src) {
       const piece = raw.trim();
       if (!piece) continue;
       if (piece.startsWith('type ')) continue;
-      const name = piece.split(/\s+as\s+/u)[0].trim();
+      const nameCandidate = piece.split(/\s+as\s+/u)[0];
+      if (nameCandidate === undefined) continue;
+      const name = nameCandidate.trim();
       if (name) symbols.push(name);
     }
     out.push({ from, symbols, isNamespace: false });
@@ -559,11 +585,15 @@ function parsePillarSchemaReExports(schemaFile) {
   const out = new Set();
   const reExportRe = /export\s*\{([\s\S]*?)\}\s*from\s*['"][^'"]+['"]/g;
   for (const m of src.matchAll(reExportRe)) {
-    for (const raw of m[1].split(',')) {
+    const group = m[1];
+    if (group === undefined) continue;
+    for (const raw of group.split(',')) {
       const piece = raw.trim();
       if (!piece) continue;
       if (piece.startsWith('type ')) continue;
-      const name = piece.split(/\s+as\s+/u)[0].trim();
+      const nameCandidate = piece.split(/\s+as\s+/u)[0];
+      if (nameCandidate === undefined) continue;
+      const name = nameCandidate.trim();
       if (name) out.add(name);
     }
   }
@@ -647,7 +677,7 @@ function collectUsedTableSymbols(pkgRoot, symbolToTable) {
  * unlinks the temp file (including the WAL/SHM sidecars).
  *
  * @param {Pillar} pillar
- * @returns {Promise<{ raw: import('better-sqlite3').Database; close: () => void }>}
+ * @returns {Promise<{ raw: SqliteHandle; close: () => void }>}
  */
 async function openPillarInMemory(pillar) {
   const distEntry = join(repoRoot, pillar.pkgDir, 'dist', 'db', 'index.js');
@@ -659,14 +689,15 @@ async function openPillarInMemory(pillar) {
   }
   const mod = await import(distEntry);
   const openerNames = Object.keys(mod).filter((k) => /^open[A-Z]\w*Db$/u.test(k));
-  if (openerNames.length !== 1) {
+  const openerName = openerNames[0];
+  if (openerNames.length !== 1 || openerName === undefined) {
     throw new Error(
       `[${pillar.name}] expected exactly one open<Pillar>Db export in ${distEntry}, ` +
         `found: ${openerNames.length === 0 ? '(none)' : openerNames.join(', ')}`
     );
   }
-  /** @type {(path: string) => { raw: import('better-sqlite3').Database }} */
-  const opener = mod[openerNames[0]];
+  /** @type {(path: string) => { raw: SqliteHandle }} */
+  const opener = mod[openerName];
   if (typeof opener !== 'function') {
     throw new Error(`[${pillar.name}] expected export ${openerNames[0]} to be a function`);
   }
@@ -709,7 +740,7 @@ async function openPillarInMemory(pillar) {
  * `INSERT` from a script, a repair query or an import path writes the row
  * (POPS-3033, POPS-3020).
  *
- * @param {import('better-sqlite3').Database} raw
+ * @param {SqliteHandle} raw
  * @param {Set<string>} usedSymbols
  * @param {Map<string, { tableName: string; indexNames: string[]; columnDefaults: ColumnDefault[] }>} symbolToTable
  * @returns {{ missingTables: string[]; missingIndexes: Array<{ table: string; index: string }>; defaultMismatches: Array<{ table: string; column: string; expected: string; actual: string | null }> }}
@@ -755,20 +786,38 @@ function diff(raw, usedSymbols, symbolToTable) {
 }
 
 /**
+ * Whether a `PRAGMA table_info` row has the shape this script reads.
+ * Always true against a real SQLite result — guards the type only.
+ *
+ * @param {unknown} row
+ * @returns {row is { name: string; dflt_value: string | null }}
+ */
+function isTableInfoRow(row) {
+  return (
+    typeof row === 'object' &&
+    row !== null &&
+    'name' in row &&
+    typeof row.name === 'string' &&
+    'dflt_value' in row &&
+    (row.dflt_value === null || typeof row.dflt_value === 'string')
+  );
+}
+
+/**
  * Physical column name → normalised `DEFAULT` clause, for one applied table.
  * A column with no `DEFAULT` is absent from the map, which the caller reads as
  * "the schema declares one and the DDL does not".
  *
- * @param {import('better-sqlite3').Database} raw
+ * @param {SqliteHandle} raw
  * @param {string} table
  * @returns {Map<string, string>}
  */
 function ddlDefaultsFor(raw, table) {
-  /** @type {Array<{ name: string; dflt_value: string | null }>} */
   const rows = raw.prepare(`PRAGMA table_info(${JSON.stringify(table)})`).all();
   /** @type {Map<string, string>} */
   const out = new Map();
   for (const row of rows) {
+    if (!isTableInfoRow(row)) continue;
     const normalised = normaliseDdlDefault(row.dflt_value);
     if (normalised !== null) out.set(row.name, normalised);
   }
@@ -824,7 +873,14 @@ async function checkPillar(pillar, options = {}) {
       );
       return false;
     }
-    const column = target.columnDefaults[0].column;
+    const firstDefault = target.columnDefaults[0];
+    if (firstDefault === undefined) {
+      console.error(
+        `[${pillar.name}] cannot inject a fake default: matched table has no column defaults.`
+      );
+      return false;
+    }
+    const column = firstDefault.column;
     target.columnDefaults = [
       ...target.columnDefaults,
       { column, expected: FAKE_SELF_TEST_DEFAULT },
@@ -938,7 +994,7 @@ async function checkPillar(pillar, options = {}) {
 
 /**
  * @param {string[]} argv
- * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]> }}
+ * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]>; injectFakeDefault: boolean }}
  */
 function parseArgs(argv) {
   let pillar = '';

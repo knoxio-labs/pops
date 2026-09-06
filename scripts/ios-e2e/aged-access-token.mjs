@@ -41,6 +41,10 @@ const TOKEN_TYPE = 'bfm-at+jwt';
  */
 const PRETENDED_LIFETIME_SECONDS = 600;
 
+/**
+ * @param {Record<string, unknown>} value
+ * @returns {string}
+ */
 function encodeSegment(value) {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
 }

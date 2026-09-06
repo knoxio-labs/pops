@@ -57,6 +57,8 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
+import { boundAddress } from './server-address.mjs';
+
 const PURCHASES_CONTRACT_PATH = fileURLToPath(
   new URL('../../pillars/purchases/openapi/purchases.openapi.json', import.meta.url)
 );
@@ -119,6 +121,21 @@ export function uploadRoute(document) {
 }
 
 /**
+ * The shape both snapshot readers accept for one pillar on the registry —
+ * shared with `upstream-stub.mjs`'s finance entry so the two can sit in the
+ * same `pillars` array.
+ *
+ * @typedef {{
+ *   pillarId: string,
+ *   baseUrl: string,
+ *   registered: boolean,
+ *   status: string,
+ *   lastHeartbeatAt: string,
+ *   manifest: Record<string, unknown>,
+ * }} RegistryEntry
+ */
+
+/**
  * The registry entry for this stub, in the shape both snapshot readers accept.
  *
  * The stricter of the two — `pillarRegistry()` in
@@ -129,7 +146,7 @@ export function uploadRoute(document) {
  * finance entry is.
  *
  * @param {{ baseUrl: string, now: string }} options
- * @returns {Record<string, unknown>}
+ * @returns {RegistryEntry}
  */
 export function purchasesRegistryEntry({ baseUrl, now }) {
   return {
@@ -196,12 +213,16 @@ export async function startPurchasesStub({
       // probe up for its whole timeout on every bootstrap, which is a real
       // wait this suite does not want. A reset fails its `fetch` at once, the
       // same as a port nothing is listening on.
-      if (!reachable) return request.socket.destroy();
+      if (!reachable) {
+        request.socket.destroy();
+        return;
+      }
       response.writeHead(200, {
         'content-type': 'application/json',
         'content-length': String(contractBody.byteLength),
       });
-      return response.end(contractBody);
+      response.end(contractBody);
+      return;
     }
 
     response.writeHead(404, { 'content-type': 'application/json' });
@@ -214,12 +235,14 @@ export async function startPurchasesStub({
     );
   });
 
-  await new Promise((resolve, reject) => {
+  /** @type {Promise<void>} */
+  const listening = new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, host, resolve);
+    server.listen(0, host, () => resolve());
   });
+  await listening;
 
-  const { port } = server.address();
+  const { port } = boundAddress(server, 'ios-e2e purchases stub');
   return {
     url: `http://${host}:${port}`,
     port,

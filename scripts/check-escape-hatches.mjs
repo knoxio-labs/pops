@@ -155,7 +155,10 @@ const WRITE_THROUGH_RE = new RegExp(
   'g'
 );
 
-/** Escape a captured identifier for literal use in a RegExp (`$` is a metachar). */
+/**
+ * Escape a captured identifier for literal use in a RegExp (`$` is a metachar).
+ * @param {string} name
+ */
 function escapeForRegExp(name) {
   return name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
@@ -300,19 +303,25 @@ export function scanHatches() {
   return { hatches: result, scanned };
 }
 
-/** Stable, diff-friendly ordering for the committed baseline. */
+/**
+ * Stable, diff-friendly ordering for the committed baseline.
+ * @param {Record<string, Record<string, number>>} obj
+ * @returns {Record<string, Record<string, number>>}
+ */
 function sortDeep(obj) {
   /** @type {Record<string, Record<string, number>>} */
   const out = {};
   for (const file of Object.keys(obj).toSorted()) {
+    const fileKinds = obj[file] ?? {};
     /** @type {Record<string, number>} */
     const kinds = {};
-    for (const kind of Object.keys(obj[file]).toSorted()) kinds[kind] = obj[file][kind];
+    for (const kind of Object.keys(fileKinds).toSorted()) kinds[kind] = fileKinds[kind] ?? 0;
     out[file] = kinds;
   }
   return out;
 }
 
+/** @returns {Record<string, Record<string, number>>} */
 function loadBaseline() {
   if (!existsSync(BASELINE_PATH)) {
     console.error(
@@ -324,7 +333,9 @@ function loadBaseline() {
   try {
     return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
   } catch (e) {
-    console.error(`✗ escape-hatch gate: baseline is not valid JSON (${e.message})`);
+    console.error(
+      `✗ escape-hatch gate: baseline is not valid JSON (${e instanceof Error ? e.message : String(e)})`
+    );
     process.exit(2);
   }
 }
@@ -438,6 +449,7 @@ function runSelfTest() {
   // `create-builder.ts` / `update-builder.ts`. Asserting only that the gate
   // exits zero would pass with these matchers deleted, which is the failure
   // mode ADR-045 exists to stop: pin the reported COUNT, both ways.
+  /** @type {Array<[label: string, source: string, kind: string, expected: number]>} */
   const launderedPositives = [
     [
       'staged, populated, asserted back',
@@ -479,6 +491,7 @@ function runSelfTest() {
   // people learn to ignore it and baseline the noise. These are the legitimate
   // uses it must stay silent on — all of them RECEIVE a value rather than
   // build one, which is precisely where `isStagedContainer` draws the line.
+  /** @type {Array<[label: string, source: string]>} */
   const launderedNegatives = [
     [
       'a parsed JSON boundary, narrowed once',
@@ -535,6 +548,7 @@ function runSelfTest() {
   }
 
   const existing = 'pillars/demo/src/existing.ts';
+  /** @type {Record<string, Record<string, number>>} */
   const baseline = { [existing]: { 'as any': 1, 'as never': 2 } };
 
   const synthetic = 'pillars/demo/src/new-violation.ts';
@@ -545,14 +559,22 @@ function runSelfTest() {
   }
 
   const grown = structuredClone(baseline);
-  grown[existing]['as any'] += 1;
+  const grownExisting = grown[existing];
+  if (!grownExisting) {
+    throw new Error(`self-test: clone of the synthetic baseline lost "${existing}"`);
+  }
+  grownExisting['as any'] = (grownExisting['as any'] ?? 0) + 1;
   if (!diffAgainstBaseline(grown, baseline).some((g) => g.file === existing)) {
     console.error('✗ self-test: gate failed to flag a grown count in an existing file.');
     process.exit(1);
   }
 
   const newKind = structuredClone(baseline);
-  newKind[existing]['as unknown as'] = 1;
+  const newKindExisting = newKind[existing];
+  if (!newKindExisting) {
+    throw new Error(`self-test: clone of the synthetic baseline lost "${existing}"`);
+  }
+  newKindExisting['as unknown as'] = 1;
   if (!diffAgainstBaseline(newKind, baseline).some((g) => g.kind === 'as unknown as')) {
     console.error('✗ self-test: gate failed to flag a new hatch kind in an existing file.');
     process.exit(1);
