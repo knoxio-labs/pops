@@ -1,11 +1,12 @@
 import { entityColorById } from './entity-colors';
 
 /**
- * Fictional `entities` rows for the contacts entity details screen (POPS-2805).
- * `avatar`, `poster` and `colour` are the three fields the model is gaining;
- * all three are optional, so the set below deliberately covers every
- * combination — full identity, colour only, and nothing at all — rather than
- * showing only the best-dressed entity.
+ * Fictional `entities` rows for the contacts entity screens (POPS-2805): the
+ * details page and the management list that will both move to
+ * `pillars/contacts/app` per POPS-3067. `avatar`, `poster` and `colour` are
+ * the three fields the model is gaining; all three are optional, so the set
+ * below deliberately covers every combination — full identity, colour only,
+ * and nothing at all — rather than showing only the best-dressed entity.
  */
 export type EntityType =
   | 'company'
@@ -31,6 +32,8 @@ export interface Entity {
   poster?: string;
   /** An `ENTITY_COLORS` id, assigned at random when the entity is created. */
   colourId?: string;
+  /** Transactions matched to this entity. Zero means "orphaned" on the list. */
+  transactionCount: number;
 }
 
 function avatarMark(colour: string, shape: string): string {
@@ -65,6 +68,7 @@ export const entities: Entity[] = [
       '#0f5c2c',
       '<circle cx="540" cy="60" r="90" fill="#ffffff22"/><circle cx="80" cy="170" r="120" fill="#ffffff14"/>'
     ),
+    transactionCount: 214,
   },
   {
     id: 'e2',
@@ -77,6 +81,7 @@ export const entities: Entity[] = [
       '#5b3fa8',
       '<circle cx="32" cy="24" r="12" fill="#fff"/><path d="M12 56c0-14 9-22 20-22s20 8 20 22" fill="#fff"/>'
     ),
+    transactionCount: 37,
   },
   {
     id: 'e3',
@@ -93,6 +98,7 @@ export const entities: Entity[] = [
       '#111c40',
       '<rect x="480" y="30" width="120" height="140" rx="8" fill="#ffffff1a"/>'
     ),
+    transactionCount: 12,
   },
   {
     id: 'e4',
@@ -104,6 +110,7 @@ export const entities: Entity[] = [
       '#0072ac',
       '<circle cx="32" cy="32" r="16" fill="none" stroke="#fff" stroke-width="6"/>'
     ),
+    transactionCount: 89,
   },
   {
     id: 'e5',
@@ -113,12 +120,33 @@ export const entities: Entity[] = [
     defaultTransactionType: 'expense',
     defaultTags: ['category:dining', 'venue:cafe'],
     colourId: 'amber',
+    transactionCount: 21,
   },
   {
     id: 'e6',
     name: 'Unlabelled Merchant Pty Ltd',
     type: 'company',
     notes: 'Matched by ABN only — no logo or alias has been added yet.',
+    transactionCount: 0,
+  },
+  {
+    id: 'e7',
+    name: 'IKEA',
+    type: 'brand',
+    abn: '48 004 383 771',
+    defaultTransactionType: 'expense',
+    defaultTags: ['category:home'],
+    colourId: 'fuchsia',
+    avatar: avatarMark('#0058a3', '<rect x="16" y="16" width="32" height="32" fill="#ffda1a"/>'),
+    transactionCount: 6,
+  },
+  {
+    id: 'e8',
+    name: 'Alexandria Netball Association',
+    type: 'organisation',
+    aliases: ['ANA'],
+    notes: 'Season fees, twice yearly.',
+    transactionCount: 0,
   },
 ];
 

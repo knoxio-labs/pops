@@ -19,6 +19,7 @@
     "@pops/pillar-sdk": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
+    "@tanstack/react-table": "^8.21.3",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",

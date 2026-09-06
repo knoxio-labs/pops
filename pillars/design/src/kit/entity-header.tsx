@@ -4,6 +4,26 @@ import { type ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, cn } from '@pops/ui';
 
 /**
+ * The small mark used wherever an entity is named in passing — the list row,
+ * a picker, a badge — rather than given a page. Same fallback rule as the
+ * headers: the uploaded avatar, or initials on the assigned colour, or plain
+ * initials when even that is unset.
+ */
+export function EntityAvatar({ entity, size = 'sm' }: { entity: Entity; size?: 'sm' | 'default' }) {
+  const colour = entityColour(entity);
+  return (
+    <Avatar size={size}>
+      {entity.avatar && <AvatarImage src={entity.avatar} alt="" />}
+      <AvatarFallback
+        style={colour ? { backgroundColor: colour.tint, color: colour.swatch } : undefined}
+      >
+        {initials(entity.name)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
+/**
  * The banner-forward header: a poster fills the top of the page and the
  * avatar sits half over it, half over the body — the layout only reads as a
  * "profile" while both are present. When there is no poster the banner
