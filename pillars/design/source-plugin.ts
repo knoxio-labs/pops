@@ -3,11 +3,13 @@
  * element the design surface renders, so a comment pinned in the browser
  * carries the file and line a session should open.
  *
- * Scoped to `src/screens` and `src/experiments` — the surface, and nothing
- * else. The chrome and `@pops/ui` stay unstamped on purpose: the overlay
- * walks up to the nearest stamped ancestor, and stamping a shared component
- * would land every comment on the same line of the design system instead of
- * on the screen that used it.
+ * Scoped to `src/screens`, `src/experiments`, and `src/kit` — the surface and
+ * the shared components it's built from. Without kit stamped, the overlay's
+ * nearest-ancestor walk skips every subitem inside a shared component and
+ * lands on the screen-level wrapper, so only the outer card is ever
+ * targetable. The thread's `route` field already records which screen the
+ * comment was made on, so a kit-sourced anchor pointing at the kit component
+ * doesn't lose that context — it points at the actual markup to edit.
  */
 import path from 'node:path';
 
@@ -19,7 +21,7 @@ import type { Plugin } from 'vite';
 /** The attribute the overlay's anchor resolver looks for. */
 export const SOURCE_ATTRIBUTE = 'data-pops-design-source';
 
-const SURFACE = /\/pillars\/design\/src\/(screens|experiments)\/[^?]+\.tsx$/u;
+const SURFACE = /\/pillars\/design\/src\/(screens|experiments|kit)\/[^?]+\.tsx$/u;
 
 function stamp(repoRoot: string) {
   return ({ types: t }: { types: typeof BabelTypes }): PluginObj => ({
