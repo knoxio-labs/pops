@@ -20,15 +20,17 @@ server and the `emit-openapi` bin share.
 
 The HTTP surface:
 
-| Path               | What it serves                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------- |
-| `/`                | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
-| `/entities`        | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
-| `/entities/{id}`   | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
-| `/entities/lookup` | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
-| `/search`          | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
-| `/health`          | Fleet-standard liveness envelope.                                                                   |
-| `/openapi`         | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
+| Path                    | What it serves                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `/`                     | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
+| `/entities`             | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
+| `/entities/{id}`        | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
+| `/entities/lookup`      | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
+| `/entities/{id}/avatar` | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/entities/{id}/poster` | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/search`               | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
+| `/health`               | Fleet-standard liveness envelope.                                                                   |
+| `/openapi`              | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
@@ -49,6 +51,22 @@ does exactly this — its vendored copy lives at
 `pillars/finance/app/contracts/contacts.openapi.json`, kept in lockstep with the
 canonical file by a repo-level drift gate
 (`scripts/ci/check-vendored-contracts.mjs`).
+
+## Blob storage
+
+`avatarAssetId` and `posterAssetId` on an entity point at rows in a `blobs`
+table in the same `contacts.db` SQLite file — bytes are a `BLOB` column, not a
+filesystem path. That is the same call finance's ADR-050 made for institution
+logos, for the same reason: this pillar's litestream config already replicates
+the whole `contacts.db` file, so a filesystem tree would need its own,
+separate backup mechanism this repo has no generic answer for, and it needs no
+extra fresh-volume provisioning (chown/mkdir) beyond what migrations already
+give the SQLite file. Content type is capped to `image/png`, `image/jpeg` and
+`image/webp` (SVG excluded — an SVG can carry a script payload that executes
+in the viewer's origin) and 2 MiB, matching finance's institution-logo upload.
+A replacement always inserts a new blob row, repoints the entity's asset id,
+then deletes the old row — so a crash mid-operation never leaves the entity
+referencing nothing.
 
 ## What proves cross-language wire conformance
 
@@ -104,6 +122,7 @@ pillars/contacts/
 │   ├── manifest.rs         the pillar manifest registered with the registry
 │   ├── registry/           register/heartbeat/deregister lifecycle + transport
 │   ├── entities/           entities model, repo, and routes
+│   ├── blobs/              blob storage backing the avatar/poster asset ids
 │   ├── search/             contacts search slice
 │   ├── health.rs           /health envelope
 │   └── time.rs             timestamp helpers
