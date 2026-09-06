@@ -159,8 +159,9 @@ export function parseGatedArray(source) {
     // through `workflowDoc` directly.
   }
   const block = /const\s+gated\s*=\s*\[([\s\S]*?)\]\s*;/u.exec(body);
-  if (!block) return [];
-  return block[1]
+  const captured = block?.[1];
+  if (captured === undefined) return [];
+  return captured
     .split(',')
     .map((entry) => entry.trim())
     .filter((entry) => entry !== '')
@@ -254,9 +255,10 @@ export function parsePathFilterMap(source) {
     // Not a workflow document — treat the input as the script body itself.
   }
   const block = /const\s+PATH_FILTERS\s*=\s*(\{[\s\S]*?\n\s*\});/u.exec(body);
-  if (!block) return {};
+  const captured = block?.[1];
+  if (captured === undefined) return {};
   try {
-    return JSON.parse(block[1]);
+    return JSON.parse(captured);
   } catch (error) {
     throw new ConfigParseError('ci-gate.yml PATH_FILTERS', error);
   }

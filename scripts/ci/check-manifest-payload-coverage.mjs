@@ -127,6 +127,7 @@ export function listSourceFiles(dir, root) {
   const files = [];
   /** @type {string[]} */
   const unclassified = [];
+  /** @param {string} name */
   const rel = (name) => relative(root, join(dir, name)).split(sep).join('/');
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -349,7 +350,7 @@ export function scanPillars(root) {
  */
 function selfTest() {
   /** @param {Record<string, string>} tree */
-  const reader = (tree) => (relPath) => tree[relPath] ?? '';
+  const reader = (tree) => (/** @type {string} */ relPath) => tree[relPath] ?? '';
 
   // Declaration forms an enumerated matcher misses: a signature wrapped over
   // lines, a default export, a re-export, and an inferred return type.

@@ -163,9 +163,14 @@ function selfTest() {
   return ok;
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {string}
+ */
 function parseBase(argv) {
   const i = argv.indexOf('--base');
-  if (i >= 0 && argv[i + 1]) return argv[i + 1];
+  const next = i >= 0 ? argv[i + 1] : undefined;
+  if (next) return next;
   return process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
 }
 

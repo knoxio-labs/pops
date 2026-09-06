@@ -269,8 +269,9 @@ export function resolveEffectiveComposite(configPath, seen = new Set()) {
   if (error || !config) return { composite: false, error };
 
   const own = config.compilerOptions;
-  if (own && typeof own === 'object' && typeof own.composite === 'boolean') {
-    return { composite: own.composite, error: null };
+  if (own !== null && typeof own === 'object') {
+    const composite = /** @type {{ composite?: unknown }} */ (own).composite;
+    if (typeof composite === 'boolean') return { composite, error: null };
   }
 
   let bases = /** @type {unknown[]} */ ([]);
@@ -313,6 +314,7 @@ export function findPopsPackageImports(srcDir) {
   const found = new Set();
   if (!existsSync(srcDir)) return found;
 
+  /** @param {string} dir */
   function walk(dir) {
     /** @type {import('node:fs').Dirent[]} */
     let entries;
@@ -547,6 +549,7 @@ function checkPillarDetection() {
     );
 
     const { targets: libTargets } = discoverLibReferenceTargets(root);
+    /** @param {string} id */
     const check = (id) =>
       checkPillar(
         {

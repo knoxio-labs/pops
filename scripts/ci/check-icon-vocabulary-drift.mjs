@@ -96,7 +96,7 @@ export function parseOxlintBannedNames(oxlintrcSource) {
  */
 export function parseTestBannedNames(testSource) {
   const casesMatch = /const cases:[^=]*=\s*\[([\s\S]*?)\n\s*\];/.exec(testSource);
-  const body = casesMatch ? casesMatch[1] : '';
+  const body = casesMatch?.[1] ?? '';
   const names = new Set();
   const tupleRe = /\[\s*'([^']+)'\s*,\s*'[^']+'\s*\]/g;
   for (const match of body.matchAll(tupleRe)) names.add(match[1]);
@@ -130,7 +130,7 @@ function run() {
     return false;
   }
 
-  /** @type {Array<{ label: string; a: [string, Set<string>]; b: [string, Set<string>] }>} */
+  /** @type {Array<{ a: [string, Set<string>]; b: [string, Set<string>] }>} */
   const pairs = [
     { a: [README_PATH, readmeNames], b: [OXLINTRC_PATH, oxlintNames] },
     { a: [OXLINTRC_PATH, oxlintNames], b: [TEST_PATH, testNames] },

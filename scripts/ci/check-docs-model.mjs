@@ -256,14 +256,17 @@ export function extractPathClaims(source, mdPath) {
 
   for (const match of source.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/gu)) {
     const target = match[1];
+    if (target === undefined) continue;
     if (/^(?:https?:|mailto:|#)/u.test(target)) continue;
-    const clean = target.split('#')[0].split('?')[0];
+    const clean = (target.split('#')[0] ?? '').split('?')[0] ?? '';
     if (clean === '' || isPlaceholderPath(clean)) continue;
     claims.push({ raw: target, candidates: [join(fromDir, clean)] });
   }
 
   for (const match of source.matchAll(BACKTICKED_TOKEN_RE)) {
-    const resolved = resolveBacktickedPathToken(match[1], fromDir);
+    const token = match[1];
+    if (token === undefined) continue;
+    const resolved = resolveBacktickedPathToken(token, fromDir);
     if (resolved) claims.push(resolved);
   }
 
@@ -406,6 +409,7 @@ export function resolvePathClaims(root, claims) {
   // `join(root, t)` alone would follow a `../../../etc/hostname`-style claim
   // straight out of the repo and report it "resolved" whenever that host path
   // happens to exist — a claim is only real if it also stays inside root.
+  /** @param {string} t */
   const existsWithinRoot = (t) => {
     const resolved = resolve(root, t);
     return (
@@ -624,7 +628,7 @@ function findCommentStart(line, slash) {
       quote = ch;
       continue;
     }
-    if (!slash && ch === '#' && (i === 0 || /\s/u.test(line[i - 1]))) {
+    if (!slash && ch === '#' && (i === 0 || /\s/u.test(line[i - 1] ?? ''))) {
       return { index: i, marker: '#', block: false };
     }
     if (slash && ch === '/' && line[i + 1] === '/') return { index: i, marker: '//', block: false };
@@ -683,6 +687,10 @@ export function extractSourceDocClaims(source, filePath) {
   /** @type {PathClaim[]} */
   const claims = [];
   const seen = new Set();
+  /**
+   * @param {string} raw
+   * @param {string[]} candidates
+   */
   const push = (raw, candidates) => {
     if (seen.has(raw)) return;
     seen.add(raw);
@@ -692,6 +700,7 @@ export function extractSourceDocClaims(source, filePath) {
   for (const comment of extractComments(source, ext)) {
     for (const match of comment.matchAll(DOC_PATH_TOKEN_RE)) {
       const token = match[1];
+      if (token === undefined) continue;
       if (token.includes('://') || isPlaceholderPath(token)) continue;
       const namesAFile = token.endsWith('.md');
       const deepRootDocsDir = token.startsWith('docs/') && token.split('/').length > 2;
@@ -699,7 +708,9 @@ export function extractSourceDocClaims(source, filePath) {
       push(token, [token, join(fromDir, token)]);
     }
     for (const match of comment.matchAll(BACKTICKED_TOKEN_RE)) {
-      const resolved = resolveBacktickedPathToken(match[1], fromDir, { rootedOnly: true });
+      const backtickToken = match[1];
+      if (backtickToken === undefined) continue;
+      const resolved = resolveBacktickedPathToken(backtickToken, fromDir, { rootedOnly: true });
       if (resolved) push(resolved.raw, resolved.candidates);
     }
   }
@@ -747,17 +758,20 @@ export function findUntrackedAbsences(root) {
     if (!mdPath.endsWith('README.md')) continue;
     const lines = readFileSync(join(root, mdPath), 'utf8').split('\n');
     for (let i = 0; i < lines.length; i++) {
-      if (!ABSENCE_HEADING_RE.test(lines[i])) continue;
-      const depth = (/^#+/u.exec(lines[i]) ?? [''])[0].length;
+      const line = lines[i];
+      if (line === undefined || !ABSENCE_HEADING_RE.test(line)) continue;
+      const depth = (/^#+/u.exec(line) ?? [''])[0].length;
       /** @type {string[]} */
       const body = [];
       for (let j = i + 1; j < lines.length; j++) {
-        const next = /^#+/u.exec(lines[j]);
+        const nextLine = lines[j];
+        if (nextLine === undefined) break;
+        const next = /^#+/u.exec(nextLine);
         if (next && next[0].length <= depth) break;
-        body.push(lines[j]);
+        body.push(nextLine);
       }
       if (!HULY_KEY_RE.test(body.join('\n'))) {
-        out.push({ file: mdPath, heading: lines[i].trim() });
+        out.push({ file: mdPath, heading: line.trim() });
       }
     }
   }

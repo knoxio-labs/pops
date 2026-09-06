@@ -95,6 +95,8 @@ const ALLOWED_DEV_PILLAR_DEPS = {
  * renamed under the guard, not cleaned up. `packages` and `apps` are the
  * pre-federation names, legitimately gone, and kept only so the guard still
  * classifies a tree that predates the move.
+ *
+ * @type {Array<{ root: string; defaultKind: 'pillar' | 'lib' | 'app'; nested: boolean; required: boolean }>}
  */
 export const UNIT_ROOTS = [
   { root: 'pillars', defaultKind: 'pillar', nested: true, required: true },

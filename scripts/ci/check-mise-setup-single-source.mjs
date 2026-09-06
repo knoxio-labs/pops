@@ -262,7 +262,9 @@ export function findViolations({ workflows, actions, wrapper }) {
     return findings;
   }
 
-  const ref = upstream[0].slice(UPSTREAM.length + 1);
+  const firstUpstream = upstream[0];
+  if (firstUpstream === undefined) return findings;
+  const ref = firstUpstream.slice(UPSTREAM.length + 1);
   const pin = classifyPin(ref);
   const floor = RETRY_FLOOR.join('.');
   if (pin.kind === 'floating') {
@@ -282,7 +284,7 @@ export function findViolations({ workflows, actions, wrapper }) {
       `${WRAPPER_REL} pins \`${UPSTREAM}@${ref}\`, which is not a release tag this guard models. ` +
         `Pin an exact release, v${floor} or later.`
     );
-  } else if (!atLeast(pin.version, RETRY_FLOOR)) {
+  } else if (pin.kind === 'exact' && !atLeast(pin.version, RETRY_FLOOR)) {
     findings.push(
       `${WRAPPER_REL} pins \`${UPSTREAM}@${ref}\`, which predates the download retry added in ` +
         `v${floor}. On a cold mise cache one transient release-CDN error fails setup and evicts ` +

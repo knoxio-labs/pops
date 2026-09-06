@@ -122,12 +122,20 @@ export function extractConstant(root, source) {
     };
   }
 
-  const value = Number.parseInt(match[1], 10);
+  const matchedDigits = match[1];
+  if (matchedDigits === undefined) {
+    return {
+      source,
+      value: null,
+      error: `${source.label} in ${source.path} matched with no captured value.`,
+    };
+  }
+  const value = Number.parseInt(matchedDigits, 10);
   if (!Number.isInteger(value)) {
     return {
       source,
       value: null,
-      error: `${source.label} in ${source.path} matched "${match[1]}", which is not an integer.`,
+      error: `${source.label} in ${source.path} matched "${matchedDigits}", which is not an integer.`,
     };
   }
 
@@ -200,6 +208,7 @@ function selfTest() {
       }
     }
 
+    /** @type {Record<string, boolean>} */
     const checks = {};
 
     write({

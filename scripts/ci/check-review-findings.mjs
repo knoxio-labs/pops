@@ -462,6 +462,7 @@ export async function selfTest() {
 
   const HEAD = 'a'.repeat(40);
 
+  /** @param {{ last_reviewed_sha: string | null, findings: DecodedFinding[] }} state */
   const stateComment = (state) => ({
     body: `## Review\n\n<!-- ${STATE_MARKER}: ${Buffer.from(JSON.stringify(state)).toString('base64')} -->`,
     user: { login: REVIEWER_LOGIN },
@@ -712,7 +713,9 @@ export async function selfTest() {
   );
   check(
     'a dismissed finding is reported back, not just silently dropped',
-    (dismissedOnly.dismissed ?? []).some((f) => f.id === 'aaaaaa111111')
+    (dismissedOnly.outcome !== 'retry' ? (dismissedOnly.dismissed ?? []) : []).some(
+      (f) => f.id === 'aaaaaa111111'
+    )
   );
   check(
     'a dismiss marker for an id that never appears is a harmless no-op',
@@ -803,7 +806,9 @@ export async function selfTest() {
   // annotateWithPushAccess: reviewed MEDIUM on this PR's own head — the
   // candidate-selection and merge-by-login logic had no test coverage at
   // all, despite deciding who is allowed to waive a finding.
+  /** @type {string[]} */
   const resolverCalls = [];
+  /** @param {string} login */
   const fakeResolver = (login) => {
     resolverCalls.push(login);
     return login === 'trusted-dev';
@@ -840,7 +845,7 @@ export async function selfTest() {
   check('an untrusted login is annotated push_access: false', annotated[2]?.push_access === false);
   check(
     'a comment with no dismiss marker is left otherwise unannotated',
-    !('push_access' in annotated[0])
+    annotated[0] !== undefined && !('push_access' in annotated[0])
   );
   const noLoginComment = { body: dismissMarkerFor('dddddd444444') };
   const withMissingLogin = annotateWithPushAccess([noLoginComment], fakeResolver);
@@ -917,7 +922,10 @@ export async function selfTest() {
   return true;
 }
 
-/** @param {string} message */
+/**
+ * @param {string} message
+ * @returns {never}
+ */
 function usage(message) {
   console.error(`check-review-findings: ${message}`);
   console.error(
@@ -938,7 +946,8 @@ function parseFlags(argv) {
   const opts = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (!arg?.startsWith('--')) usage(`unexpected argument \`${arg}\``);
+    if (arg === undefined) break;
+    if (!arg.startsWith('--')) usage(`unexpected argument \`${arg}\``);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) usage(`\`${arg}\` needs a value`);
     opts[arg.slice(2)] = value;

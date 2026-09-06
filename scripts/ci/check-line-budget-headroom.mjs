@@ -162,7 +162,7 @@ export function globToRegExp(glob) {
   const braceMatch = /\{([^{}]*)\}/.exec(glob);
   if (braceMatch) {
     const [whole, body] = braceMatch;
-    const alternatives = body.split(',');
+    const alternatives = (body ?? '').split(',');
     const pattern = alternatives
       .map(
         (alt) =>
@@ -177,6 +177,7 @@ export function globToRegExp(glob) {
   let out = '^';
   for (let i = 0; i < glob.length; i += 1) {
     const c = glob[i];
+    if (c === undefined) continue;
     if (c === '*') {
       if (glob[i + 1] === '*') {
         i += 1;
@@ -364,6 +365,7 @@ export function countBudgetLines(source) {
   for (let i = 0; i < source.length; i += 1) {
     const ch = source[i];
     const next = source[i + 1];
+    if (ch === undefined) continue;
 
     if (ch === '\n') {
       // A regex literal cannot contain a raw newline, so an opener this
@@ -580,7 +582,8 @@ function readBlobsBatch(queries, cwd) {
     // `--batch` itself only fails to start at all (no git, a bad cwd) — a
     // per-query miss is reported in its output, not a non-zero exit. A spawn
     // failure here means every query in this batch is unanswerable.
-    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    const message =
+      error instanceof Error ? (error.message.split('\n')[0] ?? error.message) : String(error);
     for (const q of queries) results.set(keyOf(q), { kind: 'error', message });
     return results;
   }
@@ -1267,6 +1270,7 @@ function selfTest() {
   const dir = tmpRepo();
   try {
     const capLine = () => 'const line = 1;';
+    /** @param {number} n */
     const bodyLines = (n) => Array.from({ length: n }, capLine).join('\n');
 
     // Common ancestor: shared.ts already at exactly 200 lines, shared2.ts at
@@ -1337,6 +1341,10 @@ function selfTest() {
   // is the failure mode this guard exists for.
   const moved = tmpRepo();
   try {
+    /**
+     * @param {number} n
+     * @param {string} [tag]
+     */
     const bodyLines = (n, tag = 'x') =>
       Array.from({ length: n }, (_, i) => `const ${tag}${i} = 1;`).join('\n');
 
@@ -1415,6 +1423,10 @@ function selfTest() {
   // every one of them.
   const reporting = tmpRepo();
   try {
+    /**
+     * @param {number} n
+     * @param {string} [tag]
+     */
     const body = (n, tag = 'x') =>
       `${Array.from({ length: n }, (_, i) => `const ${tag}${i} = 1;`).join('\n')}\n`;
 

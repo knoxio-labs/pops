@@ -134,10 +134,14 @@ const VENDOR_DECLARATIONS = [
     },
     /** @param {string} text @returns {string[]} */
     extractDeclaredFilenames(text) {
+      /** @type {string[]} */
       const names = [];
       const pattern =
         /input:\s*fileURLToPath\(\s*new URL\(\s*'\.\/contracts\/([^']+\.openapi\.json)'/g;
-      for (const match of text.matchAll(pattern)) names.push(match[1]);
+      for (const match of text.matchAll(pattern)) {
+        const name = match[1];
+        if (name !== undefined) names.push(name);
+      }
       return names;
     },
   },
@@ -158,9 +162,13 @@ const VENDOR_DECLARATIONS = [
     },
     /** @param {string} text @returns {string[]} */
     extractDeclaredFilenames(text) {
+      /** @type {string[]} */
       const names = [];
       const pattern = /vendored\s*=\s*Contracts\/([^\s'"]+\.openapi\.json)/g;
-      for (const match of text.matchAll(pattern)) names.push(match[1]);
+      for (const match of text.matchAll(pattern)) {
+        const name = match[1];
+        if (name !== undefined) names.push(name);
+      }
       return names;
     },
   },
@@ -200,6 +208,9 @@ export function discoverVendoredContracts(root) {
   const pillarsDir = join(root, 'pillars');
 
   for (const [unitKind, ...withinUnit] of VENDOR_DIRECTORIES) {
+    // Every VENDOR_DIRECTORIES entry has at least one segment; the guard exists
+    // only because array destructuring can't express that to the type checker.
+    if (unitKind === undefined) continue;
     const unitKindDir = join(root, unitKind);
     if (!existsSync(unitKindDir)) continue;
 
@@ -377,9 +388,16 @@ export function deriveExpectedContracts(root) {
   const pillarsDir = join(root, 'pillars');
 
   VENDOR_DIRECTORIES.forEach(([unitKind, ...withinUnit], index) => {
+    // Every VENDOR_DIRECTORIES entry has at least one segment, and
+    // VENDOR_DECLARATIONS is checked at load time to have exactly one entry
+    // per VENDOR_DIRECTORIES entry — the guards exist only because indexed
+    // access can't express either invariant to the type checker.
+    if (unitKind === undefined) return;
+    const declaration = VENDOR_DECLARATIONS[index];
+    if (declaration === undefined) return;
     const unitKindDir = join(root, unitKind);
     if (!existsSync(unitKindDir)) return;
-    const { findDeclarationFiles, extractDeclaredFilenames } = VENDOR_DECLARATIONS[index];
+    const { findDeclarationFiles, extractDeclaredFilenames } = declaration;
 
     for (const consumer of readdirSync(unitKindDir, { withFileTypes: true })) {
       if (!consumer.isDirectory()) continue;
@@ -605,6 +623,7 @@ function selfTestDiscovery() {
     /** @type {string[]} */
     const expected = [];
     for (const [index, [unitKind, ...withinUnit]] of VENDOR_DIRECTORIES.entries()) {
+      if (unitKind === undefined) throw new Error(`VENDOR_DIRECTORIES[${index}] has no segments`);
       const pillarId = `producer${index}`;
       mkdirSync(join(root, 'pillars', pillarId, 'openapi'), { recursive: true });
       writeFileSync(join(root, 'pillars', pillarId, 'openapi', `${pillarId}.openapi.json`), '{}\n');
@@ -697,7 +716,7 @@ function selfTestDrift() {
       throwingRead
     );
     const caughtUnreadable =
-      unreadableFindings.length === 1 && unreadableFindings[0].kind === 'unreadable';
+      unreadableFindings.length === 1 && unreadableFindings[0]?.kind === 'unreadable';
 
     const ok =
       Boolean(drift) &&
@@ -740,6 +759,7 @@ function selfTestDeclaration() {
     /** @type {string[]} */
     const copies = [];
     for (const [index, [unitKind, ...withinUnit]] of VENDOR_DIRECTORIES.entries()) {
+      if (unitKind === undefined) throw new Error(`VENDOR_DIRECTORIES[${index}] has no segments`);
       const pillarId = `declared${index}`;
       mkdirSync(join(root, 'pillars', pillarId, 'openapi'), { recursive: true });
       writeFileSync(join(root, 'pillars', pillarId, 'openapi', `${pillarId}.openapi.json`), '{}\n');
@@ -770,37 +790,45 @@ function selfTestDeclaration() {
       expectedBefore.length === VENDOR_DIRECTORIES.length &&
       findMoved(expectedBefore, statKind).length === 0;
 
+    // Both consumers were populated by the loop above, one per
+    // VENDOR_DIRECTORIES entry — the guard exists only because indexed
+    // access can't express that to the type checker.
+    const [firstCopy, secondCopy] = copies;
+    if (firstCopy === undefined || secondCopy === undefined) {
+      throw new Error('expected one vendored copy per VENDOR_DIRECTORIES entry');
+    }
+
     // The degenerate case: the first consumer's vendored-copy directory
     // moves (simulated by deleting the file it held), but nothing told its
     // declaration file, so the declaration still names the old path.
-    rmSync(copies[0]);
+    rmSync(firstCopy);
 
     // A second, distinct degenerate case: the second consumer's declared
     // path is occupied by a DIRECTORY rather than deleted outright — the
     // case `existsSync` alone would miss, since it calls a directory
     // "present" the same as a file.
-    rmSync(copies[1]);
-    mkdirSync(copies[1]);
+    rmSync(secondCopy);
+    mkdirSync(secondCopy);
 
     const expectedAfter = deriveExpectedContracts(root);
     const moved = findMoved(expectedAfter, statKind);
     const caughtMove =
       moved.length === 2 &&
-      moved.some((f) => f.copy === copies[0] && f.kind === 'moved') &&
-      moved.some((f) => f.copy === copies[1] && f.kind === 'not-a-file');
+      moved.some((f) => f.copy === firstCopy && f.kind === 'moved') &&
+      moved.some((f) => f.copy === secondCopy && f.kind === 'not-a-file');
 
     // A `stat` that THROWS for a reason other than not-found (EACCES, say)
     // must be reported as `'unreadable'`, never crash the self-test — the
     // same proof `selfTestDrift` runs for `findDrift`'s reader, here for
     // `findMoved`'s.
     const throwingStat = (/** @type {string} */ p) => {
-      if (p === copies[0]) throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      if (p === firstCopy) throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
       return statKind(p);
     };
     const unreadableFindings = findMoved(expectedAfter, throwingStat);
     const caughtUnreadable =
-      unreadableFindings.some((f) => f.copy === copies[0] && f.kind === 'unreadable') &&
-      unreadableFindings.some((f) => f.copy === copies[1] && f.kind === 'not-a-file');
+      unreadableFindings.some((f) => f.copy === firstCopy && f.kind === 'unreadable') &&
+      unreadableFindings.some((f) => f.copy === secondCopy && f.kind === 'not-a-file');
 
     const ok = positiveOk && caughtMove && caughtUnreadable;
     if (!ok) {
@@ -1148,7 +1176,7 @@ function main() {
           'vendoring location, add it to VENDOR_DIRECTORIES, VENDOR_DECLARATIONS and ' +
           'KNOWN_VENDORED_LEGS in the same commit'
       );
-    } else {
+    } else if ('declaredBy' in f) {
       console.error(
         `  ${rel(f.copy)}\n      declared by ${rel(f.declaredBy)} but not on disk — its ` +
           'vendored-contracts directory moved, or the file was renamed, without re-vendoring'

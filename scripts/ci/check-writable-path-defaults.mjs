@@ -334,7 +334,9 @@ export function parseDockerfile(source) {
 
     const envMatch = /^ENV\s+(.*)$/i.exec(line);
     if (envMatch) {
-      const body = envMatch[1];
+      // The capture group is `(.*)`, so it always matches (possibly empty);
+      // the fallback never actually fires.
+      const body = envMatch[1] ?? '';
       if (body.includes('=')) {
         for (const pair of body.match(/[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)/g) ?? []) {
           const eq = pair.indexOf('=');
@@ -352,13 +354,13 @@ export function parseDockerfile(source) {
 
     if (/^RUN\s/i.test(line)) {
       for (const mkdir of line.matchAll(/mkdir\s+(?:-\S+\s+)*([^&|;]+)/g)) {
-        for (const token of mkdir[1].trim().split(/\s+/)) {
+        for (const token of (mkdir[1] ?? '').trim().split(/\s+/)) {
           if (token.startsWith('-')) continue;
           if (token.startsWith('/')) created.push(posix.normalize(token));
         }
       }
       for (const chown of line.matchAll(/chown\s+(?:-\S+\s+)*\S+:\S+\s+([^&|;]+)/g)) {
-        for (const token of chown[1].trim().split(/\s+/)) {
+        for (const token of (chown[1] ?? '').trim().split(/\s+/)) {
           if (token.startsWith('/')) chowned.push(posix.normalize(token));
         }
       }
@@ -842,27 +844,41 @@ function selfTest() {
   const absolute = findRelativeDefaults('ingest.ts', FIXTURE_ABSOLUTE).findings;
   const nonPaths = findRelativeDefaults('url.ts', FIXTURE_NON_PATHS).findings;
 
-  const detectsPoster = poster.length === 1 && poster[0].envVars.includes('MEDIA_IMAGES_DIR');
+  const poster0 = poster[0];
+  const ladder0 = ladder[0];
+  const cwdJoin0 = cwdJoin[0];
+
+  const detectsPoster =
+    poster.length === 1 && poster0 !== undefined && poster0.envVars.includes('MEDIA_IMAGES_DIR');
   const detectsLadder =
     ladder.length === 1 &&
-    ladder[0].envVars.includes('FOOD_SQLITE_PATH') &&
-    ladder[0].envVars.includes('SQLITE_PATH');
+    ladder0 !== undefined &&
+    ladder0.envVars.includes('FOOD_SQLITE_PATH') &&
+    ladder0.envVars.includes('SQLITE_PATH');
   const detectsCwdJoin =
-    cwdJoin.length === 1 && cwdJoin[0].envVars.includes('CEREBRUM_ENGRAMS_DIR');
+    cwdJoin.length === 1 &&
+    cwdJoin0 !== undefined &&
+    cwdJoin0.envVars.includes('CEREBRUM_ENGRAMS_DIR');
   const ignoresAbsolute = absolute.length === 0;
   const ignoresNonPaths = nonPaths.length === 0;
 
   // The fix that closed POPS-2735 must read as clean.
-  const posterFixed = detectsPoster && evaluateFinding(poster[0], good).ok;
+  const posterFixed = detectsPoster && poster0 !== undefined && evaluateFinding(poster0, good).ok;
   // The ladder is satisfied by the SHARED variable, not its own.
   const ladderViaShared =
-    detectsLadder && evaluateFinding(ladder[0], good).ok && good.env.has('SQLITE_PATH');
+    detectsLadder &&
+    ladder0 !== undefined &&
+    evaluateFinding(ladder0, good).ok &&
+    good.env.has('SQLITE_PATH');
   // The state production was actually in: created but never named.
-  const catchesMkdirOnly = detectsPoster && !evaluateFinding(poster[0], mkdirOnly).ok;
+  const catchesMkdirOnly =
+    detectsPoster && poster0 !== undefined && !evaluateFinding(poster0, mkdirOnly).ok;
   // Named but never created — root-owned on a volume's first mount.
-  const catchesEnvOnly = detectsPoster && !evaluateFinding(poster[0], envOnly).ok;
+  const catchesEnvOnly =
+    detectsPoster && poster0 !== undefined && !evaluateFinding(poster0, envOnly).ok;
   // Created and named but left root-owned.
-  const catchesNoChown = detectsPoster && !evaluateFinding(poster[0], noChown).ok;
+  const catchesNoChown =
+    detectsPoster && poster0 !== undefined && !evaluateFinding(poster0, noChown).ok;
 
   const literalsOk =
     classifyPathLiteral('./data/media/images') === 'relative' &&
@@ -896,7 +912,7 @@ function selfTest() {
 
   // A Dockerfile with nothing in it must fail the finding, never pass it.
   const catchesEmptyDockerfile =
-    detectsPoster && !evaluateFinding(poster[0], parseDockerfile('')).ok;
+    detectsPoster && poster0 !== undefined && !evaluateFinding(poster0, parseDockerfile('')).ok;
 
   // A repo scan that discovers nothing must not be able to report clean: the
   // floor is above zero, so an empty result trips it.
@@ -934,10 +950,12 @@ function selfTest() {
 
   // A resolver that reads through a lookup wrapper must still be seen.
   const wrapped = findRelativeDefaults('wrapped.ts', FIXTURE_WRAPPED_ENV).findings;
+  const wrapped0 = wrapped[0];
   const seesWrappedEnvReads =
     wrapped.length === 1 &&
-    wrapped[0].envVars.includes('MEDIA_IMAGES_DIR') &&
-    evaluateFinding(wrapped[0], good).ok;
+    wrapped0 !== undefined &&
+    wrapped0.envVars.includes('MEDIA_IMAGES_DIR') &&
+    evaluateFinding(wrapped0, good).ok;
 
   // The parser cases below prove TSX is understood; this proves it is
   // COLLECTED. Reverting the lister's extension filter leaves every parser
@@ -950,10 +968,12 @@ function selfTest() {
 
   // TSX must parse as TSX and be scanned like any other source.
   const tsxScan = findRelativeDefaults('Panel.tsx', FIXTURE_TSX_RESOLVER);
+  const tsxScanFinding0 = tsxScan.findings[0];
   const scansTsx =
     !tsxScan.unparseable &&
     tsxScan.findings.length === 1 &&
-    tsxScan.findings[0].envVars.includes('THING_DIR');
+    tsxScanFinding0 !== undefined &&
+    tsxScanFinding0.envVars.includes('THING_DIR');
   // The same source under a `.ts` name is genuinely unparseable (the arrow
   // generic and JSX collide), which is what makes the extension load-bearing
   // rather than cosmetic.

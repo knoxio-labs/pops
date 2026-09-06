@@ -64,7 +64,9 @@ export function parsePillars(source) {
   if (start === -1) return [];
   const end = source.indexOf(']', start);
   if (end === -1) return [];
-  return [...source.slice(start, end).matchAll(/'([a-z][a-z0-9-]*)'/g)].map((m) => m[1]);
+  return [...source.slice(start, end).matchAll(/'([a-z][a-z0-9-]*)'/g)]
+    .map((m) => m[1])
+    .filter((id) => id !== undefined);
 }
 
 /**

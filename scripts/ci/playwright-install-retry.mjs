@@ -70,6 +70,13 @@ export async function retryWithLockClear({
  * Polls `isLockHeld` at most `maxLockWaitPolls` times so a lock that never
  * clears bounds the wait instead of hanging the job indefinitely — the same
  * "bounded" property the retry itself is supposed to have.
+ *
+ * @param {object} opts
+ * @param {() => boolean | Promise<boolean>} opts.isLockHeld
+ * @param {(ms: number) => Promise<void>} opts.sleep
+ * @param {number} opts.lockPollMs
+ * @param {number} opts.maxLockWaitPolls
+ * @returns {Promise<boolean>}
  */
 async function waitForLockClear({ isLockHeld, sleep, lockPollMs, maxLockWaitPolls }) {
   for (let i = 0; i < maxLockWaitPolls; i += 1) {
@@ -150,9 +157,15 @@ async function cliMain() {
   const flags = argv.slice(0, dashDash);
   const command = argv.slice(dashDash + 1);
 
+  /**
+   * @param {string} name
+   * @param {string} fallback
+   * @returns {string}
+   */
   const flagValue = (name, fallback) => {
     const i = flags.indexOf(name);
-    return i === -1 ? fallback : flags[i + 1];
+    if (i === -1) return fallback;
+    return flags[i + 1] ?? fallback;
   };
 
   const attempts = Number(flagValue('--attempts', String(CLI_DEFAULTS.attempts)));
@@ -162,9 +175,15 @@ async function cliMain() {
   const lockFile = flagValue('--lock-file', '/var/lib/dpkg/lock-frontend');
   const label = flagValue('--label', command.join(' '));
 
+  const [commandBin, ...commandArgs] = command;
+  if (commandBin === undefined) {
+    console.error('usage: playwright-install-retry.mjs ... -- <command> [args...]');
+    process.exit(2);
+  }
+
   const runAttempt = () =>
     new Promise((resolve) => {
-      const child = spawn(command[0], command.slice(1), { stdio: 'inherit', detached: true });
+      const child = spawn(commandBin, commandArgs, { stdio: 'inherit', detached: true });
       const timer = setTimeout(() => {
         // `detached: true` puts the child in its own process group; killing the
         // negative pid signals the whole group, not just the direct child. It

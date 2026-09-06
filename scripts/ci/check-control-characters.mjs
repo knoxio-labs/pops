@@ -166,6 +166,7 @@ export function findControlCharacters(bytes) {
   let line = 1;
   for (let offset = 0; offset < bytes.length; offset += 1) {
     const byte = bytes[offset];
+    if (byte === undefined) continue;
     if (isDisallowedControlByte(byte)) hits.push({ offset, byte, line });
     if (byte === 0x0a) line += 1;
   }
@@ -370,7 +371,7 @@ function selfTest() {
   const twoLines = Buffer.from('line one\nline tw\x00o\n', 'utf8');
   const twoLineHits = findControlCharacters(twoLines);
   checks['violation line number is computed from preceding newlines'] =
-    twoLineHits.length === 1 && twoLineHits[0].line === 2;
+    twoLineHits.length === 1 && twoLineHits[0]?.line === 2;
 
   checks['.png is a binary extension'] = isBinaryAsset('pillars/shell/e2e/fixtures/photo.png');
   checks['.woff2 is a binary extension'] = isBinaryAsset('libs/ui/src/fonts/sans.woff2');

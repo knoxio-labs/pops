@@ -217,6 +217,8 @@ export const ALLOWED_UNIT_OVERRIDE_TOOLS = ['node', 'rust'];
  * neither — ADR-043 keeps a client out of both the pnpm workspace and the
  * Cargo workspace entirely — so a client may override none of node, pnpm, or
  * rust, only ever add tools of its own (e.g. `clients/ios`'s `xcodegen`).
+ *
+ * @type {Record<string, string[]>}
  */
 export const ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE = {
   pillars: ALLOWED_UNIT_OVERRIDE_TOOLS,
@@ -598,7 +600,7 @@ export function checkOverrides(root) {
     // The unit-kind base is the dir's first path segment (`pillars/finance` →
     // `pillars`, `pillars/finance/app` → `pillars`, `clients/ios` →
     // `clients`), which is exactly how UNIT_BASES names them.
-    const base = dir.split('/')[0];
+    const base = dir.split('/')[0] ?? '';
     const allowedOverrides = ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE[base] ?? [];
 
     for (const key of keys) {
