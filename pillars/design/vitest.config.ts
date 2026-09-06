@@ -26,7 +26,7 @@ export default defineConfig({
           name: 'playground',
           environment: 'jsdom',
           setupFiles: ['./src/test-setup.ts'],
-          include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+          include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'source-plugin.test.ts'],
           exclude: ['src/api/**', 'src/db/**', 'node_modules/**', 'dist/**'],
         },
       },
