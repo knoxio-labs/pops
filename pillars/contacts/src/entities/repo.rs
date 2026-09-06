@@ -9,6 +9,7 @@
 
 use sqlx::{Row, SqlitePool};
 
+use super::colours::random_colour;
 use super::model::{
     encode_aliases, encode_default_tags, AssetIdPatch, CreateEntityBody, EntityLookupRow,
     EntityRow, UpdateEntityBody, DEFAULT_ENTITY_TYPE,
@@ -123,7 +124,11 @@ pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<Entity
 
 /// Insert a new entity. The name must be unique (a duplicate raises
 /// [`RepoError::Conflict`]). A v4 UUID id and the current `last_edited_time`
-/// are generated server-side.
+/// are generated server-side, and so is `colour` — assigned at random from
+/// the fixed palette in [`super::colours`] (POPS-3061 design correction: a
+/// client cannot set `colour` on create at all, [`CreateEntityBody`] has no
+/// field for it, and the assignment happens here rather than at the route
+/// layer so there is no path to creating an entity without a colour).
 pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityRow, RepoError> {
     if name_exists(pool, &body.name, None).await? {
         return Err(RepoError::Conflict(format!(
@@ -137,6 +142,7 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
     let ty = body
         .r#type
         .unwrap_or_else(|| DEFAULT_ENTITY_TYPE.to_string());
+    let colour = random_colour();
 
     sqlx::query(
         "INSERT INTO entities \
@@ -152,7 +158,7 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
     .bind(body.default_transaction_type.as_deref())
     .bind(encode_default_tags(&body.default_tags))
     .bind(body.notes.as_deref())
-    .bind(body.colour.as_deref())
+    .bind(colour)
     .bind(&now)
     .execute(pool)
     .await
@@ -203,9 +209,6 @@ pub async fn update(
     if let Some(tags) = &patch.default_tags {
         builder.set_nullable("default_tags", encode_default_tags(tags));
     }
-    if let Some(colour) = &patch.colour {
-        builder.set_nullable("colour", colour.clone());
-    }
 
     if !builder.is_empty() {
         builder
@@ -249,6 +252,28 @@ pub async fn set_asset_ids(
     if !builder.is_empty() {
         builder.execute(pool, id).await?;
     }
+
+    get(pool, id).await?.ok_or(RepoError::NotFound)
+}
+
+/// Repoint the `colour` column to `colour`.
+///
+/// This is the ONLY write path for that column besides [`create`]'s initial
+/// assignment — deliberately separate from [`update`], which applies
+/// [`UpdateEntityBody`] and carries no `colour` field at all. The reroll route
+/// is the sole caller, and it always passes a fresh pick from the fixed
+/// palette in [`super::colours`], the same "not a generic field" shape as
+/// [`set_asset_ids`] (POPS-3061 design correction: a client may only reroll
+/// `colour` to another palette entry, never set an arbitrary string via a
+/// generic PATCH).
+pub async fn set_colour(pool: &SqlitePool, id: &str, colour: &str) -> Result<EntityRow, RepoError> {
+    if get(pool, id).await?.is_none() {
+        return Err(RepoError::NotFound);
+    }
+
+    let mut builder = UpdateBuilder::new();
+    builder.set_text("colour", colour.to_string());
+    builder.execute(pool, id).await?;
 
     get(pool, id).await?.ok_or(RepoError::NotFound)
 }
@@ -425,7 +450,6 @@ mod tests {
             default_transaction_type: None,
             default_tags: Vec::new(),
             notes: None,
-            colour: None,
         }
     }
 
@@ -698,11 +722,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_patch_round_trip_colour() {
+    async fn create_assigns_a_colour_from_the_fixed_palette() {
         let pool = pool().await;
-        let mut b = body("Branded");
-        b.colour = Some("#3B82F6".to_string());
-        let created = create(&pool, b).await.expect("create");
+        let created = create(&pool, body("Branded")).await.expect("create");
         assert_eq!(
             created.avatar_asset_id, None,
             "create cannot set an asset id"
@@ -711,14 +733,60 @@ mod tests {
             created.poster_asset_id, None,
             "create cannot set an asset id"
         );
-        assert_eq!(created.colour.as_deref(), Some("#3B82F6"));
+        let colour = created
+            .colour
+            .as_deref()
+            .expect("create always assigns a colour");
+        assert!(
+            crate::entities::colours::ENTITY_COLOURS.contains(&colour),
+            "the assigned colour must come from the fixed palette, got {colour}"
+        );
+    }
+
+    #[tokio::test]
+    async fn generic_update_cannot_change_colour() {
+        let pool = pool().await;
+        let created = create(&pool, body("Branded")).await.expect("create");
+        let original_colour = created.colour.clone();
 
         let patch = UpdateEntityBody {
-            colour: Some(Some("#000000".to_string())),
+            notes: Some(Some("unrelated change".to_string())),
             ..Default::default()
         };
         let updated = update(&pool, &created.id, patch).await.expect("update");
-        assert_eq!(updated.colour.as_deref(), Some("#000000"));
+        assert_eq!(
+            updated.colour, original_colour,
+            "a generic update must never touch colour, whether or not the patch mentions it"
+        );
+    }
+
+    #[tokio::test]
+    async fn set_colour_rerolls_to_a_different_palette_entry() {
+        let pool = pool().await;
+        let created = create(&pool, body("Branded")).await.expect("create");
+        let current = created
+            .colour
+            .clone()
+            .expect("create always assigns a colour");
+
+        let next = crate::entities::colours::random_other_colour(&current);
+        assert_ne!(
+            next, current,
+            "the reroll pick must differ from the current colour"
+        );
+
+        let updated = set_colour(&pool, &created.id, next)
+            .await
+            .expect("set_colour");
+        assert_eq!(updated.colour.as_deref(), Some(next));
+        assert_ne!(updated.colour.as_deref(), Some(current.as_str()));
+    }
+
+    #[tokio::test]
+    async fn set_colour_on_missing_entity_is_not_found() {
+        let pool = pool().await;
+        let err = set_colour(&pool, "nope", "#e04667").await.unwrap_err();
+        assert!(matches!(err, RepoError::NotFound));
     }
 
     /// The upload/remove routes' only write path: [`set_asset_ids`] repoints

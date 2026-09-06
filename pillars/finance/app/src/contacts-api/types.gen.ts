@@ -7,11 +7,16 @@ export type ClientOptions = {
 /**
  * Body accepted by `POST /entities`. `type` defaults to `company`; the array
  * fields default to empty.
+ *
+ * `colour` deliberately has no field here: it is never client-supplied, on
+ * create or otherwise (POPS-3061 design correction). `entities::repo::create`
+ * assigns one at random from the fixed palette in `entities::colours`, the
+ * same way `avatar_asset_id`/`poster_asset_id` are absent and assigned
+ * through their own dedicated write paths rather than this body.
  */
 export type CreateEntityBody = {
   abn?: string | null;
   aliases?: Array<string>;
-  colour?: string | null;
   defaultTags?: Array<string>;
   defaultTransactionType?: string | null;
   name: string;
@@ -177,11 +182,15 @@ export type SearchResponse = {
  * (`Some(None)` — clear the column). serde collapses a JSON `null` into the
  * outer `None` by default, so those fields deserialize through
  * [`double_option`], which preserves the present-but-null case.
+ *
+ * `colour` has no field here either, for the same reason it has none on
+ * [`CreateEntityBody`]: a client may only reroll it, through the dedicated
+ * `POST /entities/:id/colour/reroll` route, never set it to an arbitrary
+ * string via this generic PATCH.
  */
 export type UpdateEntityBody = {
   abn?: string | null;
   aliases?: Array<string> | null;
-  colour?: string | null;
   defaultTags?: Array<string> | null;
   defaultTransactionType?: string | null;
   name?: string | null;
@@ -466,6 +475,38 @@ export type EntitiesUploadAvatarResponses = {
 
 export type EntitiesUploadAvatarResponse =
   EntitiesUploadAvatarResponses[keyof EntitiesUploadAvatarResponses];
+
+export type EntitiesRerollColourData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/colour/reroll';
+};
+
+export type EntitiesRerollColourErrors = {
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesRerollColourError =
+  EntitiesRerollColourErrors[keyof EntitiesRerollColourErrors];
+
+export type EntitiesRerollColourResponses = {
+  /**
+   * Entity with a freshly rerolled colour
+   */
+  200: EntityMutation;
+};
+
+export type EntitiesRerollColourResponse =
+  EntitiesRerollColourResponses[keyof EntitiesRerollColourResponses];
 
 export type EntitiesRemovePosterData = {
   body?: never;

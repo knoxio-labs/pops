@@ -29,6 +29,9 @@ import type {
   EntitiesRemovePosterData,
   EntitiesRemovePosterErrors,
   EntitiesRemovePosterResponses,
+  EntitiesRerollColourData,
+  EntitiesRerollColourErrors,
+  EntitiesRerollColourResponses,
   EntitiesUpdateData,
   EntitiesUpdateErrors,
   EntitiesUpdateResponses,
@@ -178,6 +181,21 @@ export const entitiesUploadAvatar = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * `POST /entities/{id}/colour/reroll` — the only way a client can change an
+ * entity's `colour` after creation: a fresh pick from the fixed palette,
+ * guaranteed different from the entity's current value (POPS-3061 design
+ * correction — `colour` is otherwise immutable through the generic PATCH).
+ */
+export const entitiesRerollColour = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesRerollColourData, ThrowOnError>
+): RequestResult<EntitiesRerollColourResponses, EntitiesRerollColourErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    EntitiesRerollColourResponses,
+    EntitiesRerollColourErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/colour/reroll', ...options });
 
 /**
  * `DELETE /entities/{id}/poster` — clear the entity's poster and delete the

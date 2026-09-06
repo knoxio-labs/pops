@@ -17,6 +17,7 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+use super::colours::random_other_colour;
 use super::model::{
     AssetIdPatch, CreateEntityBody, Entity, EntityLookup, EntityRow, UpdateEntityBody, ENTITY_TYPES,
 };
@@ -152,6 +153,7 @@ pub fn router() -> Router<AppState> {
             get(get_one).patch(update).delete(delete_one),
         )
         .route("/entities/lookup", post(lookup))
+        .route("/entities/{id}/colour/reroll", post(reroll_colour))
         .route(
             "/entities/{id}/avatar",
             get(get_avatar).put(upload_avatar).delete(remove_avatar),
@@ -245,9 +247,6 @@ pub async fn create(
     if let Some(ty) = body.r#type.as_deref() {
         validate_type(ty)?;
     }
-    if let Some(colour) = body.colour.as_deref() {
-        validate_colour(colour)?;
-    }
 
     let row = repo::create(&state.pool, body).await.map_err(repo_error)?;
     Ok((
@@ -284,9 +283,6 @@ pub async fn update(
     if let Some(ty) = patch.r#type.as_deref() {
         validate_type(ty)?;
     }
-    if let Some(Some(colour)) = patch.colour.as_ref() {
-        validate_colour(colour)?;
-    }
 
     let row = repo::update(&state.pool, &id, patch)
         .await
@@ -295,6 +291,42 @@ pub async fn update(
     Ok(Json(EntityMutation {
         data: row.into(),
         message: "Entity updated".to_string(),
+    }))
+}
+
+/// `POST /entities/{id}/colour/reroll` — the only way a client can change an
+/// entity's `colour` after creation: a fresh pick from the fixed palette,
+/// guaranteed different from the entity's current value (POPS-3061 design
+/// correction — `colour` is otherwise immutable through the generic PATCH).
+#[utoipa::path(
+    post,
+    path = "/entities/{id}/colour/reroll",
+    operation_id = "entities.reroll_colour",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Entity with a freshly rerolled colour", body = EntityMutation),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn reroll_colour(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityMutation>, ApiError> {
+    let before = repo::get(&state.pool, &id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+
+    let current = before.colour.as_deref().unwrap_or_default();
+    let next = random_other_colour(current);
+
+    let row = repo::set_colour(&state.pool, &id, next)
+        .await
+        .map_err(|err| repo_not_found(err, &id))?;
+
+    Ok(Json(EntityMutation {
+        data: row.into(),
+        message: "Entity colour rerolled".to_string(),
     }))
 }
 
@@ -525,18 +557,6 @@ fn assert_within_size_cap(byte_length: usize) -> Result<(), ApiError> {
     }
 }
 
-/// Reject a `colour` value that is not a `#RRGGBB` hex string.
-fn validate_colour(colour: &str) -> Result<(), ApiError> {
-    let hex = colour.strip_prefix('#').unwrap_or(colour);
-    if colour.starts_with('#') && hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        Ok(())
-    } else {
-        Err(ApiError::bad_request(format!(
-            "Invalid colour '{colour}'. Expected a hex string like '#3B82F6'"
-        )))
-    }
-}
-
 #[utoipa::path(
     delete,
     path = "/entities/{id}",
@@ -619,16 +639,6 @@ mod tests {
     fn rejects_unknown_type() {
         assert!(validate_type("wizard").is_err());
         assert!(validate_type("person").is_ok());
-    }
-
-    #[test]
-    fn validates_hex_colour() {
-        assert!(validate_colour("#3B82F6").is_ok());
-        assert!(validate_colour("#000000").is_ok());
-        assert!(validate_colour("3B82F6").is_err(), "must carry the '#'");
-        assert!(validate_colour("#3B82F").is_err(), "too short");
-        assert!(validate_colour("#3B82F6A").is_err(), "too long");
-        assert!(validate_colour("#GGGGGG").is_err(), "not hex digits");
     }
 
     #[test]

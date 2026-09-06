@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "CreateEntityBody": {
-        "description": "Body accepted by `POST /entities`. `type` defaults to `company`; the array\nfields default to empty.",
+        "description": "Body accepted by `POST /entities`. `type` defaults to `company`; the array\nfields default to empty.\n\n`colour` deliberately has no field here: it is never client-supplied, on\ncreate or otherwise (POPS-3061 design correction). `entities::repo::create`\nassigns one at random from the fixed palette in `entities::colours`, the\nsame way `avatar_asset_id`/`poster_asset_id` are absent and assigned\nthrough their own dedicated write paths rather than this body.",
         "properties": {
           "abn": {
             "nullable": true,
@@ -13,10 +13,6 @@
               "type": "string"
             },
             "type": "array"
-          },
-          "colour": {
-            "nullable": true,
-            "type": "string"
           },
           "defaultTags": {
             "items": {
@@ -391,7 +387,7 @@
         "type": "object"
       },
       "UpdateEntityBody": {
-        "description": "Body accepted by `PATCH /entities/:id`. Every field is optional; a present\nfield (even `null` for the nullable columns) is applied, an absent field is\nleft untouched. The nullable columns use `Option<Option<T>>` to tell\n\"absent\" (outer `None` — leave the column alone) apart from \"set to null\"\n(`Some(None)` — clear the column). serde collapses a JSON `null` into the\nouter `None` by default, so those fields deserialize through\n[`double_option`], which preserves the present-but-null case.",
+        "description": "Body accepted by `PATCH /entities/:id`. Every field is optional; a present\nfield (even `null` for the nullable columns) is applied, an absent field is\nleft untouched. The nullable columns use `Option<Option<T>>` to tell\n\"absent\" (outer `None` — leave the column alone) apart from \"set to null\"\n(`Some(None)` — clear the column). serde collapses a JSON `null` into the\nouter `None` by default, so those fields deserialize through\n[`double_option`], which preserves the present-but-null case.\n\n`colour` has no field here either, for the same reason it has none on\n[`CreateEntityBody`]: a client may only reroll it, through the dedicated\n`POST /entities/:id/colour/reroll` route, never set it to an arbitrary\nstring via this generic PATCH.",
         "properties": {
           "abn": {
             "nullable": true,
@@ -403,10 +399,6 @@
             },
             "nullable": true,
             "type": "array"
-          },
-          "colour": {
-            "nullable": true,
-            "type": "string"
           },
           "defaultTags": {
             "items": {
@@ -893,6 +885,48 @@
           }
         },
         "summary": "`PUT /entities/{id}/avatar` — upload/replace the entity's avatar.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/{id}/colour/reroll": {
+      "post": {
+        "operationId": "entities.reroll_colour",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Entity with a freshly rerolled colour"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`POST /entities/{id}/colour/reroll` — the only way a client can change an\nentity's `colour` after creation: a fresh pick from the fixed palette,\nguaranteed different from the entity's current value (POPS-3061 design\ncorrection — `colour` is otherwise immutable through the generic PATCH).",
         "tags": [
           "crate::entities::routes"
         ]

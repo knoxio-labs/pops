@@ -1,11 +1,13 @@
 //! The entities (contact) domain — the contacts pillar's authoritative store.
 //!
 //! - [`model`] — wire ↔ row mapping and the request/response body shapes.
+//! - [`colours`] — the fixed colour palette `colour` is assigned/rerolled from.
 //! - [`repo`] — parameterized data access (list/get/create/update/delete plus
 //!   the bulk lookup and find-by-name idempotency helpers).
 //! - [`routes`] — the axum handlers carrying the DOTTED `entities.*`
 //!   operationIds.
 
+pub mod colours;
 pub mod model;
 pub mod repo;
 pub mod routes;
