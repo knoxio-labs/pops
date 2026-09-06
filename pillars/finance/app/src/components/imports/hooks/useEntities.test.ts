@@ -50,6 +50,28 @@ describe('useEntities', () => {
     expect(mockEntitiesList).not.toHaveBeenCalled();
   });
 
+  it('falls back to the largest entity-list page when the contacts service lacks bulk lookup', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'route not found' },
+      response: new Response(null, { status: 404 }),
+    });
+    mockEntitiesList.mockResolvedValue({
+      data: {
+        data: [
+          { id: 'ent-coles', name: 'Coles', aliases: [] },
+          { id: 'ent-woolies', name: 'Woolworths', aliases: [] },
+        ],
+        pagination: { total: 2, limit: 200, offset: 0 },
+      },
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entities).toHaveLength(2));
+    expect(mockEntitiesList).toHaveBeenCalledWith({ query: { limit: 200 } });
+    expect(result.current.entities?.map((entity) => entity.name)).toEqual(['Coles', 'Woolworths']);
+  });
+
   it('leaves entities undefined until the fetch resolves, so absence is never asserted early', () => {
     mockEntitiesLookup.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useEntities(), { wrapper });

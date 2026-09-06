@@ -2,9 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { unwrap } from '../../../contacts-api-helpers.js';
-import { entitiesLookup } from '../../../contacts-api/index.js';
+import { entitiesList, entitiesLookup } from '../../../contacts-api/index.js';
 import { computeMergedEntities } from '../../../lib/merged-state';
 import { useImportStore } from '../../../store/importStore';
+
+const ENTITY_LIST_FALLBACK_INPUT = { limit: 200 } as const;
+
+async function fetchEntities() {
+  try {
+    return unwrap(await entitiesLookup({ body: {} })).entities;
+  } catch {
+    const page = unwrap(await entitiesList({ query: ENTITY_LIST_FALLBACK_INPUT }));
+    return page.data;
+  }
+}
 
 /**
  * The entity set every import surface picks from: every DB entity from the
@@ -16,18 +27,21 @@ import { useImportStore } from '../../../store/importStore';
  * hard-caps a page at 200, and these pickers have no pagination, so the tail of
  * a larger contact set was simply invisible — an existing merchant looked
  * absent, and accepting it minted a duplicate. Lookup returns the whole set's
- * match columns, already sorted by name, in one round-trip. Callers may
- * therefore read "not in `entities`" as "does not exist" — but only once
- * `entities` is defined; it is `undefined` while the fetch is in flight.
+ * match columns, already sorted by name, in one round-trip. During a rolling
+ * deployment, an older contacts service may not expose that endpoint yet, so
+ * the picker falls back to its largest supported list page instead of showing
+ * no entities at all. Callers may therefore read "not in `entities`" as "does
+ * not exist" — but only once `entities` is defined; it is `undefined` while
+ * the fetch is in flight.
  */
 export function useEntities() {
   const { data: lookup } = useQuery({
     queryKey: ['contacts', 'entities', 'lookup'],
-    queryFn: async () => unwrap(await entitiesLookup({ body: {} })),
+    queryFn: fetchEntities,
   });
   const pendingEntities = useImportStore((s) => s.pendingEntities);
   const addPendingEntity = useImportStore((s) => s.addPendingEntity);
-  const dbEntities = lookup?.entities;
+  const dbEntities = lookup;
   const entities = useMemo(
     () => (dbEntities ? computeMergedEntities(dbEntities, pendingEntities) : undefined),
     [dbEntities, pendingEntities]
