@@ -805,6 +805,7 @@ async function checkPillar(pillar, options = {}) {
     symbolToTable.set(fakeSymbol, {
       tableName: fakeTable,
       indexNames: [],
+      columnDefaults: [],
       sourceFile: '<injected>',
     });
     used.add(fakeSymbol);
@@ -924,9 +925,11 @@ async function checkPillar(pillar, options = {}) {
           'migration — or dropping the schema-side default if the DDL is the one that is right.'
       );
     }
-    console.error(
-      `  Fix: extend ${pillar.pkgDir}/migrations/ with the missing CREATE TABLE / CREATE INDEX statements.`
-    );
+    if (missingTables.length > 0 || missingIndexes.length > 0) {
+      console.error(
+        `  Fix: extend ${pillar.pkgDir}/migrations/ with the missing CREATE TABLE / CREATE INDEX statements.`
+      );
+    }
     return false;
   } finally {
     handle.close();
