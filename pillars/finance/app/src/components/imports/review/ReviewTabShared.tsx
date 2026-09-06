@@ -122,6 +122,7 @@ export function ListView({
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={props.entities}
+            entityVerification={props.entityVerification}
             variant={variant}
           />
         )
