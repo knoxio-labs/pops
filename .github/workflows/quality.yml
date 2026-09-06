@@ -742,9 +742,11 @@ jobs:
         env:
           # `github.base_ref` is a pull-request-only field, same as
           # `agent-review.yml`'s `BASE_REF`. `github.event.merge_group.base_ref`
-          # is its merge-group equivalent. `main` is the final fallback for
-          # `push`, where neither is set. See resolve-report-base.mjs for what
-          # each of the three resolves to and why.
+          # is its merge-group equivalent — a FULL ref (`refs/heads/main`) where
+          # `github.base_ref` is the bare branch, which is why the script
+          # normalises rather than trusting the shape. `main` is the final
+          # fallback for `push`, where neither is set. See
+          # resolve-report-base.mjs for what each of the three resolves to.
           BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
           set -euo pipefail

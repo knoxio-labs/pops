@@ -2,9 +2,10 @@
  * `resolve-report-base.mjs` and the wiring that makes it load-bearing.
  *
  * The script owns its own degenerate cases in `--self-test` (POPS-2166): a
- * fixture git repo for each of `pull_request`, `merge_group`, and `push`,
- * with the resolved base pinned against a commit captured independently of
- * `resolveBase` itself — see the `mainTip` capture in the fixture there. What
+ * fixture git repo for each of `pull_request`, `merge_group` (in both the bare
+ * and the `refs/heads/` spelling), and `push`, with the resolved base pinned
+ * against a commit captured independently of `resolveBase` itself — see the
+ * `mainTip` capture in the fixture there. What
  * that self-test cannot see is whether `quality.yml`'s `contract-consumers`
  * job still calls this script for its REAL base computation, or whether a
  * future edit reintroduces an inline `git merge-base` recipe that drifts from
@@ -61,7 +62,13 @@ describe('the helper proves itself', () => {
   it('passes its own --self-test', () => {
     const output = passingProofStdout(inject('realTreeProofs'), 'resolve-report-base:self-test');
     expect(output).toMatch(/self-test OK/u);
-    expect(output).toMatch(/merge_group base \(queued diff/u);
+    // Both merge-group spellings, named separately: the bare `main` the
+    // self-test always fed it, and the full `refs/heads/main` the merge-group
+    // lane actually sends. Asserting only the first is how POPS-2166's second
+    // bullet stayed green for months while production reported every leg.
+    expect(output).toMatch(/merge_group base from both the bare name and the full/u);
+    expect(output).toMatch(/refs\/heads\//u);
+    expect(output).toMatch(/queued diff, neither empty nor everything/u);
   });
 });
 
