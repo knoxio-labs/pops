@@ -46,11 +46,19 @@ export class ValidationError extends HttpError {
    * `details: unknown` cannot refuse a string, so a swapped call compiles,
    * reads correctly, and returns a 400 body reading `Validation failed`.
    *
-   * @param message What the client is shown. Required.
+   * `messageKey` (POPS-3051) comes last, after `details`, so the first two
+   * parameters stay identical to the five sibling pillars' and to
+   * {@link HttpError}'s own order. A caller wanting a key and no details
+   * passes `undefined` between them — noisier at three call sites than a
+   * reordering would be, and cheaper than six pillars whose `ValidationError`
+   * takes its arguments in two different orders.
+   *
+   * @param message What a client with no i18n is shown. Required.
    * @param details Structured context for logs. It does NOT reach the client.
+   * @param messageKey Key a client with i18n resolves instead. Defaults to the generic one.
    */
-  constructor(message: string, details?: unknown) {
-    super(400, message, details, 'common.validationFailed');
+  constructor(message: string, details?: unknown, messageKey = 'common.validationFailed') {
+    super(400, message, details, messageKey);
     this.name = 'ValidationError';
   }
 }

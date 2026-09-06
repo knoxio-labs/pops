@@ -92,24 +92,25 @@ export function makeRetrievalHandlers(
       runHttp(async () => {
         const filters: RetrievalFilters = body.filters ?? {};
 
-        // Until POPS-3043 these three threw the i18n key AS the message, and
-        // the class discarded it, so the client got `Validation failed`. The
-        // prose below is the EN-AU string `libs/locales` already ships for
-        // each key, so the wire now says something a caller can act on.
-        //
-        // The key itself is deliberately NOT carried. `messageKey` is
-        // hardcoded to `common.validationFailed`, and plumbing a third
-        // constructor argument would deliver a key the frontend cannot
-        // resolve anyway: the locale files namespace these as
-        // `media.retrieval.*`, in a cerebrum handler. Putting it in `details`
-        // instead would stash it somewhere the wire never carries and no log
-        // reader greps. Fixing the namespace and plumbing the key is
-        // POPS-3051; until then the fallback string is the whole answer.
+        // Both halves travel: the key, for a client that resolves it, and the
+        // EN-AU string, for one that does not. Until POPS-3043 these threw the
+        // key AS the message and the class discarded it, so the client got
+        // `Validation failed`; until POPS-3051 the key had nowhere to go, and
+        // the locale files namespaced it `media.retrieval.*` — in a cerebrum
+        // handler — so nothing could have resolved it either.
         if (body.mode !== 'structured' && !body.query?.trim()) {
-          throw new ValidationError('Query is required for semantic and hybrid search modes');
+          throw new ValidationError(
+            'Query is required for semantic and hybrid search modes',
+            undefined,
+            'cerebrum.retrieval.queryRequired'
+          );
         }
         if (body.mode === 'structured' && !hasAnyStructuredFilter(filters)) {
-          throw new ValidationError('Structured search requires at least one filter');
+          throw new ValidationError(
+            'Structured search requires at least one filter',
+            undefined,
+            'cerebrum.retrieval.filterRequired'
+          );
         }
 
         const svc = newService();
@@ -136,7 +137,11 @@ export function makeRetrievalHandlers(
     context: async ({ body }) =>
       runHttp(async () => {
         if (!body.query.trim()) {
-          throw new ValidationError('Query is required for context assembly');
+          throw new ValidationError(
+            'Query is required for context assembly',
+            undefined,
+            'cerebrum.retrieval.contextQueryRequired'
+          );
         }
         const svc = newService();
         const assembler = new ContextAssemblyService();

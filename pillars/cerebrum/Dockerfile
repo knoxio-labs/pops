@@ -25,6 +25,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc
 COPY pillars/cerebrum/package.json ./pillars/cerebrum/
 COPY libs/ai-telemetry/package.json ./libs/ai-telemetry/
 COPY libs/contract-openapi/package.json ./libs/contract-openapi/
+# Translation JSON only, and a test-time dependency — but `pnpm install`
+# resolves the whole subgraph including devDependencies, so the manifest has to
+# be here or the install fails resolving @pops/locales. No phase-2 COPY: the
+# image's build is `tsc -b tsconfig.build.json`, which excludes tests, and
+# nothing cerebrum ships at runtime reads a locale file.
+COPY libs/locales/package.json ./libs/locales/
 COPY libs/sdk/package.json ./libs/sdk/
 COPY libs/settings/package.json ./libs/settings/
 COPY libs/types/package.json ./libs/types/

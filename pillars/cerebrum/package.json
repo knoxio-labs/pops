@@ -65,6 +65,7 @@
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
+    "@pops/locales": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
     "@types/js-yaml": "^4.0.9",
