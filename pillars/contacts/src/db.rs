@@ -116,6 +116,48 @@ mod tests {
         }
     }
 
+    /// On a fresh database (the shape of a never-before-mounted volume), the
+    /// full embedded migration journal — including the avatar/poster/colour
+    /// columns and the `blobs` table added for POPS-3061 — must already be
+    /// applied by the time `connect` returns, with no assets present.
+    #[tokio::test]
+    async fn a_fresh_database_has_the_asset_columns_and_blobs_table() {
+        let pool = memory_pool().await;
+
+        let entity_columns: Vec<(String,)> =
+            sqlx::query_as("SELECT name FROM pragma_table_info('entities')")
+                .fetch_all(&pool)
+                .await
+                .expect("entities columns are readable");
+        let entity_columns: Vec<&str> = entity_columns.iter().map(|(c,)| c.as_str()).collect();
+        for column in ["avatar_asset_id", "poster_asset_id", "colour"] {
+            assert!(
+                entity_columns.contains(&column),
+                "entities.{column} must exist on a freshly migrated database"
+            );
+        }
+
+        let blob_columns: Vec<(String,)> =
+            sqlx::query_as("SELECT name FROM pragma_table_info('blobs')")
+                .fetch_all(&pool)
+                .await
+                .expect("blobs table exists and its columns are readable");
+        assert!(
+            !blob_columns.is_empty(),
+            "the blobs table must be created by migration on a fresh database"
+        );
+        let blob_columns: Vec<&str> = blob_columns.iter().map(|(c,)| c.as_str()).collect();
+        for column in ["id", "content_type", "byte_length", "data", "created_at"] {
+            assert!(blob_columns.contains(&column), "blobs.{column} must exist");
+        }
+
+        let blob_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM blobs")
+            .fetch_one(&pool)
+            .await
+            .expect("blobs table is queryable");
+        assert_eq!(blob_count.0, 0, "a fresh database has no assets present");
+    }
+
     #[test]
     fn in_memory_urls_are_detected() {
         assert!(is_in_memory("sqlite::memory:"));

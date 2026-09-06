@@ -39,6 +39,9 @@ pub struct Entity {
     pub default_transaction_type: Option<String>,
     pub default_tags: Vec<String>,
     pub notes: Option<String>,
+    pub avatar_asset_id: Option<String>,
+    pub poster_asset_id: Option<String>,
+    pub colour: Option<String>,
     pub last_edited_time: String,
 }
 
@@ -54,6 +57,9 @@ pub struct EntityRow {
     pub default_transaction_type: Option<String>,
     pub default_tags: Option<String>,
     pub notes: Option<String>,
+    pub avatar_asset_id: Option<String>,
+    pub poster_asset_id: Option<String>,
+    pub colour: Option<String>,
     pub last_edited_time: String,
 }
 
@@ -68,6 +74,9 @@ impl From<EntityRow> for Entity {
             default_transaction_type: row.default_transaction_type,
             default_tags: decode_default_tags(row.default_tags.as_deref()),
             notes: row.notes,
+            avatar_asset_id: row.avatar_asset_id,
+            poster_asset_id: row.poster_asset_id,
+            colour: row.colour,
             last_edited_time: row.last_edited_time,
         }
     }
@@ -160,6 +169,8 @@ pub struct CreateEntityBody {
     pub default_tags: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
+    #[serde(default)]
+    pub colour: Option<String>,
 }
 
 /// Body accepted by `PATCH /entities/:id`. Every field is optional; a present
@@ -169,7 +180,7 @@ pub struct CreateEntityBody {
 /// (`Some(None)` — clear the column). serde collapses a JSON `null` into the
 /// outer `None` by default, so those fields deserialize through
 /// [`double_option`], which preserves the present-but-null case.
-#[derive(Debug, Clone, Default, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateEntityBody {
     #[serde(default)]
@@ -189,6 +200,24 @@ pub struct UpdateEntityBody {
     #[serde(default, deserialize_with = "double_option")]
     #[schema(value_type = Option<String>)]
     pub notes: Option<Option<String>>,
+    #[serde(default, deserialize_with = "double_option")]
+    #[schema(value_type = Option<String>)]
+    pub colour: Option<Option<String>>,
+}
+
+/// Internal patch for the `avatar_asset_id`/`poster_asset_id` columns.
+///
+/// Never deserialized from a client body — it is not `Deserialize` at all.
+/// The upload routes build one directly after inserting the blob it points
+/// at, and the remove routes build one to clear it; that is the only way
+/// these columns may change; the generic create/update bodies above
+/// deliberately do not carry them (POPS-3061 review finding: an
+/// unvalidated, client-settable asset id lets a PATCH point an entity at an
+/// arbitrary or another entity's blob).
+#[derive(Debug, Clone, Default)]
+pub struct AssetIdPatch {
+    pub avatar_asset_id: Option<Option<String>>,
+    pub poster_asset_id: Option<Option<String>>,
 }
 
 /// Deserialize a present field into `Some(...)` even when its value is JSON
@@ -269,11 +298,43 @@ mod tests {
             default_transaction_type: None,
             default_tags: Some(r#"["x"]"#.to_string()),
             notes: None,
+            avatar_asset_id: Some("blob-1".to_string()),
+            poster_asset_id: None,
+            colour: Some("#3B82F6".to_string()),
             last_edited_time: "2026-06-21T00:00:00.000Z".to_string(),
         };
         let entity: Entity = row.into();
         assert_eq!(entity.aliases, vec!["Acme", "ACME Corp"]);
         assert_eq!(entity.default_tags, vec!["x"]);
         assert_eq!(entity.r#type, "company");
+        assert_eq!(entity.avatar_asset_id.as_deref(), Some("blob-1"));
+        assert_eq!(entity.poster_asset_id, None);
+        assert_eq!(entity.colour.as_deref(), Some("#3B82F6"));
+    }
+
+    #[test]
+    fn patch_distinguishes_absent_from_null_for_colour() {
+        let absent: UpdateEntityBody = serde_json::from_str("{}").unwrap();
+        assert_eq!(absent.colour, None);
+
+        let cleared: UpdateEntityBody = serde_json::from_str(r#"{"colour":null}"#).unwrap();
+        assert_eq!(cleared.colour, Some(None));
+
+        let set: UpdateEntityBody = serde_json::from_str(r##"{"colour":"#ABCDEF"}"##).unwrap();
+        assert_eq!(set.colour, Some(Some("#ABCDEF".to_string())));
+    }
+
+    /// POPS-3061 review finding: `avatarAssetId`/`posterAssetId` must not be
+    /// reachable through the generic PATCH body at all — not settable, not
+    /// even clearable. A body containing those keys deserializes fine (serde
+    /// silently ignores fields absent from the struct) and simply has no
+    /// effect; the assertion that matters is that neither field exists on
+    /// [`UpdateEntityBody`] any more; if it did, this would fail to compile.
+    #[test]
+    fn patch_body_has_no_asset_id_fields() {
+        let patch: UpdateEntityBody =
+            serde_json::from_str(r#"{"avatarAssetId":"anything","posterAssetId":"anything"}"#)
+                .unwrap();
+        assert_eq!(patch, UpdateEntityBody::default());
     }
 }

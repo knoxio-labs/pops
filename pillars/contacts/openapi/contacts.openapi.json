@@ -14,6 +14,10 @@
             },
             "type": "array"
           },
+          "colour": {
+            "nullable": true,
+            "type": "string"
+          },
           "defaultTags": {
             "items": {
               "type": "string"
@@ -54,6 +58,14 @@
             },
             "type": "array"
           },
+          "avatarAssetId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "colour": {
+            "nullable": true,
+            "type": "string"
+          },
           "defaultTags": {
             "items": {
               "type": "string"
@@ -74,6 +86,10 @@
             "type": "string"
           },
           "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "posterAssetId": {
             "nullable": true,
             "type": "string"
           },
@@ -387,6 +403,10 @@
             },
             "nullable": true,
             "type": "array"
+          },
+          "colour": {
+            "nullable": true,
+            "type": "string"
           },
           "defaultTags": {
             "items": {
@@ -720,6 +740,312 @@
             "description": "Duplicate name"
           }
         },
+        "tags": [
+          "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/{id}/avatar": {
+      "delete": {
+        "operationId": "entities.remove_avatar",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the\nbacking blob.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
+      "get": {
+        "operationId": "entities.get_avatar",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "items": {
+                    "format": "int32",
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Raw image bytes"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity, or no avatar set"
+          }
+        },
+        "summary": "`GET /entities/{id}/avatar` — serve the entity's avatar bytes.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
+      "put": {
+        "operationId": "entities.upload_avatar",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "items": {
+                  "format": "int32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "description": "Raw image bytes",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Disallowed content type or oversized upload"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`PUT /entities/{id}/avatar` — upload/replace the entity's avatar.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/{id}/poster": {
+      "delete": {
+        "operationId": "entities.remove_poster",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`DELETE /entities/{id}/poster` — clear the entity's poster and delete the\nbacking blob.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
+      "get": {
+        "operationId": "entities.get_poster",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "items": {
+                    "format": "int32",
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Raw image bytes"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity, or no poster set"
+          }
+        },
+        "summary": "`GET /entities/{id}/poster` — serve the entity's poster bytes.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
+      "put": {
+        "operationId": "entities.upload_poster",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "items": {
+                  "format": "int32",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "description": "Raw image bytes",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Disallowed content type or oversized upload"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`PUT /entities/{id}/poster` — upload/replace the entity's poster image.",
         "tags": [
           "crate::entities::routes"
         ]

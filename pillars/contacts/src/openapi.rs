@@ -54,6 +54,12 @@ use crate::search::routes::{
         crate::entities::routes::update,
         crate::entities::routes::delete_one,
         crate::entities::routes::lookup,
+        crate::entities::routes::upload_avatar,
+        crate::entities::routes::get_avatar,
+        crate::entities::routes::remove_avatar,
+        crate::entities::routes::upload_poster,
+        crate::entities::routes::get_poster,
+        crate::entities::routes::remove_poster,
         crate::search::routes::search,
     ),
     components(schemas(

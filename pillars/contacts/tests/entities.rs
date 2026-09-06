@@ -15,13 +15,18 @@ use contacts::app::{build_router, AppState};
 use contacts::db;
 
 async fn app() -> axum::Router {
+    app_with_pool().await.0
+}
+
+async fn app_with_pool() -> (axum::Router, sqlx::SqlitePool) {
     let pool = db::connect("sqlite::memory:")
         .await
         .expect("in-memory pool connects and migrates");
-    build_router(AppState {
-        pool,
+    let router = build_router(AppState {
+        pool: pool.clone(),
         version: "1.2.3-test".to_string(),
-    })
+    });
+    (router, pool)
 }
 
 async fn send(app: &axum::Router, req: Request<Body>) -> (StatusCode, Value) {
@@ -69,6 +74,31 @@ fn delete(path: &str) -> Request<Body> {
         .uri(path)
         .body(Body::empty())
         .unwrap()
+}
+
+fn put_bytes(path: &str, content_type: &str, bytes: Vec<u8>) -> Request<Body> {
+    Request::builder()
+        .method("PUT")
+        .uri(path)
+        .header("content-type", content_type)
+        .body(Body::from(bytes))
+        .unwrap()
+}
+
+async fn send_raw(
+    app: &axum::Router,
+    req: Request<Body>,
+) -> (StatusCode, axum::http::HeaderMap, axum::body::Bytes) {
+    let response = app.clone().oneshot(req).await.expect("router responds");
+    let status = response.status();
+    let headers = response.headers().clone();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body collects")
+        .to_bytes();
+    (status, headers, body)
 }
 
 async fn create_contact(app: &axum::Router, body: Value) -> Value {
@@ -374,4 +404,351 @@ async fn search_with_empty_text_returns_no_hits() {
     let (status, body) = send(&app, post("/search", json!({ "query": { "text": "  " } }))).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["hits"], json!([]));
+}
+
+#[tokio::test]
+async fn create_and_patch_accept_colour() {
+    let app = app().await;
+    let data = create_contact(&app, json!({ "name": "Branded", "colour": "#3B82F6" })).await;
+    assert_eq!(data["colour"], "#3B82F6");
+    assert_eq!(data["avatarAssetId"], Value::Null);
+    assert_eq!(data["posterAssetId"], Value::Null);
+    let id = data["id"].as_str().unwrap();
+
+    let (status, body) = send(
+        &app,
+        patch(&format!("/entities/{id}"), json!({ "colour": "#000000" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["data"]["colour"], "#000000");
+
+    let (status, body) = send(
+        &app,
+        patch(&format!("/entities/{id}"), json!({ "colour": null })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "an explicit null clears colour");
+    assert_eq!(body["data"]["colour"], Value::Null);
+}
+
+/// POPS-3061 review finding: create/PATCH must not be able to set or clear
+/// `avatarAssetId`/`posterAssetId` at all — those keys in a request body are
+/// simply ignored, since the fields don't exist on `CreateEntityBody` /
+/// `UpdateEntityBody` any more. The only legitimate write paths are the
+/// dedicated upload (`PUT`) and remove (`DELETE`) routes, covered by their
+/// own tests below.
+#[tokio::test]
+async fn create_and_patch_ignore_avatar_and_poster_asset_id() {
+    let app = app().await;
+    let created = create_contact(
+        &app,
+        json!({ "name": "Sneaky", "avatarAssetId": "attacker-controlled", "posterAssetId": "also-attacker-controlled" }),
+    )
+    .await;
+    assert_eq!(
+        created["avatarAssetId"],
+        Value::Null,
+        "create must not honor a client-supplied avatarAssetId"
+    );
+    assert_eq!(
+        created["posterAssetId"],
+        Value::Null,
+        "create must not honor a client-supplied posterAssetId"
+    );
+    let id = created["id"].as_str().unwrap();
+
+    let (status, body) = send(
+        &app,
+        patch(
+            &format!("/entities/{id}"),
+            json!({ "avatarAssetId": "still-attacker-controlled", "posterAssetId": "still-attacker-controlled" }),
+        ),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "unknown keys are not a 400, just ignored: {body}"
+    );
+    assert_eq!(
+        body["data"]["avatarAssetId"],
+        Value::Null,
+        "a generic PATCH must not be able to set avatarAssetId"
+    );
+    assert_eq!(
+        body["data"]["posterAssetId"],
+        Value::Null,
+        "a generic PATCH must not be able to set posterAssetId"
+    );
+}
+
+#[tokio::test]
+async fn create_rejects_an_invalid_colour() {
+    let app = app().await;
+    let (status, body) = send(
+        &app,
+        post("/entities", json!({ "name": "X", "colour": "blue" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(body["message"].as_str().unwrap().contains("blue"));
+}
+
+#[tokio::test]
+async fn avatar_upload_then_serve_round_trips_the_bytes() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "Avatarable" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let png_bytes = vec![0x89, b'P', b'N', b'G', 1, 2, 3, 4];
+    let (status, body) = send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/png",
+            png_bytes.clone(),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let asset_id = body["data"]["avatarAssetId"]
+        .as_str()
+        .expect("avatarAssetId is set")
+        .to_string();
+
+    let (status, headers, served) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get("content-type").unwrap(), "image/png");
+    assert_eq!(served.as_ref(), png_bytes.as_slice());
+
+    let (status, body) = send(&app, get(&format!("/entities/{id}"))).await;
+    assert_eq!(body["data"]["avatarAssetId"], asset_id);
+    let _ = status;
+}
+
+#[tokio::test]
+async fn poster_upload_then_serve_round_trips_the_bytes() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "Posterable" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let jpeg_bytes = vec![0xFF, 0xD8, 0xFF, 9, 9, 9];
+    let (status, _) = send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/poster"),
+            "image/jpeg",
+            jpeg_bytes.clone(),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, headers, served) = send_raw(&app, get(&format!("/entities/{id}/poster"))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get("content-type").unwrap(), "image/jpeg");
+    assert_eq!(served.as_ref(), jpeg_bytes.as_slice());
+}
+
+#[tokio::test]
+async fn serving_an_unset_avatar_is_a_404() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "NoAvatar" })).await;
+    let id = created["id"].as_str().unwrap();
+    let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn avatar_upload_rejects_a_disallowed_content_type() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "SvgAttempt" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let (status, body) = send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/svg+xml",
+            b"<svg onload=alert(1)></svg>".to_vec(),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body["message"].as_str().unwrap().contains("image/svg+xml"));
+
+    let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "the rejected upload must not have been stored"
+    );
+}
+
+#[tokio::test]
+async fn avatar_upload_rejects_an_oversized_payload() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "TooBig" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let oversized = vec![0u8; 2 * 1024 * 1024 + 1];
+    let (status, body) = send(
+        &app,
+        put_bytes(&format!("/entities/{id}/avatar"), "image/png", oversized),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body["message"]
+        .as_str()
+        .unwrap()
+        .to_lowercase()
+        .contains("exceeds"));
+}
+
+#[tokio::test]
+async fn replacing_an_avatar_deletes_the_old_blob() {
+    let (app, pool) = app_with_pool().await;
+    let created = create_contact(&app, json!({ "name": "Replaceable" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/png",
+            vec![1, 2, 3],
+        ),
+    )
+    .await;
+    let (_, body) = send(&app, get(&format!("/entities/{id}"))).await;
+    let first_asset_id = body["data"]["avatarAssetId"].as_str().unwrap().to_string();
+
+    let (status, body) = send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/png",
+            vec![4, 5, 6],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let second_asset_id = body["data"]["avatarAssetId"].as_str().unwrap();
+    assert_ne!(
+        first_asset_id, second_asset_id,
+        "a replace mints a new blob"
+    );
+
+    let (status, headers, served) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get("content-type").unwrap(), "image/png");
+    assert_eq!(served.as_ref(), &[4, 5, 6]);
+
+    assert!(
+        contacts::blobs::repo::get(&pool, &first_asset_id)
+            .await
+            .expect("query")
+            .is_none(),
+        "the superseded blob row must be deleted, not orphaned"
+    );
+}
+
+#[tokio::test]
+async fn removing_an_avatar_clears_it_and_deletes_the_old_blob() {
+    let (app, pool) = app_with_pool().await;
+    let created = create_contact(&app, json!({ "name": "Clearable" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/png",
+            vec![1, 2, 3],
+        ),
+    )
+    .await;
+    let (_, body) = send(&app, get(&format!("/entities/{id}"))).await;
+    let asset_id = body["data"]["avatarAssetId"].as_str().unwrap().to_string();
+
+    let (status, body) = send(&app, delete(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["data"]["avatarAssetId"],
+        Value::Null,
+        "DELETE clears avatarAssetId"
+    );
+
+    let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "the entity no longer resolves an avatar"
+    );
+
+    assert!(
+        contacts::blobs::repo::get(&pool, &asset_id)
+            .await
+            .expect("query")
+            .is_none(),
+        "clearing the reference must delete the underlying blob, not orphan it"
+    );
+
+    let (_, body) = send(&app, get(&format!("/entities/{id}"))).await;
+    assert_eq!(
+        body["data"]["avatarAssetId"],
+        Value::Null,
+        "still null after a plain re-fetch"
+    );
+}
+
+#[tokio::test]
+async fn removing_an_unset_avatar_is_a_no_op() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "AlreadyBare" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let (status, body) = send(&app, delete(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["data"]["avatarAssetId"], Value::Null);
+}
+
+#[tokio::test]
+async fn patch_ignoring_avatar_asset_id_leaves_it_untouched() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "Untouched" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    send(
+        &app,
+        put_bytes(
+            &format!("/entities/{id}/avatar"),
+            "image/png",
+            vec![7, 8, 9],
+        ),
+    )
+    .await;
+    let (_, before) = send(&app, get(&format!("/entities/{id}"))).await;
+    let asset_id = before["data"]["avatarAssetId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let (status, body) = send(
+        &app,
+        patch(
+            &format!("/entities/{id}"),
+            json!({ "notes": "unrelated change", "avatarAssetId": "attacker-controlled" }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["data"]["avatarAssetId"], asset_id,
+        "a generic PATCH can never touch avatarAssetId, whether it names the key or not"
+    );
+
+    let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK, "the blob is still there");
 }

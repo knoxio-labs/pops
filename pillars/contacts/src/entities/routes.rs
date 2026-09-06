@@ -7,18 +7,82 @@
 //! silently break every consumer. utoipa's default id is the fn name and
 //! cannot contain a dot, hence the explicit override on each route.
 
-use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::body::Bytes;
+use axum::extract::{DefaultBodyLimit, Path, Query, State};
+use axum::http::header::CONTENT_TYPE;
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use super::model::{CreateEntityBody, Entity, EntityLookup, UpdateEntityBody, ENTITY_TYPES};
+use super::model::{
+    AssetIdPatch, CreateEntityBody, Entity, EntityLookup, EntityRow, UpdateEntityBody, ENTITY_TYPES,
+};
 use super::repo;
 use crate::api::{ApiError, PaginationMeta};
 use crate::app::AppState;
+use crate::blobs;
 use crate::time::now_rfc3339;
+
+/// Content types an avatar/poster upload is accepted in. SVG is deliberately
+/// excluded (unlike the ticket's illustrative list) for the same reason
+/// finance's institution-logo upload excludes it
+/// (`pillars/finance/src/api/modules/logo-upload.ts`): an SVG can carry
+/// `<script>`/`onload=`/`foreignObject` payloads that execute in the
+/// viewer's origin, and this monorepo has no SVG sanitiser dependency.
+const ASSET_ALLOWED_CONTENT_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
+
+/// Size cap on an avatar/poster upload, matching finance's institution-logo
+/// cap (a small square mark, not a photo).
+const ASSET_MAX_BYTES: usize = 2 * 1024 * 1024;
+
+/// Which entity asset an upload/serve request targets.
+#[derive(Debug, Clone, Copy)]
+enum AssetField {
+    Avatar,
+    Poster,
+}
+
+impl AssetField {
+    fn get(self, row: &EntityRow) -> Option<&str> {
+        match self {
+            AssetField::Avatar => row.avatar_asset_id.as_deref(),
+            AssetField::Poster => row.poster_asset_id.as_deref(),
+        }
+    }
+
+    /// Build the patch that repoints this field at a freshly created blob.
+    fn set_patch(self, asset_id: String) -> AssetIdPatch {
+        self.patch(Some(asset_id))
+    }
+
+    /// Build the patch that clears this field.
+    fn clear_patch(self) -> AssetIdPatch {
+        self.patch(None)
+    }
+
+    fn patch(self, asset_id: Option<String>) -> AssetIdPatch {
+        match self {
+            AssetField::Avatar => AssetIdPatch {
+                avatar_asset_id: Some(asset_id),
+                ..Default::default()
+            },
+            AssetField::Poster => AssetIdPatch {
+                poster_asset_id: Some(asset_id),
+                ..Default::default()
+            },
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            AssetField::Avatar => "avatar",
+            AssetField::Poster => "poster",
+        }
+    }
+}
 
 /// Default page size when `limit` is omitted, matching the core entities list.
 const DEFAULT_LIMIT: i64 = 50;
@@ -88,6 +152,22 @@ pub fn router() -> Router<AppState> {
             get(get_one).patch(update).delete(delete_one),
         )
         .route("/entities/lookup", post(lookup))
+        .route(
+            "/entities/{id}/avatar",
+            get(get_avatar).put(upload_avatar).delete(remove_avatar),
+        )
+        .route(
+            "/entities/{id}/poster",
+            get(get_poster).put(upload_poster).delete(remove_poster),
+        )
+        // The default axum body limit (2 MiB) sits exactly at
+        // `ASSET_MAX_BYTES`, which would reject an over-cap upload before it
+        // reaches `assert_within_size_cap` and hand back axum's generic 413
+        // instead of this module's `ErrorBody`. Raising it here lets any
+        // upload up to double the cap reach the handler for a precise,
+        // consistent error; a request larger than that still gets axum's
+        // built-in (non-panicking) rejection.
+        .layer(DefaultBodyLimit::max(ASSET_MAX_BYTES * 2))
 }
 
 #[utoipa::path(
@@ -165,6 +245,9 @@ pub async fn create(
     if let Some(ty) = body.r#type.as_deref() {
         validate_type(ty)?;
     }
+    if let Some(colour) = body.colour.as_deref() {
+        validate_colour(colour)?;
+    }
 
     let row = repo::create(&state.pool, body).await.map_err(repo_error)?;
     Ok((
@@ -201,14 +284,257 @@ pub async fn update(
     if let Some(ty) = patch.r#type.as_deref() {
         validate_type(ty)?;
     }
+    if let Some(Some(colour)) = patch.colour.as_ref() {
+        validate_colour(colour)?;
+    }
 
     let row = repo::update(&state.pool, &id, patch)
         .await
         .map_err(|err| repo_not_found(err, &id))?;
+
     Ok(Json(EntityMutation {
         data: row.into(),
         message: "Entity updated".to_string(),
     }))
+}
+
+/// `PUT /entities/{id}/avatar` — upload/replace the entity's avatar.
+#[utoipa::path(
+    put,
+    path = "/entities/{id}/avatar",
+    operation_id = "entities.upload_avatar",
+    params(("id" = String, Path, description = "Entity id")),
+    request_body(content = Vec<u8>, description = "Raw image bytes", content_type = "application/octet-stream"),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn upload_avatar(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<EntityMutation>, ApiError> {
+    upload_asset(state, id, AssetField::Avatar, headers, body).await
+}
+
+/// `PUT /entities/{id}/poster` — upload/replace the entity's poster image.
+#[utoipa::path(
+    put,
+    path = "/entities/{id}/poster",
+    operation_id = "entities.upload_poster",
+    params(("id" = String, Path, description = "Entity id")),
+    request_body(content = Vec<u8>, description = "Raw image bytes", content_type = "application/octet-stream"),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn upload_poster(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<EntityMutation>, ApiError> {
+    upload_asset(state, id, AssetField::Poster, headers, body).await
+}
+
+/// Shared upload path for both asset fields: validate, insert the new blob,
+/// repoint the entity's asset id, then delete the old blob (if any) — so a
+/// crash mid-operation never leaves the entity referencing nothing.
+async fn upload_asset(
+    state: AppState,
+    id: String,
+    field: AssetField,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<EntityMutation>, ApiError> {
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    assert_allowed_content_type(content_type)?;
+    assert_within_size_cap(body.len())?;
+
+    let before = repo::get(&state.pool, &id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+
+    let blob_id = blobs::repo::create(&state.pool, content_type, &body)
+        .await
+        .map_err(db_error)?;
+
+    let row = repo::set_asset_ids(&state.pool, &id, field.set_patch(blob_id))
+        .await
+        .map_err(|err| repo_not_found(err, &id))?;
+
+    if let Some(old) = field.get(&before) {
+        blobs::repo::delete(&state.pool, old)
+            .await
+            .map_err(db_error)?;
+    }
+
+    Ok(Json(EntityMutation {
+        data: row.into(),
+        message: format!("Entity {} updated", field.label()),
+    }))
+}
+
+/// `DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the
+/// backing blob.
+#[utoipa::path(
+    delete,
+    path = "/entities/{id}/avatar",
+    operation_id = "entities.remove_avatar",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn remove_avatar(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityMutation>, ApiError> {
+    remove_asset(state, id, AssetField::Avatar).await
+}
+
+/// `DELETE /entities/{id}/poster` — clear the entity's poster and delete the
+/// backing blob.
+#[utoipa::path(
+    delete,
+    path = "/entities/{id}/poster",
+    operation_id = "entities.remove_poster",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn remove_poster(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityMutation>, ApiError> {
+    remove_asset(state, id, AssetField::Poster).await
+}
+
+/// Shared remove path for both asset fields: clear the column, then delete
+/// the blob it used to point at (if any). Idempotent — removing an
+/// already-unset field just returns the entity unchanged.
+async fn remove_asset(
+    state: AppState,
+    id: String,
+    field: AssetField,
+) -> Result<Json<EntityMutation>, ApiError> {
+    let before = repo::get(&state.pool, &id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+
+    let row = repo::set_asset_ids(&state.pool, &id, field.clear_patch())
+        .await
+        .map_err(|err| repo_not_found(err, &id))?;
+
+    if let Some(old) = field.get(&before) {
+        blobs::repo::delete(&state.pool, old)
+            .await
+            .map_err(db_error)?;
+    }
+
+    Ok(Json(EntityMutation {
+        data: row.into(),
+        message: format!("Entity {} removed", field.label()),
+    }))
+}
+
+/// `GET /entities/{id}/avatar` — serve the entity's avatar bytes.
+#[utoipa::path(
+    get,
+    path = "/entities/{id}/avatar",
+    operation_id = "entities.get_avatar",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = Vec<u8>),
+        (status = 404, description = "No such entity, or no avatar set", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn get_avatar(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    serve_asset(state, id, AssetField::Avatar).await
+}
+
+/// `GET /entities/{id}/poster` — serve the entity's poster bytes.
+#[utoipa::path(
+    get,
+    path = "/entities/{id}/poster",
+    operation_id = "entities.get_poster",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = Vec<u8>),
+        (status = 404, description = "No such entity, or no poster set", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn get_poster(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    serve_asset(state, id, AssetField::Poster).await
+}
+
+async fn serve_asset(state: AppState, id: String, field: AssetField) -> Result<Response, ApiError> {
+    let row = repo::get(&state.pool, &id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+    let asset_id = field
+        .get(&row)
+        .ok_or_else(|| ApiError::not_found(field.label(), &id))?;
+    let blob = blobs::repo::get(&state.pool, asset_id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found(field.label(), asset_id))?;
+    Ok(([(CONTENT_TYPE, blob.content_type)], blob.data).into_response())
+}
+
+fn assert_allowed_content_type(content_type: &str) -> Result<(), ApiError> {
+    if ASSET_ALLOWED_CONTENT_TYPES.contains(&content_type) {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(format!(
+            "Unsupported content type '{content_type}'. Allowed: {}",
+            ASSET_ALLOWED_CONTENT_TYPES.join(", ")
+        )))
+    }
+}
+
+fn assert_within_size_cap(byte_length: usize) -> Result<(), ApiError> {
+    if byte_length == 0 {
+        Err(ApiError::bad_request("Upload is empty"))
+    } else if byte_length > ASSET_MAX_BYTES {
+        Err(ApiError::bad_request(format!(
+            "Upload exceeds the maximum allowed size of {ASSET_MAX_BYTES} bytes"
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+/// Reject a `colour` value that is not a `#RRGGBB` hex string.
+fn validate_colour(colour: &str) -> Result<(), ApiError> {
+    let hex = colour.strip_prefix('#').unwrap_or(colour);
+    if colour.starts_with('#') && hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(format!(
+            "Invalid colour '{colour}'. Expected a hex string like '#3B82F6'"
+        )))
+    }
 }
 
 #[utoipa::path(
@@ -293,5 +619,27 @@ mod tests {
     fn rejects_unknown_type() {
         assert!(validate_type("wizard").is_err());
         assert!(validate_type("person").is_ok());
+    }
+
+    #[test]
+    fn validates_hex_colour() {
+        assert!(validate_colour("#3B82F6").is_ok());
+        assert!(validate_colour("#000000").is_ok());
+        assert!(validate_colour("3B82F6").is_err(), "must carry the '#'");
+        assert!(validate_colour("#3B82F").is_err(), "too short");
+        assert!(validate_colour("#3B82F6A").is_err(), "too long");
+        assert!(validate_colour("#GGGGGG").is_err(), "not hex digits");
+    }
+
+    #[test]
+    fn rejects_disallowed_and_oversized_uploads() {
+        assert!(assert_allowed_content_type("image/png").is_ok());
+        assert!(assert_allowed_content_type("image/svg+xml").is_err());
+        assert!(assert_allowed_content_type("").is_err());
+
+        assert!(assert_within_size_cap(1).is_ok());
+        assert!(assert_within_size_cap(0).is_err());
+        assert!(assert_within_size_cap(ASSET_MAX_BYTES).is_ok());
+        assert!(assert_within_size_cap(ASSET_MAX_BYTES + 1).is_err());
     }
 }

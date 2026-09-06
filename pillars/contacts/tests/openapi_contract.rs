@@ -41,6 +41,12 @@ fn entities_and_search_operation_ids_are_dotted() {
         "entities.update",
         "entities.delete",
         "entities.lookup",
+        "entities.upload_avatar",
+        "entities.get_avatar",
+        "entities.remove_avatar",
+        "entities.upload_poster",
+        "entities.get_poster",
+        "entities.remove_poster",
         "search.search",
     ];
     for id in required {
@@ -95,6 +101,9 @@ fn entity_wire_schema_omits_internal_columns() {
         "aliases",
         "defaultTags",
         "lastEditedTime",
+        "avatarAssetId",
+        "posterAssetId",
+        "colour",
     ] {
         assert!(
             props.contains_key(exposed),

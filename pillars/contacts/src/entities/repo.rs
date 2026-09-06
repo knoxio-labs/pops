@@ -10,8 +10,8 @@
 use sqlx::{Row, SqlitePool};
 
 use super::model::{
-    encode_aliases, encode_default_tags, CreateEntityBody, EntityLookupRow, EntityRow,
-    UpdateEntityBody, DEFAULT_ENTITY_TYPE,
+    encode_aliases, encode_default_tags, AssetIdPatch, CreateEntityBody, EntityLookupRow,
+    EntityRow, UpdateEntityBody, DEFAULT_ENTITY_TYPE,
 };
 use crate::time::now_rfc3339;
 
@@ -52,7 +52,8 @@ macro_rules! select_entities {
     ($tail:expr) => {
         concat!(
             "SELECT id, name, type, abn, aliases, default_transaction_type, ",
-            "default_tags, notes, last_edited_time FROM entities ",
+            "default_tags, notes, avatar_asset_id, poster_asset_id, colour, ",
+            "last_edited_time FROM entities ",
             $tail
         )
     };
@@ -139,8 +140,9 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
 
     sqlx::query(
         "INSERT INTO entities \
-         (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, last_edited_time) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+         (id, name, type, abn, aliases, default_transaction_type, default_tags, notes, \
+          colour, last_edited_time) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
     )
     .bind(&id)
     .bind(&body.name)
@@ -150,6 +152,7 @@ pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityR
     .bind(body.default_transaction_type.as_deref())
     .bind(encode_default_tags(&body.default_tags))
     .bind(body.notes.as_deref())
+    .bind(body.colour.as_deref())
     .bind(&now)
     .execute(pool)
     .await
@@ -200,6 +203,9 @@ pub async fn update(
     if let Some(tags) = &patch.default_tags {
         builder.set_nullable("default_tags", encode_default_tags(tags));
     }
+    if let Some(colour) = &patch.colour {
+        builder.set_nullable("colour", colour.clone());
+    }
 
     if !builder.is_empty() {
         builder
@@ -209,6 +215,39 @@ pub async fn update(
                 Some(name) => name_conflict_or(err, name),
                 None => RepoError::Db(err),
             })?;
+    }
+
+    get(pool, id).await?.ok_or(RepoError::NotFound)
+}
+
+/// Repoint (or clear) the `avatar_asset_id`/`poster_asset_id` columns.
+///
+/// This is the ONLY write path for those two columns — deliberately separate
+/// from [`update`], which applies [`UpdateEntityBody`] and no longer carries
+/// them at all. It exists so the avatar/poster upload and remove routes can
+/// repoint an entity at a blob they have just created (or clear the
+/// reference) without going through a body a client could also send, which
+/// is what let a `PATCH` set either id to an arbitrary, unbacked string
+/// (POPS-3061 review finding).
+pub async fn set_asset_ids(
+    pool: &SqlitePool,
+    id: &str,
+    patch: AssetIdPatch,
+) -> Result<EntityRow, RepoError> {
+    if get(pool, id).await?.is_none() {
+        return Err(RepoError::NotFound);
+    }
+
+    let mut builder = UpdateBuilder::new();
+    if let Some(avatar_asset_id) = patch.avatar_asset_id {
+        builder.set_nullable("avatar_asset_id", avatar_asset_id);
+    }
+    if let Some(poster_asset_id) = patch.poster_asset_id {
+        builder.set_nullable("poster_asset_id", poster_asset_id);
+    }
+
+    if !builder.is_empty() {
+        builder.execute(pool, id).await?;
     }
 
     get(pool, id).await?.ok_or(RepoError::NotFound)
@@ -386,6 +425,7 @@ mod tests {
             default_transaction_type: None,
             default_tags: Vec::new(),
             notes: None,
+            colour: None,
         }
     }
 
@@ -655,6 +695,94 @@ mod tests {
         create(&pool, body("Acme")).await.expect("create");
         assert!(find_by_name(&pool, "Acme").await.expect("find").is_some());
         assert!(find_by_name(&pool, "Nope").await.expect("find").is_none());
+    }
+
+    #[tokio::test]
+    async fn create_and_patch_round_trip_colour() {
+        let pool = pool().await;
+        let mut b = body("Branded");
+        b.colour = Some("#3B82F6".to_string());
+        let created = create(&pool, b).await.expect("create");
+        assert_eq!(
+            created.avatar_asset_id, None,
+            "create cannot set an asset id"
+        );
+        assert_eq!(
+            created.poster_asset_id, None,
+            "create cannot set an asset id"
+        );
+        assert_eq!(created.colour.as_deref(), Some("#3B82F6"));
+
+        let patch = UpdateEntityBody {
+            colour: Some(Some("#000000".to_string())),
+            ..Default::default()
+        };
+        let updated = update(&pool, &created.id, patch).await.expect("update");
+        assert_eq!(updated.colour.as_deref(), Some("#000000"));
+    }
+
+    /// The upload/remove routes' only write path: [`set_asset_ids`] repoints
+    /// (or clears) an id without ever going through [`UpdateEntityBody`],
+    /// which no longer carries these fields at all (POPS-3061).
+    #[tokio::test]
+    async fn set_asset_ids_repoints_and_clears_independently() {
+        let pool = pool().await;
+        let created = create(&pool, body("Assetful")).await.expect("create");
+
+        let with_avatar = set_asset_ids(
+            &pool,
+            &created.id,
+            AssetIdPatch {
+                avatar_asset_id: Some(Some("blob-avatar".to_string())),
+                poster_asset_id: None,
+            },
+        )
+        .await
+        .expect("set avatar");
+        assert_eq!(with_avatar.avatar_asset_id.as_deref(), Some("blob-avatar"));
+        assert_eq!(
+            with_avatar.poster_asset_id, None,
+            "an absent field in the patch is left untouched"
+        );
+
+        let with_poster = set_asset_ids(
+            &pool,
+            &created.id,
+            AssetIdPatch {
+                avatar_asset_id: None,
+                poster_asset_id: Some(Some("blob-poster".to_string())),
+            },
+        )
+        .await
+        .expect("set poster");
+        assert_eq!(
+            with_poster.avatar_asset_id.as_deref(),
+            Some("blob-avatar"),
+            "setting the poster must not disturb the avatar"
+        );
+        assert_eq!(with_poster.poster_asset_id.as_deref(), Some("blob-poster"));
+
+        let cleared = set_asset_ids(
+            &pool,
+            &created.id,
+            AssetIdPatch {
+                avatar_asset_id: Some(None),
+                poster_asset_id: Some(None),
+            },
+        )
+        .await
+        .expect("clear both");
+        assert_eq!(cleared.avatar_asset_id, None);
+        assert_eq!(cleared.poster_asset_id, None);
+    }
+
+    #[tokio::test]
+    async fn set_asset_ids_on_missing_entity_is_not_found() {
+        let pool = pool().await;
+        let err = set_asset_ids(&pool, "nope", AssetIdPatch::default())
+            .await
+            .unwrap_err();
+        assert!(matches!(err, RepoError::NotFound));
     }
 
     #[tokio::test]
