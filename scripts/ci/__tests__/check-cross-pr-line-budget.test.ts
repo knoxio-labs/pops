@@ -205,6 +205,38 @@ describe('what the guard SAYS (ADR-045)', () => {
     expect(summaryMarkdown([], 11)).toContain('No collision');
   });
 
+  // A raw git path can carry a comma or colon (core.quotePath=false), and
+  // `otherTitle` is free text from somebody else's PR. Unescaped, the first
+  // splits one annotation into a broken pair and the second can inject a
+  // whole second workflow command.
+  it('escapes the path and the message, so a hostile PR title cannot forge a command', () => {
+    const annotations = annotationsFor([
+      {
+        ...collision,
+        file: 'pillars/x/a,b:c.ts',
+        otherTitle: '100% done\n::error::forged',
+      },
+    ]);
+    expect(annotations).toHaveLength(1);
+    const annotation = annotations[0] ?? '';
+
+    // The property is fully escaped: a raw comma would end `file=` early and
+    // a raw colon would end the command. The human message after `::` keeps
+    // its commas and colons — only `%`, CR and LF matter there, and it is the
+    // newline that would have let the injected `::error::` start a line of
+    // its own and become a second command.
+    expect(annotation.startsWith('::warning file=pillars/x/a%2Cb%3Ac.ts::')).toBe(true);
+    expect(annotation).toContain('100%25 done%0A::error::forged');
+    expect(annotation.split('\n')).toHaveLength(1);
+  });
+
+  // "asked and found none" and "never asked" are different facts.
+  it('says it fetched nothing, rather than "0 other open PRs", when it never queried', () => {
+    const md = summaryMarkdown([], null);
+    expect(md).toContain('no other PR was fetched');
+    expect(md).not.toContain('0 other open PR');
+  });
+
   it('renders a collision as a table row carrying both deltas', () => {
     const md = summaryMarkdown([collision], 3);
     expect(md).toContain(

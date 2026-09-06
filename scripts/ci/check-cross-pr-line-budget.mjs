@@ -69,6 +69,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   countBudgetLines,
+  escapeAnnotationData,
+  escapeAnnotationProperty,
   globToRegExp,
   matchesAnyGlob,
   parseMaxLinesConfig,
@@ -175,18 +177,34 @@ export function describeCollision(c) {
  * @returns {string[]}
  */
 export function annotationsFor(collisions) {
-  return collisions.map((c) => `::warning file=${c.file}::${describeCollision(c)}`);
+  // Escaped with the sibling guard's own helpers rather than a second copy of
+  // them. Both halves need it: `file=` is a raw git path (this repo runs with
+  // `core.quotePath=false`, so a comma or colon arrives verbatim and would
+  // split the annotation into a broken pair), and the message carries
+  // `otherTitle` — free text from somebody else's open PR, which is exactly
+  // where a `%`, CR or LF would come from.
+  return collisions.map(
+    (c) =>
+      `::warning file=${escapeAnnotationProperty(c.file)}::${escapeAnnotationData(describeCollision(c))}`
+  );
 }
 
 /**
  * The step-summary table, or the sentence that says nothing collided.
  *
  * @param {Collision[]} collisions
- * @param {number} otherPrCount How many open PRs were compared against.
+ * @param {number | null} otherPrCount How many open PRs were compared against,
+ *   or `null` when the guard short-circuited before querying any.
  * @returns {string}
  */
 export function summaryMarkdown(collisions, otherPrCount) {
-  const scope = `Compared against ${otherPrCount} other open PR(s) on the same base.`;
+  // "0 other open PRs" and "never asked" are different facts, and a summary
+  // that renders them identically is a guard claiming a comparison it did not
+  // make.
+  const scope =
+    otherPrCount === null
+      ? 'This PR changes no capped file, so no other PR was fetched.'
+      : `Compared against ${otherPrCount} other open PR(s) on the same base.`;
   if (collisions.length === 0) {
     return `### Cross-PR line budget\n\nNo collision. ${scope}\n`;
   }
@@ -326,7 +344,7 @@ export function cappedFilesFrom(cwd) {
  * @param {number} params.pr
  * @param {string} params.base Base branch name, e.g. `main`.
  * @param {string} params.cwd
- * @returns {{ collisions: Collision[], otherPrCount: number } | { error: string }}
+ * @returns {{ collisions: Collision[], otherPrCount: number | null } | { error: string }}
  */
 export function evaluate({ repo, pr, base, cwd }) {
   /** @type {{ max: number, isCapped: (path: string) => boolean }} */
@@ -346,7 +364,9 @@ export function evaluate({ repo, pr, base, cwd }) {
   if (mine === undefined) {
     return { error: `git could not describe HEAD against ${baseRef}` };
   }
-  if (mine.length === 0) return { collisions: [], otherPrCount: 0 };
+  // `null`, not 0: nothing was queried, and the summary must not read as if
+  // the API had been asked and answered "none".
+  if (mine.length === 0) return { collisions: [], otherPrCount: null };
 
   /** @type {{ number: number, title: string }[]} */
   let openPrs;
@@ -434,7 +454,11 @@ function main() {
   for (const line of annotationsFor(result.collisions)) process.stdout.write(`${line}\n`);
   process.stdout.write(
     result.collisions.length === 0
-      ? `cross-PR line budget: no collision against ${result.otherPrCount} other open PR(s)\n`
+      ? `cross-PR line budget: ${
+          result.otherPrCount === null
+            ? 'no capped file changed; no other PR fetched'
+            : `no collision against ${result.otherPrCount} other open PR(s)`
+        }\n`
       : `cross-PR line budget: ${result.collisions.length} collision(s)\n` +
           `${result.collisions.map((c) => `  ${describeCollision(c)}`).join('\n')}\n`
   );
