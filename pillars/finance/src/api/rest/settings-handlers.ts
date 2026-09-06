@@ -49,7 +49,7 @@ function runSettings<T extends { status: number; body: unknown }>(
       return fn();
     } catch (err) {
       if (err instanceof UnknownSettingKeyError) {
-        throw new ValidationError({ keys: err.keys }, err.message);
+        throw new ValidationError(err.message, { keys: err.keys });
       }
       throw err;
     }

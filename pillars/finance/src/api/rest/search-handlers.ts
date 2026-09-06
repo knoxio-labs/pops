@@ -195,7 +195,7 @@ export function makeSearchHandlers(db: FinanceDb) {
       runHttp(() => {
         const filterResult = searchFilterScope(body.query.filters ?? []);
         if (!filterResult.ok) {
-          throw new ValidationError({ filters: body.query.filters }, filterResult.message);
+          throw new ValidationError(filterResult.message, { filters: body.query.filters });
         }
         const { scope } = filterResult;
 

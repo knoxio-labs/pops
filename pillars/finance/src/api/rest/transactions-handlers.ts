@@ -64,8 +64,8 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         if ((query.beforeDate === undefined) !== (query.beforeId === undefined)) {
           const missing = query.beforeDate === undefined ? 'beforeDate' : 'beforeId';
           throw new ValidationError(
-            { beforeDate: query.beforeDate, beforeId: query.beforeId },
-            `beforeDate and beforeId must be supplied together; ${missing} is missing`
+            `beforeDate and beforeId must be supplied together; ${missing} is missing`,
+            { beforeDate: query.beforeDate, beforeId: query.beforeId }
           );
         }
 

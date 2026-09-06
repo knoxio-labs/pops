@@ -205,8 +205,8 @@ export function translateCorrectionError(err: unknown, id?: string): never {
     err instanceof UnmatchablePatternError
   ) {
     throw new ValidationError(
-      err instanceof TagsOnlyCorrectionError ? undefined : { pattern: err.pattern },
-      err.message
+      err.message,
+      err instanceof TagsOnlyCorrectionError ? undefined : { pattern: err.pattern }
     );
   }
   throw err;

@@ -42,8 +42,8 @@ export function normalisesToNothing(op: AddOp): boolean {
 export function assertNotTagsOnly(op: AddOp): void {
   if (isTagsOnlyCorrectionInput(op.data)) {
     throw new ValidationError(
-      { tags: op.data.tags },
-      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules'
+      'A correction rule needs an entityId or a transactionType — tags-only rules belong in transaction_tag_rules',
+      { tags: op.data.tags }
     );
   }
 }
@@ -56,8 +56,8 @@ export function assertNotTagsOnly(op: AddOp): void {
 export function assertPatternCompiles(op: AddOp): void {
   if (op.data.matchType === 'regex' && !isValidRegexPattern(op.data.descriptionPattern)) {
     throw new ValidationError(
-      { pattern: op.data.descriptionPattern },
-      `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`
+      `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`,
+      { pattern: op.data.descriptionPattern }
     );
   }
 }
@@ -66,5 +66,5 @@ export function assertPatternCompiles(op: AddOp): void {
 export function assertPatternCanMatch(op: AddOp): void {
   if (!normalisesToNothing(op)) return;
   const unmatchable = new UnmatchablePatternError(op.data.descriptionPattern);
-  throw new ValidationError(unmatchable.pattern, unmatchable.message);
+  throw new ValidationError(unmatchable.message, unmatchable.pattern);
 }
