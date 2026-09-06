@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
@@ -1111,6 +1111,29 @@ function repoConfigRoots(): string[] {
   return mainCheckout === repoRoot ? [repoRoot] : [repoRoot, mainCheckout];
 }
 
+/**
+ * The failure a non-zero `mise current` means, as an error worth reading.
+ *
+ * Shared by the sync and async callers below so the untrusted-config case —
+ * the one the caller handles rather than fails on — cannot be recognised by
+ * one and missed by the other.
+ */
+function miseCurrentFailure(
+  trustedRoots: readonly string[],
+  dir: string,
+  tool: string,
+  status: number | null,
+  output: string
+): Error {
+  if (output.includes('not trusted')) {
+    return new MiseRefusedUntrustedConfig(
+      `mise refused untrusted config while resolving ${tool} in ${dir}, even with ` +
+        `MISE_TRUSTED_CONFIG_PATHS=${trustedRoots.join(delimiter)}. Output: ${output}`
+    );
+  }
+  return new Error(`mise current -C ${dir} ${tool} exited ${status ?? 'on a signal'}: ${output}`);
+}
+
 function miseCurrent(trustedRoots: readonly string[], dir: string, tool: string): string {
   const result = spawnSync('mise', ['current', '-C', dir, tool], {
     encoding: 'utf8',
@@ -1118,18 +1141,99 @@ function miseCurrent(trustedRoots: readonly string[], dir: string, tool: string)
   });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0) {
-    const output = `${result.stderr}${result.stdout}`.trim();
-    if (output.includes('not trusted')) {
-      throw new MiseRefusedUntrustedConfig(
-        `mise refused untrusted config while resolving ${tool} in ${dir}, even with ` +
-          `MISE_TRUSTED_CONFIG_PATHS=${trustedRoots.join(delimiter)}. Output: ${output}`
-      );
-    }
-    throw new Error(
-      `mise current -C ${dir} ${tool} exited ${result.status ?? 'on a signal'}: ${output}`
+    throw miseCurrentFailure(
+      trustedRoots,
+      dir,
+      tool,
+      result.status,
+      `${result.stderr}${result.stdout}`.trim()
     );
   }
   return result.stdout.trim();
+}
+
+function miseCurrentAsync(
+  trustedRoots: readonly string[],
+  dir: string,
+  tool: string
+): Promise<string> {
+  return new Promise((resolveWith, rejectWith) => {
+    const child = spawn('mise', ['current', '-C', dir, tool], { env: miseEnv(...trustedRoots) });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => (stdout += chunk));
+    child.stderr.on('data', (chunk: string) => (stderr += chunk));
+    child.on('error', rejectWith);
+    child.on('close', (status) => {
+      if (status === 0) {
+        resolveWith(stdout.trim());
+        return;
+      }
+      rejectWith(miseCurrentFailure(trustedRoots, dir, tool, status, `${stderr}${stdout}`.trim()));
+    });
+  });
+}
+
+/** One `mise current` to make, and what it is being asked about. */
+interface ToolQuery {
+  dir: string;
+  tool: string;
+}
+
+/**
+ * Enough concurrency to stop the whole-tree query being a serial queue, and
+ * not so much that it becomes a fork bomb: 42 units times two tools is 84
+ * `mise` processes, and asking for all of them at once measures the machine
+ * rather than the repo.
+ */
+const MISE_POOL_SIZE = 8;
+
+/**
+ * What one query answered. A union rather than two nullable fields, so a
+ * caller that has ruled out the failures is holding a `string` and not a
+ * `string | null` it has to assert about.
+ */
+type ToolOutcome =
+  | (ToolQuery & { resolved: string; failure: null })
+  | (ToolQuery & { resolved: null; failure: Error });
+
+/**
+ * Resolve every query, keeping each one's outcome rather than rejecting on the
+ * first — naming the offending unit needs them all, and the untrusted-config
+ * refusal is a skip rather than a failure.
+ */
+async function resolveToolQueries(
+  trustedRoots: readonly string[],
+  queries: readonly ToolQuery[]
+): Promise<ToolOutcome[]> {
+  const outcomes: ToolOutcome[] = [];
+  let next = 0;
+  async function worker(): Promise<void> {
+    for (let index = next++; index < queries.length; index = next++) {
+      const query = queries[index];
+      if (query === undefined) continue;
+      try {
+        const resolved = await miseCurrentAsync(
+          trustedRoots,
+          join(repoRoot, query.dir),
+          query.tool
+        );
+        outcomes.push({ ...query, resolved, failure: null });
+      } catch (error) {
+        outcomes.push({
+          ...query,
+          resolved: null,
+          failure: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(MISE_POOL_SIZE, queries.length) }, () => worker())
+  );
+  return outcomes;
 }
 
 describe('mise actually resolves the merge (real mise binary)', () => {
@@ -1171,7 +1275,7 @@ describe('mise actually resolves the merge (real mise binary)', () => {
 
   it(
     'every existing pillar/lib still resolves node/pnpm from the root pin',
-    (ctx) => {
+    async (ctx) => {
       if (miseUnusable !== null) {
         refuseToSkipInCi(miseUnusable);
         ctx.skip(miseUnusable);
@@ -1179,21 +1283,46 @@ describe('mise actually resolves the merge (real mise binary)', () => {
       }
       const trustedRoots = repoConfigRoots();
       const rootTools = parseToolsTable(readFileSync(join(repoRoot, 'mise.toml'), 'utf8'));
+      const queries: ToolQuery[] = [];
       for (const { dir, file } of discoverUnitMiseDirs(repoRoot)) {
         const unitTools = parseToolsTable(readFileSync(join(repoRoot, file), 'utf8'));
         for (const tool of ['node', 'pnpm'] as const) {
           if (tool in unitTools) continue; // this unit overrides it — nothing to assert here
-          let resolved: string;
-          try {
-            resolved = miseCurrent(trustedRoots, join(repoRoot, dir), tool);
-          } catch (error) {
-            if (!(error instanceof MiseRefusedUntrustedConfig)) throw error;
-            refuseToSkipInCi(error.message);
-            ctx.skip(error.message);
-            return;
-          }
-          expect(resolved, `${dir} should inherit root's ${tool} pin`).toBe(rootTools[tool]);
+          queries.push({ dir, tool });
         }
+      }
+      // Asserting the whole tree, rather than a sample of it, is the point of
+      // the test — so the queries run through a bounded pool instead of one
+      // after another. Serially this was ~84 process spawns end to end, which
+      // grew with every unit added and shrank the margin against whatever
+      // timeout was in force with no signal that it was doing so (POPS-1578).
+      const outcomes = await resolveToolQueries(trustedRoots, queries);
+
+      // A discovery floor and a completeness check, because the loop below
+      // asserts nothing at all when handed an empty list — a pool that ran no
+      // workers, or one that dropped a query, would report green while proving
+      // less than the serial version did. Neither is hypothetical: setting
+      // MISE_POOL_SIZE to 0 passes every case in this file without these two.
+      expect(queries.length, 'units inheriting the root node/pnpm pin').toBeGreaterThan(10);
+      expect(outcomes.length, 'every query must come back with an outcome').toBe(queries.length);
+
+      const failures = outcomes.filter((outcome) => outcome.failure !== null);
+      const refusal = failures.find(
+        (outcome) => outcome.failure instanceof MiseRefusedUntrustedConfig
+      );
+      if (refusal !== undefined) {
+        refuseToSkipInCi(refusal.failure.message);
+        ctx.skip(refusal.failure.message);
+        return;
+      }
+      const broken = failures[0];
+      if (broken !== undefined) throw broken.failure;
+
+      for (const outcome of outcomes) {
+        if (outcome.failure !== null) continue;
+        expect(outcome.resolved, `${outcome.dir} should inherit root's ${outcome.tool} pin`).toBe(
+          rootTools[outcome.tool]
+        );
       }
     },
     REAL_MISE_TIMEOUT_MS
