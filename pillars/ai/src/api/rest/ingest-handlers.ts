@@ -48,7 +48,9 @@ export function makeIngestHandler(db: AiDb) {
     record: ({ body }: Req['record']) =>
       runHttp(() => {
         if (!DOMAIN_PATTERN.test(body.domain)) {
-          throw new ValidationError({ field: 'domain', reason: 'unknown or malformed domain' });
+          throw new ValidationError(`Unknown or malformed domain: ${body.domain}`, {
+            field: 'domain',
+          });
         }
 
         const merged: Record<string, unknown> = { ...body.metadata };

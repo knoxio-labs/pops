@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type OpenedFoodDb, openFoodDb } from '../../db/index.js';
 import { createFoodApiApp } from '../app.js';
 import { createTestTransport } from './test-http.js';
-import { makeClient } from './test-utils.js';
+import { makeClient, type HttpError } from './test-utils.js';
 
 const { requestOn } = createTestTransport();
 
@@ -94,6 +94,31 @@ describe('hero-image REST', () => {
         Buffer.from('not an image').toString('base64')
       )
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  // The status alone was true before POPS-3043 too — food's `ValidationError`
+  // took `(details: unknown)` and hardcoded `'Validation failed'`, so this
+  // module's explanations were discarded before reaching the caller. Assert
+  // the body, which is the part that was wrong.
+  //
+  // Only the decode failure is asserted because it is the only one of the six
+  // guards a REST caller can reach: the contract's zod body rejects an empty
+  // `contentBase64` and a mime type outside the enum first, so those guards
+  // answer nobody. They stay as defence for direct service callers.
+  it('says the bytes would not decode, rather than "Validation failed"', async () => {
+    const client = makeClient(app());
+    const created = await client.recipes.create(SIMPLE_DSL);
+
+    const rejection = await client.heroImage
+      .upload(created.recipeId, 'image/png', Buffer.from('not an image').toString('base64'))
+      .then(
+        () => null,
+        (err: unknown) => err as HttpError
+      );
+
+    expect(rejection?.status).toBe(400);
+    expect(rejection?.body).toMatchObject({ code: 'ValidationError' });
+    expect(rejection?.message).toMatch(/^Image could not be decoded \(/);
   });
 
   it('falls through to the recipes route for a non-hero path', async () => {

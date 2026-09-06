@@ -20,7 +20,7 @@ const URI_PATTERN = /^pops:\/\/core\/user\/(.+)$/;
 function extractUserEmailFromUri(uri: string): string {
   const match = URI_PATTERN.exec(uri);
   if (!match || !match[1]) {
-    throw new ValidationError({ reason: 'unsupported-uri', uri });
+    throw new ValidationError(`Not a core user URI: '${uri}'`, { reason: 'unsupported-uri' });
   }
   return match[1];
 }

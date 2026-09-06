@@ -44,7 +44,7 @@ export function makeServiceAccountsHandlers(db: CoreDb) {
           return { status: 201 as const, body: created };
         } catch (err) {
           if (err instanceof ServiceAccountNameAlreadyExistsError) {
-            throw new ValidationError({ message: err.message });
+            throw new ValidationError(err.message);
           }
           throw err;
         }

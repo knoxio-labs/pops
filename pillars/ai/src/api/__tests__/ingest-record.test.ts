@@ -212,6 +212,22 @@ describe('POST /ai-usage/record — validation + best-effort', () => {
     expect(countLogs()).toBe(0);
   });
 
+  // The status alone was true before POPS-3043 too — this pillar's
+  // `ValidationError` took `(details: unknown)` and hardcoded
+  // `'Validation failed'`, so the guard's explanation never left the process.
+  // Assert the body, which is the part that was wrong.
+  it('names the domain it refused, rather than answering "Validation failed"', async () => {
+    const res = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', FINANCE_CRED)
+      .send(validRecord({ domain: 'Finance Pillar!!' }));
+
+    expect(res.body).toMatchObject({
+      message: 'Unknown or malformed domain: Finance Pillar!!',
+      code: 'ValidationError',
+    });
+  });
+
   it('400s a body that fails the zod schema (negative tokens)', async () => {
     const res = await requestOn(app)
       .post('/ai-usage/record')

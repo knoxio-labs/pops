@@ -73,6 +73,20 @@ describe('users — URI contract', () => {
     await expect(client().users.get(uri)).rejects.toMatchObject({ status: 400 });
   });
 
+  // The status alone was true before POPS-3043 too — registry's
+  // `ValidationError` took `(details: unknown)` and hardcoded
+  // `'Validation failed'`, so `{ reason: 'unsupported-uri', uri }` never left
+  // the process. Assert the body, which is the part that was wrong.
+  it('quotes the URI it refused, rather than answering "Validation failed"', async () => {
+    await expect(client().users.get('pops://finance/user/joao@example.com')).rejects.toMatchObject({
+      status: 400,
+      body: {
+        message: "Not a core user URI: 'pops://finance/user/joao@example.com'",
+        code: 'ValidationError',
+      },
+    });
+  });
+
   it('400s when the uri query param is missing at the contract boundary', async () => {
     const res = await requestOn(app()).get('/users');
     expect(res.status).toBe(400);
