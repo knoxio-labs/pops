@@ -56,22 +56,35 @@ export function isSurfaceModule(id: string): boolean {
   return SURFACE.test(id);
 }
 
+/**
+ * Stamps a surface module's source, or returns null for a module the plugin
+ * leaves untouched. Exercised directly by tests; the plugin's `transform`
+ * hook is a thin wrapper so Vite gets its own hot-reloadable module map.
+ */
+export function stampSource(
+  repoRoot: string,
+  id: string,
+  code: string
+): { code: string; map: NonNullable<ReturnType<typeof transformSync>>['map'] } | null {
+  if (!isSurfaceModule(id)) return null;
+  const result = transformSync(code, {
+    filename: id,
+    babelrc: false,
+    configFile: false,
+    parserOpts: { plugins: ['jsx', 'typescript'] },
+    plugins: [stamp(repoRoot)],
+    sourceMaps: true,
+  });
+  if (!result?.code) return null;
+  return { code: result.code, map: result.map };
+}
+
 export function sourcePlugin(repoRoot: string): Plugin {
   return {
     name: 'pops-design-source',
     enforce: 'pre',
     transform(code, id) {
-      if (!isSurfaceModule(id)) return null;
-      const result = transformSync(code, {
-        filename: id,
-        babelrc: false,
-        configFile: false,
-        parserOpts: { plugins: ['jsx', 'typescript'] },
-        plugins: [stamp(repoRoot)],
-        sourceMaps: true,
-      });
-      if (!result?.code) return null;
-      return { code: result.code, map: result.map };
+      return stampSource(repoRoot, id, code);
     },
   };
 }
