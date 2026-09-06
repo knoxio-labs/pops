@@ -4117,6 +4117,7 @@ export interface operations {
                 failed: number;
                 fetched: number;
                 imported: number;
+                settleRefused?: number;
                 settled: number;
                 warnings: string[];
               } | null;
@@ -4220,6 +4221,7 @@ export interface operations {
                 failed: number;
                 fetched: number;
                 imported: number;
+                settleRefused?: number;
                 settled: number;
                 warnings: string[];
               } | null;

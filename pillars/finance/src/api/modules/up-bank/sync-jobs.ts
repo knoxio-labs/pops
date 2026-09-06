@@ -88,6 +88,7 @@ function toJobResult(result: UpSyncResult): UpSyncJobResult {
     imported: result.imported,
     failed: result.failed,
     settled: result.settled,
+    settleRefused: result.settleRefused,
     alreadyHeld: result.alreadyHeld,
     batchId: result.batchId,
     checkpoint: result.checkpoint,

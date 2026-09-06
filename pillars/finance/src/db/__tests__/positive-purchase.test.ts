@@ -20,7 +20,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { PositiveAmountPurchaseError } from '../errors.js';
 import { resolveAccountIdByName } from '../services/account-lookup.js';
 import { createAccount } from '../services/accounts.js';
-import { insertImportTransaction } from '../services/imports.js';
+import { insertImportTransaction, settleImportedTransaction } from '../services/imports.js';
 import { createTransaction, getTransaction, updateTransaction } from '../services/transactions.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
@@ -145,5 +145,57 @@ describe('insertImportTransaction', () => {
 
   it('accepts a negative purchase', () => {
     expect(importRow(-4500, 'purchase')).not.toThrow();
+  });
+});
+
+/**
+ * A settlement is the one write that changes an amount without touching the
+ * type, so it is the only one that can produce the contradiction without
+ * anybody choosing to — the source settling a held card authorisation at the
+ * opposite sign. It refuses rather than guessing a replacement type, and the
+ * row keeps its pending flag so the next sync offers it again.
+ */
+describe('settleImportedTransaction', () => {
+  it('refuses a settlement that would make a held purchase positive', () => {
+    const id = create(-4500, 'purchase');
+    expect(() =>
+      settleImportedTransaction(db, id, {
+        date: '2026-01-03',
+        amountCents: 4500,
+        rawRow: 'settled',
+      })
+    ).toThrow(PositiveAmountPurchaseError);
+  });
+
+  it('leaves the refused row held, so the next sync offers it again', () => {
+    const id = create(-4500, 'purchase');
+    try {
+      settleImportedTransaction(db, id, {
+        date: '2026-01-03',
+        amountCents: 4500,
+        rawRow: 'settled',
+      });
+    } catch {
+      // asserted above
+    }
+    const stored = getTransaction(db, id);
+    expect(stored.amountCents).toBe(-4500);
+    expect(stored.date).toBe('2026-01-02');
+  });
+
+  it('settles a held refund at a positive amount, which is what a return looks like', () => {
+    const id = create(-4500, 'refund');
+    settleImportedTransaction(db, id, { date: '2026-01-03', amountCents: 4500, rawRow: 'settled' });
+    expect(getTransaction(db, id).amountCents).toBe(4500);
+  });
+
+  it('settles a purchase at a larger negative amount', () => {
+    const id = create(-4500, 'purchase');
+    settleImportedTransaction(db, id, {
+      date: '2026-01-03',
+      amountCents: -5000,
+      rawRow: 'settled',
+    });
+    expect(getTransaction(db, id).amountCents).toBe(-5000);
   });
 });

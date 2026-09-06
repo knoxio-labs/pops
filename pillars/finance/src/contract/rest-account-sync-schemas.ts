@@ -20,6 +20,15 @@ export const UpSyncJobResultSchema = z.object({
   failed: z.number().int().nonnegative(),
   /** Held rows already stored that this pass marked settled. */
   settled: z.number().int().nonnegative(),
+  /**
+   * Held rows a settlement would have turned into a positive `purchase`, so it
+   * was refused (POPS-2685). They keep their pending flag and reappear under
+   * `alreadyHeld` next pass; a figure that stays above zero across syncs is a
+   * row that needs a person, not a transient.
+   *
+   * Optional so a job result serialised before this field existed still parses.
+   */
+  settleRefused: z.number().int().nonnegative().optional(),
   /** Held rows already stored and still held: fetched, not written. */
   alreadyHeld: z.number().int().nonnegative(),
   batchId: z.string().nullable(),

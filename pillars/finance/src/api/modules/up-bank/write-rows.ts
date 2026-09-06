@@ -5,7 +5,12 @@
  * checksum before getting here, so a row that reaches `importMappedRows` is
  * one the ledger does not have.
  */
-import { importBatchesService, importsService, type FinanceDb } from '../../../db/index.js';
+import {
+  importBatchesService,
+  importsService,
+  PositiveAmountPurchaseError,
+  type FinanceDb,
+} from '../../../db/index.js';
 import { commitImport } from '../imports/commit.js';
 import { processImportCore } from '../imports/process-service.js';
 import { UP_MAPPER_VERSION, UP_SOURCE_REF, type MappedUpTransaction } from './map-transaction.js';
@@ -103,14 +108,34 @@ export async function importMappedRows(
   };
 }
 
-/** Mark stored held rows settled in place, with the date and amount Up settled them at. */
-export function settleMappedRows(db: FinanceDb, settleable: readonly SettleableRow[]): number {
+/**
+ * Mark stored held rows settled in place, with the date and amount Up settled
+ * them at. Returns the ids actually settled, and the ids refused.
+ *
+ * A refusal is isolated to its row rather than thrown, because this runs after
+ * `importMappedRows` has already committed: propagating would abandon the
+ * sync half-done, with no balance checkpoint minted, over one anomalous row.
+ * A refused row keeps its `pending` flag, so it comes back as `alreadyHeld`
+ * on the next sync instead of disappearing — the count moving is the signal.
+ */
+export function settleMappedRows(
+  db: FinanceDb,
+  settleable: readonly SettleableRow[]
+): { settled: string[]; refused: string[] } {
+  const settled: string[] = [];
+  const refused: string[] = [];
   for (const { transactionId, mapped } of settleable) {
-    importsService.settleImportedTransaction(db, transactionId, {
-      date: mapped.parsed.date,
-      amountCents: Math.round(mapped.parsed.amount * 100),
-      rawRow: mapped.parsed.rawRow,
-    });
+    try {
+      importsService.settleImportedTransaction(db, transactionId, {
+        date: mapped.parsed.date,
+        amountCents: Math.round(mapped.parsed.amount * 100),
+        rawRow: mapped.parsed.rawRow,
+      });
+      settled.push(transactionId);
+    } catch (err) {
+      if (!(err instanceof PositiveAmountPurchaseError)) throw err;
+      refused.push(transactionId);
+    }
   }
-  return settleable.length;
+  return { settled, refused };
 }
