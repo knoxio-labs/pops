@@ -116,8 +116,8 @@ function UploadControl({
 
 /**
  * The colour is never picked from a palette by hand — it's assigned at
- * random when the entity is created (POPS-2805) — so this field only shows
- * what landed and offers a reroll, rather than a swatch grid.
+ * random when the entity is created, so this field only shows what landed
+ * and offers a reroll, rather than a swatch grid.
  */
 export function ColourField({
   colourId,

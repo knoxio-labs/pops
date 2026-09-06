@@ -1,12 +1,12 @@
 import { entityColorById } from './entity-colors';
 
 /**
- * Fictional `entities` rows for the contacts entity screens (POPS-2805): the
- * details page and the management list that will both move to
- * `pillars/contacts/app` per POPS-3067. `avatar`, `poster` and `colour` are
- * the three fields the model is gaining; all three are optional, so the set
- * below deliberately covers every combination — full identity, colour only,
- * and nothing at all — rather than showing only the best-dressed entity.
+ * Fictional `entities` rows for the contacts entity screens: the details
+ * page and the entity-owned management list. `avatar`, `poster` and `colour`
+ * are the three fields the model is gaining; all three are optional, so the
+ * set below deliberately covers every combination — full identity, colour
+ * only, and nothing at all — rather than showing only the best-dressed
+ * entity.
  */
 export type EntityType =
   | 'company'

@@ -95,7 +95,7 @@ function useEntityFormValues(entity: Entity | null) {
 
 type FormValues = ReturnType<typeof useEntityFormValues>;
 
-/** Avatar, poster and colour — the identity fields the model gained (POPS-2805). */
+/** Avatar, poster and colour — the identity fields the model is gaining. */
 function IdentityFields({ values }: { values: FormValues }) {
   return (
     <>

@@ -1,5 +1,5 @@
 /**
- * The two rollups an entity details page reaches out for (POPS-3067): recent
+ * The two rollups an entity details page reaches out for: recent
  * transactions from finance, recent purchases from purchases. Deliberately
  * not on the `Entity` fixture itself — that model is contacts' own, and these
  * are each a call to a different pillar. One entity page paying for two such

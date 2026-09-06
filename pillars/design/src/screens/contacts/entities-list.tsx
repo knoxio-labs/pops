@@ -22,7 +22,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 export const meta: ScreenMeta = { title: 'Entities', order: 2, frame: 'web' };
 
 /**
- * Entity-owned fields only (POPS-3067): this list is contacts' own CRUD
+ * Entity-owned fields only: this list is contacts' own CRUD
  * surface, so it renders what a single `entities` row fetch already has. No
  * column here reaches into finance or purchases — a usage count or a "last
  * transaction" would mean one cross-pillar call per row, and that scales with
