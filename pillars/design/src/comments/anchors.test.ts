@@ -110,12 +110,21 @@ describe('resolveAnchor', () => {
     ).toBe('first');
   });
 
-  it('resolves a token anchor', () => {
+  /**
+   * `anchor_kind` is free text in the schema and the API accepts any non-empty
+   * string, so a row can name a kind this build no longer knows — a thread
+   * stored before `token` was removed is the concrete case. It must degrade to
+   * unresolved, not throw inside the render pass that resolves it.
+   */
+  it('returns null for a stored kind this build no longer knows', () => {
     const doc = render('<div data-pops-design-token="--background">background</div>');
+    const stored = parseAnchor({
+      anchorKind: 'token',
+      anchor: '{"token":"--background","text":"background"}',
+    });
 
-    expect(
-      resolveAnchor(doc, { kind: 'token', token: '--background', text: 'background' })
-    ).not.toBeNull();
+    expect(resolveAnchor(doc, stored)).toBeNull();
+    expect(anchorLabel(stored)).toBe('unresolved');
   });
 
   it('returns null for a selector that no longer matches', () => {

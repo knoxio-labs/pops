@@ -12,7 +12,6 @@ import type { Anchor } from './anchors-types';
 export const OVERLAY_MARKER = 'data-pops-design-overlay';
 
 const SOURCE_ATTRIBUTE = 'data-pops-design-source';
-const TOKEN_ATTRIBUTE = 'data-pops-design-token';
 
 const MAX_EXCERPT = 60;
 const MAX_SELECTOR_DEPTH = 6;
@@ -68,11 +67,6 @@ function semanticTarget(el: Element): Target | null {
       },
     };
   }
-  const token = el.closest(`[${TOKEN_ATTRIBUTE}]`);
-  const tokenValue = token?.getAttribute(TOKEN_ATTRIBUTE);
-  if (token && tokenValue !== null && tokenValue !== undefined && tokenValue !== '') {
-    return { el: token, anchor: { kind: 'token', token: tokenValue, text: excerpt(token) } };
-  }
   return null;
 }
 
@@ -124,8 +118,6 @@ export function resolveAnchor(doc: Document, anchor: Anchor | null): Element | n
   switch (anchor?.kind) {
     case 'source':
       return pick(doc, `[${SOURCE_ATTRIBUTE}="${anchor.source}"]`, anchor.text);
-    case 'token':
-      return pick(doc, `[${TOKEN_ATTRIBUTE}="${anchor.token}"]`, anchor.text);
     case 'selector':
       return pick(doc, anchor.selector, anchor.text);
     default:
@@ -138,8 +130,6 @@ export function anchorLabel(anchor: Anchor | null): string {
   switch (anchor?.kind) {
     case 'source':
       return anchor.source;
-    case 'token':
-      return `token ${anchor.token}`;
     case 'selector':
       return anchor.text === '' ? anchor.selector : `“${anchor.text}”`;
     default:
