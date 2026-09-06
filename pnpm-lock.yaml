@@ -988,6 +988,9 @@ importers:
       '@pops/contract-openapi':
         specifier: workspace:*
         version: link:../../libs/contract-openapi
+      '@pops/locales':
+        specifier: workspace:*
+        version: link:../../libs/locales
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13

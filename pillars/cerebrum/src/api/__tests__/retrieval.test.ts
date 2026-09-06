@@ -12,12 +12,14 @@
  * needed. The no-vec degradation is exercised by opening the db with
  * `loadVec: false`.
  */
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import enAUErrors from '@pops/locales/en-AU/errors.json';
+import ptBRErrors from '@pops/locales/pt-BR/errors.json';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
@@ -26,17 +28,16 @@ import { makeCerebrumApiDeps, makeClient, makeEmptyPeerClients } from './test-ut
 import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
 
-/** `libs/locales`, from `pillars/cerebrum/src/api/__tests__`. */
-const LOCALES_ROOT = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  '..',
-  '..',
-  'libs',
-  'locales'
-);
+/**
+ * Read through `@pops/locales`' published `"./*"` export rather than a relative
+ * path into the workspace: a raw `../../../../..` would keep passing only for
+ * as long as this pillar sits in this repo, which is the property the
+ * extractability rules exist to protect.
+ */
+const LOCALE_STRINGS: Record<string, Record<string, string>> = {
+  'en-AU': enAUErrors,
+  'pt-BR': ptBRErrors,
+};
 
 let tmpDir: string;
 let engramRoot: string;
@@ -284,9 +285,7 @@ describe('POST /retrieval/search — structured (BM25)', () => {
   // the strings, because the failure this closes was a key that existed and
   // did not match — `media.retrieval.*`, in a cerebrum handler (POPS-3051).
   it.each(['en-AU', 'pt-BR'])('%s resolves every key these handlers emit', async (locale) => {
-    const strings: Record<string, string> = JSON.parse(
-      readFileSync(join(LOCALES_ROOT, locale, 'errors.json'), 'utf8')
-    ) as Record<string, string>;
+    const strings = LOCALE_STRINGS[locale] ?? {};
 
     for (const key of [
       'cerebrum.retrieval.queryRequired',
