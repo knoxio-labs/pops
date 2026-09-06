@@ -123,21 +123,6 @@ export function EntityCompactHeader({ entity }: { entity: Entity }) {
   );
 }
 
-/** A colour swatch plus its name — used wherever the assigned colour itself needs to be legible, not just decorative. */
-export function ColourSwatch({ entity }: { entity: Entity }) {
-  const colour = entityColour(entity);
-  if (!colour) return <span className="text-sm text-muted-foreground">No colour assigned</span>;
-  return (
-    <span className="inline-flex items-center gap-2 text-sm">
-      <span
-        className="size-3.5 rounded-full border border-black/10"
-        style={{ backgroundColor: colour.swatch }}
-      />
-      {colour.label}
-    </span>
-  );
-}
-
 export function DefinitionRow({
   label,
   children,

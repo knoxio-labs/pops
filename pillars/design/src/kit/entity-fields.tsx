@@ -29,9 +29,6 @@ export function EntityFieldList({ entity }: { entity: Entity }) {
           <span className="text-muted-foreground">None</span>
         )}
       </DefinitionRow>
-      <DefinitionRow label="Default transaction">
-        {entity.defaultTransactionType ?? <span className="text-muted-foreground">Not set</span>}
-      </DefinitionRow>
       <DefinitionRow label="Default tags">
         {entity.defaultTags && entity.defaultTags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">

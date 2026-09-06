@@ -32,8 +32,6 @@ export interface Entity {
   poster?: string;
   /** An `ENTITY_COLORS` id, assigned at random when the entity is created. */
   colourId?: string;
-  /** Transactions matched to this entity. Zero means "orphaned" on the list. */
-  transactionCount: number;
 }
 
 function avatarMark(colour: string, shape: string): string {
@@ -68,7 +66,6 @@ export const entities: Entity[] = [
       '#0f5c2c',
       '<circle cx="540" cy="60" r="90" fill="#ffffff22"/><circle cx="80" cy="170" r="120" fill="#ffffff14"/>'
     ),
-    transactionCount: 214,
   },
   {
     id: 'e2',
@@ -81,7 +78,6 @@ export const entities: Entity[] = [
       '#5b3fa8',
       '<circle cx="32" cy="24" r="12" fill="#fff"/><path d="M12 56c0-14 9-22 20-22s20 8 20 22" fill="#fff"/>'
     ),
-    transactionCount: 37,
   },
   {
     id: 'e3',
@@ -98,7 +94,6 @@ export const entities: Entity[] = [
       '#111c40',
       '<rect x="480" y="30" width="120" height="140" rx="8" fill="#ffffff1a"/>'
     ),
-    transactionCount: 12,
   },
   {
     id: 'e4',
@@ -110,7 +105,6 @@ export const entities: Entity[] = [
       '#0072ac',
       '<circle cx="32" cy="32" r="16" fill="none" stroke="#fff" stroke-width="6"/>'
     ),
-    transactionCount: 89,
   },
   {
     id: 'e5',
@@ -120,14 +114,12 @@ export const entities: Entity[] = [
     defaultTransactionType: 'expense',
     defaultTags: ['category:dining', 'venue:cafe'],
     colourId: 'amber',
-    transactionCount: 21,
   },
   {
     id: 'e6',
     name: 'Unlabelled Merchant Pty Ltd',
     type: 'company',
     notes: 'Matched by ABN only — no logo or alias has been added yet.',
-    transactionCount: 0,
   },
   {
     id: 'e7',
@@ -138,7 +130,6 @@ export const entities: Entity[] = [
     defaultTags: ['category:home'],
     colourId: 'fuchsia',
     avatar: avatarMark('#0058a3', '<rect x="16" y="16" width="32" height="32" fill="#ffda1a"/>'),
-    transactionCount: 6,
   },
   {
     id: 'e8',
@@ -146,7 +137,27 @@ export const entities: Entity[] = [
     type: 'organisation',
     aliases: ['ANA'],
     notes: 'Season fees, twice yearly.',
-    transactionCount: 0,
+  },
+  {
+    id: 'e9',
+    name: 'Bunnings Warehouse',
+    type: 'company',
+    abn: '26 008 672 179',
+    defaultTransactionType: 'expense',
+    defaultTags: ['category:home'],
+    avatar: avatarMark('#0d5257', '<rect x="14" y="26" width="36" height="18" fill="#fff"/>'),
+  },
+  {
+    id: 'e10',
+    name: 'Sydney Opera House Trust',
+    type: 'government',
+    aliases: ['SOH Trust'],
+    notes: 'Occasional ticketed events, paid by card on the night.',
+    poster: posterImage(
+      '#7a1f3d',
+      '#3d0f1f',
+      '<path d="M60 190 Q120 40 220 190" fill="#ffffff1a"/><path d="M180 190 Q260 60 340 190" fill="#ffffff14"/>'
+    ),
   },
 ];
 

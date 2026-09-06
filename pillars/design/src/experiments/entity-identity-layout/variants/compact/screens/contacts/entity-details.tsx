@@ -1,4 +1,5 @@
 import { entitiesById } from '@/fixtures/entities';
+import { EntityActivity } from '@/kit/entity-activity';
 import { EntityFieldList } from '@/kit/entity-fields';
 import { EntityCompactHeader } from '@/kit/entity-header';
 
@@ -19,15 +20,19 @@ const detail = (id: string) => () => {
           <EntityFieldList entity={entity} />
         </CardContent>
       </Card>
+      <EntityActivity entity={entity} />
     </div>
   );
 };
 
 export const states: ScreenStates = {
-  'with-poster': detail('e1'),
-  'colour-no-poster': detail('e3'),
-  'no-avatar': detail('e5'),
+  'all-three': detail('e1'),
+  'avatar-and-colour': detail('e2'),
+  'poster-and-colour': detail('e3'),
+  'colour-only': detail('e5'),
   'nothing-assigned': detail('e6'),
+  'avatar-only-legacy': detail('e9'),
+  'poster-only': detail('e10'),
 };
 
 export default detail('e1');

@@ -1,7 +1,6 @@
 import { entities, ENTITY_TYPE_LABEL, type Entity, type EntityType } from '@/fixtures/entities';
 import { EntityAvatar } from '@/kit/entity-header';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 
 import {
   Badge,
@@ -21,10 +20,12 @@ import type { ColumnDef } from '@tanstack/react-table';
 export const meta: ScreenMeta = { title: 'Entities', order: 2, frame: 'web' };
 
 /**
- * The name column gains the identity fields (POPS-2805) without becoming a
- * second header: the avatar carries colour and image, "Orphaned" stays a
- * badge on the name itself, because that is a status about this entity, not
- * an attribute of how it looks.
+ * Entity-owned fields only (POPS-3067): this list is contacts' own CRUD
+ * surface, so it renders what a single `entities` row fetch already has. No
+ * column here reaches into finance or purchases — a usage count or a "last
+ * transaction" would mean one cross-pillar call per row, and that scales with
+ * the list rather than with a page view. That kind of rollup belongs on the
+ * details page, where it is one entity's worth of fetching, not a table's.
  */
 const identityColumn: ColumnDef<Entity> = {
   accessorKey: 'name',
@@ -33,14 +34,6 @@ const identityColumn: ColumnDef<Entity> = {
     <div className="flex items-center gap-2.5">
       <EntityAvatar entity={row.original} />
       <span className="font-medium">{row.original.name}</span>
-      {row.original.transactionCount === 0 && (
-        <Badge
-          variant="outline"
-          className="text-xs text-muted-foreground border-muted-foreground/30"
-        >
-          Orphaned
-        </Badge>
-      )}
     </div>
   ),
 };
@@ -88,16 +81,6 @@ const aliasesColumn: ColumnDef<Entity> = {
   },
 };
 
-const defaultTypeColumn: ColumnDef<Entity> = {
-  accessorKey: 'defaultTransactionType',
-  header: 'Default Type',
-  cell: ({ row }) => (
-    <span className="text-sm">
-      {row.original.defaultTransactionType ?? <span className="text-muted-foreground">—</span>}
-    </span>
-  ),
-};
-
 function buildActionsColumn(args: { onEdit: (entity: Entity) => void }): ColumnDef<Entity> {
   return {
     id: 'actions',
@@ -140,14 +123,11 @@ const ENTITY_TABLE_FILTERS: ColumnFilter[] = [
 ];
 
 export function EntitiesListPage({ rows }: { rows: Entity[] }) {
-  const [showOrphanedOnly, setShowOrphanedOnly] = useState(false);
-  const visible = showOrphanedOnly ? rows.filter((e) => e.transactionCount === 0) : rows;
   const columns = [
     identityColumn,
     typeColumn,
     abnColumn,
     aliasesColumn,
-    defaultTypeColumn,
     buildActionsColumn({ onEdit: () => {} }),
   ];
 
@@ -155,25 +135,12 @@ export function EntitiesListPage({ rows }: { rows: Entity[] }) {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Entities"
-        description={
-          showOrphanedOnly
-            ? `${visible.length} orphaned entit${visible.length === 1 ? 'y' : 'ies'} — no matched transactions`
-            : `${rows.length} entities`
-        }
+        description={`${rows.length} entities`}
         actions={<Button prefix={<Plus className="h-4 w-4" />}>Add entity</Button>}
       />
-      <div className="flex items-center gap-2">
-        <Button
-          variant={showOrphanedOnly ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setShowOrphanedOnly((prev) => !prev)}
-        >
-          {showOrphanedOnly ? 'Showing orphaned only' : 'Show orphaned only'}
-        </Button>
-      </div>
       <DataTable
         columns={columns}
-        data={visible}
+        data={rows}
         searchable
         searchColumn="name"
         searchPlaceholder="Search entities…"
@@ -187,7 +154,6 @@ export function EntitiesListPage({ rows }: { rows: Entity[] }) {
 
 export const states: ScreenStates = {
   empty: () => <EntitiesListPage rows={[]} />,
-  orphaned: () => <EntitiesListPage rows={entities.filter((e) => e.transactionCount === 0)} />,
 };
 
 export default function EntitiesListScreen() {
