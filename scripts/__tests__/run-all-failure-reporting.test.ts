@@ -86,7 +86,7 @@ describe('run-all: a red unit does not hide the units after it (real mise binary
     const marker = (name: string): string => `echo ${name} >> "$OUT_FILE"`;
 
     // Named so `sort` order is the interesting one: the two red units bracket
-    // the green one, so a fail-fast loop stops before `z-green` runs AND
+    // the green one, so a fail-fast loop stops before the green unit runs AND
     // before the second failure is ever seen.
     // Triple-quoted: a TOML single-quoted literal cannot span lines, and a
     // unit whose mise.toml does not parse is skipped by the source guard —
@@ -94,9 +94,9 @@ describe('run-all: a red unit does not hide the units after it (real mise binary
     unit('pillars/a-red', `[tasks.check]\nrun = '''\n${marker('ran-a-red')}\nexit 3\n'''\n`);
     unit('libs/m-red', `[tasks.check]\nrun = '''\n${marker('ran-m-red')}\nexit 4\n'''\n`);
     unit('pillars/z-green', `[tasks.check]\nrun = '''\n${marker('ran-z-green')}\n'''\n`);
-    // Defines something else entirely: skipped by the source guard, and must
-    // not inflate the attempted count that tells the reader nothing was left
-    // out.
+    // A fourth unit defining something else entirely: skipped by the source
+    // guard, and must not inflate the attempted count that tells the reader
+    // nothing was left out.
     unit('libs/no-task', '[tasks.other]\nrun = "true"\n');
 
     writeFileSync(
@@ -177,7 +177,8 @@ describe('run-all: a red unit does not hide the units after it (real mise binary
   it(
     'counts only the units that define the task as attempted',
     () => {
-      // Three units define `check`; `libs/no-task` defines something else.
+      // Three fixture units define `check`; the fourth defines a different
+      // task and must not inflate the count.
       expect(runAllCheck('count').stderr).toContain('3 unit(s)');
     },
     REAL_MISE_TIMEOUT_MS
@@ -188,8 +189,8 @@ describe('run-all: a red unit does not hide the units after it (real mise binary
     () => {
       // The other way a fan-out reports success without doing anything, and
       // the one a summary line would otherwise dress up as "passed in all 0
-      // unit(s)". `libs/no-task` defines `other`, but only as a task the
-      // source guard skips for every OTHER unit — so nothing runs.
+      // unit(s)". No fixture unit defines this task, so the source guard
+      // skips every one of them and nothing runs.
       const outcome = runAllTask('nothing-defines-this', 'absent');
 
       expect(outcome.status).not.toBe(0);
