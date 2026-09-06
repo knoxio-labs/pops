@@ -28,10 +28,14 @@
  * field — see `transactions.ts`'s `buildTransactionUpdates`) is skipped
  * entirely by both: the user's hand-fix must survive a future import's rule
  * set instead of being silently reverted (CF017/#3623).
+ *
+ * What a rule would change about a single row lives in `retroactive-updates.ts`
+ * — pure, no database, no batching. This file is the two passes: fetching rows,
+ * driving those builders, writing the result and tallying rule usage. See that
+ * file's header for why the seam is worth keeping (POPS-3068).
  */
 import { asc, eq, notInArray } from 'drizzle-orm';
 
-import { isPositiveAmountPurchase } from '../../../contract/corrections-constants.js';
 import {
   type FinanceDb,
   transactionCorrections,
@@ -41,125 +45,11 @@ import {
 import {
   type CorrectionRow,
   findMatchingCorrectionFromRules,
-  normalizeEntityId,
-  parseCorrectionTags,
   resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
+import { type BatchTxn, buildRetroactiveApplyUpdates } from './retroactive-updates.js';
 
 const RECLASSIFY_BATCH_SIZE = 500;
-
-interface BatchTxn {
-  id: string;
-  description: string;
-  accountId: string;
-  /** Selected only so {@link changedType} can refuse an incoherent retype (POPS-2685). */
-  amountCents: number;
-  entityId: string | null;
-  type: string;
-  location: string | null;
-  tags: string;
-  matchType: string | null;
-}
-
-/**
- * The entity a rule would newly assign, or `null` when it must be left alone.
- *
- * Only rules that carry an entity of their own can change one, and only when it
- * differs — so an entity-less transfer/income rule can never null out a
- * transaction's correctly-assigned merchant (the CF006 regression).
- */
-function providedEntityChange(
-  txn: BatchTxn,
-  rule: CorrectionRow
-): { entityId: string; entityName: string | null } | null {
-  const ruleEntityId = normalizeEntityId(rule.entityId);
-  if (ruleEntityId === null || ruleEntityId === (txn.entityId ?? null)) return null;
-  return { entityId: ruleEntityId, entityName: rule.entityName ?? null };
-}
-
-/** The lowercase canonical `type` the rule would newly assign (written verbatim
- * to `transactions.type` since #3607 stage 2 — no more capitalized collapse), or
- * `null` when the rule carries no type, it already matches, or applying it
- * would contradict the row's amount.
- *
- * That last case is the retroactive half of POPS-2685. A rule saying
- * `purchase` is written against a descriptor, not against a sign, so replaying
- * it across the ledger will eventually land on a credit — which is how
- * POPS-2680's `learned` rows were produced. Only the type is dropped, not the
- * whole rule: the entity, location and tags it carries are still right for the
- * row, and refusing all of them would leave the merchant unresolved to protect
- * a field that simply does not apply. This path cannot throw the way the
- * single-row writers do — one bad row must not abort a catch-up pass over the
- * whole ledger. */
-function changedType(txn: BatchTxn, rule: CorrectionRow): string | null {
-  const newType = rule.transactionType;
-  if (newType == null || newType === txn.type) return null;
-  if (isPositiveAmountPurchase(txn.amountCents, newType)) return null;
-  return newType;
-}
-
-function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {
-  const newLocation = rule.location ?? null;
-  return newLocation !== null && newLocation !== (txn.location ?? null) ? newLocation : null;
-}
-
-/**
- * Tags the rule would add to the transaction (additive-only, never removes an
- * existing tag), or `null` when the rule carries no tags or the transaction
- * already has every one of them.
- */
-function mergedTags(txn: BatchTxn, rule: CorrectionRow): string[] | null {
-  const ruleTags = parseCorrectionTags(rule.tags);
-  if (ruleTags.length === 0) return null;
-  const existing = parseCorrectionTags(txn.tags);
-  const missing = ruleTags.filter((t) => !existing.includes(t));
-  return missing.length > 0 ? [...existing, ...missing] : null;
-}
-
-/** Entity/type/location changes a rule makes, shared by every retroactive builder. */
-function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<string, unknown> {
-  const updates: Record<string, unknown> = {};
-
-  const entity = providedEntityChange(txn, rule);
-  if (entity) {
-    updates.entityId = entity.entityId;
-    updates.entityName = entity.entityName;
-  }
-
-  const newType = changedType(txn, rule);
-  if (newType !== null) updates.type = newType;
-
-  const newLocation = changedLocation(txn, rule);
-  if (newLocation !== null) updates.location = newLocation;
-
-  return updates;
-}
-
-/**
- * Build the DB update for a matched rule, or `null` when nothing changed.
- * Never clears an existing entity — see {@link providedEntityChange}. Extends
- * {@link buildCoreFieldUpdates} with tag-merge (additive-only) and
- * match-provenance stamping, shared by both the always-on catch-up
- * (`reclassifyExistingTransactions`) and the single-rule explicit apply
- * (`applyCorrectionRuleToExistingTransactions`).
- */
-function buildRetroactiveApplyUpdates(
-  txn: BatchTxn,
-  rule: CorrectionRow
-): Record<string, unknown> | null {
-  const updates = buildCoreFieldUpdates(txn, rule);
-
-  const newTags = mergedTags(txn, rule);
-  if (newTags !== null) updates.tags = JSON.stringify(newTags);
-
-  if (Object.keys(updates).length === 0) return null;
-
-  updates.matchType = 'learned';
-  updates.matchRuleId = rule.id;
-  updates.matchConfidence = rule.confidence;
-  updates.lastEditedTime = new Date().toISOString();
-  return updates;
-}
 
 function fetchBatch(db: FinanceDb, excludedChecksums: string[], offset: number): BatchTxn[] {
   let batchQuery = db
