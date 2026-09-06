@@ -136,9 +136,13 @@ describe('transactions — unlink transfer', () => {
       amount: -50,
       accountId: idFor('Everyday'),
     });
+    // `refund`, not `base()`'s `purchase`: a positive purchase is refused at
+    // the write path (POPS-2685), and seeding a type unlink must rewrite keeps
+    // the `income` assertion below meaningful.
     const credit = await client().transactions.create({
       ...base(),
       amount: 50,
+      type: 'refund',
       accountId: idFor('Bendigo'),
     });
     // Pairing is gated in prod, so arrange the linked state directly via the service.
@@ -309,5 +313,48 @@ describe('transactions — error mapping', () => {
     await expect(client().transactions.create({ description: '' })).rejects.toMatchObject({
       status: 400,
     });
+  });
+});
+
+/**
+ * The invariant itself is exercised across every write path in
+ * `db/__tests__/positive-purchase.test.ts`. What is proven here is that it is
+ * *reachable through the route* and comes back as a 400 the client can read,
+ * rather than a 500 or a silent 200 — a guard the API layer never surfaces is
+ * indistinguishable from no guard.
+ */
+describe('transactions — a positive amount cannot be a purchase (POPS-2685)', () => {
+  it('400s a create, and the body says which amount and which type', async () => {
+    await expect(
+      client().transactions.create({ ...base(), amount: 500, type: 'purchase' })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('50000 cents') },
+    });
+
+    await expect(
+      client().transactions.create({ ...base(), amount: 500, type: 'purchase' })
+    ).rejects.toMatchObject({ body: { message: expect.stringContaining('purchase') } });
+  });
+
+  it('400s a retype of a stored positive row, the way the review wizard would', async () => {
+    const created = await client().transactions.create({
+      ...base(),
+      amount: 500,
+      type: 'income',
+    });
+
+    await expect(
+      client().transactions.update(created.data.id, { type: 'purchase' })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('still accepts a positive refund through the same route', async () => {
+    const created = await client().transactions.create({
+      ...base(),
+      amount: 500,
+      type: 'refund',
+    });
+    expect(created.data).toMatchObject({ amount: 500, type: 'refund' });
   });
 });

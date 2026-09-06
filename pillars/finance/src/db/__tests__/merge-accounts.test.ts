@@ -29,6 +29,7 @@ import { writeGiftCardDetails } from '../services/gift-card-details.js';
 import { insertBatch, listBatchesForAccount } from '../services/import-batches.js';
 import { mergeAccounts, previewAccountMerge } from '../services/merge-accounts.js';
 import { createTransaction } from '../services/transactions.js';
+import { coherentType } from './coherent-type.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
@@ -46,6 +47,7 @@ function addTransaction(db: FinanceDb, accountId: string, amountCents: number): 
     accountId,
     amountCents,
     date: '2026-01-01',
+    type: coherentType(amountCents),
   });
 }
 

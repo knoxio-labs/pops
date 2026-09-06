@@ -58,6 +58,7 @@ function fakeResult(overrides: Partial<UpSyncResult> = {}): UpSyncResult {
     imported: 2,
     failed: 0,
     settled: 1,
+    settleRefused: 0,
     alreadyHeld: 0,
     batchId: 'batch-1',
     checkpoint: { id: 'cp-1', balanceCents: 1_000, deltaCents: 0 },
@@ -181,12 +182,30 @@ describe('startUpSyncJob', () => {
       imported: 2,
       failed: 0,
       settled: 1,
+      settleRefused: 0,
       alreadyHeld: 0,
       batchId: 'batch-1',
       checkpoint: { id: 'cp-1', balanceCents: 1_000, deltaCents: 0 },
       warnings: ['CHECKPOINT_MISMATCH: expected 1c, Up says 2c'],
     });
     expect(getUpSyncJob(started.job.id)).toEqual(done);
+  });
+
+  it('carries a pass that refused settlements onto the job as its own count', async () => {
+    const deferred = deferredRunner();
+    setUpSyncRunnerForTests(deferred.runner);
+    const started = startUpSyncJob(db, makeContactsFake(), {
+      accountId,
+      trigger: 'schedule',
+      asOf: '2026-09-06',
+    });
+
+    deferred.resolve(fakeResult({ settled: 0, settleRefused: 2 }));
+
+    const done = await started.done;
+    expect(done.status).toBe('completed');
+    expect(done.result).toMatchObject({ settled: 0, settleRefused: 2 });
+    expect(getUpSyncJob(started.job.id)?.result?.settleRefused).toBe(2);
   });
 
   it('records a failed pass as a failed job carrying the message', async () => {

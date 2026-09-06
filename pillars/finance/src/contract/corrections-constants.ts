@@ -95,6 +95,32 @@ export const SPEND_TRANSACTION_TYPES = [
   'reversal',
 ] as const satisfies readonly TransactionType[];
 
+/**
+ * Whether an amount and a type contradict each other outright.
+ *
+ * The invariant is narrower than it first looks, and writing it wide is the
+ * main way to get this wrong. It is **not** "a positive amount may not carry a
+ * spend type": `refund` is in {@link SPEND_TRANSACTION_TYPES} and a positive
+ * refund is an expense offset, not income — the ledger holds correct ones. It
+ * is not "a positive amount may not be an expense" either; `reversal` is the
+ * same shape.
+ *
+ * Only `purchase` is a contradiction in terms: the amount says money arrived
+ * and the type says it was spent, and since POPS-2610 made spend aggregations
+ * filter on `type`, such a row adds its amount to a total of outgoings.
+ * POPS-2680 found four, one worth $500, and only because someone thought to
+ * query for the combination.
+ *
+ * The mirror case — a negative `income` or `rebate` — is deliberately NOT
+ * covered. A negative income is an income reversal (a clawback, a bank undoing
+ * an interest credit) and correctly reduces the income total; there is no
+ * evidence of it ever being wrong, where the positive purchase has four known
+ * instances. Adding it would be a guess dressed as symmetry.
+ */
+export function isPositiveAmountPurchase(amountCents: number, type: string): boolean {
+  return type === 'purchase' && amountCents > 0;
+}
+
 const SPEND_TYPE_LOOKUP = new Set<string>(SPEND_TRANSACTION_TYPES);
 
 /** Whether a stored `type` value counts as outgoing spend. */

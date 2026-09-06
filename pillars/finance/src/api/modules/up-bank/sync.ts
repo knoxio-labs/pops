@@ -41,6 +41,13 @@ export interface UpSyncResult {
   imported: number;
   failed: number;
   settled: number;
+  /**
+   * Held rows a settlement would have turned into a positive `purchase`
+   * (POPS-2685). They keep their pending flag and reappear as `alreadyHeld`
+   * next sync; a number that stays above zero across syncs is a row needing a
+   * human, not a transient.
+   */
+  settleRefused: number;
   alreadyHeld: number;
   batchId: string | null;
   /** Null when a checkpoint for this account and day already exists. */
@@ -106,7 +113,7 @@ export async function syncUpAccount(
     { accountId: plan.account.id, commitKey },
     plan.newRows
   );
-  const settled = settleMappedRows(db, plan.settleable);
+  const { settled, refused } = settleMappedRows(db, plan.settleable);
   const minted = mintBalanceCheckpoint(db, plan, commitKey, args.asOf ?? today());
   if (minted.checkpoint !== null && imported.batchId !== null) {
     importBatchesService.attachCheckpoint(db, imported.batchId, minted.checkpoint.id);
@@ -118,7 +125,8 @@ export async function syncUpAccount(
     fetched: plan.fetched,
     imported: imported.imported,
     failed: imported.failed,
-    settled,
+    settled: settled.length,
+    settleRefused: refused.length,
     alreadyHeld: plan.alreadyHeld,
     batchId: imported.batchId,
     checkpoint: minted.checkpoint,

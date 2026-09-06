@@ -272,6 +272,25 @@ describe('POST /webhooks/up ingest hand-off (POPS-2920)', () => {
     );
   });
 
+  it('warns for a settlement the ledger refused, naming the row left held (POPS-2685)', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() };
+    const ingest: UpWebhookIngest = async () => ({
+      kind: 'settle-refused',
+      accountId: 'a1',
+      transactionId: 't1',
+    });
+
+    const res = await signedPost(buildApp(ingest, logger));
+
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledTimes(1));
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[webhook/up] settlement would contradict the row type; left held',
+      { accountId: 'a1', transactionId: 't1' }
+    );
+    expect(logger.info).not.toHaveBeenCalled();
+  });
+
   it('hands undefined fields on for a payload missing them', async () => {
     const ingest = vi.fn(acknowledgeOnly);
     await signedPost(buildApp(ingest), JSON.stringify({ data: {} }));

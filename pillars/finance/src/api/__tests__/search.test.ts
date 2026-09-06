@@ -160,7 +160,7 @@ describe('search — aggregation & empty query', () => {
     await client().transactions.create({
       description: 'Travel fund',
       accountId: amexAccountId,
-      amount: 1,
+      amount: -1,
       date: '2026-01-01',
       type: 'purchase',
     });
@@ -177,7 +177,7 @@ describe('search — aggregation & empty query', () => {
     await client().transactions.create({
       description: 'Anything',
       accountId: amexAccountId,
-      amount: 1,
+      amount: -1,
       date: '2026-01-01',
       type: 'purchase',
     });

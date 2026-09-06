@@ -58,6 +58,8 @@ export interface UpWebhookEvent {
 export type UpWebhookOutcome =
   | { kind: 'imported'; accountId: string; batchId: string | null; failed: number }
   | { kind: 'settled'; accountId: string; transactionId: string }
+  /** The settled amount would have contradicted the row's type; it stays held (POPS-2685). */
+  | { kind: 'settle-refused'; accountId: string; transactionId: string }
   | { kind: 'duplicate'; accountId: string }
   | { kind: 'unmapped'; upAccountId: string; transactionId: string }
   | { kind: 'deleted'; transactionId: string }
@@ -112,7 +114,10 @@ async function writeRow(
     return { kind: 'imported', accountId, batchId: imported.batchId, failed: imported.failed };
   }
   if (existing.pending && !mapped.parsed.pending) {
-    settleMappedRows(db, [{ transactionId: existing.id, mapped }]);
+    const { refused } = settleMappedRows(db, [{ transactionId: existing.id, mapped }]);
+    if (refused.length > 0) {
+      return { kind: 'settle-refused', accountId, transactionId: existing.id };
+    }
     return { kind: 'settled', accountId, transactionId: existing.id };
   }
   return { kind: 'duplicate', accountId };

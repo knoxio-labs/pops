@@ -56,6 +56,28 @@ export class TransactionAlreadyExistsError extends Error {
   }
 }
 
+/**
+ * A write would have stored `type = 'purchase'` on a row whose amount is
+ * positive — see {@link isPositiveAmountPurchase} for why only this pairing is
+ * refused and why the mirror case is not.
+ *
+ * Rejected at the write boundary rather than reported afterwards: POPS-2680
+ * had to correct four such rows by migration, months after they were written,
+ * because nothing looked and nothing stopped them.
+ */
+export class PositiveAmountPurchaseError extends Error {
+  override readonly name = 'PositiveAmountPurchaseError' as const;
+  readonly amountCents: number;
+
+  constructor(amountCents: number) {
+    super(
+      `A transaction of ${amountCents} cents cannot be typed 'purchase': a positive amount is ` +
+        'money arriving, and purchase means money spent. Use refund, rebate or income.'
+    );
+    this.amountCents = amountCents;
+  }
+}
+
 export class ImportTransactionPersistError extends Error {
   override readonly name = 'ImportTransactionPersistError' as const;
   readonly id: string;

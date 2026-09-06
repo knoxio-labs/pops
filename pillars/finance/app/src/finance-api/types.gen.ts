@@ -2269,6 +2269,7 @@ export type AccountImportsTriggerSyncResponses = {
         failed: number;
         fetched: number;
         imported: number;
+        settleRefused?: number;
         settled: number;
         warnings: Array<string>;
       } | null;
@@ -2345,6 +2346,7 @@ export type AccountImportsGetSyncJobResponses = {
         failed: number;
         fetched: number;
         imported: number;
+        settleRefused?: number;
         settled: number;
         warnings: Array<string>;
       } | null;

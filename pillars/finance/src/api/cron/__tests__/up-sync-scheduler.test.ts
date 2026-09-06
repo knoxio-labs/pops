@@ -52,6 +52,7 @@ function result(accountId: string): UpSyncResult {
     imported: 1,
     failed: 0,
     settled: 0,
+    settleRefused: 0,
     alreadyHeld: 0,
     batchId: `batch-${accountId}`,
     checkpoint: null,

@@ -31,6 +31,8 @@ import type { TransactionType } from '../../../../contract/corrections-constants
 interface SeedTxn {
   description: string;
   type: TransactionType;
+  /** Defaults to a debit; set positive to exercise the POPS-2685 refusal. */
+  amountCents?: number;
   entityId?: string | null;
   entityName?: string | null;
   location?: string | null;
@@ -59,7 +61,7 @@ function seedTxn(input: SeedTxn): string {
       id,
       description: input.description,
       accountId: seededAccountId(db, 'amex'),
-      amountCents: -1250,
+      amountCents: input.amountCents ?? -1250,
       date: '2026-01-01',
       type: input.type,
       tags: JSON.stringify(input.tags ?? []),
@@ -515,5 +517,76 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
 
   it('throws TransactionCorrectionNotFoundError for an unknown rule id', () => {
     expect(() => applyCorrectionRuleToExistingTransactions(db, 'nope')).toThrow();
+  });
+});
+
+/**
+ * A correction rule is written against a descriptor, never against a sign, so
+ * replaying one across the whole ledger will eventually land on a credit. That
+ * is how POPS-2680's `learned` rows were produced: a rule saying `purchase`
+ * met a positive amount and nothing objected.
+ *
+ * The refusal here cannot throw the way the single-row writers do — one bad
+ * row must not abort a catch-up pass over the ledger — so what is pinned is
+ * that the type alone is dropped while the rest of the rule still lands.
+ */
+describe('retroactive apply — a rule cannot retype a credit to purchase (POPS-2685)', () => {
+  it("applies the rule's entity and tags but leaves the type alone on a positive row", () => {
+    const txnId = seedTxn({
+      description: 'REFUND FROM SHOP',
+      type: 'refund',
+      amountCents: 50_000,
+      entityId: null,
+    });
+    seedRule({
+      descriptionPattern: 'REFUND FROM SHOP',
+      entityId: 'ent-shop',
+      entityName: 'The Shop',
+      transactionType: 'purchase',
+      tags: ['shopping'],
+      confidence: 1,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    const row = readTxn(txnId);
+    expect(row.type).toBe('refund');
+    expect(row.entityId).toBe('ent-shop');
+    expect(JSON.parse(row.tags)).toEqual(['shopping']);
+  });
+
+  it('still retypes a negative row to purchase, so the guard is not written too wide', () => {
+    const txnId = seedTxn({ description: 'SHOP', type: 'income', amountCents: -1250 });
+    seedRule({
+      descriptionPattern: 'SHOP',
+      transactionType: 'purchase',
+      entityId: 'ent-shop',
+      entityName: 'The Shop',
+      confidence: 1,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    expect(readTxn(txnId).type).toBe('purchase');
+  });
+
+  it('leaves a rule with no other change to make as a no-op rather than a partial write', () => {
+    const txnId = seedTxn({
+      description: 'REFUND ONLY',
+      type: 'refund',
+      amountCents: 50_000,
+      entityId: 'ent-shop',
+      entityName: 'The Shop',
+    });
+    seedRule({
+      descriptionPattern: 'REFUND ONLY',
+      entityId: 'ent-shop',
+      entityName: 'The Shop',
+      transactionType: 'purchase',
+      confidence: 1,
+    });
+
+    expect(reclassifyExistingTransactions(db, [])).toBe(0);
+    expect(readTxn(txnId).matchType).toBeNull();
   });
 });

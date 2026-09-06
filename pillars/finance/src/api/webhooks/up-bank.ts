@@ -91,6 +91,12 @@ function logOutcome(logger: UpBankWebhookLogger, outcome: UpWebhookOutcome): voi
         transactionId: outcome.transactionId,
       });
       return;
+    case 'settle-refused':
+      logger.warn('[webhook/up] settlement would contradict the row type; left held', {
+        accountId: outcome.accountId,
+        transactionId: outcome.transactionId,
+      });
+      return;
     default:
       logger.info(`[webhook/up] ${outcome.kind}`, { ...outcome });
   }

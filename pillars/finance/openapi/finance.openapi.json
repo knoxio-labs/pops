@@ -6133,6 +6133,11 @@
                               "minimum": 0,
                               "type": "integer"
                             },
+                            "settleRefused": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
                             "settled": {
                               "maximum": 9007199254740991,
                               "minimum": 0,
@@ -6384,6 +6389,11 @@
                               "type": "integer"
                             },
                             "imported": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "settleRefused": {
                               "maximum": 9007199254740991,
                               "minimum": 0,
                               "type": "integer"

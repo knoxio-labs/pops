@@ -18,7 +18,8 @@
  */
 import { eq, inArray } from 'drizzle-orm';
 
-import { ImportTransactionPersistError } from '../errors.js';
+import { isPositiveAmountPurchase } from '../../contract/corrections-constants.js';
+import { ImportTransactionPersistError, PositiveAmountPurchaseError } from '../errors.js';
 import { transactions } from '../schema.js';
 import { resolveImportAccountId } from './account-lookup.js';
 
@@ -141,12 +142,30 @@ export function findTransactionsByChecksums(
  * A held row came back settled: overwrite the three things a settlement can
  * change and clear the flag. Nothing a person may have edited — entity, tags,
  * notes — is touched.
+ *
+ * A settlement is the one write that changes an amount without touching the
+ * type, so it is the one that can turn a coherent row into a positive
+ * `purchase` (POPS-2685) without anybody choosing to. It would mean the source
+ * settled a held card authorisation at the opposite sign — the original
+ * classification is then wrong for the settled amount, and picking the right
+ * replacement (`refund`? `reversal`?) is a decision this function has no basis
+ * to make. So it refuses, and the caller decides; the row stays `pending` and
+ * is offered again on the next sync rather than being lost.
  */
 export function settleImportedTransaction(
   db: FinanceDb,
   id: string,
   input: SettleImportedTransactionInput
 ): void {
+  const stored = db
+    .select({ type: transactions.type })
+    .from(transactions)
+    .where(eq(transactions.id, id))
+    .get();
+  if (stored !== undefined && isPositiveAmountPurchase(input.amountCents, stored.type)) {
+    throw new PositiveAmountPurchaseError(input.amountCents);
+  }
+
   db.update(transactions)
     .set({
       date: input.date,
@@ -274,6 +293,17 @@ export function insertImportTransaction(
   db: FinanceDb,
   input: InsertImportTransactionInput
 ): ImportTransactionRow {
+  // The commit path CAN express the combination, so it is guarded rather than
+  // assumed safe. The automatic classifier will not produce one — a credit
+  // whose entity resolves is left `uncertain` with no defaulted type — but the
+  // type a commit carries can also come from the review wizard, which is where
+  // POPS-2680's rows came from. Throwing rolls the whole commit back, which is
+  // the point: a batch is atomic, so the alternative is storing the bad row
+  // alongside the good ones and finding it months later by migration.
+  if (isPositiveAmountPurchase(input.amountCents, input.type)) {
+    throw new PositiveAmountPurchaseError(input.amountCents);
+  }
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
