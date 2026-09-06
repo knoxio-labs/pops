@@ -219,6 +219,71 @@ describe('syncUpAccount', () => {
     expect(JSON.parse(rows[0]?.rawRow ?? '{}')).toMatchObject({ status: 'SETTLED' });
   });
 
+  it('reports a refused settlement without abandoning the rest of the pass', async () => {
+    configure();
+    const heldFuel = upTransaction({
+      id: 'p',
+      description: 'Fuel',
+      status: 'HELD',
+      cents: -10_000,
+      createdAt: '2026-09-01T18:00:00+10:00',
+    });
+    const heldCoffee = upTransaction({
+      id: 'q',
+      description: 'Coffee',
+      status: 'HELD',
+      cents: -2_000,
+      createdAt: '2026-09-01T19:00:00+10:00',
+    });
+    const first = await syncUpAccount(db, makeContactsFake(), {
+      accountId,
+      client: fakeUp([heldFuel, heldCoffee]).client,
+      ...RANGE,
+    });
+    expect(first).toMatchObject({ imported: 2, settleRefused: 0 });
+    expect(storedRows().map((r) => r.type)).toEqual(['purchase', 'purchase']);
+
+    // Up settles the held authorisation at the opposite sign: a positive
+    // amount on a row typed `purchase`, which is the pairing the guard refuses.
+    const settledPositive = upTransaction({
+      id: 'p',
+      description: 'Fuel',
+      status: 'SETTLED',
+      cents: 10_000,
+      createdAt: '2026-09-01T18:00:00+10:00',
+      settledAt: '2026-09-03T03:00:00+10:00',
+    });
+    const settledCoffee = upTransaction({
+      id: 'q',
+      description: 'Coffee',
+      status: 'SETTLED',
+      cents: -2_100,
+      createdAt: '2026-09-01T19:00:00+10:00',
+      settledAt: '2026-09-03T04:00:00+10:00',
+    });
+
+    const result = await syncUpAccount(db, makeContactsFake(), {
+      accountId,
+      client: fakeUp([settledPositive, settledCoffee]).client,
+      ...RANGE,
+      asOf: '2026-09-08',
+    });
+
+    expect(result).toMatchObject({ imported: 0, settled: 1, settleRefused: 1, alreadyHeld: 0 });
+    expect(result.checkpoint).not.toBeNull();
+    const byDescription = new Map(storedRows().map((r) => [r.description, r]));
+    expect(byDescription.get('Fuel')).toMatchObject({
+      pending: true,
+      amountCents: -10_000,
+      date: '2026-09-01',
+    });
+    expect(byDescription.get('Coffee')).toMatchObject({
+      pending: false,
+      amountCents: -2_100,
+      date: '2026-09-03',
+    });
+  });
+
   it('keeps rows outside the requested calendar range, even though the fetch is wider', async () => {
     configure();
     const { client } = fakeUp([

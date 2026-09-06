@@ -193,6 +193,38 @@ describe('makeUpWebhookIngest', () => {
     ).resolves.toEqual({ kind: 'duplicate', accountId });
   });
 
+  it('reports a settlement the guard refuses and leaves the row held for the next delivery', async () => {
+    configure(accountId);
+    const held = upTransaction({
+      id: 'txn-1',
+      status: 'HELD',
+      cents: -1_000,
+      createdAt: '2026-09-05T09:00:00+10:00',
+    });
+    await ingestWith({ UP_TOKEN: customer([held]).client })(created);
+    const [stored] = storedRows();
+    expect(stored).toMatchObject({ pending: true, type: 'purchase', amountCents: -1_000 });
+
+    const settledPositive = upTransaction({
+      id: 'txn-1',
+      status: 'SETTLED',
+      cents: 1_000,
+      createdAt: '2026-09-05T09:00:00+10:00',
+      settledAt: '2026-09-07T02:00:00+10:00',
+    });
+    const ingest = ingestWith({ UP_TOKEN: customer([settledPositive]).client });
+
+    const outcome = await ingest({ eventType: 'TRANSACTION_SETTLED', transactionId: 'txn-1' });
+
+    expect(outcome).toEqual({ kind: 'settle-refused', accountId, transactionId: stored?.id });
+    expect(storedRows()).toMatchObject([
+      { pending: true, amountCents: -1_000, date: '2026-09-05' },
+    ]);
+    await expect(
+      ingest({ eventType: 'TRANSACTION_SETTLED', transactionId: 'txn-1' })
+    ).resolves.toEqual({ kind: 'settle-refused', accountId, transactionId: stored?.id });
+  });
+
   it('is one row with the batch sync, whichever fetches it first', async () => {
     configure(accountId);
     const { client } = customer([

@@ -191,6 +191,23 @@ describe('startUpSyncJob', () => {
     expect(getUpSyncJob(started.job.id)).toEqual(done);
   });
 
+  it('carries a pass that refused settlements onto the job as its own count', async () => {
+    const deferred = deferredRunner();
+    setUpSyncRunnerForTests(deferred.runner);
+    const started = startUpSyncJob(db, makeContactsFake(), {
+      accountId,
+      trigger: 'schedule',
+      asOf: '2026-09-06',
+    });
+
+    deferred.resolve(fakeResult({ settled: 0, settleRefused: 2 }));
+
+    const done = await started.done;
+    expect(done.status).toBe('completed');
+    expect(done.result).toMatchObject({ settled: 0, settleRefused: 2 });
+    expect(getUpSyncJob(started.job.id)?.result?.settleRefused).toBe(2);
+  });
+
   it('records a failed pass as a failed job carrying the message', async () => {
     const deferred = deferredRunner();
     setUpSyncRunnerForTests(deferred.runner);
