@@ -66,7 +66,7 @@ function makeContactsFake() {
           id: `entity-${++nextId}`,
           type: 'bank',
           avatarAssetId: null,
-          colour: null,
+          colour: colour ?? null,
         };
         entities.set(entity.id, entity);
         names.set(name.toLowerCase(), entity.id);
@@ -170,10 +170,11 @@ describe('migrateInstitutionsToEntities', () => {
       collisions: 0,
       logosUploaded: 1,
       logosSkipped: 0,
-      coloursSet: 1,
-      coloursSkipped: 0,
+      coloursSet: 0,
+      coloursSkipped: 1,
     });
     expect(contacts.created).toEqual([{ name: 'Westpac', colour: '#d5001c' }]);
+    expect(contacts.coloursSet).toEqual([]);
     expect(contacts.uploads).toHaveLength(1);
     expect(contacts.uploads[0]?.logo.data.equals(PNG_BYTES)).toBe(true);
     expect(contacts.uploads[0]?.logo.contentType).toBe('image/png');
@@ -192,7 +193,8 @@ describe('migrateInstitutionsToEntities', () => {
       created: 1,
       logosUploaded: 0,
       logosSkipped: 1,
-      coloursSet: 1,
+      coloursSet: 0,
+      coloursSkipped: 1,
     });
   });
 
@@ -282,7 +284,7 @@ describe('migrateInstitutionsToEntities', () => {
     expect(second.matched).toBe(1);
     expect(contacts.created).toHaveLength(1);
     expect(contacts.uploads).toHaveLength(1); // not re-uploaded
-    expect(contacts.coloursSet).toHaveLength(1); // not re-set
+    expect(contacts.coloursSet).toHaveLength(0); // colour was already set by the CREATE call itself
     expect(second).toMatchObject({
       logosUploaded: 0,
       logosSkipped: 1,
