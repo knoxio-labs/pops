@@ -3,10 +3,14 @@
  * purely to keep `client.ts` under the repo's per-file line budget; these
  * carry no logic of their own; see `client.ts`'s own doc comment for the
  * degradation/error-classification model they support.
+ *
+ * `CONTACTS_PILLAR_ID` and `ContactsRouter` stay declared in `client.ts`
+ * itself rather than here: the cross-pillar-expectations guard (ADR-045)
+ * resolves a `pillar<T>(id)` call site's producer from a local `const id
+ * = '...'` and its operations from `T`'s declaration, both read from that
+ * SAME file — moving either out of `client.ts` would make the call site
+ * unresolvable.
  */
-/** The contacts pillar id, as registered with the registry. */
-export const CONTACTS_PILLAR_ID = 'contacts';
-
 /** A full contact, mirroring the contacts `Entity` wire shape (no notion/owner columns). */
 export interface ContactEntity {
   id: string;
@@ -27,33 +31,6 @@ export interface ListResponse {
   data: ContactEntity[];
   pagination: { total: number; limit: number; offset: number; hasMore: boolean };
 }
-
-/**
- * Typed handle over the subset of the contacts router the finance backend
- * calls. Declared as a `type` (not `interface`) so it satisfies the SDK proxy's
- * `Record<string, unknown>` constraint — an interface does not (see the same
- * note in the orchestrator's `PillarSearchRouter`). Exported for unit tests
- * that drive `createContactsClient` against a stub handle.
- */
-export type ContactsRouter = {
-  entities: {
-    list: (input: {
-      search?: string;
-      type?: string;
-      limit?: number;
-      offset?: number;
-    }) => Promise<ListResponse>;
-    get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
-    create: (input: {
-      name: string;
-      type: string;
-    }) => Promise<{ data: ContactEntity; message: string }>;
-    update: (input: {
-      id: string;
-      defaultTags: string[];
-    }) => Promise<{ data: ContactEntity; message: string }>;
-  };
-};
 
 /** Outcome of a create-or-fetch-by-name pre-create against contacts. */
 export interface CreateOrFetchResult {

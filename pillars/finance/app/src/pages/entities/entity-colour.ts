@@ -1,11 +1,12 @@
 /**
  * An entity's `colour` (POPS-3061) is a raw `#rrggbb` hex value assigned
- * server-side from a fixed ten-entry palette
- * (`pillars/contacts/src/entities/colours.rs::ENTITY_COLOURS`) — unlike the
- * design playground's fixture palette, there is no id → tint/ring lookup
- * table on the wire. `29`/`66` are the nearest 8-digit hex-alpha steps to the
- * 16%/40% alpha the design system's OKLCH swatches use for tint/ring, so the
- * fallback rendering matches `EntityAvatar` while working off the hex alone.
+ * server-side by contacts from its own fixed ten-entry palette — contacts is
+ * the source of truth for which hex values exist, and this file only ever
+ * renders whatever hex it is given. Unlike the design playground's fixture
+ * palette, there is no id → tint/ring lookup table on the wire. `29`/`66` are
+ * the nearest 8-digit hex-alpha steps to the 16%/40% alpha the design
+ * system's OKLCH swatches use for tint/ring, so the fallback rendering
+ * matches `EntityAvatar` while working off the hex alone.
  */
 export interface EntityColourStyle {
   swatch: string;

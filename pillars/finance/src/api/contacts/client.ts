@@ -49,25 +49,45 @@ import {
   UNAUTHORIZED_REASON,
 } from '../pillars/outbound.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
-import { CONTACTS_PILLAR_ID } from './types.js';
 
-import type {
-  ContactEntity,
-  ContactsClient,
-  ContactsRouter,
-  CreateOrFetchResult,
-} from './types.js';
+import type { ContactEntity, ContactsClient, CreateOrFetchResult, ListResponse } from './types.js';
 
-export { CONTACTS_PILLAR_ID } from './types.js';
-export type {
-  ContactEntity,
-  ContactsClient,
-  ContactsRouter,
-  CreateOrFetchResult,
-  ListResponse,
-} from './types.js';
+export type { ContactEntity, ContactsClient, CreateOrFetchResult, ListResponse } from './types.js';
 
 export { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
+
+/** The contacts pillar id, as registered with the registry. */
+export const CONTACTS_PILLAR_ID = 'contacts';
+
+/**
+ * Typed handle over the subset of the contacts router the finance backend
+ * calls. Declared as a `type` (not `interface`) so it satisfies the SDK proxy's
+ * `Record<string, unknown>` constraint — an interface does not (see the same
+ * note in the orchestrator's `PillarSearchRouter`). Exported for unit tests
+ * that drive `createContactsClient` against a stub handle. Declared here
+ * rather than in `./types.js`: the cross-pillar-expectations guard resolves
+ * a `pillar<T>(...)` call site's operations from `T`'s declaration in the
+ * SAME file as the call.
+ */
+export type ContactsRouter = {
+  entities: {
+    list: (input: {
+      search?: string;
+      type?: string;
+      limit?: number;
+      offset?: number;
+    }) => Promise<ListResponse>;
+    get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
+    create: (input: {
+      name: string;
+      type: string;
+    }) => Promise<{ data: ContactEntity; message: string }>;
+    update: (input: {
+      id: string;
+      defaultTags: string[];
+    }) => Promise<{ data: ContactEntity; message: string }>;
+  };
+};
 
 /** The non-ok, non-conflict result kinds this classifier sorts. */
 type ContactsFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
