@@ -39,9 +39,9 @@ export function changeEngramType(deps: ChangeTypeDeps, id: string, newType: stri
   const newAbs = absolutePath(root, newRelPath);
 
   if (existsSync(newAbs)) {
-    throw new ValidationError({
-      message: `cannot change engram '${id}' type to '${newType}': target path '${newRelPath}' already exists`,
-    });
+    throw new ValidationError(
+      `cannot change engram '${id}' type to '${newType}': target path '${newRelPath}' already exists`
+    );
   }
 
   const { frontmatter, body } = parseEngramFile(readFileSync(oldAbs, 'utf8'));

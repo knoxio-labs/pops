@@ -92,11 +92,21 @@ export function makeRetrievalHandlers(
       runHttp(async () => {
         const filters: RetrievalFilters = body.filters ?? {};
 
+        // The prose is the EN-AU string `libs/locales` already ships for these
+        // three keys; the key itself moves to `details` rather than being the
+        // message, which is what it was until POPS-3043. It is not plumbed to
+        // `messageKey` here because the key is mis-namespaced — the locale
+        // files carry it as `media.retrieval.*`, in a cerebrum handler — and
+        // resolving that is POPS-3051.
         if (body.mode !== 'structured' && !body.query?.trim()) {
-          throw new ValidationError({ message: 'retrieval.queryRequired' });
+          throw new ValidationError('Query is required for semantic and hybrid search modes', {
+            messageKey: 'retrieval.queryRequired',
+          });
         }
         if (body.mode === 'structured' && !hasAnyStructuredFilter(filters)) {
-          throw new ValidationError({ message: 'retrieval.filterRequired' });
+          throw new ValidationError('Structured search requires at least one filter', {
+            messageKey: 'retrieval.filterRequired',
+          });
         }
 
         const svc = newService();
@@ -123,7 +133,9 @@ export function makeRetrievalHandlers(
     context: async ({ body }) =>
       runHttp(async () => {
         if (!body.query.trim()) {
-          throw new ValidationError({ message: 'retrieval.contextQueryRequired' });
+          throw new ValidationError('Query is required for context assembly', {
+            messageKey: 'retrieval.contextQueryRequired',
+          });
         }
         const svc = newService();
         const assembler = new ContextAssemblyService();

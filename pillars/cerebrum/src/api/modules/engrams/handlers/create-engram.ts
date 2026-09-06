@@ -133,7 +133,7 @@ export function createEngram(deps: CreateDeps, input: CreateEngramInput): string
   const source = input.source ?? 'manual';
 
   if (scopes.length === 0 && !input.template && !scopeRuleEngine) {
-    throw new ValidationError({ message: 'at least one scope is required' });
+    throw new ValidationError('at least one scope is required');
   }
 
   const resolved = resolveTemplate(templates, input, scopes, input.type || 'capture');
@@ -147,7 +147,7 @@ export function createEngram(deps: CreateDeps, input: CreateEngramInput): string
     });
   }
   if (mergedScopes.length === 0) {
-    throw new ValidationError({ message: 'at least one scope is required' });
+    throw new ValidationError('at least one scope is required');
   }
 
   assertSafeType(resolved.type);

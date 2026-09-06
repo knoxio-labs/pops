@@ -32,7 +32,7 @@ function parseSource(source: string | undefined): EngramSource | undefined {
   if (source === undefined) return undefined;
   const parsed = engramSourceSchema.safeParse(source);
   if (!parsed.success) {
-    throw new ValidationError({ message: parsed.error.issues[0]?.message ?? 'invalid source' });
+    throw new ValidationError(parsed.error.issues[0]?.message ?? 'invalid source');
   }
   return parsed.data;
 }

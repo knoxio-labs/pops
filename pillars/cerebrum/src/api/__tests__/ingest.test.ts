@@ -92,6 +92,17 @@ describe('POST /ingest/classify', () => {
   it('400s on an empty body', async () => {
     await expect(client().ingest.classify('   ')).rejects.toMatchObject({ status: 400 });
   });
+
+  // POPS-3043: the status alone was true while the body said nothing.
+  it('says the body was empty, rather than answering "Validation failed"', async () => {
+    await expect(client().ingest.classify('   ')).rejects.toMatchObject({
+      status: 400,
+      body: {
+        message: 'body must not be empty or whitespace-only',
+        code: 'ValidationError',
+      },
+    });
+  });
 });
 
 describe('POST /ingest/extract-entities', () => {

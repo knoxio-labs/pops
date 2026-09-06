@@ -43,7 +43,7 @@ function parseScopes(scopes: string[]): string[] {
   return scopes.map((raw) => {
     const parsed = scopeStringSchema.safeParse(raw);
     if (!parsed.success) {
-      throw new ValidationError({ message: parsed.error.issues[0]?.message ?? 'invalid scope' });
+      throw new ValidationError(parsed.error.issues[0]?.message ?? 'invalid scope');
     }
     return parsed.data;
   });
@@ -57,17 +57,17 @@ function parseScopes(scopes: string[]): string[] {
 function parseScopePrefix(raw: string): string {
   const val = normaliseScope(raw);
   if (val.length === 0 || val.startsWith('.') || val.endsWith('.') || val.includes('..')) {
-    throw new ValidationError({ message: 'invalid scope prefix format' });
+    throw new ValidationError('invalid scope prefix format');
   }
   const segs = val.split('.');
   if (segs.length > 6) {
-    throw new ValidationError({ message: 'scope prefix must have at most 6 segments' });
+    throw new ValidationError('scope prefix must have at most 6 segments');
   }
   for (const seg of segs) {
     if (!SCOPE_PREFIX_SEGMENT.test(seg)) {
-      throw new ValidationError({
-        message: `segment '${seg}' is invalid — must be lowercase alphanumeric/hyphens, 1-32 chars`,
-      });
+      throw new ValidationError(
+        `segment '${seg}' is invalid — must be lowercase alphanumeric/hyphens, 1-32 chars`
+      );
     }
   }
   return val;
@@ -101,9 +101,9 @@ export function makeScopesHandlers(
         const toRemove = new Set(scopes);
         const remaining = engram.scopes.filter((s) => !toRemove.has(s));
         if (remaining.length === 0) {
-          throw new ValidationError({
-            message: 'cannot remove the last scope — an engram must have at least one scope',
-          });
+          throw new ValidationError(
+            'cannot remove the last scope — an engram must have at least one scope'
+          );
         }
         return {
           status: 200,

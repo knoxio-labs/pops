@@ -42,9 +42,7 @@ export interface EmitHandlerDeps {
 function validateDateRange(dateRange: EmitDateRangeWire | undefined): void {
   if (!dateRange) return;
   if (dateRange.from > dateRange.to) {
-    throw new ValidationError({
-      message: 'Invalid date range: from must be before or equal to to',
-    });
+    throw new ValidationError('Invalid date range: from must be before or equal to to');
   }
 }
 
@@ -65,10 +63,10 @@ export function makeEmitHandlers(
     generate: async ({ body }) =>
       runHttp(async () => {
         if (body.mode === 'report' && !body.query) {
-          throw new ValidationError({ message: 'Query is required for report mode' });
+          throw new ValidationError('Query is required for report mode');
         }
         if (body.mode === 'summary' && !body.dateRange) {
-          throw new ValidationError({ message: 'Date range is required for summary mode' });
+          throw new ValidationError('Date range is required for summary mode');
         }
         validateDateRange(body.dateRange);
         const result = await service().generate({

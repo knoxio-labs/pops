@@ -35,8 +35,7 @@ export function applyTemplate(input: ApplyTemplateInput): ApplyTemplateResult {
     (field) => customFields[field] === undefined || customFields[field] === null
   );
   if (missing.length > 0) {
-    throw new ValidationError({
-      message: `Template '${template.name}' requires: ${missing.join(', ')}`,
+    throw new ValidationError(`Template '${template.name}' requires: ${missing.join(', ')}`, {
       missing,
     });
   }
@@ -127,15 +126,13 @@ function assertTypeMatches(key: string, spec: TemplateCustomField, value: unknow
         // template schema's Zod enum prevents this reaching here at load
         // time, but a registry bypass (e.g. a test injecting a raw Template)
         // would otherwise disable all validation for the field.
-        throw new ValidationError({
-          message: `Template declares unsupported type '${spec.type}' for field '${key}'`,
-        });
+        throw new ValidationError(
+          `Template declares unsupported type '${spec.type}' for field '${key}'`
+        );
     }
   };
   const ok = isArray ? Array.isArray(value) && value.every(check) : check(value);
   if (!ok) {
-    throw new ValidationError({
-      message: `Field '${key}' should be of type '${spec.type}'`,
-    });
+    throw new ValidationError(`Field '${key}' should be of type '${spec.type}'`);
   }
 }

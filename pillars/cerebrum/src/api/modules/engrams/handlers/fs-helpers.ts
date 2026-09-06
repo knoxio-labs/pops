@@ -26,9 +26,7 @@ const TYPE_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
 export function assertSafeType(type: string): void {
   if (!TYPE_SEGMENT_PATTERN.test(type) || WELL_KNOWN_DIRS.has(type) || type === 'engrams') {
-    throw new ValidationError({
-      message: `invalid engram type '${type}' — must be a short lowercase segment`,
-    });
+    throw new ValidationError(`invalid engram type '${type}' — must be a short lowercase segment`);
   }
 }
 
