@@ -912,7 +912,7 @@ export function describeVerdict(v) {
  * @param {string} text
  * @returns {string}
  */
-function escapeAnnotationData(text) {
+export function escapeAnnotationData(text) {
   return text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
 }
 
@@ -926,7 +926,7 @@ function escapeAnnotationData(text) {
  * @param {string} text
  * @returns {string}
  */
-function escapeAnnotationProperty(text) {
+export function escapeAnnotationProperty(text) {
   return escapeAnnotationData(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
 }
 
