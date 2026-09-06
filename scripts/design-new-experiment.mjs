@@ -57,7 +57,7 @@ export function parseArgs(argv) {
   const options = { id: '', variants: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
-    if (!flag.startsWith('--')) continue;
+    if (flag === undefined || !flag.startsWith('--')) continue;
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) {
       return { kind: 'error', message: `${flag} needs a value` };

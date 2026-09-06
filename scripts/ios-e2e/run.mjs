@@ -74,6 +74,7 @@ import { fileURLToPath } from 'node:url';
 
 import { startControlPlane } from './control-plane.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
+import { boundAddress } from './server-address.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
 import { startUpstreamStub } from './upstream-stub.mjs';
 
@@ -192,7 +193,7 @@ function allocatePort() {
     const probe = createServer();
     probe.once('error', reject);
     probe.listen(0, HOST, () => {
-      const { port } = probe.address();
+      const { port } = boundAddress(probe, 'ios-e2e');
       probe.close(() => resolve(port));
     });
   });

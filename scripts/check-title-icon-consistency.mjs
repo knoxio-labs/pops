@@ -68,13 +68,13 @@ function* scanCode(text, fromIndex = 0) {
   /** @type {'line' | 'block' | null} */
   let comment = null;
   for (let i = fromIndex; i < text.length; i++) {
-    const ch = text[i];
+    const ch = text.charAt(i);
     if (comment === 'line') {
       if (ch === '\n') comment = null;
       continue;
     }
     if (comment === 'block') {
-      if (ch === '*' && text[i + 1] === '/') {
+      if (ch === '*' && text.charAt(i + 1) === '/') {
         i++;
         comment = null;
       }
@@ -88,12 +88,12 @@ function* scanCode(text, fromIndex = 0) {
       if (ch === quote) quote = null;
       continue;
     }
-    if (ch === '/' && text[i + 1] === '/') {
+    if (ch === '/' && text.charAt(i + 1) === '/') {
       comment = 'line';
       i++;
       continue;
     }
-    if (ch === '/' && text[i + 1] === '*') {
+    if (ch === '/' && text.charAt(i + 1) === '*') {
       comment = 'block';
       i++;
       continue;
@@ -192,12 +192,16 @@ function topLevelProperties(objectSpan) {
   const props = new Map();
   let depth = 0;
   let entryStart = 0;
+  /** @param {number} end */
   const flush = (end) => {
     const entry = inner
       .slice(entryStart, end)
       .replace(/^(?:\s*(?:\/\/[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/))*/, '');
     const keyMatch = /^\s*(\w+)\s*:\s*/.exec(entry);
-    if (keyMatch !== null) props.set(keyMatch[1], entry.slice(keyMatch[0].length).trim());
+    const key = keyMatch === null ? undefined : keyMatch[1];
+    if (keyMatch !== null && key !== undefined) {
+      props.set(key, entry.slice(keyMatch[0].length).trim());
+    }
   };
   for (const { index, ch } of scanCode(inner)) {
     if (ch === '{' || ch === '[' || ch === '(') depth++;
@@ -237,8 +241,10 @@ export function parseNavConfigItems(source) {
   for (const obj of topLevelObjects(itemsSpan)) {
     const pathMatch = /path:\s*['"]([^'"]*)['"]/.exec(obj);
     const iconMatch = /icon:\s*['"]([^'"]*)['"]/.exec(obj);
-    if (pathMatch === null || iconMatch === null) continue;
-    items.push({ path: pathMatch[1].replace(/^\//, ''), icon: iconMatch[1] });
+    const path = pathMatch?.[1];
+    const icon = iconMatch?.[1];
+    if (path === undefined || icon === undefined) continue;
+    items.push({ path: path.replace(/^\//, ''), icon });
   }
   return items;
 }
@@ -276,16 +282,19 @@ export function parseRouteComponents(source) {
       const indexChildren = childObjs
         .map((c) => topLevelProperties(c))
         .filter((c) => c.get('index') === 'true');
-      if (indexChildren.length === 1) {
-        elementMatch = /^<([A-Z]\w*)/.exec(indexChildren[0].get('element') ?? '');
+      const onlyIndexChild = indexChildren.length === 1 ? indexChildren[0] : undefined;
+      if (onlyIndexChild !== undefined) {
+        elementMatch = /^<([A-Z]\w*)/.exec(onlyIndexChild.get('element') ?? '');
       }
     }
     if (elementMatch === null) continue;
+    const component = elementMatch[1];
+    if (component === undefined) continue;
     // The path is used exactly as written — it already matches a normalized
     // navConfig item path 1:1 (both strip the leading slash), and reducing
     // it to a prefix would collide two genuinely different sibling routes
     // that merely share one (e.g. `list` and `list/:id`).
-    map.set(path, elementMatch[1]);
+    map.set(path, component);
   }
   return map;
 }
@@ -300,7 +309,12 @@ export function parseLazyImports(source) {
   /** @type {Map<string, string>} */
   const map = new Map();
   const re = /const\s+(\w+)\s*=\s*lazy\(\s*\(\)\s*=>\s*[\s\S]*?import\(\s*['"]([^'"]+)['"]\s*\)/g;
-  for (const match of source.matchAll(re)) map.set(match[1], match[2]);
+  for (const match of source.matchAll(re)) {
+    const name = match[1];
+    const importPath = match[2];
+    if (name === undefined || importPath === undefined) continue;
+    map.set(name, importPath);
+  }
   return map;
 }
 
@@ -598,6 +612,7 @@ function selfTest() {
     ];
   `;
 
+  /** @type {Record<string, string>} */
   const pages = {
     './pages/HomePage':
       '<PageHeader title="Home" icon={<LayoutDashboard className="h-6 w-6" />} />',
@@ -606,6 +621,7 @@ function selfTest() {
   };
   const consistentMismatch = analyzeApp('x', routesSource, (p) => pages[p]);
 
+  /** @type {Record<string, string>} */
   const allWithIcon = {
     ...pages,
     './pages/SettingsPage':
@@ -613,6 +629,7 @@ function selfTest() {
   };
   const clean = analyzeApp('x', routesSource, (p) => allWithIcon[p]);
 
+  /** @type {Record<string, string>} */
   const mismatchedIcon = {
     ...allWithIcon,
     './pages/ListPage': '<PageHeader title="List" icon={<Database className="h-6 w-6" />} />',

@@ -1,10 +1,21 @@
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 
+/**
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {import('node:child_process').ExecFileSyncOptions} [options]
+ */
 function run(command, args, options = {}) {
   execFileSync(command, args, { stdio: 'inherit', ...options });
 }
 
+/**
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {Omit<import('node:child_process').ExecFileSyncOptions, 'encoding'>} [options]
+ * @returns {string}
+ */
 function output(command, args, options = {}) {
   return execFileSync(command, args, { encoding: 'utf8', ...options }).trim();
 }
@@ -14,8 +25,18 @@ function usage() {
   process.exit(1);
 }
 
+/**
+ * @param {string | undefined} branch
+ * @returns {branch is string}
+ */
 function validBranch(branch) {
-  return branch.length > 0 && !branch.startsWith('/') && !branch.includes('..') && branch !== '.';
+  return (
+    branch !== undefined &&
+    branch.length > 0 &&
+    !branch.startsWith('/') &&
+    !branch.includes('..') &&
+    branch !== '.'
+  );
 }
 
 const [operation, ...arguments_] = process.argv.slice(2);

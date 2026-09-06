@@ -420,6 +420,7 @@ const TAILWIND_DEFAULT_BREAKPOINT_UNIT = new Map(
  */
 function loadBreakpoints() {
   const css = readFileSync(GLOBALS_CSS_PATH, 'utf8');
+  /** @type {Set<string>} */
   const names = new Set();
   const px = new Map(TAILWIND_DEFAULT_BREAKPOINT_PX);
   const unit = new Map(TAILWIND_DEFAULT_BREAKPOINT_UNIT);
@@ -427,6 +428,7 @@ function loadBreakpoints() {
     /--breakpoint-([a-z0-9][a-z0-9-]*)\s*:\s*(\d+(?:\.\d+)?)?([a-z%]*)/g
   )) {
     const [, name, num, rawUnit] = m;
+    if (name === undefined) continue;
     names.add(name);
     if (num === undefined) continue;
     // `em` is resolved to the same PX THRESHOLD as `rem` for ordering
@@ -581,7 +583,7 @@ function variantSegmentsFor(tagText, matchIndex) {
   let start = matchIndex;
   let depth = 0;
   while (start > 0) {
-    const ch = tagText[start - 1];
+    const ch = tagText.charAt(start - 1);
     if (ch === ']') {
       depth++;
       start--;
@@ -688,6 +690,10 @@ function parseMediaRegimeOrdering(segment) {
   const before = new RegExp(`${numUnit}\\s*(<=|<|>=|>)\\s*width`, 'i').exec(segment);
   const after = new RegExp(`width\\s*(<=|<|>=|>)\\s*${numUnit}`, 'i').exec(segment);
   if (before && after) return null;
+  /**
+   * @param {string | undefined} num
+   * @param {string | undefined} unit
+   */
   const toPx = (num, unit) => (unit === 'rem' ? Number(num) * REM_PX : Number(num));
   if (before) {
     const [, num, unit, op] = before;
@@ -1414,9 +1420,9 @@ function hasTruthyAsChild(tagText) {
  */
 function enclosingOpeningTag(source, childIndex) {
   let i = childIndex - 1;
-  while (i >= 0 && /\s/.test(source[i])) i--;
-  if (i < 0 || source[i] !== '>') return null;
-  if (source[i - 1] === '/') return null;
+  while (i >= 0 && /\s/.test(source.charAt(i))) i--;
+  if (i < 0 || source.charAt(i) !== '>') return null;
+  if (source.charAt(i - 1) === '/') return null;
   const closeIndex = i;
   const lowerBound = Math.max(0, closeIndex - ASCHILD_LOOKBACK);
   let j = closeIndex - 1;
@@ -1622,14 +1628,19 @@ function scanCurrent() {
   return { counts: sortDeep(counts), scanned: files.length };
 }
 
-/** Stable, diff-friendly ordering for the committed baseline. */
+/**
+ * Stable, diff-friendly ordering for the committed baseline.
+ * @param {Record<string, Record<string, number>>} obj
+ * @returns {Record<string, Record<string, number>>}
+ */
 function sortDeep(obj) {
   /** @type {Record<string, Record<string, number>>} */
   const out = {};
   for (const file of Object.keys(obj).toSorted()) {
+    const fileKinds = obj[file] ?? {};
     /** @type {Record<string, number>} */
     const kinds = {};
-    for (const kind of Object.keys(obj[file]).toSorted()) kinds[kind] = obj[file][kind];
+    for (const kind of Object.keys(fileKinds).toSorted()) kinds[kind] = fileKinds[kind] ?? 0;
     out[file] = kinds;
   }
   return out;
@@ -1660,6 +1671,7 @@ function total(counts) {
   return n;
 }
 
+/** @returns {Record<string, Record<string, number>>} */
 function loadBaseline() {
   if (!existsSync(BASELINE_PATH)) {
     console.error(
@@ -1671,7 +1683,9 @@ function loadBaseline() {
   try {
     return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
   } catch (e) {
-    console.error(`✗ touch-target gate: baseline is not valid JSON (${e.message})`);
+    console.error(
+      `✗ touch-target gate: baseline is not valid JSON (${e instanceof Error ? e.message : String(e)})`
+    );
     process.exit(2);
   }
 }

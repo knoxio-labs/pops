@@ -217,6 +217,7 @@ export function titleSearchPrefix(pattern) {
   let index = 0;
   while (index < pattern.length) {
     const char = pattern[index];
+    if (char === undefined) break;
     if (char === '\\' && index + 1 < pattern.length) {
       prefix += pattern[index + 1];
       index += 2;

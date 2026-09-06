@@ -581,16 +581,16 @@ export function findMirrors(issues, commits, prs = []) {
 
     const candidates = byPrTitle.get(title);
     if (candidates === undefined) continue;
-    if (candidates.length === 1) {
-      const [pr] = candidates;
+    const sole = candidates.length === 1 ? candidates[0] : undefined;
+    if (sole !== undefined) {
       mirrors.push({
         identifier: issue.identifier,
         title,
         status,
         evidence: 'pr-title',
         ambiguous: false,
-        prNumber: pr.number,
-        baseRefName: pr.baseRefName,
+        prNumber: sole.number,
+        baseRefName: sole.baseRefName,
       });
     } else {
       mirrors.push({
@@ -1122,8 +1122,12 @@ function selfTest() {
         [mergeCommit],
         [pr]
       );
+      const [mirror] = mirrors;
       return (
-        mirrors.length === 1 && mirrors[0]?.evidence === 'pr-title' && mirrors[0]?.prNumber === 4001
+        mirrors.length === 1 &&
+        mirror?.evidence === 'pr-title' &&
+        mirror.ambiguous === false &&
+        mirror.prNumber === 4001
       );
     })(),
     'a PR based on a branch other than main is found via PR title': (() => {
@@ -1142,10 +1146,12 @@ function selfTest() {
         [reSquashedOnMain],
         [pr]
       );
+      const [mirror] = mirrors;
       return (
         mirrors.length === 1 &&
-        mirrors[0]?.evidence === 'pr-title' &&
-        mirrors[0]?.baseRefName === 'lake-migration'
+        mirror?.evidence === 'pr-title' &&
+        mirror.ambiguous === false &&
+        mirror.baseRefName === 'lake-migration'
       );
     })(),
     'a commit-subject match wins over an available PR-title match, and its evidence says so':

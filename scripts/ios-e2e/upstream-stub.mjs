@@ -81,6 +81,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 import { purchasesRegistryEntry } from './purchases-stub.mjs';
+import { boundAddress } from './server-address.mjs';
 
 const FINANCE_CONTRACT_PATH = fileURLToPath(
   new URL('../../pillars/finance/openapi/finance.openapi.json', import.meta.url)
@@ -115,11 +116,13 @@ export function readFinanceContract() {
  * @returns {{ list: { method: string, path: string }, get: { method: string, path: string } }}
  */
 export function financeRoutes(document) {
+  /** @type {Map<string, 'list' | 'get'>} */
   const wanted = new Map([
     [LIST_OPERATION_ID, 'list'],
     [GET_OPERATION_ID, 'get'],
   ]);
-  const found = {};
+  /** @type {Record<'list' | 'get', { method: string, path: string } | undefined>} */
+  const found = { list: undefined, get: undefined };
 
   const paths = document?.paths;
   if (paths === null || typeof paths !== 'object') {
@@ -129,7 +132,10 @@ export function financeRoutes(document) {
   for (const [path, item] of Object.entries(paths)) {
     if (item === null || typeof item !== 'object') continue;
     for (const [method, operation] of Object.entries(item)) {
-      const operationId = operation?.operationId;
+      const operationId =
+        operation !== null && typeof operation === 'object' && 'operationId' in operation
+          ? operation.operationId
+          : undefined;
       const key = typeof operationId === 'string' ? wanted.get(operationId) : undefined;
       if (key === undefined || found[key] !== undefined) continue;
       found[key] = { method: method.toUpperCase(), path };
@@ -144,7 +150,13 @@ export function financeRoutes(document) {
     );
   }
 
-  return found;
+  const { list, get } = found;
+  if (list === undefined || get === undefined) {
+    throw new Error(
+      'finance-routes: unreachable — the missing-operation check above already threw'
+    );
+  }
+  return { list, get };
 }
 
 /**
@@ -154,6 +166,7 @@ export function financeRoutes(document) {
  * @returns {(pathname: string) => Record<string, string> | null}
  */
 export function pathMatcher(template) {
+  /** @type {string[]} */
   const names = [];
   const pattern = template.replace(/\{([^}]+)\}/gu, (_match, name) => {
     names.push(name);
@@ -165,7 +178,15 @@ export function pathMatcher(template) {
     const match = regex.exec(pathname);
     if (match === null) return null;
     return Object.fromEntries(
-      names.map((name, index) => [name, decodeURIComponent(match[index + 1])])
+      names.map((name, index) => {
+        const captured = match[index + 1];
+        if (captured === undefined) {
+          throw new Error(
+            `path-matcher: capture group ${index + 1} for {${name}} did not match, though the regex as a whole did`
+          );
+        }
+        return [name, decodeURIComponent(captured)];
+      })
     );
   };
 }
@@ -185,6 +206,27 @@ export function compareRows(a, b) {
   if (a.date !== b.date) return a.date < b.date ? 1 : -1;
   if (a.id !== b.id) return a.id < b.id ? 1 : -1;
   return 0;
+}
+
+/**
+ * `compareRows`'s `{ date, id }` out of a seeded row, which is typed as
+ * `Record<string, unknown>` because that is the shape the BFM's own zod
+ * schemas validate rather than one this stub gets to narrow in advance.
+ * Every seeded fixture carries both as strings — `transactions-fixture.mjs`
+ * — so a row missing either is a fixture bug, not a request this stub should
+ * quietly sort to the wrong place.
+ *
+ * @param {Record<string, unknown>} row
+ * @returns {{ date: string, id: string }}
+ */
+function sortKey(row) {
+  const { date, id } = row;
+  if (typeof date !== 'string' || typeof id !== 'string') {
+    throw new Error(
+      `ios-e2e upstream stub: row is missing a string date/id to sort by: ${JSON.stringify(row)}`
+    );
+  }
+  return { date, id };
 }
 
 /** finance's own defaults, from `pillars/finance/src/api/rest/transactions-handlers.ts`. */
@@ -243,6 +285,11 @@ export function parseListQuery(params) {
   // finance's contract types these, so a value that is not a whole number in
   // range never reaches its handler — it is a 400 from the ts-rest layer. `NaN`
   // reaching `slice` here would answer 200 with an empty page instead.
+  /**
+   * @param {'limit' | 'offset'} name
+   * @param {number} fallback
+   * @returns {number | string}
+   */
   const bounded = (name, fallback) => {
     const raw = params.get(name);
     if (raw === null) return fallback;
@@ -284,12 +331,11 @@ export function parseListQuery(params) {
  * @returns {{ data: Array<Record<string, unknown>>, pagination: { total: number, limit: number, offset: number, hasMore: boolean } }}
  */
 export function selectPage(rows, query) {
-  const ordered = rows.toSorted(compareRows);
+  const ordered = rows.toSorted((a, b) => compareRows(sortKey(a), sortKey(b)));
+  const { beforeDate, beforeId } = query;
   const matching =
-    query.beforeDate !== undefined && query.beforeId !== undefined
-      ? ordered.filter(
-          (row) => compareRows(row, { date: query.beforeDate, id: query.beforeId }) > 0
-        )
+    beforeDate !== undefined && beforeId !== undefined
+      ? ordered.filter((row) => compareRows(sortKey(row), { date: beforeDate, id: beforeId }) > 0)
       : ordered;
 
   // finance's defaults, not "everything". `parseListQuery` already applies
@@ -336,7 +382,7 @@ export function selectPage(rows, query) {
  *   discovery parser treats it as optional. That is why `status` is stated.
  *
  * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, now?: string }} options
- * @returns {{ fetchedAt: string, pillars: Array<{ pillarId: string, baseUrl: string, registered: boolean, status: string, lastHeartbeatAt: string, manifest: Record<string, unknown> }> }}
+ * @returns {{ fetchedAt: string, pillars: Array<import('./purchases-stub.mjs').RegistryEntry> }}
  */
 export function buildRegistrySnapshot({
   financeBaseUrl,
@@ -452,6 +498,10 @@ export async function startUpstreamStub({
 
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', `http://${host}`);
+    /**
+     * @param {number} status
+     * @param {Record<string, unknown>} body
+     */
     const json = (status, body) => {
       response.writeHead(status, { 'content-type': 'application/json' });
       response.end(JSON.stringify(body));
@@ -527,12 +577,14 @@ export async function startUpstreamStub({
     });
   });
 
-  await new Promise((resolve, reject) => {
+  /** @type {Promise<void>} */
+  const listening = new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, host, resolve);
+    server.listen(0, host, () => resolve());
   });
+  await listening;
 
-  const { port } = server.address();
+  const { port } = boundAddress(server, 'ios-e2e upstream stub');
   return {
     url: `http://${host}:${port}`,
     port,
