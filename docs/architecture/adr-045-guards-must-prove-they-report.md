@@ -95,6 +95,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-receipt-max-parts-drift.mjs`      | `quality.yml` → `receipt-max-parts-drift`                                       | `bfm`/`purchases` TS source, `clients/ios` Swift source         |
 | `scripts/ci/check-supertest-transport-adoption.mjs` | `quality.yml` → `supertest-transport-adoption`                                  | the nine gated pillars' TS/JS source, and their `package.json`  |
 | `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`                                          | `.oxlintrc.json`, `git diff`/`git show` of touched files        |
+| `scripts/ci/check-cross-pr-line-budget.mjs`         | `quality.yml` → `cross-pr-line-budget`                                          | `.oxlintrc.json`, `git show` of two branches, open PRs via REST |
 | `scripts/ci/check-pops-uri-pattern-adoption.mjs`    | `quality.yml` → `pops-uri-pattern-adoption`                                     | `pillars/purchases/src/**` TS source                            |
 | `scripts/ci/pr-review.mjs`                          | `pr-review.yml` → `review`                                                      | `git diff`/`git show`, the sticky comment's state block         |
 | `scripts/ci/check-review-findings.mjs`              | `review-findings-gate.yml` → `review-findings-gate`                             | the sticky comment's state block, via the GitHub REST API       |
