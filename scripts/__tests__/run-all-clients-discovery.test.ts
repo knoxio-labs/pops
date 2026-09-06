@@ -6,39 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { extractTaskField } from './mise-task-source.js';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
-
-/** The first capture group of `re` against `text`, or `undefined` on no match. */
-function firstCapture(re: RegExp, text: string): string | undefined {
-  return re.exec(text)?.[1];
-}
-
-/**
- * Pull a `[tasks.<name>]` field out of a mise.toml source. Used to build the
- * fixtures below out of the REAL `run-all` task body instead of a copy that
- * could silently drift from it — the same reasoning `AGENTS.md` gives for
- * never writing an enumeration out twice.
- */
-function extractTaskField(source: string, taskName: string, field: string): string {
-  const escapedTask = taskName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const header = new RegExp(`^\\[tasks\\.${escapedTask}\\]\\s*$`, 'm').exec(source);
-  if (!header) throw new Error(`no [tasks.${taskName}] section in source`);
-  const rest = source.slice(header.index + header[0].length);
-  const nextHeader = /^\[/m.exec(rest);
-  const body = nextHeader ? rest.slice(0, nextHeader.index) : rest;
-
-  const triple = firstCapture(new RegExp(`^${field}\\s*=\\s*'''\\n([\\s\\S]*?)\\n'''`, 'm'), body);
-  if (triple !== undefined) return triple;
-
-  const single = firstCapture(new RegExp(`^${field}\\s*=\\s*'([^']*)'`, 'm'), body);
-  if (single !== undefined) return single;
-
-  const double = firstCapture(new RegExp(`^${field}\\s*=\\s*"([^"]*)"`, 'm'), body);
-  if (double !== undefined) return double;
-
-  throw new Error(`no "${field}" field in [tasks.${taskName}]`);
-}
 
 describe('extractTaskField', () => {
   it('reads a triple-quoted multi-line run body', () => {
