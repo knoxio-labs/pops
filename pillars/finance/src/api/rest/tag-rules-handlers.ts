@@ -84,7 +84,7 @@ function translateTagRuleError(err: unknown, id?: string): never {
     throw new NotFoundError('TagRule', id ?? err.id);
   }
   if (err instanceof InvalidPatternError || err instanceof UnmatchablePatternError) {
-    throw new ValidationError({ pattern: err.pattern }, err.message);
+    throw new ValidationError(err.message, { pattern: err.pattern });
   }
   throw err;
 }

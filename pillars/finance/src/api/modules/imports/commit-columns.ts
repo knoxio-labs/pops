@@ -77,9 +77,9 @@ function committedType(txn: ConfirmedRow, tags: string[]): TransactionType {
   if (txn.transactionType) return resolveCommittedType(txn.transactionType, tags);
   if (txn.amount >= 0) {
     throw new ValidationError(
-      { description: txn.description, amount: txn.amount, date: txn.date },
       `Refusing to commit credit '${txn.description}' (${txn.amount}) with no transaction type: ` +
-        'a positive amount is not a purchase, and this pillar will not guess which type it is'
+        'a positive amount is not a purchase, and this pillar will not guess which type it is',
+      { description: txn.description, amount: txn.amount, date: txn.date }
     );
   }
   return resolveCommittedType('purchase', tags);

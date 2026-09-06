@@ -137,9 +137,9 @@ function filterAcceptedTagRuleChangeSets(
 
 function rejectUnknownClosedValue(tag: string, facet: string): never {
   throw new ValidationError(
-    { tag, facet },
     `'${tag}' is not a value of the closed '${facet}' namespace. ` +
-      `Pick an existing ${facet} value, or use an open namespace for a value you are creating.`
+      `Pick an existing ${facet} value, or use an open namespace for a value you are creating.`,
+    { tag, facet }
   );
 }
 

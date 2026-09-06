@@ -45,8 +45,8 @@ type Columns = Parameters<typeof importsService.insertImportTransaction>[1];
 function assertNotLoanTypedCredit(columns: Columns, isLoanAccount: boolean): void {
   if (isLoanAccount && columns.type === 'loan' && columns.amountCents > 0) {
     throw new ValidationError(
-      { description: columns.description, amountCents: columns.amountCents },
-      "'loan' is reserved for a drawdown; a positive amount against a loan account is a repayment, not a drawdown"
+      "'loan' is reserved for a drawdown; a positive amount against a loan account is a repayment, not a drawdown",
+      { description: columns.description, amountCents: columns.amountCents }
     );
   }
 }

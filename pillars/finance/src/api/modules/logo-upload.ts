@@ -43,19 +43,15 @@ function assertAllowedContentType(
 ): asserts contentType is LogoAllowedContentType {
   if (!(LOGO_ALLOWED_CONTENT_TYPES as readonly string[]).includes(contentType)) {
     throw new ValidationError(
-      undefined,
       `Unsupported content type "${contentType}". Allowed: ${LOGO_ALLOWED_CONTENT_TYPES.join(', ')}`
     );
   }
 }
 
 function assertWithinSizeCap(byteLength: number): void {
-  if (byteLength === 0) throw new ValidationError(undefined, 'Logo upload is empty.');
+  if (byteLength === 0) throw new ValidationError('Logo upload is empty.');
   if (byteLength > LOGO_MAX_BYTES) {
-    throw new ValidationError(
-      undefined,
-      `Logo exceeds the maximum allowed size of ${LOGO_MAX_BYTES} bytes.`
-    );
+    throw new ValidationError(`Logo exceeds the maximum allowed size of ${LOGO_MAX_BYTES} bytes.`);
   }
 }
 

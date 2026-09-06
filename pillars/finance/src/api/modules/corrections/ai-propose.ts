@@ -98,8 +98,8 @@ export async function proposeChangeSetFromCorrectionSignal(
 
   if (!existing && isTagsOnlyCorrectionInput(effectiveSignal)) {
     throw new ValidationError(
-      { tags: effectiveSignal.tags },
-      'A correction signal needs an entityId or a transactionType — tags-only signals belong in transaction_tag_rules'
+      'A correction signal needs an entityId or a transactionType — tags-only signals belong in transaction_tag_rules',
+      { tags: effectiveSignal.tags }
     );
   }
 

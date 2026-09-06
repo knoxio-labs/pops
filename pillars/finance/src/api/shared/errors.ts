@@ -31,13 +31,24 @@ export class NotFoundError extends HttpError {
 
 export class ValidationError extends HttpError {
   /**
+   * `message` comes first, and is required, because it is the only one of the
+   * two the client ever sees.
+   *
+   * The reverse order — `(details, message = 'Validation failed')` — is what
+   * this class had until POPS-3037, and eleven sites got it wrong (POPS-3005):
+   * `throw new ValidationError('Pattern is not a valid regular expression')`
+   * compiles, reads correctly, and returns a 400 whose body says
+   * `Validation failed`, because `details: unknown` cannot refuse a string.
+   * Three of them were handler translators that had already pulled
+   * `err.message` off the domain error and then put it in the discarded slot.
+   * Do not "tidy" the order back.
+   *
+   * @param message What the client is shown. Required — there is no generic
+   *   default, so a caller cannot get one by omission.
    * @param details Structured context for logs. It does NOT reach the client —
-   *   the wire envelope carries `message`, `code` and `messageKey` only — so
-   *   anything the caller has to act on belongs in `message`, not here.
-   * @param message Overrides the generic default. Worth supplying whenever the
-   *   caller can fix the request from reading it.
+   *   the wire envelope carries `message`, `code` and `messageKey` only.
    */
-  constructor(details: unknown, message = 'Validation failed') {
+  constructor(message: string, details?: unknown) {
     super(400, message, details, 'common.validationFailed');
     this.name = 'ValidationError';
   }
