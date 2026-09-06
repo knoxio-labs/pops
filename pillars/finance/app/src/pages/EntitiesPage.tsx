@@ -120,6 +120,9 @@ export function EntitiesPage() {
         form={state.form}
         isSubmitting={state.isSubmitting}
         onSubmit={state.onSubmit}
+        uploadAvatarMutation={state.uploadAvatarMutation}
+        removeAvatarMutation={state.removeAvatarMutation}
+        rerollColourMutation={state.rerollColourMutation}
       />
       <DeleteEntityDialog
         deletingId={state.deletingId}

@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import {
   Button,
@@ -16,12 +17,16 @@ import {
   TextInput,
 } from '@pops/ui';
 
+import { EntityAvatarField } from './EntityAvatarField';
+import { EntityColourField } from './EntityColourField';
 import {
   ENTITY_DEFAULT_TYPE_OPTIONS,
   ENTITY_TYPES,
   type Entity,
   type EntityFormValues,
 } from './types';
+
+import type { useEntitiesPage } from './useEntitiesPage';
 
 interface EntityFormDialogProps {
   open: boolean;
@@ -30,6 +35,45 @@ interface EntityFormDialogProps {
   form: UseFormReturn<EntityFormValues>;
   isSubmitting: boolean;
   onSubmit: (values: EntityFormValues) => void;
+  uploadAvatarMutation: ReturnType<typeof useEntitiesPage>['uploadAvatarMutation'];
+  removeAvatarMutation: ReturnType<typeof useEntitiesPage>['removeAvatarMutation'];
+  rerollColourMutation: ReturnType<typeof useEntitiesPage>['rerollColourMutation'];
+}
+
+/**
+ * Avatar upload/remove and colour reroll — shown only once the entity
+ * exists, since both are dedicated routes keyed on the entity id
+ * (`PUT`/`DELETE /entities/{id}/avatar`, `POST /entities/{id}/colour/reroll`)
+ * rather than fields on the create/update body (POPS-3061).
+ */
+function IdentityFields({
+  entity,
+  uploadAvatarMutation,
+  removeAvatarMutation,
+  rerollColourMutation,
+}: {
+  entity: Entity;
+  uploadAvatarMutation: EntityFormDialogProps['uploadAvatarMutation'];
+  removeAvatarMutation: EntityFormDialogProps['removeAvatarMutation'];
+  rerollColourMutation: EntityFormDialogProps['rerollColourMutation'];
+}) {
+  return (
+    <>
+      <EntityAvatarField
+        entity={entity}
+        uploadAvatar={(file) => uploadAvatarMutation.mutate({ id: entity.id, file })}
+        removeAvatar={() => removeAvatarMutation.mutate({ id: entity.id })}
+        uploadIsPending={uploadAvatarMutation.isPending}
+        removeIsPending={removeAvatarMutation.isPending}
+        onError={(message) => toast.error(message)}
+      />
+      <EntityColourField
+        colour={entity.colour}
+        onReroll={() => rerollColourMutation.mutate({ id: entity.id })}
+        isPending={rerollColourMutation.isPending}
+      />
+    </>
+  );
 }
 
 function NameAndType({ form }: { form: UseFormReturn<EntityFormValues> }) {
@@ -101,7 +145,17 @@ function TagsAndAliases({ form }: { form: UseFormReturn<EntityFormValues> }) {
 }
 
 export function EntityFormDialog(props: EntityFormDialogProps) {
-  const { open, onOpenChange, editingEntity, form, isSubmitting, onSubmit } = props;
+  const {
+    open,
+    onOpenChange,
+    editingEntity,
+    form,
+    isSubmitting,
+    onSubmit,
+    uploadAvatarMutation,
+    removeAvatarMutation,
+    rerollColourMutation,
+  } = props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
       <DialogContent className="sm:max-w-125">
@@ -113,6 +167,14 @@ export function EntityFormDialog(props: EntityFormDialogProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {editingEntity && (
+              <IdentityFields
+                entity={editingEntity}
+                uploadAvatarMutation={uploadAvatarMutation}
+                removeAvatarMutation={removeAvatarMutation}
+                rerollColourMutation={rerollColourMutation}
+              />
+            )}
             <NameAndType form={form} />
             <TagsAndAliases form={form} />
           </div>

@@ -15,6 +15,8 @@ export interface Entity {
   notes: string | null;
   lastEditedTime: string;
   transactionCount?: number;
+  avatarAssetId: string | null;
+  colour: string | null;
 }
 
 /** An entity's default transaction type: a leading "None" plus the full taxonomy. */

@@ -1,11 +1,17 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 
-import { unwrap } from '../../contacts-api-helpers.js';
-import { entitiesCreate, entitiesDelete, entitiesUpdate } from '../../contacts-api/index.js';
+import { unwrap, uploadEntityAvatar } from '../../contacts-api-helpers.js';
+import {
+  entitiesCreate,
+  entitiesDelete,
+  entitiesRemoveAvatar,
+  entitiesRerollColour,
+  entitiesUpdate,
+} from '../../contacts-api/index.js';
 import { unwrap as unwrapFinance } from '../../finance-api-helpers.js';
 import { entityUsageList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
@@ -76,6 +82,77 @@ function useEntityMutations(deps: MutationDeps) {
   return { createMutation, updateMutation, deleteMutation };
 }
 
+/**
+ * The dialog's dedicated avatar/colour mutations. Unlike create/update they
+ * apply to an already-existing entity (avatar upload and colour reroll are
+ * their own routes, gated on an id — POPS-3061) and keep the dialog open,
+ * merging the fresh `avatarAssetId`/`colour` into `editingEntity` so its
+ * preview updates without waiting for the list refetch.
+ */
+function useEntityAssetMutations(setEditingEntity: Dispatch<SetStateAction<Entity | null>>) {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ENTITIES_KEY });
+  const applyAssetFields = (updated: { avatarAssetId?: string | null; colour?: string | null }) =>
+    setEditingEntity((current) =>
+      current
+        ? {
+            ...current,
+            avatarAssetId: updated.avatarAssetId ?? null,
+            colour: updated.colour ?? null,
+          }
+        : current
+    );
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (input: { id: string; file: File }) =>
+      uploadEntityAvatar(input.id, input.file),
+    onSuccess: applyAssetFields,
+    onError: (err: Error) => toast.error(err.message),
+    onSettled: invalidate,
+  });
+  const removeAvatarMutation = useMutation({
+    mutationFn: async (input: { id: string }) =>
+      unwrap(await entitiesRemoveAvatar({ path: { id: input.id } })).data,
+    onSuccess: applyAssetFields,
+    onError: (err: Error) => toast.error(err.message),
+    onSettled: invalidate,
+  });
+  const rerollColourMutation = useMutation({
+    mutationFn: async (input: { id: string }) =>
+      unwrap(await entitiesRerollColour({ path: { id: input.id } })).data,
+    onSuccess: applyAssetFields,
+    onError: (err: Error) => toast.error(err.message),
+    onSettled: invalidate,
+  });
+  return { uploadAvatarMutation, removeAvatarMutation, rerollColourMutation };
+}
+
+function buildDialogHandlers(
+  form: UseFormReturn<EntityFormValues>,
+  setEditingEntity: (e: Entity | null) => void,
+  setIsDialogOpen: (v: boolean) => void
+) {
+  const handleAdd = () => {
+    setEditingEntity(null);
+    form.reset(DEFAULT_FORM_VALUES);
+    setIsDialogOpen(true);
+  };
+  const handleEdit = (entity: Entity) => {
+    setEditingEntity(entity);
+    form.reset({
+      name: entity.name,
+      type: entity.type ?? 'company',
+      abn: entity.abn ?? '',
+      aliases: entity.aliases,
+      defaultTransactionType: entity.defaultTransactionType ?? '',
+      defaultTags: entity.defaultTags,
+      notes: entity.notes ?? '',
+    });
+    setIsDialogOpen(true);
+  };
+  return { handleAdd, handleEdit };
+}
+
 function buildSubmit(
   editingEntity: Entity | null,
   createMutation: ReturnType<typeof useEntityMutations>['createMutation'],
@@ -117,29 +194,14 @@ export function useEntitiesPage() {
     setEditingEntity,
     setDeletingId,
   });
+  const { uploadAvatarMutation, removeAvatarMutation, rerollColourMutation } =
+    useEntityAssetMutations(setEditingEntity);
   const form = useForm<EntityFormValues>({
     resolver: standardSchemaResolver(EntityFormSchema),
     defaultValues: DEFAULT_FORM_VALUES,
   });
 
-  const handleAdd = () => {
-    setEditingEntity(null);
-    form.reset(DEFAULT_FORM_VALUES);
-    setIsDialogOpen(true);
-  };
-  const handleEdit = (entity: Entity) => {
-    setEditingEntity(entity);
-    form.reset({
-      name: entity.name,
-      type: entity.type ?? 'company',
-      abn: entity.abn ?? '',
-      aliases: entity.aliases,
-      defaultTransactionType: entity.defaultTransactionType ?? '',
-      defaultTags: entity.defaultTags,
-      notes: entity.notes ?? '',
-    });
-    setIsDialogOpen(true);
-  };
+  const { handleAdd, handleEdit } = buildDialogHandlers(form, setEditingEntity, setIsDialogOpen);
 
   return {
     query,
@@ -152,6 +214,9 @@ export function useEntitiesPage() {
     showOrphanedOnly,
     setShowOrphanedOnly,
     deleteMutation,
+    uploadAvatarMutation,
+    removeAvatarMutation,
+    rerollColourMutation,
     handleAdd,
     handleEdit,
     onSubmit: buildSubmit(editingEntity, createMutation, updateMutation),

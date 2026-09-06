@@ -8,12 +8,21 @@ import type { Entity } from './types';
 const entitiesCreateMock = vi.hoisted(() => vi.fn());
 const entitiesUpdateMock = vi.hoisted(() => vi.fn());
 const entitiesDeleteMock = vi.hoisted(() => vi.fn());
+const entitiesRemoveAvatarMock = vi.hoisted(() => vi.fn());
+const entitiesRerollColourMock = vi.hoisted(() => vi.fn());
+const clientPutMock = vi.hoisted(() => vi.fn());
 const entityUsageListMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../contacts-api/index.js', () => ({
   entitiesCreate: (...args: unknown[]) => entitiesCreateMock(...args),
   entitiesUpdate: (...args: unknown[]) => entitiesUpdateMock(...args),
   entitiesDelete: (...args: unknown[]) => entitiesDeleteMock(...args),
+  entitiesRemoveAvatar: (...args: unknown[]) => entitiesRemoveAvatarMock(...args),
+  entitiesRerollColour: (...args: unknown[]) => entitiesRerollColourMock(...args),
+}));
+
+vi.mock('../../contacts-api/client.gen.js', () => ({
+  client: { put: (...args: unknown[]) => clientPutMock(...args) },
 }));
 
 vi.mock('../../finance-api/index.js', () => ({
@@ -41,6 +50,8 @@ function makeEntity(overrides: Partial<Entity> = {}): Entity {
     notes: null,
     lastEditedTime: '2026-01-01T00:00:00.000Z',
     transactionCount: 3,
+    avatarAssetId: null,
+    colour: null,
     ...overrides,
   };
 }
@@ -218,5 +229,81 @@ describe('useEntitiesPage — delete', () => {
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['contacts', 'entities'] })
     );
+  });
+});
+
+describe('useEntitiesPage — avatar and colour mutations', () => {
+  it('uploads the avatar through the low-level client (not the generated wrapper) and updates editingEntity', async () => {
+    const entity = makeEntity({ id: 'ent-avatar', avatarAssetId: null });
+    clientPutMock.mockResolvedValue({
+      data: { data: { ...entity, avatarAssetId: 'blob-new' } },
+      error: undefined,
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useEntitiesPage(), { wrapper });
+
+    act(() => {
+      result.current.handleEdit(entity);
+    });
+    const file = new File([new Uint8Array(4)], 'logo.png', { type: 'image/png' });
+    act(() => {
+      result.current.uploadAvatarMutation.mutate({ id: 'ent-avatar', file });
+    });
+
+    await waitFor(() =>
+      expect(clientPutMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/entities/{id}/avatar',
+          path: { id: 'ent-avatar' },
+          body: file,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      )
+    );
+    await waitFor(() => expect(result.current.editingEntity?.avatarAssetId).toBe('blob-new'));
+  });
+
+  it('removes the avatar and updates editingEntity to null', async () => {
+    const entity = makeEntity({ id: 'ent-avatar', avatarAssetId: 'blob-1' });
+    entitiesRemoveAvatarMock.mockResolvedValue({
+      data: { data: { ...entity, avatarAssetId: null } },
+      error: undefined,
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useEntitiesPage(), { wrapper });
+
+    act(() => {
+      result.current.handleEdit(entity);
+    });
+    act(() => {
+      result.current.removeAvatarMutation.mutate({ id: 'ent-avatar' });
+    });
+
+    await waitFor(() =>
+      expect(entitiesRemoveAvatarMock).toHaveBeenCalledWith({ path: { id: 'ent-avatar' } })
+    );
+    await waitFor(() => expect(result.current.editingEntity?.avatarAssetId).toBeNull());
+  });
+
+  it('rerolls the colour and updates editingEntity with the fresh value', async () => {
+    const entity = makeEntity({ id: 'ent-colour', colour: '#e04667' });
+    entitiesRerollColourMock.mockResolvedValue({
+      data: { data: { ...entity, colour: '#83b81d' } },
+      error: undefined,
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useEntitiesPage(), { wrapper });
+
+    act(() => {
+      result.current.handleEdit(entity);
+    });
+    act(() => {
+      result.current.rerollColourMutation.mutate({ id: 'ent-colour' });
+    });
+
+    await waitFor(() =>
+      expect(entitiesRerollColourMock).toHaveBeenCalledWith({ path: { id: 'ent-colour' } })
+    );
+    await waitFor(() => expect(result.current.editingEntity?.colour).toBe('#83b81d'));
   });
 });
