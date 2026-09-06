@@ -139,7 +139,7 @@ describe('UploadStep — merging several CSVs', () => {
   });
 });
 
-describe('UploadStep — a headerless export uploaded under a headed bank', () => {
+describe('UploadStep — an ANZ transaction-account export', () => {
   it('imports every line rather than losing the first charge to the header row', async () => {
     // Unlike the other tests in this file, this one needs the format radio
     // itself on screen to pick 'ANZ' — so, just this once, the account and
@@ -189,7 +189,7 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
 
     render(renderUploadStep());
 
-    // 'ANZ' is the headed dialect; the file is a headerless credit-card export.
+    // ANZ transaction accounts use the same headerless CSV layout as ANZ cards.
     const anz = await screen.findByRole('radio', { name: 'ANZ' });
     fireEvent.click(anz);
     selectFiles([csvFile('anz.csv', contents)]);
@@ -199,7 +199,7 @@ describe('UploadStep — a headerless export uploaded under a headed bank', () =
     const state = useImportStore.getState();
     expect(state.rows).toHaveLength(lineCount);
     expect(state.headers).not.toContain('MERCHANT 1');
-    expect(state.rows[0]).toMatchObject({ 'Column 3': 'MERCHANT 1' });
+    expect(state.rows[0]).toMatchObject({ Description: 'MERCHANT 1' });
   });
 });
 

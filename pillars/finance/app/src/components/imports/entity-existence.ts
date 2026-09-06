@@ -5,7 +5,10 @@
  * a name missing from it is not proof the merchant is absent, and promising
  * "Create X" on that evidence would be a lie.
  */
-export type EntityExistence = 'existing' | 'new' | 'unknown';
+export type EntityExistence = 'existing' | 'new' | 'checking' | 'unavailable';
+
+/** Whether the complete contact list can verify an AI suggestion. */
+export type EntityVerification = 'ready' | 'checking' | 'unavailable';
 
 /** Scope of the button asking: one transaction, or the whole group. */
 export type AcceptScope = 'one' | 'all';
@@ -30,9 +33,12 @@ export function entityAnswersTo(
  */
 export function resolveEntityExistence(
   entityName: string | null | undefined,
-  entities: ReadonlyArray<{ name: string; aliases?: readonly string[] }> | undefined
+  entities: ReadonlyArray<{ name: string; aliases?: readonly string[] }> | undefined,
+  verification: EntityVerification
 ): EntityExistence {
-  if (!entityName || !entities) return 'unknown';
+  if (!entityName) return 'unavailable';
+  if (verification === 'checking' || verification === 'unavailable') return verification;
+  if (!entities) return 'unavailable';
   const target = entityName.toLowerCase();
   return entities.some((e) => entityAnswersTo(e, target)) ? 'existing' : 'new';
 }
@@ -46,9 +52,13 @@ const LABELS: Record<EntityExistence, Record<AcceptScope, (name: string) => stri
     one: (name) => `Create "${name}"`,
     all: (name) => `Create "${name}" & assign all`,
   },
-  unknown: {
-    one: (name) => `Accept "${name}"`,
-    all: (name) => `Accept all as "${name}"`,
+  checking: {
+    one: (name) => `Checking "${name}"…`,
+    all: (name) => `Checking "${name}"…`,
+  },
+  unavailable: {
+    one: (name) => `Can't verify "${name}"`,
+    all: (name) => `Can't verify "${name}"`,
   },
 };
 

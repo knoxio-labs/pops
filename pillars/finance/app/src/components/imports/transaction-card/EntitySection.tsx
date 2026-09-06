@@ -3,7 +3,11 @@ import { AlertTriangle, Sparkles } from 'lucide-react';
 import { Badge } from '@pops/ui';
 
 import { AcceptEntityButton } from '../AcceptEntityButton';
-import { type EntityExistence, resolveEntityExistence } from '../entity-existence';
+import {
+  type EntityExistence,
+  resolveEntityExistence,
+  type EntityVerification,
+} from '../entity-existence';
 import { EntitySelect } from '../EntitySelect';
 import {
   classifyAssignedEntity,
@@ -84,6 +88,7 @@ function UnresolvedEntityNotice({
 interface EntitySectionProps {
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
+  entityVerification?: EntityVerification;
   onEntitySelect?: (
     transaction: ProcessedTransaction,
     entityId: string,
@@ -103,8 +108,14 @@ interface EntitySectionProps {
  * which is exactly when the fix wasn't needed.
  */
 export function EntitySection(props: EntitySectionProps) {
-  const { transaction, entities, onEntitySelect, onCreateEntityWithName, onAcceptAiSuggestion } =
-    props;
+  const {
+    transaction,
+    entities,
+    entityVerification = 'checking',
+    onEntitySelect,
+    onCreateEntityWithName,
+    onAcceptAiSuggestion,
+  } = props;
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
   const assigned = classifyAssignedEntity(transaction, entities);
@@ -114,7 +125,7 @@ export function EntitySection(props: EntitySectionProps) {
         <AiSuggestionPanel
           transaction={transaction}
           entityName={suggestedName}
-          existence={resolveEntityExistence(suggestedName, entities)}
+          existence={resolveEntityExistence(suggestedName, entities, entityVerification)}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
         />
       )}

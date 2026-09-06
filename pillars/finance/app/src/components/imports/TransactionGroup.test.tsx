@@ -45,6 +45,7 @@ function renderGroup(overrides: Partial<Parameters<typeof TransactionGroup>[0]> 
         { id: 'ent-1', name: 'Bunnings Warehouse' },
         { id: 'ent-2', name: 'Coles' },
       ]}
+      entityVerification="ready"
       {...overrides}
     />
   );
@@ -132,16 +133,30 @@ describe('TransactionGroup — the accept button names its outcome', () => {
     ).toBeInTheDocument();
   });
 
-  it('promises neither while the entity list is still loading', () => {
+  it('shows that it is checking while the entity list is still loading', () => {
     renderGroup({
       group: makeGroup({ aiSuggestion: true }),
       entities: undefined,
+      entityVerification: 'checking',
     });
 
     expect(
-      screen.getByRole('button', { name: 'Accept all as "Bunnings Warehouse"' })
+      screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /create "bunnings/i })).not.toBeInTheDocument();
+  });
+
+  it('does not permit accepting when Contacts is unavailable', () => {
+    renderGroup({
+      group: makeGroup({ aiSuggestion: true }),
+      entities: undefined,
+      entityVerification: 'unavailable',
+    });
+
+    expect(
+      screen.getByRole('button', { name: `Can't verify "Bunnings Warehouse"` })
+    ).toBeDisabled();
   });
 
   it('leaves the picker under a name of its own, not a second "assign all"', () => {
@@ -149,5 +164,38 @@ describe('TransactionGroup — the accept button names its outcome', () => {
 
     expect(screen.getByRole('button', { name: /choose entity/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /assign all/i })).toHaveLength(1);
+  });
+});
+
+describe('TransactionGroup — expanded rows inherit the group verification state', () => {
+  function makeAiTxn(checksum: string): ProcessedTransaction {
+    return {
+      ...makeTxn(checksum),
+      entity: { matchType: 'ai', confidence: 0.6, entityName: 'Bunnings Warehouse' },
+    };
+  }
+
+  it('resolves each row instead of leaving it stuck on checking', async () => {
+    const user = userEvent.setup();
+    renderGroup({ group: makeGroup({ transactions: [makeAiTxn('a')] }) });
+
+    await user.click(screen.getByRole('button', { name: 'Expand' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Assign to "Bunnings Warehouse"' })
+    ).toBeInTheDocument();
+  });
+
+  it('disables the row button while verification is still checking', async () => {
+    const user = userEvent.setup();
+    renderGroup({
+      group: makeGroup({ transactions: [makeAiTxn('a')] }),
+      entities: undefined,
+      entityVerification: 'checking',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Expand' }));
+
+    expect(screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })).toBeDisabled();
   });
 });

@@ -92,18 +92,24 @@ export interface BankDialect {
   fxCaptureSource: FxCaptureSource;
 }
 
-/**
- * ANZ ships a headerless, CRLF file of eight columns — date, amount,
- * description, then five it never populates — signs purchases negative, and
- * crams merchant, suburb and any foreign-currency detail into the one
- * description column.
- */
-const ANZ_CREDIT_CARD: BankDialect = {
+/** The shared CSV layout exported by ANZ transaction and credit-card accounts. */
+const ANZ_HEADERLESS: Pick<BankDialect, 'hasHeader' | 'columns' | 'amountSign'> = {
   hasHeader: false,
   columns: HEADERLESS_ANZ_COLUMNS,
   amountSign: 'debit-negative',
+};
+
+/** ANZ's credit-card descriptions additionally carry fixed-width merchant and FX details. */
+const ANZ_CREDIT_CARD: BankDialect = {
+  ...ANZ_HEADERLESS,
   deriveFields: parseAnzDescription,
   fxCaptureSource: 'anz-descriptor',
+};
+
+/** ANZ transaction-account exports use the shared signed, headerless CSV layout. */
+const ANZ: BankDialect = {
+  ...ANZ_HEADERLESS,
+  fxCaptureSource: 'unavailable',
 };
 
 /**
@@ -143,7 +149,7 @@ const ING: BankDialect = {
 };
 
 const DIALECTS: Readonly<Record<BankDialectId, BankDialect>> = {
-  ANZ: DEFAULT_DIALECT,
+  ANZ,
   'ANZ Credit Card': ANZ_CREDIT_CARD,
   Amex: AMEX,
   ING,

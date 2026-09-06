@@ -8,6 +8,7 @@ import { TransactionGroup } from '../TransactionGroup';
 
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
+import type { EntityVerification } from '../entity-existence';
 import type { ViewMode } from '../hooks/useTransactionReview';
 
 export type ReviewTabVariant = 'matched' | 'uncertain' | 'failed';
@@ -28,6 +29,7 @@ export interface ReviewTabBaseProps {
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
   entities?: Array<{ id: string; name: string }>;
+  entityVerification: EntityVerification;
 }
 
 export function ViewModeToggle({
@@ -85,6 +87,7 @@ export function GroupedView({
           onSaveEdit={props.onSaveEdit}
           onCancelEdit={props.onCancelEdit}
           entities={props.entities}
+          entityVerification={props.entityVerification}
           variant={variant}
         />
       ))}
@@ -119,6 +122,7 @@ export function ListView({
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={props.entities}
+            entityVerification={props.entityVerification}
             variant={variant}
           />
         )

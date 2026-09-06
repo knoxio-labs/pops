@@ -31,7 +31,7 @@ describe('parseAllFiles — a headerless export under a bank declared as headed'
     const lineCount = 556;
     const contents = headerlessAnzExport(lineCount);
 
-    const { error, parsed } = await parseOne(contents, 'ANZ');
+    const { error, parsed } = await parseOne(contents, 'Up');
 
     expect(error).toBeUndefined();
     const [file] = parsed;
@@ -43,7 +43,7 @@ describe('parseAllFiles — a headerless export under a bank declared as headed'
   });
 
   it('does not name the columns after the first transaction', async () => {
-    const { parsed } = await parseOne(headerlessAnzExport(3), 'ANZ');
+    const { parsed } = await parseOne(headerlessAnzExport(3), 'Up');
 
     expect(parsed[0]?.headers).not.toContain('01/07/2026');
     expect(parsed[0]?.headers).not.toContain('MERCHANT 1');
@@ -60,7 +60,7 @@ describe('parseAllFiles — a headerless export under a bank declared as headed'
   });
 
   it('keeps the first transaction addressable in the row set', async () => {
-    const { parsed } = await parseOne(headerlessAnzExport(3), 'ANZ');
+    const { parsed } = await parseOne(headerlessAnzExport(3), 'Up');
 
     expect(parsed[0]?.rows[0]).toMatchObject({
       'Column 1': '01/07/2026',
@@ -86,14 +86,14 @@ describe('parseAllFiles — a headed export under a bank declared as headerless'
 
 describe('parseAllFiles — the bank and the file agree', () => {
   it('reads a headed export under a headed bank unchanged', async () => {
-    const { parsed } = await parseOne(HEADED_EXPORT, 'ANZ');
+    const { parsed } = await parseOne(HEADED_EXPORT, 'Up');
 
     expect(parsed[0]?.headers).toEqual(['Date', 'Description', 'Amount']);
     expect(parsed[0]?.rows).toHaveLength(2);
   });
 
-  it("names a headerless export's columns from the dialect", async () => {
-    const { parsed } = await parseOne(headerlessAnzExport(2), 'ANZ Credit Card');
+  it("names a headerless ANZ transaction export's columns from the dialect", async () => {
+    const { parsed } = await parseOne(headerlessAnzExport(2), 'ANZ');
 
     expect(parsed[0]?.headers.slice(0, 3)).toEqual(['Date', 'Amount', 'Description']);
     expect(parsed[0]?.rows).toHaveLength(2);
@@ -103,14 +103,14 @@ describe('parseAllFiles — the bank and the file agree', () => {
 
 describe('parseAllFiles — column naming', () => {
   it('names blank header cells positionally so they are selectable', async () => {
-    const { parsed } = await parseOne('Date,,Amount\r\n01/01/2026,Rent,-900.00\r\n', 'ANZ');
+    const { parsed } = await parseOne('Date,,Amount\r\n01/01/2026,Rent,-900.00\r\n', 'Up');
 
     expect(parsed[0]?.headers).toEqual(['Date', 'Column 2', 'Amount']);
     expect(parsed[0]?.rows[0]?.['Column 2']).toBe('Rent');
   });
 
   it('keeps repeated header names distinct rather than collapsing the columns', async () => {
-    const { parsed } = await parseOne('Date,Amount,Amount\r\n01/01/2026,-900.00,-4.50\r\n', 'ANZ');
+    const { parsed } = await parseOne('Date,Amount,Amount\r\n01/01/2026,-900.00,-4.50\r\n', 'Up');
 
     expect(parsed[0]?.headers).toEqual(['Date', 'Amount', 'Amount_1']);
     expect(parsed[0]?.rows[0]).toMatchObject({ Amount: '-900.00', Amount_1: '-4.50' });
@@ -127,7 +127,7 @@ describe('parseAllFiles — column naming', () => {
   });
 
   it('drops a byte order mark from the first column name', async () => {
-    const { parsed } = await parseOne('\uFEFFDate,Amount\r\n01/01/2026,-900.00\r\n', 'ANZ');
+    const { parsed } = await parseOne('\uFEFFDate,Amount\r\n01/01/2026,-900.00\r\n', 'Up');
 
     expect(parsed[0]?.headers).toEqual(['Date', 'Amount']);
   });
@@ -135,14 +135,14 @@ describe('parseAllFiles — column naming', () => {
 
 describe('parseAllFiles — files with no transactions', () => {
   it('reports a header-only file as empty rather than importing nothing silently', async () => {
-    const { error, parsed } = await parseOne('Date,Description,Amount\r\n', 'ANZ');
+    const { error, parsed } = await parseOne('Date,Description,Amount\r\n', 'Up');
 
     expect(error).toMatch(/export\.csv: CSV file is empty/);
     expect(parsed).toEqual([]);
   });
 
   it('names the file when an empty upload cannot be parsed at all', async () => {
-    const { error, parsed } = await parseOne('', 'ANZ');
+    const { error, parsed } = await parseOne('', 'Up');
 
     expect(error).toMatch(/^export\.csv: /);
     expect(parsed).toEqual([]);

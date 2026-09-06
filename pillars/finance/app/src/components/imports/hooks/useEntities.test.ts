@@ -50,12 +50,63 @@ describe('useEntities', () => {
     expect(mockEntitiesList).not.toHaveBeenCalled();
   });
 
+  it('falls back to the largest entity-list page when the contacts service lacks bulk lookup', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'route not found' },
+      response: new Response(null, { status: 404 }),
+    });
+    mockEntitiesList.mockResolvedValue({
+      data: {
+        data: [
+          { id: 'ent-coles', name: 'Coles', aliases: [] },
+          { id: 'ent-woolies', name: 'Woolworths', aliases: [] },
+        ],
+        pagination: { total: 2, limit: 200, offset: 0 },
+      },
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entities).toHaveLength(2));
+    expect(mockEntitiesList).toHaveBeenCalledWith({ query: { limit: 200 } });
+    expect(result.current.entities?.map((entity) => entity.name)).toEqual(['Coles', 'Woolworths']);
+  });
+
   it('leaves entities undefined until the fetch resolves, so absence is never asserted early', () => {
     mockEntitiesLookup.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useEntities(), { wrapper });
 
     expect(result.current.entities).toBeUndefined();
     expect(result.current.dbEntities).toBeUndefined();
+    expect(result.current.entityVerification).toBe('checking');
+  });
+
+  it('does not mask a real lookup failure behind the list fallback', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'internal error' },
+      response: new Response(null, { status: 500 }),
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entityVerification).toBe('unavailable'));
+    expect(mockEntitiesList).not.toHaveBeenCalled();
+  });
+
+  it('reports an unavailable state when neither Contacts endpoint can load entities', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'lookup unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+    mockEntitiesList.mockResolvedValue({
+      error: { message: 'list unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entityVerification).toBe('unavailable'));
+    expect(result.current.entities).toBeUndefined();
   });
 
   it('merges a session-pending entity into its alphabetical place', async () => {

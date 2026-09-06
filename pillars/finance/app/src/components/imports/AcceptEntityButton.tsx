@@ -1,4 +1,4 @@
-import { Check, Plus, Sparkles } from 'lucide-react';
+import { Check, CircleAlert, LoaderCircle, Plus } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
@@ -7,13 +7,16 @@ import { type AcceptScope, acceptEntityLabel, type EntityExistence } from './ent
 const ICONS: Record<EntityExistence, typeof Check> = {
   existing: Check,
   new: Plus,
-  unknown: Sparkles,
+  checking: LoaderCircle,
+  unavailable: CircleAlert,
 };
 
 const TITLES: Record<EntityExistence, (name: string) => string | undefined> = {
   existing: (name) => `"${name}" already exists — these transactions are assigned to it`,
   new: (name) => `"${name}" does not exist yet — accepting creates it`,
-  unknown: () => undefined,
+  checking: () => 'Checking Contacts to determine whether accepting creates an entity',
+  unavailable: () =>
+    'Contacts is unavailable, so POPS cannot determine whether accepting creates an entity',
 };
 
 interface AcceptEntityButtonProps {
@@ -37,10 +40,14 @@ export function AcceptEntityButton(props: AcceptEntityButtonProps) {
       variant="default"
       size="sm"
       onClick={onClick}
+      disabled={existence === 'checking' || existence === 'unavailable'}
       title={TITLES[existence](entityName)}
       className={`bg-app-accent text-app-accent-foreground hover:bg-app-accent/90 ${className ?? ''}`}
     >
-      <Icon className="w-4 h-4 mr-1 shrink-0" aria-hidden="true" />
+      <Icon
+        className={`w-4 h-4 mr-1 shrink-0 ${existence === 'checking' ? 'animate-spin' : ''}`}
+        aria-hidden="true"
+      />
       {acceptEntityLabel(existence, scope, entityName)}
     </Button>
   );

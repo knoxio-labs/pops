@@ -50,6 +50,30 @@ describe('ANZ credit card — amount sign', () => {
   });
 });
 
+describe('ANZ transaction account — shared CSV layout', () => {
+  it('keeps the export sign and description without credit-card-only enrichment', () => {
+    const { parsedTransactions } = validateAllRows(
+      [
+        anzRow(
+          '31/07/2026',
+          '-5.00',
+          'ACCOUNT SERVICING FEE MINIMUM $2000 IN DEPOSITS NOT RECEIVED'
+        ),
+      ],
+      columnMap,
+      'ANZ',
+      'acc-test'
+    );
+
+    expect(parsedTransactions[0]).toMatchObject({
+      amount: -5,
+      description: 'ACCOUNT SERVICING FEE MINIMUM $2000 IN DEPOSITS NOT RECEIVED',
+      fxCaptureSource: 'unavailable',
+    });
+    expect(parsedTransactions[0]?.location).toBeUndefined();
+  });
+});
+
 describe('ANZ credit card — derived fields', () => {
   it('stores the merchant and suburb separately', () => {
     const { parsedTransactions } = validateAllRows(
