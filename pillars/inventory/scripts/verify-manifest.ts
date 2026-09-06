@@ -7,23 +7,16 @@
  * instruction. Wired into the pillar's `build` script so a stale
  * committed manifest fails CI.
  */
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 
-import { MANIFEST_OUTPUT_PATH, readContractVersion, renderManifest } from './render-manifest.js';
-
-function oxfmt(content: string): string {
-  const dir = mkdtempSync(join(tmpdir(), 'manifest-verify-'));
-  const path = join(dir, 'manifest.generated.ts');
-  writeFileSync(path, content);
-  execFileSync('pnpm', ['exec', 'oxfmt', '--write', path], { stdio: 'ignore' });
-  return readFileSync(path, 'utf8');
-}
+import {
+  MANIFEST_OUTPUT_PATH,
+  readContractVersion,
+  renderFormattedManifest,
+} from './render-manifest.js';
 
 const version = readContractVersion();
-const expected = oxfmt(renderManifest(version));
+const expected = renderFormattedManifest(version);
 
 let actual: string;
 try {
