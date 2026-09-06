@@ -72,7 +72,13 @@ export const financeTagRulesContract = c.router({
     method: 'GET',
     path: '/tag-rules/vocabulary',
     responses: { 200: z.object({ tags: z.array(z.string()) }) },
-    summary: 'List the user tag vocabulary',
+    summary: 'List the user tag vocabulary, most-used first (POPS-2616)',
+    description:
+      'Ordered by how often each tag has been written onto a transaction, ' +
+      'descending, with the tag itself breaking ties. The order is part of ' +
+      'the response, not an accident of storage: the pickers preserve it, so ' +
+      'the most-used value of each facet is the one a user reaches first. A ' +
+      'client that sorts this list alphabetically is discarding the ranking.',
   },
   facets: {
     method: 'GET',
