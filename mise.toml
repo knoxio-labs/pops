@@ -87,13 +87,49 @@ if [ "${RUN_ALL_INCLUDE_CLIENTS:-}" = "1" ]; then
   units="$units
 $(find clients -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/mise.toml' ';' -print)"
 fi
+# Units that failed go here, by path, instead of ending the loop. A red unit
+# used to `exit 1` on the spot, and since units run in `sort` order that left
+# every unit after it unattempted with nothing in the output saying so — a
+# partial run reads exactly like a complete one that found a single problem.
+# It cost a full CI round trip at least once: a known flake in `pillars/media`
+# stopped the fan-out before `pillars/shell` ran, and shell held the actual
+# regression (POPS-1915, POPS-1573). Grepping the local log for `shell`
+# afterwards returned nothing, which is the whole problem — the evidence that
+# a unit had not run was an absence.
+#
+# This makes a failing `mise test` / `mise typecheck` slower and honest rather
+# than fast and ambiguous. If an inner-loop task ever wants fail-fast back, it
+# should be an explicit opt-in flag, not the default.
+failed_units=""
+ran_units=0
 for d in $(echo "$units" | sort); do
   src="$(mise tasks info "$usage_task" -C "$d" 2>/dev/null | sed -n 's/^Source: //p')"
   case "$src" in
-    */"$d"/mise.toml) mise run -C "$d" "$usage_task" || exit 1 ;;
+    */"$d"/mise.toml)
+      ran_units=$((ran_units + 1))
+      if ! mise run -C "$d" "$usage_task"; then failed_units="$failed_units $d"; fi
+      ;;
     *) : ;;  # task absent or inherited from an ancestor — skip this unit
   esac
 done
+
+# A fan-out over nothing is the other way this task can report success without
+# doing anything, and it is the one a summary line would otherwise dress up as
+# "passed in all 0 unit(s)". It fires on a task name no unit defines locally,
+# and on discovery that has stopped finding units at all.
+if [ "$ran_units" -eq 0 ]; then
+  echo "run-all: no discovered unit defines '$usage_task' locally — nothing ran." >&2
+  echo "run-all: a unit's task only counts when 'mise tasks info' sources it from that" >&2
+  echo "         unit's own mise.toml; one inherited from the root is deliberately skipped." >&2
+  exit 1
+fi
+
+if [ -n "$failed_units" ]; then
+  echo "run-all: $usage_task FAILED in:$failed_units" >&2
+  echo "run-all: $ran_units unit(s) defining '$usage_task' were attempted; every one of them ran." >&2
+  exit 1
+fi
+echo "run-all: $usage_task passed in all $ran_units unit(s) that define it."
 '''
 
 [tasks.test]
