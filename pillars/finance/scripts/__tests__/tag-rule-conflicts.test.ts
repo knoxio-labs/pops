@@ -89,12 +89,12 @@ describe('findTagRuleConflicts', () => {
     expect(conflicts).toEqual([]);
   });
 
-  it('matches through the digits the normalizer strips from both sides', () => {
+  it('does not match a different numeric identifier', () => {
     const conflicts = findTagRuleConflicts(
       [{ pattern: 'HOYTS 1034', tags: ['occasion:out'] }],
       [row('HOYTS 2251 SYDNEY', ['occasion:home'])]
     );
 
-    expect(conflicts.map((c) => c.existing)).toEqual(['occasion:home']);
+    expect(conflicts).toEqual([]);
   });
 });

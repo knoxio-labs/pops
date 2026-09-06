@@ -946,21 +946,19 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
   });
 });
 
-describe('tagRules — write path refuses an unconditionally unmatchable pattern (POPS-2942)', () => {
-  it('400s an add op whose contains pattern normalises to empty, writing nothing', async () => {
-    await expect(
-      client().tagRules.apply({
-        changeSet: {
-          ops: [
-            { op: 'add', data: { descriptionPattern: '42', matchType: 'contains', tags: ['x'] } },
-          ],
-        },
-        acceptedNewTags: [],
-      })
-    ).rejects.toMatchObject({ status: 400 });
+describe('tagRules — write path accepts numeric patterns', () => {
+  it('accepts an add op with a numeric contains pattern', async () => {
+    await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          { op: 'add', data: { descriptionPattern: '42', matchType: 'contains', tags: ['x'] } },
+        ],
+      },
+      acceptedNewTags: [],
+    });
 
     const listed = await client().tagRules.list({});
-    expect(listed.data).toHaveLength(0);
+    expect(listed.data).toHaveLength(1);
   });
 
   it("does not refuse a well-formed pattern that matches nothing in today's ledger — the forward-looking case", async () => {

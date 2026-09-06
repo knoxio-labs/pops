@@ -5,7 +5,7 @@
  * tag-rule matcher, the rule-match preview, the ChangeSet impact preview, the
  * retroactive apply — routes through {@link patternMatchesDescription} here.
  * Four independent implementations used to exist and disagreed on case
- * folding, digit stripping and the regex `i` flag, so the same rule could
+ * folding and the regex `i` flag, so the same rule could
  * classify a row and contribute no tags (POPS-2600).
  *
  * Dependency-free and browser-safe: `app-finance`'s optimistic merge bundles
@@ -55,8 +55,8 @@ export function isValidRegexPattern(pattern: string): boolean {
  * `exact`/`contains` patterns are matched against a normalised description and
  * are normalised on write so they line up. A `regex` pattern is stored
  * verbatim: {@link normalizeDescription} uppercases every character including
- * metacharacters (`\d` -> `\D`, `\s` -> `\S`), strips digits (`a{2,3}` ->
- * `a{,}`) and deletes `.`, which silently corrupts the pattern.
+ * metacharacters (`\d` -> `\D`, `\s` -> `\S`) and deletes `.`, which
+ * silently corrupts the pattern.
  */
 export function normalizePatternForStorage(pattern: string, matchType: PatternMatchType): string {
   return matchType === 'regex' ? pattern : normalizeDescription(pattern);

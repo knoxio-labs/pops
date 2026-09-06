@@ -90,15 +90,17 @@ describe('tag-only pass through processImportCore', () => {
   it('tags the same rows from one call with the flag on', async () => {
     process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] = 'true';
     tagsOnlyBatchWithAi.mockResolvedValue({
-      results: [{ tags: ['venue:supermarket', 'contains:groceries'] }],
+      results: Array.from({ length: 3 }, () => ({
+        tags: ['venue:supermarket', 'contains:groceries'],
+      })),
       usage: { inputTokens: 120, outputTokens: 24, costUsd: 0.00024 },
     });
 
     const { output } = await run(rows(3));
 
-    // Three rows, one descriptor once digits are stripped, one entry.
+    // Numeric identifiers make these three distinct descriptors.
     expect(tagsOnlyBatchWithAi).toHaveBeenCalledTimes(1);
-    expect(tagsOnlyBatchWithAi.mock.calls[0]?.[0] as TagsOnlyInput[]).toHaveLength(1);
+    expect(tagsOnlyBatchWithAi.mock.calls[0]?.[0] as TagsOnlyInput[]).toHaveLength(3);
     for (const row of output.matched) {
       expect(row.suggestedTags).toEqual([
         { tag: 'venue:supermarket', source: 'ai' },
