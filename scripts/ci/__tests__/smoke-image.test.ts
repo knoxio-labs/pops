@@ -83,25 +83,31 @@ function readPackageJson(path: string): WorkspacePackage {
   return JSON.parse(readFileSync(path, 'utf8')) as WorkspacePackage;
 }
 
+/** A workspace member: its manifest, and the repo-relative directory holding it. */
+interface WorkspaceMember {
+  readonly dir: string;
+  readonly pkg: WorkspacePackage;
+}
+
 /** Every workspace member, by package name. Mirrors `packages:` in pnpm-workspace.yaml. */
-function workspaceMembers(): Map<string, WorkspacePackage> {
-  const members = new Map<string, WorkspacePackage>();
+function workspaceMembers(): Map<string, WorkspaceMember> {
+  const members = new Map<string, WorkspaceMember>();
   for (const group of ['pillars', 'libs']) {
     for (const entry of readdirSync(join(repoRoot, group), { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
-      const candidates = [join(repoRoot, group, entry.name)];
+      const candidates = [`${group}/${entry.name}`];
       if (group === 'pillars') {
         for (const nested of readdirSync(join(repoRoot, group, entry.name), {
           withFileTypes: true,
         })) {
-          if (nested.isDirectory()) candidates.push(join(repoRoot, group, entry.name, nested.name));
+          if (nested.isDirectory()) candidates.push(`${group}/${entry.name}/${nested.name}`);
         }
       }
       for (const dir of candidates) {
-        const manifest = join(dir, 'package.json');
+        const manifest = join(repoRoot, dir, 'package.json');
         if (!existsSync(manifest)) continue;
         const pkg = readPackageJson(manifest);
-        if (pkg.name !== undefined) members.set(pkg.name, pkg);
+        if (pkg.name !== undefined) members.set(pkg.name, { dir, pkg });
       }
     }
   }
@@ -117,18 +123,38 @@ function workspaceMembers(): Map<string, WorkspacePackage> {
  */
 function selectedWorkspacePackages(
   entry: string,
-  members: ReadonlyMap<string, WorkspacePackage>
+  members: ReadonlyMap<string, WorkspaceMember>
+): Set<string> {
+  return workspaceClosure(entry, members, ['dependencies', 'devDependencies']);
+}
+
+/**
+ * The workspace packages reachable from `entry` through `fields`.
+ *
+ * Split out because the two callers want different edges and the difference is
+ * load-bearing. `selectedWorkspacePackages` follows dev dependencies because
+ * that is what pnpm's `...` suffix resolves to, and over-inclusion is the safe
+ * direction when the question is "might this image install better-sqlite3".
+ * The COPY guard below follows runtime dependencies only, because
+ * over-inclusion there is a false failure: `pillars/design` declares nine
+ * `@pops/app-*` dev dependencies whose directories `Dockerfile.api` never
+ * copies, and that image builds and ships.
+ */
+function workspaceClosure(
+  entry: string,
+  members: ReadonlyMap<string, WorkspaceMember>,
+  fields: ReadonlyArray<'dependencies' | 'devDependencies'>
 ): Set<string> {
   const selected = new Set<string>();
   const pending = [entry];
   while (pending.length > 0) {
     const current = pending.pop();
     if (current === undefined || selected.has(current)) continue;
-    const pkg = members.get(current);
-    if (pkg === undefined) continue;
+    const member = members.get(current);
+    if (member === undefined) continue;
     selected.add(current);
-    for (const field of ['dependencies', 'devDependencies'] as const) {
-      for (const dep of Object.keys(pkg[field] ?? {})) {
+    for (const field of fields) {
+      for (const dep of Object.keys(member.pkg[field] ?? {})) {
         if (members.has(dep)) pending.push(dep);
       }
     }
@@ -145,7 +171,7 @@ function imagesInstallingBetterSqlite3(): string[] {
     const name = readPackageJson(manifest).name;
     if (name === undefined) return false;
     return [...selectedWorkspacePackages(name, members)].some((selected) => {
-      const pkg = members.get(selected);
+      const pkg = members.get(selected)?.pkg;
       return (
         pkg?.dependencies?.['better-sqlite3'] !== undefined ||
         pkg?.devDependencies?.['better-sqlite3'] !== undefined
@@ -773,6 +799,120 @@ describe('copiesPath', () => {
     expect(copiesPath(new Set(['libs/sdk/tsconfig.json']), 'libs/sdk/tsconfig.build.json')).toBe(
       false
     );
+  });
+});
+
+/**
+ * Whether a Dockerfile brings any of `dir`'s source into the image — the
+ * manifest itself does not count.
+ *
+ * Three shapes all qualify, and every pillar image uses one of them: the
+ * directory named outright (`COPY libs/ui ./libs/ui`), a path inside it
+ * (`COPY libs/sdk/src ./libs/sdk/src`), or a sweep that contains it
+ * (`COPY libs/ ./libs/`, which `pillars/shell/Dockerfile` uses for the whole
+ * tree). Reading only the first two is what a first draft of this did, and it
+ * reported fourteen false misses against shell alone.
+ */
+function copiesSourceOf(sources: ReadonlySet<string>, dir: string): boolean {
+  return [...sources].some((source) => {
+    if (source === `${dir}/package.json`) return false;
+    const trimmed = source.endsWith('/') ? source.slice(0, -1) : source;
+    return trimmed === dir || source.startsWith(`${dir}/`) || dir.startsWith(`${trimmed}/`);
+  });
+}
+
+describe('copiesSourceOf', () => {
+  it('accepts the directory named outright, with or without a trailing slash', () => {
+    expect(copiesSourceOf(new Set(['libs/ui']), 'libs/ui')).toBe(true);
+    expect(copiesSourceOf(new Set(['libs/ui/']), 'libs/ui')).toBe(true);
+  });
+
+  it('accepts a path inside the directory', () => {
+    expect(copiesSourceOf(new Set(['libs/sdk/src']), 'libs/sdk')).toBe(true);
+  });
+
+  it('accepts a sweep that contains the directory', () => {
+    expect(copiesSourceOf(new Set(['libs/']), 'libs/sdk')).toBe(true);
+    expect(copiesSourceOf(new Set(['pillars/']), 'pillars/finance/app')).toBe(true);
+  });
+
+  it('does not accept the manifest alone — that is the other half of the check', () => {
+    expect(copiesSourceOf(new Set(['libs/sdk/package.json']), 'libs/sdk')).toBe(false);
+  });
+
+  it('does not accept a sibling whose name is a prefix', () => {
+    expect(copiesSourceOf(new Set(['libs/sdk-legacy']), 'libs/sdk')).toBe(false);
+  });
+});
+
+/**
+ * Every workspace dependency each pillar image must bring in, derived from the
+ * manifests rather than listed.
+ *
+ * The gap this closes is POPS-1624's: `docker-build.yml`'s trigger filter
+ * covers every Dockerfile, the infra directory and the lockfile, and nothing
+ * under a pillar. Adding a `@pops/*` dependency to a pillar — or to a lib the
+ * pillar already depends on — changes what its image has to copy and touches
+ * no path in that filter, so the only job that would notice does not run. The
+ * image stays broken until an unrelated PR happens to touch a Dockerfile,
+ * where the failure then reads as that PR's fault. That is exactly how
+ * `documents`, `mcp` and `orchestrator` sat unbuildable on main.
+ *
+ * Runtime dependencies only. Following dev dependencies too would be a false
+ * failure rather than a stricter check: `pillars/design` declares nine
+ * `@pops/app-*` dev dependencies whose directories `Dockerfile.api` never
+ * copies, and that image builds, ships and runs — `pnpm install --filter
+ * "<name>..."` over a partial checkout selects what is present.
+ */
+function workspaceCopyCases(): Array<{
+  title: string;
+  image: string;
+  dep: string;
+  dir: string;
+  copied: ReadonlySet<string>;
+}> {
+  const members = workspaceMembers();
+  return pillarImages().flatMap((image) => {
+    const manifest = join(repoRoot, dirname(image), 'package.json');
+    // pillars/contacts is Rust: a Dockerfile, a Cargo.toml, no workspace
+    // manifest for this derivation to start from.
+    if (!existsSync(manifest)) return [];
+    const name = readPackageJson(manifest).name;
+    if (name === undefined) return [];
+    const copied = copiedSources(readDockerfile(image));
+    return [...workspaceClosure(name, members, ['dependencies'])]
+      .filter((dep) => dep !== name)
+      .toSorted()
+      .map((dep) => {
+        const dir = members.get(dep)?.dir ?? '';
+        return { title: `${image} needs ${dep} (${dir})`, image, dep, dir, copied };
+      });
+  });
+}
+
+describe('the workspace dependencies each pillar image copies', () => {
+  const cases = workspaceCopyCases();
+
+  it('derives cases from more than one image (the derivation is not silently empty)', () => {
+    expect(new Set(cases.map((testCase) => testCase.image)).size).toBeGreaterThan(5);
+    expect(cases.every((testCase) => testCase.dir !== '')).toBe(true);
+  });
+
+  // The assertion carries its own message because vitest truncates a `$title`
+  // interpolation, and `expected false to be true` against a truncated name is
+  // not something anyone can act on.
+  it.each(cases)('$title — and copies its manifest', (testCase) => {
+    expect(
+      copiesPath(testCase.copied, `${testCase.dir}/package.json`),
+      `${testCase.image} must COPY ${testCase.dir}/package.json — it depends on ${testCase.dep}`
+    ).toBe(true);
+  });
+
+  it.each(cases)('$title — and copies its source', (testCase) => {
+    expect(
+      copiesSourceOf(testCase.copied, testCase.dir),
+      `${testCase.image} must COPY ${testCase.dir}'s source — it depends on ${testCase.dep}`
+    ).toBe(true);
   });
 });
 
