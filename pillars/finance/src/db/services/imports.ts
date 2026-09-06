@@ -18,7 +18,8 @@
  */
 import { eq, inArray } from 'drizzle-orm';
 
-import { ImportTransactionPersistError } from '../errors.js';
+import { isPositiveAmountPurchase } from '../../contract/corrections-constants.js';
+import { ImportTransactionPersistError, PositiveAmountPurchaseError } from '../errors.js';
 import { transactions } from '../schema.js';
 import { resolveImportAccountId } from './account-lookup.js';
 
@@ -274,6 +275,17 @@ export function insertImportTransaction(
   db: FinanceDb,
   input: InsertImportTransactionInput
 ): ImportTransactionRow {
+  // The commit path CAN express the combination, so it is guarded rather than
+  // assumed safe. The automatic classifier will not produce one — a credit
+  // whose entity resolves is left `uncertain` with no defaulted type — but the
+  // type a commit carries can also come from the review wizard, which is where
+  // POPS-2680's rows came from. Throwing rolls the whole commit back, which is
+  // the point: a batch is atomic, so the alternative is storing the bad row
+  // alongside the good ones and finding it months later by migration.
+  if (isPositiveAmountPurchase(input.amountCents, input.type)) {
+    throw new PositiveAmountPurchaseError(input.amountCents);
+  }
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 

@@ -31,6 +31,7 @@
  */
 import { asc, eq, notInArray } from 'drizzle-orm';
 
+import { isPositiveAmountPurchase } from '../../../contract/corrections-constants.js';
 import {
   type FinanceDb,
   transactionCorrections,
@@ -51,6 +52,8 @@ interface BatchTxn {
   id: string;
   description: string;
   accountId: string;
+  /** Selected only so {@link changedType} can refuse an incoherent retype (POPS-2685). */
+  amountCents: number;
   entityId: string | null;
   type: string;
   location: string | null;
@@ -76,10 +79,23 @@ function providedEntityChange(
 
 /** The lowercase canonical `type` the rule would newly assign (written verbatim
  * to `transactions.type` since #3607 stage 2 — no more capitalized collapse), or
- * `null` when the rule carries no type or it already matches. */
+ * `null` when the rule carries no type, it already matches, or applying it
+ * would contradict the row's amount.
+ *
+ * That last case is the retroactive half of POPS-2685. A rule saying
+ * `purchase` is written against a descriptor, not against a sign, so replaying
+ * it across the ledger will eventually land on a credit — which is how
+ * POPS-2680's `learned` rows were produced. Only the type is dropped, not the
+ * whole rule: the entity, location and tags it carries are still right for the
+ * row, and refusing all of them would leave the merchant unresolved to protect
+ * a field that simply does not apply. This path cannot throw the way the
+ * single-row writers do — one bad row must not abort a catch-up pass over the
+ * whole ledger. */
 function changedType(txn: BatchTxn, rule: CorrectionRow): string | null {
   const newType = rule.transactionType;
-  return newType != null && newType !== txn.type ? newType : null;
+  if (newType == null || newType === txn.type) return null;
+  if (isPositiveAmountPurchase(txn.amountCents, newType)) return null;
+  return newType;
 }
 
 function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {
@@ -154,6 +170,7 @@ function fetchBatch(db: FinanceDb, excludedChecksums: string[], offset: number):
       // live import does — a rule scoped to one account must not be replayed
       // across the whole ledger (POPS-2593).
       accountId: transactions.accountId,
+      amountCents: transactions.amountCents,
       entityId: transactions.entityId,
       type: transactions.type,
       location: transactions.location,

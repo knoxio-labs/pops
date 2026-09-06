@@ -18,7 +18,12 @@
  */
 import { eq } from 'drizzle-orm';
 
-import { TransactionAlreadyExistsError, TransactionNotFoundError } from '../errors.js';
+import { isPositiveAmountPurchase } from '../../contract/corrections-constants.js';
+import {
+  PositiveAmountPurchaseError,
+  TransactionAlreadyExistsError,
+  TransactionNotFoundError,
+} from '../errors.js';
 import { transactions } from '../schema.js';
 import { getAccount } from './accounts.js';
 
@@ -89,6 +94,11 @@ export function getTransaction(db: FinanceDb, id: string): TransactionRow {
  * serialised.
  */
 export function createTransaction(db: FinanceDb, input: CreateTransactionInput): TransactionRow {
+  const type = input.type ?? 'purchase';
+  if (isPositiveAmountPurchase(input.amountCents, type)) {
+    throw new PositiveAmountPurchaseError(input.amountCents);
+  }
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const accountId = getAccount(db, input.accountId).id;
@@ -100,7 +110,7 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
       accountId,
       amountCents: input.amountCents,
       date: input.date,
-      type: input.type ?? 'purchase',
+      type,
       tags: JSON.stringify(input.tags ?? []),
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
@@ -185,6 +195,25 @@ function buildTransactionUpdates(db: FinanceDb, input: UpdateTransactionInput): 
 }
 
 /**
+ * A PATCH is checked against the row it lands on, not against itself.
+ *
+ * This is the reason the guard lives in the service rather than in the zod
+ * body: `UpdateTransactionBody` makes `amount` and `type` independently
+ * optional, so `{ type: 'purchase' }` alone is a valid body and a schema
+ * refinement cannot see the stored amount it would contradict. That is exactly
+ * how POPS-2680's rows were produced — their `match_type` is `prefix`,
+ * `learned` and `manual`, i.e. through review and the editor, never through
+ * the automatic default.
+ */
+function assertPatchStaysCoherent(stored: TransactionRow, input: UpdateTransactionInput): void {
+  const amountCents = input.amountCents ?? stored.amountCents;
+  const type = input.type ?? stored.type;
+  if (isPositiveAmountPurchase(amountCents, type)) {
+    throw new PositiveAmountPurchaseError(amountCents);
+  }
+}
+
+/**
  * Patch a transaction. Throws `TransactionNotFoundError` if missing.
  * No-op writes (empty `input`) still re-read the row but skip the UPDATE.
  */
@@ -193,7 +222,8 @@ export function updateTransaction(
   id: string,
   input: UpdateTransactionInput
 ): TransactionRow {
-  getTransaction(db, id);
+  const stored = getTransaction(db, id);
+  assertPatchStaysCoherent(stored, input);
 
   const updates = buildTransactionUpdates(db, input);
   if (Object.keys(updates).length > 0) {

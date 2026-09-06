@@ -64,6 +64,7 @@ describe('GET /health', () => {
       accountId: amexAccountId,
       amountCents: 4200,
       date: '2026-07-01',
+      type: 'income',
     });
 
     const res = await requestOn(app(), (r) => r.get('/health'));
@@ -80,6 +81,7 @@ describe('GET /health', () => {
       accountId: amexAccountId,
       amountCents: 1000,
       date: '2026-01-01',
+      type: 'income',
     });
     const staleDays = 30;
     const staleEdit = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000).toISOString();
@@ -102,6 +104,7 @@ describe('GET /health', () => {
       accountId: amexAccountId,
       amountCents: 1000,
       date: '2026-01-01',
+      type: 'income',
     });
     financeDb.db
       .update(transactions)

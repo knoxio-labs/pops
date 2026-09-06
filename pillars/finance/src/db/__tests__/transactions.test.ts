@@ -47,7 +47,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Groceries',
       accountId: upSavingsId,
-      amountCents: 5000,
+      amountCents: -5000,
       date: '2025-06-15',
       type: 'purchase',
     });
@@ -55,18 +55,20 @@ describe('createTransaction', () => {
     expect(created.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(created.description).toBe('Groceries');
     expect(created.accountId).toBe(upSavingsId);
-    expect(created.amountCents).toBe(5000);
+    expect(created.amountCents).toBe(-5000);
     expect(created.date).toBe('2025-06-15');
     expect(created.type).toBe('purchase');
     expect(created.tags).toBe('[]');
     expect(created.lastEditedTime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  // The default is still `purchase`; it is simply no longer reachable with a
+  // credit, which POPS-2685 refuses at this write path.
   it('defaults type to purchase when omitted', () => {
     const created = createTransaction(db, {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
-      amountCents: 1000,
+      amountCents: -1000,
       date: '2025-06-15',
     });
     expect(created.type).toBe('purchase');
@@ -77,6 +79,7 @@ describe('createTransaction', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
       tags: ['Groceries', 'Online'],
     });
@@ -88,6 +91,7 @@ describe('createTransaction', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     expect(created.entityId).toBeNull();
@@ -104,7 +108,7 @@ describe('createTransaction', () => {
     const created = createTransaction(db, {
       description: 'Woolworths Groceries',
       accountId: resolveIdByName(db, 'Up Savings'),
-      amountCents: 15075,
+      amountCents: -15075,
       date: '2025-06-15',
       type: 'purchase',
       tags: ['Groceries'],
@@ -134,6 +138,7 @@ describe('createTransaction', () => {
         description: 'Groceries',
         accountId: 'does-not-exist',
         amountCents: 5000,
+        type: 'income',
         date: '2025-06-15',
       })
     ).toThrow(AccountNotFoundError);
@@ -151,6 +156,7 @@ describe('getTransaction', () => {
       description: 'X',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
+      type: 'income',
       date: '2025-06-15',
     });
     const fetched = getTransaction(db, created.id);
@@ -184,7 +190,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Woolworths Groceries',
       accountId: upSavingsId,
-      amountCents: 5000,
+      amountCents: -5000,
       date: '2025-06-15',
       type: 'purchase',
       tags: ['Groceries', 'Online'],
@@ -193,7 +199,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Coles Groceries',
       accountId: anzVisaId,
-      amountCents: 3000,
+      amountCents: -3000,
       date: '2025-06-14',
       type: 'purchase',
       tags: ['Groceries'],
@@ -202,7 +208,7 @@ describe('listTransactions', () => {
     createTransaction(db, {
       description: 'Fuel Station',
       accountId: upSavingsId,
-      amountCents: 6000,
+      amountCents: -6000,
       date: '2025-06-13',
       type: 'purchase',
       tags: ['Transport'],
@@ -500,6 +506,7 @@ describe('updateTransaction', () => {
       description: 'Original',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const original = created.lastEditedTime;
@@ -522,6 +529,7 @@ describe('updateTransaction', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
       tags: ['Old'],
     });
@@ -534,6 +542,7 @@ describe('updateTransaction', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
       notes: 'Some notes',
       entityId: 'ent-1',
@@ -563,6 +572,7 @@ describe('updateTransaction', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, {});
@@ -588,6 +598,7 @@ describe('updateTransaction — accountId', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const anzId = resolveIdByName(db, 'ANZ Visa');
@@ -601,6 +612,7 @@ describe('updateTransaction — accountId', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, { description: 'Renamed' });
@@ -612,6 +624,7 @@ describe('updateTransaction — accountId', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     expect(() => updateTransaction(db, created.id, { accountId: 'does-not-exist' })).toThrow(
@@ -631,6 +644,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
       description: 'Woolworths Groceries',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 2000,
+      type: 'income',
       date: '2025-06-15',
       entityId: 'ent-wrong',
     });
@@ -649,6 +663,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
         description: 'Test',
         accountId: resolveIdByName(db, 'Up'),
         amountCents: 1000,
+        type: 'income',
         date: '2025-06-15',
       });
       const updated = updateTransaction(db, created.id, { [field]: 'new-value' });
@@ -661,6 +676,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, { notes: 'a note', amountCents: 1500 });
@@ -672,6 +688,7 @@ describe('updateTransaction — manual-override marker (CF017/#3623)', () => {
       description: 'Test',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
     });
     const updated = updateTransaction(db, created.id, {});
@@ -690,6 +707,7 @@ describe('deleteTransaction', () => {
       description: 'To Delete',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 1000,
+      type: 'income',
       date: '2025-06-15',
       tags: ['X'],
       notes: 'Bye',
@@ -704,6 +722,7 @@ describe('deleteTransaction', () => {
       description: 'X',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
+      type: 'income',
       date: '2025-06-15',
     });
     deleteTransaction(db, created.id);
@@ -726,6 +745,7 @@ describe('restoreTransaction', () => {
       description: 'Restored',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 9900,
+      type: 'income',
       date: '2025-06-15',
       tags: ['Z'],
       checksum: 'sum-1',
@@ -747,6 +767,7 @@ describe('restoreTransaction', () => {
       description: 'X',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
+      type: 'income',
       date: '2025-06-15',
     });
     expect(() => restoreTransaction(db, created)).toThrow(TransactionAlreadyExistsError);
@@ -757,6 +778,7 @@ describe('restoreTransaction', () => {
       description: 'X',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: 100,
+      type: 'income',
       date: '2025-06-15',
     });
     try {

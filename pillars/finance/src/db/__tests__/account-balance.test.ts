@@ -20,6 +20,7 @@ import { balanceAsOf } from '../services/account-balance.js';
 import { insertCheckpoint } from '../services/account-checkpoints.js';
 import { createAccount } from '../services/accounts.js';
 import { createTransaction } from '../services/transactions.js';
+import { coherentType } from './coherent-type.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
@@ -28,7 +29,13 @@ let db: FinanceDb;
 let accountId: string;
 
 function tx(date: string, amountCents: number): void {
-  createTransaction(db, { description: `tx ${date}`, accountId, amountCents, date });
+  createTransaction(db, {
+    description: `tx ${date}`,
+    accountId,
+    amountCents,
+    date,
+    type: coherentType(amountCents),
+  });
 }
 
 function checkpoint(asOf: string, balanceCents: number): string {
@@ -135,7 +142,13 @@ describe('balanceAsOf on a liability', () => {
   beforeEach(() => {
     card = createAccount(db, { name: 'Amex Platinum', kind: 'credit-card', currency: 'AUD' }).id;
     const spend = (date: string, amountCents: number): void => {
-      createTransaction(db, { description: `card ${date}`, accountId: card, amountCents, date });
+      createTransaction(db, {
+        description: `card ${date}`,
+        accountId: card,
+        amountCents,
+        date,
+        type: coherentType(amountCents),
+      });
     };
     spend('2026-08-14', -12_000);
     insertCheckpoint(db, {
