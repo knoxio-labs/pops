@@ -233,6 +233,25 @@ describe('POST /retrieval/search — structured (BM25)', () => {
       status: 400,
     });
   });
+
+  // All three statuses above were true before POPS-3043 too. Until then these
+  // handlers threw the bare i18n key `retrieval.queryRequired` as the message
+  // and cerebrum's `ValidationError` discarded it, so every one of them
+  // answered `Validation failed` and a caller could not tell a missing query
+  // from a missing filter. Assert the body, which is the part that was wrong.
+  it.each([
+    [{ mode: 'semantic' as const }, 'Query is required for semantic and hybrid search modes'],
+    [{ mode: 'hybrid' as const }, 'Query is required for semantic and hybrid search modes'],
+    [{ mode: 'structured' as const }, 'Structured search requires at least one filter'],
+  ])(
+    'says what %o is missing, rather than answering "Validation failed"',
+    async (body, message) => {
+      await expect(client().retrieval.search(body)).rejects.toMatchObject({
+        status: 400,
+        body: { message, code: 'ValidationError' },
+      });
+    }
+  );
 });
 
 describe('POST /retrieval/search — semantic + cross-pillar enrichment', () => {
@@ -366,6 +385,14 @@ describe('POST /retrieval/context', () => {
   it('400s on an empty query', async () => {
     await expect(client().retrieval.context({ query: '   ' })).rejects.toMatchObject({
       status: 400,
+    });
+  });
+
+  // POPS-3043: the status alone was true while the body said nothing.
+  it('says the query is required, rather than answering "Validation failed"', async () => {
+    await expect(client().retrieval.context({ query: '   ' })).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'Query is required for context assembly', code: 'ValidationError' },
     });
   });
 });
