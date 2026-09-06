@@ -156,6 +156,7 @@ export function RuleCreationStep() {
         changeSet: buildChangeSet(proposal),
         source: 'import-batch',
         acceptedNewTags: proposal.tags,
+        sourceChecksums: proposal.sourceChecksums,
       });
     }
     nextStep();

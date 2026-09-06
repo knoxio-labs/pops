@@ -6,12 +6,9 @@ import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/
 import { useImportStore } from '../../../store/importStore';
 import { groupByEntity } from './tagReviewUtils';
 import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
-import {
-  applyAffectedToLocalTags,
-  applyAffectedToSuggested,
-  useTagActions,
-} from './useTagReviewActions';
+import { useTagActions } from './useTagReviewActions';
 import { type TagRuleDialogState, useTagRuleDialog } from './useTagRuleDialog';
+import { useTagRuleHandler } from './useTagRuleHandler';
 
 import type {
   ConfirmedTransaction,
@@ -116,39 +113,16 @@ function useTagFacets(): TagFacetOption[] {
   return data?.facets ?? [];
 }
 
-function useTagRuleHandler(args: {
-  addPendingTagRuleChangeSet: ImportStoreType['addPendingTagRuleChangeSet'];
-  dialogGroupNameRef: React.MutableRefObject<string | null>;
-  setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
-  setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
-  suggestedTagMeta: Record<string, SuggestedTag[]>;
-}) {
-  const {
-    addPendingTagRuleChangeSet,
-    dialogGroupNameRef,
-    setLocalTags,
-    setSuggestedTagMeta,
-    suggestedTagMeta,
-  } = args;
-  return useCallback(
-    (changeSet: TagRuleChangeSet, affected: TagRuleImpactItem[], acceptedNewTags: string[]) => {
-      addPendingTagRuleChangeSet({
-        changeSet,
-        source: `tag-review:${dialogGroupNameRef.current ?? 'unknown'}`,
-        acceptedNewTags,
-      });
-      if (affected.length === 0) return;
-      setLocalTags((prev) => applyAffectedToLocalTags(prev, affected, suggestedTagMeta));
-      setSuggestedTagMeta((prev) => applyAffectedToSuggested(prev, affected));
-    },
-    [
-      addPendingTagRuleChangeSet,
-      dialogGroupNameRef,
-      setLocalTags,
-      setSuggestedTagMeta,
-      suggestedTagMeta,
-    ]
-  );
+/** Flushes the step's working copy of the tags into the store before advancing. */
+function useHandleContinue(
+  localTags: Record<string, string[]>,
+  updateTransactionTags: ImportStoreType['updateTransactionTags'],
+  nextStep: () => void
+) {
+  return useCallback(() => {
+    for (const [checksum, tags] of Object.entries(localTags)) updateTransactionTags(checksum, tags);
+    nextStep();
+  }, [localTags, updateTransactionTags, nextStep]);
 }
 
 export function useTagReviewState(): UseTagReviewStateOutput {
@@ -176,15 +150,13 @@ export function useTagReviewState(): UseTagReviewStateOutput {
       confirmedTransactions,
     });
 
-  const handleContinue = useCallback(() => {
-    for (const [checksum, tags] of Object.entries(localTags)) updateTransactionTags(checksum, tags);
-    nextStep();
-  }, [localTags, updateTransactionTags, nextStep]);
+  const handleContinue = useHandleContinue(localTags, updateTransactionTags, nextStep);
 
   const dialog = useTagRuleDialog(localTags);
   const handleTagRuleApplied = useTagRuleHandler({
     addPendingTagRuleChangeSet,
     dialogGroupNameRef: dialog.dialogGroupNameRef,
+    dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
     setLocalTags,
     setSuggestedTagMeta,
     suggestedTagMeta,

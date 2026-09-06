@@ -1,3 +1,5 @@
+import { reconcilePendingTagRule } from './tag-rule-reconcile';
+
 import type {
   ChangeSet,
   CommitTagRuleChangeSet,
@@ -85,6 +87,10 @@ function validateChangeSetEntities(
  * ID (`temp:entity:*`) referenced by a ChangeSet op must exist in the pending
  * entity list.
  *
+ * Staged tag rules are re-checked against the current tags of the rows they
+ * were derived from, so a rule cannot carry a tag the user has since edited
+ * away — see `reconcilePendingTagRule`.
+ *
  * Returns a shallow snapshot (spread copies of input arrays). The store's
  * replace-not-mutate pattern guarantees object identity changes on updates,
  * so shallow copies are sufficient for snapshot isolation.
@@ -107,10 +113,13 @@ export function buildCommitPayload({
   const validTempEntityIds = new Set(pendingEntities.map((e) => e.tempId));
   validateChangeSetEntities(pendingChangeSets, validTempEntityIds, 'ChangeSet');
   validateChangeSetEntities(pendingTagRuleChangeSets, validTempEntityIds, 'Tag rule ChangeSet');
+  const reconciledTagRules = pendingTagRuleChangeSets
+    .map((pcs) => reconcilePendingTagRule(pcs, confirmedTransactions))
+    .filter((pcs): pcs is PendingTagRuleChangeSet => pcs !== null);
   return {
     entities: [...pendingEntities],
     changeSets: pendingChangeSets.map((pcs) => pcs.changeSet),
-    tagRuleChangeSets: pendingTagRuleChangeSets.map((pcs) => ({
+    tagRuleChangeSets: reconciledTagRules.map((pcs) => ({
       changeSet: pcs.changeSet,
       ...(pcs.acceptedNewTags ? { acceptedNewTags: pcs.acceptedNewTags } : {}),
     })),

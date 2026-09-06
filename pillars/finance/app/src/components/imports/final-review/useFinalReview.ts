@@ -9,9 +9,12 @@ import {
 } from '../../../finance-api/index.js';
 import { buildCommitPayload, importSourceFor } from '../../../lib/commit-payload';
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
+import { reconcilePendingTagRule } from '../../../lib/tag-rule-reconcile';
 import { clearPersistedImport } from '../../../store/import-store-lifecycle';
 import { useImportStore } from '../../../store/importStore';
 import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
+
+import type { PendingTagRuleChangeSet } from '../../../store/importStore';
 
 type CommitResponse = ImportsCommitImportResponses[200];
 type CommitBody = NonNullable<ImportsCommitImportData['body']>;
@@ -32,13 +35,31 @@ function useStoreSlice() {
   };
 }
 
-function useDerivedCounts(slice: ReturnType<typeof useStoreSlice>) {
-  const {
-    processedTransactions,
-    confirmedTransactions,
-    pendingChangeSets,
-    pendingTagRuleChangeSets,
-  } = slice;
+/**
+ * The staged tag rules as they will actually be committed — narrowed to the
+ * tags their source rows still carry.
+ *
+ * Final Review reads this rather than the raw staged list so the summary is
+ * the commit's own content: before POPS-3106 it displayed a rule's staged tags
+ * while the commit sent something else, and the discrepancy only surfaced as
+ * an atomic rejection naming a tag shown nowhere on the page.
+ */
+function useReconciledTagRules(slice: ReturnType<typeof useStoreSlice>) {
+  const { pendingTagRuleChangeSets, confirmedTransactions } = slice;
+  return useMemo(
+    () =>
+      pendingTagRuleChangeSets
+        .map((pcs) => reconcilePendingTagRule(pcs, confirmedTransactions))
+        .filter((pcs): pcs is PendingTagRuleChangeSet => pcs !== null),
+    [pendingTagRuleChangeSets, confirmedTransactions]
+  );
+}
+
+function useDerivedCounts(
+  slice: ReturnType<typeof useStoreSlice>,
+  reconciledTagRuleChangeSets: PendingTagRuleChangeSet[]
+) {
+  const { processedTransactions, confirmedTransactions, pendingChangeSets } = slice;
   const txnBreakdown = useMemo(
     () => ({
       matched: processedTransactions.matched.length,
@@ -62,10 +83,25 @@ function useDerivedCounts(slice: ReturnType<typeof useStoreSlice>) {
     [pendingChangeSets]
   );
   const totalTagRuleOps = useMemo(
-    () => pendingTagRuleChangeSets.reduce((sum, pcs) => sum + pcs.changeSet.ops.length, 0),
-    [pendingTagRuleChangeSets]
+    () => reconciledTagRuleChangeSets.reduce((sum, pcs) => sum + pcs.changeSet.ops.length, 0),
+    [reconciledTagRuleChangeSets]
   );
   return { txnBreakdown, tagAssignmentCount, taggedTxnCount, totalOps, totalTagRuleOps };
+}
+
+function commitBodyFor(slice: ReturnType<typeof useStoreSlice>, commitKey: string): CommitBody {
+  const payload = buildCommitPayload({
+    pendingEntities: slice.pendingEntities,
+    pendingChangeSets: slice.pendingChangeSets,
+    pendingTagRuleChangeSets: slice.pendingTagRuleChangeSets,
+    confirmedTransactions: slice.confirmedTransactions,
+    source: importSourceFor(slice.dialectId, slice.sourceFileNames),
+  });
+  return {
+    ...payload,
+    changeSets: payload.changeSets.map(toRestCorrectionChangeSet),
+    commitKey,
+  };
 }
 
 /**
@@ -80,8 +116,9 @@ function useDerivedCounts(slice: ReturnType<typeof useStoreSlice>) {
  */
 export function useFinalReview() {
   const slice = useStoreSlice();
-  const counts = useDerivedCounts(slice);
-  const tagRuleAddCollisions = useTagRuleAddCollisions(slice.pendingTagRuleChangeSets);
+  const reconciledTagRuleChangeSets = useReconciledTagRules(slice);
+  const counts = useDerivedCounts(slice, reconciledTagRuleChangeSets);
+  const tagRuleAddCollisions = useTagRuleAddCollisions(reconciledTagRuleChangeSets);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitKey] = useState(() => crypto.randomUUID());
@@ -116,24 +153,11 @@ export function useFinalReview() {
     setConfirmOpen(true);
   };
   const cancelConfirm = () => setConfirmOpen(false);
-  const confirmCommit = () => {
-    const payload = buildCommitPayload({
-      pendingEntities: slice.pendingEntities,
-      pendingChangeSets: slice.pendingChangeSets,
-      pendingTagRuleChangeSets: slice.pendingTagRuleChangeSets,
-      confirmedTransactions: slice.confirmedTransactions,
-      source: importSourceFor(slice.dialectId, slice.sourceFileNames),
-    });
-    commitMutation.mutate({
-      ...payload,
-      changeSets: payload.changeSets.map(toRestCorrectionChangeSet),
-      commitKey,
-    });
-  };
+  const confirmCommit = () => commitMutation.mutate(commitBodyFor(slice, commitKey));
   return {
     pendingEntities: slice.pendingEntities,
     pendingChangeSets: slice.pendingChangeSets,
-    pendingTagRuleChangeSets: slice.pendingTagRuleChangeSets,
+    pendingTagRuleChangeSets: reconciledTagRuleChangeSets,
     tagRuleAddCollisions: tagRuleAddCollisions.data,
     accountName: slice.accountName,
     ...counts,

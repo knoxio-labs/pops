@@ -372,3 +372,77 @@ describe('importStore — pendingChangeSets (local-first-import)', () => {
     expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
 });
+
+describe('importStore — staging a tag rule is idempotent (POPS-3106)', () => {
+  beforeEach(() => {
+    useImportStore.getState().reset();
+  });
+
+  const rule = (tags: string[], entityId: string | null = 'entity-1') => ({
+    changeSet: {
+      source: 'import-batch',
+      ops: [
+        {
+          op: 'add' as const,
+          data: {
+            descriptionPattern: 'PALMS ON OXFORD',
+            matchType: 'contains' as const,
+            entityId,
+            tags,
+          },
+        },
+      ],
+    },
+    source: 'import-batch',
+    sourceChecksums: ['chk-1'],
+  });
+
+  it('re-staging the same rule replaces it instead of appending a second copy', () => {
+    const store = useImportStore.getState();
+    store.addPendingTagRuleChangeSet(rule(['venue:pub']));
+    store.addPendingTagRuleChangeSet(rule(['venue:pub']));
+    expect(useImportStore.getState().pendingTagRuleChangeSets).toHaveLength(1);
+  });
+
+  it('keeps the latest staging of a rule, not the first', () => {
+    const store = useImportStore.getState();
+    store.addPendingTagRuleChangeSet(rule(['venue:bar']));
+    store.addPendingTagRuleChangeSet(rule(['venue:pub']));
+    const entries = useImportStore.getState().pendingTagRuleChangeSets;
+    const op = elementAt(elementAt(entries, 0).changeSet.ops, 0);
+    expect(op.op === 'add' ? op.data.tags : []).toEqual(['venue:pub']);
+  });
+
+  it('does not collapse rules that differ by entity scope', () => {
+    const store = useImportStore.getState();
+    store.addPendingTagRuleChangeSet(rule(['venue:pub'], 'entity-1'));
+    store.addPendingTagRuleChangeSet(rule(['venue:pub'], null));
+    expect(useImportStore.getState().pendingTagRuleChangeSets).toHaveLength(2);
+  });
+
+  it('a whole re-run of batch rule creation does not multiply the staged count', () => {
+    const store = useImportStore.getState();
+    for (let pass = 0; pass < 5; pass++) {
+      for (const merchant of ['PALMS', 'NOTION', 'EXPLOREN']) {
+        store.addPendingTagRuleChangeSet({
+          ...rule(['venue:pub']),
+          changeSet: {
+            source: 'import-batch',
+            ops: [
+              {
+                op: 'add' as const,
+                data: {
+                  descriptionPattern: merchant,
+                  matchType: 'contains' as const,
+                  entityId: null,
+                  tags: ['venue:pub'],
+                },
+              },
+            ],
+          },
+        });
+      }
+    }
+    expect(useImportStore.getState().pendingTagRuleChangeSets).toHaveLength(3);
+  });
+});
