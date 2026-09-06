@@ -10,8 +10,14 @@ import type {
   EntitiesDeleteData,
   EntitiesDeleteErrors,
   EntitiesDeleteResponses,
+  EntitiesGetAvatarData,
+  EntitiesGetAvatarErrors,
+  EntitiesGetAvatarResponses,
   EntitiesGetData,
   EntitiesGetErrors,
+  EntitiesGetPosterData,
+  EntitiesGetPosterErrors,
+  EntitiesGetPosterResponses,
   EntitiesGetResponses,
   EntitiesListData,
   EntitiesListResponses,
@@ -20,6 +26,12 @@ import type {
   EntitiesUpdateData,
   EntitiesUpdateErrors,
   EntitiesUpdateResponses,
+  EntitiesUploadAvatarData,
+  EntitiesUploadAvatarErrors,
+  EntitiesUploadAvatarResponses,
+  EntitiesUploadPosterData,
+  EntitiesUploadPosterErrors,
+  EntitiesUploadPosterResponses,
   HealthGetData,
   HealthGetResponses,
   RootGetData,
@@ -114,6 +126,66 @@ export const entitiesUpdate = <ThrowOnError extends boolean = false>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * `GET /entities/{id}/avatar` — serve the entity's avatar bytes.
+ */
+export const entitiesGetAvatar = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesGetAvatarData, ThrowOnError>
+): RequestResult<EntitiesGetAvatarResponses, EntitiesGetAvatarErrors, ThrowOnError> =>
+  (options.client ?? client).get<EntitiesGetAvatarResponses, EntitiesGetAvatarErrors, ThrowOnError>(
+    { url: '/entities/{id}/avatar', ...options }
+  );
+
+/**
+ * `PUT /entities/{id}/avatar` — upload/replace the entity's avatar.
+ */
+export const entitiesUploadAvatar = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesUploadAvatarData, ThrowOnError>
+): RequestResult<EntitiesUploadAvatarResponses, EntitiesUploadAvatarErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    EntitiesUploadAvatarResponses,
+    EntitiesUploadAvatarErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/entities/{id}/avatar',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...options.headers,
+    },
+  });
+
+/**
+ * `GET /entities/{id}/poster` — serve the entity's poster bytes.
+ */
+export const entitiesGetPoster = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesGetPosterData, ThrowOnError>
+): RequestResult<EntitiesGetPosterResponses, EntitiesGetPosterErrors, ThrowOnError> =>
+  (options.client ?? client).get<EntitiesGetPosterResponses, EntitiesGetPosterErrors, ThrowOnError>(
+    { url: '/entities/{id}/poster', ...options }
+  );
+
+/**
+ * `PUT /entities/{id}/poster` — upload/replace the entity's poster image.
+ */
+export const entitiesUploadPoster = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesUploadPosterData, ThrowOnError>
+): RequestResult<EntitiesUploadPosterResponses, EntitiesUploadPosterErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    EntitiesUploadPosterResponses,
+    EntitiesUploadPosterErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/entities/{id}/poster',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
       ...options.headers,
     },
   });

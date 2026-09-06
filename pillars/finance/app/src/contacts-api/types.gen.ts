@@ -11,10 +11,13 @@ export type ClientOptions = {
 export type CreateEntityBody = {
   abn?: string | null;
   aliases?: Array<string>;
+  avatarAssetId?: string | null;
+  colour?: string | null;
   defaultTags?: Array<string>;
   defaultTransactionType?: string | null;
   name: string;
   notes?: string | null;
+  posterAssetId?: string | null;
   type?: string | null;
 };
 
@@ -26,12 +29,15 @@ export type CreateEntityBody = {
 export type Entity = {
   abn?: string | null;
   aliases: Array<string>;
+  avatarAssetId?: string | null;
+  colour?: string | null;
   defaultTags: Array<string>;
   defaultTransactionType?: string | null;
   id: string;
   lastEditedTime: string;
   name: string;
   notes?: string | null;
+  posterAssetId?: string | null;
   type: string;
 };
 
@@ -177,10 +183,13 @@ export type SearchResponse = {
 export type UpdateEntityBody = {
   abn?: string | null;
   aliases?: Array<string> | null;
+  avatarAssetId?: string | null;
+  colour?: string | null;
   defaultTags?: Array<string> | null;
   defaultTransactionType?: string | null;
   name?: string | null;
   notes?: string | null;
+  posterAssetId?: string | null;
   type?: string | null;
 };
 
@@ -359,6 +368,146 @@ export type EntitiesUpdateResponses = {
 };
 
 export type EntitiesUpdateResponse = EntitiesUpdateResponses[keyof EntitiesUpdateResponses];
+
+export type EntitiesGetAvatarData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/avatar';
+};
+
+export type EntitiesGetAvatarErrors = {
+  /**
+   * No such entity, or no avatar set
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesGetAvatarError = EntitiesGetAvatarErrors[keyof EntitiesGetAvatarErrors];
+
+export type EntitiesGetAvatarResponses = {
+  /**
+   * Raw image bytes
+   */
+  200: Array<number>;
+};
+
+export type EntitiesGetAvatarResponse =
+  EntitiesGetAvatarResponses[keyof EntitiesGetAvatarResponses];
+
+export type EntitiesUploadAvatarData = {
+  /**
+   * Raw image bytes
+   */
+  body: Array<number>;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/avatar';
+};
+
+export type EntitiesUploadAvatarErrors = {
+  /**
+   * Disallowed content type or oversized upload
+   */
+  400: ErrorBody;
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesUploadAvatarError =
+  EntitiesUploadAvatarErrors[keyof EntitiesUploadAvatarErrors];
+
+export type EntitiesUploadAvatarResponses = {
+  /**
+   * Updated entity
+   */
+  200: EntityMutation;
+};
+
+export type EntitiesUploadAvatarResponse =
+  EntitiesUploadAvatarResponses[keyof EntitiesUploadAvatarResponses];
+
+export type EntitiesGetPosterData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/poster';
+};
+
+export type EntitiesGetPosterErrors = {
+  /**
+   * No such entity, or no poster set
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesGetPosterError = EntitiesGetPosterErrors[keyof EntitiesGetPosterErrors];
+
+export type EntitiesGetPosterResponses = {
+  /**
+   * Raw image bytes
+   */
+  200: Array<number>;
+};
+
+export type EntitiesGetPosterResponse =
+  EntitiesGetPosterResponses[keyof EntitiesGetPosterResponses];
+
+export type EntitiesUploadPosterData = {
+  /**
+   * Raw image bytes
+   */
+  body: Array<number>;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/poster';
+};
+
+export type EntitiesUploadPosterErrors = {
+  /**
+   * Disallowed content type or oversized upload
+   */
+  400: ErrorBody;
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesUploadPosterError =
+  EntitiesUploadPosterErrors[keyof EntitiesUploadPosterErrors];
+
+export type EntitiesUploadPosterResponses = {
+  /**
+   * Updated entity
+   */
+  200: EntityMutation;
+};
+
+export type EntitiesUploadPosterResponse =
+  EntitiesUploadPosterResponses[keyof EntitiesUploadPosterResponses];
 
 export type HealthGetData = {
   body?: never;
