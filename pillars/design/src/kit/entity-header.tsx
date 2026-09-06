@@ -46,13 +46,12 @@ export function EntityProfileHeader({ entity }: { entity: Entity }) {
       <div className="h-40 w-full rounded-t-lg sm:h-48" style={bannerStyle} />
       <div className="flex flex-col gap-4 px-6 pt-3 pb-2 sm:flex-row sm:items-end sm:gap-6">
         <Avatar
-          size="lg"
-          className="-mt-16 size-28 border-4 border-background shadow-sm sm:size-36"
+          className="-mt-16 size-32 border-4 border-background shadow-sm sm:-mt-24 sm:size-44"
           style={colour ? { boxShadow: `0 0 0 3px ${colour.ring}` } : undefined}
         >
           {entity.avatar && <AvatarImage src={entity.avatar} alt="" />}
           <AvatarFallback
-            className="text-xl font-medium sm:text-2xl"
+            className="text-3xl font-medium sm:text-5xl"
             style={colour ? { backgroundColor: colour.tint, color: colour.swatch } : undefined}
           >
             {initials(entity.name)}
@@ -89,7 +88,6 @@ export function EntityCompactHeader({ entity }: { entity: Entity }) {
       style={{ borderColor: colour?.swatch ?? 'transparent' }}
     >
       <Avatar
-        size="lg"
         className="size-14 shrink-0"
         style={colour ? { boxShadow: `0 0 0 2px ${colour.ring}` } : undefined}
       >
