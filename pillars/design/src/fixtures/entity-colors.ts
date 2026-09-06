@@ -12,7 +12,7 @@ export interface EntityColor {
   ring: string;
 }
 
-export const ENTITY_COLORS: EntityColor[] = [
+export const ENTITY_COLORS: [EntityColor, ...EntityColor[]] = [
   {
     id: 'rose',
     label: 'Rose',

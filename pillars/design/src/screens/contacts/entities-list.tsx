@@ -1,5 +1,7 @@
 import { entities, ENTITY_TYPE_LABEL, type Entity, type EntityType } from '@/fixtures/entities';
+import { EntityFormDialog } from '@/kit/entity-form';
 import { EntityAvatar } from '@/kit/entity-header';
+import { useEntityDialog } from '@/kit/use-entity-dialog';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import {
@@ -123,12 +125,13 @@ const ENTITY_TABLE_FILTERS: ColumnFilter[] = [
 ];
 
 export function EntitiesListPage({ rows }: { rows: Entity[] }) {
+  const dialog = useEntityDialog();
   const columns = [
     identityColumn,
     typeColumn,
     abnColumn,
     aliasesColumn,
-    buildActionsColumn({ onEdit: () => {} }),
+    buildActionsColumn({ onEdit: dialog.openWith }),
   ];
 
   return (
@@ -136,7 +139,11 @@ export function EntitiesListPage({ rows }: { rows: Entity[] }) {
       <PageHeader
         title="Entities"
         description={`${rows.length} entities`}
-        actions={<Button prefix={<Plus className="h-4 w-4" />}>Add entity</Button>}
+        actions={
+          <Button prefix={<Plus className="h-4 w-4" />} onClick={() => dialog.openWith(null)}>
+            Add entity
+          </Button>
+        }
       />
       <DataTable
         columns={columns}
@@ -147,6 +154,12 @@ export function EntitiesListPage({ rows }: { rows: Entity[] }) {
         paginated
         defaultPageSize={50}
         filters={ENTITY_TABLE_FILTERS}
+      />
+      <EntityFormDialog
+        key={dialog.key}
+        open={dialog.open}
+        onOpenChange={dialog.setOpen}
+        entity={dialog.entity}
       />
     </div>
   );
