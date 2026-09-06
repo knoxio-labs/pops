@@ -15,6 +15,11 @@ export {
   type CorrectionRow,
 } from './corrections-pure.js';
 export {
+  derivePatternFromDescriptions,
+  longestCommonSubstring,
+  MIN_DERIVED_PATTERN_LENGTH,
+} from './pattern-derivation.js';
+export {
   describeForMatching,
   isValidRegexPattern,
   normalizePatternForStorage,

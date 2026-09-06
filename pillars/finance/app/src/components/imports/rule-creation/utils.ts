@@ -1,7 +1,5 @@
 import {
-  describeForMatching,
-  normalizeDescription,
-  patternMatchesDescription,
+  derivePatternFromDescriptions,
   type ConfirmedTransaction,
   type TagRuleChangeSet,
 } from '@pops/finance';
@@ -59,68 +57,13 @@ function commonTagsForGroup(group: EntityGroup): string[] {
 }
 
 /**
- * The shortest derived pattern worth storing as a `contains` rule.
- *
- * The longest common substring of two descriptors that share no merchant is
- * a fragment of a word — `RATTLE N HUM` and `MICROSOFT*STORE` have `S` in
- * common — and a rule on a fragment tags everything. Below this length the
- * group is treated as having no usable pattern and no rule is proposed at
- * all, which is the safe direction: a missing rule is visible on the next
- * import, an over-broad one silently mislabels the whole ledger.
- */
-const MIN_PATTERN_LENGTH = 4;
-
-/**
- * The longest string contained in every one of `values`, or `''`.
- *
- * Scans the substrings of the shortest input from longest to shortest, so the
- * first candidate every other value contains is by definition the longest.
- * Descriptors are bank-statement length and a group is one merchant's rows,
- * so the cubic worst case is never approached in practice.
- */
-function longestCommonSubstring(values: string[]): string {
-  const [shortest, ...rest] = values.toSorted((a, b) => a.length - b.length);
-  if (shortest === undefined) return '';
-  for (let length = shortest.length; length > 0; length--) {
-    for (let start = 0; start + length <= shortest.length; start++) {
-      const candidate = shortest.slice(start, start + length);
-      if (rest.every((value) => value.includes(candidate))) return candidate;
-    }
-  }
-  return '';
-}
-
-/**
  * The `contains` pattern for a group, derived from the descriptions the group
- * was built from — never from the entity name.
- *
- * An entity name is a tidy label a human or the matcher chose; the descriptor
- * is what the bank actually sent, and the two routinely fail to line up under
- * {@link normalizeDescription}, which inserts no word boundaries and strips
- * neither `*` nor a bank's mid-word truncation. `MICROSOFT STORE` is not
- * contained in `MICROSOFT*STORE`, and `RATTLE N HUM BAR GRILL` is longer than
- * the `RATTLE N HUM BAR GRI` it would have to be contained in, so both stored
- * as rules that could never fire (POPS-2758).
- *
- * Taking the longest common substring of the group's own normalised
- * descriptors makes a match against every source row true by construction:
- * one row yields that row's whole descriptor, several yield the part they
- * share. Returns `null` when no pattern long enough to be specific survives.
+ * was built from — never from the entity name. See
+ * `derivePatternFromDescriptions` for why, and why it lives beside the
+ * matcher rather than here.
  */
 function derivePattern(group: EntityGroup): string | null {
-  const pattern = longestCommonSubstring(
-    group.txns.map((txn) => normalizeDescription(txn.description))
-  ).trim();
-  if (pattern.length < MIN_PATTERN_LENGTH) return null;
-
-  // Construction guarantees this; running the real predicate is what keeps the
-  // guarantee honest if normalisation ever changes under us. A proposal that
-  // matches none of its own source rows is exactly the bug, so it is dropped
-  // rather than offered.
-  const matchesOwnRows = group.txns.some((txn) =>
-    patternMatchesDescription(pattern, 'contains', describeForMatching(txn.description))
-  );
-  return matchesOwnRows ? pattern : null;
+  return derivePatternFromDescriptions(group.txns.map((txn) => txn.description));
 }
 
 /**
