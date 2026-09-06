@@ -127,6 +127,28 @@ export function setInstitutionLogoAssetId(
 }
 
 /**
+ * Point an institution at the contacts Entity it was migrated to (POPS-3062
+ * scaffolding — see `migrations/0097_institutions_migrated_entity_id.sql`).
+ * Split out from {@link updateInstitution} for the same reason
+ * {@link setInstitutionLogoAssetId} is: it is written by the one-off
+ * migration script, not the settings PATCH form, so `UpdateInstitutionInput`
+ * has no `migratedEntityId` field for a rename/recolour PATCH to touch by
+ * accident.
+ */
+export function setInstitutionMigratedEntityId(
+  db: FinanceDb,
+  id: string,
+  entityId: string
+): InstitutionRow {
+  getInstitution(db, id);
+  db.update(institutions)
+    .set({ migratedEntityId: entityId, updatedAt: new Date().toISOString() })
+    .where(eq(institutions.id, id))
+    .run();
+  return getInstitution(db, id);
+}
+
+/**
  * Every user table carrying a column literally named `institution_id`,
  * quoted for interpolation into raw SQL. Shared by {@link isInstitutionInUse}
  * (read) and {@link mergeInstitutions} (write) so both stay accurate as more

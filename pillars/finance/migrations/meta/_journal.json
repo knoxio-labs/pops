@@ -337,6 +337,13 @@
       "when": 1781913600041,
       "tag": "0096_import_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1781913600042,
+      "tag": "0097_institutions_migrated_entity_id",
+      "breakpoints": true
     }
   ]
 }
