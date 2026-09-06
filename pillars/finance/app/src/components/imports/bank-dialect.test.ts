@@ -24,6 +24,14 @@ function parseHeaderless(csv: string, columns: readonly string[]) {
 }
 
 describe('bankDialect', () => {
+  it('declares ANZ transaction accounts as headerless with debits already signed', () => {
+    expect(bankDialect('ANZ')).toMatchObject({
+      hasHeader: false,
+      columns: HEADERLESS_ANZ_COLUMNS,
+      amountSign: 'debit-negative',
+    });
+  });
+
   it('declares ANZ credit card as headerless with debits already signed', () => {
     expect(bankDialect('ANZ Credit Card')).toMatchObject({
       hasHeader: false,
@@ -39,7 +47,7 @@ describe('bankDialect', () => {
   });
 
   it('leaves the headed, debit-positive banks on the default', () => {
-    for (const bank of ['ANZ', 'Amex', 'Up'] as const) {
+    for (const bank of ['Amex', 'Up'] as const) {
       expect(bankDialect(bank)).toMatchObject({
         hasHeader: true,
         amountSign: 'debit-positive',
