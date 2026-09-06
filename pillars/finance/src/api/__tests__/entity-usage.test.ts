@@ -70,6 +70,8 @@ const SEED: SeedContact[] = [
     type: 'company',
     aliases: ['Alpha Co', 'ALP'],
     defaultTags: ['groceries'],
+    avatarAssetId: 'blob-alpha',
+    colour: '#e04667',
   },
   { id: 'ent-bravo', name: 'Bravo', type: 'person' },
   { id: 'ent-charlie', name: 'Charlie', type: 'company' },
@@ -136,6 +138,16 @@ describe('entityUsage — transactionCount rollup over the live contact set', ()
     const alpha = data[0];
     expect(alpha?.aliases).toEqual(['Alpha Co', 'ALP']);
     expect(alpha?.defaultTags).toEqual(['groceries']);
+  });
+
+  it('passes avatarAssetId and colour through from the contact wire shape', async () => {
+    const { data } = await client(fakeWithSeed()).entityUsage.list({ search: 'Alpha' });
+    expect(data[0]).toMatchObject({ avatarAssetId: 'blob-alpha', colour: '#e04667' });
+  });
+
+  it('reports null avatarAssetId and colour for a contact with neither set', async () => {
+    const { data } = await client(fakeWithSeed()).entityUsage.list({ search: 'Bravo' });
+    expect(data[0]).toMatchObject({ avatarAssetId: null, colour: null });
   });
 
   it('degrades to an empty list when contacts is unavailable', async () => {

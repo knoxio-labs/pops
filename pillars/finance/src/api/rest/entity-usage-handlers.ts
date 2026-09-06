@@ -31,6 +31,8 @@ function toEntityUsage(row: EntityUsageRow) {
     notes: row.notes,
     lastEditedTime: row.lastEditedTime,
     transactionCount: row.transactionCount,
+    avatarAssetId: row.avatarAssetId,
+    colour: row.colour,
   };
 }
 

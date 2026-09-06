@@ -13487,6 +13487,14 @@
                             },
                             "type": "array"
                           },
+                          "avatarAssetId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "colour": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "defaultTags": {
                             "items": {
                               "type": "string"
@@ -13527,7 +13535,9 @@
                           "defaultTags",
                           "notes",
                           "lastEditedTime",
-                          "transactionCount"
+                          "transactionCount",
+                          "avatarAssetId",
+                          "colour"
                         ],
                         "type": "object"
                       },

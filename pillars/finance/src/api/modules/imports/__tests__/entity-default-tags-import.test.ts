@@ -52,6 +52,8 @@ function contact(over: Partial<ContactEntity> & { id: string; name: string }): C
     defaultTags: [],
     notes: null,
     lastEditedTime: '2026-01-01T00:00:00.000Z',
+    avatarAssetId: null,
+    colour: null,
     ...over,
   };
 }

@@ -26,6 +26,8 @@ export interface SeedContact {
   defaultTags?: string[];
   notes?: string | null;
   lastEditedTime?: string;
+  avatarAssetId?: string | null;
+  colour?: string | null;
 }
 
 export interface ContactsFake extends ContactsClient {
@@ -52,6 +54,8 @@ function toEntity(seed: SeedContact): ContactEntity {
     defaultTags: seed.defaultTags ?? [],
     notes: seed.notes ?? null,
     lastEditedTime: seed.lastEditedTime ?? '2026-01-01T00:00:00.000Z',
+    avatarAssetId: seed.avatarAssetId ?? null,
+    colour: seed.colour ?? null,
   };
 }
 

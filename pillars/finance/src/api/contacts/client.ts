@@ -50,62 +50,12 @@ import {
 } from '../pillars/outbound.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
+import type { ContactEntity, ContactsRouter, CreateOrFetchResult } from './types.js';
+
+export type { ContactEntity, ContactsRouter, CreateOrFetchResult, ListResponse } from './types.js';
+
 /** The contacts pillar id, as registered with the registry. */
 export const CONTACTS_PILLAR_ID = 'contacts';
-
-/** A full contact, mirroring the contacts `Entity` wire shape (no notion/owner columns). */
-export interface ContactEntity {
-  id: string;
-  name: string;
-  type: string;
-  abn: string | null;
-  aliases: string[];
-  defaultTransactionType: string | null;
-  defaultTags: string[];
-  notes: string | null;
-  lastEditedTime: string;
-}
-
-/** The contacts `entities.list` envelope (page of contacts + pagination cursor). */
-export interface ListResponse {
-  data: ContactEntity[];
-  pagination: { total: number; limit: number; offset: number; hasMore: boolean };
-}
-
-/**
- * Typed handle over the subset of the contacts router the finance backend
- * calls. Declared as a `type` (not `interface`) so it satisfies the SDK proxy's
- * `Record<string, unknown>` constraint — an interface does not (see the same
- * note in the orchestrator's `PillarSearchRouter`). Exported for unit tests
- * that drive `createContactsClient` against a stub handle.
- */
-export type ContactsRouter = {
-  entities: {
-    list: (input: {
-      search?: string;
-      type?: string;
-      limit?: number;
-      offset?: number;
-    }) => Promise<ListResponse>;
-    get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
-    create: (input: {
-      name: string;
-      type: string;
-    }) => Promise<{ data: ContactEntity; message: string }>;
-    update: (input: {
-      id: string;
-      defaultTags: string[];
-    }) => Promise<{ data: ContactEntity; message: string }>;
-  };
-};
-
-/** Outcome of a create-or-fetch-by-name pre-create against contacts. */
-export interface CreateOrFetchResult {
-  id: string;
-  name: string;
-  /** True only when this call inserted a NEW contact; false when it reused an existing one. */
-  created: boolean;
-}
 
 /**
  * The injectable seam every finance live-fetch path depends on. The default

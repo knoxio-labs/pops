@@ -28,6 +28,8 @@ export const EntityUsageSchema = z.object({
   notes: z.string().nullable(),
   lastEditedTime: z.string(),
   transactionCount: z.number(),
+  avatarAssetId: z.string().nullable(),
+  colour: z.string().nullable(),
 });
 
 const EntityUsageQuery = z.object({
