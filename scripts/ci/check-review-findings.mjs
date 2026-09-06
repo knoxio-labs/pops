@@ -45,15 +45,29 @@
  * `pr-review.yml`'s own selection (`| last // empty`) so the two halves of
  * this mechanism never disagree about which comment is authoritative.
  *
- * THE ESCAPE HATCH. `pr-review-state.mjs` resolves a finding by checking
- * whether its snippet is still present in the file — POPS-2669 tracks a bug
- * where that check can never go true again: a one-line anchor that also
- * occurs, correctly, in an unrelated branch of the same function means the
- * finding never resolves no matter what the author does. Without a way out,
- * a check that blocks on ANY open finding would wedge a PR permanently on
- * this bug — a worse outcome than the one POPS-2661 exists to fix, because
- * it gets disabled within a day. So a finding can be dismissed by id: a plain
- * PR comment containing
+ * WHAT A PR CARRYING A STALE FINDING DOES, AND HOW IT GETS UNSTUCK. Two
+ * mechanisms, in the order to reach for them.
+ *
+ * First, the reviewer is asked. Since POPS-2669, `pr-review.mjs`'s `plan`
+ * offers every carried open finding whose own file the current diff touched
+ * back to the model as a RE-JUDGE list, and `publish` marks resolved the ids
+ * the model says no longer hold. So the ordinary way out of a stale finding
+ * is the ordinary way out of a real one: push the fix. The next review reads
+ * the file, sees the defect gone, and clears it — even though its anchor
+ * snippet is still sitting in the file where it is correct.
+ *
+ * That is bounded on purpose, and every bound fails closed. A finding whose
+ * file the diff did not touch is never offered, because nothing in the diff
+ * could have fixed it. Only an id that was offered can be cleared, so a
+ * hallucinated or copy-pasted id does nothing. A run with no model output, an
+ * unreadable offered list, or a workflow that forgot to pass one clears
+ * nothing at all. Every failure of the mechanism leaves this gate exactly as
+ * closed as it was.
+ *
+ * Second, and only when the first does not apply — the reviewer keeps
+ * re-reporting a finding you believe is wrong, or the defect was fixed
+ * somewhere the reviewer will not look — a finding can be dismissed by id: a
+ * plain PR comment containing
  *
  *   <!-- review-findings-gate-dismiss: <finding-id> -->
  *
