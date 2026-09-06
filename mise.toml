@@ -136,7 +136,10 @@ run = "mise run build && mise run -j 99 run-all dev"
 
 [tasks.lint]
 description = "Lint all units (oxlint is workspace-wide, no per-unit orchestration)"
-run = "oxlint --type-aware"
+# The preflight comes first because oxlint's answer in a fresh worktree is
+# worse than no answer: a tsconfig error pointing at libs/ui that reads as
+# pre-existing repo debt on main, which it is not (POPS-2400).
+run = ["node scripts/check-deps-materialised.mjs", "oxlint --type-aware"]
 
 [tasks.registry]
 description = "Regenerate the module-registry static manifest (src/generated.ts)"
