@@ -1,6 +1,9 @@
 import type { ConfirmedTransaction, TagRuleChangeSet } from '@pops/finance';
 
-import type { PendingTagRuleChangeSet } from '../store/importStore';
+// From the leaf types module rather than the store barrel: the store's actions
+// import `pendingTagRuleKey` from here, and going through the barrel would make
+// that a cycle.
+import type { PendingTagRuleChangeSet } from '../store/import-store-types';
 
 type TagRuleChangeSetOp = TagRuleChangeSet['ops'][number];
 
