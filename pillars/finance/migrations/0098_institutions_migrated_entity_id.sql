@@ -1,0 +1,12 @@
+-- POPS-3062. Scaffolding column for the finance→contacts institutions
+-- migration: once an institution has been backfilled into a `bank`-typed
+-- contacts Entity, its id is recorded here so a re-run of the migration
+-- script (`pillars/finance/scripts/migrate-institutions-to-entities.ts`) can
+-- find the target directly instead of re-deriving it from a name lookup, and
+-- so a partial run picks up cleanly where it left off.
+--
+-- No FOREIGN KEY — the id it points at lives in the contacts pillar's own
+-- SQLite database, not this one. Temporary: POPS-3063 reads this column to
+-- retarget `accounts.institutionId` onto `accounts.entityId`, and POPS-3064
+-- drops it along with the rest of `institutions`.
+ALTER TABLE `institutions` ADD `migrated_entity_id` text;
