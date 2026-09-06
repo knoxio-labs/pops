@@ -1,3 +1,4 @@
+import { pendingTagRuleKey } from '../lib/tag-rule-reconcile';
 import { findSimilarTransactions } from '../lib/transaction-utils';
 import {
   type AddPendingChangeSetInput,
@@ -118,6 +119,13 @@ export function buildPendingChangeSetActions(set: StoreSet, get: StoreGet) {
 
 export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
   return {
+    /**
+     * Staging is idempotent per rule identity: re-entering the step that
+     * proposes a rule restages it, and appending unconditionally is what let a
+     * 50-row import report 176 rule changes (POPS-3106). Same identity replaces
+     * in place, so the latest staging wins and the count stays the number of
+     * rules that will actually be written.
+     */
     addPendingTagRuleChangeSet: (
       input: AddPendingTagRuleChangeSetInput
     ): PendingTagRuleChangeSet => {
@@ -126,9 +134,22 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
         changeSet: input.changeSet,
         appliedAt: new Date().toISOString(),
         source: input.source,
+        sourceChecksums: input.sourceChecksums,
         ...(input.acceptedNewTags ? { acceptedNewTags: input.acceptedNewTags } : {}),
       };
-      set((prev) => ({ pendingTagRuleChangeSets: [...prev.pendingTagRuleChangeSets, entry] }));
+      const key = pendingTagRuleKey(entry);
+      set((prev) => {
+        const existing =
+          key === null
+            ? -1
+            : prev.pendingTagRuleChangeSets.findIndex((c) => pendingTagRuleKey(c) === key);
+        if (existing === -1) {
+          return { pendingTagRuleChangeSets: [...prev.pendingTagRuleChangeSets, entry] };
+        }
+        return {
+          pendingTagRuleChangeSets: prev.pendingTagRuleChangeSets.with(existing, entry),
+        };
+      });
       return entry;
     },
     listPendingTagRuleChangeSets: (): PendingTagRuleChangeSet[] => get().pendingTagRuleChangeSets,

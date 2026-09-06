@@ -13,6 +13,8 @@ export interface RuleProposal {
   pattern: string;
   tags: string[];
   affectsCount: number;
+  /** The rows `tags` was read from, so a later edit to them can narrow the staged rule (POPS-3106). */
+  sourceChecksums: string[];
 }
 
 type EntityGroup = { entityId: string | null; entityName: string; txns: ConfirmedTransaction[] };
@@ -88,6 +90,7 @@ export function computeProposals(confirmedTransactions: ConfirmedTransaction[]):
       pattern,
       tags,
       affectsCount: group.txns.length,
+      sourceChecksums: group.txns.map((txn) => txn.checksum),
     });
   }
   return proposals;

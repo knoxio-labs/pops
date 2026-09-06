@@ -450,6 +450,114 @@ describe('buildCommitPayload', () => {
   });
 });
 
+describe('buildCommitPayload staged tag rule reconciliation (POPS-3106)', () => {
+  function palmsRule(tags: string[], sourceChecksums: string[]): PendingTagRuleChangeSet {
+    return makePendingTagRuleChangeSet(
+      {
+        source: 'import-batch',
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'PALMS ON OXFORD', matchType: 'contains', tags },
+          },
+        ],
+      },
+      { acceptedNewTags: tags, sourceChecksums }
+    );
+  }
+
+  it('does not send a tag the user edited away after staging the rule', () => {
+    // The reported failure: a rule staged with `venue:bar`, the chip then
+    // changed to `venue:pub`. The UI showed Pub; the commit still carried Bar
+    // and was refused whole against the closed `venue` namespace.
+    const txn = makeConfirmedTransaction({
+      checksum: 'chk-palms',
+      tags: ['occasion:out', 'venue:pub'],
+    });
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [palmsRule(['occasion:out', 'venue:bar'], ['chk-palms'])],
+      confirmedTransactions: [txn],
+      source: SOURCE,
+    });
+
+    const sent = JSON.stringify(payload.tagRuleChangeSets);
+    expect(sent).not.toContain('venue:bar');
+    expect(sent).toContain('occasion:out');
+  });
+
+  it('drops a staged rule whose every tag was edited away', () => {
+    const txn = makeConfirmedTransaction({ checksum: 'chk-palms', tags: ['venue:pub'] });
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [palmsRule(['venue:bar'], ['chk-palms'])],
+      confirmedTransactions: [txn],
+      source: SOURCE,
+    });
+    expect(payload.tagRuleChangeSets).toEqual([]);
+  });
+
+  it('does not upsert a dropped tag into the vocabulary via acceptedNewTags', () => {
+    const txn = makeConfirmedTransaction({ checksum: 'chk-palms', tags: ['occasion:out'] });
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [palmsRule(['occasion:out', 'venue:bar'], ['chk-palms'])],
+      confirmedTransactions: [txn],
+      source: SOURCE,
+    });
+    expect(elementAt(payload.tagRuleChangeSets, 0).acceptedNewTags).toEqual(['occasion:out']);
+  });
+
+  it('holds the invariant that every rule tag is backed by a source row, for any edit sequence', () => {
+    const vocabulary = ['occasion:out', 'venue:pub', 'contains:alcohol', 'venue:bar'];
+    const checksums = ['chk-a', 'chk-b', 'chk-c'];
+
+    // Stand-in for the user editing chips in any order: each case is a
+    // different surviving tag set per row against the same staged rule.
+    for (let mask = 0; mask < 1 << vocabulary.length; mask++) {
+      const surviving = vocabulary.filter((_, i) => (mask & (1 << i)) !== 0);
+      const transactions = checksums.map((checksum) =>
+        makeConfirmedTransaction({ checksum, tags: surviving })
+      );
+      const payload = buildCommitPayload({
+        pendingEntities: [],
+        pendingChangeSets: [],
+        pendingTagRuleChangeSets: [palmsRule(vocabulary, checksums)],
+        confirmedTransactions: transactions,
+        source: SOURCE,
+      });
+
+      const live = new Set(surviving);
+      for (const entry of payload.tagRuleChangeSets) {
+        for (const op of entry.changeSet.ops) {
+          if (op.op !== 'add' && op.op !== 'edit') continue;
+          for (const tag of op.data.tags ?? []) {
+            expect(live.has(tag)).toBe(true);
+          }
+          expect(op.data.tags?.length ?? 0).toBeGreaterThan(0);
+        }
+        for (const tag of entry.acceptedNewTags ?? []) expect(live.has(tag)).toBe(true);
+      }
+    }
+  });
+
+  it('leaves a rule staged before provenance was recorded untouched', () => {
+    const pcs = makePendingTagRuleChangeSet(sampleTagRuleChangeSet);
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [pcs],
+      confirmedTransactions: [makeConfirmedTransaction({ tags: [] })],
+      source: SOURCE,
+    });
+    expect(payload.tagRuleChangeSets).toHaveLength(1);
+    expect(elementAt(payload.tagRuleChangeSets, 0).changeSet).toEqual(sampleTagRuleChangeSet);
+  });
+});
+
 describe('importSourceFor', () => {
   it('names the CSV dialect when every file is a CSV', () => {
     expect(importSourceFor('ANZ Credit Card', ['jun.csv', 'jul.CSV'])).toEqual({

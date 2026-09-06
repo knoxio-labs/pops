@@ -54,12 +54,23 @@ export interface PendingTagRuleChangeSet {
    * creation), where every tag the ChangeSet carries is upserted.
    */
   acceptedNewTags?: string[];
+  /**
+   * Checksums of the confirmed transactions this rule's tags were read from,
+   * so the commit payload can re-check the rule against those rows' *current*
+   * tags instead of the copy taken when it was staged (POPS-3106).
+   *
+   * Optional on the stored shape because sessions persisted before this
+   * existed have none; required on the input, so every staging path has to say
+   * where its tags came from.
+   */
+  sourceChecksums?: string[];
 }
 
 export interface AddPendingTagRuleChangeSetInput {
   changeSet: TagRuleChangeSet;
   source: string;
   acceptedNewTags?: string[];
+  sourceChecksums: string[];
 }
 
 export interface ProcessedTransaction extends BaseProcessedTransaction {
