@@ -63,6 +63,22 @@ export type RepairPlan =
   /** The merchant has no stored transactions yet — unused, not broken. */
   | { action: 'unused' }
   /**
+   * A `regex` rule that does not currently fire. Left alone entirely.
+   *
+   * POPS-2758's defect is a pattern derived from an entity *name*, which only
+   * an `exact`/`contains` rule can carry — a regex was hand-written, and a
+   * regex that matches nothing today is as likely to be deliberately narrow
+   * as broken. Worse, every tool this pass has for judging one destroys it:
+   * `normalizeDescription` uppercases metacharacters (`\d` -> `\D`), strips
+   * digits out of quantifiers (`a{2,3}` -> `a{,}`) and deletes `.`, which is
+   * exactly why {@link normalizePatternForStorage} stores a regex verbatim.
+   * Run over a regex it still leaves the merchant's name intact, so the
+   * mis-assignment guard would pass and the rule would be rewritten into a
+   * `contains` pattern — silently replacing an author's regex with something
+   * they never wrote.
+   */
+  | { action: 'regex' }
+  /**
    * The rule's own pattern shares nothing with its merchant's descriptors,
    * which is entity mis-assignment rather than a bad derivation. Re-deriving
    * would silently repoint the rule at a merchant its author never meant.
@@ -139,6 +155,7 @@ export function planRuleRepair(rule: RuleUnderRepair): RepairPlan {
   if (rule.entityId === null) return { action: 'unscoped' };
   if (rule.descriptions.length === 0) return { action: 'unused' };
   if (matchesOwnMerchant(rule)) return { action: 'ok' };
+  if (rule.matchType === 'regex') return { action: 'regex' };
 
   if (!sharesGroundWithMerchant(rule)) {
     return {
@@ -247,7 +264,7 @@ function main(): void {
     for (const { plan } of planned) counts.set(plan.action, (counts.get(plan.action) ?? 0) + 1);
 
     console.warn(`tag rules scanned: ${rules.length}`);
-    for (const action of ['ok', 'repair', 'disable', 'review', 'unused', 'unscoped']) {
+    for (const action of ['ok', 'repair', 'disable', 'review', 'regex', 'unused', 'unscoped']) {
       console.warn(`  ${action}: ${counts.get(action) ?? 0}`);
     }
 

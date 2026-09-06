@@ -96,6 +96,30 @@ describe('planRuleRepair', () => {
     expect(plan.action === 'disable' && plan.reason).toContain('covers too little');
   });
 
+  it('never rewrites a regex rule, whose pattern this pass has no safe way to judge', () => {
+    const plan = planRuleRepair(
+      rule({
+        pattern: '^IMPERIAL HOTEL.*\\d{2}$',
+        matchType: 'regex',
+        descriptions: ['IMPERIAL HOTEL ERSKIN 2 ERSKINEVILLE'],
+      })
+    );
+
+    expect(plan).toEqual({ action: 'regex' });
+  });
+
+  it('still reports a regex rule that fires as ok, not as skipped', () => {
+    expect(
+      planRuleRepair(
+        rule({
+          pattern: 'imperial hotel',
+          matchType: 'regex',
+          descriptions: ['IMPERIAL HOTEL ERSKIN 2 ERSKINEVILLE'],
+        })
+      )
+    ).toEqual({ action: 'ok' });
+  });
+
   it('leaves an unscoped rule alone — there is no merchant to derive from', () => {
     expect(planRuleRepair(rule({ entityId: null, descriptions: [] }))).toEqual({
       action: 'unscoped',
