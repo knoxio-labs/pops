@@ -18,7 +18,9 @@
  *     exactly the queued change — not empty, and not "everything". (The
  *     workflow step this replaces carried a comment claiming push and
  *     merge_group behave the same way; they do not — see the git history of
- *     that comment for why it was wrong.)
+ *     that comment for why it was wrong.) Note that this field is a FULL ref,
+ *     `refs/heads/main`, where `github.base_ref` is the bare `main`;
+ *     `branchName` below is what reconciles the two.
  *   - `push` (to `main`) — `github.base_ref` and `merge_group.base_ref` are
  *     both empty, so `--ref` falls back to the literal `main`. `origin/main`
  *     has already been refreshed by this same checkout, so it equals HEAD:
@@ -88,17 +90,38 @@ function tryGit(args, cwd) {
 }
 
 /**
+ * A `--ref` as the workflow hands it over, reduced to the branch name that
+ * `origin/<name>` is built from.
+ *
+ * The two events that supply a ref disagree on its shape: `github.base_ref` on
+ * a `pull_request` is the bare branch (`main`), while
+ * `github.event.merge_group.base_ref` is the full ref (`refs/heads/main`).
+ * Passing the latter through unchanged asks git for `origin/refs/heads/main`,
+ * which no checkout has — so every merge-group entry took the no-base branch
+ * and reported every leg, green and useless. See POPS-2166.
+ *
+ * @param {string} ref
+ * @returns {string} The bare branch name, or `''` when there is nothing left.
+ */
+function branchName(ref) {
+  const trimmed = ref.trim();
+  const prefix = 'refs/heads/';
+  return trimmed.startsWith(prefix) ? trimmed.slice(prefix.length).trim() : trimmed;
+}
+
+/**
  * The base commit to diff HEAD against, or `null` when none is usable.
  *
  * @param {object} args
- * @param {string} args.ref  A branch name, e.g. `main` — not a full ref, not a SHA.
+ * @param {string} args.ref  A branch name (`main`) or a full branch ref
+ *   (`refs/heads/main`) — not a SHA, and not a tag or PR ref.
  * @param {string} args.cwd
  * @returns {string | null}
  */
 export function resolveBase({ ref, cwd }) {
-  const trimmed = ref.trim();
-  if (trimmed.length === 0) return null;
-  return tryGit(['merge-base', `origin/${trimmed}`, 'HEAD'], cwd);
+  const branch = branchName(ref);
+  if (branch.length === 0) return null;
+  return tryGit(['merge-base', `origin/${branch}`, 'HEAD'], cwd);
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +245,46 @@ function selfTest() {
   });
 
   cases.push({
+    name:
+      'merge_group shape: --ref arrives as the full ref `refs/heads/main` and resolves the same ' +
+      'base as the bare name',
+    run: () => {
+      const { dir, mainTip } = fixtureRepo();
+      scratch.push(dir);
+      writeIn(dir, 'queued.txt', 'queued change\n');
+      gitIn(dir, ['add', '-A']);
+      gitIn(dir, ['commit', '--quiet', '-m', 'queued pr, squashed onto its base']);
+      // The case above feeds `main`, which is the shape `github.base_ref`
+      // gives on a `pull_request` — and only that shape. The merge-group lane
+      // hands over `github.event.merge_group.base_ref`, which is the full ref,
+      // so for months this script was proven against an input production never
+      // sent it. Job 101488129641 printed `No merge base against
+      // origin/refs/heads/main — reporting every leg.` while this self-test
+      // passed.
+      const base = resolveBase({ ref: 'refs/heads/main', cwd: dir });
+      assert(base === mainTip, `expected main's tip ${mainTip}, got ${String(base)}`);
+      // And prove it was the normalisation that resolved it rather than git
+      // being lenient about the prefix: the literal ref must not exist.
+      assert(
+        tryGit(['rev-parse', '--verify', '--quiet', 'origin/refs/heads/main'], dir) === null,
+        'origin/refs/heads/main must not resolve — otherwise this case proves nothing'
+      );
+    },
+  });
+
+  cases.push({
+    name: 'refuses rather than guesses when --ref is a bare `refs/heads/` with no branch after it',
+    run: () => {
+      const { dir } = fixtureRepo();
+      scratch.push(dir);
+      assert(
+        resolveBase({ ref: 'refs/heads/', cwd: dir }) === null,
+        'a ref prefix with no branch name must resolve to null, not to `origin/`'
+      );
+    },
+  });
+
+  cases.push({
     name: 'push shape: origin/main already equals HEAD — base IS head, diff is empty, silence is correct',
     run: () => {
       const { dir, mainTip } = fixtureRepo();
@@ -280,9 +343,10 @@ function selfTest() {
     return false;
   }
   console.log(
-    `self-test OK — resolves the pull_request fork point, the merge_group base (queued diff, ` +
-      `neither empty nor everything), the push no-op, and refuses rather than guessing when ` +
-      `origin/<ref> is missing (${String(cases.length)} cases).`
+    `self-test OK — resolves the pull_request fork point, the merge_group base from both the ` +
+      `bare name and the full \`refs/heads/\` ref (queued diff, neither empty nor everything), ` +
+      `the push no-op, and refuses rather than guessing when origin/<ref> is missing ` +
+      `(${String(cases.length)} cases).`
   );
   return true;
 }

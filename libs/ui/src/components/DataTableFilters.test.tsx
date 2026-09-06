@@ -90,6 +90,19 @@ describe('FilterBar', () => {
     expect(matches()).toBe('Bunnings');
   });
 
+  it('keeps both date fields in a vertical range control', () => {
+    render(<Harness filters={[{ id: 'merchant', type: 'daterange', label: 'Date range' }]} />);
+
+    const from = control('Date range (from)');
+    const to = control('Date range (to)');
+    const range = from.closest('div.flex.flex-col');
+
+    expect(range).not.toBeNull();
+    expect(range).toHaveClass('flex-col');
+    expect(range).not.toHaveClass('sm:flex-row');
+    expect(to).toBeInTheDocument();
+  });
+
   it('counts only filters that hold a value, and clears them all', () => {
     render(<Harness />);
     expect(screen.queryByText(/filters? active/)).not.toBeInTheDocument();

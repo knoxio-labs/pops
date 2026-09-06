@@ -128,7 +128,7 @@ export function setInstitutionLogoAssetId(
 
 /**
  * Point an institution at the contacts Entity it was migrated to (POPS-3062
- * scaffolding — see `migrations/0097_institutions_migrated_entity_id.sql`).
+ * scaffolding — see `migrations/0098_institutions_migrated_entity_id.sql`).
  * Split out from {@link updateInstitution} for the same reason
  * {@link setInstitutionLogoAssetId} is: it is written by the one-off
  * migration script, not the settings PATCH form, so `UpdateInstitutionInput`
