@@ -159,6 +159,14 @@ describe('run-all: clients/* discovery (real mise binary)', () => {
     };
   }
 
+  // Every case below shells out to the real `mise` binary, which then fans the
+  // task out across the fixture's units — several subprocesses per assertion,
+  // and none of them bounded by what is being asserted. POPS-2053 measured the
+  // sibling suite's real-mise test at 6-10s under ~20 concurrent worktrees, so
+  // vitest's 5s default here would fail on the host's load rather than on this
+  // guard. Matches the 120s the other real-mise suites use.
+  const REAL_MISE_TIMEOUT_MS = 120_000;
+
   function runAllEcho(extraEnv: NodeJS.ProcessEnv): string[] {
     const outFile = join(root, `out-${Math.random().toString(36).slice(2)}.txt`);
     execFileSync('mise', ['run', '-C', root, 'run-all', 'echo'], {
@@ -171,19 +179,35 @@ describe('run-all: clients/* discovery (real mise binary)', () => {
       .toSorted((a, b) => a.localeCompare(b));
   }
 
-  it('discovers and runs pillars/* and libs/* units defining the task, unconditionally', () => {
-    expect(runAllEcho({})).toEqual(['ran-l1', 'ran-p1']);
-  });
+  it(
+    'discovers and runs pillars/* and libs/* units defining the task, unconditionally',
+    () => {
+      expect(runAllEcho({})).toEqual(['ran-l1', 'ran-p1']);
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 
-  it('does not reach clients/* by default', () => {
-    expect(runAllEcho({})).not.toContain('ran-c1');
-  });
+  it(
+    'does not reach clients/* by default',
+    () => {
+      expect(runAllEcho({})).not.toContain('ran-c1');
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 
-  it('includes a clients/* unit defining the task once RUN_ALL_INCLUDE_CLIENTS=1', () => {
-    expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).toEqual(['ran-c1', 'ran-l1', 'ran-p1']);
-  });
+  it(
+    'includes a clients/* unit defining the task once RUN_ALL_INCLUDE_CLIENTS=1',
+    () => {
+      expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).toEqual(['ran-c1', 'ran-l1', 'ran-p1']);
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 
-  it('still skips a clients/* unit lacking the task even when opted in — the exact case the source guard exists for', () => {
-    expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).not.toContain('should-not-run');
-  });
+  it(
+    'still skips a clients/* unit lacking the task even when opted in — the exact case the source guard exists for',
+    () => {
+      expect(runAllEcho({ RUN_ALL_INCLUDE_CLIENTS: '1' })).not.toContain('should-not-run');
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 });

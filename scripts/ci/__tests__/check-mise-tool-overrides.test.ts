@@ -1158,12 +1158,16 @@ describe('mise actually resolves the merge (real mise binary)', () => {
     throw new Error(`${reason}\nThis is a skip everywhere else, and a failure in CI.`);
   }
 
-  // Spawns a real `mise current` subprocess per unit per tool across every
-  // pillar, lib, and client — dozens of processes, comfortably under vitest's
-  // 5s default on an idle machine but not under concurrent load from sibling
-  // CI jobs or parallel worktrees. The bound is on the machine's load, not on
-  // anything this asserts, so it matches the 120s the sibling scripts suites use.
-  const RESOLVE_ALL_UNITS_TIMEOUT_MS = 120_000;
+  // Every test in this block spawns a real `mise` subprocess. The whole-tree
+  // one spawns dozens — one per unit per tool across every pillar, lib and
+  // client — and the two fixture ones spawn a handful each, after writing a
+  // temp tree. All of them are comfortably under vitest's 5s default on an
+  // idle machine and none of them are under concurrent load from sibling CI
+  // jobs or parallel worktrees, which is where POPS-2053 saw the whole-tree
+  // one take 6-10s. The bound is on the machine's load rather than on anything
+  // these assert, so one constant covers the block and matches the 120s the
+  // sibling scripts suites use.
+  const REAL_MISE_TIMEOUT_MS = 120_000;
 
   it(
     'every existing pillar/lib still resolves node/pnpm from the root pin',
@@ -1192,92 +1196,103 @@ describe('mise actually resolves the merge (real mise binary)', () => {
         }
       }
     },
-    RESOLVE_ALL_UNITS_TIMEOUT_MS
+    REAL_MISE_TIMEOUT_MS
   );
 
-  it('a unit-level [tools] override wins, and un-overridden tools still inherit', (ctx) => {
-    if (miseUnusable !== null) {
-      refuseToSkipInCi(miseUnusable);
-      ctx.skip(miseUnusable);
-      return;
-    }
-    const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-merge-fixture-'));
-    try {
-      writeFileSync(join(fixtureRoot, 'mise.toml'), '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n');
-      mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
-      writeFileSync(join(fixtureRoot, 'unit', 'mise.toml'), '[tools]\nnode = "22.14.0"\n');
+  it(
+    'a unit-level [tools] override wins, and un-overridden tools still inherit',
+    (ctx) => {
+      if (miseUnusable !== null) {
+        refuseToSkipInCi(miseUnusable);
+        ctx.skip(miseUnusable);
+        return;
+      }
+      const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-merge-fixture-'));
+      try {
+        writeFileSync(
+          join(fixtureRoot, 'mise.toml'),
+          '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n'
+        );
+        mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
+        writeFileSync(join(fixtureRoot, 'unit', 'mise.toml'), '[tools]\nnode = "22.14.0"\n');
 
-      const unitDir = join(fixtureRoot, 'unit');
-      expect(miseCurrent([fixtureRoot], unitDir, 'node')).toBe('22.14.0');
-      expect(miseCurrent([fixtureRoot], unitDir, 'pnpm')).toBe('10.32.1');
-    } finally {
-      rmSync(fixtureRoot, { recursive: true, force: true });
-    }
-  });
+        const unitDir = join(fixtureRoot, 'unit');
+        expect(miseCurrent([fixtureRoot], unitDir, 'node')).toBe('22.14.0');
+        expect(miseCurrent([fixtureRoot], unitDir, 'pnpm')).toBe('10.32.1');
+      } finally {
+        rmSync(fixtureRoot, { recursive: true, force: true });
+      }
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 
-  it('resolves a unit whose config mise would refuse to read untrusted', (ctx) => {
-    if (miseUnusable !== null) {
-      refuseToSkipInCi(miseUnusable);
-      ctx.skip(miseUnusable);
-      return;
-    }
-    // mise short-circuits its whole trust model wherever it detects CI — `CI`
-    // or any vendor variable — and paranoid mode does not turn that off in
-    // 2026.7 despite the `mise trust` help text saying it does. That
-    // short-circuit is exactly why a trap that blocks `git push` on every
-    // developer machine has never once been visible on a runner, and it leaves
-    // this case nothing to demonstrate there. Said out loud rather than left as
-    // a green assertion that quietly checked nothing.
-    if (process.env.CI !== undefined || process.env.GITHUB_ACTIONS !== undefined) {
-      ctx.skip('mise assumes trust wherever it detects CI; this is a developer-machine property');
-      return;
-    }
-    // The shape that made this suite fail on every fresh worktree: a unit
-    // config carrying `[env]` and a template, which mise classes as unsafe and
-    // declines to parse until its absolute path is trusted. A fixture rather
-    // than a name from this repo, so the case survives clients/ios losing its
-    // `[env]` — and so this states what is being relied on, which is that the
-    // environment above makes an untrusted-by-construction config readable.
-    const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-untrusted-fixture-'));
-    try {
-      writeFileSync(
-        join(fixtureRoot, 'mise.toml'),
-        '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n\n[env]\n_.path = ["{{config_root}}/bin"]\n'
-      );
-      mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
-      writeFileSync(
-        join(fixtureRoot, 'unit', 'mise.toml'),
-        '[env]\nPOPS_FIXTURE_ROOT = "{{config_root}}"\n'
-      );
+  it(
+    'resolves a unit whose config mise would refuse to read untrusted',
+    (ctx) => {
+      if (miseUnusable !== null) {
+        refuseToSkipInCi(miseUnusable);
+        ctx.skip(miseUnusable);
+        return;
+      }
+      // mise short-circuits its whole trust model wherever it detects CI — `CI`
+      // or any vendor variable — and paranoid mode does not turn that off in
+      // 2026.7 despite the `mise trust` help text saying it does. That
+      // short-circuit is exactly why a trap that blocks `git push` on every
+      // developer machine has never once been visible on a runner, and it leaves
+      // this case nothing to demonstrate there. Said out loud rather than left as
+      // a green assertion that quietly checked nothing.
+      if (process.env.CI !== undefined || process.env.GITHUB_ACTIONS !== undefined) {
+        ctx.skip('mise assumes trust wherever it detects CI; this is a developer-machine property');
+        return;
+      }
+      // The shape that made this suite fail on every fresh worktree: a unit
+      // config carrying `[env]` and a template, which mise classes as unsafe and
+      // declines to parse until its absolute path is trusted. A fixture rather
+      // than a name from this repo, so the case survives clients/ios losing its
+      // `[env]` — and so this states what is being relied on, which is that the
+      // environment above makes an untrusted-by-construction config readable.
+      const fixtureRoot = mkdtempSync(join(tmpdir(), 'mise-untrusted-fixture-'));
+      try {
+        writeFileSync(
+          join(fixtureRoot, 'mise.toml'),
+          '[tools]\nnode = "24.5.0"\npnpm = "10.32.1"\n\n[env]\n_.path = ["{{config_root}}/bin"]\n'
+        );
+        mkdirSync(join(fixtureRoot, 'unit'), { recursive: true });
+        writeFileSync(
+          join(fixtureRoot, 'unit', 'mise.toml'),
+          '[env]\nPOPS_FIXTURE_ROOT = "{{config_root}}"\n'
+        );
 
-      const unitDir = join(fixtureRoot, 'unit');
-      // Both halves run under MISE_PARANOID, which stops mise sharing trust
-      // between a linked worktree and its main checkout — otherwise this would
-      // be measuring the runner's history rather than the fixture. It does not
-      // override MISE_TRUSTED_CONFIG_PATHS, which is the thing under test.
-      const withoutTrustPaths = { ...process.env };
-      delete withoutTrustPaths.MISE_TRUSTED_CONFIG_PATHS;
+        const unitDir = join(fixtureRoot, 'unit');
+        // Both halves run under MISE_PARANOID, which stops mise sharing trust
+        // between a linked worktree and its main checkout — otherwise this would
+        // be measuring the runner's history rather than the fixture. It does not
+        // override MISE_TRUSTED_CONFIG_PATHS, which is the thing under test.
+        const withoutTrustPaths = { ...process.env };
+        delete withoutTrustPaths.MISE_TRUSTED_CONFIG_PATHS;
 
-      const refused = spawnSync('mise', ['current', '-C', unitDir, 'node'], {
-        encoding: 'utf8',
-        env: { ...withoutTrustPaths, MISE_PARANOID: '1' },
-      });
-      expect(
-        refused.status,
-        'this fixture is meant to be one mise refuses without the trust environment'
-      ).not.toBe(0);
-      expect(refused.stderr).toContain('not trusted');
+        const refused = spawnSync('mise', ['current', '-C', unitDir, 'node'], {
+          encoding: 'utf8',
+          env: { ...withoutTrustPaths, MISE_PARANOID: '1' },
+        });
+        expect(
+          refused.status,
+          'this fixture is meant to be one mise refuses without the trust environment'
+        ).not.toBe(0);
+        expect(refused.stderr).toContain('not trusted');
 
-      const trusted = spawnSync('mise', ['current', '-C', unitDir, 'node'], {
-        encoding: 'utf8',
-        env: { ...miseEnv(fixtureRoot), MISE_PARANOID: '1' },
-      });
-      expect(trusted.stderr).not.toContain('not trusted');
-      expect(trusted.stdout.trim()).toBe('24.5.0');
-    } finally {
-      rmSync(fixtureRoot, { recursive: true, force: true });
-    }
-  });
+        const trusted = spawnSync('mise', ['current', '-C', unitDir, 'node'], {
+          encoding: 'utf8',
+          env: { ...miseEnv(fixtureRoot), MISE_PARANOID: '1' },
+        });
+        expect(trusted.stderr).not.toContain('not trusted');
+        expect(trusted.stdout.trim()).toBe('24.5.0');
+      } finally {
+        rmSync(fixtureRoot, { recursive: true, force: true });
+      }
+    },
+    REAL_MISE_TIMEOUT_MS
+  );
 });
 
 describe('ALLOWED_UNIT_OVERRIDE_TOOLS / REQUIRED_ROOT_TOOLS', () => {
