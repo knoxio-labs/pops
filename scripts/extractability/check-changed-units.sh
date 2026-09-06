@@ -42,9 +42,37 @@ if [[ -z "$merge_base" ]]; then
   exec node "$repo_root/scripts/extractability/depcheck.mjs" --all
 fi
 
+# The pathspecs the diff below is scoped to. Asserted rather than assumed: a
+# pathspec that matches nothing is not an error to `git diff`, so a renamed or
+# relocated root would narrow the change set to empty and take the
+# "nothing to check" exit — the gate reporting ✔ over a tree it can no longer
+# address.
+for pathspec in libs pillars; do
+  if [[ ! -d "$repo_root/$pathspec" ]]; then
+    echo "check-changed-units: '$pathspec/' is not a directory in this checkout, so the" >&2
+    echo "  diff below would scope to nothing and this gate would pass without looking." >&2
+    echo "  Update the pathspecs here if the units have moved." >&2
+    exit 1
+  fi
+done
+
 # Map every changed file to the nearest enclosing unit directory (one holding a
 # package.json), restricted to libs/ and pillars/.
-mapfile -t changed < <(git diff --name-only "$merge_base"...HEAD -- libs pillars 2>/dev/null || true)
+#
+# git's status is captured explicitly. `mapfile < <(...)` never propagates the
+# exit status of a process substitution, and the previous form added `2>/dev/null`
+# and `|| true` on top, so any git failure produced an empty change set and the
+# ✔ below. A failed diff takes the same full sweep the shallow-clone path takes
+# — never skip the gate silently.
+if ! changed_files="$(git diff --name-only "$merge_base"...HEAD -- libs pillars)"; then
+  echo "check-changed-units: git diff against '$merge_base' failed — sweeping all units." >&2
+  exec node "$repo_root/scripts/extractability/depcheck.mjs" --all
+fi
+
+changed=()
+if [[ -n "$changed_files" ]]; then
+  mapfile -t changed <<<"$changed_files"
+fi
 
 declare -A units=()
 for file in "${changed[@]}"; do
