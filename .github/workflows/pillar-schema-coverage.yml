@@ -120,6 +120,25 @@ jobs:
           grep -q "fake_self_test_table" out.log || { echo "::error::Self-test failed: script did not flag injected fake table"; exit 1; }
           grep -q "Missing tables" out.log || { echo "::error::Self-test failed: script did not produce 'Missing tables' message"; exit 1; }
           echo "Self-test passed: script correctly catches injected missing tables"
+      - name: Self-test (script catches an injected column-default mismatch)
+        # The default check is the half of this guard that compares values
+        # rather than existence, so "the migration applies" cannot stand in
+        # for it. The injected expectation is planted on a column that already
+        # carries a real DEFAULT, so this exercises the disagreement branch —
+        # the one a genuine drift takes — not the missing-column one.
+        run: |
+          set +e
+          pillar='${{ steps.pick.outputs.pillar }}'
+          node scripts/check-pillar-schema-coverage.mjs \
+            --pillar "$pillar" --inject-fake-default 2>&1 | tee default.log
+          actual_exit=${PIPESTATUS[0]}
+          if [ "$actual_exit" -eq 0 ]; then
+            echo "::error::Self-test failed: script exited 0 with an injected fake column default"
+            exit 1
+          fi
+          grep -q "__fake_self_test_default__" default.log || { echo "::error::Self-test failed: script did not flag the injected default"; exit 1; }
+          grep -q "Column default mismatches" default.log || { echo "::error::Self-test failed: script did not produce 'Column default mismatches' message"; exit 1; }
+          echo "Self-test passed: script correctly catches column-default drift"
 
   done:
     name: Pillar schema coverage
