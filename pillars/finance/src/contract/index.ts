@@ -73,6 +73,7 @@ export {
   DAY_ONE_ACCOUNT_KINDS,
   ACCOUNT_KIND_BEHAVIOURS,
   getAccountKindBehaviour,
+  hasIssuingInstitution,
   type AccountKind,
   type AccountKindBehaviour,
 } from './account-kind.js';

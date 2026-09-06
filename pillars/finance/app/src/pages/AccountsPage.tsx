@@ -27,9 +27,8 @@ export function AccountsPage() {
   const navigate = useNavigate();
   const state = useAccountsPage();
   const accounts = state.accounts.data?.data ?? [];
-  const institutions = state.institutions.data?.data ?? [];
   const currencies = state.currencies.data?.data ?? [];
-  const filters = useAccountListFilters(accounts, institutions, currencies);
+  const filters = useAccountListFilters(accounts, currencies);
   // The grid tints and subtotals by currency kind — a points balance is
   // neutral and stays out of the fiat totals. `currencies` is its own query
   // with no ordering against `accounts`, so rendering on accounts alone would
@@ -71,7 +70,6 @@ export function AccountsPage() {
       <AccountsGrid
         isLoading={isLoading}
         accounts={accounts}
-        institutions={institutions}
         currencies={currencies}
         filters={filters}
         onAdd={state.handleAdd}
@@ -82,9 +80,9 @@ export function AccountsPage() {
         onOpenChange={state.setIsDialogOpen}
         editingAccount={state.editingAccount}
         form={state.form}
-        institutions={institutions}
+        bankEntities={state.bankEntities}
         currencies={currencies}
-        onCreateInstitution={state.createInstitution}
+        onCreateBankEntity={state.createBankEntity}
         isSubmitting={state.isSubmitting}
         onSubmit={state.onSubmit}
         onArchiveToggle={state.onArchiveToggle}

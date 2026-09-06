@@ -1,15 +1,25 @@
 /**
  * POPS-2771's `person` account / `entityId` invariant, split out of
- * `accounts.ts` to keep that file under the repo's 200-line cap.
+ * `accounts.ts` to keep that file under the repo's 200-line cap. Extended by
+ * POPS-3063 to also allow an issuer-bearing account (anything
+ * {@link hasIssuingInstitution} says can carry one) to point `entityId` at a
+ * `bank`-typed contacts Entity.
  *
  * `kind === 'person'` requires an `entityId` (a receivable/payable ledger
- * with no contact behind it has nothing to key the balance to), and every
- * other kind must NOT carry one (`entityId` exists only to name a `person`
- * account's contact). `allowPendingEntity` is the one exception — a `person`
- * account may transiently hold `entityId = null` while
- * `entity_precreate_outbox` resolves it (see
- * `accountsService.createAccount`'s `CreateAccountOptions`).
+ * with no contact behind it has nothing to key the balance to). Every
+ * `hasIssuingInstitution` kind MAY carry one (its issuing bank), and it is
+ * genuinely optional there — many accounts still point at an institution
+ * that has not been migrated to a contacts Entity yet (POPS-3099) and
+ * resolve display data through that fallback instead (see
+ * `account-entity-display.ts`). Every remaining kind (`cash`, the reserved
+ * placeholders) must NOT carry one — `entityId` names either a `person`
+ * account's contact or an issuer, never anything else. `allowPendingEntity`
+ * is the one exception on the `person` side — a `person` account may
+ * transiently hold `entityId = null` while `entity_precreate_outbox`
+ * resolves it (see `accountsService.createAccount`'s
+ * `CreateAccountOptions`).
  */
+import { hasIssuingInstitution } from '../../contract/account-kind.js';
 import {
   AccountNameConflictError,
   NonPersonAccountHasEntityError,
@@ -44,7 +54,9 @@ export function validatePersonEntityInvariant(
     if (entityId === null && !allowPendingEntity) throw new PersonAccountRequiresEntityError();
     return;
   }
-  if (entityId !== null) throw new NonPersonAccountHasEntityError(kind);
+  if (entityId !== null && !hasIssuingInstitution(kind)) {
+    throw new NonPersonAccountHasEntityError(kind);
+  }
 }
 
 /**

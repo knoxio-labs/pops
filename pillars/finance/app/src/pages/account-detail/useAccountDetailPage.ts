@@ -2,19 +2,12 @@ import { useAccountFormDialog } from '../accounts/useAccountFormDialog';
 import { useAccountsData } from '../accounts/useAccountsPage';
 
 import type { CurrenciesListResponses } from '../../finance-api/index.js';
-import type { Account, Institution } from '../accounts/types';
+import type { Account } from '../accounts/types';
 
 type Currency = CurrenciesListResponses[200]['data'][number];
 
 function findAccount(accounts: Account[], accountId: string): Account | null {
   return accounts.find((candidate) => candidate.id === accountId) ?? null;
-}
-
-function findInstitution(
-  institutions: Institution[],
-  institutionId: string | null | undefined
-): Institution | null {
-  return institutions.find((candidate) => candidate.id === institutionId) ?? null;
 }
 
 function findCurrency(currencies: Currency[], code: string | undefined): Currency | null {
@@ -34,21 +27,18 @@ function findCurrency(currencies: Currency[], code: string | undefined): Currenc
  * `handleAdd`.
  */
 export function useAccountDetailPage(accountId: string) {
-  const { accounts, institutions, currencies } = useAccountsData();
+  const { accounts, currencies } = useAccountsData();
   const formDialog = useAccountFormDialog();
 
   const accountRows = accounts.data?.data ?? [];
-  const institutionRows = institutions.data?.data ?? [];
   const currencyRows = currencies.data?.data ?? [];
   const account = findAccount(accountRows, accountId);
 
   return {
     accounts,
-    institutions: institutionRows,
     currencies: currencyRows,
-    isLoading: accounts.isLoading || institutions.isLoading || currencies.isLoading,
+    isLoading: accounts.isLoading || currencies.isLoading,
     account,
-    institution: findInstitution(institutionRows, account?.institutionId),
     currency: findCurrency(currencyRows, account?.currency),
     ...formDialog,
   };

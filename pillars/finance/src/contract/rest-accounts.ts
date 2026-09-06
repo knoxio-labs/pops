@@ -15,10 +15,17 @@
  * A `person` account's `entityId` names the contacts entity it is a
  * receivable/payable ledger for (POPS-2771) — required eventually, though
  * transiently null while `entity_precreate_outbox` resolves a name-only
- * create against a down contacts pillar. `entityDisplayName` /
- * `entityDisplayNameStale` are read-only response fields: the contact's
- * current name resolved live from contacts, degrading to the account's own
- * stored `name` (marked stale) when contacts can't be reached.
+ * create against a down contacts pillar. An issuer-bearing account's
+ * `entityId` (POPS-3063) instead names the `bank`-typed contacts Entity its
+ * institution was migrated to — resolved directly when set, or through
+ * `institutionId`'s `migratedEntityId` as a read-only transition-window
+ * fallback when it isn't. `entityDisplayName` / `entityDisplayNameStale` /
+ * `entityColour` / `entityAvatarAssetId` are read-only response fields: the
+ * linked contact's current name/colour/avatar resolved live from contacts,
+ * degrading to the account's own stored `name` (marked stale) when contacts
+ * can't be reached. `institution` is the not-yet-migrated fallback: the
+ * issuing institution's own name/colour/logo, populated only when no
+ * `entityId` resolved at all.
  *
  * `merge`/`previewMerge` (POPS-2812) fold `:id` (the source) into `targetId`:
  * every transaction repoints onto `targetId` and the source row is deleted
@@ -37,6 +44,14 @@ import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from '
 
 const c = initContract();
 
+/** The not-yet-migrated institution fallback shape — see `AccountSchema.institution`. */
+export const AccountIssuerInstitutionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  colour: z.string(),
+  logoAssetId: z.string().nullable(),
+});
+
 /** Wire shape served by the accounts handlers. */
 export const AccountSchema = z.object({
   id: z.string(),
@@ -49,6 +64,26 @@ export const AccountSchema = z.object({
   entityId: z.string().nullable(),
   entityDisplayName: z.string().nullable(),
   entityDisplayNameStale: z.boolean(),
+  /**
+   * The linked contact's colour/avatar asset id (POPS-3063), resolved via
+   * `entityId` (direct or, for an issuer-bearing account, its migrated
+   * institution). Both null unless `entityDisplayName` is also non-null.
+   */
+  entityColour: z.string().nullable(),
+  entityAvatarAssetId: z.string().nullable(),
+  /** The contacts Entity id the three fields above were actually resolved
+   * from — distinct from `entityId` in the migrated-institution fallback
+   * case, where `entityId` is still null. A caller needs this id (not
+   * `entityId`) to build the contacts avatar URL. */
+  resolvedEntityId: z.string().nullable(),
+  /**
+   * The issuing institution's own name/colour/logo — populated ONLY as the
+   * not-yet-migrated fallback (POPS-3099) for an issuer-bearing account with
+   * no resolvable `entityId`. Mutually exclusive with a non-null
+   * `entityDisplayName`; lets a caller render an account's issuer without a
+   * separate institutions fetch/join regardless of which side resolved it.
+   */
+  institution: AccountIssuerInstitutionSchema.nullable(),
   /**
    * What the account holds today, checkpoint-anchored (ADR-051). Read-only,
    * and never a stored column: `basis` says whether it is a real balance or

@@ -8,6 +8,7 @@ import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../../test-u
 import { AccountDetailPage } from '../AccountDetailPage';
 import { AccountsPage } from '../AccountsPage';
 
+import type { Entity } from '../../contacts-api/index.js';
 import type { Account } from './types';
 
 const accountsList = vi.fn();
@@ -17,6 +18,7 @@ const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
 const transactionsList = vi.fn();
 const entitiesList = vi.fn();
+const entitiesCreate = vi.fn();
 const loanWriteTerms = vi.fn();
 const loanGetTerms = vi.fn();
 const loanListRateHistory = vi.fn();
@@ -47,6 +49,7 @@ vi.mock('../../finance-api/index.js', () => ({
 
 vi.mock('../../contacts-api/index.js', () => ({
   entitiesList: (...args: unknown[]) => entitiesList(...args),
+  entitiesCreate: (...args: unknown[]) => entitiesCreate(...args),
 }));
 
 function account(overrides: Partial<Account>): Account {
@@ -61,6 +64,10 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    entityColour: null,
+    entityAvatarAssetId: null,
+    resolvedEntityId: null,
+    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -79,7 +86,7 @@ const AUD = {
   createdAt: '',
 };
 
-function renderPage(accounts: Account[]) {
+function renderPage(accounts: Account[], entities: Entity[] = []) {
   accountsList.mockResolvedValue({
     data: {
       data: accounts,
@@ -89,6 +96,13 @@ function renderPage(accounts: Account[]) {
   });
   institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
+  entitiesList.mockResolvedValue({
+    data: {
+      data: entities,
+      pagination: { total: entities.length, limit: 200, offset: 0, hasMore: false },
+    },
+    error: undefined,
+  });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -207,6 +221,81 @@ describe('AccountFormDialog — create', () => {
 
     expect(dialog.queryByRole('combobox', { name: 'Institution' })).not.toBeInTheDocument();
     expect(dialog.getByText(/looks up or creates a matching contact/)).toBeInTheDocument();
+  });
+
+  it('lists bank-typed contacts entities in the institution picker, not finance institutions (POPS-3063)', async () => {
+    const anz: Entity = {
+      id: 'entity-anz',
+      name: 'ANZ',
+      type: 'bank',
+      abn: null,
+      aliases: [],
+      defaultTransactionType: null,
+      defaultTags: [],
+      notes: null,
+      avatarAssetId: null,
+      colour: '#0072ac',
+      lastEditedTime: '2026-01-01T00:00:00.000Z',
+    };
+    renderPage([], [anz]);
+    const dialog = await openCreateDialog();
+
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Institution' }));
+    expect(await screen.findByText('ANZ')).toBeInTheDocument();
+    expect(entitiesList).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ type: 'bank' }) })
+    );
+    expect(institutionsList).not.toHaveBeenCalled();
+  });
+
+  it('creates a bank-typed contacts entity from the institution picker and submits its id as entityId', async () => {
+    entitiesCreate.mockResolvedValue({
+      data: {
+        data: {
+          id: 'entity-bendigo',
+          name: 'Bendigo Bank',
+          type: 'bank',
+          abn: null,
+          aliases: [],
+          defaultTransactionType: null,
+          defaultTags: [],
+          notes: null,
+          avatarAssetId: null,
+          colour: '#6b7280',
+          lastEditedTime: '2026-01-01T00:00:00.000Z',
+        },
+        message: 'Entity created',
+      },
+      error: undefined,
+    });
+    accountsCreate.mockResolvedValue({
+      data: {
+        data: account({ id: 'new', entityId: 'entity-bendigo' }),
+        message: 'Account created',
+      },
+      error: undefined,
+    });
+    renderPage([]);
+    const dialog = await openCreateDialog();
+
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Institution' }));
+    await userEvent.type(screen.getByPlaceholderText('Search institutions...'), 'Bendigo Bank');
+    await userEvent.click(await screen.findByText('Create “Bendigo Bank”'));
+
+    await waitFor(() =>
+      expect(entitiesCreate).toHaveBeenCalledWith({
+        body: { name: 'Bendigo Bank', type: 'bank' },
+      })
+    );
+
+    await userEvent.type(dialog.getByPlaceholderText('Everyday'), 'Bendigo Everyday');
+    await pickCurrency(dialog, 'AUD — Australian Dollar');
+    await userEvent.click(dialog.getByRole('button', { name: 'Create account' }));
+
+    await waitFor(() => expect(accountsCreate).toHaveBeenCalled());
+    const [call] = accountsCreate.mock.calls[0] as [{ body: Record<string, unknown> }];
+    expect(call.body).toMatchObject({ entityId: 'entity-bendigo' });
+    expect(call.body).not.toHaveProperty('institutionId');
   });
 
   it('writes loan terms after creating a new loan account with every term filled', async () => {

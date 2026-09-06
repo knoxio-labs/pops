@@ -26,6 +26,13 @@ export interface ContactEntity {
   colour: string | null;
 }
 
+/** The subset of a contact the account-issuer display resolver needs. */
+export interface ContactEntitySummary {
+  name: string;
+  colour: string | null;
+  avatarAssetId: string | null;
+}
+
 /** The contacts `entities.list` envelope (page of contacts + pagination cursor). */
 export interface ListResponse {
   data: ContactEntity[];
@@ -64,6 +71,13 @@ export interface ContactsClient {
    * marker rather than treating this as an error.
    */
   fetchEntityDisplayName(entityId: string): Promise<string | null>;
+  /**
+   * A single contact's name/colour/avatar, for the account-issuer display
+   * resolver (POPS-3063) — a bank-typed contact's `colour`/`avatarAssetId`
+   * alongside its name, in one call rather than three. `null` under the same
+   * conditions as {@link fetchEntityDisplayName}.
+   */
+  fetchEntitySummary(entityId: string): Promise<ContactEntitySummary | null>;
   /**
    * Resolve a contact for `name`, creating it only when absent. Fetches by
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a

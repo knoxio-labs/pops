@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ACCOUNT_KINDS, DAY_ONE_ACCOUNT_KINDS } from '@pops/finance';
+import { ACCOUNT_KINDS, DAY_ONE_ACCOUNT_KINDS, hasIssuingInstitution } from '@pops/finance';
 
 import type { FieldNamesMarkedBoolean } from 'react-hook-form';
 
@@ -22,7 +22,17 @@ export const KIND_FORM_OPTIONS = ACCOUNT_KINDS.map((kind) => ({
 export const AccountFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   kind: z.enum(ACCOUNT_KINDS),
-  institutionId: z.string().nullable(),
+  /**
+   * The issuing `bank`-typed contacts Entity (POPS-3063) — set directly by
+   * the picker for every kind {@link hasInstitution} allows. No
+   * `institutionId` field: a NEW account is created with `entityId` alone,
+   * never via finance's own `institutions` table. An EXISTING account
+   * carrying a legacy `institutionId` with no `entityId` yet keeps reading
+   * through that fallback server-side (`account-entity-display.ts`) until
+   * either this form's picker sets an `entityId` for it, or the POPS-3099
+   * backfill does.
+   */
+  entityId: z.string().nullable(),
   currency: z.string().min(1, 'Currency is required'),
   giftCardNumber: z.string(),
   giftCardPin: z.string(),
@@ -40,7 +50,7 @@ export type AccountFormValues = z.infer<typeof AccountFormSchema>;
 export const DEFAULT_ACCOUNT_FORM_VALUES: AccountFormValues = {
   name: '',
   kind: 'checking',
-  institutionId: null,
+  entityId: null,
   currency: '',
   giftCardNumber: '',
   giftCardPin: '',
@@ -105,7 +115,9 @@ export function loanTermsFieldsDirty(
   return LOAN_TERMS_FIELDS.some((field) => Boolean(dirtyFields[field]));
 }
 
-/** Kinds with no issuing institution — `rest-accounts.ts`: null for cash and person accounts. */
+/** Kinds with no issuing institution — `rest-accounts.ts`: null for cash and person accounts.
+ * Delegates to the shared `@pops/finance` definition so the form and the
+ * write-side invariant (`account-entity-invariant.ts`) never drift apart. */
 export function hasInstitution(kind: AccountFormValues['kind']): boolean {
-  return kind !== 'cash' && kind !== 'person';
+  return hasIssuingInstitution(kind);
 }

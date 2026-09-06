@@ -12,7 +12,7 @@ import { LoanOffsetLinksSection } from './LoanOffsetLinksSection';
 import { type Account, type AccountFormValues } from './types';
 
 import type { CurrenciesListResponses } from '../../finance-api/index.js';
-import type { Institution } from './types';
+import type { BankEntityOption } from './InstitutionSelect';
 
 type Currency = CurrenciesListResponses[200]['data'][number];
 
@@ -23,15 +23,15 @@ function Hint({ children }: { children: ReactNode }) {
 export function AccountFormFields({
   form,
   account,
-  institutions,
+  bankEntities,
   currencies,
-  onCreateInstitution,
+  onCreateBankEntity,
 }: {
   form: UseFormReturn<AccountFormValues>;
   account: Account | null;
-  institutions: Institution[];
+  bankEntities: BankEntityOption[];
   currencies: Currency[];
-  onCreateInstitution: (name: string) => void;
+  onCreateBankEntity: (name: string) => void;
 }) {
   const kind = form.watch('kind');
   return (
@@ -48,8 +48,8 @@ export function AccountFormFields({
       )}
       <AccountInstitutionField
         form={form}
-        institutions={institutions}
-        onCreate={onCreateInstitution}
+        bankEntities={bankEntities}
+        onCreate={onCreateBankEntity}
       />
       <Controller
         control={form.control}

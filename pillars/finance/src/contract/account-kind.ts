@@ -119,3 +119,16 @@ export const ACCOUNT_KIND_BEHAVIOURS = {
 export function getAccountKindBehaviour(kind: AccountKind): AccountKindBehaviour {
   return ACCOUNT_KIND_BEHAVIOURS[kind];
 }
+
+/**
+ * Whether an account of this `kind` can carry an issuing institution
+ * (POPS-3063) — everything except `cash` (no issuer at all) and `person`
+ * (a receivable/payable ledger, whose `entityId` names the CONTACT it is
+ * owed by/owes, not an issuer). Shared by the write-side invariant
+ * (`account-entity-invariant.ts`) and the account form's institution/entity
+ * picker so both agree on exactly the same set of kinds without duplicating
+ * the `!== 'cash' && !== 'person'` check.
+ */
+export function hasIssuingInstitution(kind: AccountKind): boolean {
+  return kind !== 'cash' && kind !== 'person';
+}

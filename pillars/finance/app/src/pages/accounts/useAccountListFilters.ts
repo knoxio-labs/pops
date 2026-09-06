@@ -5,24 +5,21 @@ import { ACCOUNT_KINDS, type AccountKind } from '@pops/finance';
 import { sortAccounts, type AccountSort } from './account-list-sort';
 
 import type { Currency } from './account-subtotals';
-import type { Account, Institution } from './types';
+import type { Account } from './types';
 
-function searchText(account: Account, institutionsById: Map<string, Institution>): string {
-  const institution = account.institutionId
-    ? institutionsById.get(account.institutionId)?.name
-    : undefined;
-  return `${account.name} ${institution ?? ''} ${account.entityDisplayName ?? ''}`.toLowerCase();
+/** The issuer name to search against, whichever side resolved it (POPS-3063) — see `Account.institution`. */
+function issuerName(account: Account): string {
+  return account.entityDisplayName ?? account.institution?.name ?? '';
 }
 
-function matches(
-  account: Account,
-  query: string,
-  kinds: AccountKind[],
-  institutionsById: Map<string, Institution>
-): boolean {
+function searchText(account: Account): string {
+  return `${account.name} ${issuerName(account)}`.toLowerCase();
+}
+
+function matches(account: Account, query: string, kinds: AccountKind[]): boolean {
   if (kinds.length > 0 && !kinds.includes(account.kind)) return false;
   const needle = query.trim().toLowerCase();
-  return needle === '' || searchText(account, institutionsById).includes(needle);
+  return needle === '' || searchText(account).includes(needle);
 }
 
 function describe(total: number, shown: number, archived: number, narrowed: boolean): string {
@@ -40,22 +37,15 @@ function describe(total: number, shown: number, archived: number, narrowed: bool
  * household's account count sits far below the API's page cap — the same
  * reasoning `useAllAccounts` documents for the picker's "fetch everything".
  */
-export function useAccountListFilters(
-  accounts: Account[],
-  institutions: Institution[],
-  currencies: Currency[]
-) {
+export function useAccountListFilters(accounts: Account[], currencies: Currency[]) {
   const [query, setQuery] = useState('');
   const [kinds, setKinds] = useState<AccountKind[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [sort, setSort] = useState<AccountSort>('kind');
-  const institutionsById = new Map(institutions.map((i) => [i.id, i]));
 
   const narrowed = query.trim() !== '' || kinds.length > 0;
   const visible = sortAccounts(
-    accounts.filter(
-      (a) => (showArchived || a.archivedAt === null) && matches(a, query, kinds, institutionsById)
-    ),
+    accounts.filter((a) => (showArchived || a.archivedAt === null) && matches(a, query, kinds)),
     sort,
     currencies
   );

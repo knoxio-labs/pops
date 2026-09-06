@@ -21,11 +21,23 @@ const PAGE_SIZE = 200;
  *
  * The full `Entity` is returned rather than `entities.lookup`'s match columns
  * because these surfaces render the entity type alongside the name.
+ *
+ * `type`, when given, narrows the server-side filter (e.g. `'bank'` for the
+ * account form's issuer picker, POPS-3063) — folded into the same paged
+ * fetch rather than a second hook, since the pagination logic is identical.
  */
-export function useAllEntities(): UseQueryResult<PaginatedResult<Entity>> {
+export function useAllEntities(
+  options: {
+    type?: string;
+  } = {}
+): UseQueryResult<PaginatedResult<Entity>> {
+  const { type } = options;
   return useQuery({
-    queryKey: ['contacts', 'entities', 'list', 'all'],
+    queryKey: ['contacts', 'entities', 'list', 'all', type ?? null],
     queryFn: async () =>
-      fetchAllPages(async (page) => unwrap(await entitiesList({ query: page })), PAGE_SIZE),
+      fetchAllPages(
+        async (page) => unwrap(await entitiesList({ query: { ...page, type } })),
+        PAGE_SIZE
+      ),
   });
 }

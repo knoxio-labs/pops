@@ -80,7 +80,7 @@ function toAccountPayload(values: AccountFormValues) {
   return {
     name: values.name,
     kind: values.kind,
-    institutionId: hasInstitution(values.kind) ? values.institutionId : null,
+    entityId: hasInstitution(values.kind) ? values.entityId : null,
     currency: values.currency,
   };
 }

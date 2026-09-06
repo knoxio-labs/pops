@@ -6,7 +6,7 @@ import { AccountListControls } from './AccountListControls';
 import { AccountSubtotals } from './AccountSubtotals';
 
 import type { Currency } from './account-subtotals';
-import type { Account, Institution } from './types';
+import type { Account } from './types';
 import type { AccountListFilters } from './useAccountListFilters';
 
 function LoadingSkeleton() {
@@ -22,7 +22,6 @@ function LoadingSkeleton() {
 export function AccountsGrid({
   isLoading,
   accounts,
-  institutions,
   currencies,
   filters,
   onAdd,
@@ -30,7 +29,6 @@ export function AccountsGrid({
 }: {
   isLoading: boolean;
   accounts: Account[];
-  institutions: Institution[];
   currencies: Currency[];
   filters: AccountListFilters;
   onAdd: () => void;
@@ -52,7 +50,6 @@ export function AccountsGrid({
             <AccountCard
               key={account.id}
               account={account}
-              institutions={institutions}
               currencies={currencies}
               onSelect={() => onSelect(account)}
             />

@@ -5,7 +5,7 @@ import { AccountMark, ACCOUNT_KIND_META, Badge, Button, cn } from '@pops/ui';
 
 import { toAccountOptions } from '../../components/accounts/toAccountOptions';
 
-import type { Account, Institution } from '../accounts/types';
+import type { Account } from '../accounts/types';
 
 /**
  * The account dashboard's header: identity on the left, actions on the
@@ -17,17 +17,15 @@ import type { Account, Institution } from '../accounts/types';
  */
 export function AccountDetailHeader({
   account,
-  institutions,
   onEdit,
   onAddTransaction,
 }: {
   account: Account;
-  institutions: Institution[];
   onEdit: () => void;
   onAddTransaction: () => void;
 }) {
-  const [option] = toAccountOptions([account], institutions);
-  const institution = institutions.find((candidate) => candidate.id === account.institutionId);
+  const [option] = toAccountOptions([account]);
+  const issuerName = account.entityDisplayName ?? account.institution?.name ?? null;
   const isArchived = account.archivedAt !== null;
 
   return (
@@ -37,9 +35,7 @@ export function AccountDetailHeader({
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{account.name}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              {institution?.name ?? 'No institution'}
-            </span>
+            <span className="text-sm text-muted-foreground">{issuerName ?? 'No institution'}</span>
             <Badge variant="secondary">{ACCOUNT_KIND_META[account.kind].label}</Badge>
             <Badge variant="outline">{account.currency}</Badge>
             {isArchived && <Badge variant="outline">Archived</Badge>}

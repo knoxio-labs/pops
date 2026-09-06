@@ -2,13 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../../finance-api-helpers.js';
-import { currenciesList, institutionsList } from '../../../finance-api/index.js';
+import { currenciesList } from '../../../finance-api/index.js';
+import { useAllEntities } from '../../../lib/useAllEntities';
 import { mapAccountApiError } from '../../../pages/accounts/account-error-mapping';
 import { useAccountFormDialogState } from '../../../pages/accounts/useAccountFormDialogState';
 import { useAccountMutations } from '../../../pages/accounts/useAccountMutations';
-import { useCreateInstitution } from '../../../pages/accounts/useCreateInstitution';
+import { useCreateBankEntity } from '../../../pages/accounts/useCreateBankEntity';
 import { useImportStore } from '../../../store/importStore';
 import { useAccountFormats } from './useAccountFormats';
+
+/** The contacts entity `type` the institution picker lists/creates (POPS-3063). */
+const BANK_ENTITY_TYPE = 'bank';
 
 /**
  * Wires the import wizard's account picker to the real accounts endpoint and
@@ -21,10 +25,7 @@ export function useAccountAndFormat() {
   const queryClient = useQueryClient();
   const { accountId, setAccount } = useImportStore();
   const { accounts, accountsLoading, account, availableBanks } = useAccountFormats(accountId);
-  const institutionsQuery = useQuery({
-    queryKey: ['finance', 'institutions', 'list'],
-    queryFn: async () => unwrap(await institutionsList()),
-  });
+  const bankEntitiesQuery = useAllEntities({ type: BANK_ENTITY_TYPE });
   const currenciesQuery = useQuery({
     queryKey: ['finance', 'currencies', 'list'],
     queryFn: async () => unwrap(await currenciesList()),
@@ -64,13 +65,13 @@ export function useAccountAndFormat() {
     setAccount,
     account,
     availableBanks,
-    institutions: institutionsQuery.data?.data ?? [],
+    bankEntities: bankEntitiesQuery.data?.data ?? [],
     currencies: currenciesQuery.data?.data ?? [],
     dialog,
     handleAdd,
     handleCreate,
     isCreating: createMutation.isPending,
-    createInstitution: useCreateInstitution(dialog.form),
+    createBankEntity: useCreateBankEntity(dialog.form),
   };
 }
 

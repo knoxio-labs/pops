@@ -14,7 +14,8 @@ import {
 import { AccountFormFields } from './AccountFormFields';
 
 import type { CurrenciesListResponses } from '../../finance-api/index.js';
-import type { Account, AccountFormValues, Institution } from './types';
+import type { BankEntityOption } from './InstitutionSelect';
+import type { Account, AccountFormValues } from './types';
 
 type Currency = CurrenciesListResponses[200]['data'][number];
 
@@ -23,9 +24,9 @@ export interface AccountFormDialogProps {
   onOpenChange: (v: boolean) => void;
   editingAccount: Account | null;
   form: UseFormReturn<AccountFormValues>;
-  institutions: Institution[];
+  bankEntities: BankEntityOption[];
   currencies: Currency[];
-  onCreateInstitution: (name: string) => void;
+  onCreateBankEntity: (name: string) => void;
   isSubmitting: boolean;
   onSubmit: (values: AccountFormValues) => void;
   onArchiveToggle: (account: Account) => void;
@@ -116,9 +117,9 @@ export function AccountFormDialog(props: AccountFormDialogProps) {
     onOpenChange,
     editingAccount,
     form,
-    institutions,
+    bankEntities,
     currencies,
-    onCreateInstitution,
+    onCreateBankEntity,
     isSubmitting,
     onSubmit,
     onArchiveToggle,
@@ -142,9 +143,9 @@ export function AccountFormDialog(props: AccountFormDialogProps) {
             <AccountFormFields
               form={form}
               account={editingAccount}
-              institutions={institutions}
+              bankEntities={bankEntities}
               currencies={currencies}
-              onCreateInstitution={onCreateInstitution}
+              onCreateBankEntity={onCreateBankEntity}
             />
           </div>
           <AccountFormDialogFooter

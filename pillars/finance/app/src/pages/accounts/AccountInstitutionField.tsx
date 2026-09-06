@@ -1,16 +1,16 @@
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { InstitutionSelect } from './InstitutionSelect';
-import { hasInstitution, type AccountFormValues, type Institution } from './types';
+import { InstitutionSelect, type BankEntityOption } from './InstitutionSelect';
+import { hasInstitution, type AccountFormValues } from './types';
 
 /** The institution picker, shown for every kind except `cash` and `person` (`rest-accounts.ts`: neither has an issuing institution). */
 export function AccountInstitutionField({
   form,
-  institutions,
+  bankEntities,
   onCreate,
 }: {
   form: UseFormReturn<AccountFormValues>;
-  institutions: Institution[];
+  bankEntities: BankEntityOption[];
   onCreate: (name: string) => void;
 }) {
   const kind = form.watch('kind');
@@ -18,10 +18,10 @@ export function AccountInstitutionField({
   return (
     <Controller
       control={form.control}
-      name="institutionId"
+      name="entityId"
       render={({ field }) => (
         <InstitutionSelect
-          institutions={institutions}
+          entities={bankEntities}
           value={field.value}
           onChange={field.onChange}
           onCreate={onCreate}

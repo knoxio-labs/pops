@@ -50,9 +50,21 @@ import {
 } from '../pillars/outbound.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
-import type { ContactEntity, ContactsClient, CreateOrFetchResult, ListResponse } from './types.js';
+import type {
+  ContactEntity,
+  ContactEntitySummary,
+  ContactsClient,
+  CreateOrFetchResult,
+  ListResponse,
+} from './types.js';
 
-export type { ContactEntity, ContactsClient, CreateOrFetchResult, ListResponse } from './types.js';
+export type {
+  ContactEntity,
+  ContactEntitySummary,
+  ContactsClient,
+  CreateOrFetchResult,
+  ListResponse,
+} from './types.js';
 
 export { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
@@ -145,10 +157,10 @@ function warnDegraded(operation: string, result: CallResult<unknown>): void {
 }
 
 /**
- * Fetch a single contact by id, shared by `fetchEntityDefaultTags` and
- * `fetchEntityDisplayName` — both need the same contact and degrade the same
- * way (`null` for no handle, an unknown id, or a degraded result), differing
- * only in which field of it they read.
+ * Fetch a single contact by id, shared by `fetchEntityDefaultTags`,
+ * `fetchEntityDisplayName` and `fetchEntitySummary` — all three need the same
+ * contact and degrade the same way (`null` for no handle, an unknown id, or a
+ * degraded result), differing only in which field(s) of it they read.
  */
 async function fetchOneEntity(
   handle: PillarHandle<ContactsRouter> | null,
@@ -224,6 +236,12 @@ export function createContactsClient(
 
     async fetchEntityDisplayName(entityId: string): Promise<string | null> {
       return (await fetchOneEntity(handleFactory(), entityId))?.name ?? null;
+    },
+
+    async fetchEntitySummary(entityId: string): Promise<ContactEntitySummary | null> {
+      const entity = await fetchOneEntity(handleFactory(), entityId);
+      if (entity === null) return null;
+      return { name: entity.name, colour: entity.colour, avatarAssetId: entity.avatarAssetId };
     },
 
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {

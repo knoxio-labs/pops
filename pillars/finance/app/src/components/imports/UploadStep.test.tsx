@@ -9,24 +9,28 @@ import { useImportStore } from '../../store/importStore';
 import { UploadStep } from './UploadStep';
 
 // These tests are about parsing/merging behaviour, not the account picker
-// (POPS-2840) — accounts/institutions/currencies default to empty lists so
+// (POPS-2840) — accounts/currencies default to empty lists so
 // `AccountAndFormatFields` never makes a real network call, and every test
 // pre-selects an account directly on the store so the file-parsing UI it now
 // gates stays reachable. One test below (the format-derivation gate,
-// POPS-2854) overrides the account/institution lists for the one case that
-// needs the format picker's radio to actually be on screen.
+// POPS-2854) overrides the account list for the one case that needs the
+// format picker's radio to actually be on screen.
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const accountsCreate = vi.fn();
+const entitiesList = vi.fn();
+const entitiesCreate = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
-  institutionsCreate: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
+}));
+
+vi.mock('../../contacts-api/index.js', () => ({
+  entitiesList: (...args: unknown[]) => entitiesList(...args),
+  entitiesCreate: (...args: unknown[]) => entitiesCreate(...args),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -44,8 +48,10 @@ beforeEach(() => {
   useImportStore.getState().reset();
   useImportStore.getState().setAccount('acc-1', 'Test Account');
   accountsList.mockResolvedValue({ data: { data: [], pagination: { total: 0 } } });
-  institutionsList.mockResolvedValue({ data: { data: [] } });
   currenciesList.mockResolvedValue({ data: { data: [] } });
+  entitiesList.mockResolvedValue({
+    data: { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } },
+  });
 });
 
 afterEach(() => {
@@ -142,8 +148,10 @@ describe('UploadStep — merging several CSVs', () => {
 describe('UploadStep — an ANZ transaction-account export', () => {
   it('imports every line rather than losing the first charge to the header row', async () => {
     // Unlike the other tests in this file, this one needs the format radio
-    // itself on screen to pick 'ANZ' — so, just this once, the account and
-    // institution lists resolve to a real ANZ checking account (POPS-2854).
+    // itself on screen to pick 'ANZ' — so, just this once, the account list
+    // resolves to a real ANZ checking account (POPS-2854), carrying its
+    // not-yet-migrated institution fallback (POPS-3063) so the format picker
+    // resolves a bank name with no separate institutions fetch.
     accountsList.mockResolvedValueOnce({
       data: {
         data: [
@@ -158,25 +166,15 @@ describe('UploadStep — an ANZ transaction-account export', () => {
             entityId: null,
             entityDisplayName: null,
             entityDisplayNameStale: false,
+            entityColour: null,
+            entityAvatarAssetId: null,
+            resolvedEntityId: null,
+            institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },
         ],
         pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
-      },
-    });
-    institutionsList.mockResolvedValueOnce({
-      data: {
-        data: [
-          {
-            id: 'inst-anz',
-            name: 'ANZ',
-            colour: '#0072ac',
-            logoAssetId: null,
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-          },
-        ],
       },
     });
 
@@ -224,25 +222,15 @@ describe('UploadStep — an account with no derivable import format (POPS-2854)'
             entityId: null,
             entityDisplayName: null,
             entityDisplayNameStale: false,
+            entityColour: null,
+            entityAvatarAssetId: null,
+            resolvedEntityId: null,
+            institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },
         ],
         pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
-      },
-    });
-    institutionsList.mockResolvedValueOnce({
-      data: {
-        data: [
-          {
-            id: 'inst-anz',
-            name: 'ANZ',
-            colour: '#0072ac',
-            logoAssetId: null,
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z',
-          },
-        ],
       },
     });
 
@@ -308,21 +296,16 @@ describe('UploadStep — creating an account mid-import (POPS-2820)', () => {
       entityId: null,
       entityDisplayName: null,
       entityDisplayNameStale: false,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    };
-    const anzInstitution = {
-      id: 'inst-anz',
-      name: 'ANZ',
-      colour: '#0072ac',
-      logoAssetId: null,
+      entityColour: null,
+      entityAvatarAssetId: null,
+      resolvedEntityId: null,
+      institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     };
     accountsList.mockResolvedValue({
       data: { data: [anzAccount], pagination: { total: 1, limit: 500, offset: 0, hasMore: false } },
     });
-    institutionsList.mockResolvedValue({ data: { data: [anzInstitution] } });
     currenciesList.mockResolvedValue({
       data: {
         data: [{ code: 'AUD', name: 'Australian Dollar', symbol: '$', decimals: 2, kind: 'fiat' }],

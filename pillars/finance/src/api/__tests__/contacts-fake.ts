@@ -26,8 +26,8 @@ export interface SeedContact {
   defaultTags?: string[];
   notes?: string | null;
   lastEditedTime?: string;
-  avatarAssetId?: string | null;
   colour?: string | null;
+  avatarAssetId?: string | null;
 }
 
 export interface ContactsFake extends ContactsClient {
@@ -54,8 +54,8 @@ function toEntity(seed: SeedContact): ContactEntity {
     defaultTags: seed.defaultTags ?? [],
     notes: seed.notes ?? null,
     lastEditedTime: seed.lastEditedTime ?? '2026-01-01T00:00:00.000Z',
-    avatarAssetId: seed.avatarAssetId ?? null,
     colour: seed.colour ?? null,
+    avatarAssetId: seed.avatarAssetId ?? null,
   };
 }
 
@@ -72,21 +72,24 @@ export interface ContactsFakeOptions {
   unavailableDetail?: string;
 }
 
+function filterEntities(
+  entities: ContactEntity[],
+  query: { search?: string; type?: string }
+): ContactEntity[] {
+  const search = query.search?.toLowerCase();
+  return entities.filter((e) => {
+    if (query.type && e.type !== query.type) return false;
+    if (search && !e.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
   const entities = (options.seed ?? []).map(toEntity);
   const created: { name: string; type: string }[] = [];
   const defaultTagWrites: { entityId: string; defaultTags: string[] }[] = [];
   let unavailable = options.unavailable ?? false;
   const unavailableDetail = options.unavailableDetail ?? 'unavailable';
-
-  function filter(query: { search?: string; type?: string }): ContactEntity[] {
-    const search = query.search?.toLowerCase();
-    return entities.filter((e) => {
-      if (query.type && e.type !== query.type) return false;
-      if (search && !e.name.toLowerCase().includes(search)) return false;
-      return true;
-    });
-  }
 
   return {
     entities,
@@ -96,7 +99,7 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
       unavailable = value;
     },
     async fetchAllEntities(query = {}): Promise<ContactEntity[]> {
-      return unavailable ? [] : filter(query);
+      return unavailable ? [] : filterEntities(entities, query);
     },
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {
       if (unavailable) return [];
@@ -105,6 +108,16 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
     async fetchEntityDisplayName(entityId: string): Promise<string | null> {
       if (unavailable) return null;
       return entities.find((e) => e.id === entityId)?.name ?? null;
+    },
+    async fetchEntitySummary(entityId: string) {
+      if (unavailable) return null;
+      const entity = entities.find((e) => e.id === entityId);
+      if (!entity) return null;
+      return {
+        name: entity.name,
+        colour: entity.colour ?? null,
+        avatarAssetId: entity.avatarAssetId ?? null,
+      };
     },
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       created.push({ name, type });

@@ -28,7 +28,7 @@ export function useAccountFormDialogState() {
       ...DEFAULT_ACCOUNT_FORM_VALUES,
       name: account.name,
       kind: account.kind,
-      institutionId: account.institutionId,
+      entityId: account.entityId,
       currency: account.currency,
     });
     setIsDialogOpen(true);

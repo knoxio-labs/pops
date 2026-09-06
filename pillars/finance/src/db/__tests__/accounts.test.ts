@@ -357,14 +357,46 @@ describe('person account entity invariant (POPS-2771)', () => {
     expect(created.entityId).toBeNull();
   });
 
-  it.each(['checking', 'savings', 'credit-card', 'cash', 'gift-card'] as const)(
-    'rejects a non-person account (%s) carrying an entityId',
+  it('rejects an account with no issuing institution (cash) carrying an entityId', () => {
+    expect(() =>
+      createAccount(db, {
+        name: 'Not linkable',
+        kind: 'cash',
+        currency: 'AUD',
+        entityId: 'entity-x',
+      })
+    ).toThrow(NonPersonAccountHasEntityError);
+  });
+
+  it.each(['checking', 'savings', 'credit-card', 'gift-card', 'loan'] as const)(
+    'accepts an issuer-bearing account (%s) carrying an entityId (POPS-3063)',
     (kind) => {
-      expect(() =>
-        createAccount(db, { name: 'Not a person', kind, currency: 'AUD', entityId: 'entity-x' })
-      ).toThrow(NonPersonAccountHasEntityError);
+      const created = createAccount(db, {
+        name: 'Bank account',
+        kind,
+        currency: 'AUD',
+        entityId: 'entity-bank',
+      });
+      expect(created.entityId).toBe('entity-bank');
     }
   );
+
+  it('allows two issuer-bearing accounts to share the same entityId and currency (POPS-3063)', () => {
+    createAccount(db, {
+      name: 'Checking',
+      kind: 'checking',
+      currency: 'AUD',
+      entityId: 'entity-bank',
+    });
+    expect(() =>
+      createAccount(db, {
+        name: 'Savings',
+        kind: 'savings',
+        currency: 'AUD',
+        entityId: 'entity-bank',
+      })
+    ).not.toThrow();
+  });
 
   it('rejects a second person account for the same (entityId, currency) pair', () => {
     createAccount(db, {

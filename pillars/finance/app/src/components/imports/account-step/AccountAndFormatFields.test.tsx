@@ -8,38 +8,41 @@ import { useImportStore } from '../../../store/importStore';
 import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../../../test-utils.js';
 import { AccountAndFormatFields } from './AccountAndFormatFields';
 
-import type { Account, Institution } from '../../../pages/accounts/types';
+import type { Account } from '../../../pages/accounts/types';
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const accountsCreate = vi.fn();
+const entitiesList = vi.fn();
+const entitiesCreate = vi.fn();
 
 vi.mock('../../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
-  institutionsCreate: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
+}));
+
+vi.mock('../../../contacts-api/index.js', () => ({
+  entitiesList: (...args: unknown[]) => entitiesList(...args),
+  entitiesCreate: (...args: unknown[]) => entitiesCreate(...args),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-function institution(overrides: Partial<Institution>): Institution {
+/** The not-yet-migrated institution fallback embedded on an account response (POPS-3063). */
+function institutionFallback(overrides: Partial<Account['institution']> = {}) {
   return {
     id: 'inst-anz',
     name: 'ANZ',
     colour: '#0072ac',
     logoAssetId: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
 }
 
-const ANZ_INSTITUTION = institution({});
-const ING_INSTITUTION = institution({ id: 'inst-ing', name: 'ING', colour: '#ff6200' });
+const ANZ_INSTITUTION = institutionFallback();
+const ING_INSTITUTION = institutionFallback({ id: 'inst-ing', name: 'ING', colour: '#ff6200' });
 
 function account(overrides: Partial<Account>): Account {
   return {
@@ -53,6 +56,10 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    entityColour: null,
+    entityAvatarAssetId: null,
+    resolvedEntityId: null,
+    institution: ANZ_INSTITUTION,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -71,7 +78,7 @@ const AUD = {
   createdAt: '',
 };
 
-function renderFields(accounts: Account[], institutions: Institution[] = [ANZ_INSTITUTION]) {
+function renderFields(accounts: Account[]) {
   accountsList.mockResolvedValue({
     data: {
       data: accounts,
@@ -79,7 +86,10 @@ function renderFields(accounts: Account[], institutions: Institution[] = [ANZ_IN
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: institutions }, error: undefined });
+  entitiesList.mockResolvedValue({
+    data: { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } },
+    error: undefined,
+  });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -122,13 +132,20 @@ describe('AccountAndFormatFields', () => {
 
   it('changes the offered formats when a different institution is picked, instead of always showing the same list', async () => {
     const user = userEvent.setup();
-    renderFields(
-      [
-        account({ id: 'acc-anz', name: 'ANZ Everyday', institutionId: ANZ_INSTITUTION.id }),
-        account({ id: 'acc-ing', name: 'ING Everyday', institutionId: ING_INSTITUTION.id }),
-      ],
-      [ANZ_INSTITUTION, ING_INSTITUTION]
-    );
+    renderFields([
+      account({
+        id: 'acc-anz',
+        name: 'ANZ Everyday',
+        institutionId: ANZ_INSTITUTION.id,
+        institution: ANZ_INSTITUTION,
+      }),
+      account({
+        id: 'acc-ing',
+        name: 'ING Everyday',
+        institutionId: ING_INSTITUTION.id,
+        institution: ING_INSTITUTION,
+      }),
+    ]);
 
     await user.click(await screen.findByRole('combobox', { name: 'Account to import into' }));
     await user.click(await screen.findByText('ANZ Everyday'));
@@ -144,7 +161,13 @@ describe('AccountAndFormatFields', () => {
   it('says there is nothing to import instead of showing an unrelated bank list, for a kind with no export', async () => {
     const user = userEvent.setup();
     renderFields([
-      account({ id: 'acc-cash', name: 'Wallet cash', institutionId: null, kind: 'cash' }),
+      account({
+        id: 'acc-cash',
+        name: 'Wallet cash',
+        institutionId: null,
+        institution: null,
+        kind: 'cash',
+      }),
     ]);
 
     await user.click(await screen.findByRole('combobox', { name: 'Account to import into' }));

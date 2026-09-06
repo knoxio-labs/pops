@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../../test-utils.js';
 import { toAccountOptions } from './toAccountOptions';
 
-import type { ApiAccount, ApiInstitution } from './toAccountOptions';
+import type { ApiAccount } from './toAccountOptions';
 
 function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
   return {
@@ -17,6 +17,10 @@ function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    entityColour: null,
+    entityAvatarAssetId: null,
+    resolvedEntityId: null,
+    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -26,69 +30,84 @@ function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
   };
 }
 
-function institution(overrides: Partial<ApiInstitution> = {}): ApiInstitution {
-  return {
-    id: 'anz',
-    name: 'ANZ',
-    colour: '#0072ac',
-    logoAssetId: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    ...overrides,
-  };
-}
-
 describe('toAccountOptions', () => {
-  it('joins an account onto its institution by id', () => {
-    const [option] = toAccountOptions([account({ institutionId: 'anz' })], [institution()]);
-    expect(option?.institution).toEqual({ id: 'anz', name: 'ANZ', colour: '#0072ac' });
+  it('reads a contacts-resolved issuer straight off the account response', () => {
+    const [option] = toAccountOptions([
+      account({
+        entityId: 'entity-anz',
+        resolvedEntityId: 'entity-anz',
+        entityDisplayName: 'ANZ',
+        entityColour: '#0072ac',
+      }),
+    ]);
+    expect(option?.institution).toEqual({ id: 'entity-anz', name: 'ANZ', colour: '#0072ac' });
   });
 
-  it('leaves institution undefined for an account with no institutionId', () => {
-    const [option] = toAccountOptions([account({ institutionId: null })], [institution()]);
-    expect(option?.institution).toBeUndefined();
+  it('resolves a contacts avatar asset id to the contacts-api avatar route', () => {
+    const [option] = toAccountOptions([
+      account({
+        entityId: 'entity-anz',
+        resolvedEntityId: 'entity-anz',
+        entityDisplayName: 'ANZ',
+        entityColour: '#0072ac',
+        entityAvatarAssetId: 'avatar-1',
+      }),
+    ]);
+    expect(option?.institution?.logoUrl).toBe('/contacts-api/entities/entity-anz/avatar');
   });
 
-  it('leaves institution undefined when the referenced institution is not in the joined set', () => {
-    // Guards a stale reference (e.g. a deleted institution the fixture forgot
-    // to filter out) from throwing rather than degrading gracefully.
-    const [option] = toAccountOptions([account({ institutionId: 'missing' })], [institution()]);
-    expect(option?.institution).toBeUndefined();
+  it('falls back to the not-yet-migrated institution object when no entity resolved', () => {
+    const [option] = toAccountOptions([
+      account({
+        institutionId: 'inst-anz',
+        institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
+      }),
+    ]);
+    expect(option?.institution).toEqual({ id: 'inst-anz', name: 'ANZ', colour: '#0072ac' });
   });
 
-  it('resolves logoAssetId to the raw serving route', () => {
-    const [option] = toAccountOptions(
-      [account({ institutionId: 'anz' })],
-      [institution({ logoAssetId: 'asset-1' })]
-    );
+  it("resolves the institution fallback's logoAssetId to finance's own logo route", () => {
+    const [option] = toAccountOptions([
+      account({
+        institutionId: 'inst-anz',
+        institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: 'asset-1' },
+      }),
+    ]);
     expect(option?.institution?.logoUrl).toBe('/finance-api/logos/asset-1');
   });
 
-  it('leaves logoUrl unset when the institution has no logoAssetId', () => {
-    const [option] = toAccountOptions(
-      [account({ institutionId: 'anz' })],
-      [institution({ logoAssetId: null })]
-    );
-    expect(option?.institution?.logoUrl).toBeUndefined();
+  it('leaves institution undefined for a cash account', () => {
+    const [option] = toAccountOptions([account({ kind: 'cash' })]);
+    expect(option?.institution).toBeUndefined();
+  });
+
+  it('leaves institution undefined for a person account even though entityDisplayName resolves', () => {
+    const [option] = toAccountOptions([
+      account({ kind: 'person', entityId: 'entity-alice', entityDisplayName: 'Alice' }),
+    ]);
+    expect(option?.institution).toBeUndefined();
+  });
+
+  it('leaves institution undefined for an issuer-bearing account linked to neither', () => {
+    const [option] = toAccountOptions([account({ kind: 'checking' })]);
+    expect(option?.institution).toBeUndefined();
   });
 
   it('reads archived from a non-null archivedAt', () => {
-    const [active, archived] = toAccountOptions(
-      [
-        account({ id: 'a1', archivedAt: null }),
-        account({ id: 'a2', archivedAt: '2026-06-01T00:00:00.000Z' }),
-      ],
-      []
-    );
+    const [active, archived] = toAccountOptions([
+      account({ id: 'a1', archivedAt: null }),
+      account({ id: 'a2', archivedAt: '2026-06-01T00:00:00.000Z' }),
+    ]);
     expect(active?.archived).toBe(false);
     expect(archived?.archived).toBe(true);
   });
 
   it('preserves input order and count', () => {
-    const options = toAccountOptions(
-      [account({ id: 'a1' }), account({ id: 'a2' }), account({ id: 'a3' })],
-      []
-    );
+    const options = toAccountOptions([
+      account({ id: 'a1' }),
+      account({ id: 'a2' }),
+      account({ id: 'a3' }),
+    ]);
     expect(options.map((o) => o.id)).toEqual(['a1', 'a2', 'a3']);
   });
 });

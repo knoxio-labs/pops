@@ -1441,6 +1441,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -1464,6 +1466,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1479,6 +1487,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             }[];
@@ -1551,6 +1560,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -1574,6 +1585,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1589,6 +1606,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             };
@@ -1694,6 +1712,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -1717,6 +1737,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1732,6 +1758,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             }[];
@@ -1816,6 +1843,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -1839,6 +1868,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1854,6 +1889,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             };
@@ -1942,6 +1978,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -1965,6 +2003,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -1980,6 +2024,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             };
@@ -2089,6 +2134,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -2112,6 +2159,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -2127,6 +2180,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             };
@@ -3772,6 +3826,8 @@ export interface operations {
               createdAt: string;
               currency: string;
               displayOrder: number;
+              entityAvatarAssetId: string | null;
+              entityColour: string | null;
               entityDisplayName: string | null;
               entityDisplayNameStale: boolean;
               entityId: string | null;
@@ -3795,6 +3851,12 @@ export interface operations {
                   to: string;
                 } | null;
               };
+              institution: {
+                colour: string;
+                id: string;
+                logoAssetId: string | null;
+                name: string;
+              } | null;
               institutionId: string | null;
               /** @enum {string} */
               kind:
@@ -3810,6 +3872,7 @@ export interface operations {
                 | 'crypto'
                 | 'other';
               name: string;
+              resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
             };
@@ -3918,6 +3981,8 @@ export interface operations {
                 createdAt: string;
                 currency: string;
                 displayOrder: number;
+                entityAvatarAssetId: string | null;
+                entityColour: string | null;
                 entityDisplayName: string | null;
                 entityDisplayNameStale: boolean;
                 entityId: string | null;
@@ -3941,6 +4006,12 @@ export interface operations {
                     to: string;
                   } | null;
                 };
+                institution: {
+                  colour: string;
+                  id: string;
+                  logoAssetId: string | null;
+                  name: string;
+                } | null;
                 institutionId: string | null;
                 /** @enum {string} */
                 kind:
@@ -3956,6 +4027,7 @@ export interface operations {
                   | 'crypto'
                   | 'other';
                 name: string;
+                resolvedEntityId: string | null;
                 transactionCount: number;
                 updatedAt: string;
               };
@@ -3977,6 +4049,8 @@ export interface operations {
                 createdAt: string;
                 currency: string;
                 displayOrder: number;
+                entityAvatarAssetId: string | null;
+                entityColour: string | null;
                 entityDisplayName: string | null;
                 entityDisplayNameStale: boolean;
                 entityId: string | null;
@@ -4000,6 +4074,12 @@ export interface operations {
                     to: string;
                   } | null;
                 };
+                institution: {
+                  colour: string;
+                  id: string;
+                  logoAssetId: string | null;
+                  name: string;
+                } | null;
                 institutionId: string | null;
                 /** @enum {string} */
                 kind:
@@ -4015,6 +4095,7 @@ export interface operations {
                   | 'crypto'
                   | 'other';
                 name: string;
+                resolvedEntityId: string | null;
                 transactionCount: number;
                 updatedAt: string;
               };
