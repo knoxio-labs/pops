@@ -91,11 +91,20 @@ interface TransactionListProps {
   onAcceptAiSuggestion: TransactionGroupProps['onAcceptAiSuggestion'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
+  entityVerification: EntityVerification;
   variant: GroupVariant;
 }
 
 function TransactionList(props: TransactionListProps) {
-  const { group, editingTransaction, onSaveEdit, onCancelEdit, entities, variant } = props;
+  const {
+    group,
+    editingTransaction,
+    onSaveEdit,
+    onCancelEdit,
+    entities,
+    entityVerification,
+    variant,
+  } = props;
   return (
     <div className="p-4 space-y-3 border-t border-border">
       {group.transactions.map((transaction, idx) =>
@@ -116,6 +125,7 @@ function TransactionList(props: TransactionListProps) {
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}
+            entityVerification={entityVerification}
             variant={variant}
           />
         )
@@ -171,6 +181,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
             onEdit={props.onEdit}
             entities={entities}
+            entityVerification={entityVerification}
             variant={variant}
           />
         </CollapsibleContent>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { unwrap } from '../../../contacts-api-helpers.js';
+import { ContactsApiError, unwrap } from '../../../contacts-api-helpers.js';
 import { entitiesList, entitiesLookup } from '../../../contacts-api/index.js';
 import { computeMergedEntities } from '../../../lib/merged-state';
 import { useImportStore } from '../../../store/importStore';
@@ -10,10 +10,22 @@ import type { EntityVerification } from '../entity-existence';
 
 const ENTITY_LIST_FALLBACK_INPUT = { limit: 200 } as const;
 
+/**
+ * Only a 404 means "this contacts instance predates the lookup endpoint" —
+ * the one case the largest-list-page fallback exists for. Any other failure
+ * (500, a timeout, an auth error) is a real problem with entities.lookup
+ * itself, and falling back would silently serve a capped, possibly stale
+ * page while reporting `ready` instead of surfacing that lookup is broken.
+ */
+function isMissingLookupEndpoint(err: unknown): boolean {
+  return err instanceof ContactsApiError && err.status === 404;
+}
+
 async function fetchEntities() {
   try {
     return unwrap(await entitiesLookup({ body: {} })).entities;
-  } catch {
+  } catch (err) {
+    if (!isMissingLookupEndpoint(err)) throw err;
     const page = unwrap(await entitiesList({ query: ENTITY_LIST_FALLBACK_INPUT }));
     return page.data;
   }

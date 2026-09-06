@@ -81,6 +81,18 @@ describe('useEntities', () => {
     expect(result.current.entityVerification).toBe('checking');
   });
 
+  it('does not mask a real lookup failure behind the list fallback', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'internal error' },
+      response: new Response(null, { status: 500 }),
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entityVerification).toBe('unavailable'));
+    expect(mockEntitiesList).not.toHaveBeenCalled();
+  });
+
   it('reports an unavailable state when neither Contacts endpoint can load entities', async () => {
     mockEntitiesLookup.mockResolvedValue({
       error: { message: 'lookup unavailable' },

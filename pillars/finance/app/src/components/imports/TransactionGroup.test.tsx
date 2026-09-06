@@ -166,3 +166,36 @@ describe('TransactionGroup — the accept button names its outcome', () => {
     expect(screen.getAllByRole('button', { name: /assign all/i })).toHaveLength(1);
   });
 });
+
+describe('TransactionGroup — expanded rows inherit the group verification state', () => {
+  function makeAiTxn(checksum: string): ProcessedTransaction {
+    return {
+      ...makeTxn(checksum),
+      entity: { matchType: 'ai', confidence: 0.6, entityName: 'Bunnings Warehouse' },
+    };
+  }
+
+  it('resolves each row instead of leaving it stuck on checking', async () => {
+    const user = userEvent.setup();
+    renderGroup({ group: makeGroup({ transactions: [makeAiTxn('a')] }) });
+
+    await user.click(screen.getByRole('button', { name: 'Expand' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Assign to "Bunnings Warehouse"' })
+    ).toBeInTheDocument();
+  });
+
+  it('disables the row button while verification is still checking', async () => {
+    const user = userEvent.setup();
+    renderGroup({
+      group: makeGroup({ transactions: [makeAiTxn('a')] }),
+      entities: undefined,
+      entityVerification: 'checking',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Expand' }));
+
+    expect(screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })).toBeDisabled();
+  });
+});
