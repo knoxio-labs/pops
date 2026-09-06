@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Collapsible, CollapsibleContent, Label } from '@pops/ui';
 
 import { EditableTransactionCard } from './EditableTransactionCard';
-import { resolveEntityExistence } from './entity-existence';
+import { resolveEntityExistence, type EntityVerification } from './entity-existence';
 import { EntitySelect } from './EntitySelect';
 import { GroupHeader } from './transaction-group/GroupHeader';
 import { TransactionCard } from './TransactionCard';
@@ -33,6 +33,7 @@ interface TransactionGroupProps {
   ) => void;
   onCancelEdit?: () => void;
   entities?: Array<{ id: string; name: string }>;
+  entityVerification?: EntityVerification;
   variant?: GroupVariant;
 }
 
@@ -127,12 +128,12 @@ function TransactionList(props: TransactionListProps) {
  * Grouped view of transactions with bulk actions
  */
 export function TransactionGroup(props: TransactionGroupProps) {
-  const { group, entities, variant = 'uncertain' } = props;
+  const { group, entities, entityVerification = 'checking', variant = 'uncertain' } = props;
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEntitySelector, setShowEntitySelector] = useState(false);
 
   const totalAmount = group.transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  const existence = resolveEntityExistence(group.entityName, entities);
+  const existence = resolveEntityExistence(group.entityName, entities, entityVerification);
 
   return (
     <div

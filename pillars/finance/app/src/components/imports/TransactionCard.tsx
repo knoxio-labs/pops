@@ -9,6 +9,8 @@ import { EntitySection, ReadonlyEntitySummary } from './transaction-card/EntityS
 
 import type { ProcessedTransaction } from '@pops/finance';
 
+import type { EntityVerification } from './entity-existence';
+
 interface TransactionCardProps {
   transaction: ProcessedTransaction;
   onEntitySelect?: (
@@ -20,6 +22,7 @@ interface TransactionCardProps {
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;
+  entityVerification?: EntityVerification;
   readonly?: boolean;
   showMatchType?: boolean;
   variant?: 'matched' | 'uncertain' | 'failed';
@@ -35,6 +38,7 @@ export function TransactionCard({
   onAcceptAiSuggestion,
   onEdit,
   entities,
+  entityVerification,
   readonly = false,
   showMatchType = false,
   variant = 'matched',
@@ -53,6 +57,7 @@ export function TransactionCard({
         <EntitySection
           transaction={transaction}
           entities={entities}
+          entityVerification={entityVerification}
           onEntitySelect={onEntitySelect}
           onCreateEntityWithName={onCreateEntityWithName}
           onAcceptAiSuggestion={onAcceptAiSuggestion}

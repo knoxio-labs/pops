@@ -1,5 +1,6 @@
 import { useImportStore } from '../../store/importStore';
 import { DroppedRowsNotice } from './review/DroppedRowsNotice';
+import { EntityLookupUnavailableNotice } from './review/EntityLookupUnavailableNotice';
 import { ReviewFooter, ReviewHeader } from './review/ReviewChrome';
 import { ReviewDialogs } from './review/ReviewDialogs';
 import { ReviewTabs } from './review/ReviewTabs';
@@ -57,6 +58,9 @@ export function ReviewStep() {
         setBrowseOpen={proposal.setBrowseOpen}
       />
       <ReviewWarnings warnings={processedTransactions.warnings} />
+      {bulk.entityVerification === 'unavailable' && (
+        <EntityLookupUnavailableNotice onRetry={() => void bulk.retryEntityLookup()} />
+      )}
       <DroppedRowsNotice dropped={commit.dropped} />
       <ReviewTabs
         activeTab={review.activeTab}
@@ -78,6 +82,7 @@ export function ReviewStep() {
         handleAcceptAll={bulk.handleAcceptAll}
         handleCreateAndAssignAll={bulk.handleCreateAndAssignAll}
         entities={bulk.entities}
+        entityVerification={bulk.entityVerification}
       />
       <ReviewFooter
         unresolvedCount={review.unresolvedCount}

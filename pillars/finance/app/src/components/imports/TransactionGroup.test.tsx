@@ -45,6 +45,7 @@ function renderGroup(overrides: Partial<Parameters<typeof TransactionGroup>[0]> 
         { id: 'ent-1', name: 'Bunnings Warehouse' },
         { id: 'ent-2', name: 'Coles' },
       ]}
+      entityVerification="ready"
       {...overrides}
     />
   );
@@ -132,16 +133,30 @@ describe('TransactionGroup — the accept button names its outcome', () => {
     ).toBeInTheDocument();
   });
 
-  it('promises neither while the entity list is still loading', () => {
+  it('shows that it is checking while the entity list is still loading', () => {
     renderGroup({
       group: makeGroup({ aiSuggestion: true }),
       entities: undefined,
+      entityVerification: 'checking',
     });
 
     expect(
-      screen.getByRole('button', { name: 'Accept all as "Bunnings Warehouse"' })
+      screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Checking "Bunnings Warehouse"…' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /create "bunnings/i })).not.toBeInTheDocument();
+  });
+
+  it('does not permit accepting when Contacts is unavailable', () => {
+    renderGroup({
+      group: makeGroup({ aiSuggestion: true }),
+      entities: undefined,
+      entityVerification: 'unavailable',
+    });
+
+    expect(
+      screen.getByRole('button', { name: `Can't verify "Bunnings Warehouse"` })
+    ).toBeDisabled();
   });
 
   it('leaves the picker under a name of its own, not a second "assign all"', () => {

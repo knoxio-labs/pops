@@ -9,6 +9,7 @@ import { UncertainTab } from './UncertainTab';
 
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
+import type { EntityVerification } from '../entity-existence';
 import type { ViewMode } from '../hooks/useTransactionReview';
 
 export interface ReviewTabsProps {
@@ -40,6 +41,7 @@ export interface ReviewTabsProps {
   handleAcceptAll: (ts: ProcessedTransaction[]) => void;
   handleCreateAndAssignAll: (ts: ProcessedTransaction[], entityName: string) => void;
   entities?: Array<{ id: string; name: string }>;
+  entityVerification: EntityVerification;
 }
 
 function buildTabSharedProps(props: ReviewTabsProps) {
@@ -57,6 +59,7 @@ function buildTabSharedProps(props: ReviewTabsProps) {
     onSaveEdit: props.handleSaveEdit,
     onCancelEdit: props.handleCancelEdit,
     entities: props.entities,
+    entityVerification: props.entityVerification,
   };
 }
 

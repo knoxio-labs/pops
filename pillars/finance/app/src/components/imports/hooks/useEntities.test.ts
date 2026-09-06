@@ -78,6 +78,23 @@ describe('useEntities', () => {
 
     expect(result.current.entities).toBeUndefined();
     expect(result.current.dbEntities).toBeUndefined();
+    expect(result.current.entityVerification).toBe('checking');
+  });
+
+  it('reports an unavailable state when neither Contacts endpoint can load entities', async () => {
+    mockEntitiesLookup.mockResolvedValue({
+      error: { message: 'lookup unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+    mockEntitiesList.mockResolvedValue({
+      error: { message: 'list unavailable' },
+      response: new Response(null, { status: 503 }),
+    });
+
+    const { result } = renderHook(() => useEntities(), { wrapper });
+
+    await waitFor(() => expect(result.current.entityVerification).toBe('unavailable'));
+    expect(result.current.entities).toBeUndefined();
   });
 
   it('merges a session-pending entity into its alphabetical place', async () => {

@@ -29,6 +29,7 @@ function renderSection(overrides: Partial<Parameters<typeof EntitySection>[0]> =
     <EntitySection
       transaction={aiMatched("McDonald's")}
       entities={ENTITIES}
+      entityVerification="ready"
       onEntitySelect={vi.fn()}
       onCreateEntityWithName={vi.fn()}
       onAcceptAiSuggestion={vi.fn()}

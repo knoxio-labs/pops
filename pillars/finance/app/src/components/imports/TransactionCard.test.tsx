@@ -231,6 +231,7 @@ describe('TransactionCard — the AI accept button names its outcome', () => {
         variant="uncertain"
         onAcceptAiSuggestion={vi.fn()}
         entities={[{ id: 'ent_1', name: 'Chargefox' }]}
+        entityVerification="ready"
         {...overrides}
       />
     );
@@ -247,9 +248,15 @@ describe('TransactionCard — the AI accept button names its outcome', () => {
   });
 
   it('promises neither while the entity list is still loading', () => {
-    renderAiCard({ entities: undefined });
-    expect(screen.getByRole('button', { name: 'Accept "Chargefox"' })).toBeInTheDocument();
+    renderAiCard({ entities: undefined, entityVerification: 'checking' });
+    expect(screen.getByRole('button', { name: 'Checking "Chargefox"…' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Checking "Chargefox"…' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /create "chargefox"/i })).not.toBeInTheDocument();
+  });
+
+  it('refuses to promise an outcome when Contacts is unavailable', () => {
+    renderAiCard({ entities: undefined, entityVerification: 'unavailable' });
+    expect(screen.getByRole('button', { name: `Can't verify "Chargefox"` })).toBeDisabled();
   });
 
   it('accepts the suggestion when clicked', () => {

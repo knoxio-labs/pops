@@ -6,6 +6,8 @@ import { entitiesList, entitiesLookup } from '../../../contacts-api/index.js';
 import { computeMergedEntities } from '../../../lib/merged-state';
 import { useImportStore } from '../../../store/importStore';
 
+import type { EntityVerification } from '../entity-existence';
+
 const ENTITY_LIST_FALLBACK_INPUT = { limit: 200 } as const;
 
 async function fetchEntities() {
@@ -15,6 +17,11 @@ async function fetchEntities() {
     const page = unwrap(await entitiesList({ query: ENTITY_LIST_FALLBACK_INPUT }));
     return page.data;
   }
+}
+
+function classifyVerification(lookup: unknown, isError: boolean): EntityVerification {
+  if (lookup) return 'ready';
+  return isError ? 'unavailable' : 'checking';
 }
 
 /**
@@ -35,10 +42,11 @@ async function fetchEntities() {
  * the fetch is in flight.
  */
 export function useEntities() {
-  const { data: lookup } = useQuery({
+  const entityQuery = useQuery({
     queryKey: ['contacts', 'entities', 'lookup'],
     queryFn: fetchEntities,
   });
+  const { data: lookup } = entityQuery;
   const pendingEntities = useImportStore((s) => s.pendingEntities);
   const addPendingEntity = useImportStore((s) => s.addPendingEntity);
   const dbEntities = lookup;
@@ -46,5 +54,12 @@ export function useEntities() {
     () => (dbEntities ? computeMergedEntities(dbEntities, pendingEntities) : undefined),
     [dbEntities, pendingEntities]
   );
-  return { entities, dbEntities, addPendingEntity };
+  const entityVerification = classifyVerification(lookup, entityQuery.isError);
+  return {
+    entities,
+    dbEntities,
+    addPendingEntity,
+    entityVerification,
+    retryEntityLookup: entityQuery.refetch,
+  };
 }

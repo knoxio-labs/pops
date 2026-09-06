@@ -57,6 +57,7 @@ function renderTab(
       { id: 'ent-Coles', name: 'Coles' },
       { id: 'ent-Bunnings', name: 'Bunnings' },
     ],
+    entityVerification: 'ready',
     ...overrides,
   };
   return { ...render(<MatchedTab {...props} />), props };
