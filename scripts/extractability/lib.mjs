@@ -34,19 +34,59 @@ export const UNIT_ROOTS = ['libs', 'pillars'];
  */
 
 /**
- * Reads and parses a package.json, returning null if absent or unparseable.
+ * Reads and parses a package.json. `null` means **absent**; a file that exists
+ * and does not parse throws.
+ *
+ * The two used to be the same answer, and that made a unit with a broken
+ * manifest invisible: `discoverUnits` skips a directory whose `pkg` is null,
+ * so `depcheck --all` never checked it and printed ✔. The guard whose whole
+ * job is "every imported package is declared" could not see a unit in the one
+ * state where that claim is most likely to be false.
+ *
+ * `scripts/check-exports.mjs` reads the same file and lets `JSON.parse` throw.
+ * Two guards disagreeing about what a malformed manifest means is one of them
+ * being wrong; this is the half that was.
+ *
  * @param {string} dir
- * @returns {Record<string, unknown> | null}
+ * @returns {Record<string, unknown> | null} `null` only when there is no file.
+ * @throws if the file exists but is not parseable JSON, or parses to a non-object.
  */
 export function readPackageJson(dir) {
   const file = join(dir, 'package.json');
   if (!existsSync(file)) return null;
+  let parsed;
   try {
-    const parsed = JSON.parse(readFileSync(file, 'utf8'));
-    return typeof parsed === 'object' && parsed !== null ? parsed : null;
-  } catch {
-    return null;
+    parsed = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error) {
+    throw new Error(`${file} exists but does not parse as JSON`, { cause: error });
   }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(
+      `${file} parses to ${Array.isArray(parsed) ? 'an array' : typeof parsed}, not an object`
+    );
+  }
+  return parsed;
+}
+
+/**
+ * The reason a unit declares for having nothing to prove, or `null`.
+ *
+ * `pops.extractability.noProofSurface`, as a non-empty string. EX-2 reads it
+ * to skip a unit with no build/typecheck/test script; EX-1 reads it to accept
+ * a unit with no scannable source. Both are the same claim — "this unit is
+ * data, not code" — so both resolve it the same way rather than each carrying
+ * its own idea of where the field lives and what shape counts.
+ *
+ * @param {Record<string, unknown>} pkg
+ * @returns {string | null}
+ */
+export function noProofSurfaceReason(pkg) {
+  const pops = pkg.pops;
+  if (typeof pops !== 'object' || pops === null) return null;
+  const extractability = /** @type {Record<string, unknown>} */ (pops).extractability;
+  if (typeof extractability !== 'object' || extractability === null) return null;
+  const reason = /** @type {Record<string, unknown>} */ (extractability).noProofSurface;
+  return typeof reason === 'string' && reason.trim().length > 0 ? reason : null;
 }
 
 /**
@@ -66,12 +106,10 @@ export function discoverUnits(roots = UNIT_ROOTS, cwd = process.cwd()) {
   const units = [];
   /** @param {string} dir */
   const walk = (dir) => {
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    // Not caught. A directory this walk cannot read is indistinguishable from
+    // one holding no units, and "no units" is the answer that makes EX-1
+    // print ✔ over a tree it never opened.
+    const entries = readdirSync(dir, { withFileTypes: true });
     const pkg = readPackageJson(dir);
     if (pkg && typeof pkg.name === 'string') {
       units.push({ dir, name: pkg.name, pkg });
@@ -149,12 +187,10 @@ function scriptKindFor(filePath) {
 export function importedPackages(filePath) {
   /** @type {Set<string>} */
   const roots = new Set();
-  let source;
-  try {
-    source = readFileSync(filePath, 'utf8');
-  } catch {
-    return roots;
-  }
+  // Not caught. An unreadable source file returning "imports nothing" is a
+  // phantom dependency that cannot be reported, in the one file the reader
+  // would least expect to be skipped.
+  const source = readFileSync(filePath, 'utf8');
   const sourceFile = ts.createSourceFile(
     filePath,
     source,
@@ -291,12 +327,10 @@ export function sourceFiles(unitDir) {
   const files = [];
   /** @param {string} dir */
   const walk = (dir) => {
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
+    // Not caught, for the same reason as `discoverUnits`: an unreadable
+    // directory returning "no files" is how a unit gets scanned as clean
+    // without a single import being parsed.
+    const entries = readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {

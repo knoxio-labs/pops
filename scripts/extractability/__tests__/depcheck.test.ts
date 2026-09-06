@@ -1,6 +1,8 @@
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 
@@ -215,5 +217,123 @@ describe('discoverUnits — against the live repo', () => {
 
   it('every discovered unit declares every package it imports (EX-1 holds on the tree)', () => {
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * The gate's own exit code, not just the pure function underneath it.
+ *
+ * `findPhantomDeps` returning `{ phantoms: [] }` is the same value for "this
+ * unit is clean" and "this unit had nothing to parse", and every caller read
+ * only the first field. That is how `--all` could print
+ * `✔ EX-1: 0 unit(s) declare every imported package` and exit 0 over a tree it
+ * could no longer see. `scanned` was computed all along and discarded.
+ *
+ * These spawn the CLI because that is the surface CI runs — `main()` is not
+ * exported, and the assertion the ticket asks for is on the exit code.
+ */
+describe('depcheck CLI — an empty sweep is not a pass', () => {
+  const cli = join(dirname(fileURLToPath(import.meta.url)), '..', 'depcheck.mjs');
+  let root: string;
+
+  beforeAll(() => {
+    root = mkdtempSync(join(tmpdir(), 'ex1-cli-'));
+  });
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  /** Run the gate in `cwd` and return its exit code and combined output. */
+  function run(cwd: string, args: string[]): { status: number; output: string } {
+    const result = spawnSync(process.execPath, [cli, ...args], { cwd, encoding: 'utf8' });
+    return { status: result.status ?? -1, output: `${result.stdout}${result.stderr}` };
+  }
+
+  function unit(dir: string, pkg: Record<string, unknown>, files: Record<string, string> = {}) {
+    const abs = join(root, dir);
+    mkdirSync(abs, { recursive: true });
+    writeFileSync(join(abs, 'package.json'), JSON.stringify(pkg));
+    for (const [rel, content] of Object.entries(files)) {
+      const target = join(abs, rel);
+      mkdirSync(join(target, '..'), { recursive: true });
+      writeFileSync(target, content);
+    }
+  }
+
+  it('fails when --all discovers no units at all', () => {
+    const empty = join(root, 'no-roots');
+    mkdirSync(empty, { recursive: true });
+
+    const { status, output } = run(empty, ['--all']);
+
+    expect(status).toBe(1);
+    expect(output).toContain('discovered zero units');
+  });
+
+  it('fails when a discovered unit has no source file to parse', () => {
+    const tree = join(root, 'silent');
+    mkdirSync(join(tree, 'libs'), { recursive: true });
+    unit('silent/libs/hollow', { name: '@fixture/hollow' });
+
+    const { status, output } = run(tree, ['--all']);
+
+    expect(status).toBe(1);
+    expect(output).toContain('@fixture/hollow');
+    expect(output).toContain('no source file to scan');
+  });
+
+  it('accepts a source-free unit that declares why, and says so on stdout', () => {
+    const tree = join(root, 'declared');
+    mkdirSync(join(tree, 'libs'), { recursive: true });
+    unit('declared/libs/data-only', {
+      name: '@fixture/data-only',
+      pops: { extractability: { noProofSurface: 'translation JSON only' } },
+    });
+
+    const { status, output } = run(tree, ['--all']);
+
+    expect(status).toBe(0);
+    expect(output).toContain('translation JSON only');
+  });
+
+  it('reports the file count, so a shrinking scan is visible in a passing run', () => {
+    const tree = join(root, 'counted');
+    mkdirSync(join(tree, 'libs'), { recursive: true });
+    unit(
+      'counted/libs/real',
+      { name: '@fixture/real', dependencies: { declared: '^1.0.0' } },
+      { 'src/index.ts': "import 'declared';", 'src/other.ts': "import 'declared';" }
+    );
+
+    const { status, output } = run(tree, ['--all']);
+
+    expect(status).toBe(0);
+    expect(output).toContain('2 source file(s) parsed');
+  });
+
+  it('fails when the source root cannot be read, rather than scanning zero files', () => {
+    // `src` as a FILE, so `readdirSync` raises ENOTDIR. The scan used to catch
+    // that and return an empty file list, which reaches the caller as
+    // `{ phantoms: [] }` — the guard's success value — from a unit whose
+    // source it never opened. Portable and deterministic, unlike chmod 000,
+    // which does nothing when the suite happens to run as root.
+    const tree = join(root, 'unreadable');
+    mkdirSync(join(tree, 'libs', 'blocked'), { recursive: true });
+    writeFileSync(join(tree, 'libs', 'blocked', 'package.json'), JSON.stringify({ name: '@f/b' }));
+    writeFileSync(join(tree, 'libs', 'blocked', 'src'), 'not a directory');
+
+    const { status, output } = run(tree, ['--all']);
+
+    expect(status).not.toBe(0);
+    expect(output).toContain('ENOTDIR');
+  });
+
+  it('fails on a package.json that exists and does not parse, rather than skipping the unit', () => {
+    const tree = join(root, 'malformed');
+    mkdirSync(join(tree, 'libs', 'broken'), { recursive: true });
+    writeFileSync(join(tree, 'libs', 'broken', 'package.json'), '{"name": ');
+
+    const { status, output } = run(tree, ['--all']);
+
+    expect(status).not.toBe(0);
+    expect(output).toContain('does not parse as JSON');
   });
 });

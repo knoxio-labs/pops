@@ -46,6 +46,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { noProofSurfaceReason as declaredNoProofSurface } from './lib.mjs';
+
 /** @param {unknown} value */
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.length > 0;
@@ -96,9 +98,7 @@ export function computeProofSurface(pkg) {
   const testScript = resolveTestScript(scripts);
   const hasTest = testScript !== null;
 
-  const reason = /** @type {any} */ (pkg)?.pops?.extractability?.noProofSurface;
-  const noProofSurfaceReason =
-    typeof reason === 'string' && reason.trim().length > 0 ? reason : null;
+  const noProofSurfaceReason = declaredNoProofSurface(pkg);
 
   const hasRecognizedSurface = hasBuild || hasTypecheck || hasTest;
   const decision = resolveDecision(hasRecognizedSurface, noProofSurfaceReason);
