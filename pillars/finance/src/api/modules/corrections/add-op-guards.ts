@@ -23,7 +23,7 @@ type AddOp = Extract<ChangeSetOp, { op: 'add' }>;
 
 /**
  * Would this `add` op store an `exact`/`contains` pattern that normalises to
- * the empty string — `'1234'`, `'  '` — which `patternMatchesDescription`
+ * the empty string — for example `'  '` — which `patternMatchesDescription`
  * refuses unconditionally, leaving an active rule nothing can ever fire
  * (POPS-3001)? `transaction_tag_rules` has refused this since POPS-2942;
  * corrections never did.

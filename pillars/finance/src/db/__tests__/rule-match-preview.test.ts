@@ -4,7 +4,7 @@
  *
  * Seeds an in-memory database carrying the migrated finance schema and asserts
  * the preview matches exactly what a rule would hit at import time: matching is
- * against the post-`normalizeDescription` form (digits stripped, whitespace
+ * against the post-`normalizeDescription` form (digits preserved, whitespace
  * collapsed, uppercased), the total count spans the full DB (never the page
  * limit), and pagination slices the newest-first ordering.
  */
@@ -85,11 +85,11 @@ describe('previewRuleMatchTransactions — exact', () => {
     harness = freshDb();
   });
 
-  it('matches on the normalised description (digits stripped, whitespace collapsed)', () => {
+  it('matches on the normalised description (digits preserved, whitespace collapsed)', () => {
     seedTransaction(harness.raw, { description: 'Starbucks   42  Store 7' });
     seedTransaction(harness.raw, { description: 'Starbucks Coffee' });
 
-    const result = preview(harness.db, 'STARBUCKS STORE', 'exact');
+    const result = preview(harness.db, 'STARBUCKS 42 STORE 7', 'exact');
     expect(result.totalCount).toBe(1);
     expect(result.matches.map((m) => m.description)).toEqual(['Starbucks   42  Store 7']);
   });
@@ -124,11 +124,9 @@ describe('previewRuleMatchTransactions — contains', () => {
     ]);
   });
 
-  it('matches across digit boundaries a raw SQL LIKE would miss', () => {
-    // normalise("STARBUCKS 12 LONDON") === "STARBUCKS LONDON", so the pattern
-    // spans a point where the raw row still has an interposed reference number.
+  it('does not match across an intervening digit run', () => {
     seedTransaction(harness.raw, { description: 'STARBUCKS 12 LONDON' });
-    expect(preview(harness.db, 'STARBUCKS LONDON', 'contains').totalCount).toBe(1);
+    expect(preview(harness.db, 'STARBUCKS LONDON', 'contains').totalCount).toBe(0);
   });
 
   it('projects checksum + current entity onto each match', () => {

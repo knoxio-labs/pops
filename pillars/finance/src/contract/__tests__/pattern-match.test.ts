@@ -31,9 +31,9 @@ describe('patternMatchesDescription', () => {
       ).toBe(true);
     });
 
-    it('sees the digits normalisation strips', () => {
+    it('sees digits in the raw description', () => {
       const description = describeForMatching('CARD 4471 PURCHASE');
-      expect(description.normalized).toBe('CARD PURCHASE');
+      expect(description.normalized).toBe('CARD 4471 PURCHASE');
       expect(patternMatchesDescription('4471', 'regex', description)).toBe(true);
       expect(patternMatchesDescription('\\d{4}', 'regex', description)).toBe(true);
     });
@@ -77,7 +77,7 @@ describe('patternMatchesDescription', () => {
   });
 
   describe('exact and contains are tested against the normalised description', () => {
-    it('folds digits on both sides, so one pattern covers every store number', () => {
+    it('preserves digits so a numeric suffix can narrow a rule', () => {
       expect(
         patternMatchesDescription(
           'WOOLWORTHS',
@@ -86,12 +86,11 @@ describe('patternMatchesDescription', () => {
         )
       ).toBe(true);
       expect(
-        patternMatchesDescription(
-          'WOOLWORTHS 9999',
-          'contains',
-          describeForMatching('WOOLWORTHS 2201 NEWTOWN')
-        )
+        patternMatchesDescription('7373', 'contains', describeForMatching('CARD 4564XXXXXXXX7373'))
       ).toBe(true);
+      expect(
+        patternMatchesDescription('9999', 'contains', describeForMatching('CARD 4564XXXXXXXX7373'))
+      ).toBe(false);
     });
 
     it('is case- and diacritic-insensitive', () => {
@@ -102,16 +101,16 @@ describe('patternMatchesDescription', () => {
 
     it('anchors `exact` to the whole normalised description', () => {
       expect(patternMatchesDescription('NETFLIX', 'exact', describeForMatching('NETFLIX 42'))).toBe(
-        true
+        false
       );
       expect(
         patternMatchesDescription('NETFLIX', 'exact', describeForMatching('NETFLIX AUSTRALIA'))
       ).toBe(false);
     });
 
-    it('rejects a pattern that normalises to nothing', () => {
+    it('matches a numeric-only pattern', () => {
       expect(patternMatchesDescription('1234', 'contains', describeForMatching('CARD 1234'))).toBe(
-        false
+        true
       );
     });
   });
@@ -120,6 +119,6 @@ describe('patternMatchesDescription', () => {
     const description = describeForMatching('Woolworths 1234 Sydney');
     expect(description.raw).toBe('Woolworths 1234 Sydney');
     expect(description.normalized).toBe(normalizeDescription('Woolworths 1234 Sydney'));
-    expect(description.normalized).toBe('WOOLWORTHS SYDNEY');
+    expect(description.normalized).toBe('WOOLWORTHS 1234 SYDNEY');
   });
 });

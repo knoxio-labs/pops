@@ -99,8 +99,8 @@ vi.mock('sonner', () => ({
 }));
 
 describe('normalizeDescription', () => {
-  it('uppercases, strips digits, and collapses whitespace', () => {
-    expect(normalizeDescription('Woolworths 1234 Sydney')).toBe('WOOLWORTHS SYDNEY');
+  it('uppercases, preserves digits, and collapses whitespace', () => {
+    expect(normalizeDescription('Woolworths 1234 Sydney')).toBe('WOOLWORTHS 1234 SYDNEY');
   });
 
   it('trims leading and trailing whitespace', () => {
@@ -111,8 +111,8 @@ describe('normalizeDescription', () => {
     expect(normalizeDescription('FOO    BAR')).toBe('FOO BAR');
   });
 
-  it('strips all digits, not just standalone runs', () => {
-    expect(normalizeDescription('TXN42ABC99')).toBe('TXNABC');
+  it('preserves digits embedded in a description', () => {
+    expect(normalizeDescription('TXN42ABC99')).toBe('TXN42ABC99');
   });
 });
 
@@ -124,8 +124,8 @@ describe('transactionMatchesSignal', () => {
       ).toBe(true);
     });
 
-    it('ignores digits in both description and pattern', () => {
-      expect(transactionMatchesSignal('STORE 42 SYDNEY', 'STORE 99', 'contains')).toBe(true);
+    it('uses digits in both description and pattern', () => {
+      expect(transactionMatchesSignal('STORE 42 SYDNEY', 'STORE 99', 'contains')).toBe(false);
     });
 
     it('is case-insensitive via normalization', () => {
@@ -144,7 +144,7 @@ describe('transactionMatchesSignal', () => {
 
   describe('exact', () => {
     it('matches when normalized description equals normalized pattern', () => {
-      expect(transactionMatchesSignal('NETFLIX 42', 'NETFLIX', 'exact')).toBe(true);
+      expect(transactionMatchesSignal('NETFLIX 42', 'NETFLIX 42', 'exact')).toBe(true);
     });
 
     it('rejects when description has extra words', () => {

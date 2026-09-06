@@ -11,8 +11,8 @@ import { normalizeDescription as dbNormalizeDescription } from '../../db/service
 import { normalizeDescription } from '../corrections-pure.js';
 
 describe('normalizeDescription', () => {
-  it('uppercases, strips digits, collapses whitespace, and trims', () => {
-    expect(normalizeDescription('  starbucks   42  store 7 ')).toBe('STARBUCKS STORE');
+  it('uppercases, preserves digits, collapses whitespace, and trims', () => {
+    expect(normalizeDescription('  starbucks   42  store 7 ')).toBe('STARBUCKS 42 STORE 7');
   });
 
   it('folds diacritics so an accented merchant matches its plain-ASCII spelling', () => {

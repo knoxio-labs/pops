@@ -87,7 +87,7 @@ describe('findDuplicateTransactionTagRules', () => {
     expect(groups[0]?.rules).toHaveLength(2);
   });
 
-  it('groups un-normalized case/digit variants of the same pattern (legacy drift)', () => {
+  it('does not group patterns with distinct numeric identifiers', () => {
     seedRule(harness, { descriptionPattern: 'K MART', matchType: 'contains', entityId: 'ent-a' });
     seedRule(harness, {
       descriptionPattern: 'k mart 42',
@@ -96,9 +96,7 @@ describe('findDuplicateTransactionTagRules', () => {
     });
 
     const groups = findDuplicateTransactionTagRules(harness.db);
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.descriptionPattern).toBe('K MART');
-    expect(groups[0]?.rules).toHaveLength(2);
+    expect(groups).toEqual([]);
   });
 
   it('does not normalize regex patterns when grouping (metacharacters must survive)', () => {

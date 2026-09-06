@@ -127,12 +127,12 @@ function seedCorrection(
 }
 
 describe('normalizeDescription', () => {
-  it('uppercases, strips digits, collapses whitespace, and trims', () => {
-    expect(normalizeDescription('  starbucks   42  store 7 ')).toBe('STARBUCKS STORE');
+  it('uppercases, preserves digits, collapses whitespace, and trims', () => {
+    expect(normalizeDescription('  starbucks   42  store 7 ')).toBe('STARBUCKS 42 STORE 7');
   });
 
-  it('returns an empty string when the input is digits + whitespace only', () => {
-    expect(normalizeDescription('   123  456  ')).toBe('');
+  it('preserves a digits-only input', () => {
+    expect(normalizeDescription('   123  456  ')).toBe('123 456');
   });
 
   it('is idempotent — passing a normalised value through is a no-op', () => {
@@ -164,7 +164,7 @@ describe('createOrUpdateTransactionCorrection — insert path', () => {
       matchType: 'exact',
     });
 
-    expect(created.descriptionPattern).toBe('COFFEE SHOP');
+    expect(created.descriptionPattern).toBe('COFFEE SHOP 42');
     expect(created.matchType).toBe('exact');
     expect(created.entityId).toBeNull();
     expect(created.entityName).toBeNull();
@@ -261,7 +261,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
 
   it('reinforces the existing row when (normalised pattern, matchType) collides', () => {
     const first = createOrUpdateTransactionCorrection(harness.db, {
-      descriptionPattern: 'Foo Bar 1',
+      descriptionPattern: 'Foo Bar',
       matchType: 'exact',
       entityName: 'Original',
     });
@@ -270,7 +270,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
     expect(first.lastUsedAt).toBeNull();
 
     const second = createOrUpdateTransactionCorrection(harness.db, {
-      descriptionPattern: 'foo bar 999',
+      descriptionPattern: 'foo bar',
       matchType: 'exact',
       entityName: 'Updated',
     });
@@ -543,7 +543,7 @@ describe('updateTransactionCorrection', () => {
     const updated = updateTransactionCorrection(harness.db, id, {
       descriptionPattern: '  new   pattern 42 ',
     });
-    expect(updated.descriptionPattern).toBe('NEW PATTERN');
+    expect(updated.descriptionPattern).toBe('NEW PATTERN 42');
   });
 
   it('treats explicit null as a value (clears the field)', () => {
@@ -787,7 +787,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
       priority: 1,
     });
 
-    const matches = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Coffee 42', null);
+    const matches = findAllMatchingTransactionCorrectionsFromDb(harness.db, 'Coffee', null);
     expect(matches.map((m) => m.id)).toEqual(['rule-a', 'rule-b', 'rule-z']);
   });
 

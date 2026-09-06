@@ -107,10 +107,8 @@ describe('the modules POPS-3037 reversed', () => {
     ).toBe(new InvalidPatternError('[unclosed').message);
   });
 
-  it('corrections: quotes the pattern that normalises away', () => {
-    expect(
-      wireBodyOf(() => assertPatternCanMatch(addOp({ descriptionPattern: '1234' }))).message
-    ).toContain('normalises to empty');
+  it('corrections: accepts a numeric pattern', () => {
+    expect(() => assertPatternCanMatch(addOp({ descriptionPattern: '1234' }))).not.toThrow();
   });
 
   it('rest: forwards a translated domain error message rather than swallowing it', () => {

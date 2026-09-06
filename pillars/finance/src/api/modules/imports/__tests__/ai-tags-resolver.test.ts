@@ -282,7 +282,11 @@ describe('env gating', () => {
 describe('deduplication and chunking', () => {
   it('costs one batch entry per distinct normalized descriptor, not one per row', async () => {
     tagsOnlyBatchWithAi.mockResolvedValue(
-      reply({ tags: ['venue:supermarket'] }, { tags: ['venue:cafe'] }, { tags: ['venue:bar'] })
+      reply(
+        ...Array.from({ length: 6 }, () => ({ tags: ['venue:supermarket'] })),
+        { tags: ['venue:cafe'] },
+        { tags: ['venue:bar'] }
+      )
     );
     const results = [
       ...Array.from({ length: 6 }, (_, i) => tagPoorRow(`WOOLWORTHS ${1000 + i}`)),
@@ -297,8 +301,7 @@ describe('deduplication and chunking', () => {
     await resolve(results);
 
     expect(tagsOnlyBatchWithAi).toHaveBeenCalledTimes(1);
-    expect(callInputs(0)).toHaveLength(3);
-    // The six Woolworths rows differ only in digits, which `normalizeDescription` strips.
+    expect(callInputs(0)).toHaveLength(8);
     for (const result of results.slice(0, 6)) {
       expect(rowOf(result).suggestedTags).toEqual([{ tag: 'venue:supermarket', source: 'ai' }]);
     }
@@ -306,7 +309,9 @@ describe('deduplication and chunking', () => {
   });
 
   it('gives each row its own suggestion objects so the wizard can edit them apart', async () => {
-    tagsOnlyBatchWithAi.mockResolvedValue(reply({ tags: ['venue:supermarket'] }));
+    tagsOnlyBatchWithAi.mockResolvedValue(
+      reply({ tags: ['venue:supermarket'] }, { tags: ['venue:supermarket'] })
+    );
     const results = [tagPoorRow('WOOLWORTHS 1'), tagPoorRow('WOOLWORTHS 2')];
 
     await resolve(results);

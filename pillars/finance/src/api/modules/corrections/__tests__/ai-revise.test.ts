@@ -99,7 +99,7 @@ describe('buildRevisePrompt — pattern storage instruction', () => {
       'tighten the pattern'
     );
 
-    expect(prompt).toContain('uppercase with digits stripped');
+    expect(prompt).toContain('digits are preserved');
   });
 });
 

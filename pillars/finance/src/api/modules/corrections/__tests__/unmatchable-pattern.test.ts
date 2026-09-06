@@ -2,8 +2,8 @@
  * A correction pattern that normalises to the empty string must be refused at
  * every write boundary (POPS-3001).
  *
- * `normalizeDescription` strips digits and collapses whitespace, so `'1234'`
- * and `'   '` normalise to `''`, and `patternMatchesDescription` answers
+ * `normalizeDescription` collapses whitespace, so `'   '` normalises to `''`,
+ * and `patternMatchesDescription` answers
  * `false` unconditionally for a zero-length pattern — the row is stored,
  * active, listed like any working rule, and structurally unable to fire.
  * `transaction_tag_rules` has thrown `UnmatchablePatternError` for this since
@@ -20,7 +20,6 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
-import { UnmatchablePatternError } from '../../../../db/errors.js';
 import { transactionCorrections } from '../../../../db/schema/corrections.js';
 import {
   createOrUpdateTransactionCorrection,
@@ -55,11 +54,10 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
     db = freshMigratedFinanceDb().db;
   });
 
-  it('refuses an all-digit contains pattern in a ChangeSet and stores nothing', () => {
-    expect(() => applyChangeSet(db, addChangeSet('1234', 'contains'))).toThrow(
-      /can never match a description/
-    );
-    expect(db.select().from(transactionCorrections).all()).toHaveLength(0);
+  it('accepts an all-digit contains pattern in a ChangeSet', () => {
+    applyChangeSet(db, addChangeSet('1234', 'contains'));
+    const [row] = db.select().from(transactionCorrections).all();
+    expect(row?.descriptionPattern).toBe('1234');
   });
 
   it('refuses a whitespace-only exact pattern in a ChangeSet', () => {
@@ -77,18 +75,17 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
     expect(row?.isActive).toBe(true);
   });
 
-  it('refuses an all-digit pattern on the direct create path', () => {
-    expect(() =>
-      createOrUpdateTransactionCorrection(db, {
-        descriptionPattern: '42',
-        matchType: 'contains',
-        entityId: 'ent-acme',
-        entityName: 'Acme',
-      })
-    ).toThrow(UnmatchablePatternError);
+  it('accepts an all-digit pattern on the direct create path', () => {
+    const row = createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: '42',
+      matchType: 'contains',
+      entityId: 'ent-acme',
+      entityName: 'Acme',
+    });
+    expect(row.descriptionPattern).toBe('42');
   });
 
-  it('refuses a PATCH that introduces an empty pattern and leaves the row untouched', () => {
+  it('accepts a PATCH that introduces a numeric pattern', () => {
     const row = createOrUpdateTransactionCorrection(db, {
       descriptionPattern: 'ACME CORP',
       matchType: 'contains',
@@ -96,15 +93,13 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
       entityName: 'Acme',
     });
 
-    expect(() => updateTransactionCorrection(db, row.id, { descriptionPattern: '999' })).toThrow(
-      UnmatchablePatternError
-    );
+    updateTransactionCorrection(db, row.id, { descriptionPattern: '999' });
 
     const [after] = db.select().from(transactionCorrections).all();
-    expect(after?.descriptionPattern).toBe('ACME CORP');
+    expect(after?.descriptionPattern).toBe('999');
   });
 
-  it('refuses a PATCH that only reinterprets a working regex under a normalising match type', () => {
+  it('allows a PATCH that reinterprets a numeric regex under a normalising match type', () => {
     const row = createOrUpdateTransactionCorrection(db, {
       descriptionPattern: '1234',
       matchType: 'regex',
@@ -112,12 +107,10 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
       entityName: 'Acme',
     });
 
-    expect(() => updateTransactionCorrection(db, row.id, { matchType: 'contains' })).toThrow(
-      UnmatchablePatternError
-    );
+    updateTransactionCorrection(db, row.id, { matchType: 'contains' });
 
     const [after] = db.select().from(transactionCorrections).all();
-    expect(after?.matchType).toBe('regex');
+    expect(after?.matchType).toBe('contains');
   });
 
   it('still lets a PATCH that leaves matchType alone edit a legacy unmatchable row', () => {
@@ -141,7 +134,7 @@ describe('correction writes refuse a pattern that normalises to nothing', () => 
   it('drops rather than explodes on the import-commit path', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const changeSet: ChangeSet = {
-      ops: [...addChangeSet('1234', 'contains').ops, ...addChangeSet('ACME CORP', 'contains').ops],
+      ops: [...addChangeSet('   ', 'contains').ops, ...addChangeSet('ACME CORP', 'contains').ops],
     };
 
     const survived = dropUnusableAddOps(changeSet);

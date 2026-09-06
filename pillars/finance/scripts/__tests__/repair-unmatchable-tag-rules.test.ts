@@ -38,7 +38,7 @@ describe('planRuleRepair', () => {
 
     expect(plan.action).toBe('repair');
     expect(plan).toMatchObject({ from: 'imperial hotel erskineville' });
-    expect(plan.action === 'repair' && plan.to).toBe('IMPERIAL HOTEL ERSKIN ERSKINEVILLE');
+    expect(plan.action === 'repair' && plan.to).toBe('IMPERIAL HOTEL ERSKIN 2 ERSKINEVILLE');
   });
 
   it('repairs across a bank truncation that removes the space', () => {

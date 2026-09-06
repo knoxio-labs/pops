@@ -516,9 +516,9 @@ describe('feedbackKey — regex patterns keep their identity (POPS-3002)', () =>
     );
   });
 
-  it('still normalises an exact/contains pattern, so existing keys are unchanged', () => {
+  it('normalises whitespace while retaining numeric exact/contains patterns', () => {
     expect(feedbackKey({ matchType: 'contains', descriptionPattern: '  woolworths 1234  ' })).toBe(
-      'corrections.changeSetRejections:contains:WOOLWORTHS'
+      'corrections.changeSetRejections:contains:WOOLWORTHS 1234'
     );
   });
 });

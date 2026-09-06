@@ -42,6 +42,7 @@ interface SeedTxn {
 
 interface SeedRule {
   descriptionPattern: string;
+  matchType?: 'exact' | 'contains' | 'regex';
   confidence: number;
   entityId?: string | null;
   entityName?: string | null;
@@ -82,7 +83,7 @@ function seedRule(input: SeedRule): string {
     .values({
       id,
       descriptionPattern: input.descriptionPattern,
-      matchType: 'exact',
+      matchType: input.matchType ?? 'exact',
       entityId: input.entityId ?? null,
       entityName: input.entityName ?? null,
       location: input.location ?? null,
@@ -328,6 +329,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
     });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
       entityId: 'ent-woolies',
       entityName: 'Woolworths',
       transactionType: 'purchase',
@@ -350,6 +352,7 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
     seedTxn({ description: 'WOOLWORTHS 2', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
       entityId: 'ent-woolies',
       entityName: 'Woolworths',
       transactionType: 'purchase',

@@ -77,20 +77,22 @@ describe('corrections — createOrUpdate, get & list', () => {
       timesApplied: 0,
     });
 
-    // Same (normalized pattern, matchType) → reinforced, not duplicated.
+    // A numeric identifier makes this a distinct correction.
     const reinforced = await client().corrections.createOrUpdate({
       descriptionPattern: 'WOOLWORTHS METRO 1234',
       matchType: 'contains',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
       tags: ['groceries'],
     });
-    expect(reinforced.data.id).toBe(created.data.id);
-    expect(reinforced.data.confidence).toBeCloseTo(0.8, 5);
+    expect(reinforced.data.id).not.toBe(created.data.id);
+    expect(reinforced.data.confidence).toBeCloseTo(0.7, 5);
     expect(reinforced.data.timesApplied).toBe(0);
     expect(reinforced.data.lastUsedAt).toBeNull();
 
     const list = await client().corrections.list();
-    expect(list.data).toHaveLength(1);
-    expect(list.pagination).toMatchObject({ total: 1, hasMore: false });
+    expect(list.data).toHaveLength(2);
+    expect(list.pagination).toMatchObject({ total: 2, hasMore: false });
   });
 
   it('gets a correction by id', async () => {
@@ -299,7 +301,7 @@ describe('corrections — ruleMatchPreview', () => {
     });
 
     const firstPage = await client().corrections.ruleMatchPreview({
-      pattern: 'WOOLWORTHS SYDNEY',
+      pattern: 'WOOLWORTHS',
       matchType: 'contains',
       limit: 2,
     });
@@ -315,7 +317,7 @@ describe('corrections — ruleMatchPreview', () => {
     });
 
     const secondPage = await client().corrections.ruleMatchPreview({
-      pattern: 'WOOLWORTHS SYDNEY',
+      pattern: 'WOOLWORTHS',
       matchType: 'contains',
       limit: 2,
       offset: 2,
@@ -595,19 +597,14 @@ describe('corrections — applyChangeSet', () => {
       },
     });
 
-    // Both `add` ops normalize to the same (descriptionPattern, matchType)
-    // key — digits are stripped by normalizeDescription — so they must
-    // collapse onto one row, last-write-wins, instead of forking a second
-    // rule that would never fire because the matcher also normalizes.
-    expect(seeded.data).toHaveLength(1);
-    expect(seeded.data[0]).toMatchObject({
-      descriptionPattern: 'WOOLWORTHS',
-      entityName: 'Second Pass',
-      priority: 2,
-    });
+    expect(seeded.data).toHaveLength(2);
+    expect(seeded.data.map((row) => row.descriptionPattern)).toEqual([
+      'WOOLWORTHS 5678',
+      'WOOLWORTHS 1234',
+    ]);
 
     const list = await client().corrections.list();
-    expect(list.pagination.total).toBe(1);
+    expect(list.pagination.total).toBe(2);
   });
 
   it('upsert-keys an add against a rule from an earlier, already-applied ChangeSet', async () => {
@@ -1136,7 +1133,7 @@ describe('corrections — regex patterns (POPS-2600)', () => {
       entityId: 'ent-acme',
       entityName: 'Acme',
     });
-    expect(created.data.descriptionPattern).toBe('ACME STORE');
+    expect(created.data.descriptionPattern).toBe('ACME STORE 42');
   });
 
   it('400s a createOrUpdate whose regex pattern does not compile', async () => {
@@ -1164,7 +1161,7 @@ describe('corrections — regex patterns (POPS-2600)', () => {
   });
 
   it('400s a matchType flip to regex when the stored pattern would not compile', async () => {
-    // `normalizeDescription` uppercases and strips digits but leaves parens
+    // `normalizeDescription` uppercases while leaving parens and digits
     // intact, so an `exact` pattern can be a broken regex.
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'T(arget',

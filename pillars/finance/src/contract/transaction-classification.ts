@@ -45,7 +45,7 @@ export const GIFT_CARD_TAG = 'contains:gift-card';
 
 /**
  * Descriptor patterns per fee kind, matched as `contains` against a normalised
- * description (uppercased, digits stripped — see {@link normalizeDescription}).
+ * description (uppercased with digits preserved — see {@link normalizeDescription}).
  *
  * Every pattern is a multi-word phrase on purpose: a bare `FEE` would classify
  * a coffee at "Fee Street Cafe" as an interest charge. Ordered most-specific

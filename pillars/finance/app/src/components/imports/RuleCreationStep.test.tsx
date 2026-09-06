@@ -86,7 +86,7 @@ describe('RuleCreationStep', () => {
     expect(mockNextStep).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
     expect(call.changeSet.ops[0].op).toBe('add');
-    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('WOOLWORTHS SYDNEY');
+    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('WOOLWORTHS 1034 SYDNEY');
     expect(call.changeSet.ops[0].data.tags).toEqual(['Groceries']);
   });
 
@@ -123,7 +123,7 @@ describe('RuleCreationStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
-    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('AMPOL FOODARY ROZELLE');
+    expect(call.changeSet.ops[0].data.descriptionPattern).toBe('AMPOL FOODARY 4521 ROZELLE');
   });
 
   it('skip advances without creating rules', () => {
