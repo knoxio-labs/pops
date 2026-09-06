@@ -21,6 +21,22 @@
  * straw. The shared server dispatches to the most recently supplied app and
  * is `unref`ed and never closed: vitest's per-file module isolation scopes
  * it to the file, and worker teardown reclaims it.
+ *
+ * The same churn has a second, rarer symptom: a response carrying a status
+ * no code path in the app under test can produce, when a connection outlives
+ * the ephemeral server it belonged to and lands on whatever bound the same
+ * port next. That was reasoning until POPS-1312 measured it. Sequential
+ * POSTs at a listener whose only behaviour is `201` — it has no 4xx branch
+ * to take at all — returned a non-201 six times in 23,000 requests through a
+ * bare app, and zero times in 23,000 through the shared transport. The
+ * impostor statuses were 401 and 403, neither of which the listener knows,
+ * because the responder is whatever else on the machine holds that port at
+ * that moment. About 1 in 3,800, the same order as the 1 in 1,496 POPS-1312
+ * observed against the real pillar. The shape is transport-only, so a bare
+ * `supertest(listener)` loop reproduces it with no app involved — which also
+ * means a test asserting on a status it did not expect has a second possible
+ * explanation besides the app, and the first thing to check is whether that
+ * suite still opens a server per request.
  */
 import { once } from 'node:events';
 import http from 'node:http';
