@@ -11,13 +11,11 @@ export type ClientOptions = {
 export type CreateEntityBody = {
   abn?: string | null;
   aliases?: Array<string>;
-  avatarAssetId?: string | null;
   colour?: string | null;
   defaultTags?: Array<string>;
   defaultTransactionType?: string | null;
   name: string;
   notes?: string | null;
-  posterAssetId?: string | null;
   type?: string | null;
 };
 
@@ -183,13 +181,11 @@ export type SearchResponse = {
 export type UpdateEntityBody = {
   abn?: string | null;
   aliases?: Array<string> | null;
-  avatarAssetId?: string | null;
   colour?: string | null;
   defaultTags?: Array<string> | null;
   defaultTransactionType?: string | null;
   name?: string | null;
   notes?: string | null;
-  posterAssetId?: string | null;
   type?: string | null;
 };
 
@@ -369,6 +365,38 @@ export type EntitiesUpdateResponses = {
 
 export type EntitiesUpdateResponse = EntitiesUpdateResponses[keyof EntitiesUpdateResponses];
 
+export type EntitiesRemoveAvatarData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/avatar';
+};
+
+export type EntitiesRemoveAvatarErrors = {
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesRemoveAvatarError =
+  EntitiesRemoveAvatarErrors[keyof EntitiesRemoveAvatarErrors];
+
+export type EntitiesRemoveAvatarResponses = {
+  /**
+   * Updated entity
+   */
+  200: EntityMutation;
+};
+
+export type EntitiesRemoveAvatarResponse =
+  EntitiesRemoveAvatarResponses[keyof EntitiesRemoveAvatarResponses];
+
 export type EntitiesGetAvatarData = {
   body?: never;
   path: {
@@ -438,6 +466,38 @@ export type EntitiesUploadAvatarResponses = {
 
 export type EntitiesUploadAvatarResponse =
   EntitiesUploadAvatarResponses[keyof EntitiesUploadAvatarResponses];
+
+export type EntitiesRemovePosterData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/poster';
+};
+
+export type EntitiesRemovePosterErrors = {
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesRemovePosterError =
+  EntitiesRemovePosterErrors[keyof EntitiesRemovePosterErrors];
+
+export type EntitiesRemovePosterResponses = {
+  /**
+   * Updated entity
+   */
+  200: EntityMutation;
+};
+
+export type EntitiesRemovePosterResponse =
+  EntitiesRemovePosterResponses[keyof EntitiesRemovePosterResponses];
 
 export type EntitiesGetPosterData = {
   body?: never;

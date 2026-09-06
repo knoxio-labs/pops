@@ -14,10 +14,6 @@
             },
             "type": "array"
           },
-          "avatarAssetId": {
-            "nullable": true,
-            "type": "string"
-          },
           "colour": {
             "nullable": true,
             "type": "string"
@@ -36,10 +32,6 @@
             "type": "string"
           },
           "notes": {
-            "nullable": true,
-            "type": "string"
-          },
-          "posterAssetId": {
             "nullable": true,
             "type": "string"
           },
@@ -412,10 +404,6 @@
             "nullable": true,
             "type": "array"
           },
-          "avatarAssetId": {
-            "nullable": true,
-            "type": "string"
-          },
           "colour": {
             "nullable": true,
             "type": "string"
@@ -436,10 +424,6 @@
             "type": "string"
           },
           "notes": {
-            "nullable": true,
-            "type": "string"
-          },
-          "posterAssetId": {
             "nullable": true,
             "type": "string"
           },
@@ -762,6 +746,46 @@
       }
     },
     "/entities/{id}/avatar": {
+      "delete": {
+        "operationId": "entities.remove_avatar",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the\nbacking blob.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
       "get": {
         "operationId": "entities.get_avatar",
         "parameters": [
@@ -875,6 +899,46 @@
       }
     },
     "/entities/{id}/poster": {
+      "delete": {
+        "operationId": "entities.remove_poster",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityMutation"
+                }
+              }
+            },
+            "description": "Updated entity"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "summary": "`DELETE /entities/{id}/poster` — clear the entity's poster and delete the\nbacking blob.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      },
       "get": {
         "operationId": "entities.get_poster",
         "parameters": [

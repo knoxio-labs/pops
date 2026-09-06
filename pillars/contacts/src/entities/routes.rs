@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use super::model::{
-    CreateEntityBody, Entity, EntityLookup, EntityRow, UpdateEntityBody, ENTITY_TYPES,
+    AssetIdPatch, CreateEntityBody, Entity, EntityLookup, EntityRow, UpdateEntityBody, ENTITY_TYPES,
 };
 use super::repo;
 use crate::api::{ApiError, PaginationMeta};
@@ -53,14 +53,24 @@ impl AssetField {
         }
     }
 
-    fn patch(self, asset_id: String) -> UpdateEntityBody {
+    /// Build the patch that repoints this field at a freshly created blob.
+    fn set_patch(self, asset_id: String) -> AssetIdPatch {
+        self.patch(Some(asset_id))
+    }
+
+    /// Build the patch that clears this field.
+    fn clear_patch(self) -> AssetIdPatch {
+        self.patch(None)
+    }
+
+    fn patch(self, asset_id: Option<String>) -> AssetIdPatch {
         match self {
-            AssetField::Avatar => UpdateEntityBody {
-                avatar_asset_id: Some(Some(asset_id)),
+            AssetField::Avatar => AssetIdPatch {
+                avatar_asset_id: Some(asset_id),
                 ..Default::default()
             },
-            AssetField::Poster => UpdateEntityBody {
-                poster_asset_id: Some(Some(asset_id)),
+            AssetField::Poster => AssetIdPatch {
+                poster_asset_id: Some(asset_id),
                 ..Default::default()
             },
         }
@@ -142,8 +152,14 @@ pub fn router() -> Router<AppState> {
             get(get_one).patch(update).delete(delete_one),
         )
         .route("/entities/lookup", post(lookup))
-        .route("/entities/{id}/avatar", get(get_avatar).put(upload_avatar))
-        .route("/entities/{id}/poster", get(get_poster).put(upload_poster))
+        .route(
+            "/entities/{id}/avatar",
+            get(get_avatar).put(upload_avatar).delete(remove_avatar),
+        )
+        .route(
+            "/entities/{id}/poster",
+            get(get_poster).put(upload_poster).delete(remove_poster),
+        )
         // The default axum body limit (2 MiB) sits exactly at
         // `ASSET_MAX_BYTES`, which would reject an over-cap upload before it
         // reaches `assert_within_size_cap` and hand back axum's generic 413
@@ -272,47 +288,14 @@ pub async fn update(
         validate_colour(colour)?;
     }
 
-    let before = repo::get(&state.pool, &id)
-        .await
-        .map_err(db_error)?
-        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
     let row = repo::update(&state.pool, &id, patch)
         .await
         .map_err(|err| repo_not_found(err, &id))?;
-
-    cleanup_replaced_blob(
-        &state.pool,
-        AssetField::Avatar.get(&before),
-        row.avatar_asset_id.as_deref(),
-    )
-    .await
-    .map_err(db_error)?;
-    cleanup_replaced_blob(
-        &state.pool,
-        AssetField::Poster.get(&before),
-        row.poster_asset_id.as_deref(),
-    )
-    .await
-    .map_err(db_error)?;
 
     Ok(Json(EntityMutation {
         data: row.into(),
         message: "Entity updated".to_string(),
     }))
-}
-
-/// Delete `old`'s blob if the field actually changed away from it. Called
-/// after the entity row's own update has already committed, so a crash here
-/// leaves an orphaned (harmless) blob row rather than a dangling asset id.
-async fn cleanup_replaced_blob(
-    pool: &sqlx::SqlitePool,
-    old: Option<&str>,
-    new: Option<&str>,
-) -> Result<(), sqlx::Error> {
-    match old {
-        Some(old_id) if Some(old_id) != new => blobs::repo::delete(pool, old_id).await,
-        _ => Ok(()),
-    }
 }
 
 /// `PUT /entities/{id}/avatar` — upload/replace the entity's avatar.
@@ -385,7 +368,7 @@ async fn upload_asset(
         .await
         .map_err(db_error)?;
 
-    let row = repo::update(&state.pool, &id, field.patch(blob_id))
+    let row = repo::set_asset_ids(&state.pool, &id, field.set_patch(blob_id))
         .await
         .map_err(|err| repo_not_found(err, &id))?;
 
@@ -398,6 +381,73 @@ async fn upload_asset(
     Ok(Json(EntityMutation {
         data: row.into(),
         message: format!("Entity {} updated", field.label()),
+    }))
+}
+
+/// `DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the
+/// backing blob.
+#[utoipa::path(
+    delete,
+    path = "/entities/{id}/avatar",
+    operation_id = "entities.remove_avatar",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn remove_avatar(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityMutation>, ApiError> {
+    remove_asset(state, id, AssetField::Avatar).await
+}
+
+/// `DELETE /entities/{id}/poster` — clear the entity's poster and delete the
+/// backing blob.
+#[utoipa::path(
+    delete,
+    path = "/entities/{id}/poster",
+    operation_id = "entities.remove_poster",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Updated entity", body = EntityMutation),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn remove_poster(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityMutation>, ApiError> {
+    remove_asset(state, id, AssetField::Poster).await
+}
+
+/// Shared remove path for both asset fields: clear the column, then delete
+/// the blob it used to point at (if any). Idempotent — removing an
+/// already-unset field just returns the entity unchanged.
+async fn remove_asset(
+    state: AppState,
+    id: String,
+    field: AssetField,
+) -> Result<Json<EntityMutation>, ApiError> {
+    let before = repo::get(&state.pool, &id)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+
+    let row = repo::set_asset_ids(&state.pool, &id, field.clear_patch())
+        .await
+        .map_err(|err| repo_not_found(err, &id))?;
+
+    if let Some(old) = field.get(&before) {
+        blobs::repo::delete(&state.pool, old)
+            .await
+            .map_err(db_error)?;
+    }
+
+    Ok(Json(EntityMutation {
+        data: row.into(),
+        message: format!("Entity {} removed", field.label()),
     }))
 }
 

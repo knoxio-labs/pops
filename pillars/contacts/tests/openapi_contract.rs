@@ -43,8 +43,10 @@ fn entities_and_search_operation_ids_are_dotted() {
         "entities.lookup",
         "entities.upload_avatar",
         "entities.get_avatar",
+        "entities.remove_avatar",
         "entities.upload_poster",
         "entities.get_poster",
+        "entities.remove_poster",
         "search.search",
     ];
     for id in required {

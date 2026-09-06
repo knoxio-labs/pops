@@ -23,6 +23,12 @@ import type {
   EntitiesListResponses,
   EntitiesLookupData,
   EntitiesLookupResponses,
+  EntitiesRemoveAvatarData,
+  EntitiesRemoveAvatarErrors,
+  EntitiesRemoveAvatarResponses,
+  EntitiesRemovePosterData,
+  EntitiesRemovePosterErrors,
+  EntitiesRemovePosterResponses,
   EntitiesUpdateData,
   EntitiesUpdateErrors,
   EntitiesUpdateResponses,
@@ -131,6 +137,19 @@ export const entitiesUpdate = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * `DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the
+ * backing blob.
+ */
+export const entitiesRemoveAvatar = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesRemoveAvatarData, ThrowOnError>
+): RequestResult<EntitiesRemoveAvatarResponses, EntitiesRemoveAvatarErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    EntitiesRemoveAvatarResponses,
+    EntitiesRemoveAvatarErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/avatar', ...options });
+
+/**
  * `GET /entities/{id}/avatar` — serve the entity's avatar bytes.
  */
 export const entitiesGetAvatar = <ThrowOnError extends boolean = false>(
@@ -159,6 +178,19 @@ export const entitiesUploadAvatar = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * `DELETE /entities/{id}/poster` — clear the entity's poster and delete the
+ * backing blob.
+ */
+export const entitiesRemovePoster = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesRemovePosterData, ThrowOnError>
+): RequestResult<EntitiesRemovePosterResponses, EntitiesRemovePosterErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    EntitiesRemovePosterResponses,
+    EntitiesRemovePosterErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/poster', ...options });
 
 /**
  * `GET /entities/{id}/poster` — serve the entity's poster bytes.

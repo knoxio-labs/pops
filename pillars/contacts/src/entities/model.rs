@@ -170,10 +170,6 @@ pub struct CreateEntityBody {
     #[serde(default)]
     pub notes: Option<String>,
     #[serde(default)]
-    pub avatar_asset_id: Option<String>,
-    #[serde(default)]
-    pub poster_asset_id: Option<String>,
-    #[serde(default)]
     pub colour: Option<String>,
 }
 
@@ -184,7 +180,7 @@ pub struct CreateEntityBody {
 /// (`Some(None)` — clear the column). serde collapses a JSON `null` into the
 /// outer `None` by default, so those fields deserialize through
 /// [`double_option`], which preserves the present-but-null case.
-#[derive(Debug, Clone, Default, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateEntityBody {
     #[serde(default)]
@@ -206,13 +202,22 @@ pub struct UpdateEntityBody {
     pub notes: Option<Option<String>>,
     #[serde(default, deserialize_with = "double_option")]
     #[schema(value_type = Option<String>)]
-    pub avatar_asset_id: Option<Option<String>>,
-    #[serde(default, deserialize_with = "double_option")]
-    #[schema(value_type = Option<String>)]
-    pub poster_asset_id: Option<Option<String>>,
-    #[serde(default, deserialize_with = "double_option")]
-    #[schema(value_type = Option<String>)]
     pub colour: Option<Option<String>>,
+}
+
+/// Internal patch for the `avatar_asset_id`/`poster_asset_id` columns.
+///
+/// Never deserialized from a client body — it is not `Deserialize` at all.
+/// The upload routes build one directly after inserting the blob it points
+/// at, and the remove routes build one to clear it; that is the only way
+/// these columns may change; the generic create/update bodies above
+/// deliberately do not carry them (POPS-3061 review finding: an
+/// unvalidated, client-settable asset id lets a PATCH point an entity at an
+/// arbitrary or another entity's blob).
+#[derive(Debug, Clone, Default)]
+pub struct AssetIdPatch {
+    pub avatar_asset_id: Option<Option<String>>,
+    pub poster_asset_id: Option<Option<String>>,
 }
 
 /// Deserialize a present field into `Some(...)` even when its value is JSON
@@ -308,25 +313,28 @@ mod tests {
     }
 
     #[test]
-    fn patch_distinguishes_absent_from_null_for_the_new_nullable_fields() {
+    fn patch_distinguishes_absent_from_null_for_colour() {
         let absent: UpdateEntityBody = serde_json::from_str("{}").unwrap();
-        assert_eq!(absent.avatar_asset_id, None);
-        assert_eq!(absent.poster_asset_id, None);
         assert_eq!(absent.colour, None);
 
-        let cleared: UpdateEntityBody =
-            serde_json::from_str(r#"{"avatarAssetId":null,"posterAssetId":null,"colour":null}"#)
-                .unwrap();
-        assert_eq!(cleared.avatar_asset_id, Some(None));
-        assert_eq!(cleared.poster_asset_id, Some(None));
+        let cleared: UpdateEntityBody = serde_json::from_str(r#"{"colour":null}"#).unwrap();
         assert_eq!(cleared.colour, Some(None));
 
-        let set: UpdateEntityBody = serde_json::from_str(
-            "{\"avatarAssetId\":\"a1\",\"posterAssetId\":\"p1\",\"colour\":\"#ABCDEF\"}",
-        )
-        .unwrap();
-        assert_eq!(set.avatar_asset_id, Some(Some("a1".to_string())));
-        assert_eq!(set.poster_asset_id, Some(Some("p1".to_string())));
+        let set: UpdateEntityBody = serde_json::from_str(r##"{"colour":"#ABCDEF"}"##).unwrap();
         assert_eq!(set.colour, Some(Some("#ABCDEF".to_string())));
+    }
+
+    /// POPS-3061 review finding: `avatarAssetId`/`posterAssetId` must not be
+    /// reachable through the generic PATCH body at all — not settable, not
+    /// even clearable. A body containing those keys deserializes fine (serde
+    /// silently ignores fields absent from the struct) and simply has no
+    /// effect; the assertion that matters is that neither field exists on
+    /// [`UpdateEntityBody`] any more; if it did, this would fail to compile.
+    #[test]
+    fn patch_body_has_no_asset_id_fields() {
+        let patch: UpdateEntityBody =
+            serde_json::from_str(r#"{"avatarAssetId":"anything","posterAssetId":"anything"}"#)
+                .unwrap();
+        assert_eq!(patch, UpdateEntityBody::default());
     }
 }

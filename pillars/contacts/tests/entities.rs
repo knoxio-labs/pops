@@ -407,7 +407,7 @@ async fn search_with_empty_text_returns_no_hits() {
 }
 
 #[tokio::test]
-async fn create_and_patch_accept_avatar_poster_and_colour() {
+async fn create_and_patch_accept_colour() {
     let app = app().await;
     let data = create_contact(&app, json!({ "name": "Branded", "colour": "#3B82F6" })).await;
     assert_eq!(data["colour"], "#3B82F6");
@@ -430,6 +430,57 @@ async fn create_and_patch_accept_avatar_poster_and_colour() {
     .await;
     assert_eq!(status, StatusCode::OK, "an explicit null clears colour");
     assert_eq!(body["data"]["colour"], Value::Null);
+}
+
+/// POPS-3061 review finding: create/PATCH must not be able to set or clear
+/// `avatarAssetId`/`posterAssetId` at all — those keys in a request body are
+/// simply ignored, since the fields don't exist on `CreateEntityBody` /
+/// `UpdateEntityBody` any more. The only legitimate write paths are the
+/// dedicated upload (`PUT`) and remove (`DELETE`) routes, covered by their
+/// own tests below.
+#[tokio::test]
+async fn create_and_patch_ignore_avatar_and_poster_asset_id() {
+    let app = app().await;
+    let created = create_contact(
+        &app,
+        json!({ "name": "Sneaky", "avatarAssetId": "attacker-controlled", "posterAssetId": "also-attacker-controlled" }),
+    )
+    .await;
+    assert_eq!(
+        created["avatarAssetId"],
+        Value::Null,
+        "create must not honor a client-supplied avatarAssetId"
+    );
+    assert_eq!(
+        created["posterAssetId"],
+        Value::Null,
+        "create must not honor a client-supplied posterAssetId"
+    );
+    let id = created["id"].as_str().unwrap();
+
+    let (status, body) = send(
+        &app,
+        patch(
+            &format!("/entities/{id}"),
+            json!({ "avatarAssetId": "still-attacker-controlled", "posterAssetId": "still-attacker-controlled" }),
+        ),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "unknown keys are not a 400, just ignored: {body}"
+    );
+    assert_eq!(
+        body["data"]["avatarAssetId"],
+        Value::Null,
+        "a generic PATCH must not be able to set avatarAssetId"
+    );
+    assert_eq!(
+        body["data"]["posterAssetId"],
+        Value::Null,
+        "a generic PATCH must not be able to set posterAssetId"
+    );
 }
 
 #[tokio::test]
@@ -604,7 +655,7 @@ async fn replacing_an_avatar_deletes_the_old_blob() {
 }
 
 #[tokio::test]
-async fn patching_avatar_asset_id_to_null_clears_it_and_deletes_the_old_blob() {
+async fn removing_an_avatar_clears_it_and_deletes_the_old_blob() {
     let (app, pool) = app_with_pool().await;
     let created = create_contact(&app, json!({ "name": "Clearable" })).await;
     let id = created["id"].as_str().unwrap();
@@ -621,16 +672,12 @@ async fn patching_avatar_asset_id_to_null_clears_it_and_deletes_the_old_blob() {
     let (_, body) = send(&app, get(&format!("/entities/{id}"))).await;
     let asset_id = body["data"]["avatarAssetId"].as_str().unwrap().to_string();
 
-    let (status, body) = send(
-        &app,
-        patch(&format!("/entities/{id}"), json!({ "avatarAssetId": null })),
-    )
-    .await;
+    let (status, body) = send(&app, delete(&format!("/entities/{id}/avatar"))).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         body["data"]["avatarAssetId"],
         Value::Null,
-        "an explicit null clears avatarAssetId"
+        "DELETE clears avatarAssetId"
     );
 
     let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
@@ -652,12 +699,23 @@ async fn patching_avatar_asset_id_to_null_clears_it_and_deletes_the_old_blob() {
     assert_eq!(
         body["data"]["avatarAssetId"],
         Value::Null,
-        "an omitted key on a later patch leaves it untouched, still null here"
+        "still null after a plain re-fetch"
     );
 }
 
 #[tokio::test]
-async fn patch_omitting_avatar_asset_id_leaves_it_untouched() {
+async fn removing_an_unset_avatar_is_a_no_op() {
+    let app = app().await;
+    let created = create_contact(&app, json!({ "name": "AlreadyBare" })).await;
+    let id = created["id"].as_str().unwrap();
+
+    let (status, body) = send(&app, delete(&format!("/entities/{id}/avatar"))).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["data"]["avatarAssetId"], Value::Null);
+}
+
+#[tokio::test]
+async fn patch_ignoring_avatar_asset_id_leaves_it_untouched() {
     let app = app().await;
     let created = create_contact(&app, json!({ "name": "Untouched" })).await;
     let id = created["id"].as_str().unwrap();
@@ -681,14 +739,14 @@ async fn patch_omitting_avatar_asset_id_leaves_it_untouched() {
         &app,
         patch(
             &format!("/entities/{id}"),
-            json!({ "notes": "unrelated change" }),
+            json!({ "notes": "unrelated change", "avatarAssetId": "attacker-controlled" }),
         ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         body["data"]["avatarAssetId"], asset_id,
-        "a patch that omits avatarAssetId must not touch it"
+        "a generic PATCH can never touch avatarAssetId, whether it names the key or not"
     );
 
     let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
