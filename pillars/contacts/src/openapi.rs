@@ -52,6 +52,7 @@ use crate::search::routes::{
         crate::entities::routes::get_one,
         crate::entities::routes::create,
         crate::entities::routes::update,
+        crate::entities::routes::reroll_colour,
         crate::entities::routes::delete_one,
         crate::entities::routes::lookup,
         crate::entities::routes::upload_avatar,

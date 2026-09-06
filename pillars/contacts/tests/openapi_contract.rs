@@ -39,6 +39,7 @@ fn entities_and_search_operation_ids_are_dotted() {
         "entities.get",
         "entities.create",
         "entities.update",
+        "entities.reroll_colour",
         "entities.delete",
         "entities.lookup",
         "entities.upload_avatar",
@@ -110,6 +111,36 @@ fn entity_wire_schema_omits_internal_columns() {
             "the wire Entity must expose `{exposed}`"
         );
     }
+}
+
+/// POPS-3061 design correction: `colour` is read-only on the wire — present
+/// on `Entity` (checked above) but absent from both mutation bodies, since a
+/// client can only reroll it via the dedicated route, never set it directly.
+#[test]
+fn colour_is_absent_from_create_and_update_bodies() {
+    let doc = openapi_30_value();
+    for schema_name in ["CreateEntityBody", "UpdateEntityBody"] {
+        let props = doc["components"]["schemas"][schema_name]["properties"]
+            .as_object()
+            .unwrap_or_else(|| panic!("{schema_name} schema properties"));
+        assert!(
+            !props.contains_key("colour"),
+            "{schema_name} must not accept a client-supplied `colour`"
+        );
+    }
+}
+
+/// The reroll route must be registered and take no request body — it only
+/// ever reads the entity's current colour and writes a fresh pick.
+#[test]
+fn reroll_colour_route_is_registered() {
+    let doc = openapi_30_value();
+    let op = &doc["paths"]["/entities/{id}/colour/reroll"]["post"];
+    assert_eq!(op["operationId"], "entities.reroll_colour");
+    assert!(
+        op.get("requestBody").is_none(),
+        "reroll takes no request body"
+    );
 }
 
 #[test]

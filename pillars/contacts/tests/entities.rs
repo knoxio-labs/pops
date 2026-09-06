@@ -406,30 +406,110 @@ async fn search_with_empty_text_returns_no_hits() {
     assert_eq!(body["hits"], json!([]));
 }
 
+/// POPS-3061 design correction: `colour` is assigned server-side at creation
+/// from the fixed palette, never client-supplied.
 #[tokio::test]
-async fn create_and_patch_accept_colour() {
+async fn create_assigns_a_colour_from_the_fixed_palette_and_ignores_a_client_value() {
     let app = app().await;
     let data = create_contact(&app, json!({ "name": "Branded", "colour": "#3B82F6" })).await;
-    assert_eq!(data["colour"], "#3B82F6");
+    let colour = data["colour"]
+        .as_str()
+        .expect("create always assigns a colour");
+    assert_ne!(
+        colour, "#3B82F6",
+        "a client-supplied colour on create must be ignored"
+    );
+    assert!(
+        contacts::entities::colours::ENTITY_COLOURS.contains(&colour),
+        "the assigned colour must be a fixed-palette entry, got {colour}"
+    );
     assert_eq!(data["avatarAssetId"], Value::Null);
     assert_eq!(data["posterAssetId"], Value::Null);
+}
+
+/// A generic PATCH body cannot change `colour` at all, whether or not the
+/// value it carries is a real palette entry.
+#[tokio::test]
+async fn generic_patch_does_not_change_colour() {
+    let app = app().await;
+    let data = create_contact(&app, json!({ "name": "Branded" })).await;
+    let original_colour = data["colour"].as_str().unwrap().to_string();
     let id = data["id"].as_str().unwrap();
 
     let (status, body) = send(
         &app,
-        patch(&format!("/entities/{id}"), json!({ "colour": "#000000" })),
+        patch(&format!("/entities/{id}"), json!({ "colour": "amber" })),
     )
     .await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["data"]["colour"], "#000000");
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "an unknown key is not a 400: {body}"
+    );
+    assert_eq!(
+        body["data"]["colour"], original_colour,
+        "a generic PATCH must not be able to change colour"
+    );
 
     let (status, body) = send(
         &app,
         patch(&format!("/entities/{id}"), json!({ "colour": null })),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "an explicit null clears colour");
-    assert_eq!(body["data"]["colour"], Value::Null);
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["data"]["colour"], original_colour,
+        "a generic PATCH must not be able to clear colour either"
+    );
+}
+
+/// `POST /entities/{id}/colour/reroll` is the only way to change `colour`
+/// after creation, and it must produce a different palette entry every time —
+/// a reroll that could return the same value would be a pointless no-op.
+#[tokio::test]
+async fn reroll_colour_always_changes_to_another_palette_entry() {
+    let app = app().await;
+    let data = create_contact(&app, json!({ "name": "Rerollable" })).await;
+    let id = data["id"].as_str().unwrap();
+    let mut current = data["colour"].as_str().unwrap().to_string();
+
+    for _ in 0..20 {
+        let (status, body) = send(
+            &app,
+            Request::builder()
+                .method("POST")
+                .uri(format!("/entities/{id}/colour/reroll"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let next = body["data"]["colour"].as_str().unwrap().to_string();
+        assert_ne!(
+            next, current,
+            "a reroll must never return the current colour"
+        );
+        assert!(
+            contacts::entities::colours::ENTITY_COLOURS.contains(&next.as_str()),
+            "a reroll must only ever produce a palette value, got {next}"
+        );
+        current = next;
+    }
+}
+
+#[tokio::test]
+async fn reroll_colour_on_missing_entity_is_not_found() {
+    let app = app().await;
+    let (status, _) = send(
+        &app,
+        Request::builder()
+            .method("POST")
+            .uri("/entities/nope/colour/reroll")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 /// POPS-3061 review finding: create/PATCH must not be able to set or clear
@@ -481,18 +561,6 @@ async fn create_and_patch_ignore_avatar_and_poster_asset_id() {
         Value::Null,
         "a generic PATCH must not be able to set posterAssetId"
     );
-}
-
-#[tokio::test]
-async fn create_rejects_an_invalid_colour() {
-    let app = app().await;
-    let (status, body) = send(
-        &app,
-        post("/entities", json!({ "name": "X", "colour": "blue" })),
-    )
-    .await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert!(body["message"].as_str().unwrap().contains("blue"));
 }
 
 #[tokio::test]

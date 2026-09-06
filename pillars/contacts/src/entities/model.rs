@@ -154,6 +154,12 @@ pub fn encode_default_tags(tags: &[String]) -> Option<String> {
 
 /// Body accepted by `POST /entities`. `type` defaults to `company`; the array
 /// fields default to empty.
+///
+/// `colour` deliberately has no field here: it is never client-supplied, on
+/// create or otherwise (POPS-3061 design correction). `entities::repo::create`
+/// assigns one at random from the fixed palette in `entities::colours`, the
+/// same way `avatar_asset_id`/`poster_asset_id` are absent and assigned
+/// through their own dedicated write paths rather than this body.
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateEntityBody {
@@ -169,8 +175,6 @@ pub struct CreateEntityBody {
     pub default_tags: Vec<String>,
     #[serde(default)]
     pub notes: Option<String>,
-    #[serde(default)]
-    pub colour: Option<String>,
 }
 
 /// Body accepted by `PATCH /entities/:id`. Every field is optional; a present
@@ -180,6 +184,11 @@ pub struct CreateEntityBody {
 /// (`Some(None)` — clear the column). serde collapses a JSON `null` into the
 /// outer `None` by default, so those fields deserialize through
 /// [`double_option`], which preserves the present-but-null case.
+///
+/// `colour` has no field here either, for the same reason it has none on
+/// [`CreateEntityBody`]: a client may only reroll it, through the dedicated
+/// `POST /entities/:id/colour/reroll` route, never set it to an arbitrary
+/// string via this generic PATCH.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateEntityBody {
@@ -200,9 +209,6 @@ pub struct UpdateEntityBody {
     #[serde(default, deserialize_with = "double_option")]
     #[schema(value_type = Option<String>)]
     pub notes: Option<Option<String>>,
-    #[serde(default, deserialize_with = "double_option")]
-    #[schema(value_type = Option<String>)]
-    pub colour: Option<Option<String>>,
 }
 
 /// Internal patch for the `avatar_asset_id`/`poster_asset_id` columns.
@@ -300,7 +306,7 @@ mod tests {
             notes: None,
             avatar_asset_id: Some("blob-1".to_string()),
             poster_asset_id: None,
-            colour: Some("#3B82F6".to_string()),
+            colour: Some("rose".to_string()),
             last_edited_time: "2026-06-21T00:00:00.000Z".to_string(),
         };
         let entity: Entity = row.into();
@@ -309,19 +315,7 @@ mod tests {
         assert_eq!(entity.r#type, "company");
         assert_eq!(entity.avatar_asset_id.as_deref(), Some("blob-1"));
         assert_eq!(entity.poster_asset_id, None);
-        assert_eq!(entity.colour.as_deref(), Some("#3B82F6"));
-    }
-
-    #[test]
-    fn patch_distinguishes_absent_from_null_for_colour() {
-        let absent: UpdateEntityBody = serde_json::from_str("{}").unwrap();
-        assert_eq!(absent.colour, None);
-
-        let cleared: UpdateEntityBody = serde_json::from_str(r#"{"colour":null}"#).unwrap();
-        assert_eq!(cleared.colour, Some(None));
-
-        let set: UpdateEntityBody = serde_json::from_str(r##"{"colour":"#ABCDEF"}"##).unwrap();
-        assert_eq!(set.colour, Some(Some("#ABCDEF".to_string())));
+        assert_eq!(entity.colour.as_deref(), Some("rose"));
     }
 
     /// POPS-3061 review finding: `avatarAssetId`/`posterAssetId` must not be
@@ -336,5 +330,27 @@ mod tests {
             serde_json::from_str(r#"{"avatarAssetId":"anything","posterAssetId":"anything"}"#)
                 .unwrap();
         assert_eq!(patch, UpdateEntityBody::default());
+    }
+
+    /// POPS-3061 design correction: `colour` is server-assigned at creation
+    /// and only ever changed by a dedicated reroll, never by this generic
+    /// PATCH body. A body containing the key deserializes fine (serde
+    /// silently ignores fields absent from the struct) and simply has no
+    /// effect; the assertion that matters is that the field does not exist on
+    /// [`UpdateEntityBody`] at all — if it did, this would fail to compile.
+    #[test]
+    fn patch_body_has_no_colour_field() {
+        let patch: UpdateEntityBody = serde_json::from_str(r#"{"colour":"anything"}"#).unwrap();
+        assert_eq!(patch, UpdateEntityBody::default());
+    }
+
+    /// Same correction, create side: a client-supplied `colour` on create is
+    /// not just ignored at the route/repo layer, it cannot even be expressed —
+    /// [`CreateEntityBody`] carries no such field.
+    #[test]
+    fn create_body_has_no_colour_field() {
+        let body: CreateEntityBody =
+            serde_json::from_str(r#"{"name":"Acme","colour":"anything"}"#).unwrap();
+        assert_eq!(body.name, "Acme");
     }
 }
