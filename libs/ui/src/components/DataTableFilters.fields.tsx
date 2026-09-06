@@ -91,7 +91,7 @@ export function DateRangeFilter<TData>({ column, ariaLabel }: DateRangeFilterPro
   const toLabel = ariaLabel ? `${ariaLabel} (to)` : 'To';
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 overflow-hidden sm:flex-row sm:items-center">
+    <div className="flex min-w-0 flex-col gap-2">
       <TextInput
         type="date"
         value={filterValue[0]}
@@ -100,7 +100,7 @@ export function DateRangeFilter<TData>({ column, ariaLabel }: DateRangeFilterPro
         className="min-w-0 flex-1"
         aria-label={fromLabel}
       />
-      <span className="hidden text-muted-foreground sm:block">to</span>
+      <span className="text-sm text-muted-foreground">to</span>
       <TextInput
         type="date"
         value={filterValue[1]}
