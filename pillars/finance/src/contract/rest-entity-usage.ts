@@ -27,6 +27,8 @@ export const EntityUsageSchema = z.object({
   defaultTags: z.array(z.string()),
   notes: z.string().nullable(),
   lastEditedTime: z.string(),
+  avatarAssetId: z.string().nullable(),
+  colour: z.string().nullable(),
   transactionCount: z.number(),
 });
 

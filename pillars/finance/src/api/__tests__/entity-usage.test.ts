@@ -138,6 +138,22 @@ describe('entityUsage — transactionCount rollup over the live contact set', ()
     expect(alpha?.defaultTags).toEqual(['groceries']);
   });
 
+  it('passes avatarAssetId and colour through from the contact wire shape', async () => {
+    const withIdentity = makeContactsFake({
+      seed: [
+        ...SEED,
+        { id: 'ent-delta', name: 'Delta', avatarAssetId: 'asset-1', colour: '#e04667' },
+      ],
+    });
+    const { data } = await client(withIdentity).entityUsage.list({ search: 'Delta' });
+    expect(data[0]).toMatchObject({ avatarAssetId: 'asset-1', colour: '#e04667' });
+  });
+
+  it('reports null avatarAssetId and colour for a contact with neither set', async () => {
+    const { data } = await client(fakeWithSeed()).entityUsage.list({ search: 'Alpha' });
+    expect(data[0]).toMatchObject({ avatarAssetId: null, colour: null });
+  });
+
   it('degrades to an empty list when contacts is unavailable', async () => {
     const down = makeContactsFake({ unavailable: true });
     const { data, pagination } = await client(down).entityUsage.list();

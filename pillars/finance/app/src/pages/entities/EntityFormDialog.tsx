@@ -16,17 +16,12 @@ import {
   TextInput,
 } from '@pops/ui';
 
-import {
-  ENTITY_DEFAULT_TYPE_OPTIONS,
-  ENTITY_TYPES,
-  type Entity,
-  type EntityFormValues,
-} from './types';
+import { EntityIdentityFields, type EntityIdentityFieldsProps } from './EntityAvatarField';
+import { ENTITY_DEFAULT_TYPE_OPTIONS, ENTITY_TYPES, type EntityFormValues } from './types';
 
-interface EntityFormDialogProps {
+interface EntityFormDialogProps extends EntityIdentityFieldsProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  editingEntity: Entity | null;
   form: UseFormReturn<EntityFormValues>;
   isSubmitting: boolean;
   onSubmit: (values: EntityFormValues) => void;
@@ -113,6 +108,7 @@ export function EntityFormDialog(props: EntityFormDialogProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <EntityIdentityFields {...props} />
             <NameAndType form={form} />
             <TagsAndAliases form={form} />
           </div>

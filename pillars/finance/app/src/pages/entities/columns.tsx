@@ -11,6 +11,7 @@ import {
 } from '@pops/ui';
 
 import { TagBadgeRow } from '../../components/tags/TagChip';
+import { EntityAvatar } from './EntityAvatar';
 import { ENTITY_TYPES, type Entity } from './types';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -20,6 +21,7 @@ const nameColumn: ColumnDef<Entity> = {
   header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
   cell: ({ row }) => (
     <div className="flex items-center gap-2">
+      <EntityAvatar entity={row.original} />
       <span className="font-medium">{row.original.name}</span>
       {row.original.transactionCount === 0 && (
         <Badge

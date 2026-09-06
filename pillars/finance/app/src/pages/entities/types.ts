@@ -14,6 +14,8 @@ export interface Entity {
   defaultTags: string[];
   notes: string | null;
   lastEditedTime: string;
+  avatarAssetId: string | null;
+  colour: string | null;
   transactionCount?: number;
 }
 

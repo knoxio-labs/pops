@@ -4952,6 +4952,8 @@ export type EntityUsageListResponses = {
     data: Array<{
       abn: string | null;
       aliases: Array<string>;
+      avatarAssetId: string | null;
+      colour: string | null;
       defaultTags: Array<string>;
       defaultTransactionType: string | null;
       id: string;
