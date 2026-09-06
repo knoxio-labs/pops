@@ -46,7 +46,7 @@ function mapServiceError(err: unknown): never {
     throw new NotFoundError('Feature', err.key);
   }
   if (err instanceof FeatureGateError || err instanceof FeatureScopeError) {
-    throw new ValidationError({ reason: err.name, message: err.message });
+    throw new ValidationError(err.message, { reason: err.name });
   }
   throw err;
 }

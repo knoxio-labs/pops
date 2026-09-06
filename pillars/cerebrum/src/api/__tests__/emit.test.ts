@@ -193,6 +193,22 @@ describe('POST /emit/generate', () => {
       status: 400,
     });
   });
+
+  // Both statuses above were true before POPS-3043 too — cerebrum's
+  // `ValidationError` took `(details: unknown)` and hardcoded
+  // `'Validation failed'`, so all 31 of this pillar's explanations were
+  // discarded and the two refusals above were indistinguishable on the wire.
+  // Assert the body, which is the part that was wrong.
+  it('says which mode is missing what, rather than answering "Validation failed"', async () => {
+    await expect(client().emit.generate({ mode: 'report' })).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'Query is required for report mode', code: 'ValidationError' },
+    });
+    await expect(client().emit.generate({ mode: 'summary' })).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'Date range is required for summary mode' },
+    });
+  });
 });
 
 describe('POST /emit/preview', () => {

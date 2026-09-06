@@ -13,7 +13,7 @@ import { ValidationError } from '../../shared/errors.js';
 /** Normalise raw input content for storage as an engram body. */
 export function normaliseBody(raw: string): string {
   if (!raw || raw.trim().length === 0) {
-    throw new ValidationError({ message: 'body must not be empty or whitespace-only' });
+    throw new ValidationError('body must not be empty or whitespace-only');
   }
 
   let body = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');

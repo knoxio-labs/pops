@@ -19,7 +19,7 @@ export type LinkDeps = {
 export function linkEngrams(deps: LinkDeps, sourceId: string, targetId: string): void {
   const { db, now } = deps;
   if (sourceId === targetId) {
-    throw new ValidationError({ message: 'cannot link an engram to itself' });
+    throw new ValidationError('cannot link an engram to itself');
   }
   getIndexRow(db, sourceId);
   const targetRow = findIndexRow(db, targetId);

@@ -20,7 +20,11 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
+import {
+  openCoreDb,
+  ServiceAccountNameAlreadyExistsError,
+  type OpenedCoreDb,
+} from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
 import { makeClient, type ClientHeaders } from './test-utils.js';
 
@@ -88,6 +92,22 @@ describe('service-accounts REST — error mapping', () => {
     await expect(
       client().serviceAccounts.create({ name: 'dup', scopes: ['core.shell'] })
     ).rejects.toMatchObject({ status: 400 });
+  });
+
+  // Before POPS-3043 this handler pulled `err.message` off the domain error
+  // and put it in the discarded `details` slot, so the caller was told only
+  // `Validation failed` and could not tell a duplicate name from bad input.
+  it('names the duplicate, rather than answering "Validation failed"', async () => {
+    await client().serviceAccounts.create({ name: 'taken', scopes: ['core.shell'] });
+    await expect(
+      client().serviceAccounts.create({ name: 'taken', scopes: ['core.shell'] })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: {
+        message: new ServiceAccountNameAlreadyExistsError('taken').message,
+        code: 'ValidationError',
+      },
+    });
   });
 
   it('400s malformed input at the zod boundary (too short / spaces / empty scopes)', async () => {

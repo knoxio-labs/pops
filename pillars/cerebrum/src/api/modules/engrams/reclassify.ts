@@ -136,9 +136,7 @@ function writeAllAtomic(work: WorkItem[]): WorkItem[] {
     }
   } catch (err) {
     rollbackWrites(written, 'reclassify rollback');
-    throw new ValidationError({
-      message: `reclassify failed and was rolled back: ${(err as Error).message}`,
-    });
+    throw new ValidationError(`reclassify failed and was rolled back: ${(err as Error).message}`);
   }
   return written;
 }
@@ -191,9 +189,9 @@ export function reclassifyScopes(
     applyDbChanges(db, work);
   } catch (dbErr) {
     rollbackWrites(written, 'reclassify DB rollback');
-    throw new ValidationError({
-      message: `reclassify DB update failed and file changes were rolled back: ${(dbErr as Error).message}`,
-    });
+    throw new ValidationError(
+      `reclassify DB update failed and file changes were rolled back: ${(dbErr as Error).message}`
+    );
   }
 
   return { affected: affectedIds.length };

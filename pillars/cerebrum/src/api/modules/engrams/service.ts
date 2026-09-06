@@ -122,9 +122,9 @@ export class EngramService {
     const { frontmatter, body } = parseEngramFile(existingContent);
 
     if (changes.status && !canTransitionStatus(frontmatter.status, changes.status)) {
-      throw new ValidationError({
-        message: `cannot transition status from '${frontmatter.status}' to '${changes.status}'`,
-      });
+      throw new ValidationError(
+        `cannot transition status from '${frontmatter.status}' to '${changes.status}'`
+      );
     }
 
     const nextBody = applyTitleChange(changes.body ?? body, changes.title);

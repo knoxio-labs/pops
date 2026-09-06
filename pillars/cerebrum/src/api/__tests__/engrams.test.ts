@@ -64,6 +64,16 @@ describe('POST /engrams (create)', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  // POPS-3043: the status alone was true while the body said nothing.
+  it('names the missing requirement, rather than answering "Validation failed"', async () => {
+    await expect(
+      client().engrams.create({ type: 'note', title: 'No scope' })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: 'at least one scope is required', code: 'ValidationError' },
+    });
+  });
+
   it('400s on an invalid source channel', async () => {
     await expect(
       client().engrams.create({

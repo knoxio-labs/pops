@@ -15,6 +15,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { UnknownSettingKeyError } from '@pops/pillar-settings';
+
 import { inventoryKeyDefaults } from '../../contract/settings/key-defaults.js';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
@@ -91,5 +93,20 @@ describe('inventory federated /settings', () => {
   it('rejects a single-key write outside the declared enum with a 400', async () => {
     const res = await requestOn(app()).put('/settings/totally.unknown').send({ value: 'x' });
     expect(res.status).toBe(400);
+  });
+
+  // The statuses above were true before POPS-3043 too — inventory's
+  // `ValidationError` took `(details: unknown)` and hardcoded
+  // `'Validation failed'`, so this handler's `err.message` never reached the
+  // caller and an unknown key was indistinguishable from a malformed body.
+  it('names the unknown key, rather than answering "Validation failed"', async () => {
+    const res = await requestOn(app())
+      .post('/settings/set-many')
+      .send({ entries: [{ key: 'inventory.notAThing', value: 'x' }] });
+
+    expect(res.body).toMatchObject({
+      message: new UnknownSettingKeyError(['inventory.notAThing']).message,
+      code: 'ValidationError',
+    });
   });
 });

@@ -38,6 +38,7 @@ import {
   type OpenedCoreDb,
 } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
+import { FeatureScopeError } from '../modules/features/index.js';
 import { createTestTransport } from './test-http.js';
 import { makeClient, type ClientHeaders } from './test-utils.js';
 
@@ -229,6 +230,21 @@ describe('features REST — setEnabled', () => {
     });
   });
 
+  // Before POPS-3043 this translator pulled `err.message` off the domain
+  // error and put it in the discarded `details` slot, so both scope refusals
+  // below answered `Validation failed` and named neither the key nor the
+  // scope. Assert the body, not the status.
+  it('names the key and both scopes when setEnabled is refused', async () => {
+    registerPillar(manifestWith('demo', [CAPABILITY_FLAG]));
+    await expect(client().features.setEnabled('demo.capabilityFlag', true)).rejects.toMatchObject({
+      status: 400,
+      body: {
+        message: new FeatureScopeError('demo.capabilityFlag', 'system|user', 'capability').message,
+        code: 'ValidationError',
+      },
+    });
+  });
+
   it('404s an unknown key', async () => {
     registerPillar(manifestWith('demo', [SYSTEM_FLAG]));
     await expect(client().features.setEnabled('demo.nope', true)).rejects.toMatchObject({
@@ -266,6 +282,7 @@ describe('features REST — user preference lifecycle', () => {
       client().features.setUserPreference('demo.systemFlag', true)
     ).rejects.toMatchObject({
       status: 400,
+      body: { message: new FeatureScopeError('demo.systemFlag', 'user', 'system').message },
     });
   });
 });
