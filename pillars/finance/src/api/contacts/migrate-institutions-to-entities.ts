@@ -15,25 +15,30 @@
  *   - a NON-bank entity with the same name (e.g. a person or company that
  *     happens to share the bank's name) is a COLLISION: this migration must
  *     never silently repoint or merge into it, because doing so would staple
- *     a bank's logo/colour onto an unrelated contact. The institution is
- *     skipped and reported so a human can resolve the name clash by hand
- *     (rename one side, or decide they really are the same entity); nothing
- *     about resolving that requires this migration to run again first — the
+ *     a bank's logo onto an unrelated contact. The institution is skipped and
+ *     reported so a human can resolve the name clash by hand (rename one
+ *     side, or decide they really are the same entity); nothing about
+ *     resolving that requires this migration to run again first — the
  *     institution just isn't touched until then;
  *   - otherwise, create a new `bank`-typed entity.
  *
- * Logo and colour are copied idempotently: a null `logoAssetId` is skipped
- * outright, and an entity that already has an avatar (from an earlier run,
- * OR because a user set one by hand after migrating) is never re-uploaded or
- * clobbered. Colour follows the same rule — set only when the entity has
- * none yet.
+ * The logo is copied idempotently: a null `logoAssetId` is skipped outright,
+ * and an entity that already has an avatar (from an earlier run, OR because a
+ * user set one by hand after migrating) is never re-uploaded or clobbered.
+ *
+ * Colour is entirely out of this migration's scope (POPS-3061 design
+ * correction): contacts assigns an entity's colour at random from its fixed
+ * palette on creation, and the only way to change it afterwards is the
+ * dedicated `POST /entities/:id/colour/reroll` route, which never takes a
+ * caller-chosen value. There is nothing for this migration to copy or set —
+ * a freshly created entity gets its colour from the CREATE call itself, and
+ * a matched existing entity simply keeps whatever colour it already has.
  */
 
 /** A finance `institutions` row, in the shape the migrator needs. */
 export interface InstitutionRecord {
   id: string;
   name: string;
-  colour: string;
   logoAssetId: string | null;
   migratedEntityId: string | null;
 }
@@ -49,7 +54,6 @@ export interface EntityMatch {
   id: string;
   type: string;
   avatarAssetId: string | null;
-  colour: string | null;
 }
 
 export type InstitutionOutcome = 'created' | 'matched' | 'collision';
@@ -61,7 +65,6 @@ export interface InstitutionResult {
   outcome: InstitutionOutcome;
   entityId: string | null;
   logoUploaded: boolean;
-  colourSet: boolean;
 }
 
 export interface MigrationSummary {
@@ -71,8 +74,6 @@ export interface MigrationSummary {
   collisions: number;
   logosUploaded: number;
   logosSkipped: number;
-  coloursSet: number;
-  coloursSkipped: number;
   results: InstitutionResult[];
 }
 
@@ -94,14 +95,13 @@ export interface MigrateInstitutionsDeps {
    * after all" and falls back to the by-name lookup.
    */
   getEntityById(id: string): Promise<EntityMatch | null>;
-  /** Create a new `bank`-typed entity with `name`/`colour`. */
-  createBankEntity(name: string, colour: string): Promise<EntityMatch>;
+  /** Create a new `bank`-typed entity named `name`. Its colour is assigned
+   * server-side at random; there is nothing to pass in. */
+  createBankEntity(name: string): Promise<EntityMatch>;
   /** Read an institution's logo bytes out of finance's blob store. */
   fetchLogoBytes(logoAssetId: string): Promise<LogoBytes | null>;
   /** Upload `logo` as the entity's avatar through contacts' own upload route. */
   uploadAvatar(entityId: string, logo: LogoBytes): Promise<void>;
-  /** Set an entity's `colour`. */
-  setEntityColour(entityId: string, colour: string): Promise<void>;
   /** Record the institution → entity mapping back into finance's own DB. */
   recordMigratedEntityId(institutionId: string, entityId: string): Promise<void>;
 }
@@ -132,7 +132,7 @@ async function resolveTarget(
 
   const existing = await deps.findEntityByName(institution.name);
   if (existing === null) {
-    const created = await deps.createBankEntity(institution.name, institution.colour);
+    const created = await deps.createBankEntity(institution.name);
     return { kind: 'target', outcome: 'created', entity: created };
   }
   if (existing.type !== BANK_ENTITY_TYPE) {
@@ -162,27 +162,11 @@ async function migrateLogo(
 }
 
 /**
- * Copy `institution`'s colour onto `entity`, idempotently: an entity that
- * already carries a colour (from an earlier run, or a user's own edit since)
- * is left alone. Returns whether a write actually happened.
- */
-async function migrateColour(
-  institution: InstitutionRecord,
-  entity: EntityMatch,
-  deps: MigrateInstitutionsDeps
-): Promise<boolean> {
-  if (entity.colour !== null && entity.colour !== '') return false;
-  await deps.setEntityColour(entity.id, institution.colour);
-  return true;
-}
-
-/**
  * Run the migration end to end: read every institution, resolve/create its
- * bank entity, copy the logo and colour idempotently, and record the
- * mapping. A collision skips the institution entirely — no entity write, no
- * logo/colour write, no `migratedEntityId` recorded — so a re-run keeps
- * retrying it (and keeps reporting it) until a human resolves the name
- * clash.
+ * bank entity, copy the logo idempotently, and record the mapping. A
+ * collision skips the institution entirely — no entity write, no logo write,
+ * no `migratedEntityId` recorded — so a re-run keeps retrying it (and keeps
+ * reporting it) until a human resolves the name clash.
  */
 export async function migrateInstitutionsToEntities(
   deps: MigrateInstitutionsDeps
@@ -195,8 +179,6 @@ export async function migrateInstitutionsToEntities(
     collisions: 0,
     logosUploaded: 0,
     logosSkipped: 0,
-    coloursSet: 0,
-    coloursSkipped: 0,
     results: [],
   };
 
@@ -211,7 +193,6 @@ export async function migrateInstitutionsToEntities(
         outcome: 'collision',
         entityId: null,
         logoUploaded: false,
-        colourSet: false,
       });
       continue;
     }
@@ -224,10 +205,6 @@ export async function migrateInstitutionsToEntities(
     if (logoUploaded) summary.logosUploaded++;
     else summary.logosSkipped++;
 
-    const colourSet = await migrateColour(institution, entity, deps);
-    if (colourSet) summary.coloursSet++;
-    else summary.coloursSkipped++;
-
     await deps.recordMigratedEntityId(institution.id, entity.id);
 
     summary.results.push({
@@ -236,7 +213,6 @@ export async function migrateInstitutionsToEntities(
       outcome,
       entityId: entity.id,
       logoUploaded,
-      colourSet,
     });
   }
 

@@ -37,7 +37,6 @@ import {
   createBankEntity,
   findEntityByName,
   getEntityById,
-  setEntityColour,
   uploadAvatar,
 } from './institutions-migration-contacts-client.js';
 
@@ -47,7 +46,6 @@ function buildDeps(financeDb: OpenedFinanceDb): MigrateInstitutionsDeps {
       return institutionsService.listInstitutions(financeDb.db).map((row) => ({
         id: row.id,
         name: row.name,
-        colour: row.colour,
         logoAssetId: row.logoAssetId,
         migratedEntityId: row.migratedEntityId,
       }));
@@ -64,7 +62,6 @@ function buildDeps(financeDb: OpenedFinanceDb): MigrateInstitutionsDeps {
       }
     },
     uploadAvatar,
-    setEntityColour,
     async recordMigratedEntityId(institutionId: string, entityId: string): Promise<void> {
       institutionsService.setInstitutionMigratedEntityId(financeDb.db, institutionId, entityId);
     },
@@ -81,8 +78,7 @@ async function main(): Promise<void> {
     console.warn(
       `[migrate-institutions-to-entities] done — total=${summary.total} created=${summary.created} ` +
         `matched=${summary.matched} collisions=${summary.collisions} ` +
-        `logosUploaded=${summary.logosUploaded} logosSkipped=${summary.logosSkipped} ` +
-        `coloursSet=${summary.coloursSet} coloursSkipped=${summary.coloursSkipped}`
+        `logosUploaded=${summary.logosUploaded} logosSkipped=${summary.logosSkipped}`
     );
     if (summary.collisions > 0) {
       const names = summary.results

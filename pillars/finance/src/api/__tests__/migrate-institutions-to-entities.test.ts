@@ -17,8 +17,10 @@
  * Covers every rule from the ticket: fresh creation, match-existing,
  * collision skip (a non-bank entity with the same name), already-migrated
  * idempotency (both via a prior `migratedEntityId` and via a same-named
- * pre-existing bank entity), logo/colour idempotency (never re-uploaded or
- * clobbered), and a null-logo institution.
+ * pre-existing bank entity), logo idempotency (never re-uploaded or
+ * clobbered), and a null-logo institution. Colour is out of scope entirely
+ * (POPS-3061): contacts assigns it server-side at random on creation and it
+ * is never settable through this migration.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -39,13 +41,11 @@ function makeContactsFake() {
 
   let nextId = 0;
   const uploads: { entityId: string; logo: LogoBytes }[] = [];
-  const coloursSet: { entityId: string; colour: string }[] = [];
-  const created: { name: string; colour: string }[] = [];
+  const created: { name: string }[] = [];
 
   return {
     entities,
     uploads,
-    coloursSet,
     created,
     seedNamed(name: string, entity: EntityMatch): void {
       entities.set(entity.id, entity);
@@ -60,13 +60,12 @@ function makeContactsFake() {
         const entity = entities.get(id);
         return entity ? { ...entity } : null;
       },
-      async createBankEntity(name: string, colour: string): Promise<EntityMatch> {
-        created.push({ name, colour });
+      async createBankEntity(name: string): Promise<EntityMatch> {
+        created.push({ name });
         const entity: EntityMatch = {
           id: `entity-${++nextId}`,
           type: 'bank',
           avatarAssetId: null,
-          colour: colour ?? null,
         };
         entities.set(entity.id, entity);
         names.set(name.toLowerCase(), entity.id);
@@ -78,15 +77,9 @@ function makeContactsFake() {
         if (!entity) throw new Error(`no such entity ${entityId}`);
         entity.avatarAssetId = `blob-${entityId}`;
       },
-      async setEntityColour(entityId: string, colour: string): Promise<void> {
-        coloursSet.push({ entityId, colour });
-        const entity = entities.get(entityId);
-        if (!entity) throw new Error(`no such entity ${entityId}`);
-        entity.colour = colour;
-      },
     } satisfies Pick<
       MigrateInstitutionsDeps,
-      'findEntityByName' | 'getEntityById' | 'createBankEntity' | 'uploadAvatar' | 'setEntityColour'
+      'findEntityByName' | 'getEntityById' | 'createBankEntity' | 'uploadAvatar'
     >,
   };
 }
@@ -100,7 +93,6 @@ function financeDeps(
       return institutionsService.listInstitutions(db).map((row) => ({
         id: row.id,
         name: row.name,
-        colour: row.colour,
         logoAssetId: row.logoAssetId,
         migratedEntityId: row.migratedEntityId,
       }));
@@ -170,11 +162,8 @@ describe('migrateInstitutionsToEntities', () => {
       collisions: 0,
       logosUploaded: 1,
       logosSkipped: 0,
-      coloursSet: 0,
-      coloursSkipped: 1,
     });
-    expect(contacts.created).toEqual([{ name: 'Westpac', colour: '#d5001c' }]);
-    expect(contacts.coloursSet).toEqual([]);
+    expect(contacts.created).toEqual([{ name: 'Westpac' }]);
     expect(contacts.uploads).toHaveLength(1);
     expect(contacts.uploads[0]?.logo.data.equals(PNG_BYTES)).toBe(true);
     expect(contacts.uploads[0]?.logo.contentType).toBe('image/png');
@@ -193,8 +182,6 @@ describe('migrateInstitutionsToEntities', () => {
       created: 1,
       logosUploaded: 0,
       logosSkipped: 1,
-      coloursSet: 0,
-      coloursSkipped: 1,
     });
   });
 
@@ -204,7 +191,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'existing-bank',
       type: 'bank',
       avatarAssetId: null,
-      colour: null,
     });
     createInstitution(db, { name: 'ANZ', colour: '#0033a0' });
 
@@ -212,7 +198,6 @@ describe('migrateInstitutionsToEntities', () => {
 
     expect(summary).toMatchObject({ created: 0, matched: 1, collisions: 0 });
     expect(contacts.created).toEqual([]);
-    expect(contacts.coloursSet).toEqual([{ entityId: 'existing-bank', colour: '#0033a0' }]);
   });
 
   it('skips a name collision with a non-bank entity, reports it, and touches nothing', async () => {
@@ -221,7 +206,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'person-1',
       type: 'person',
       avatarAssetId: null,
-      colour: null,
     });
     const institution = createInstitution(db, { name: 'Macquarie', colour: '#00558c' });
 
@@ -235,11 +219,9 @@ describe('migrateInstitutionsToEntities', () => {
         outcome: 'collision',
         entityId: null,
         logoUploaded: false,
-        colourSet: false,
       },
     ]);
     expect(contacts.created).toEqual([]);
-    expect(contacts.coloursSet).toEqual([]);
     const refetched = institutionsService.getInstitution(db, institution.id);
     expect(refetched.migratedEntityId).toBeNull();
     // The person entity itself is untouched.
@@ -247,7 +229,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'person-1',
       type: 'person',
       avatarAssetId: null,
-      colour: null,
     });
   });
 
@@ -257,7 +238,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'person-1',
       type: 'person',
       avatarAssetId: null,
-      colour: null,
     });
     createInstitution(db, { name: 'Macquarie', colour: '#00558c' });
 
@@ -268,7 +248,7 @@ describe('migrateInstitutionsToEntities', () => {
     expect(contacts.created).toEqual([]);
   });
 
-  it('is fully idempotent across two runs: no duplicate entity, no re-upload, no re-set colour', async () => {
+  it('is fully idempotent across two runs: no duplicate entity, no re-upload', async () => {
     const { db, contacts, deps } = setup();
     const logo = logoBlobsService.createLogoBlob(db, {
       contentType: 'image/jpeg',
@@ -284,12 +264,9 @@ describe('migrateInstitutionsToEntities', () => {
     expect(second.matched).toBe(1);
     expect(contacts.created).toHaveLength(1);
     expect(contacts.uploads).toHaveLength(1); // not re-uploaded
-    expect(contacts.coloursSet).toHaveLength(0); // colour was already set by the CREATE call itself
     expect(second).toMatchObject({
       logosUploaded: 0,
       logosSkipped: 1,
-      coloursSet: 0,
-      coloursSkipped: 1,
     });
   });
 
@@ -299,7 +276,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'already-migrated',
       type: 'bank',
       avatarAssetId: 'blob-existing',
-      colour: '#f37021',
     });
     const institution = createInstitution(db, { name: 'NAB', colour: '#f37021' });
     institutionsService.setInstitutionMigratedEntityId(db, institution.id, 'already-migrated');
@@ -311,15 +287,12 @@ describe('migrateInstitutionsToEntities', () => {
       matched: 1,
       logosUploaded: 0,
       logosSkipped: 1,
-      coloursSet: 0,
-      coloursSkipped: 1,
     });
     expect(contacts.created).toEqual([]);
     expect(contacts.uploads).toEqual([]);
-    expect(contacts.coloursSet).toEqual([]);
   });
 
-  it('never clobbers an avatar or colour a user set after migration', async () => {
+  it('never clobbers an avatar a user set after migration', async () => {
     const { db, contacts, deps } = setup();
     const logo = logoBlobsService.createLogoBlob(db, {
       contentType: 'image/png',
@@ -329,20 +302,17 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'user-edited',
       type: 'bank',
       avatarAssetId: 'user-uploaded-blob',
-      colour: '#123456',
     });
     createInstitution(db, { name: 'Bendigo Bank', colour: '#ffcc00', logoAssetId: logo.id });
 
     await migrateInstitutionsToEntities(deps);
 
     expect(contacts.uploads).toEqual([]);
-    expect(contacts.coloursSet).toEqual([]);
     const entity = await contacts.deps.getEntityById('user-edited');
     expect(entity).toEqual({
       id: 'user-edited',
       type: 'bank',
       avatarAssetId: 'user-uploaded-blob',
-      colour: '#123456',
     });
   });
 
@@ -366,7 +336,6 @@ describe('migrateInstitutionsToEntities', () => {
       id: 'person-1',
       type: 'person',
       avatarAssetId: null,
-      colour: null,
     });
     createInstitution(db, { name: 'Westpac', colour: '#d5001c' });
     createInstitution(db, { name: 'Macquarie', colour: '#00558c' });

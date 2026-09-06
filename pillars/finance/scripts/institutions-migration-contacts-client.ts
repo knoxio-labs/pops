@@ -33,7 +33,6 @@ type ContactsEntity = {
   name: string;
   type: string;
   avatarAssetId: string | null;
-  colour: string | null;
 };
 
 type ContactsRouter = {
@@ -47,9 +46,7 @@ type ContactsRouter = {
     create: (input: {
       name: string;
       type: string;
-      colour: string;
     }) => Promise<{ data: ContactsEntity; message: string }>;
-    update: (input: { id: string; colour: string }) => Promise<{ data: ContactsEntity }>;
   };
 };
 
@@ -58,7 +55,6 @@ function toEntityMatch(entity: ContactsEntity): EntityMatch {
     id: entity.id,
     type: entity.type,
     avatarAssetId: entity.avatarAssetId,
-    colour: entity.colour,
   };
 }
 
@@ -97,26 +93,15 @@ export async function getEntityById(id: string): Promise<EntityMatch | null> {
   throw new Error(`contacts entities.get(${id}) failed: ${result.kind}`);
 }
 
-export async function createBankEntity(name: string, colour: string): Promise<EntityMatch> {
+export async function createBankEntity(name: string): Promise<EntityMatch> {
   const result = await pillar<ContactsRouter>(CONTACTS_PILLAR_ID).entities.create({
     name,
     type: BANK_ENTITY_TYPE,
-    colour,
   });
   if (!isOk(result)) {
     throw new Error(`contacts entities.create failed for "${name}": ${result.kind}`);
   }
   return toEntityMatch(result.value.data);
-}
-
-export async function setEntityColour(entityId: string, colour: string): Promise<void> {
-  const result = await pillar<ContactsRouter>(CONTACTS_PILLAR_ID).entities.update({
-    id: entityId,
-    colour,
-  });
-  if (!isOk(result)) {
-    throw new Error(`contacts entities.update(${entityId}) failed: ${result.kind}`);
-  }
 }
 
 /** Resolve contacts' current base URL off the same registry snapshot the SDK uses. */
