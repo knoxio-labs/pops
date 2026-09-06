@@ -14,6 +14,11 @@ export {
   type SqliteStatement,
 } from './connection.js';
 export {
+  assignNullableKeys,
+  setNullableKeys,
+  type NullableColumnKeys,
+} from './nullable-column-keys.js';
+export {
   journalPath,
   lastAppliedMigrationAt,
   pendingMigrations,

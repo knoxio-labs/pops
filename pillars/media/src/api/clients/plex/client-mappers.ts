@@ -21,29 +21,37 @@ export function parseGuids(guids: RawPlexMediaItem['Guid'] | undefined): PlexExt
     .filter((id): id is PlexExternalId => id !== null);
 }
 
-const NULLABLE_SCALAR_KEYS = [
-  ['originalTitle', 'originalTitle'],
-  ['summary', 'summary'],
-  ['tagline', 'tagline'],
-  ['year', 'year'],
-  ['thumbUrl', 'thumb'],
-  ['artUrl', 'art'],
-  ['durationMs', 'duration'],
-  ['lastViewedAt', 'lastViewedAt'],
-  ['rating', 'rating'],
-  ['audienceRating', 'audienceRating'],
-  ['contentRating', 'contentRating'],
-  ['leafCount', 'leafCount'],
-  ['viewedLeafCount', 'viewedLeafCount'],
-  ['childCount', 'childCount'],
-] as const satisfies ReadonlyArray<readonly [keyof PlexMediaItem, keyof RawPlexMediaItem]>;
+/**
+ * Absent Plex scalars become `null` rather than staying absent, so a
+ * `PlexMediaItem` is always fully populated.
+ *
+ * Written out rather than looped over a list of `[outKey, rawKey]` pairs: the
+ * loop cannot be type-checked — `outKey` and `rawKey` are independent unions,
+ * so TypeScript has to consider every pairing, not the one the tuple actually
+ * holds — and the cast that made it compile was hiding the six places where
+ * the two names differ (POPS-3029).
+ */
+function orNull<T>(value: T | undefined): T | null {
+  return value ?? null;
+}
 
 function readScalars(raw: RawPlexMediaItem): Partial<PlexMediaItem> {
-  const out: Record<string, unknown> = {};
-  for (const [outKey, rawKey] of NULLABLE_SCALAR_KEYS) {
-    out[outKey] = raw[rawKey] ?? null;
-  }
-  return out as Partial<PlexMediaItem>;
+  return {
+    originalTitle: orNull(raw.originalTitle),
+    summary: orNull(raw.summary),
+    tagline: orNull(raw.tagline),
+    year: orNull(raw.year),
+    thumbUrl: orNull(raw.thumb),
+    artUrl: orNull(raw.art),
+    durationMs: orNull(raw.duration),
+    lastViewedAt: orNull(raw.lastViewedAt),
+    rating: orNull(raw.rating),
+    audienceRating: orNull(raw.audienceRating),
+    contentRating: orNull(raw.contentRating),
+    leafCount: orNull(raw.leafCount),
+    viewedLeafCount: orNull(raw.viewedLeafCount),
+    childCount: orNull(raw.childCount),
+  };
 }
 
 export function mapMediaItem(raw: RawPlexMediaItem): PlexMediaItem {
