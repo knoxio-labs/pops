@@ -25,17 +25,30 @@ export type TagVocabularyRow = typeof tagVocabulary.$inferSelect;
 export type TagVocabularySource = 'seed' | 'user';
 
 /**
- * Return the active vocabulary tags.
+ * Return the active vocabulary tags, most-used first.
  *
- * No explicit ORDER BY — SQLite makes no ordering guarantee in that case. The
- * router treats the result as a set, so order is not observable to clients.
- * Callers that need a ranked list use {@link listVocabularyTagsForFacets}.
+ * The order is load-bearing (POPS-2616). This is what `GET
+ * /tag-rules/vocabulary` serves, and both tag pickers preserve the order they
+ * are given: `rankTagSuggestions` splits it into prefix and substring buckets
+ * without reordering within either, and `groupTagsByFacet` fixes the order of
+ * the axes while leaving each bucket's contents alone. So the values that
+ * actually carry the corpus lead every facet, which is what POPS-2608 asked
+ * for and could not have — until this counter existed there was nothing to
+ * rank on, and without an ORDER BY the list was whatever SQLite happened to
+ * return.
+ *
+ * Ranked the same way {@link listVocabularyTagsForFacets} ranks the
+ * categorizer prompt, deliberately: two orderings over one counter would drift
+ * and the drift would show up as a picker and a prompt disagreeing about what
+ * is common. `tag` breaks ties so a cold vocabulary, where every count is
+ * zero, is still deterministic.
  */
 export function listVocabularyTags(db: FinanceDb): string[] {
   return db
     .select({ tag: tagVocabulary.tag })
     .from(tagVocabulary)
     .where(eq(tagVocabulary.isActive, true))
+    .orderBy(sql`${tagVocabulary.usageCount} desc`, tagVocabulary.tag)
     .all()
     .map((row) => row.tag);
 }

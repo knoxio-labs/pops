@@ -37,6 +37,33 @@ describe('GroupTagBar', () => {
     expect(screen.getByLabelText('Venue: Bar')).toHaveAttribute('data-tag', 'venue:bar');
   });
 
+  // POPS-2616: the server hands the vocabulary over most-used first, and the
+  // whole ranking lives in that order — nothing downstream carries a count to
+  // re-sort by. So the picker must not reorder within a facet, and asserting
+  // membership rather than sequence would pass against a picker that did.
+  it('shows the vocabulary in the order it was given, within each facet', () => {
+    renderBar({ availableTags: ['venue:cafe', 'venue:bar', 'venue:pub'] });
+    openPicker();
+
+    const venue = screen.getByRole('group', { name: 'Venue' });
+    expect(
+      [...venue.querySelectorAll('[data-tag]')].map((el) => el.getAttribute('data-tag'))
+    ).toEqual(['venue:cafe', 'venue:bar', 'venue:pub']);
+  });
+
+  it('keeps that order under a typed filter, within each match bucket', () => {
+    renderBar({ availableTags: ['venue:cafe', 'venue:bar', 'venue:cantina'] });
+    openPicker();
+    fireEvent.change(screen.getByPlaceholderText('+ Add tag…'), { target: { value: 'ca' } });
+
+    const venue = screen.getByRole('group', { name: 'Venue' });
+    // `venue:bar` does not contain "ca" at all; the two that do keep the order
+    // the vocabulary supplied rather than falling back to the alphabet.
+    expect(
+      [...venue.querySelectorAll('[data-tag]')].map((el) => el.getAttribute('data-tag'))
+    ).toEqual(['venue:cafe', 'venue:cantina']);
+  });
+
   it('groups the picker dropdown by facet, unfaceted last', () => {
     renderBar();
     openPicker();

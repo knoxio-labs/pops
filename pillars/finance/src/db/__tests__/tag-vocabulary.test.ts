@@ -82,6 +82,47 @@ describe('listVocabularyTags', () => {
 
     expect(listVocabularyTags(harness.db)).toEqual(['Active']);
   });
+
+  // The order is the product here (POPS-2616): both pickers preserve what
+  // this returns, so a lost ORDER BY is not a cosmetic regression — it is the
+  // ranking silently going away while every other assertion stays green.
+  it('returns the most-used tag first', () => {
+    upsertVocabularyTag(harness.db, 'venue:pub', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:cafe', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:casino', 'seed');
+    incrementVocabularyUsage(harness.db, ['venue:cafe']);
+    incrementVocabularyUsage(harness.db, ['venue:cafe']);
+    incrementVocabularyUsage(harness.db, ['venue:casino']);
+
+    expect(listVocabularyTags(harness.db)).toEqual(['venue:cafe', 'venue:casino', 'venue:pub']);
+  });
+
+  it('breaks a tie on the tag, so a cold vocabulary is still deterministic', () => {
+    upsertVocabularyTag(harness.db, 'venue:pub', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:cafe', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:bar', 'seed');
+
+    expect(listVocabularyTags(harness.db)).toEqual(['venue:bar', 'venue:cafe', 'venue:pub']);
+  });
+
+  it('ranks on usage before the alphabet, not after it', () => {
+    upsertVocabularyTag(harness.db, 'venue:zoo', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:bar', 'seed');
+    incrementVocabularyUsage(harness.db, ['venue:zoo']);
+
+    // Alphabetical would put `bar` first; usage must win.
+    expect(listVocabularyTags(harness.db)[0]).toBe('venue:zoo');
+  });
+
+  it('ranks a retired tag nowhere, however heavily it was used', () => {
+    upsertVocabularyTag(harness.db, 'venue:bar', 'seed');
+    upsertVocabularyTag(harness.db, 'venue:pub', 'seed');
+    incrementVocabularyUsage(harness.db, ['venue:bar']);
+    incrementVocabularyUsage(harness.db, ['venue:bar']);
+    harness.raw.prepare(`UPDATE tag_vocabulary SET is_active = 0 WHERE tag = ?`).run('venue:bar');
+
+    expect(listVocabularyTags(harness.db)).toEqual(['venue:pub']);
+  });
 });
 
 describe('upsertVocabularyTag — insert path', () => {
