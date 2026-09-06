@@ -166,3 +166,47 @@ describe('RuleCreationStep', () => {
     expect(screen.queryByText('Organic')).not.toBeInTheDocument();
   });
 });
+
+describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
+  it('stages the checksums of exactly the rows the proposal was built from', () => {
+    storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    const call = mockAddPendingTagRuleChangeSet.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    expect(call.sourceChecksums).toEqual(['w-1', 'w-2']);
+  });
+
+  it('gives each proposal its own rows, never another merchant’s', () => {
+    const coles = { description: 'COLES 555', entityId: 'entity-coles', entityName: 'Coles' };
+    storeState.confirmedTransactions = [
+      makeTxn({ checksum: 'w-1' }),
+      makeTxn({ checksum: 'w-2' }),
+      makeTxn({ checksum: 'c-1', ...coles }),
+      makeTxn({ checksum: 'c-2', ...coles }),
+    ];
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    const staged = new Map(
+      mockAddPendingTagRuleChangeSet.mock.calls.map(([arg]) => [
+        arg.changeSet.ops[0].data.entityId,
+        arg.sourceChecksums,
+      ])
+    );
+    expect(staged.get('entity-woolworths')).toEqual(['w-1', 'w-2']);
+    expect(staged.get('entity-coles')).toEqual(['c-1', 'c-2']);
+  });
+
+  it('never stages a rule with no provenance, which reconciliation would drop whole', () => {
+    storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
+    render(<RuleCreationStep />);
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    expect(mockAddPendingTagRuleChangeSet.mock.calls.length).toBeGreaterThan(0);
+    for (const [arg] of mockAddPendingTagRuleChangeSet.mock.calls) {
+      expect(arg.sourceChecksums.length).toBeGreaterThan(0);
+    }
+  });
+});
