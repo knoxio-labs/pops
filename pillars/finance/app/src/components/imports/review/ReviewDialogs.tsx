@@ -1,7 +1,6 @@
 import { toast } from 'sonner';
 
 import { toRestSignal } from '../../../lib/rest-changeset';
-import { useImportStore } from '../../../store/importStore';
 import { CorrectionProposalDialog } from '../CorrectionProposalDialog';
 import { EntityCreateDialog } from '../EntityCreateDialog';
 import { useReevaluatePending } from '../hooks/useReevaluatePending';
@@ -26,10 +25,9 @@ function BrowseDialog({
   previewTransactions,
   applyReevaluatedResult,
 }: BrowseDialogProps) {
-  const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
   const { runReevaluate } = useReevaluatePending();
   const onClose = (hadChanges: boolean) => {
-    if (!hadChanges || !sessionId || pendingChangeSets.length === 0) return;
+    if (!hadChanges || !sessionId) return;
     void runReevaluate().then((outcome) => {
       if (!outcome) return;
       applyReevaluatedResult(outcome.result);

@@ -132,7 +132,7 @@ export interface TagRuleWriteResult {
  * `isActive=true`, `priority=0`, `timesApplied=0`. The generated `id` is a
  * UUID from drizzle's `$defaultFn`.
  *
- * `descriptionPattern` is normalized (uppercased, digit-stripped,
+ * `descriptionPattern` is normalized (uppercased, digits preserved,
  * whitespace-collapsed) for `exact`/`contains` patterns, which are matched
  * against a normalized description and need the same treatment to line up.
  * A `regex` pattern is stored raw: `normalizeDescription` uppercases every

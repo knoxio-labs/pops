@@ -408,16 +408,16 @@ describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', (
     harness = freshDb();
   });
 
-  it('normalizes the pattern on insert: uppercases, strips digits, collapses whitespace', () => {
+  it('normalizes the pattern on insert: uppercases, preserves digits, collapses whitespace', () => {
     const created = createTransactionTagRule(harness.db, {
       descriptionPattern: '  k  mart 42  store 7 ',
       matchType: 'exact',
       tags: ['Shopping'],
     });
-    expect(created.descriptionPattern).toBe('K MART STORE');
+    expect(created.descriptionPattern).toBe('K MART 42 STORE 7');
   });
 
-  it('reinforces the same rule on a case/digit variant instead of forking a duplicate row', () => {
+  it('keeps rules with distinct numeric patterns separate', () => {
     const first = createTransactionTagRule(harness.db, {
       descriptionPattern: 'K Mart',
       matchType: 'exact',
@@ -432,14 +432,14 @@ describe('createTransactionTagRule — normalization + upsert (CF022, #3628)', (
       tags: ['Shopping', 'Home'],
     });
 
-    expect(second.id).toBe(first.id);
+    expect(second.id).not.toBe(first.id);
     // Re-creating a rule is not a use of it: the usage counters stay put and
     // remain readable as evidence (POPS-2597).
     expect(second.timesApplied).toBe(0);
     expect(second.lastUsedAt).toBeNull();
-    expect(second.confidence).toBeCloseTo(1.0, 5);
+    expect(second.confidence).toBeCloseTo(0.95, 5);
     expect(JSON.parse(second.tags)).toEqual(['Shopping', 'Home']);
-    expect(listTransactionTagRules(harness.db)).toHaveLength(1);
+    expect(listTransactionTagRules(harness.db)).toHaveLength(2);
   });
 
   it('keeps two rules with the same (pattern, matchType) but different entityId scope separate', () => {
@@ -496,15 +496,13 @@ describe('createTransactionTagRule — refuses an unconditionally unmatchable pa
     harness = freshDb();
   });
 
-  it('refuses an all-digit exact pattern — normalisation strips digits to nothing', () => {
-    expect(() =>
-      createTransactionTagRule(harness.db, {
-        descriptionPattern: '42',
-        matchType: 'exact',
-        tags: ['Shopping'],
-      })
-    ).toThrow(UnmatchablePatternError);
-    expect(listTransactionTagRules(harness.db)).toHaveLength(0);
+  it('accepts an all-digit exact pattern', () => {
+    const rule = createTransactionTagRule(harness.db, {
+      descriptionPattern: '42',
+      matchType: 'exact',
+      tags: ['Shopping'],
+    });
+    expect(rule.descriptionPattern).toBe('42');
   });
 
   it('refuses a whitespace-only contains pattern', () => {
@@ -623,7 +621,7 @@ describe('createOrReinforceTransactionTagRule — an add never replaces curated 
     const curated = seedCuratedRule(['Fast Food', 'Dining']);
 
     const reinforced = createTransactionTagRule(harness.db, {
-      descriptionPattern: 'hungry jacks 42',
+      descriptionPattern: 'hungry jacks',
       matchType: 'contains',
       tags: ['Cairns 2026'],
     });

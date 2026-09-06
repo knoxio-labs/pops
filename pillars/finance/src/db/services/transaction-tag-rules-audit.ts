@@ -36,7 +36,7 @@ export interface TagRuleConflictGroup {
 /**
  * Normalize a stored pattern the same way {@link createTransactionTagRule}
  * does before persisting: non-regex patterns fold through
- * {@link normalizeDescription} (uppercase, digit-strip, whitespace-collapse),
+ * {@link normalizeDescription} (uppercase, digit-preserving, whitespace-collapse),
  * regex patterns stay raw (normalizing would corrupt metacharacters). Applied
  * to the grouping key so two rows the create path would treat as the same
  * pattern collapse into one cluster even when a legacy/un-normalized row stored

@@ -17,7 +17,7 @@ export type PatternMatchType = 'exact' | 'contains' | 'regex';
 
 /**
  * Canonicalise a transaction description for matching: fold diacritics, treat
- * hyphens as a space and strip ampersands/periods, uppercase, strip digits,
+ * hyphens as a space and strip ampersands/periods, uppercase,
  * collapse whitespace. The entity-matcher's `normalizeKey` folds diacritics
  * and punctuation the same way.
  *
@@ -35,7 +35,6 @@ export function normalizeDescription(description: string): string {
     .replaceAll(/-/g, ' ')
     .replaceAll(/[&.]/g, '')
     .toUpperCase()
-    .replaceAll(/\d+/g, '')
     .replaceAll(/\s+/g, ' ')
     .trim();
 }
@@ -78,7 +77,7 @@ export function normalizePatternForStorage(pattern: string, matchType: PatternMa
 export function describePatternStorageRule(matchType: PatternMatchType): string {
   return matchType === 'regex'
     ? 'A "regex" pattern is stored verbatim and tested against the raw description: write it exactly as it must run, and never uppercase it or strip its digits — that would corrupt \\d, \\s and quantifiers such as a{2,3}.'
-    : 'An "exact" or "contains" pattern is tested against a normalised description: write it uppercase with digits stripped.';
+    : 'An "exact" or "contains" pattern is tested against a normalised description: case and diacritics are folded while digits are preserved.';
 }
 
 const warnedInvalidPatterns = new Set<string>();
@@ -113,11 +112,8 @@ export function describeForMatching(raw: string): MatchableDescription {
  *   stored pattern or a raw not-yet-persisted one), which is what lets one
  *   `WOOLWORTHS` pattern cover `WOOLWORTHS 1034 CANTERB` and
  *   `WOOLWORTHS 2201 NEWTOWN`.
- * - `regex` tests `description.raw`. Normalisation strips digits, so a regex
- *   run against it could never see one — `\d{4}` was inert by construction,
- *   which removed the only reason to choose `regex` over `contains`
- *   (POPS-2640). An author writing a regex is specifying the match precisely;
- *   they get the description the bank actually sent.
+ * - `regex` tests `description.raw`. An author writing a regex is specifying
+ *   the match precisely; they get the description the bank actually sent.
  *
  * Two consequences of `regex` seeing raw text, both deliberate and both tested:
  *

@@ -239,7 +239,7 @@ export interface RuleMatchPreviewResult {
  *
  * Matching is done in JS via {@link patternMatchesDescription} rather than a
  * SQL `LIKE`: the `exact`/`contains` match set is defined post-normalisation
- * (digit-stripping + Unicode whitespace collapse) and the `regex` one needs a
+ * (Unicode folding + whitespace collapse) and the `regex` one needs a
  * regex engine, neither of which SQLite's `LIKE` can faithfully reproduce
  * without a registered function — and none is registered here. A SQL narrowing
  * could silently under-count, which is exactly the failure this endpoint exists

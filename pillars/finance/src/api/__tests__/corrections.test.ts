@@ -595,19 +595,14 @@ describe('corrections — applyChangeSet', () => {
       },
     });
 
-    // Both `add` ops normalize to the same (descriptionPattern, matchType)
-    // key — digits are stripped by normalizeDescription — so they must
-    // collapse onto one row, last-write-wins, instead of forking a second
-    // rule that would never fire because the matcher also normalizes.
-    expect(seeded.data).toHaveLength(1);
-    expect(seeded.data[0]).toMatchObject({
-      descriptionPattern: 'WOOLWORTHS',
-      entityName: 'Second Pass',
-      priority: 2,
-    });
+    expect(seeded.data).toHaveLength(2);
+    expect(seeded.data.map((row) => row.descriptionPattern)).toEqual([
+      'WOOLWORTHS 1234',
+      'WOOLWORTHS 5678',
+    ]);
 
     const list = await client().corrections.list();
-    expect(list.pagination.total).toBe(1);
+    expect(list.pagination.total).toBe(2);
   });
 
   it('upsert-keys an add against a rule from an earlier, already-applied ChangeSet', async () => {
@@ -1136,7 +1131,7 @@ describe('corrections — regex patterns (POPS-2600)', () => {
       entityId: 'ent-acme',
       entityName: 'Acme',
     });
-    expect(created.data.descriptionPattern).toBe('ACME STORE');
+    expect(created.data.descriptionPattern).toBe('ACME STORE 42');
   });
 
   it('400s a createOrUpdate whose regex pattern does not compile', async () => {
