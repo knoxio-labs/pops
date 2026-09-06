@@ -43,6 +43,8 @@ function contact(over: Partial<ContactEntity> & { name: string }): ContactEntity
     defaultTags: over.defaultTags ?? [],
     notes: over.notes ?? null,
     lastEditedTime: over.lastEditedTime ?? '2026-01-01T00:00:00.000Z',
+    avatarAssetId: over.avatarAssetId ?? null,
+    colour: over.colour ?? null,
   };
 }
 

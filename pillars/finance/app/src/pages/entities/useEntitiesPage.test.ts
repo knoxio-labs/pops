@@ -8,12 +8,20 @@ import type { Entity } from './types';
 const entitiesCreateMock = vi.hoisted(() => vi.fn());
 const entitiesUpdateMock = vi.hoisted(() => vi.fn());
 const entitiesDeleteMock = vi.hoisted(() => vi.fn());
+const entitiesRemoveAvatarMock = vi.hoisted(() => vi.fn());
+const entitiesRerollColourMock = vi.hoisted(() => vi.fn());
 const entityUsageListMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../contacts-api/index.js', () => ({
   entitiesCreate: (...args: unknown[]) => entitiesCreateMock(...args),
   entitiesUpdate: (...args: unknown[]) => entitiesUpdateMock(...args),
   entitiesDelete: (...args: unknown[]) => entitiesDeleteMock(...args),
+  entitiesRemoveAvatar: (...args: unknown[]) => entitiesRemoveAvatarMock(...args),
+  entitiesRerollColour: (...args: unknown[]) => entitiesRerollColourMock(...args),
+}));
+
+vi.mock('../../contacts-api/client.gen.js', () => ({
+  client: { put: vi.fn() },
 }));
 
 vi.mock('../../finance-api/index.js', () => ({
@@ -40,6 +48,8 @@ function makeEntity(overrides: Partial<Entity> = {}): Entity {
     defaultTags: [],
     notes: null,
     lastEditedTime: '2026-01-01T00:00:00.000Z',
+    avatarAssetId: null,
+    colour: null,
     transactionCount: 3,
     ...overrides,
   };

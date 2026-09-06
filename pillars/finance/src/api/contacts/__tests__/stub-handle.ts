@@ -86,6 +86,8 @@ export function entity(over: Partial<ContactEntity> & { id: string; name: string
     defaultTags: [],
     notes: null,
     lastEditedTime: '2026-01-01T00:00:00.000Z',
+    avatarAssetId: null,
+    colour: null,
     ...over,
   };
 }

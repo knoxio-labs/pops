@@ -7363,6 +7363,8 @@ export interface operations {
             data: {
               abn: string | null;
               aliases: string[];
+              avatarAssetId: string | null;
+              colour: string | null;
               defaultTags: string[];
               defaultTransactionType: string | null;
               id: string;

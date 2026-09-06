@@ -30,6 +30,8 @@ function toEntityUsage(row: EntityUsageRow) {
     defaultTags: row.defaultTags,
     notes: row.notes,
     lastEditedTime: row.lastEditedTime,
+    avatarAssetId: row.avatarAssetId,
+    colour: row.colour,
     transactionCount: row.transactionCount,
   };
 }

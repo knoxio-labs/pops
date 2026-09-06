@@ -1,6 +1,6 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { type Dispatch, type SetStateAction, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ import {
   EntityFormSchema,
   type ENTITY_TYPES,
 } from './types';
+import { useEntityAvatarMutations } from './useEntityAvatarMutations';
 
 import type { EntitiesCreateData } from '../../contacts-api/types.gen.js';
 
@@ -76,6 +77,36 @@ function useEntityMutations(deps: MutationDeps) {
   return { createMutation, updateMutation, deleteMutation };
 }
 
+/**
+ * Avatar upload/remove + colour reroll, reconciled onto `editingEntity` by
+ * id: a mutation kicked off for one entity can resolve after the dialog has
+ * moved on to another (or closed), so a stale response must not clobber
+ * whatever is showing now.
+ */
+function useEntityIdentityMutations(setEditingEntity: Dispatch<SetStateAction<Entity | null>>) {
+  const applyEntityChange = (updated: Omit<Entity, 'transactionCount'>) =>
+    setEditingEntity((current) =>
+      current?.id === updated.id ? { ...current, ...updated } : current
+    );
+  const {
+    uploadAvatar,
+    removeAvatar,
+    rerollColour,
+    uploadIsPending: avatarUploadIsPending,
+    removeIsPending: avatarRemoveIsPending,
+    rerollIsPending: colourRerollIsPending,
+  } = useEntityAvatarMutations(applyEntityChange);
+  return {
+    uploadAvatar,
+    removeAvatar,
+    avatarUploadIsPending,
+    avatarRemoveIsPending,
+    rerollColour,
+    colourRerollIsPending,
+    onAvatarError: (message: string) => toast.error(message),
+  };
+}
+
 function buildSubmit(
   editingEntity: Entity | null,
   createMutation: ReturnType<typeof useEntityMutations>['createMutation'],
@@ -117,6 +148,7 @@ export function useEntitiesPage() {
     setEditingEntity,
     setDeletingId,
   });
+  const identityMutations = useEntityIdentityMutations(setEditingEntity);
   const form = useForm<EntityFormValues>({
     resolver: standardSchemaResolver(EntityFormSchema),
     defaultValues: DEFAULT_FORM_VALUES,
@@ -156,5 +188,6 @@ export function useEntitiesPage() {
     handleEdit,
     onSubmit: buildSubmit(editingEntity, createMutation, updateMutation),
     isSubmitting: createMutation.isPending || updateMutation.isPending,
+    ...identityMutations,
   };
 }
