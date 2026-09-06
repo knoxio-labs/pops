@@ -42,11 +42,20 @@
  * drizzle is the only writer, and wrong the moment a raw INSERT is not.
  *
  * The pillar set is derived from disk (every `pillars/<x>` that exposes a
- * `src/db/schema.ts` barrel) — there is no hard-coded pillar list.
+ * `src/db/schema.ts` barrel) — there is no hard-coded pillar list. Discovery
+ * by one filename cuts both ways, so two things follow from it. A pillar that
+ * carries a `migrations/` or `src/db/` directory and no barrel is REPORTED and
+ * fails the run rather than quietly leaving the set, because leaving the set
+ * also removes it from the job matrix `--list-pillars` feeds. And a pillar
+ * that is discovered but yields no table symbols, or no references to them,
+ * fails as "could not analyse" instead of scoring as full coverage — that
+ * branch used to return the guard's success value before the database was
+ * ever opened (POPS-1626, POPS-1629).
  *
  * Usage:
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance
  *   node scripts/check-pillar-schema-coverage.mjs --all
+ *   node scripts/check-pillar-schema-coverage.mjs --list-pillars
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --ignore-allowlist
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --inject-fake-table finance:fake_table
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --inject-fake-default
@@ -109,10 +118,10 @@ const repoRoot = resolve(here, '..');
  * exposes a `src/db/schema.ts` barrel — the canonical signal that it owns
  * a migrated schema surface this guard can check. No static list.
  *
+ * @param {string} [pillarsRoot] Absolute path to the `pillars` directory.
  * @returns {Pillar[]}
  */
-function discoverPillars() {
-  const pillarsRoot = join(repoRoot, 'pillars');
+export function discoverPillars(pillarsRoot = join(repoRoot, 'pillars')) {
   if (!existsSync(pillarsRoot)) return [];
   /** @type {Pillar[]} */
   const out = [];
@@ -124,7 +133,50 @@ function discoverPillars() {
   return out.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * The pillars this guard would want to check and cannot: a `pillars/<x>`
+ * carrying a `migrations/` or a `src/db/` directory but exposing no
+ * `src/db/schema.ts` barrel for `discoverPillars` to find.
+ *
+ * Discovery by one hardcoded filename means a renamed barrel does not fail
+ * the guard, it removes the pillar from it — and nine of ten pillars passing
+ * prints exactly the same as ten of ten. The workflow mirrors this discovery
+ * to build its job matrix, so the pillar loses its CI job too and the
+ * workflow still reports green. Naming the pillars that fell out is what
+ * makes that difference visible; `main` turns the list into a failure.
+ *
+ * A `pillars/<x>` with neither directory is not a candidate — plenty of
+ * units under `pillars/` legitimately persist nothing.
+ *
+ * Nor is a pillar without a root `package.json`. This guard reads drizzle
+ * schema declarations out of TypeScript and applies migrations through a
+ * pillar's `open<Pillar>Db()` export; a pillar written in another language
+ * has neither, and `pillars/contacts` is exactly that — Rust, with a
+ * `migrations/` directory and a `Cargo.toml`. Reporting it would be a
+ * standing false failure that teaches people to ignore this message, which
+ * costs more than the case it would catch.
+ *
+ * @param {string} [pillarsRoot] Absolute path to the `pillars` directory.
+ * @returns {string[]} Pillar directory names, sorted.
+ */
+export function discoverUnanalysablePillars(pillarsRoot = join(repoRoot, 'pillars')) {
+  if (!existsSync(pillarsRoot)) return [];
+  /** @type {string[]} */
+  const out = [];
+  for (const entry of readdirSync(pillarsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const dir = join(pillarsRoot, entry.name);
+    if (existsSync(join(dir, 'src', 'db', 'schema.ts'))) continue;
+    if (!existsSync(join(dir, 'package.json'))) continue;
+    const looksPersistent =
+      existsSync(join(dir, 'migrations')) || existsSync(join(dir, 'src', 'db'));
+    if (looksPersistent) out.push(entry.name);
+  }
+  return out.toSorted((a, b) => a.localeCompare(b));
+}
+
 const PILLARS = discoverPillars();
+const PILLARS_WITHOUT_BARREL = discoverUnanalysablePillars();
 
 /**
  * Pre-existing drift between the drizzle schema in `@pops/db-types` and
@@ -488,13 +540,14 @@ function parseColumnDefaults(block, symbol, file) {
  * the script loudly — we don't silently miss tables.
  *
  * @param {Pillar} pillar
+ * @param {string} [root] Absolute path `pillar.pkgDir` is resolved against.
  * @returns {Map<string, { tableName: string; indexNames: string[]; columnDefaults: ColumnDefault[]; sourceFile: string }>}
  */
-function buildSymbolToTableMap(pillar) {
+export function buildSymbolToTableMap(pillar, root = repoRoot) {
   /** @type {Map<string, { tableName: string; indexNames: string[]; columnDefaults: ColumnDefault[]; sourceFile: string }>} */
   const map = new Map();
 
-  const schemaDir = join(repoRoot, pillar.pkgDir, 'src', 'db', 'schema');
+  const schemaDir = join(root, pillar.pkgDir, 'src', 'db', 'schema');
 
   if (existsSync(schemaDir)) {
     for (const file of walkTsFiles(schemaDir)) {
@@ -512,6 +565,45 @@ function buildSymbolToTableMap(pillar) {
   }
 
   return map;
+}
+
+/**
+ * Why this pillar cannot be checked, or `null` when it can.
+ *
+ * This branch used to `return true` — the guard's success value — before the
+ * database was ever opened, so a pillar the analyser could not read scored as
+ * fully covered. Every route into it is silent: `src/db/schema/` renamed
+ * (no symbols), `src/db/services/` renamed (no references), or the barrel
+ * switched to a re-export form the parser does not model. Those are precisely
+ * the conditions this guard exists to survive, and the CI `--inject-fake-table`
+ * self-test cannot see the difference because it injects further down.
+ *
+ * Discovery already requires a `src/db/schema.ts` barrel, so every pillar
+ * reaching here claims to own a migrated schema surface. Zero of anything is
+ * therefore a broken analyser, not an empty pillar, and the two causes are
+ * reported separately because they are fixed in different places.
+ *
+ * @param {{ pillar: string; symbolCount: number; usedCount: number }} counts
+ * @returns {string | null}
+ */
+export function analysabilityFailure({ pillar, symbolCount, usedCount }) {
+  if (symbolCount === 0) {
+    return (
+      `[${pillar}] FAIL — could not analyse this pillar: no \`sqliteTable(...)\` declaration ` +
+      `was found under src/db/schema/. The pillar exposes a src/db/schema.ts barrel, so it ` +
+      `claims a migrated schema surface; a schema directory that has been renamed or a table ` +
+      `declaration form the parser does not model would both look like this.`
+    );
+  }
+  if (usedCount === 0) {
+    return (
+      `[${pillar}] FAIL — could not analyse this pillar: ${symbolCount} table symbol(s) were ` +
+      `found under src/db/schema/, but nothing in src/db/services/ or the src/db/schema.ts ` +
+      `barrel references any of them. A renamed services directory or an import form the ` +
+      `parser does not model would both look like this.`
+    );
+  }
+  return null;
 }
 
 /**
@@ -628,7 +720,7 @@ function isPillarSchemaImport(from) {
  * @param {Map<string, { tableName: string }>} symbolToTable
  * @returns {Set<string>}
  */
-function collectUsedTableSymbols(pkgRoot, symbolToTable) {
+export function collectUsedTableSymbols(pkgRoot, symbolToTable) {
   const servicesDir = join(pkgRoot, 'src', 'db', 'services');
   const schemaFile = join(pkgRoot, 'src', 'db', 'schema.ts');
 
@@ -902,9 +994,14 @@ async function checkPillar(pillar, options = {}) {
     `[${pillar.name}] inspecting ${used.size} table symbol(s), ` +
       `comparing ${comparedDefaults} column default(s)`
   );
-  if (used.size === 0) {
-    console.log(`[${pillar.name}] no tables referenced — nothing to check.`);
-    return true;
+  const unanalysable = analysabilityFailure({
+    pillar: pillar.name,
+    symbolCount: symbolToTable.size,
+    usedCount: used.size,
+  });
+  if (unanalysable !== null) {
+    console.error(unanalysable);
+    return false;
   }
 
   const handle = await openPillarInMemory(pillar);
@@ -994,12 +1091,13 @@ async function checkPillar(pillar, options = {}) {
 
 /**
  * @param {string[]} argv
- * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]>; injectFakeDefault: boolean }}
+ * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; listPillars: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]>; injectFakeDefault: boolean }}
  */
 function parseArgs(argv) {
   let pillar = '';
   let all = false;
   let help = false;
+  let listPillars = false;
   let ignoreAllowlist = false;
   let injectFakeDefault = false;
   /**
@@ -1016,6 +1114,7 @@ function parseArgs(argv) {
     if (arg === '--pillar') pillar = argv[++i] ?? '';
     else if (arg === '--all') all = true;
     else if (arg === '--help' || arg === '-h') help = true;
+    else if (arg === '--list-pillars') listPillars = true;
     else if (arg === '--ignore-allowlist') ignoreAllowlist = true;
     else if (arg === '--inject-fake-default') injectFakeDefault = true;
     else if (arg === '--inject-fake-table') {
@@ -1034,27 +1133,30 @@ function parseArgs(argv) {
       help = true;
     }
   }
-  if (help) return { pillars: [], help: true, ignoreAllowlist, injections, injectFakeDefault };
-  if (all)
-    return { pillars: [...PILLARS], help: false, ignoreAllowlist, injections, injectFakeDefault };
-  if (!pillar)
-    return { pillars: [...PILLARS], help: false, ignoreAllowlist, injections, injectFakeDefault };
+  const rest = { listPillars, ignoreAllowlist, injections, injectFakeDefault };
+  if (help) return { pillars: [], help: true, ...rest };
+  if (all) return { pillars: [...PILLARS], help: false, ...rest };
+  if (!pillar) return { pillars: [...PILLARS], help: false, ...rest };
   const match = PILLARS.find((p) => p.name === pillar);
   if (!match) {
     console.error(`unknown pillar: ${pillar}. Known: ${PILLARS.map((p) => p.name).join(', ')}`);
-    return { pillars: [], help: true, ignoreAllowlist, injections, injectFakeDefault };
+    return { pillars: [], help: true, ...rest };
   }
-  return { pillars: [match], help: false, ignoreAllowlist, injections, injectFakeDefault };
+  return { pillars: [match], help: false, ...rest };
 }
 
 function usage() {
   console.log(
     [
-      'Usage: node scripts/check-pillar-schema-coverage.mjs [--pillar <name>] [--all] [--ignore-allowlist] [--inject-fake-table <pillar>:<table>] [--inject-fake-default]',
+      'Usage: node scripts/check-pillar-schema-coverage.mjs [--pillar <name>] [--all] [--list-pillars] [--ignore-allowlist] [--inject-fake-table <pillar>:<table>] [--inject-fake-default]',
       '',
       'Pillars: ' + PILLARS.map((p) => p.name).join(', '),
       '',
       'With no args, every pillar is checked.',
+      '',
+      '--list-pillars prints the discovered pillar names as a JSON array on',
+      'stdout and exits. The workflow builds its job matrix from this, so the',
+      'matrix cannot disagree with the guard about which pillars exist.',
       '',
       '--ignore-allowlist disables the in-script grandfather list so the',
       'true diff (including known pre-existing drift) is reported. Use to',
@@ -1073,14 +1175,53 @@ function usage() {
   );
 }
 
+/**
+ * Report the pillars that carry a persistence surface this guard cannot
+ * discover, and say what it costs. Called before anything else so the
+ * `--list-pillars` matrix and a full run fail at the same point and for the
+ * same reason.
+ *
+ * @returns {boolean} True when nothing fell out of discovery.
+ */
+function reportUnanalysablePillars() {
+  if (PILLARS_WITHOUT_BARREL.length === 0) return true;
+  console.error(
+    `FAIL — ${PILLARS_WITHOUT_BARREL.length} pillar(s) carry a migrations/ or src/db/ ` +
+      'directory but expose no src/db/schema.ts barrel, so this guard cannot see them ' +
+      'and neither can the job matrix derived from the same discovery:'
+  );
+  for (const name of PILLARS_WITHOUT_BARREL) console.error(`  - pillars/${name}`);
+  console.error(
+    '\nEither restore the barrel at src/db/schema.ts, or — if the pillar genuinely ' +
+      'persists nothing — remove the migrations/ and src/db/ directories that say it does. ' +
+      'Silently dropping out of the guard is the one outcome that is not available (ADR-045).'
+  );
+  return false;
+}
+
 async function main() {
-  const { pillars, help, ignoreAllowlist, injections, injectFakeDefault } = parseArgs(
+  const { pillars, help, listPillars, ignoreAllowlist, injections, injectFakeDefault } = parseArgs(
     process.argv.slice(2)
   );
+  // Ahead of the usage branch on purpose. A barrel renamed out from under
+  // the guard makes its pillar undiscoverable, so `--pillar <that one>` is
+  // answered with "unknown pillar" and a usage dump — the least informative
+  // reading of the situation available. Running the report before `usage()`
+  // puts the actual diagnosis between the two, rather than never.
+  const analysable = reportUnanalysablePillars();
   if (help) {
     usage();
     process.exit(2);
   }
+  // The workflow builds its job matrix from this, so it has to be the same
+  // discovery the run itself uses rather than a `find` that agrees with it
+  // only by inspection. Written to stdout alone; every diagnostic goes to
+  // stderr so the JSON stays machine-readable.
+  if (listPillars) {
+    console.log(JSON.stringify(PILLARS.map((p) => p.name)));
+    process.exit(analysable ? 0 : 1);
+  }
+  if (!analysable) process.exit(1);
   if (pillars.length === 0) {
     console.error(
       'No pillars discovered under pillars/* with a src/db/schema.ts barrel. ' + 'Nothing to check.'
@@ -1101,7 +1242,9 @@ async function main() {
   process.exit(allOk ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -36,20 +36,28 @@ jobs:
       count: ${{ steps.list.outputs.count }}
     steps:
       - uses: actions/checkout@v7
+      # Pinned to the same major the other jobs use rather than the runner's
+      # preinstalled node: `--list-pillars` runs the guard's own module scope,
+      # which uses `import.meta.main`, and that is not in every node the image
+      # might ship. No pnpm and no cache — this step installs nothing.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
       - id: list
         name: Enumerate pillars with a migrated schema surface
-        # A pillar this guard can check is any `pillars/<x>` exposing a
-        # `src/db/schema.ts` barrel. Derived from disk so adding or
-        # removing a pillar needs no workflow edit (mirrors the script's
-        # own discovery in scripts/check-pillar-schema-coverage.mjs).
+        # Asks the guard itself rather than re-deriving the set with `find`.
+        # The two used to agree only by inspection, and a pillar whose
+        # `src/db/schema.ts` barrel was renamed fell out of BOTH at once —
+        # no job in this matrix and a green workflow, which is the one
+        # failure this job exists to make impossible (POPS-1629).
+        #
+        # `--list-pillars` needs no install: the script's module scope
+        # touches nothing but node builtins. It also exits non-zero when a
+        # pillar carries a persistence surface it cannot discover, so that
+        # drift fails here rather than disappearing into an empty matrix.
         run: |
           set -euo pipefail
-          json=$(find pillars -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
-            | sort \
-            | while read -r dir; do
-                if [ -f "$dir/src/db/schema.ts" ]; then basename "$dir"; fi
-              done \
-            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          json=$(node scripts/check-pillar-schema-coverage.mjs --list-pillars)
           count=$(echo "$json" | jq 'length')
           echo "pillars=$json" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
