@@ -144,4 +144,59 @@ describe('parseAmountCents', () => {
     expect(parseAmountCents('R$ 12,50', { currency: 'BRL' })).toBe(1250);
     expect(parseAmountCents('RM 12.50', { currency: 'MYR' })).toBe(1250);
   });
+
+  it('reads a bare integer as whole units, not as cents', () => {
+    // No separator at all is its own path, and the reading is not obvious:
+    // a receipt printing `800` beside an item means eight hundred dollars,
+    // not eight. An adapter that assumed otherwise would under-report a
+    // shop by two orders of magnitude and still reconcile against itself.
+    expect(parseAmountCents('800')).toBe(80_000);
+    expect(parseAmountCents('$7')).toBe(700);
+    expect(parseAmountCents('-7')).toBe(-700);
+  });
+
+  it('refuses a separator arrangement no number has', () => {
+    // Each of these reaches a different refusal inside the split, and every
+    // one of them used to be reachable only through a real receipt.
+    expect(parseAmountCents('1.,')).toBeNull(); // decimal separator with nothing after it
+    expect(parseAmountCents('1..2')).toBeNull(); // two of the same separator, one group
+    expect(parseAmountCents('.,')).toBeNull(); // separators and no digit at all
+    expect(parseAmountCents(',')).toBeNull();
+  });
+
+  it('reads a doubled group separator that still states its own convention', () => {
+    // Not a refusal, which is the surprise: both separators are present, so
+    // the later one is the decimal point and the repeated earlier one is
+    // grouping — stripped, `1..2,3` is 12.3. Asserted so that tightening the
+    // refusal above cannot quietly take this with it.
+    expect(parseAmountCents('1..2,3')).toBe(1230);
+  });
+
+  it('lets a stated comma-decimal currency claim three trailing digits', () => {
+    // The one case where the locale breaks the tie: `1,495` is fifteen
+    // hundred by default, and one-point-four-nine-five when the receipt says
+    // it is priced in a currency that writes decimals with a comma.
+    expect(parseAmountCents('1,495')).toBe(149_500);
+    expect(parseAmountCents('1,495', { currency: 'EUR' })).toBe(150);
+    // And the mirror: a dot-decimal currency claims a dot the same way.
+    expect(parseAmountCents('1.495', { currency: 'AUD' })).toBe(150);
+  });
+
+  it('falls back to grouping when the receipt names no currency', () => {
+    // `currency: null` is the ordinary case — it is the field most often
+    // missing — and it must read as grouping rather than throwing the
+    // locale check at a value that is not a string.
+    expect(parseAmountCents('1,495', { currency: null })).toBe(149_500);
+    expect(parseAmountCents('1.495', { currency: null })).toBe(149_500);
+    // A leading zero still forces the fraction reading, currency or not.
+    expect(parseAmountCents('0,585', { currency: null })).toBe(59);
+  });
+
+  it('refuses an amount too large to hold in cents exactly', () => {
+    // Past `Number.MAX_SAFE_INTEGER` the cents figure stops being the
+    // number it prints, so returning it would be a quiet lie rather than a
+    // rounding error.
+    expect(parseAmountCents('999999999999999999.99')).toBeNull();
+    expect(parseAmountCents('99999999999999999999')).toBeNull();
+  });
 });

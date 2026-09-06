@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   calendarDateInZone,
   instantFromLocalParts,
+  instantFromLocalPartsAtOffset,
   isKnownTimeZone,
   storeTimeZone,
+  utcOffsetMinutesAt,
 } from '../local-time.js';
 
 const ZONE_VAR = 'PURCHASES_TIME_ZONE';
@@ -142,5 +144,60 @@ describe('calendarDateInZone', () => {
   it('answers null rather than guessing at something that is not an instant', () => {
     expect(calendarDateInZone('not-a-date')).toBeNull();
     expect(calendarDateInZone('')).toBeNull();
+  });
+});
+
+describe('instantFromLocalPartsAtOffset', () => {
+  const noon = { year: 2026, month: 3, day: 1, hour: 12, minute: 0 };
+
+  it('subtracts the stated offset rather than consulting a zone', () => {
+    // The camera and the phone both state an offset and neither names a
+    // zone, so there is no DST rule to apply and none is applied.
+    expect(instantFromLocalPartsAtOffset(noon, 600)).toBe('2026-03-01T02:00:00.000Z');
+    expect(instantFromLocalPartsAtOffset(noon, 0)).toBe('2026-03-01T12:00:00.000Z');
+    expect(instantFromLocalPartsAtOffset(noon, -300)).toBe('2026-03-01T17:00:00.000Z');
+  });
+
+  it('refuses an offset no place on earth has', () => {
+    // An EXIF tag is bytes off a memory card, so this is arithmetic on a
+    // number a file claimed. Shifting a reading by three days because the
+    // tag was garbage would look like a real purchase on the wrong date.
+    expect(instantFromLocalPartsAtOffset(noon, 5000)).toBeNull();
+    expect(instantFromLocalPartsAtOffset(noon, -5000)).toBeNull();
+  });
+
+  it('refuses parts that are not a real moment', () => {
+    expect(instantFromLocalPartsAtOffset({ ...noon, month: 13 }, 600)).toBeNull();
+    expect(instantFromLocalPartsAtOffset({ ...noon, day: 32 }, 600)).toBeNull();
+    expect(instantFromLocalPartsAtOffset({ ...noon, hour: 24 }, 600)).toBeNull();
+  });
+});
+
+describe('utcOffsetMinutesAt', () => {
+  it('recovers the offset the instant was resolved against', () => {
+    // What `instantFromLocalParts` works out and then throws away: its
+    // answer is UTC-spelled, so without this a consumer can name the
+    // reading's calendar day in Greenwich and nowhere else.
+    expect(utcOffsetMinutesAt('2026-02-02T23:41:21.000Z', 'Australia/Sydney')).toBe(660);
+    expect(utcOffsetMinutesAt('2026-06-02T23:41:21.000Z', 'Australia/Sydney')).toBe(600);
+    expect(utcOffsetMinutesAt('2026-02-02T01:41:21.000Z', 'America/Chicago')).toBe(-360);
+  });
+
+  it('reads a zone sitting exactly on UTC as zero rather than as a failure', () => {
+    // `longOffset` prints a bare `GMT` for these, with no `+00:00` to parse.
+    // Its own branch, and reading it as unparseable would make every UTC
+    // deployment answer null for a question it can answer.
+    expect(utcOffsetMinutesAt('2026-03-01T00:00:00Z', 'UTC')).toBe(0);
+    expect(utcOffsetMinutesAt('2026-03-01T00:00:00Z', 'Etc/GMT')).toBe(0);
+  });
+
+  it('returns null for a string that names no moment', () => {
+    expect(utcOffsetMinutesAt('not a date', 'Australia/Sydney')).toBeNull();
+    expect(utcOffsetMinutesAt('', 'Australia/Sydney')).toBeNull();
+  });
+
+  it('follows the zone override when no zone is named', () => {
+    process.env[ZONE_VAR] = 'America/Chicago';
+    expect(utcOffsetMinutesAt('2026-02-02T01:41:21.000Z')).toBe(-360);
   });
 });

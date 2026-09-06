@@ -147,25 +147,35 @@ export default defineConfig({
        * error-mapping middlewares, and a name tie-break case in
        * `merchant-spend.ts`.
        *
-       * `branches` sits at 90 rather than 91 because the pillar's surface
-       * grew faster than that pass covered it: the stage-4 learned-rule
-       * ladder (POPS-1309), the product leaderboard and inventory fan-out
+       * `branches` sat at 90 for a while: the pillar's surface grew faster
+       * than the pass that raised it — the stage-4 learned-rule ladder
+       * (POPS-1309), the product leaderboard and inventory fan-out
        * (POPS-244/POPS-245), and the receipt-capture ingest path each
        * landed with real but partial branch coverage on their edge cases,
-       * diluting the global ratio the same week it was raised to 91. This
-       * is the drifted-above case the note below warns about, not a
-       * convenience lowering: re-measure before raising it back.
+       * diluting the global ratio the same week it reached 91.
        *
-       * What is still uncovered is real edge-case branches — locale and
-       * timezone parsing, reconciliation error paths, the ingest adapters —
-       * spread thin across the several dozen files that each have one or
-       * two, rather than concentrated anywhere a single test would reach,
-       * plus a handful that look unreachable through the public API and
-       * need a judgement call on excluding them rather than more tests.
+       * It is back at 91 (measured 91.11) on the strength of the paths that
+       * had never been driven at all rather than of a threshold nudge:
+       * `parseAmountCents`'s refusals and its bare-integer reading, the
+       * whole of `utcOffsetMinutesAt` and `instantFromLocalPartsAtOffset`,
+       * `byNewestFirst` as a comparator rather than as the fold beside it,
+       * the container walks that stop at a chunk claiming more bytes than
+       * the file holds, and the TIFF reader's bounds checks driven directly
+       * (POPS-1767).
+       *
+       * What remains uncovered is mostly not reachable by a test at all.
+       * Measured over the whole pillar: of the branches with no coverage,
+       * roughly two in five are on a line carrying `??`, `?.` or
+       * `err instanceof Error ? … : String(err)` — the defensive arms
+       * `noUncheckedIndexedAccess` and unknown-error handling require, which
+       * no input takes. Chasing those with tests would mean contriving
+       * states the type system already rules out. The rest is genuine
+       * edge-case work spread one or two branches to a file, which is why
+       * this number moves in small deliberate steps and not in sweeps.
        */
       thresholds: {
         statements: 95,
-        branches: 90,
+        branches: 91,
         functions: 93,
         lines: 96,
       },

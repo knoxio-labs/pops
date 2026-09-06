@@ -233,4 +233,63 @@ describe('a malformed file yields no reading, and never an exception', () => {
     expect(readPhotoCapture(noise, 'image/png')).toBeNull();
     expect(readPhotoCapture(noise, 'image/webp')).toBeNull();
   });
+
+  it('stops at a PNG chunk that declares more data than the file holds', () => {
+    // The bound the walk exists for. A length field is four bytes off an
+    // upload, so a chunk claiming four gigabytes in a two-hundred-byte file
+    // is the ordinary shape of a truncated download, and reading it would
+    // hand a subarray past the end to the TIFF parser.
+    const whole = pngWithExif({ dateTimeOriginal: '2026:08:01 14:32:07' });
+    const lying = Buffer.from(whole);
+    // The first chunk after the 8-byte signature is IHDR; overstate it.
+    lying.writeUInt32BE(0xffff, 8);
+
+    expect(readPhotoCapture(lying, 'image/png')).toBeNull();
+  });
+
+  it('stops a PNG walk at IEND rather than reading past the end of the image', () => {
+    // `eXIf` is legal on either side of the pixels, so the walk cannot stop
+    // at IDAT — but it must stop somewhere, and past IEND is whatever the
+    // file happens to have been concatenated with.
+    const ended = Buffer.concat([
+      pngWithExif({ dateTimeOriginal: '2026:08:01 14:32:07' }, { afterImageData: true }).subarray(
+        0,
+        8
+      ),
+      Buffer.from([0, 0, 0, 0]),
+      Buffer.from('IEND', 'ascii'),
+      Buffer.alloc(4),
+      pngWithExif({ dateTimeOriginal: '2026:08:01 14:32:07' }).subarray(8),
+    ]);
+
+    expect(readPhotoCapture(ended, 'image/png')).toBeNull();
+  });
+
+  it('refuses a RIFF file too short to state its own form', () => {
+    expect(readPhotoCapture(Buffer.from('RIFF', 'ascii'), 'image/webp')).toBeNull();
+    expect(readPhotoCapture(Buffer.alloc(11, 0x52), 'image/webp')).toBeNull();
+  });
+
+  it('refuses a RIFF file whose form is not WEBP', () => {
+    // RIFF carries WAV and AVI too. The four bytes at offset 8 are the only
+    // thing that says which, and reading a WAV's chunks as a WebP's is how
+    // a bounded walk starts trusting arbitrary lengths.
+    const wav = Buffer.concat([
+      Buffer.from('RIFF', 'ascii'),
+      Buffer.alloc(4),
+      Buffer.from('WAVE', 'ascii'),
+      Buffer.alloc(16),
+    ]);
+
+    expect(readPhotoCapture(wav, 'image/webp')).toBeNull();
+  });
+
+  it('stops at a WebP chunk that declares more data than the file holds', () => {
+    const whole = webpWithExif({ dateTimeOriginal: '2026:08:01 14:32:07' });
+    const lying = Buffer.from(whole);
+    // The first chunk after the 12-byte RIFF header is `VP8 `; overstate it.
+    lying.writeUInt32LE(0xffff, 16);
+
+    expect(readPhotoCapture(lying, 'image/webp')).toBeNull();
+  });
 });
