@@ -35,15 +35,15 @@
   "media.rotation.cannotDeleteManualSource": "Não é possível excluir a fonte manual",
   "media.rotation.movieExcludedFromRotation": "Filme excluído da rotação",
 
-  "media.retrieval.queryRequired": "A consulta é obrigatória para os modos de busca semântica e híbrida",
-  "media.retrieval.filterRequired": "A busca estruturada requer pelo menos um filtro",
-  "media.retrieval.contextQueryRequired": "A consulta é obrigatória para montagem de contexto",
-
   "inventory.reports.insuranceReportFailed": "Falha ao gerar relatório de seguro: {{detail}}",
   "inventory.reports.valueByLocationFailed": "Falha ao carregar detalhamento de valor por localização: {{detail}}",
   "inventory.reports.valueByTypeFailed": "Falha ao carregar detalhamento de valor por tipo: {{detail}}",
   "inventory.paperless.notConfigured": "O Paperless-ngx não está configurado",
   "inventory.paperless.apiError": "Erro do Paperless: {{detail}}",
+
+  "cerebrum.retrieval.queryRequired": "A consulta é obrigatória para os modos de busca semântica e híbrida",
+  "cerebrum.retrieval.filterRequired": "A busca estruturada requer pelo menos um filtro",
+  "cerebrum.retrieval.contextQueryRequired": "A consulta é obrigatória para montagem de contexto",
 
   "cerebrum.nudge.notFound": "Nudge '{{id}}' não encontrado",
   "cerebrum.nudge.notPendingOrMissing": "Nudge '{{id}}' não está pendente ou não existe",

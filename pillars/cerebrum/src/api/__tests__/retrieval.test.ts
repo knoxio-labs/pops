@@ -12,9 +12,10 @@
  * needed. The no-vec degradation is exercised by opening the db with
  * `loadVec: false`.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -24,6 +25,18 @@ import { makeCerebrumApiDeps, makeClient, makeEmptyPeerClients } from './test-ut
 
 import type { EmbeddingClient } from '../modules/retrieval/embedding-client.js';
 import type { PeerClients } from '../modules/retrieval/peer-clients.js';
+
+/** `libs/locales`, from `pillars/cerebrum/src/api/__tests__`. */
+const LOCALES_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'libs',
+  'locales'
+);
 
 let tmpDir: string;
 let engramRoot: string;
@@ -240,18 +253,56 @@ describe('POST /retrieval/search — structured (BM25)', () => {
   // answered `Validation failed` and a caller could not tell a missing query
   // from a missing filter. Assert the body, which is the part that was wrong.
   it.each([
-    [{ mode: 'semantic' as const }, 'Query is required for semantic and hybrid search modes'],
-    [{ mode: 'hybrid' as const }, 'Query is required for semantic and hybrid search modes'],
-    [{ mode: 'structured' as const }, 'Structured search requires at least one filter'],
+    [
+      { mode: 'semantic' as const },
+      'Query is required for semantic and hybrid search modes',
+      'cerebrum.retrieval.queryRequired',
+    ],
+    [
+      { mode: 'hybrid' as const },
+      'Query is required for semantic and hybrid search modes',
+      'cerebrum.retrieval.queryRequired',
+    ],
+    [
+      { mode: 'structured' as const },
+      'Structured search requires at least one filter',
+      'cerebrum.retrieval.filterRequired',
+    ],
   ])(
     'says what %o is missing, rather than answering "Validation failed"',
-    async (body, message) => {
+    async (body, message, messageKey) => {
       await expect(client().retrieval.search(body)).rejects.toMatchObject({
         status: 400,
-        body: { message, code: 'ValidationError' },
+        body: { message, messageKey, code: 'ValidationError' },
       });
     }
   );
+
+  // Both halves or neither: a key with no fallback leaves a client without
+  // i18n showing nothing, and a fallback with no key leaves one with i18n
+  // stuck on English. Read against the real locale files rather than a copy of
+  // the strings, because the failure this closes was a key that existed and
+  // did not match — `media.retrieval.*`, in a cerebrum handler (POPS-3051).
+  it.each(['en-AU', 'pt-BR'])('%s resolves every key these handlers emit', async (locale) => {
+    const strings: Record<string, string> = JSON.parse(
+      readFileSync(join(LOCALES_ROOT, locale, 'errors.json'), 'utf8')
+    ) as Record<string, string>;
+
+    for (const key of [
+      'cerebrum.retrieval.queryRequired',
+      'cerebrum.retrieval.filterRequired',
+      'cerebrum.retrieval.contextQueryRequired',
+    ]) {
+      expect(strings[key], `${locale} has no entry for ${key}`).toBeTruthy();
+    }
+
+    const rejection = await client()
+      .retrieval.search({ mode: 'structured' })
+      .catch((err: unknown) => err);
+    const { body } = rejection as { body: { messageKey?: string; message?: string } };
+    expect(strings[body.messageKey ?? '']).toBeTruthy();
+    if (locale === 'en-AU') expect(strings[body.messageKey ?? '']).toBe(body.message);
+  });
 });
 
 describe('POST /retrieval/search — semantic + cross-pillar enrichment', () => {

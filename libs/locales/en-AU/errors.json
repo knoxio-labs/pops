@@ -35,15 +35,15 @@
   "media.rotation.cannotDeleteManualSource": "Cannot delete the manual source",
   "media.rotation.movieExcludedFromRotation": "Movie is excluded from rotation",
 
-  "media.retrieval.queryRequired": "Query is required for semantic and hybrid search modes",
-  "media.retrieval.filterRequired": "Structured search requires at least one filter",
-  "media.retrieval.contextQueryRequired": "Query is required for context assembly",
-
   "inventory.reports.insuranceReportFailed": "Failed to generate insurance report: {{detail}}",
   "inventory.reports.valueByLocationFailed": "Failed to load value by location breakdown: {{detail}}",
   "inventory.reports.valueByTypeFailed": "Failed to load value by type breakdown: {{detail}}",
   "inventory.paperless.notConfigured": "Paperless-ngx is not configured",
   "inventory.paperless.apiError": "Paperless error: {{detail}}",
+
+  "cerebrum.retrieval.queryRequired": "Query is required for semantic and hybrid search modes",
+  "cerebrum.retrieval.filterRequired": "Structured search requires at least one filter",
+  "cerebrum.retrieval.contextQueryRequired": "Query is required for context assembly",
 
   "cerebrum.nudge.notFound": "Nudge '{{id}}' not found",
   "cerebrum.nudge.notPendingOrMissing": "Nudge '{{id}}' is not pending or does not exist",
