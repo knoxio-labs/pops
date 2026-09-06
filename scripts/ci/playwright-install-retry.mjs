@@ -79,6 +79,62 @@ async function waitForLockClear({ isLockHeld, sleep, lockPollMs, maxLockWaitPoll
   return !(await isLockHeld());
 }
 
+/**
+ * The wall-clock ceiling a given configuration implies, in seconds: every
+ * attempt burning its full timeout, and every gap between attempts spending
+ * the whole bounded lock wait before its backoff.
+ *
+ * This is exported because the number is only meaningful next to another one —
+ * the `timeout-minutes` GitHub puts on the step that invokes this script. When
+ * the ceiling exceeds that timeout the retry is a fiction: the runner kills the
+ * step part-way through the loop, the `::error::` below never prints, and the
+ * log ends on a bare `The operation was canceled`. That is the exact failure
+ * signature POPS-2302 was filed about, moved from the job to the step.
+ * `__tests__/playwright-install-retry.test.ts` reads the real workflow and
+ * holds the two numbers against each other.
+ *
+ * @param {object} opts
+ * @param {number} opts.attempts
+ * @param {number} opts.timeoutSeconds Per-attempt ceiling.
+ * @param {(attempt: number) => number} opts.backoffMs
+ * @param {number} [opts.lockPollMs]
+ * @param {number} [opts.maxLockWaitPolls]
+ * @returns {number}
+ */
+export function worstCaseSeconds({
+  attempts,
+  timeoutSeconds,
+  backoffMs,
+  lockPollMs = 1000,
+  maxLockWaitPolls = 60,
+}) {
+  let ms = attempts * timeoutSeconds * 1000;
+  for (let attempt = 1; attempt < attempts; attempt += 1) {
+    ms += lockPollMs * maxLockWaitPolls + backoffMs(attempt);
+  }
+  return ms / 1000;
+}
+
+/**
+ * What the CLI uses when a flag is absent. Exported so the workflow test reads
+ * the same numbers the workflow actually runs with instead of a copy of them.
+ *
+ * `attempts` is 2 rather than 3 because three attempts at a 300s ceiling is
+ * 900s of attempts alone, before a single backoff — more than the 15-minute
+ * step timeout, and there is no room to raise that: the job has 30 minutes for
+ * checkout, install, build, the browser install and the suite itself. Two
+ * attempts is what fits, and one retry is the whole mechanism anyway: attempt 2
+ * is the one that runs after the dpkg lock has been cleared.
+ */
+export const CLI_DEFAULTS = {
+  attempts: 2,
+  timeoutSeconds: 300,
+  lockPollMs: 1000,
+  maxLockWaitPolls: 60,
+  /** @param {number} attempt */
+  backoffMs: (attempt) => attempt * 45_000,
+};
+
 async function cliMain() {
   const { spawn, spawnSync } = await import('node:child_process');
 
@@ -99,8 +155,10 @@ async function cliMain() {
     return i === -1 ? fallback : flags[i + 1];
   };
 
-  const attempts = Number(flagValue('--attempts', '3'));
-  const timeoutSeconds = Number(flagValue('--timeout-seconds', '300'));
+  const attempts = Number(flagValue('--attempts', String(CLI_DEFAULTS.attempts)));
+  const timeoutSeconds = Number(
+    flagValue('--timeout-seconds', String(CLI_DEFAULTS.timeoutSeconds))
+  );
   const lockFile = flagValue('--lock-file', '/var/lib/dpkg/lock-frontend');
   const label = flagValue('--label', command.join(' '));
 
@@ -134,13 +192,23 @@ async function cliMain() {
     spawnSync('sudo', ['pkill', '-9', '-f', 'apt-get|dpkg'], { stdio: 'ignore' });
   };
 
+  // Printed before the first attempt so a step that later dies to something
+  // outside this process still says, in its own log, what budget it was
+  // working to.
+  console.log(
+    `${label}: up to ${String(attempts)} attempts of ${String(timeoutSeconds)}s against apt/dpkg; ` +
+      `worst case ${String(worstCaseSeconds({ ...CLI_DEFAULTS, attempts, timeoutSeconds }))}s`
+  );
+
   const result = await retryWithLockClear({
     attempts,
     run: runAttempt,
     isLockHeld,
     killStaleHolders,
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-    backoffMs: (attempt) => attempt * 45_000,
+    backoffMs: CLI_DEFAULTS.backoffMs,
+    lockPollMs: CLI_DEFAULTS.lockPollMs,
+    maxLockWaitPolls: CLI_DEFAULTS.maxLockWaitPolls,
     onEvent: (event) => {
       if (event.type === 'attempt-failed') {
         console.log(
