@@ -18,7 +18,6 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-constants.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import {
@@ -867,6 +866,9 @@ describe('findAllMatchingTransactionCorrections', () => {
     harness = freshDb();
   });
 
+  /** The matching floor removed by ADR-053/POPS-3129 — kept only as a fixture anchor. */
+  const OLD_MATCHING_FLOOR = 0.7;
+
   it('groups results as [exact, contains, regex] in matchType order', () => {
     seedCorrection(harness.raw, {
       id: 'exact-rule',
@@ -952,13 +954,13 @@ describe('findAllMatchingTransactionCorrections', () => {
       id: 'at-floor',
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
-      confidence: MIN_MATCH_CONFIDENCE,
+      confidence: OLD_MATCHING_FLOOR,
     });
     seedCorrection(harness.raw, {
       id: 'below-floor',
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
-      confidence: MIN_MATCH_CONFIDENCE - 0.01,
+      confidence: OLD_MATCHING_FLOOR - 0.01,
     });
 
     expect(
@@ -971,7 +973,7 @@ describe('findAllMatchingTransactionCorrections', () => {
       id: 'below-floor',
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
-      confidence: MIN_MATCH_CONFIDENCE - 0.01,
+      confidence: OLD_MATCHING_FLOOR - 0.01,
     });
 
     expect(

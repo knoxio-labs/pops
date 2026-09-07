@@ -13,7 +13,7 @@ Re-evaluation is asymmetric by bucket, and the asymmetry is the point (`reevalua
 
 `classifyWithoutAi` runs two stages and then defers to AI; the middle of the ladder is entirely inside `entity-matcher.ts`. First hit wins.
 
-1. **Learned corrections** (`apply-learned-correction.ts`) — active rules, ordered `priority ASC, id ASC`. A rule is an instruction, not a hypothesis: provenance decides the bucket, not confidence (ADR-053). A rule naming an entity, or an entity-less `transfer`/`income` rule, is `matched`. An entity-less `purchase` rule is always `uncertain` — the review step still has to resolve a merchant, whatever the rule's own confidence.
+1. **Learned corrections** (`apply-learned-correction.ts`) — every active rule, no confidence floor, ordered `priority ASC, id ASC`. A rule is an instruction, not a hypothesis: provenance decides the bucket, not confidence (ADR-053). A rule naming an entity, or an entity-less `transfer`/`income` rule, is `matched`. An entity-less `purchase` rule is always `uncertain` — the review step still has to resolve a merchant, whatever the rule's own confidence.
 2. **Aliases** — substring match; longest matching alias wins.
 3. **Exact** — description equals an entity name.
 4. **Prefix** — description starts with an entity name; longest name wins.

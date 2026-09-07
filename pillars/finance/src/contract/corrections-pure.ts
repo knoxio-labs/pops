@@ -14,7 +14,6 @@ import { normalizePatternForStorage } from './pattern-match.js';
 
 import type { ChangeSet, ChangeSetOp } from './rest-corrections-schemas.js';
 
-export { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 export { normalizeDescription } from './pattern-match.js';
 export type { TransactionType } from './corrections-constants.js';
 
