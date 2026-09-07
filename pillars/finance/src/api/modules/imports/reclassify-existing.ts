@@ -5,11 +5,11 @@
  * against the full active rule set after every import commit (US-04),
  * excluding the just-imported batch by checksum. Ported from the monolith
  * `lib/reclassify-existing.ts`, db-injected. Matching reuses the corrections
- * module's pure `findMatchingCorrectionFromRules`, and only high-confidence,
- * review-free matches are applied: retroactive changes pass the same
+ * module's pure `findMatchingCorrectionFromRules`, and only review-free
+ * matches are applied: retroactive changes pass the same
  * `resolveCorrectionApplyStatus` gate as live import, so an `uncertain`
- * (sub-threshold, or entity-less purchase) match is skipped rather than
- * silently written without review. A changed row merges the winning rule's
+ * (entity-less purchase — no merchant resolved yet, ADR-053) match is skipped
+ * rather than silently written without review. A changed row merges the winning rule's
  * tags in (additive-only) and stamps match provenance (`matchType: 'learned'`,
  * `matchRuleId`, `matchConfidence`) — mirroring the live-import path
  * (`apply-learned-correction.ts`, CF057/#3658) so a retroactively-classified

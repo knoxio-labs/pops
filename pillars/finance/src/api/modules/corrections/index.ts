@@ -25,7 +25,6 @@ export {
   resolveCorrectionApplyStatus,
   normalizeEntityId,
   parseCorrectionTags,
-  HIGH_CONFIDENCE_THRESHOLD,
   type CorrectionMatchResult,
   type CorrectionMatchStatus,
   type CorrectionRow,

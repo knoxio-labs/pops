@@ -18,9 +18,6 @@ export { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 export { normalizeDescription } from './pattern-match.js';
 export type { TransactionType } from './corrections-constants.js';
 
-/** Confidence at/above which a learned correction is treated as a confident match. */
-export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
-
 /**
  * API-facing correction shape: `tags` is a decoded `string[]` and `isActive`
  * is a real boolean, unlike the DB row which stores tags as a JSON string.

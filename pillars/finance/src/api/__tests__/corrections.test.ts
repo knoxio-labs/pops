@@ -184,25 +184,26 @@ describe('corrections — 404s on unknown ids', () => {
 });
 
 describe('corrections — findMatch', () => {
-  it('classifies a confident match, an uncertain match, and a miss', async () => {
-    // Confidence starts at 0.7 (uncertain); bumped to 0.95 → matched.
+  it('classifies any pattern match as matched, whatever its stored confidence, and a miss as null (ADR-053)', async () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'WOOLWORTHS',
       matchType: 'contains',
     });
 
-    const uncertain = await client().corrections.findMatch({
+    // Confidence is audit data, not a gate: a freshly-created rule (0.7) and
+    // one bumped well above the old 0.9 bar classify identically.
+    const low = await client().corrections.findMatch({
       description: 'WOOLWORTHS METRO SYDNEY',
       minConfidence: 0.3,
     });
-    expect(uncertain.status).toBe('uncertain');
-    expect(uncertain.data?.id).toBe(created.data.id);
+    expect(low.status).toBe('matched');
+    expect(low.data?.id).toBe(created.data.id);
 
-    await client().corrections.adjustConfidence(created.data.id, 0.25); // 0.7 → 0.95
-    const matched = await client().corrections.findMatch({
+    await client().corrections.adjustConfidence(created.data.id, 0.25); // 0.7 -> 0.95
+    const bumped = await client().corrections.findMatch({
       description: 'WOOLWORTHS METRO SYDNEY',
     });
-    expect(matched.status).toBe('matched');
+    expect(bumped.status).toBe('matched');
 
     const miss = await client().corrections.findMatch({ description: 'TOTALLY UNRELATED' });
     expect(miss).toEqual({ data: null, status: null });
@@ -1021,7 +1022,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     expect(row.matchType).toBe('manual');
   });
 
-  it('skips an uncertain (sub-threshold) rule match, applying nothing', async () => {
+  it('skips an uncertain entity-less purchase rule, applying nothing (ADR-053: no merchant to resolve)', async () => {
     const db = financeDb.db;
     const amexId = seedAmexAccount(db);
     transactionsService.createTransaction(db, {
@@ -1030,12 +1031,12 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
       amountCents: -3000,
       date: '2026-01-01',
     });
-    // Default confidence from createOrUpdate is below the 0.9 matched threshold.
+    // No entityId: a purchase rule with no merchant still needs review,
+    // whatever its confidence.
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'BIG W',
       matchType: 'exact',
-      entityId: 'ent-bigw',
-      entityName: 'BIG W',
+      transactionType: 'purchase',
       tags: ['shopping'],
     });
 
