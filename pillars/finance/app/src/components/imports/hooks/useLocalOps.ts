@@ -16,6 +16,7 @@ import type { CorrectionSignal, LocalOp, ServerChangeSetOp } from '../correction
 import type { CorrectionRule } from '../RulePicker';
 
 export {
+  findLocalOpProblem,
   localOpToServerOp,
   localOpsToChangeSet,
   newClientId,

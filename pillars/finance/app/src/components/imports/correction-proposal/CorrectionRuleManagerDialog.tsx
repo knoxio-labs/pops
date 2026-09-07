@@ -5,7 +5,7 @@ import { WorkflowDialog } from '@pops/ui';
 
 import { useImportStore } from '../../../store/importStore';
 import { type PreviewView } from '../CorrectionProposalDialogPanels';
-import { localOpsToChangeSet } from '../hooks/useLocalOps';
+import { findLocalOpProblem, localOpsToChangeSet } from '../hooks/useLocalOps';
 import { buildBodyProps } from './rule-manager/build-body-props';
 import { RuleManagerFooter } from './rule-manager/Footer';
 import { RuleManagerBody } from './rule-manager/RuleManagerBody';
@@ -28,6 +28,26 @@ interface CleanupArgs {
   setSelectedClientId: (v: string | null) => void;
   setPreviewView: (v: PreviewView) => void;
   resetPreviewState: () => void;
+}
+
+function buildSaveHandler(
+  localOps: LocalOp[],
+  addPendingChangeSet: ReturnType<typeof useImportStore.getState>['addPendingChangeSet'],
+  handleOpenChange: (v: boolean) => void
+) {
+  return () => {
+    if (findLocalOpProblem(localOps) !== null) return;
+    if (localOps.length === 0) {
+      handleOpenChange(false);
+      return;
+    }
+    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
+    if (changeSet) {
+      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
+      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
+    }
+    handleOpenChange(false);
+  };
 }
 
 function buildOpenChangeHandler(
@@ -81,18 +101,12 @@ export function CorrectionRuleManagerDialog(props: CorrectionRuleManagerDialogPr
     ]
   );
 
-  const handleBrowseSave = useCallback(() => {
-    if (localOps.length === 0) {
-      handleOpenChange(false);
-      return;
-    }
-    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
-    if (changeSet) {
-      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
-      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
-    }
-    handleOpenChange(false);
-  }, [addPendingChangeSet, handleOpenChange, localOps]);
+  const problem = findLocalOpProblem(localOps);
+
+  const handleBrowseSave = useCallback(
+    buildSaveHandler(localOps, addPendingChangeSet, handleOpenChange),
+    [addPendingChangeSet, handleOpenChange, localOps]
+  );
 
   const isGridMode = !browse.browseListQuery.isError && !browse.browseListQuery.isLoading;
   const bodyProps = buildBodyProps(hooks, handleAddNewRuleOp);
@@ -108,6 +122,7 @@ export function CorrectionRuleManagerDialog(props: CorrectionRuleManagerDialogPr
       footer={
         <RuleManagerFooter
           localOpsCount={localOps.length}
+          problem={problem}
           onCancel={() => handleOpenChange(false)}
           onSave={handleBrowseSave}
         />
