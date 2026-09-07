@@ -296,11 +296,16 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
   });
 
   it('applies a below-the-bar rule to a matched row without demoting it', async () => {
-    // 0.72 clears minConfidence (0.7) so the rule matches, but sits under
-    // HIGH_CONFIDENCE_THRESHOLD (0.9), so its outcome bucket is `uncertain`.
-    // That bucket used to make the whole outcome be discarded, which turned
-    // every hand-written rule (they default to 0.7) into a no-op on the rows
-    // it was written for. The row takes the rule and stays matched.
+    // `seedWeakRule` names an entity (Coles), so its outcome bucket is
+    // `matched` regardless of the confidence stored on it — provenance
+    // decides the bucket now, not confidence (ADR-053/POPS-3128), and there
+    // is no confidence floor on matching either (POPS-3129). It used to be
+    // otherwise: a rule below the old minConfidence floor (0.7) never
+    // matched at all, and one between that floor and the old
+    // HIGH_CONFIDENCE_THRESHOLD (0.9) routed to `uncertain`, which used to
+    // make the whole outcome get discarded — turning every hand-written rule
+    // (they defaulted to 0.7) into a no-op on the rows it was written for.
+    // The row takes the rule and stays matched.
     seedWeakRule('r-weak');
     const alreadyMatched = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
