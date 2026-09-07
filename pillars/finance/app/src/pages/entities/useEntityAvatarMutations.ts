@@ -43,7 +43,7 @@ const ENTITIES_KEY = ['contacts', 'entities'] as const;
  * normalizing; `transactionCount` stays off since these mutations never
  * change it and the caller merges onto the entity already showing.
  */
-function toPageEntity(entity: ContactEntity): Omit<Entity, 'transactionCount'> {
+export function toPageEntity(entity: ContactEntity): Omit<Entity, 'transactionCount'> {
   return {
     id: entity.id,
     name: entity.name,
