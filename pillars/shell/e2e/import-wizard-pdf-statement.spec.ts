@@ -26,8 +26,9 @@
  * different layer (POPS-2538).
  *
  * Endpoints mocked:
- *   GET /finance-api/accounts            → one ANZ credit card (POPS-2840)
- *   GET /finance-api/institutions        → ANZ
+ *   GET /finance-api/accounts            → one ANZ credit card (POPS-2840),
+ *                                          its issuing institution embedded
+ *                                          (POPS-3063)
  *   GET /finance-api/accounts/:id        → its import status, whose `span`
  *                                          is what the overlap check reads
  *                                          (POPS-2504)
@@ -52,15 +53,15 @@ const account = {
   entityId: null,
   entityDisplayName: null,
   entityDisplayNameStale: false,
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-};
-
-const institution = {
-  id: 'inst-anz',
-  name: 'ANZ',
-  colour: '#0b5fff',
-  logoAssetId: null,
+  entityColour: null,
+  entityAvatarAssetId: null,
+  resolvedEntityId: null,
+  institution: {
+    id: 'inst-anz',
+    name: 'ANZ',
+    colour: '#0b5fff',
+    logoAssetId: null,
+  },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -121,7 +122,7 @@ const MARCH_COFFEE: StatementRow = {
 };
 
 async function setupMocks(page: Page): Promise<void> {
-  await stubFinanceAccount(page, account, institution);
+  await stubFinanceAccount(page, account);
   await page.route(
     `**/finance-api/accounts/${account.id}`,
     fulfilWith(200, AccountGetResponseSchema, accountGetBody, 'accounts.get')

@@ -1,19 +1,29 @@
 /**
  * Stand-ins for the finance account reads the import wizard makes before it
- * shows a file input (POPS-2840): the account picker's list and the
- * institutions it derives each account's bank dialects from.
+ * shows a file input (POPS-2840): the account picker's list, whose issuing
+ * institution now arrives embedded on each account row (POPS-3063) rather
+ * than through a separate institutions fetch/join.
  *
- * Hand-mirrored from `rest-accounts.ts`'s `AccountSchema` and
- * `rest-institutions.ts`'s `InstitutionSchema`, for the reason every per-spec
- * schema here is mirrored rather than imported: `shell-no-cross-internal`
- * (`.dependency-cruiser.cjs`) stops the shell reaching a pillar's contract
- * package.
+ * Hand-mirrored from `rest-accounts.ts`'s `AccountSchema`, for the reason
+ * every per-spec schema here is mirrored rather than imported:
+ * `shell-no-cross-internal` (`.dependency-cruiser.cjs`) stops the shell
+ * reaching a pillar's contract package.
  */
 import { z } from 'zod';
 
 import { fulfilWith } from './pillar-rest';
 
 import type { Page } from '@playwright/test';
+
+/** The not-yet-migrated institution fallback shape — see `AccountSchema.institution`. */
+export const AccountIssuerInstitutionSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    colour: z.string(),
+    logoAssetId: z.string().nullable(),
+  })
+  .strict();
 
 export const AccountSchema = z
   .object({
@@ -27,6 +37,10 @@ export const AccountSchema = z
     entityId: z.string().nullable(),
     entityDisplayName: z.string().nullable(),
     entityDisplayNameStale: z.boolean(),
+    entityColour: z.string().nullable(),
+    entityAvatarAssetId: z.string().nullable(),
+    resolvedEntityId: z.string().nullable(),
+    institution: AccountIssuerInstitutionSchema.nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
@@ -41,35 +55,15 @@ export const AccountsListResponseSchema = z
   })
   .strict();
 
-export const InstitutionSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    colour: z.string(),
-    logoAssetId: z.string().nullable(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
-  .strict();
-
-export const InstitutionsListResponseSchema = z
-  .object({ data: z.array(InstitutionSchema) })
-  .strict();
-
 export type StubAccount = z.infer<typeof AccountSchema>;
-export type StubInstitution = z.infer<typeof InstitutionSchema>;
 
 /**
- * Serve one account and its institution. The institution's `name` is what the
- * Upload step keys the account's bank dialects off
- * (`BANK_TYPE_BY_INSTITUTION_NAME` in `account-step/import-formats.ts`); an
- * unrecognised name leaves the account with no format and no dropzone.
+ * Serve one account. The embedded `institution.name` is what the Upload step
+ * keys the account's bank dialects off (`BANK_TYPE_BY_INSTITUTION_NAME` in
+ * `account-step/import-formats.ts`); an unrecognised name — or no
+ * `institution` at all — leaves the account with no format and no dropzone.
  */
-export async function stubFinanceAccount(
-  page: Page,
-  account: StubAccount,
-  institution: StubInstitution
-): Promise<void> {
+export async function stubFinanceAccount(page: Page, account: StubAccount): Promise<void> {
   await page.route(
     '**/finance-api/accounts?**',
     fulfilWith(
@@ -81,9 +75,5 @@ export async function stubFinanceAccount(
       },
       'accounts.list'
     )
-  );
-  await page.route(
-    '**/finance-api/institutions',
-    fulfilWith(200, InstitutionsListResponseSchema, { data: [institution] }, 'institutions.list')
   );
 }
