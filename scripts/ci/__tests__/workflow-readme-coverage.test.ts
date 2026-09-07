@@ -62,8 +62,7 @@ function callOnlyFiles(): string[] {
     .filter((file) => {
       const doc = parseYaml(readFileSync(join(workflowsDir, file), 'utf8'), file);
       if (!isMapping(doc)) return false;
-      // YAML 1.1 reads a bare `on:` as the boolean true; the quoted form stays a string.
-      const triggers = doc.on ?? doc.true;
+      const triggers = doc.on;
       if (!isMapping(triggers)) return false;
       const keys = Object.keys(triggers);
       return keys.length === 1 && keys[0] === 'workflow_call';
