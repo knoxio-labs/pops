@@ -502,6 +502,16 @@ function selfTest() {
     '--dirs trims whitespace around entries':
       JSON.stringify(parseDirsArg(['--dirs= pillars/finance , libs/types '])) ===
       JSON.stringify(['pillars/finance', 'libs/types']),
+    '--dirs strips a trailing slash so the entry still selects its unit':
+      JSON.stringify(parseDirsArg(['--dirs=pillars/finance/'])) ===
+      JSON.stringify(['pillars/finance']),
+    'a scoped dir that exists but owns no unit (scripts) is not reported':
+      unresolvableDirs(['scripts'], (d) => d === 'scripts').length === 0,
+    'a scoped dir that names no path at all is reported': (() => {
+      const bad = unresolvableDirs(['scripts', 'pillars/gone'], (d) => d === 'scripts');
+      return JSON.stringify(bad) === JSON.stringify(['pillars/gone']);
+    })(),
+    'the full-tree sweep has no scope to validate': unresolvableDirs(null).length === 0,
     'scoping a pillar dir also selects its nested app unit': (() => {
       const units = [
         { dir: 'pillars/finance', name: '@pops/finance', pkg: {} },
@@ -527,7 +537,7 @@ function selfTest() {
   } else {
     console.log(
       'self-test OK — gate flags missing target / outside-files / wildcard / bad version / bare export, ' +
-        'passes clean + bare-main units, and --dirs scoping parses correctly.'
+        'passes clean + bare-main units, parses --dirs scoping correctly, and reports a scope entry that names no path.'
     );
   }
   return ok;
@@ -541,6 +551,11 @@ function selfTest() {
  * after it, e.g. a PR that only touched `scripts/`) is a valid "no unit
  * changed" result, not an error.
  *
+ * Trailing slashes are stripped. `selectUnits` matches on the exact dir string
+ * or a `${dir}/` prefix, so `pillars/finance/` would otherwise match neither
+ * the unit nor its nested app and scope the run to nothing while still naming
+ * a path that exists — a silent zero that {@link unresolvableDirs} cannot see.
+ *
  * @param {string[]} argv
  * @returns {string[] | null}
  */
@@ -551,8 +566,41 @@ export function parseDirsArg(argv) {
   if (raw.length === 0) return [];
   return raw
     .split(',')
-    .map((d) => d.trim())
+    .map((d) => d.trim().replace(/\/+$/, ''))
     .filter((d) => d.length > 0);
+}
+
+/**
+ * Report scope entries that name a path which is not a directory in this
+ * checkout.
+ *
+ * A scoped run that selects zero units is not by itself wrong: quality.yml's
+ * `scope` job always prepends the literal `scripts`, which is a real directory
+ * carrying no manifest, so a docs-only or scripts-only PR legitimately checks
+ * nothing. What is wrong is a scope entry that resolves to no path at all —
+ * that means the changed-unit list and the tree disagree (a rename, a
+ * path-prefix change, a `maxdepth` tweak), and every unit behind that entry is
+ * reported as checked without having been read.
+ *
+ * Existence is the discriminator rather than "selected at least one unit"
+ * precisely because `scripts` must stay legal.
+ *
+ * @param {string[] | null} onlyDirs  Result of {@link parseDirsArg}.
+ * @param {(dir: string) => boolean} [dirExists]  Repo-relative directory probe.
+ * @returns {string[]} The offending entries, in the order given.
+ */
+export function unresolvableDirs(onlyDirs, dirExists = repoDirExists) {
+  if (onlyDirs === null) return [];
+  return onlyDirs.filter((d) => !dirExists(d));
+}
+
+/**
+ * @param {string} dir
+ * @returns {boolean}
+ */
+function repoDirExists(dir) {
+  const abs = join(repoRoot, dir);
+  return existsSync(abs) && statSync(abs).isDirectory();
 }
 
 /**
@@ -596,6 +644,19 @@ function main() {
   }
 
   const onlyDirs = parseDirsArg(args);
+  const unresolvable = unresolvableDirs(onlyDirs);
+  if (unresolvable.length > 0) {
+    console.error(
+      `FAIL — ${unresolvable.length} scoped dir(s) name a path that is not a directory here:`
+    );
+    for (const dir of unresolvable) console.error(`    - ${dir}`);
+    console.error(
+      '\n--dirs carries the changed-unit scope from quality.yml. A path that does not exist means ' +
+        'the scope and the tree disagree, and the units behind it would be reported as checked ' +
+        'without being read. Fix whatever computes the scope — do not widen this check.'
+    );
+    process.exit(1);
+  }
   const units = selectUnits(discoverUnits(), onlyDirs);
   /** @type {UnitReport[]} */
   const failing = [];
