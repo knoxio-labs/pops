@@ -17,7 +17,8 @@ export function isDeadSessionError(error: unknown): boolean {
   return error instanceof FinanceApiError && (error.status === 404 || error.status === 412);
 }
 
-function sleep(ms: number): Promise<void> {
+/** Exported so other recovery-adjacent retries (e.g. {@link useReevaluatePending}) share one implementation. */
+export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

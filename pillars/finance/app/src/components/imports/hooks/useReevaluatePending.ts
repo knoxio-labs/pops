@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
-import { unwrap } from '../../../finance-api-helpers.js';
+import { isUnavailableError, unwrap } from '../../../finance-api-helpers.js';
 import {
   importsReevaluateWithPendingRules,
   type ImportsReevaluateWithPendingRulesResponses,
@@ -12,11 +12,22 @@ import {
   isDeadSessionError,
   pendingImportRecovery,
   recoverImportSession,
+  sleep,
 } from './session-recovery';
 
 type ReevaluateOutcome = ImportsReevaluateWithPendingRulesResponses[200];
 
 const REEVALUATE_FAILED_MESSAGE = 'Failed to re-evaluate transactions against updated rules';
+
+/**
+ * How long to wait before retrying a request that failed with no status or a
+ * 5xx — the shape a pillar mid-redeploy or a transient upstream hiccup
+ * produces, as opposed to a real 4xx rejection. A brief deploy-time gap (the
+ * old container gone, the new one not yet listening) is measured in seconds,
+ * so one short wait is enough to ride it out without the user ever seeing a
+ * toast for something that was never actually broken.
+ */
+const TRANSIENT_RETRY_DELAY_MS = 1500;
 
 async function requestReevaluate(sessionId: string): Promise<ReevaluateOutcome> {
   const { pendingChangeSets } = useImportStore.getState();
@@ -34,6 +45,22 @@ async function requestReevaluate(sessionId: string): Promise<ReevaluateOutcome> 
 }
 
 /**
+ * `requestReevaluate`, retried once after {@link TRANSIENT_RETRY_DELAY_MS}
+ * when the first attempt fails with no status or a 5xx. A 4xx (including the
+ * dead-session 404/412 the caller handles separately) is never retried here —
+ * it is a real answer, not a transient gap.
+ */
+async function requestReevaluateWithTransientRetry(sessionId: string): Promise<ReevaluateOutcome> {
+  try {
+    return await requestReevaluate(sessionId);
+  } catch (error) {
+    if (!isUnavailableError(error)) throw error;
+    await sleep(TRANSIENT_RETRY_DELAY_MS);
+    return await requestReevaluate(sessionId);
+  }
+}
+
+/**
  * The session id to re-evaluate against, waiting out a recovery already in
  * progress rather than racing it.
  *
@@ -48,22 +75,39 @@ async function currentSessionId(): Promise<string | null> {
   return useImportStore.getState().processSessionId;
 }
 
+/**
+ * Whether the error toast has already fired for the run chain currently in
+ * flight (see {@link scheduleReevaluate}). A save that wakes more than one
+ * mounted consumer (the review step's own effect, the browse dialog, ...)
+ * collapses into one `activeRun` plus one `queuedRun`; if the outage spans
+ * both, each would otherwise throw its own toast for what the user
+ * experiences as a single save. Reset once the whole chain drains back to
+ * idle, so an unrelated later failure still gets its own toast.
+ */
+let chainErrorToastShown = false;
+
+function toastReevaluateError(): void {
+  if (chainErrorToastShown) return;
+  chainErrorToastShown = true;
+  toast.error(REEVALUATE_FAILED_MESSAGE);
+}
+
 async function executeReevaluate(): Promise<ReevaluateOutcome | null> {
   const sessionId = await currentSessionId();
   if (!sessionId) return null;
   try {
-    return await requestReevaluate(sessionId);
+    return await requestReevaluateWithTransientRetry(sessionId);
   } catch (error) {
     if (!isDeadSessionError(error)) {
-      toast.error(REEVALUATE_FAILED_MESSAGE);
+      toastReevaluateError();
       return null;
     }
   }
   toast.info('Import session expired — reprocessing transactions…');
   try {
-    return await requestReevaluate(await recoverImportSession());
+    return await requestReevaluateWithTransientRetry(await recoverImportSession());
   } catch {
-    toast.error(REEVALUATE_FAILED_MESSAGE);
+    toastReevaluateError();
     return null;
   }
 }
@@ -89,6 +133,9 @@ function scheduleReevaluate(): Promise<ReevaluateOutcome | null> {
   if (!activeRun) {
     activeRun = executeReevaluate().finally(() => {
       activeRun = null;
+      // A queued follow-up is about to re-run the chain (it may still fail);
+      // only clear the dedup flag once nothing is left queued behind it.
+      if (!queuedRun) chainErrorToastShown = false;
     });
     return activeRun;
   }

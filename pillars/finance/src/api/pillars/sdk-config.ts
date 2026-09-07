@@ -27,6 +27,17 @@ import {
 } from './service-account.js';
 
 /**
+ * Outbound pillar-to-pillar call budget, well inside the 30s
+ * `proxy_read_timeout` the shell's nginx gives `/finance-api/` (see
+ * `_pillar-proxy.conf`). The SDK's own default (30s) ties the two clocks: a
+ * slow contacts pillar can then time out the browser's own request before
+ * finance's degraded-empty-set fallback (`entities.list degraded`) ever gets
+ * to run, turning a contacts hiccup into a bare 504 instead of a request
+ * that completes with a caveat.
+ */
+const OUTBOUND_CALL_TIMEOUT_MS = 8_000;
+
+/**
  * Bind the process-wide server SDK config from the environment.
  *
  * Called once, before the server listens.
@@ -42,7 +53,7 @@ export function configureFinanceServerSdk(env: NodeJS.ProcessEnv = process.env):
     // be answered by one an earlier call left behind. Production calls this
     // once; a test or a reload calling it twice must not silently keep
     // authenticating as the first environment.
-    configureServerSdk({ apiKey: undefined });
+    configureServerSdk({ apiKey: undefined, callTimeoutMs: OUTBOUND_CALL_TIMEOUT_MS });
     console.error(
       `[finance-api] no service-account key: set ${SERVICE_ACCOUNT_KEY_FILE_ENV} to a mounted ` +
         `secret (production) or ${SERVICE_ACCOUNT_KEY_ENV} (local dev). The API serves normally; ` +
@@ -53,6 +64,6 @@ export function configureFinanceServerSdk(env: NodeJS.ProcessEnv = process.env):
   }
   // Passed explicitly rather than left to the SDK's own env fallback: only
   // this module knows about the file-based secret, and explicit beats env.
-  configureServerSdk({ apiKey });
+  configureServerSdk({ apiKey, callTimeoutMs: OUTBOUND_CALL_TIMEOUT_MS });
   return true;
 }
