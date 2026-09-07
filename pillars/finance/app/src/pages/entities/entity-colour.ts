@@ -30,3 +30,8 @@ export function entityColourStyle(
 export function entityAvatarUrlFor(entityId: string, avatarAssetId: string): string {
   return `/contacts-api/entities/${entityId}/avatar?v=${avatarAssetId}`;
 }
+
+/** Same content-addressing as {@link entityAvatarUrlFor}, for the poster asset. */
+export function entityPosterUrlFor(entityId: string, posterAssetId: string): string {
+  return `/contacts-api/entities/${entityId}/poster?v=${posterAssetId}`;
+}

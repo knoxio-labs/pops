@@ -19,6 +19,9 @@ const TransactionsPage = lazy(() =>
 const EntitiesPage = lazy(() =>
   import('./pages/EntitiesPage').then((m) => ({ default: m.EntitiesPage }))
 );
+const EntityDetailPage = lazy(() =>
+  import('./pages/EntityDetailPage').then((m) => ({ default: m.EntityDetailPage }))
+);
 const AccountsPage = lazy(() =>
   import('./pages/AccountsPage').then((m) => ({ default: m.AccountsPage }))
 );
@@ -56,6 +59,7 @@ export const routes: RouteObject[] = [
   { index: true, element: <DashboardPage /> },
   { path: 'transactions', element: <TransactionsPage /> },
   { path: 'entities', element: <EntitiesPage /> },
+  { path: 'entities/:id', element: <EntityDetailPage /> },
   { path: 'accounts', element: <AccountsPage /> },
   { path: 'accounts/:id', element: <AccountDetailPage /> },
   { path: 'accounts/:id/checkpoints', element: <AccountCheckpointsPage /> },

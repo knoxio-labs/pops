@@ -99,7 +99,7 @@ export function EntityFormDialog(props: EntityFormDialogProps) {
   const { open, onOpenChange, editingEntity, form, isSubmitting, onSubmit } = props;
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
-      <DialogContent className="sm:max-w-125">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-125">
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>{editingEntity ? 'Edit Entity' : 'New Entity'}</DialogTitle>

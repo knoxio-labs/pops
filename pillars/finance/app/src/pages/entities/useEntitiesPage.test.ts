@@ -161,6 +161,33 @@ describe('useEntitiesPage — add/edit form wiring', () => {
     expect(result.current.form.getValues('aliases')).toEqual(['Coles Express']);
   });
 
+  it('re-prefills the form when handleEdit is called for a different entity without closing first', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useEntitiesPage(), { wrapper });
+    const first = makeEntity({
+      id: 'ent-1',
+      name: 'Coles',
+      abn: '123',
+      aliases: ['Coles Express'],
+    });
+    const second = makeEntity({ id: 'ent-2', name: 'Woolworths', abn: null, aliases: [] });
+
+    act(() => {
+      result.current.handleEdit(first);
+    });
+    act(() => {
+      result.current.form.setValue('name', 'Unsaved edit');
+    });
+    act(() => {
+      result.current.handleEdit(second);
+    });
+
+    expect(result.current.editingEntity).toEqual(second);
+    expect(result.current.form.getValues('name')).toBe('Woolworths');
+    expect(result.current.form.getValues('abn')).toBe('');
+    expect(result.current.form.getValues('aliases')).toEqual([]);
+  });
+
   it('onSubmit calls entitiesCreate when there is no editing entity', async () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useEntitiesPage(), { wrapper });

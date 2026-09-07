@@ -1,4 +1,5 @@
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router';
 
 import {
   Badge,
@@ -20,7 +21,10 @@ const nameColumn: ColumnDef<Entity> = {
   accessorKey: 'name',
   header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
   cell: ({ row }) => (
-    <div className="flex items-center gap-2">
+    <Link
+      to={`/finance/entities/${row.original.id}`}
+      className="flex items-center gap-2 hover:underline"
+    >
       <EntityAvatar entity={row.original} />
       <span className="font-medium">{row.original.name}</span>
       {row.original.transactionCount === 0 && (
@@ -31,7 +35,7 @@ const nameColumn: ColumnDef<Entity> = {
           Orphaned
         </Badge>
       )}
-    </div>
+    </Link>
   ),
 };
 

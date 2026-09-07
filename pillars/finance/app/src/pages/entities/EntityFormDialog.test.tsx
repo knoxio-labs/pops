@@ -60,6 +60,15 @@ function Harness({
   );
 }
 
+describe('EntityFormDialog — scrolling', () => {
+  it('caps the dialog content height and scrolls internally, so the header and footer stay reachable on a short viewport', () => {
+    render(<Harness editingEntity={entity()} />);
+    const content = screen.getByRole('dialog');
+    expect(content.className).toMatch(/max-h-\[90vh\]/);
+    expect(content.className).toMatch(/overflow-y-auto/);
+  });
+});
+
 describe('EntityFormDialog — avatar and colour', () => {
   it('shows no avatar or colour section when creating a new entity', () => {
     render(<Harness editingEntity={null} />);
