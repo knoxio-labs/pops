@@ -89,13 +89,16 @@ it was the closest number lying around.
 ## Consequences
 
 - `HIGH_CONFIDENCE_THRESHOLD` and `MIN_MATCH_CONFIDENCE` lose every caller
-  that decides something and are deleted (POPS-3132) once routing (POPS-3128)
-  and the matching floor (POPS-3129) are gone. `HIGH_CONFIDENCE_THRESHOLD` was
-  declared **twice** — `contract/corrections-pure.ts` and
-  `api/modules/corrections/types.ts`, re-exported from both barrels — with no
-  test tying the two together. Same value today by luck, not by any guard;
-  worth remembering the next time a constant this load-bearing is worth
-  copying rather than importing.
+  that decides something once routing (POPS-3128) and the matching floor
+  (POPS-3129) are gone. `HIGH_CONFIDENCE_THRESHOLD` is deleted in this
+  change (POPS-3128) — it was declared **twice**, `contract/corrections-pure.ts`
+  and `api/modules/corrections/types.ts`, re-exported from both barrels, with
+  no test tying the two together, so both copies go the moment routing stops
+  reading either. Same value today by luck, not by any guard; worth
+  remembering the next time a constant this load-bearing is worth copying
+  rather than importing. `MIN_MATCH_CONFIDENCE` outlives it — the invented
+  default and the schema/validation floor still read it until POPS-3130 — and
+  is deleted last, in POPS-3132.
 - Removing the matching floor (POPS-3129) makes any rule stored below 0.7
   live for the first time. Nothing writes one by hand once POPS-3130 lands,
   but an AI proposal could have minted one before this ADR. What is actually
