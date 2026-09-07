@@ -46,7 +46,10 @@ export function AliasRow({
   onEdit,
 }: AliasRowProps): ReactElement {
   const asserted = aliasIsAsserted(alias);
-  const wording = alias.printedName;
+  // Qualified by the product it sits under, because two products a merchant
+  // prints identically hold the same wording: a control named for the wording
+  // alone is indistinguishable from its twin to anyone navigating by control.
+  const wording = `${alias.printedName} in ${currentProductLabel}`;
 
   return (
     <li className="border-border space-y-2 rounded-md border p-3">
@@ -83,6 +86,7 @@ export function AliasRow({
 
         <MergeControl
           alias={alias}
+          currentProductLabel={currentProductLabel}
           targets={allProducts.filter((product) => product.id !== currentProductId)}
           isPending={isPending}
           onEdit={onEdit}
@@ -107,7 +111,7 @@ function ForgetWordingControl({
   isPending,
   onEdit,
 }: ForgetWordingControlProps): ReactElement {
-  const wording = alias.printedName;
+  const wording = `${alias.printedName} in ${productLabel}`;
 
   if (!endsNamedProduct) {
     return (
@@ -167,6 +171,8 @@ function WordingSummary({ alias }: { alias: DictionaryAlias }): ReactElement {
 
 interface MergeControlProps {
   alias: DictionaryAlias;
+  /** The product the wording sits under today, which names the control. */
+  currentProductLabel: string;
   targets: readonly DictionaryProduct[];
   isPending: boolean;
   onEdit: (edit: DictionaryEdit) => void;
@@ -180,6 +186,7 @@ interface MergeControlProps {
  */
 function MergeControl({
   alias,
+  currentProductLabel,
   targets,
   isPending,
   onEdit,
@@ -191,7 +198,7 @@ function MergeControl({
   return (
     <>
       <Select
-        aria-label={`Point “${alias.printedName}” at another product`}
+        aria-label={`Point “${alias.printedName}” in ${currentProductLabel} at another product`}
         containerClassName="max-w-xs"
         value={target}
         placeholder="Choose a product…"
@@ -201,7 +208,7 @@ function MergeControl({
       <Button
         size="sm"
         disabled={isPending || target === ''}
-        aria-label={`Point ${alias.printedName} at the chosen product`}
+        aria-label={`Point ${alias.printedName} in ${currentProductLabel} at the chosen product`}
         onClick={() => onEdit({ kind: 'merge', aliasId: alias.id, productId: target })}
       >
         Point it there

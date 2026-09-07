@@ -118,7 +118,7 @@ export const states: ScreenStates = {
   'filtered-empty': () => (
     <ProductDictionaryPage
       products={dictionaryProducts}
-      initialFilters={{ source: 'ebay', assertion: 'all' }}
+      initialFilters={{ source: 'woolworths', assertion: 'unasserted' }}
     />
   ),
   'pass-running': () => (

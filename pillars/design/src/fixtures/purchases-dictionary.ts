@@ -110,6 +110,23 @@ export const dictionaryProducts: DictionaryProduct[] = [
     ],
   },
   {
+    id: 'prod_lamb_woolworths',
+    label: 'Lamb backstrap',
+    labelConfirmedAt: '2026-08-27T09:12:00.000Z',
+    createdAt: '2026-08-24T06:15:00.000Z',
+    aliases: [
+      {
+        id: 'alias_lamb_woolworths',
+        printedName: 'LAMB BACKSTRAP KG',
+        normalisedName: 'lamb backstrap kg',
+        source: 'woolworths',
+        scopeKey: 'woolworths:lamb backstrap kg',
+        confirmedAt: '2026-08-27T09:12:00.000Z',
+        createdAt: '2026-08-24T06:15:00.000Z',
+      },
+    ],
+  },
+  {
     id: 'prod_charcoal_receipt',
     label: 'COLGATE CHARC 110G',
     labelConfirmedAt: null,
