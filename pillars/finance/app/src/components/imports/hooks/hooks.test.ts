@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  findLocalOpProblem,
   localOpsToChangeSet,
   localOpToServerOp,
   newClientId,
@@ -289,5 +290,77 @@ describe('canApply derivation rules', () => {
   ])('canApply=%j', ({ isBusy, opsLen, hasDirty, sessionId, error, expected }) => {
     const result = !isBusy && opsLen > 0 && !hasDirty && Boolean(sessionId) && !error;
     expect(result).toBe(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findLocalOpProblem
+// ---------------------------------------------------------------------------
+
+function addOp(descriptionPattern: string): LocalOp {
+  return {
+    kind: 'add',
+    clientId: 'add-1',
+    data: { descriptionPattern, matchType: 'contains', tags: [] },
+    dirty: true,
+  };
+}
+
+function editOp(data: Extract<LocalOp, { kind: 'edit' }>['data']): LocalOp {
+  return {
+    kind: 'edit',
+    clientId: 'edit-1',
+    targetRuleId: 'rule-1',
+    targetRule: fakeRule,
+    data,
+    dirty: true,
+  };
+}
+
+describe('findLocalOpProblem', () => {
+  it('passes an empty op list', () => {
+    expect(findLocalOpProblem([])).toBeNull();
+  });
+
+  it('rejects an add op with no pattern', () => {
+    expect(findLocalOpProblem([addOp('')])).toMatch(/description pattern/i);
+  });
+
+  it('rejects an add op whose pattern is only whitespace', () => {
+    expect(findLocalOpProblem([addOp('   ')])).toMatch(/description pattern/i);
+  });
+
+  it('accepts an add op with a pattern', () => {
+    expect(findLocalOpProblem([addOp('WOOLWORTHS')])).toBeNull();
+  });
+
+  it('rejects an edit op that empties the pattern', () => {
+    expect(findLocalOpProblem([editOp({ descriptionPattern: '' })])).toMatch(/cannot be emptied/i);
+  });
+
+  it('accepts an edit op that leaves the pattern alone', () => {
+    expect(findLocalOpProblem([editOp({ location: 'Sydney' })])).toBeNull();
+  });
+
+  it('accepts an edit op that rewrites the pattern', () => {
+    expect(findLocalOpProblem([editOp({ descriptionPattern: 'XX7373' })])).toBeNull();
+  });
+
+  it('reports the first problem across a mixed list', () => {
+    expect(findLocalOpProblem([addOp('OK'), editOp({ descriptionPattern: ' ' })])).toMatch(
+      /cannot be emptied/i
+    );
+  });
+
+  it('ignores disable and remove ops', () => {
+    const disable: LocalOp = {
+      kind: 'disable',
+      clientId: 'disable-1',
+      targetRuleId: 'rule-1',
+      targetRule: fakeRule,
+      rationale: '',
+      dirty: true,
+    };
+    expect(findLocalOpProblem([disable])).toBeNull();
   });
 });

@@ -67,6 +67,25 @@ export function localOpToServerOp(op: LocalOp): ServerChangeSetOp {
   return { op: 'remove', id: op.targetRuleId };
 }
 
+/**
+ * The first reason `ops` cannot be saved, or `null` when they all can.
+ *
+ * A rule with a blank description pattern matches nothing and is rejected by
+ * the contract, so it is caught while the operator is still in the editor
+ * rather than at commit time.
+ */
+export function findLocalOpProblem(ops: LocalOp[]): string | null {
+  for (const op of ops) {
+    if (op.kind === 'add' && op.data.descriptionPattern.trim() === '') {
+      return 'A new rule needs a description pattern.';
+    }
+    if (op.kind === 'edit' && op.data.descriptionPattern?.trim() === '') {
+      return "A rule's description pattern cannot be emptied.";
+    }
+  }
+  return null;
+}
+
 export function localOpsToChangeSet(
   ops: LocalOp[],
   extras?: { source?: string; reason?: string }
