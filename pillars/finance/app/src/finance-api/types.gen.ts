@@ -3063,7 +3063,6 @@ export type CorrectionsFindMatchData = {
   body?: {
     accountId?: string | null;
     description: string;
-    minConfidence: number;
   };
   path?: never;
   query?: never;
@@ -3432,7 +3431,6 @@ export type CorrectionsPreviewChangeSetData = {
       reason?: string;
       source?: string;
     };
-    minConfidence: number;
     pendingChangeSets?: Array<{
       changeSet: {
         ops: Array<
@@ -3653,7 +3651,6 @@ export type CorrectionsProposeChangeSetData = {
    */
   body?: {
     maxPreviewItems: number;
-    minConfidence: number;
     signal: {
       descriptionPattern: string;
       entityId?: string | null;
@@ -5062,7 +5059,6 @@ export type ImportsApplyChangeSetAndReevaluateData = {
       reason?: string;
       source?: string;
     };
-    minConfidence: number;
     sessionId: string;
   };
   path?: never;
@@ -6140,7 +6136,6 @@ export type ImportsReevaluateWithPendingRulesData = {
    * Body
    */
   body?: {
-    minConfidence: number;
     pendingChangeSets: Array<{
       changeSet: {
         ops: Array<

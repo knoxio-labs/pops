@@ -116,7 +116,6 @@ export const FindMatchBody = z.object({
    * global-only would under-report which rules the string hits (POPS-2593).
    */
   accountId: z.string().min(1).nullable().optional(),
-  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
 });
 
 export const FindMatchResult = z.object({
@@ -196,7 +195,6 @@ const PreviewChangeSetTransactionSchema = z.object({
 export const PreviewChangeSetBody = z.object({
   changeSet: ChangeSetSchema,
   transactions: z.array(PreviewChangeSetTransactionSchema).min(1).max(2000),
-  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
   pendingChangeSets: z.array(PendingChangeSetSchema).max(200).optional(),
 });
 

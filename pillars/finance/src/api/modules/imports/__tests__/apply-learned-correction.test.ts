@@ -95,7 +95,6 @@ describe('applyLearnedCorrection — no match', () => {
   it('returns null when no rule matches the description (in-memory rules)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'WOOLWORTHS 1234' }),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule()],
     });
@@ -106,7 +105,6 @@ describe('applyLearnedCorrection — no match', () => {
     seedRule(rule());
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'WOOLWORTHS 1234' }),
-      minConfidence: 0.7,
       knownTags: [],
     });
     expect(result).toBeNull();
@@ -117,7 +115,6 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
   it('matches high confidence to "matched", carrying entity + ruleProvenance', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ confidence: 0.95 })],
     });
@@ -152,7 +149,6 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
   it('matches a low-confidence entity rule to "matched" too — confidence is not a gate (ADR-053)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ confidence: 0.75 })],
     });
@@ -166,12 +162,10 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
 
     const fromDb = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
     });
     const fromRules = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ confidence: 0.95 })],
     });
@@ -185,7 +179,6 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
     seedRule(rule({ isActive: false }));
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
     });
     expect(result).toBeNull();
@@ -194,27 +187,25 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
   it('ignores an inactive rule supplied through the in-memory rules override', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ isActive: false })],
     });
     expect(result).toBeNull();
   });
 
-  it('ignores a sub-floor rule supplied through the in-memory rules override', () => {
+  it('matches a sub-floor rule too — no confidence floor (ADR-053)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ confidence: 0.69 })],
     });
-    expect(result).toBeNull();
+    expect(result?.bucket).toBe('matched');
+    expect(result?.processed.entity.entityId).toBe('ent-spotify');
   });
 
   it('picks the lower priority-number rule when multiple rules match (priority ASC, rank 0 wins)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({ id: 'rank-10', priority: 10, entityName: 'Rank Ten Co' }),
@@ -231,7 +222,6 @@ describe('applyLearnedCorrection — entity-less rules', () => {
   it('routes an entity-less purchase rule to "uncertain" regardless of confidence (a merchant is still required)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({ entityId: null, entityName: null, transactionType: 'purchase', confidence: 0.99 }),
@@ -246,7 +236,6 @@ describe('applyLearnedCorrection — entity-less rules', () => {
   it('routes a high-confidence entity-less transfer rule to "matched", setting transactionType', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({ entityId: null, entityName: null, transactionType: 'transfer', confidence: 0.95 }),
@@ -260,7 +249,6 @@ describe('applyLearnedCorrection — entity-less rules', () => {
   it('carries a new (post-#3607) taxonomy value through a high-confidence entity-less rule', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'AMAZON REFUND' }),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -280,7 +268,6 @@ describe('applyLearnedCorrection — entity-less rules', () => {
   it('matches a low-confidence entity-less transfer rule too — it names no merchant to resolve', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({ entityId: null, entityName: null, transactionType: 'transfer', confidence: 0.75 }),
@@ -293,7 +280,6 @@ describe('applyLearnedCorrection — entity-less rules', () => {
   it('returns null for a rule with neither an entity nor a transaction type (nothing to apply)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ entityId: null, entityName: null, transactionType: null })],
     });
@@ -316,7 +302,7 @@ describe('applyLearnedCorrection — usage telemetry gated by isPreview, not by 
   it('bumps timesApplied on a live DB fetch (rules omitted)', () => {
     seedRule(rule({ id: 'r-1' }));
 
-    applyLearnedCorrection(db, { transaction: transaction(), minConfidence: 0.7, knownTags: [] });
+    applyLearnedCorrection(db, { transaction: transaction(), knownTags: [] });
 
     expect(timesApplied('r-1')).toBe(1);
   });
@@ -327,7 +313,6 @@ describe('applyLearnedCorrection — usage telemetry gated by isPreview, not by 
 
     applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: fetchedOnce,
     });
@@ -341,7 +326,6 @@ describe('applyLearnedCorrection — usage telemetry gated by isPreview, not by 
 
     applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: previewRules,
       isPreview: true,
@@ -358,7 +342,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it("applies an entity-bearing rule's own transactionType instead of dropping it", () => {
     const result = applyLearnedCorrection(db, {
       transaction: cardPayment(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -377,7 +360,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it('falls back to the descriptor when an entity-bearing rule carries no type', () => {
     const result = applyLearnedCorrection(db, {
       transaction: cardPayment(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -395,7 +377,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it('carries the derived fee: value when the descriptor types the row a fee', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -418,7 +399,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it("keeps exactly one fee: value when the rule's own tags name a different one", () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -438,7 +418,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it('lets an explicit rule type override the descriptor, entity-bearing or not', () => {
     const withEntity = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'INTEREST CHARGED ON PURCHASES', amount: -256.49 }),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [
         rule({
@@ -457,7 +436,6 @@ describe('applyLearnedCorrection — the rule and the descriptor both get a say 
   it('leaves an ordinary merchant untyped, as it was before', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
-      minConfidence: 0.7,
       knownTags: [],
       rules: [rule({ transactionType: null })],
     });
@@ -510,7 +488,6 @@ describe('applyLearnedCorrection — account-scoped rules', () => {
   function applyOn(accountId: string, rules?: CorrectionRow[]) {
     return applyLearnedCorrection(db, {
       transaction: transaction({ description: 'LATE FEE', accountId }),
-      minConfidence: 0.7,
       knownTags: [],
       ...(rules ? { rules } : {}),
     });
@@ -591,7 +568,6 @@ describe('applyLearnedCorrection — account-scoped rules', () => {
 
     const result = applyLearnedCorrection(db, {
       transaction: transaction({ description: 'LATE FEE' }),
-      minConfidence: 0.7,
       knownTags: [],
     });
 

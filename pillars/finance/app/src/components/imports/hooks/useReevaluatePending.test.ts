@@ -124,7 +124,6 @@ describe('useReevaluatePending', () => {
     expect(reevaluateMock).toHaveBeenCalledExactlyOnceWith({
       body: {
         sessionId: 'live-session',
-        minConfidence: 0.7,
         pendingChangeSets: restPendingChangeSets,
       },
     });
@@ -149,7 +148,6 @@ describe('useReevaluatePending', () => {
       expect(reevaluateMock).toHaveBeenLastCalledWith({
         body: {
           sessionId: 'fresh-id',
-          minConfidence: 0.7,
           pendingChangeSets: restPendingChangeSets,
         },
       });

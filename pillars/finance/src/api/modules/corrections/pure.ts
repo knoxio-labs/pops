@@ -15,7 +15,6 @@
 import {
   applyChangeSetToRules as applyChangeSetToRulesPure,
   compareRuleScope,
-  MIN_MATCH_CONFIDENCE,
   ruleAppliesToAccount,
 } from '../../../contract/corrections-pure.js';
 import { transactionCorrectionsService } from '../../../db/index.js';
@@ -45,9 +44,10 @@ export function ruleMatchesDescription(
 /**
  * Return ALL matching correction rules, account-scoped rules first, then in
  * priority order (priority ASC, id ASC). The first entry is the winner;
- * subsequent entries are overridden alternatives. Inactive rules, rules below
- * `minConfidence`, and rules scoped to a different account are filtered out
- * first.
+ * subsequent entries are overridden alternatives. Inactive rules and rules
+ * scoped to a different account are filtered out first. No confidence floor:
+ * a stored rule is a matching candidate on activity, scope and pattern alone
+ * (ADR-053) — confidence is audit data, never a gate.
  *
  * `accountId` is the transaction's `accounts.id`, or `null` for a caller with
  * no account in hand (a description-only probe), which sees every rule. Scope
@@ -57,24 +57,22 @@ export function ruleMatchesDescription(
  * a defaulted one: either answer would be silently wrong for half the callers,
  * so each one has to state which it is.
  *
- * Filtering (active + confidence + scope + pattern match) runs before the
- * sort, so only the matched subset — usually zero or one row — is sorted, not
- * the full rule set. That keeps a per-transaction import loop that threads one
- * fetched-once rule array through every call at O(rules) per row instead of
+ * Filtering (active + scope + pattern match) runs before the sort, so only
+ * the matched subset — usually zero or one row — is sorted, not the full rule
+ * set. That keeps a per-transaction import loop that threads one fetched-once
+ * rule array through every call at O(rules) per row instead of
  * O(rules·log rules) (CF040/#3664).
  */
 export function findAllMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
-  accountId: string | null,
-  minConfidence: number = MIN_MATCH_CONFIDENCE
+  accountId: string | null
 ): CorrectionRow[] {
   const matchable = describeForMatching(description);
   return rules
     .filter(
       (rule) =>
         rule.isActive &&
-        rule.confidence >= minConfidence &&
         ruleAppliesToAccount(rule, accountId) &&
         ruleMatchesDescription(rule, matchable)
     )
@@ -96,10 +94,9 @@ export function findAllMatchingCorrectionFromRules(
 export function findMatchingCorrectionFromRules(
   description: string,
   rules: CorrectionRow[],
-  accountId: string | null,
-  minConfidence: number = MIN_MATCH_CONFIDENCE
+  accountId: string | null
 ): CorrectionMatchResult | null {
-  const first = findAllMatchingCorrectionFromRules(description, rules, accountId, minConfidence)[0];
+  const first = findAllMatchingCorrectionFromRules(description, rules, accountId)[0];
   return first ? classifyCorrectionMatch(first) : null;
 }
 

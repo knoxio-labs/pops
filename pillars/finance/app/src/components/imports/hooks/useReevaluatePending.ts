@@ -35,7 +35,6 @@ async function requestReevaluate(sessionId: string): Promise<ReevaluateOutcome> 
     await importsReevaluateWithPendingRules({
       body: {
         sessionId,
-        minConfidence: 0.7,
         pendingChangeSets: pendingChangeSets.map((pcs) => ({
           changeSet: toRestCorrectionChangeSet(pcs.changeSet),
         })),

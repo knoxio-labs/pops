@@ -13,7 +13,6 @@ import type { PreviewTransactionEntry } from '../types';
 
 export interface RuleManagerInputs {
   open: boolean;
-  minConfidence: number;
   previewTransactions: PreviewTransactionEntry[];
 }
 
@@ -36,7 +35,7 @@ function useDialogState(open: boolean) {
 }
 
 export function useRuleManagerHooks(props: RuleManagerInputs) {
-  const { open, minConfidence, previewTransactions } = props;
+  const { open, previewTransactions } = props;
   const pendingChangeSetsRaw = useImportStore((s) => s.pendingChangeSets);
   const pendingChangeSets = useMemo(
     () => toRestPendingChangeSets(pendingChangeSetsRaw),
@@ -55,7 +54,6 @@ export function useRuleManagerHooks(props: RuleManagerInputs) {
       open,
       localOps: localOpsHook.localOps,
       selectedOp: localOpsHook.selectedOp,
-      minConfidence,
       previewTransactions,
       dbTransactions: dbTxnsQuery.data?.data ?? [],
       pendingChangeSets,

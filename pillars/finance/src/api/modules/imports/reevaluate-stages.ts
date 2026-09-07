@@ -27,7 +27,6 @@ export interface ReevaluateContext {
   rules: CorrectionRow[];
   /** True when `rules` is merged with un-persisted pending ChangeSets — gates usage telemetry, see `applyLearnedCorrection`. */
   isPreview: boolean;
-  minConfidence: number;
   knownTags: string[];
   entityLookup: EntityMaps['entityLookup'];
   aliases: EntityMaps['aliasMap'];
@@ -57,7 +56,6 @@ function tryApplyCorrectionStage(
 ): StageResult {
   const correctionApplied = applyLearnedCorrection(ctx.db, {
     transaction: item.tx,
-    minConfidence: ctx.minConfidence,
     knownTags: ctx.knownTags,
     rules: ctx.rules,
     isPreview: ctx.isPreview,
@@ -186,8 +184,7 @@ export function reapplyCorrectionToMatched(
   const winner = findAllMatchingCorrectionFromRules(
     tx.description,
     ctx.rules,
-    tx.accountId ?? null,
-    ctx.minConfidence
+    tx.accountId ?? null
   )[0];
   if (!winner || correctionOutcomeBucket(winner) === null) {
     buckets.matched.push(tx);
@@ -196,7 +193,6 @@ export function reapplyCorrectionToMatched(
 
   const correctionApplied = applyLearnedCorrection(ctx.db, {
     transaction: tx,
-    minConfidence: ctx.minConfidence,
     knownTags: ctx.knownTags,
     rules: ctx.rules,
     isPreview: ctx.isPreview,

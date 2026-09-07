@@ -80,7 +80,6 @@ function describeRationale(
 
 export interface ProposeArgs {
   signal: CorrectionSignal;
-  minConfidence: number;
   maxPreviewItems: number;
 }
 
@@ -118,7 +117,6 @@ export async function proposeChangeSetFromCorrectionSignal(
     changeSet,
     matchType,
     normalizedPattern,
-    minConfidence: args.minConfidence,
     maxPreviewItems: args.maxPreviewItems,
   });
 

@@ -37,7 +37,6 @@ interface RunPreviewArgs {
   ops: LocalOp[];
   sessionTxns: PreviewTransactionEntry[];
   dbTxns: Array<{ checksum?: string; description: string }>;
-  minConfidence: number;
   pendingChangeSets: Array<{ changeSet: ServerChangeSet }>;
   previewMutateAsync: PreviewMutateAsync;
   setSession: (p: PreviewChangeSetOutput | null) => void;
@@ -57,7 +56,7 @@ export interface RunPreviewResult {
 
 /** Schedules a preview API call and applies the result. Returns a cancel handle and whether the txn list was empty. */
 export function runPreview(args: RunPreviewArgs): RunPreviewResult {
-  const { ops, sessionTxns, dbTxns, minConfidence, pendingChangeSets, previewMutateAsync } = args;
+  const { ops, sessionTxns, dbTxns, pendingChangeSets, previewMutateAsync } = args;
   const { setSession, setDb, setError, setTruncated, shouldApply, onSuccess } = args;
   const changeSet = localOpsToChangeSet(ops);
   if (!changeSet) return { cancel: () => undefined, empty: true };
@@ -78,7 +77,6 @@ export function runPreview(args: RunPreviewArgs): RunPreviewResult {
   previewMutateAsync({
     changeSet,
     transactions: allTxns,
-    minConfidence,
     pendingChangeSets:
       pendingChangeSets.length > 0
         ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))

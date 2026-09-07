@@ -6,13 +6,9 @@
  * surface through the `transactionCorrectionsService` namespace on the
  * package barrel and the in-tree consumer treats them as one slice.
  */
-import { and, asc, desc, eq, gte, isNull, or, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or, type SQL } from 'drizzle-orm';
 
-import {
-  compareRuleScope,
-  MIN_MATCH_CONFIDENCE,
-  ruleAppliesToAccount,
-} from '../../contract/corrections-pure.js';
+import { compareRuleScope, ruleAppliesToAccount } from '../../contract/corrections-pure.js';
 import { centsToDollars } from '../../money.js';
 import { transactionCorrections, transactions } from '../schema.js';
 import {
@@ -64,28 +60,21 @@ function accountScopeFilter(accountId: string | null): SQL | undefined {
  * account-scoped rule beats a global one on the same description whatever
  * their priorities — see {@link compareRuleScope} (POPS-2593).
  *
- * Filters out rules below `minConfidence` and inactive rules before the
- * in-memory pattern test, mirroring the in-tree
- * `findAllMatchingCorrectionFromDB` semantics.
+ * Filters out inactive rules before the in-memory pattern test, mirroring the
+ * in-tree `findAllMatchingCorrectionFromDB` semantics. No confidence floor
+ * (ADR-053): an active, in-scope, pattern-matching rule is a candidate.
  */
 export function findAllMatchingTransactionCorrectionsFromDb(
   db: FinanceDb,
   description: string,
-  accountId: string | null,
-  minConfidence: number = MIN_MATCH_CONFIDENCE
+  accountId: string | null
 ): TransactionCorrectionRow[] {
   const matchable = describeForMatching(description);
 
   const candidates = db
     .select()
     .from(transactionCorrections)
-    .where(
-      and(
-        eq(transactionCorrections.isActive, true),
-        gte(transactionCorrections.confidence, minConfidence),
-        accountScopeFilter(accountId)
-      )
-    )
+    .where(and(eq(transactionCorrections.isActive, true), accountScopeFilter(accountId)))
     .orderBy(asc(transactionCorrections.priority), asc(transactionCorrections.id))
     .all();
 
@@ -95,7 +84,7 @@ export function findAllMatchingTransactionCorrectionsFromDb(
 }
 
 /**
- * Fetch every active correction at or above `minConfidence`, unordered.
+ * Fetch every active correction, unordered. No confidence floor (ADR-053).
  *
  * This is the query {@link findAllMatchingTransactionCorrections} used to run
  * once per description. A caller matching many descriptions in one run (the
@@ -105,18 +94,12 @@ export function findAllMatchingTransactionCorrectionsFromDb(
  * of re-issuing the same SELECT per call (POPS-2634).
  */
 export function listActiveTransactionCorrectionsForMatching(
-  db: FinanceDb,
-  minConfidence: number = MIN_MATCH_CONFIDENCE
+  db: FinanceDb
 ): TransactionCorrectionRow[] {
   return db
     .select()
     .from(transactionCorrections)
-    .where(
-      and(
-        eq(transactionCorrections.isActive, true),
-        gte(transactionCorrections.confidence, minConfidence)
-      )
-    )
+    .where(eq(transactionCorrections.isActive, true))
     .all();
 }
 
@@ -164,21 +147,18 @@ export function findAllMatchingTransactionCorrectionsFromRows(
 }
 
 /**
- * Return every active correction at or above `minConfidence` whose pattern
- * matches `description` and whose account scope admits `accountId`,
- * account-scoped rules first, then grouped by `matchType` in
- * `[exact, contains, regex]` order, each group sorted by
- * `confidence DESC, timesApplied DESC, id ASC`.
+ * Return every active correction whose pattern matches `description` and
+ * whose account scope admits `accountId`, account-scoped rules first, then
+ * grouped by `matchType` in `[exact, contains, regex]` order, each group
+ * sorted by `confidence DESC, timesApplied DESC, id ASC` (a tiebreak among
+ * equally-eligible rules, not a floor — ADR-053; no candidate is excluded on
+ * confidence).
  *
  * Used by callers that need to surface all matches (not just the winning
  * rule) rather than a single classification verdict — today, the
- * tag-suggester's correction pass. The `minConfidence` floor defaults to
- * {@link MIN_MATCH_CONFIDENCE}, matching
- * {@link findAllMatchingTransactionCorrectionsFromDb}: a rule the engine
- * judges too weak to classify a transaction must not be trusted to tag it
- * either (POPS-2601). Pass `0` to see sub-floor matches — a surface that
- * deliberately lists demoted rules, or a test isolating the pattern
- * predicate.
+ * tag-suggester's correction pass: a rule is trusted to tag a transaction on
+ * the same terms it is trusted to classify one, because nothing about
+ * confidence distinguishes the two anymore.
  *
  * The pattern test runs in JS over a single candidate fetch rather than in
  * SQL. The three per-match-type SQL queries this replaces each had their own
@@ -196,11 +176,10 @@ export function findAllMatchingTransactionCorrectionsFromRows(
 export function findAllMatchingTransactionCorrections(
   db: FinanceDb,
   description: string,
-  accountId: string | null,
-  minConfidence: number = MIN_MATCH_CONFIDENCE
+  accountId: string | null
 ): TransactionCorrectionRow[] {
   return findAllMatchingTransactionCorrectionsFromRows(
-    listActiveTransactionCorrectionsForMatching(db, minConfidence),
+    listActiveTransactionCorrectionsForMatching(db),
     description,
     accountId
   );

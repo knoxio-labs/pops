@@ -83,7 +83,6 @@ describe('computeChangeSetImpact — counting after truncation (POPS-2699)', () 
       changeSet: addOpChangeSet('COFFEE', 'contains'),
       matchType: 'contains',
       normalizedPattern: 'COFFEE',
-      minConfidence: 0,
       maxPreviewItems: 3,
     });
 
@@ -99,7 +98,6 @@ describe('computeChangeSetImpact — counting after truncation (POPS-2699)', () 
       changeSet: addOpChangeSet('COFFEE', 'contains'),
       matchType: 'contains',
       normalizedPattern: 'COFFEE',
-      minConfidence: 0,
       maxPreviewItems: 200,
     });
 
@@ -124,7 +122,6 @@ describe('computeChangeSetImpact — regex candidate predicate (POPS-2699)', () 
       changeSet: addOpChangeSet(pattern, 'regex'),
       matchType: 'regex',
       normalizedPattern: pattern,
-      minConfidence: 0,
       maxPreviewItems: 2,
     });
 
@@ -141,7 +138,6 @@ describe('computeChangeSetImpact — regex candidate predicate (POPS-2699)', () 
       changeSet: addOpChangeSet('^UBER TRIP \\d+$', 'regex'),
       matchType: 'regex',
       normalizedPattern: '^UBER TRIP \\d+$',
-      minConfidence: 0,
       maxPreviewItems: 200,
     });
 
