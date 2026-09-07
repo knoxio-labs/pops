@@ -26,7 +26,6 @@ function FiltersSection({ model }: { model: Model }) {
     <TagRulesFilters
       matchType={model.matchType}
       isActive={model.isActive}
-      minConfidence={model.minConfidence}
       onMatchTypeChange={(value) => {
         model.setMatchType(value);
         model.resetPage();
@@ -35,14 +34,9 @@ function FiltersSection({ model }: { model: Model }) {
         model.setIsActive(value);
         model.resetPage();
       }}
-      onMinConfidenceChange={(value) => {
-        model.setMinConfidence(value);
-        model.resetPage();
-      }}
       onClear={() => {
         model.setMatchType('');
         model.setIsActive('');
-        model.setMinConfidence('');
         model.resetPage();
       }}
     />
