@@ -57,6 +57,46 @@ describe('HeaderBadges — Auto-matched badge', () => {
     expect(screen.getByText('Rule matched')).toBeInTheDocument();
     expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
   });
+
+  it('reports the rule confidence in the tooltip when the rule has one', () => {
+    render(
+      <HeaderBadges
+        transaction={makeTx('learned', {
+          ruleProvenance: {
+            source: 'correction',
+            ruleId: 'r1',
+            pattern: 'WOOLWORTHS',
+            matchType: 'contains',
+            confidence: 0.8,
+          },
+        })}
+      />
+    );
+    const badge = screen.getByText('Rule matched');
+    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute(
+      'title',
+      expect.stringContaining('Confidence: 80%')
+    );
+  });
+
+  it('omits the confidence line for a hand-written rule that was never assessed (ADR-053/POPS-3130)', () => {
+    render(
+      <HeaderBadges
+        transaction={makeTx('learned', {
+          ruleProvenance: {
+            source: 'correction',
+            ruleId: 'r1',
+            pattern: 'WOOLWORTHS',
+            matchType: 'contains',
+            confidence: null,
+          },
+        })}
+      />
+    );
+    const badge = screen.getByText('Rule matched');
+    const title = badge.closest('[data-slot="badge"]')?.getAttribute('title');
+    expect(title).not.toContain('Confidence');
+  });
 });
 
 describe('HeaderBadges — AI-matched badge (CF037/#3655)', () => {

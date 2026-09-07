@@ -51,7 +51,9 @@ function ruleMatchedTitle(ruleProvenance: ProcessedTransaction['ruleProvenance']
     'Rule matched',
     `Pattern: ${ruleProvenance.pattern}`,
     `Match type: ${ruleProvenance.matchType}`,
-    `Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`,
+    ...(ruleProvenance.confidence !== null
+      ? [`Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`]
+      : []),
   ].join('\n');
 }
 
@@ -144,7 +146,8 @@ function OverriddenRulesPopover({ rules }: { rules: MatchedRule[] }) {
                 </Badge>
               </div>
               <div className="text-muted-foreground">
-                Priority: {rule.priority} • {Math.round(rule.confidence * 100)}%
+                Priority: {rule.priority}
+                {rule.confidence !== null && ` • ${Math.round(rule.confidence * 100)}%`}
                 {rule.entityName && ` • ${rule.entityName}`}
               </div>
             </li>

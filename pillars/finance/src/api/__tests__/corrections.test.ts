@@ -73,7 +73,7 @@ describe('corrections — createOrUpdate, get & list', () => {
       entityName: 'Woolworths',
       tags: ['groceries'],
       isActive: true,
-      confidence: 0.7,
+      confidence: null,
       timesApplied: 0,
     });
 
@@ -86,7 +86,7 @@ describe('corrections — createOrUpdate, get & list', () => {
       tags: ['groceries'],
     });
     expect(reinforced.data.id).not.toBe(created.data.id);
-    expect(reinforced.data.confidence).toBeCloseTo(0.7, 5);
+    expect(reinforced.data.confidence).toBeNull();
     expect(reinforced.data.timesApplied).toBe(0);
     expect(reinforced.data.lastUsedAt).toBeNull();
 
@@ -160,11 +160,15 @@ describe('corrections — update, delete & adjustConfidence', () => {
       matchType: 'contains',
     });
 
+    // A hand-written rule starts at confidence `null` — never assessed
+    // (ADR-053/POPS-3130) — so the first explicit adjustment seeds from a
+    // neutral 0.5 base rather than propagating `null` forward: unlike a
+    // system default, this one is the user's own assessment.
     const bumped = await client().corrections.adjustConfidence(created.data.id, 0.2);
     expect(bumped.message).toBe('Confidence adjusted');
-    expect((await client().corrections.get(created.data.id)).data.confidence).toBeCloseTo(0.9, 5);
+    expect((await client().corrections.get(created.data.id)).data.confidence).toBeCloseTo(0.7, 5);
 
-    // 0.9 - 0.7 = 0.2 < 0.3 floor → row is deleted by the GC path.
+    // 0.7 - 0.7 = 0.0 < 0.3 floor → row is deleted by the GC path.
     await client().corrections.adjustConfidence(created.data.id, -0.7);
     await expect(client().corrections.get(created.data.id)).rejects.toMatchObject({ status: 404 });
   });

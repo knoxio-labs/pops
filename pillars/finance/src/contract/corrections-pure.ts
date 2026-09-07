@@ -9,7 +9,7 @@
  * re-exports {@link applyChangeSetToRules} (injecting its own `NotFoundError`)
  * rather than re-implementing it.
  */
-import { MIN_MATCH_CONFIDENCE, type TransactionType } from './corrections-constants.js';
+import { type TransactionType } from './corrections-constants.js';
 import { normalizePatternForStorage } from './pattern-match.js';
 
 import type { ChangeSet, ChangeSetOp } from './rest-corrections-schemas.js';
@@ -35,7 +35,7 @@ export interface Correction {
   transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
-  confidence: number;
+  confidence: number | null;
   timesApplied: number;
   createdAt: string;
   lastUsedAt: string | null;
@@ -58,7 +58,7 @@ export interface CorrectionRow {
   tags: string;
   transactionType: TransactionType | null;
   isActive: boolean;
-  confidence: number;
+  confidence: number | null;
   priority: number;
   timesApplied: number;
   createdAt: string;
@@ -149,7 +149,7 @@ function makeAddedRow(op: Extract<ChangeSetOp, { op: 'add' }>, tempId: string): 
     tags: JSON.stringify(op.data.tags ?? []),
     transactionType: op.data.transactionType ?? null,
     isActive: op.data.isActive ?? true,
-    confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+    confidence: op.data.confidence ?? null,
     priority: op.data.priority ?? 0,
     timesApplied: 0,
     createdAt: new Date().toISOString(),

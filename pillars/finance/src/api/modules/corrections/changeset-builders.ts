@@ -8,9 +8,9 @@ import { type CorrectionRow } from './types.js';
 import type { ChangeSet } from '../../../contract/rest-corrections.js';
 
 /**
- * Confidence assigned to a rule created/refreshed via a user-approved proposal.
- * Stays above `MIN_MATCH_CONFIDENCE` (see `contract/corrections-pure.ts`) so
- * the rule fires.
+ * Confidence recorded (audit-only, ADR-053) on a rule created/refreshed via a
+ * user-approved AI proposal — the model's own assessment at the moment a
+ * human accepted it, not a threshold anything downstream reads.
  */
 export const PROPOSAL_APPROVED_CONFIDENCE = 0.95;
 
@@ -36,7 +36,7 @@ function changeSetSource(hasFeedback: boolean): string {
 }
 
 export function buildEditChangeSet(existing: CorrectionRow, args: BuildArgs): ChangeSet {
-  const promotedConfidence = Math.max(existing.confidence, PROPOSAL_APPROVED_CONFIDENCE);
+  const promotedConfidence = Math.max(existing.confidence ?? 0, PROPOSAL_APPROVED_CONFIDENCE);
   return {
     source: changeSetSource(args.hasFeedback),
     reason: describeReason('update', args),

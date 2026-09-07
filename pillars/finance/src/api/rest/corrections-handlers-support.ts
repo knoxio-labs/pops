@@ -62,7 +62,7 @@ export interface Correction {
   transactionType: TransactionCorrectionTransactionType | null;
   isActive: boolean;
   priority: number;
-  confidence: number;
+  confidence: number | null;
   timesApplied: number;
   createdAt: string;
   lastUsedAt: string | null;

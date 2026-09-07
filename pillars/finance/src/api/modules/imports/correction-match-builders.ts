@@ -90,7 +90,10 @@ export function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransactio
     ...transaction,
     location: correction.location ?? transaction.location,
     transactionType: applied.type,
-    entity: { matchType: 'learned', confidence: correction.confidence },
+    entity: {
+      matchType: 'learned',
+      ...(correction.confidence !== null ? { confidence: correction.confidence } : {}),
+    },
     ruleProvenance: {
       source: 'correction',
       ruleId: correction.id,
@@ -139,7 +142,7 @@ export function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
       entityId,
       entityName: correction.entityName ?? 'Unknown',
       matchType: 'learned',
-      confidence: correction.confidence,
+      ...(correction.confidence !== null ? { confidence: correction.confidence } : {}),
     },
     ruleProvenance: {
       source: 'correction',

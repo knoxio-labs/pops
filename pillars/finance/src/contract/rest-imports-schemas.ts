@@ -88,14 +88,16 @@ export const RuleProvenanceSchema = z.object({
   ruleId: z.string().min(1),
   pattern: z.string().min(1),
   matchType: z.enum(['exact', 'contains', 'regex']),
-  confidence: z.number().min(0).max(1),
+  // Audit-only (ADR-053/POPS-3130): `null` on a hand-written rule that was
+  // never assessed — not a matching or routing signal either way.
+  confidence: z.number().min(0).max(1).nullable(),
 });
 
 export const MatchedRuleSchema = z.object({
   ruleId: z.string().min(1),
   pattern: z.string().min(1),
   matchType: z.enum(['exact', 'contains', 'regex']),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).nullable(),
   priority: z.number(),
   entityId: z.string().nullable().optional(),
   entityName: z.string().nullable().optional(),

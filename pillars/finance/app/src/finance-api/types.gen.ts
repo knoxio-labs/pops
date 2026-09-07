@@ -2714,7 +2714,7 @@ export type CorrectionsListResponses = {
   200: {
     data: Array<{
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -2817,7 +2817,7 @@ export type CorrectionsCreateOrUpdateResponses = {
   200: {
     data: {
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -2919,7 +2919,7 @@ export type CorrectionsApplyChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -2945,7 +2945,7 @@ export type CorrectionsApplyChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3024,7 +3024,7 @@ export type CorrectionsApplyChangeSetResponses = {
   200: {
     data: Array<{
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -3106,7 +3106,7 @@ export type CorrectionsFindMatchResponses = {
   200: {
     data: {
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -3216,7 +3216,7 @@ export type CorrectionsListMergedData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -3242,7 +3242,7 @@ export type CorrectionsListMergedData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern?: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -3322,7 +3322,7 @@ export type CorrectionsListMergedResponses = {
   200: {
     data: Array<{
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -3369,7 +3369,7 @@ export type CorrectionsPreviewChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3395,7 +3395,7 @@ export type CorrectionsPreviewChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3437,7 +3437,7 @@ export type CorrectionsPreviewChangeSetData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -3463,7 +3463,7 @@ export type CorrectionsPreviewChangeSetData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern?: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -3716,7 +3716,7 @@ export type CorrectionsProposeChangeSetResponses = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3742,7 +3742,7 @@ export type CorrectionsProposeChangeSetResponses = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3831,7 +3831,7 @@ export type CorrectionsProposeChangeSetResponses = {
     targetRules: {
       [key: string]: {
         accountId: string | null;
-        confidence: number;
+        confidence: number | null;
         createdAt: string;
         descriptionPattern: string;
         entityId: string | null;
@@ -3873,7 +3873,7 @@ export type CorrectionsRejectChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -3899,7 +3899,7 @@ export type CorrectionsRejectChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -4020,7 +4020,7 @@ export type CorrectionsReviseChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -4046,7 +4046,7 @@ export type CorrectionsReviseChangeSetData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -4152,7 +4152,7 @@ export type CorrectionsReviseChangeSetResponses = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -4178,7 +4178,7 @@ export type CorrectionsReviseChangeSetResponses = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -4218,7 +4218,7 @@ export type CorrectionsReviseChangeSetResponses = {
     targetRules: {
       [key: string]: {
         accountId: string | null;
-        confidence: number;
+        confidence: number | null;
         createdAt: string;
         descriptionPattern: string;
         entityId: string | null;
@@ -4418,7 +4418,7 @@ export type CorrectionsGetResponses = {
   200: {
     data: {
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -4454,7 +4454,7 @@ export type CorrectionsUpdateData = {
    */
   body?: {
     accountId?: string | null;
-    confidence?: number;
+    confidence?: number | null;
     descriptionPattern?: string;
     entityId?: string | null;
     entityName?: string | null;
@@ -4518,7 +4518,7 @@ export type CorrectionsUpdateResponses = {
   200: {
     data: {
       accountId: string | null;
-      confidence: number;
+      confidence: number | null;
       createdAt: string;
       descriptionPattern: string;
       entityId: string | null;
@@ -4997,7 +4997,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -5023,7 +5023,7 @@ export type ImportsApplyChangeSetAndReevaluateData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -5150,7 +5150,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5161,7 +5161,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -5217,7 +5217,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5228,7 +5228,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -5284,7 +5284,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5295,7 +5295,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -5351,7 +5351,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5362,7 +5362,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -5410,7 +5410,7 @@ export type ImportsCommitImportData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -5436,7 +5436,7 @@ export type ImportsCommitImportData = {
         | {
             data: {
               accountId?: string | null;
-              confidence?: number;
+              confidence?: number | null;
               descriptionPattern?: string;
               entityId?: string | null;
               entityName?: string | null;
@@ -5877,7 +5877,7 @@ export type ImportsGetImportProgressResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5888,7 +5888,7 @@ export type ImportsGetImportProgressResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -5944,7 +5944,7 @@ export type ImportsGetImportProgressResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -5955,7 +5955,7 @@ export type ImportsGetImportProgressResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6011,7 +6011,7 @@ export type ImportsGetImportProgressResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6022,7 +6022,7 @@ export type ImportsGetImportProgressResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6078,7 +6078,7 @@ export type ImportsGetImportProgressResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6089,7 +6089,7 @@ export type ImportsGetImportProgressResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6142,7 +6142,7 @@ export type ImportsReevaluateWithPendingRulesData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -6168,7 +6168,7 @@ export type ImportsReevaluateWithPendingRulesData = {
           | {
               data: {
                 accountId?: string | null;
-                confidence?: number;
+                confidence?: number | null;
                 descriptionPattern?: string;
                 entityId?: string | null;
                 entityName?: string | null;
@@ -6296,7 +6296,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6307,7 +6307,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6363,7 +6363,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6374,7 +6374,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6430,7 +6430,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6441,7 +6441,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;
@@ -6497,7 +6497,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         fxFeeCents?: number;
         location?: string;
         matchedRules?: Array<{
-          confidence: number;
+          confidence: number | null;
           entityId?: string | null;
           entityName?: string | null;
           matchType: 'exact' | 'contains' | 'regex';
@@ -6508,7 +6508,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
-          confidence: number;
+          confidence: number | null;
           matchType: 'exact' | 'contains' | 'regex';
           pattern: string;
           ruleId: string;

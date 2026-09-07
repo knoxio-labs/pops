@@ -91,6 +91,27 @@ describe('findMatchingTagRules — priority ordering', () => {
     const rows = findMatchingTagRules(db, 'UBER EATS SYDNEY', null);
     expect(rows.map((r) => r.id)).toEqual([high.id, low.id]);
   });
+
+  it('breaks a same-priority tie by id, never by confidence (ADR-053/POPS-3130)', () => {
+    const highConfidence = transactionTagRulesService.createTransactionTagRule(db, {
+      descriptionPattern: 'UBER',
+      matchType: 'contains',
+      tags: ['Rideshare'],
+      priority: 0,
+      confidence: 0.95,
+    });
+    const lowConfidence = transactionTagRulesService.createTransactionTagRule(db, {
+      descriptionPattern: 'UBER EATS',
+      matchType: 'contains',
+      tags: ['Eat Out'],
+      priority: 0,
+      confidence: 0.1,
+    });
+
+    const rows = findMatchingTagRules(db, 'UBER EATS SYDNEY', null);
+    const byId = [highConfidence.id, lowConfidence.id].toSorted();
+    expect(rows.map((r) => r.id)).toEqual(byId);
+  });
 });
 
 describe('findMatchingTagRules — includes the row id', () => {

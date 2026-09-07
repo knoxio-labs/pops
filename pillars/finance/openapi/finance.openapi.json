@@ -7436,6 +7436,7 @@
                             "type": "string"
                           },
                           "confidence": {
+                            "nullable": true,
                             "type": "number"
                           },
                           "createdAt": {
@@ -7706,6 +7707,7 @@
                           "type": "string"
                         },
                         "confidence": {
+                          "nullable": true,
                           "type": "number"
                         },
                         "createdAt": {
@@ -8037,7 +8039,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -8117,7 +8120,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -8254,6 +8258,7 @@
                             "type": "string"
                           },
                           "confidence": {
+                            "nullable": true,
                             "type": "number"
                           },
                           "createdAt": {
@@ -8466,6 +8471,7 @@
                           "type": "string"
                         },
                         "confidence": {
+                          "nullable": true,
                           "type": "number"
                         },
                         "createdAt": {
@@ -8850,7 +8856,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -8930,7 +8937,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -9073,6 +9081,7 @@
                             "type": "string"
                           },
                           "confidence": {
+                            "nullable": true,
                             "type": "number"
                           },
                           "createdAt": {
@@ -9287,7 +9296,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -9367,7 +9377,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -9503,7 +9514,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -9583,7 +9595,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -10206,7 +10219,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -10286,7 +10300,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -10576,6 +10591,7 @@
                             "type": "string"
                           },
                           "confidence": {
+                            "nullable": true,
                             "type": "number"
                           },
                           "createdAt": {
@@ -10771,7 +10787,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -10851,7 +10868,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -11184,7 +11202,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -11264,7 +11283,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -11482,7 +11502,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -11562,7 +11583,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -11687,6 +11709,7 @@
                             "type": "string"
                           },
                           "confidence": {
+                            "nullable": true,
                             "type": "number"
                           },
                           "createdAt": {
@@ -12174,6 +12197,7 @@
                           "type": "string"
                         },
                         "confidence": {
+                          "nullable": true,
                           "type": "number"
                         },
                         "createdAt": {
@@ -12362,7 +12386,8 @@
                   },
                   "confidence": {
                     "maximum": 1,
-                    "minimum": 0.7,
+                    "minimum": 0,
+                    "nullable": true,
                     "type": "number"
                   },
                   "descriptionPattern": {
@@ -12437,6 +12462,7 @@
                           "type": "string"
                         },
                         "confidence": {
+                          "nullable": true,
                           "type": "number"
                         },
                         "createdAt": {
@@ -13737,7 +13763,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -13817,7 +13844,8 @@
                                     },
                                     "confidence": {
                                       "maximum": 1,
-                                      "minimum": 0.7,
+                                      "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "descriptionPattern": {
@@ -14090,6 +14118,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -14139,6 +14168,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -14326,6 +14356,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -14375,6 +14406,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -14562,6 +14594,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -14611,6 +14644,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -14798,6 +14832,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -14847,6 +14882,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -15101,7 +15137,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -15181,7 +15218,8 @@
                                       },
                                       "confidence": {
                                         "maximum": 1,
-                                        "minimum": 0.7,
+                                        "minimum": 0,
+                                        "nullable": true,
                                         "type": "number"
                                       },
                                       "descriptionPattern": {
@@ -16491,6 +16529,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -16540,6 +16579,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -16727,6 +16767,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -16776,6 +16817,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -16963,6 +17005,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -17012,6 +17055,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -17199,6 +17243,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -17248,6 +17293,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -17503,7 +17549,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -17583,7 +17630,8 @@
                                           },
                                           "confidence": {
                                             "maximum": 1,
-                                            "minimum": 0.7,
+                                            "minimum": 0,
+                                            "nullable": true,
                                             "type": "number"
                                           },
                                           "descriptionPattern": {
@@ -17862,6 +17910,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -17911,6 +17960,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -18098,6 +18148,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -18147,6 +18198,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -18334,6 +18386,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -18383,6 +18436,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {
@@ -18570,6 +18624,7 @@
                                     "confidence": {
                                       "maximum": 1,
                                       "minimum": 0,
+                                      "nullable": true,
                                       "type": "number"
                                     },
                                     "entityId": {
@@ -18619,6 +18674,7 @@
                                   "confidence": {
                                     "maximum": 1,
                                     "minimum": 0,
+                                    "nullable": true,
                                     "type": "number"
                                   },
                                   "matchType": {

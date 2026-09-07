@@ -8,10 +8,10 @@ import type { MatchType } from '../types';
  * about: the pattern + match type that drive matching, the tags applied
  * on a hit, the active toggle, and the priority used for ordering.
  *
- * Confidence is intentionally NOT exposed here — that field is governed
- * by the AI feedback loop (see `ConfidenceSlider` in the table). New
- * rules created manually rely on the API's createOrUpdate default of
- * 0.5 and edits to existing rules leave confidence untouched.
+ * Confidence is intentionally NOT exposed here — it is audit-only now
+ * (ADR-053/POPS-3130), adjustable only through `ConfidenceSlider` in the
+ * table. A rule created manually gets `confidence: null` (never assessed)
+ * and edits to existing rules leave it untouched.
  */
 export const RuleFormSchema = z.object({
   descriptionPattern: z.string().min(1, 'Pattern is required'),

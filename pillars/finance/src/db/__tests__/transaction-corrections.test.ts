@@ -49,7 +49,7 @@ CREATE TABLE transaction_corrections (
   tags text DEFAULT '[]' NOT NULL,
   transaction_type text,
   is_active integer DEFAULT 1 NOT NULL,
-  confidence real DEFAULT 0.5 NOT NULL,
+  confidence real,
   priority integer DEFAULT 0 NOT NULL,
   times_applied integer DEFAULT 0 NOT NULL,
   created_at text DEFAULT (datetime('now')) NOT NULL,
@@ -75,10 +75,10 @@ function freshDb(): TestHarness {
 }
 
 /**
- * `confidence` defaults to 0.5, mirroring the column default — no matcher
- * filters on it any more (ADR-053/POPS-3129), so this is just the schema's
- * invented default for a row this helper doesn't set confidence on
- * explicitly, not a value that changes what a matcher returns.
+ * `confidence` defaults to 0.5 here — a JS-side default for this helper's
+ * convenience, not a floor: nothing reads confidence to decide whether a rule
+ * matches or how review routes (ADR-053/POPS-3129/POPS-3130). A real create
+ * leaves it `null` (never assessed) unless the caller sets it explicitly.
  */
 function seedCorrection(
   raw: Database.Database,
@@ -171,7 +171,7 @@ describe('createOrUpdateTransactionCorrection — insert path', () => {
     expect(created.tags).toBe('[]');
     expect(created.transactionType).toBeNull();
     expect(created.isActive).toBe(true);
-    expect(created.confidence).toBe(0.7);
+    expect(created.confidence).toBeNull();
     expect(created.priority).toBe(0);
     expect(created.timesApplied).toBe(0);
     expect(created.lastUsedAt).toBeNull();
@@ -264,7 +264,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
       matchType: 'exact',
       entityName: 'Original',
     });
-    expect(first.confidence).toBe(0.7);
+    expect(first.confidence).toBeNull();
     expect(first.timesApplied).toBe(0);
     expect(first.lastUsedAt).toBeNull();
 
@@ -275,7 +275,9 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
     });
 
     expect(second.id).toBe(first.id);
-    expect(second.confidence).toBeCloseTo(0.8, 5);
+    // Reinforcement never mints a number a hand-written rule never had
+    // (ADR-053/POPS-3130): null stays null through the conflict path too.
+    expect(second.confidence).toBeNull();
     // Re-creating a correction is not a use of it: the usage counters stay put
     // and remain readable as evidence (POPS-2597).
     expect(second.timesApplied).toBe(0);
@@ -479,7 +481,7 @@ describe('listTransactionCorrections', () => {
       offset: 0,
     });
     expect(result.total).toBe(2);
-    expect(result.rows.every((r) => r.confidence >= 0.9)).toBe(true);
+    expect(result.rows.every((r) => (r.confidence ?? 0) >= 0.9)).toBe(true);
   });
 
   it('filters by matchType equality', () => {
@@ -889,34 +891,37 @@ describe('findAllMatchingTransactionCorrections', () => {
     expect(matches.map((m) => m.id)).toEqual(['exact-rule', 'contains-rule', 'regex-rule']);
   });
 
-  it('sorts within each group by confidence DESC then timesApplied DESC', () => {
+  it('sorts within each group by priority ASC then timesApplied DESC — never confidence (ADR-053/POPS-3130)', () => {
     seedCorrection(harness.raw, {
-      id: 'low-conf',
+      id: 'low-priority',
       descriptionPattern: 'COFFEE',
       matchType: 'contains',
-      confidence: 0.7,
+      confidence: 0.99,
+      priority: 10,
       timesApplied: 10,
     });
     seedCorrection(harness.raw, {
-      id: 'high-conf-low-uses',
+      id: 'high-priority-low-uses',
       descriptionPattern: 'COFFEE',
       matchType: 'contains',
-      confidence: 0.95,
+      confidence: 0.5,
+      priority: 0,
       timesApplied: 1,
     });
     seedCorrection(harness.raw, {
-      id: 'high-conf-high-uses',
+      id: 'high-priority-high-uses',
       descriptionPattern: 'COFFEE',
       matchType: 'contains',
-      confidence: 0.95,
+      confidence: 0.5,
+      priority: 0,
       timesApplied: 5,
     });
 
     const matches = findAllMatchingTransactionCorrections(harness.db, 'coffee', null);
     expect(matches.map((m) => m.id)).toEqual([
-      'high-conf-high-uses',
-      'high-conf-low-uses',
-      'low-conf',
+      'high-priority-high-uses',
+      'high-priority-low-uses',
+      'low-priority',
     ]);
   });
 
