@@ -4,7 +4,10 @@ import {
   boundedPeriod,
   merchantSpendGroups,
   merchantSpendGroupsEmpty,
+  merchantSpendGroupsLabelCollision,
+  merchantSpendGroupsMissingTotal,
   merchantSpendGroupsSingleCurrency,
+  merchantSpendGroupsUnnamedEntity,
 } from '@/fixtures/purchases-merchant-spend';
 import { EmptyPanel } from '@/kit/purchases/empty-panel';
 import { AbsentDrillDown } from '@/kit/purchases/merchant-lens/absent-drill-down';
@@ -162,6 +165,11 @@ export const states: ScreenStates = {
   'single-currency': () => <MerchantLensPage groups={merchantSpendGroupsSingleCurrency} />,
   'bounded-period': () => (
     <MerchantLensPage groups={merchantSpendGroups} period={boundedPeriod} initialSelection="2026" />
+  ),
+  'currency-without-total': () => <MerchantLensPage groups={merchantSpendGroupsMissingTotal} />,
+  'unnamed-entity': () => <MerchantLensPage groups={merchantSpendGroupsUnnamedEntity} />,
+  'entity-name-label-collision': () => (
+    <MerchantLensPage groups={merchantSpendGroupsLabelCollision} />
   ),
 };
 

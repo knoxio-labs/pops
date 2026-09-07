@@ -11,6 +11,8 @@ interface DictionaryBodyProps {
   products: DictionaryProduct[];
   visible: DictionaryProduct[];
   isLoading: boolean;
+  /** Disables every edit control while an edit is in flight. */
+  isEditPending: boolean;
   onEdit: (edit: DictionaryEdit) => void;
   /** Renders one product's forget-product control pre-armed, for a design state. */
   startArmedProductId?: string;
@@ -26,6 +28,7 @@ export function DictionaryBody({
   products,
   visible,
   isLoading,
+  isEditPending,
   onEdit,
   startArmedProductId,
 }: DictionaryBodyProps): ReactElement {
@@ -66,7 +69,7 @@ export function DictionaryBody({
             key={product.id}
             product={product}
             allProducts={products}
-            isPending={false}
+            isPending={isEditPending}
             onEdit={onEdit}
             startArmed={product.id === startArmedProductId}
           />

@@ -156,6 +156,41 @@ export const audUnattributed: MerchantSpend = {
   accounting: accounting({ totalCents: 3_200, matchedCents: 0 }),
 };
 
+/**
+ * An entity the roll-up resolved but that carries no name of its own — the
+ * case merchantLabel falls back to the entity id for, distinctly from the
+ * unattributed group below which has no entity at all.
+ */
+export const unnamedEntityMerchant: MerchantSpend = {
+  merchant: entity('e-unnamed-042', null),
+  currency: 'EUR',
+  orderCount: 1,
+  accounting: accounting({ totalCents: 4_500, matchedCents: 4_500 }),
+};
+
+/**
+ * An entity and a name-grouped merchant that happen to render the same
+ * label text. `merchantKey` (below) prefixes each key with its resolution,
+ * so these two never collapse into one row even though their labels are
+ * indistinguishable on screen — the invariant the original
+ * `merchantOrdersQuery` enforced by sending `merchantEntityId` for one and
+ * `merchantEntityName` for the other, never the same parameter for both.
+ */
+export const generalStoreEntity: MerchantSpend = {
+  merchant: entity('general-store-e7', 'General Store'),
+  currency: 'EUR',
+  orderCount: 1,
+  accounting: accounting({ totalCents: 6_000, matchedCents: 6_000 }),
+};
+
+/** The name-grouped counterpart to {@link generalStoreEntity} — same label, different key. */
+export const generalStoreName: MerchantSpend = {
+  merchant: named('General Store'),
+  currency: 'EUR',
+  orderCount: 1,
+  accounting: accounting({ totalCents: 2_200, matchedCents: 2_200 }),
+};
+
 /** The second currency, so nothing can be blended into one number. */
 export const amazonUs: MerchantSpend = {
   merchant: entity('amazon-us', 'Amazon.com'),
@@ -217,6 +252,45 @@ export const merchantSpendGroupsSingleCurrency: CurrencyGroup[] = [
 
 /** No spend reached the roll-up in the selected window. */
 export const merchantSpendGroupsEmpty: CurrencyGroup[] = [];
+
+/**
+ * A currency the roll-up reported merchants for but no total — the
+ * `CurrencyGroupSection` branch that shows the merchants anyway rather than
+ * dropping a currency the roll-up otherwise has something to say about.
+ */
+export const merchantSpendGroupsMissingTotal: CurrencyGroup[] = [
+  { currency: 'AUD', total: null, merchants: [woolworths, bunnings] },
+];
+
+/** An entity with no name of its own — triggers merchantLabel's id fallback. */
+export const merchantSpendGroupsUnnamedEntity: CurrencyGroup[] = [
+  {
+    currency: 'EUR',
+    total: {
+      currency: 'EUR',
+      orderCount: unnamedEntityMerchant.orderCount,
+      accounting: sumAccounting([unnamedEntityMerchant.accounting]),
+    },
+    merchants: [unnamedEntityMerchant],
+  },
+];
+
+/**
+ * An entity group and a name group whose displayed labels are identical
+ * text, side by side, so a reviewer can see them render as two distinct
+ * rows rather than collapsing into one.
+ */
+export const merchantSpendGroupsLabelCollision: CurrencyGroup[] = [
+  {
+    currency: 'EUR',
+    total: {
+      currency: 'EUR',
+      orderCount: generalStoreEntity.orderCount + generalStoreName.orderCount,
+      accounting: sumAccounting([generalStoreEntity.accounting, generalStoreName.accounting]),
+    },
+    merchants: [generalStoreEntity, generalStoreName],
+  },
+];
 
 /**
  * The window the roll-up reported it computed over, which is not the window

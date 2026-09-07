@@ -1,11 +1,9 @@
-import { fullQueuePage, purchasesQueue } from '@/fixtures/purchases-queue';
-import { EmptyPanel } from '@/kit/purchases/empty-panel';
+import { allProposedQueue, fullQueuePage, purchasesQueue } from '@/fixtures/purchases-queue';
 import { useQueueCursor } from '@/kit/purchases/reconcile/cursor';
-import { DecisionBar } from '@/kit/purchases/reconcile/decision-bar';
 import { useQueueDecisions } from '@/kit/purchases/reconcile/decisions';
 import { filterQueueEntries } from '@/kit/purchases/reconcile/filter';
+import { QueueContent } from '@/kit/purchases/reconcile/queue-content';
 import { QueueFilters } from '@/kit/purchases/reconcile/queue-filters';
-import { QueueList } from '@/kit/purchases/reconcile/queue-list';
 import { DEFAULT_QUEUE_FILTERS } from '@/kit/purchases/reconcile/types';
 import { RetryableError } from '@/kit/purchases/retryable-error';
 import { useState } from 'react';
@@ -14,7 +12,6 @@ import { PageHeader } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { QueueEntry } from '@/fixtures/purchases-queue';
-import type { QueueCursor } from '@/kit/purchases/reconcile/cursor';
 import type { DecisionOutcome } from '@/kit/purchases/reconcile/decisions';
 import type { QueueFilterState } from '@/kit/purchases/reconcile/types';
 import type { ReactElement } from 'react';
@@ -23,39 +20,6 @@ export const meta: ScreenMeta = { title: 'Reconcile queue', order: 1, frame: 'we
 
 /** The server's own default, which the read takes rather than asking for one. */
 const QUEUE_PAGE_SIZE = 50;
-
-interface QueueBodyProps {
-  entries: QueueEntry[];
-  isLoading: boolean;
-  cursor: QueueCursor;
-  onDecide: (entry: QueueEntry, kind: 'accept' | 'reject') => void;
-  autoFocus: boolean;
-}
-
-function QueueBody({
-  entries,
-  isLoading,
-  cursor,
-  onDecide,
-  autoFocus,
-}: QueueBodyProps): ReactElement {
-  if (isLoading) {
-    return (
-      <p role="status" className="text-sm text-muted-foreground">
-        Loading the queue…
-      </p>
-    );
-  }
-  if (entries.length === 0) {
-    return (
-      <EmptyPanel
-        title="Nothing is waiting on you"
-        hint="Every charge in this filter is already decided or auto-linked. Widen the filter to see the rest."
-      />
-    );
-  }
-  return <QueueList entries={entries} cursor={cursor} onDecide={onDecide} autoFocus={autoFocus} />;
-}
 
 interface ReconcileQueuePageProps {
   allEntries?: QueueEntry[];
@@ -72,6 +36,10 @@ interface ReconcileQueuePageProps {
   lastOutcome?: DecisionOutcome;
   /** The states view renders every case at once; only the default owns the page's focus. */
   autoFocus?: boolean;
+  /** The filter selection to open with. Defaults to the server's own default, "All". */
+  initialFilters?: QueueFilterState;
+  /** A decision on the active entry that has not resolved yet. */
+  isPending?: boolean;
 }
 
 /** `/purchases` — the reconciliation queue, ported for design review. */
@@ -83,9 +51,13 @@ export function ReconcileQueuePage({
   initialChargeId,
   lastOutcome,
   autoFocus = true,
+  initialFilters,
+  isPending = false,
 }: ReconcileQueuePageProps): ReactElement {
   const [entries, setEntries] = useState(allEntries);
-  const [filters, setFilters] = useState<QueueFilterState>({ ...DEFAULT_QUEUE_FILTERS });
+  const [filters, setFilters] = useState<QueueFilterState>(
+    initialFilters ?? { ...DEFAULT_QUEUE_FILTERS }
+  );
 
   const matched = filterQueueEntries(entries, filters);
   const visible = matched.slice(0, limit);
@@ -103,35 +75,26 @@ export function ReconcileQueuePage({
 
       <QueueFilters value={filters} onChange={setFilters} />
 
-      {error !== null && (
+      {error !== null ? (
         <RetryableError
           title="Could not load the reconcile queue"
           message={error}
           retryLabel="Retry"
           onRetry={() => undefined}
         />
-      )}
-
-      {error === null && (
-        <>
-          <DecisionBar
-            activeEntry={cursor.activeEntry}
-            lastOutcome={lastOutcome ?? decisions.lastOutcome}
-            onDecide={decisions.decide}
-          />
-          <QueueBody
-            entries={visible}
-            isLoading={isLoading}
-            cursor={cursor}
-            onDecide={decisions.decide}
-            autoFocus={autoFocus}
-          />
-          {isTruncated && (
-            <p className="text-xs text-muted-foreground">
-              Showing the first {limit} charges. More arrive as you work through these.
-            </p>
-          )}
-        </>
+      ) : (
+        <QueueContent
+          visible={visible}
+          hasUnfilteredEntries={entries.length > 0}
+          isLoading={isLoading}
+          isTruncated={isTruncated}
+          limit={limit}
+          cursor={cursor}
+          decisions={decisions}
+          lastOutcome={lastOutcome}
+          autoFocus={autoFocus}
+          isPending={isPending}
+        />
       )}
     </div>
   );
@@ -158,6 +121,29 @@ export const states: ScreenStates = {
   ),
   'row-selected': () => (
     <ReconcileQueuePage initialChargeId="chg_01K5Q3F7Y2W9J3HNRK6BMS" autoFocus={false} />
+  ),
+  'filter-applied': () => (
+    <ReconcileQueuePage
+      initialFilters={{ kind: 'proposed', includeAuto: false }}
+      autoFocus={false}
+    />
+  ),
+  'filter-empty': () => (
+    <ReconcileQueuePage
+      allEntries={allProposedQueue}
+      initialFilters={{ kind: 'unexplained', includeAuto: false }}
+      autoFocus={false}
+    />
+  ),
+  'auto-linked-visible': () => (
+    <ReconcileQueuePage
+      initialFilters={{ kind: 'all', includeAuto: true }}
+      initialChargeId="chg_01K5Q4K9M1P4D6P8SXV2QJ"
+      autoFocus={false}
+    />
+  ),
+  'decision-pending': () => (
+    <ReconcileQueuePage initialChargeId="chg_01K5Q1XN4E7K2M9V3ZB6TY" isPending autoFocus={false} />
   ),
 };
 

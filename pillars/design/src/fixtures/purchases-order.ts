@@ -8,6 +8,12 @@
  * the order total; the refund charge equals the refunded line's
  * `refundedCents`; and `accounting.netSpendCents` is `totalCents -
  * refundedCents`.
+ *
+ * `landedCostCents` also sums to the order total: the $5.99 shipping charge
+ * is allocated across the three lines in proportion to each line's own
+ * `lineTotalCents` (456 / 68 / 75 cents), floored per line with the 2-cent
+ * rounding remainder given to the last line, so the split is both
+ * proportional and exhaustive rather than leaving cents unaccounted for.
  */
 import type { PurchaseOrderDetail } from './purchases-order-types';
 
@@ -49,7 +55,7 @@ export const purchaseOrder: PurchaseOrderDetail = {
         refundedCents: 0,
         kind: { value: 'durable' },
       },
-      landedCostCents: 16200,
+      landedCostCents: 16356,
       tags: [{ tag: 'power-tools', confirmedAt: '2026-08-20T18:00:00Z' }],
       units: [{ id: 'unit_1', serialNumber: 'DRL-88213-0042', inventoryItemUri: null }],
       notes: [],
@@ -65,7 +71,7 @@ export const purchaseOrder: PurchaseOrderDetail = {
         refundedCents: 0,
         kind: null,
       },
-      landedCostCents: 2450,
+      landedCostCents: 2468,
       tags: [],
       units: [],
       notes: ['Bought as a pair for shared workshop use.'],
@@ -81,7 +87,7 @@ export const purchaseOrder: PurchaseOrderDetail = {
         refundedCents: 850,
         kind: { value: 'consumable' },
       },
-      landedCostCents: 2550,
+      landedCostCents: 2625,
       tags: [{ tag: 'hardware', confirmedAt: null }],
       units: [],
       notes: [],

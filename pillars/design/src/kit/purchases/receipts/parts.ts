@@ -49,6 +49,7 @@ export function nextPartId(): string {
   return `staged-part-${String(staged)}`;
 }
 
+/** Drop the part at `index`, or return the list unchanged when there is none there. */
 export function removePartAt(parts: readonly StagedPart[], index: number): StagedPart[] {
   return parts.filter((_, position) => position !== index);
 }

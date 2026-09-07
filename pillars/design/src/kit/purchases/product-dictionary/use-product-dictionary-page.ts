@@ -7,6 +7,12 @@ import type { DictionaryProduct, ProposalOutcome } from '@/fixtures/purchases-di
 
 import type { DictionaryEdit, DictionaryFilterState, EditOutcome } from './types';
 
+/**
+ * The proposal pass's own lifecycle, separate from the dictionary it acts
+ * on: whether one is running, what the last one reported, and whether it
+ * failed. `outcome` and `error` are not mutually cleared on a new run — the
+ * caller decides what to show while `isPending` is true.
+ */
 export interface PassState {
   isPending: boolean;
   outcome: ProposalOutcome | null;
@@ -15,12 +21,20 @@ export interface PassState {
 
 const IDLE_PASS: PassState = { isPending: false, outcome: null, error: null };
 
+/**
+ * Every piece of starting state `products.tsx`'s `states` map can seed, so a
+ * design state can render a condition — a pass mid-run, an edit in flight, a
+ * status line already showing — with no interaction required to reach it.
+ */
 export interface UseProductDictionaryPageOptions {
   initialFilters?: DictionaryFilterState;
   initialPass?: PassState;
   initialEditOutcome?: EditOutcome | null;
+  /** Seeds every edit control as mid-write — a design state only; nothing in this hook ever flips it on its own. */
+  initialIsEditPending?: boolean;
 }
 
+/** Everything `ProductDictionaryPage` reads from and calls back into this hook. */
 export interface ProductDictionaryPageState {
   products: DictionaryProduct[];
   filters: DictionaryFilterState;
@@ -29,6 +43,8 @@ export interface ProductDictionaryPageState {
   runPass: () => void;
   editOutcome: EditOutcome | null;
   applyEdit: (edit: DictionaryEdit) => void;
+  /** Whether every edit control should render disabled. Only ever seeded by `initialIsEditPending`: this playground applies an edit synchronously and has no in-flight window to represent otherwise. */
+  isEditPending: boolean;
 }
 
 /**
@@ -64,6 +80,7 @@ export function useProductDictionaryPage(
   const [editOutcome, setEditOutcome] = useState<EditOutcome | null>(
     options.initialEditOutcome ?? null
   );
+  const [isEditPending] = useState(options.initialIsEditPending ?? false);
 
   return {
     products,
@@ -78,5 +95,6 @@ export function useProductDictionaryPage(
       setProducts((prev) => applyDictionaryEdit(prev, edit));
       setEditOutcome({ kind: edit.kind, status: 'ok', message: null });
     },
+    isEditPending,
   };
 }
