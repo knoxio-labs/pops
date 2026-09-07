@@ -129,9 +129,10 @@ it was the closest number lying around.
 ## Sequence
 
 POPS-3126 (epic) → POPS-3127 (this ADR) → **POPS-3128** (routing moves to
-provenance) → **POPS-3129** (matching floor removed) → POPS-3130 (tag-rule
-ordering, stop minting the 0.7 default) → POPS-3131 (UI) → POPS-3132
-(delete the constants).
+provenance, and deletes `HIGH_CONFIDENCE_THRESHOLD`) → **POPS-3129**
+(matching floor removed) → POPS-3130 (tag-rule ordering, stop minting the
+0.7 default) → POPS-3131 (UI) → POPS-3132 (delete `MIN_MATCH_CONFIDENCE`,
+the one constant still standing).
 
 Routing before the floor, deliberately: dropping the floor while the 0.9 bar
 still stood would put sub-0.9 rules in front of rows only to have their
