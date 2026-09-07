@@ -252,7 +252,34 @@ describe('the upsert identity', () => {
     });
 
     expect(second.id).toBe(first.id);
-    expect(second.confidence).toBeGreaterThan(first.confidence);
+    // Reinforcement never mints a number a hand-written rule never had
+    // (ADR-053/POPS-3130): both rows are null-confidence, so re-adding the
+    // same pattern leaves it null rather than bumping it from an invented
+    // starting point.
+    expect(first.confidence).toBeNull();
+    expect(second.confidence).toBeNull();
+  });
+
+  it('bumps an already-assessed confidence by 0.1 on reinforcement, capped at 1.0', () => {
+    seedRule({
+      id: 'seeded-late-fee',
+      descriptionPattern: 'LATE FEE',
+      accountId: BANK_A,
+      entityId: 'ent-bank-a',
+      entityName: 'Bank A',
+      confidence: 0.95,
+    });
+
+    const reinforced = createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: 'LATE FEE',
+      matchType: 'exact',
+      accountId: BANK_A,
+      entityId: 'ent-bank-a',
+      entityName: 'Bank A',
+    });
+
+    expect(reinforced.id).toBe('seeded-late-fee');
+    expect(reinforced.confidence).toBeCloseTo(1.0);
   });
 
   it('does not let a scoped create reinforce an unrelated account’s rule', () => {

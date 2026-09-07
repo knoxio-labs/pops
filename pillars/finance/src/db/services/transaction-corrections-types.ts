@@ -71,7 +71,8 @@ export interface UpdateTransactionCorrectionInput {
   tags?: string[];
   transactionType?: TransactionCorrectionTransactionType | null;
   isActive?: boolean;
-  confidence?: number;
+  /** Audit-only (ADR-053/POPS-3130): `null` clears it back to "never assessed". */
+  confidence?: number | null;
   priority?: number;
 }
 

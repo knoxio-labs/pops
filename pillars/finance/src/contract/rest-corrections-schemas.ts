@@ -8,7 +8,7 @@
  */
 import { z } from 'zod';
 
-import { MIN_MATCH_CONFIDENCE, TRANSACTION_TYPES } from './corrections-constants.js';
+import { TRANSACTION_TYPES } from './corrections-constants.js';
 import { LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 export type { TransactionType } from './corrections-constants.js';
@@ -51,12 +51,15 @@ export const UpdateCorrectionSchema = z.object({
   tags: z.array(z.string()).optional(),
   transactionType: TransactionTypeSchema.nullable().optional(),
   isActive: z.boolean().optional(),
-  confidence: z.number().min(MIN_MATCH_CONFIDENCE).max(1).optional(),
+  // Audit-only (ADR-053/POPS-3130): no floor — an omitted value means "never
+  // assessed" and is stored as `null`, not defaulted to a matching threshold
+  // that no longer exists.
+  confidence: z.number().min(0).max(1).nullable().optional(),
   priority: z.number().int().nonnegative().optional(),
 });
 
 const CorrectionRuleDataSchema = CreateCorrectionSchema.extend({
-  confidence: z.number().min(MIN_MATCH_CONFIDENCE).max(1).optional(),
+  confidence: z.number().min(0).max(1).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -93,7 +96,7 @@ export const CorrectionSchema = z.object({
   transactionType: TransactionTypeSchema.nullable(),
   isActive: z.boolean(),
   priority: z.number(),
-  confidence: z.number(),
+  confidence: z.number().nullable(),
   timesApplied: z.number(),
   createdAt: z.string(),
   lastUsedAt: z.string().nullable(),

@@ -61,7 +61,7 @@ function confidenceColumn(onAutoDelete: BuildOptions['onAutoDelete']): ColumnDef
       <ConfidenceSlider
         key={`${row.original.id}-${row.original.confidence}`}
         ruleId={row.original.id}
-        initial={row.original.confidence}
+        initial={row.original.confidence ?? 0.5}
         onAutoDelete={onAutoDelete}
       />
     ),

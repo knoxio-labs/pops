@@ -14,7 +14,6 @@
  */
 import { and, desc, eq } from 'drizzle-orm';
 
-import { MIN_MATCH_CONFIDENCE } from '../../../contract/corrections-pure.js';
 import {
   type FinanceDb,
   transactionCorrections,
@@ -145,7 +144,7 @@ function reinforceExistingCorrectionRule(tx: FinanceDb, existing: CorrectionRow,
       tags: JSON.stringify(tags),
       transactionType: op.data.transactionType ?? null,
       isActive: op.data.isActive ?? true,
-      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+      confidence: op.data.confidence ?? null,
       priority: op.data.priority ?? 0,
     })
     .where(eq(transactionCorrections.id, existing.id))
@@ -163,7 +162,7 @@ function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): 
       tags: JSON.stringify(op.data.tags ?? []),
       transactionType: op.data.transactionType ?? null,
       isActive: op.data.isActive ?? true,
-      confidence: op.data.confidence ?? MIN_MATCH_CONFIDENCE,
+      confidence: op.data.confidence ?? null,
       priority: op.data.priority ?? 0,
     })
     .run();

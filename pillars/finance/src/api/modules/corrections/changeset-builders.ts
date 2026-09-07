@@ -36,7 +36,7 @@ function changeSetSource(hasFeedback: boolean): string {
 }
 
 export function buildEditChangeSet(existing: CorrectionRow, args: BuildArgs): ChangeSet {
-  const promotedConfidence = Math.max(existing.confidence, PROPOSAL_APPROVED_CONFIDENCE);
+  const promotedConfidence = Math.max(existing.confidence ?? 0, PROPOSAL_APPROVED_CONFIDENCE);
   return {
     source: changeSetSource(args.hasFeedback),
     reason: describeReason('update', args),

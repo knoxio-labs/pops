@@ -328,17 +328,22 @@ describe('applying the rest of the journal to a populated finance database', () 
     expect(stored.get('t-odd-type')).toBe('purchase');
   });
 
-  it('does not rewrite an existing value to a newly-raised default', () => {
-    // 0061 raises the `confidence` default from 0.5 to 0.7. A rebuild that
-    // took the new default for existing rows would silently activate rules
-    // their author had deliberately left inert.
+  it('nulls every confidence unconditionally at 0100, not just newly-raised defaults', () => {
+    // 0061 raised the `confidence` default from 0.5 to 0.7 without rewriting
+    // any existing row — a rebuild that took the new default for existing
+    // rows would have silently activated rules their author had deliberately
+    // left inert. 0100 (ADR-053/POPS-3130) goes further and nulls every row
+    // regardless of value: nothing in this column, at any point in its
+    // history, was ever a genuine probability assessment (the AI categorizer
+    // never wrote to it), so the whole column becomes "never assessed" by
+    // the end of the journal.
     const stored = new Map(
-      rows<{ id: string; confidence: number }>(
+      rows<{ id: string; confidence: number | null }>(
         `SELECT id, confidence FROM transaction_corrections`
       ).map((row) => [row.id, row.confidence])
     );
-    expect(stored.get('c-woolies')).toBe(0.5);
-    expect(stored.get('c-payroll')).toBe(0.95);
+    expect(stored.get('c-woolies')).toBeNull();
+    expect(stored.get('c-payroll')).toBeNull();
   });
 
   it('carries the columns a rebuild has to copy by name', () => {

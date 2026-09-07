@@ -49,8 +49,8 @@ export function CardHeader({
           <div className="mt-1 text-xs text-muted-foreground">
             <span className="font-mono">
               {ruleProvenance.matchType}
-              {' • '}
-              {Math.round(ruleProvenance.confidence * 100)}%
+              {ruleProvenance.confidence !== null &&
+                ` • ${Math.round(ruleProvenance.confidence * 100)}%`}
             </span>
             {' • '}
             <span

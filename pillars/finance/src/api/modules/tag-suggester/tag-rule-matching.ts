@@ -22,12 +22,14 @@
  * decision, not this module's — it used to be made here, and differently from
  * everywhere else (CF022).
  *
- * Ordered `priority ASC, confidence DESC` (ties within a matchType group):
- * lower `priority` wins first, same convention as the corrections matcher.
- * When multiple rules contribute the same tag, `addTagRuleTags`'s dedup keeps
- * whichever rule's attribution came first in this order.
+ * Ordered `priority ASC, id ASC` (ties within a matchType group): lower
+ * `priority` wins first, same convention as the corrections matcher
+ * (POPS-3130) — `id` breaks ties reproducibly instead of `confidence`, a
+ * number nobody sets deliberately. When multiple rules contribute the same
+ * tag, `addTagRuleTags`'s dedup keeps whichever rule's attribution came
+ * first in this order.
  */
-import { and, asc, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import {
   type FinanceDb,
@@ -51,11 +53,11 @@ export interface TagRuleRow {
 
 /** The fields {@link matchTagRules} needs to decide whether a rule fires, and in what order. */
 export interface TagRuleMatchable {
+  id: string;
   descriptionPattern: string;
   matchType: TagRuleMatchType;
   entityId: string | null;
   isActive: boolean;
-  confidence: number;
   priority: number;
 }
 
@@ -65,8 +67,9 @@ export interface TagRuleMatchable {
  * table's JSON column is parsed on the way in.
  */
 export interface InMemoryTagRule extends TagRuleMatchable {
-  id: string;
   tags: string[];
+  /** Audit-only now (ADR-053/POPS-3130): carried for display and the reinforcement step, never matching. */
+  confidence: number;
 }
 
 function ruleFires(
@@ -81,8 +84,8 @@ function ruleFires(
 
 /**
  * The rules in `rules` that fire for `description` under `entityId`, ordered
- * `matchType` group (exact, contains, regex), then `priority ASC,
- * confidence DESC` within each group.
+ * `matchType` group (exact, contains, regex), then `priority ASC, id ASC`
+ * within each group.
  */
 export function matchTagRules<T extends TagRuleMatchable>(
   rules: readonly T[],
@@ -92,7 +95,7 @@ export function matchTagRules<T extends TagRuleMatchable>(
   const matchable = describeForMatching(description);
   const matched = rules
     .filter((rule) => ruleFires(rule, entityId, matchable))
-    .toSorted((a, b) => a.priority - b.priority || b.confidence - a.confidence);
+    .toSorted((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
 
   return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
     matched.filter((rule) => rule.matchType === matchType)
@@ -118,12 +121,11 @@ export function findMatchingTagRules(
       matchType: transactionTagRules.matchType,
       entityId: transactionTagRules.entityId,
       isActive: transactionTagRules.isActive,
-      confidence: transactionTagRules.confidence,
       priority: transactionTagRules.priority,
     })
     .from(transactionTagRules)
     .where(and(eq(transactionTagRules.isActive, true), buildEntityFilter(entityId)))
-    .orderBy(asc(transactionTagRules.priority), desc(transactionTagRules.confidence))
+    .orderBy(asc(transactionTagRules.priority), asc(transactionTagRules.id))
     .all();
 
   return matchTagRules(candidates, description, entityId).map(

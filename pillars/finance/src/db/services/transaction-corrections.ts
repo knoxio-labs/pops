@@ -17,7 +17,6 @@
  */
 import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 
-import { MIN_MATCH_CONFIDENCE } from '../../contract/corrections-pure.js';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
@@ -108,9 +107,13 @@ function reinforceExistingCorrection(
         `the rule already carries a value on that single-valued facet`
     );
   }
+  // Reinforcement never mints a number a hand-written rule never had
+  // (ADR-053/POPS-3130): a null `confidence` — never assessed — stays null,
+  // it does not gain a synthetic +0.1 the moment its pattern is re-added.
+  const confidence = existing.confidence === null ? null : Math.min(existing.confidence + 0.1, 1.0);
   db.update(transactionCorrections)
     .set({
-      confidence: Math.min(existing.confidence + 0.1, 1.0),
+      confidence,
       entityId: input.entityId ?? existing.entityId,
       entityName: input.entityName ?? existing.entityName,
       location: input.location ?? existing.location,
@@ -144,7 +147,7 @@ function insertNewCorrection(
       transactionType: input.transactionType ?? null,
       priority: input.priority ?? 0,
       isActive: true,
-      confidence: MIN_MATCH_CONFIDENCE,
+      confidence: null,
     })
     .run();
 
@@ -188,10 +191,10 @@ function insertNewCorrection(
  * cannot clear a rule's tags; that remains the job of `updateTransactionCorrection`
  * (the PATCH path), which replaces `tags` outright when the field is present.
  *
- * On miss, a new row is inserted at {@link MIN_MATCH_CONFIDENCE} (the matching
- * floor — never below it, so a freshly created rule is never structurally
- * inert) with `timesApplied` left at 0. Throws `TagsOnlyCorrectionError` on a
- * miss whose input carries no `entityId`, no `transactionType`, and non-empty
+ * On miss, a new row is inserted with `confidence: null` (ADR-053/POPS-3130:
+ * no probability was ever assessed for a hand-written rule) and `timesApplied`
+ * left at 0. Throws `TagsOnlyCorrectionError` on a miss whose input carries no
+ * `entityId`, no `transactionType`, and non-empty
  * `tags` — a tags-only row belongs in `transaction_tag_rules`, not here
  * (CF061/#3650).
  *
@@ -296,6 +299,11 @@ export function incrementTransactionCorrectionUsage(db: FinanceDb, id: string, c
  * When the resulting confidence is below 0.3 the row is deleted — the import
  * pipeline uses this to garbage-collect rules that the user has consistently
  * rejected. Throws `TransactionCorrectionNotFoundError` if `id` is missing.
+ *
+ * A `null` existing confidence (never assessed, ADR-053/POPS-3130) seeds from
+ * a neutral 0.5 rather than propagating `null` forward: unlike a system
+ * default, this is an explicit human adjustment, so the first one is itself
+ * the assessment that gives the rule a real number.
  */
 export function adjustTransactionCorrectionConfidence(
   db: FinanceDb,
@@ -303,7 +311,8 @@ export function adjustTransactionCorrectionConfidence(
   delta: number
 ): void {
   const existing = getTransactionCorrection(db, id);
-  const newConfidence = Math.max(0, Math.min(1, existing.confidence + delta));
+  const base = existing.confidence ?? 0.5;
+  const newConfidence = Math.max(0, Math.min(1, base + delta));
 
   db.update(transactionCorrections)
     .set({ confidence: newConfidence })

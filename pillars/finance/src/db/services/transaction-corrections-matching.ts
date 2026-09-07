@@ -107,7 +107,8 @@ export function listActiveTransactionCorrectionsForMatching(
  * Match `description` against an already-fetched active-correction set, with
  * account-scoped rules first, then grouped by `matchType` in
  * `[exact, contains, regex]` order, each group sorted by
- * `confidence DESC, timesApplied DESC, id ASC`.
+ * `priority ASC, timesApplied DESC, id ASC`. No confidence (ADR-053/
+ * POPS-3130): it is audit-only now, never a precedence signal.
  *
  * The account scope is filtered here rather than in SQL, because `rows` is a
  * set the caller already holds — a scope narrowing baked into the fetch would
@@ -130,7 +131,7 @@ export function findAllMatchingTransactionCorrectionsFromRows(
 
   const matched = rows
     .toSorted((a, b) => {
-      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+      if (a.priority !== b.priority) return a.priority - b.priority;
       if (b.timesApplied !== a.timesApplied) return b.timesApplied - a.timesApplied;
       if (a.id < b.id) return -1;
       if (a.id > b.id) return 1;
@@ -150,9 +151,8 @@ export function findAllMatchingTransactionCorrectionsFromRows(
  * Return every active correction whose pattern matches `description` and
  * whose account scope admits `accountId`, account-scoped rules first, then
  * grouped by `matchType` in `[exact, contains, regex]` order, each group
- * sorted by `confidence DESC, timesApplied DESC, id ASC` (a tiebreak among
- * equally-eligible rules, not a floor — ADR-053; no candidate is excluded on
- * confidence).
+ * sorted by `priority ASC, timesApplied DESC, id ASC` — confidence enters
+ * nowhere, audit-only now (ADR-053/POPS-3130).
  *
  * Used by callers that need to surface all matches (not just the winning
  * rule) rather than a single classification verdict — today, the

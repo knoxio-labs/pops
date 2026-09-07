@@ -95,7 +95,7 @@ export interface Correction {
   transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
-  confidence: number;
+  confidence: number | null;
   timesApplied: number;
   createdAt: string;
   lastUsedAt: string | null;

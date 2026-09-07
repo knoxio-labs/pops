@@ -4600,7 +4600,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -4726,7 +4726,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -4889,7 +4889,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -4922,7 +4922,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -4976,7 +4976,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -5074,7 +5074,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -5247,7 +5247,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5280,7 +5280,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern?: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5335,7 +5335,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -5428,7 +5428,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -5461,7 +5461,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -5508,7 +5508,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5541,7 +5541,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern?: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5803,7 +5803,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5836,7 +5836,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern?: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -5932,7 +5932,7 @@ export interface operations {
             targetRules: {
               [key: string]: {
                 accountId: string | null;
-                confidence: number;
+                confidence: number | null;
                 createdAt: string;
                 descriptionPattern: string;
                 entityId: string | null;
@@ -6020,7 +6020,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -6053,7 +6053,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -6195,7 +6195,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -6228,7 +6228,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -6311,7 +6311,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -6344,7 +6344,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern?: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -6389,7 +6389,7 @@ export interface operations {
             targetRules: {
               [key: string]: {
                 accountId: string | null;
-                confidence: number;
+                confidence: number | null;
                 createdAt: string;
                 descriptionPattern: string;
                 entityId: string | null;
@@ -6564,7 +6564,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -6717,7 +6717,7 @@ export interface operations {
       content: {
         'application/json': {
           accountId?: string | null;
-          confidence?: number;
+          confidence?: number | null;
           descriptionPattern?: string;
           entityId?: string | null;
           entityName?: string | null;
@@ -6752,7 +6752,7 @@ export interface operations {
           'application/json': {
             data: {
               accountId: string | null;
-              confidence: number;
+              confidence: number | null;
               createdAt: string;
               descriptionPattern: string;
               entityId: string | null;
@@ -7379,7 +7379,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -7412,7 +7412,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -7510,7 +7510,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -7522,7 +7522,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -7586,7 +7586,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -7598,7 +7598,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -7662,7 +7662,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -7674,7 +7674,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -7738,7 +7738,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -7750,7 +7750,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -7862,7 +7862,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -7895,7 +7895,7 @@ export interface operations {
               | {
                   data: {
                     accountId?: string | null;
-                    confidence?: number;
+                    confidence?: number | null;
                     descriptionPattern?: string;
                     entityId?: string | null;
                     entityName?: string | null;
@@ -8392,7 +8392,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8404,7 +8404,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -8468,7 +8468,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8480,7 +8480,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -8544,7 +8544,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8556,7 +8556,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -8620,7 +8620,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8632,7 +8632,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -8736,7 +8736,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -8769,7 +8769,7 @@ export interface operations {
                 | {
                     data: {
                       accountId?: string | null;
-                      confidence?: number;
+                      confidence?: number | null;
                       descriptionPattern?: string;
                       entityId?: string | null;
                       entityName?: string | null;
@@ -8868,7 +8868,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8880,7 +8880,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -8944,7 +8944,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -8956,7 +8956,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -9020,7 +9020,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -9032,7 +9032,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
@@ -9096,7 +9096,7 @@ export interface operations {
                 fxFeeCents?: number;
                 location?: string;
                 matchedRules?: {
-                  confidence: number;
+                  confidence: number | null;
                   entityId?: string | null;
                   entityName?: string | null;
                   /** @enum {string} */
@@ -9108,7 +9108,7 @@ export interface operations {
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
-                  confidence: number;
+                  confidence: number | null;
                   /** @enum {string} */
                   matchType: 'exact' | 'contains' | 'regex';
                   pattern: string;
