@@ -132,13 +132,13 @@ export function processRemainingItem(
 /**
  * The outcome a matched row takes from a rule that re-decides it.
  *
- * The row stays in `matched` whatever bucket the rule's confidence would map
- * to: a rule below the high-confidence bar means "apply this, but ask
- * me", and there is nothing to ask about a row the user has already settled.
- * Discarding the outcome instead made every rule written by hand a no-op on
- * matched rows — an added rule defaults to `MIN_MATCH_CONFIDENCE` (0.7), so it
- * matched the row, previewed as covering it, and then changed nothing
- * (POPS-3120).
+ * The row stays in `matched` whatever bucket the rule would otherwise route
+ * to: a rule is an instruction, not a hypothesis, and there is nothing to ask
+ * about a row the user has already settled (ADR-053). Discarding a non-`matched`
+ * outcome instead made every rule that resolved to `uncertain` on its own — an
+ * entity-less purchase rule, or, before ADR-053, anything under the old
+ * confidence bar — a no-op on matched rows: it matched the row, previewed as
+ * covering it, and then changed nothing (POPS-3120).
  *
  * A rule that names no entity keeps the row's own: `buildTypeOnlyMatch`
  * writes an entity-less placeholder, which is right for a row that had no

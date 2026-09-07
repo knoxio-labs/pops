@@ -149,7 +149,7 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
     ]);
   });
 
-  it('routes sub-threshold confidence to "uncertain" (below HIGH_CONFIDENCE_THRESHOLD)', () => {
+  it('matches a low-confidence entity rule to "matched" too — confidence is not a gate (ADR-053)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
       minConfidence: 0.7,
@@ -157,8 +157,8 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
       rules: [rule({ confidence: 0.75 })],
     });
 
-    expect(result?.bucket).toBe('uncertain');
-    expect(result?.processed.status).toBe('uncertain');
+    expect(result?.bucket).toBe('matched');
+    expect(result?.processed.status).toBe('matched');
   });
 
   it('produces the identical bucket + entity via a DB-seeded rule as via the in-memory rules override (parity)', () => {
@@ -277,7 +277,7 @@ describe('applyLearnedCorrection — entity-less rules', () => {
     expect(result?.processed.transactionType).toBe('refund');
   });
 
-  it('routes a low-confidence entity-less transfer rule to "uncertain"', () => {
+  it('matches a low-confidence entity-less transfer rule too — it names no merchant to resolve', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
       minConfidence: 0.7,
@@ -287,7 +287,7 @@ describe('applyLearnedCorrection — entity-less rules', () => {
       ],
     });
 
-    expect(result?.bucket).toBe('uncertain');
+    expect(result?.bucket).toBe('matched');
   });
 
   it('returns null for a rule with neither an entity nor a transaction type (nothing to apply)', () => {

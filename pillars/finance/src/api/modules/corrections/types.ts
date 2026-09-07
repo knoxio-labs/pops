@@ -9,9 +9,6 @@ import { type TransactionCorrectionRow } from '../../../db/index.js';
 
 export type CorrectionRow = TransactionCorrectionRow;
 
-/** Confidence at/above which a learned correction is treated as a confident match. */
-export const HIGH_CONFIDENCE_THRESHOLD = 0.9;
-
 export type CorrectionMatchStatus = 'matched' | 'uncertain';
 
 export interface CorrectionMatchResult {
@@ -20,15 +17,21 @@ export interface CorrectionMatchResult {
 }
 
 /**
- * Classify a matched correction as a confident (`matched`) or tentative
- * (`uncertain`) outcome by its confidence relative to
- * {@link HIGH_CONFIDENCE_THRESHOLD}.
+ * Classify a matched correction rule.
+ *
+ * A stored correction rule is a human (or a rule) telling the system what a
+ * description means, not a probabilistic guess about it — the confidence
+ * column is audit data (ADR-053), never a gate on whether the rule applies.
+ * Every row reaching this function already won its match, so it is always
+ * settled: `status` is `matched` unconditionally.
+ *
+ * Kept as a function rather than inlined at each call site because the
+ * REST-facing `CorrectionMatchResult` shape (`{ correction, status }`) has
+ * three callers that all need it, and because "a matched rule is settled" is
+ * a decision worth naming once rather than repeating.
  */
 export function classifyCorrectionMatch(correction: CorrectionRow): CorrectionMatchResult {
-  return {
-    correction,
-    status: correction.confidence >= HIGH_CONFIDENCE_THRESHOLD ? 'matched' : 'uncertain',
-  };
+  return { correction, status: 'matched' };
 }
 
 /**
@@ -46,15 +49,14 @@ export function normalizeEntityId(entityId: string | null | undefined): string |
 /**
  * Resolve the status a correction rule yields when applied automatically —
  * shared by live import and retroactive reclassification so both gate on the
- * same routing:
+ * same routing. Provenance decides, not confidence (ADR-053):
  *
- * - A rule that carries an entity follows the confidence-based
- *   {@link classifyCorrectionMatch}.
+ * - A rule that carries an entity is a resolved match — `matched`.
  * - An entity-less `purchase` rule is never a finished match: the review step
- *   still has to resolve a merchant, so it is always `uncertain` regardless of
- *   confidence.
- * - An entity-less `transfer`/`income` rule carries no merchant and follows the
- *   confidence-based classification.
+ *   still has to resolve a merchant, so it is always `uncertain` — a fact
+ *   about what the rule can name, not about how sure anyone is.
+ * - An entity-less `transfer`/`income` rule carries no merchant to resolve,
+ *   so it is a finished match too — `matched`.
  * - A rule that provides neither an entity nor a transaction type has nothing to
  *   apply and yields `null`.
  *
@@ -63,11 +65,9 @@ export function normalizeEntityId(entityId: string | null | undefined): string |
 export function resolveCorrectionApplyStatus(
   correction: CorrectionRow
 ): CorrectionMatchStatus | null {
-  if (normalizeEntityId(correction.entityId)) return classifyCorrectionMatch(correction).status;
+  if (normalizeEntityId(correction.entityId)) return 'matched';
   if (!correction.transactionType) return null;
-  return correction.transactionType === 'purchase'
-    ? 'uncertain'
-    : classifyCorrectionMatch(correction).status;
+  return correction.transactionType === 'purchase' ? 'uncertain' : 'matched';
 }
 
 /** Parse a JSON-encoded tags string from the corrections table into a string array. */

@@ -369,14 +369,15 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
     expect(row?.entity.matchType).toBe('learned');
   });
 
-  it('routes a low-confidence entity-less transfer rule to uncertain (below the matched threshold)', async () => {
+  it('matches a low-confidence entity-less transfer rule too — confidence is not a gate (ADR-053)', async () => {
     const c = client();
     const created = await c.corrections.createOrUpdate({
       descriptionPattern: 'ROUND UP TO SAVER',
       matchType: 'contains',
       transactionType: 'transfer',
     });
-    // Applies (≥ 0.7 minConfidence) but sits below the 0.9 matched threshold.
+    // Applies (>= 0.7 minConfidence); provenance, not the confidence value,
+    // decides the bucket for a rule naming a transfer.
     await c.corrections.update(created.data.id, { confidence: 0.8 });
 
     const { sessionId } = await c.imports.processImport({
@@ -384,9 +385,9 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
     });
     const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
 
-    expect(result.matched).toHaveLength(0);
-    expect(result.uncertain).toHaveLength(1);
-    const row = result.uncertain[0];
+    expect(result.uncertain).toHaveLength(0);
+    expect(result.matched).toHaveLength(1);
+    const row = result.matched[0];
     expect(row?.ruleProvenance?.source).toBe('correction');
     expect(row?.transactionType).toBe('transfer');
     expect(row?.entity.matchType).toBe('learned');

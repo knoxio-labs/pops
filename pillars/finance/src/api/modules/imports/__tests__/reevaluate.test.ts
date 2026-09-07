@@ -118,6 +118,21 @@ function seedTypeOnlyRule(id: string): void {
     .run();
 }
 
+function seedPurchaseTypeRule(id: string): void {
+  db.insert(transactionCorrections)
+    .values({
+      id,
+      descriptionPattern: 'COLES',
+      matchType: 'contains',
+      transactionType: 'purchase',
+      tags: '[]',
+      isActive: true,
+      confidence: 0.72,
+      priority: 0,
+    })
+    .run();
+}
+
 function correctionRow(id: string): { timesApplied: number; lastUsedAt: string | null } {
   const row = db
     .select()
@@ -560,10 +575,11 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
   });
 
   it('does not re-credit a row the rule leaves in the uncertain bucket', async () => {
-    // The rule clears minConfidence but not the match bar, so the row stays
-    // uncertain across both runs and never reaches the matched-row path — the
-    // gate has to hold on the full ladder too, not only on the re-apply branch.
-    seedWeakRule('r-weak');
+    // An entity-less purchase rule always leaves the row uncertain (no
+    // merchant resolved yet, ADR-053) across both runs and never reaches the
+    // matched-row path — the gate has to hold on the full ladder too, not
+    // only on the re-apply branch.
+    seedPurchaseTypeRule('r-purchase-only');
     const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
 
     const first = await reevaluateImportSessionResult({
@@ -573,7 +589,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       minConfidence: 0.7,
     });
     expect(first.nextResult.uncertain).toHaveLength(1);
-    expect(timesApplied('r-weak')).toBe(1);
+    expect(timesApplied('r-purchase-only')).toBe(1);
 
     await reevaluateImportSessionResult({
       db,
@@ -582,7 +598,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       minConfidence: 0.7,
     });
 
-    expect(timesApplied('r-weak')).toBe(1);
+    expect(timesApplied('r-purchase-only')).toBe(1);
   });
 
   it('does not re-credit the tag rules a no-op run re-matches', async () => {

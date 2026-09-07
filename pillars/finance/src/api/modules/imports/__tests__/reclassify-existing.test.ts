@@ -2,9 +2,10 @@
  * Regression tests for the retroactive reclassification gate (CF006, #3612).
  *
  * `reclassifyExistingTransactions` must mirror the live-import classification
- * gate: only high-confidence, review-free matches are written, and an
- * entity-less rule must never clear a transaction's already-assigned entity.
- * These cases pin the exact failures the finance audit found.
+ * gate: only review-free matches are written — provenance decides that, not
+ * confidence (ADR-053) — and an entity-less rule must never clear a
+ * transaction's already-assigned entity. These cases pin the exact failures
+ * the finance audit found.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -115,7 +116,7 @@ afterEach(() => {
 });
 
 describe('reclassifyExistingTransactions — classification gate (CF006)', () => {
-  it('skips a sub-threshold (<0.9) entity match rather than applying it unreviewed', () => {
+  it('applies a sub-threshold (<0.9) entity match too — confidence is not a gate (ADR-053)', () => {
     const txnId = seedTxn({ description: 'COFFEE SHOP', type: 'purchase', entityId: null });
     seedRule({
       descriptionPattern: 'COFFEE SHOP',
@@ -127,10 +128,10 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
 
     const count = reclassifyExistingTransactions(db, []);
 
-    expect(count).toBe(0);
+    expect(count).toBe(1);
     const row = readTxn(txnId);
-    expect(row.entityId).toBeNull();
-    expect(row.entityName).toBeNull();
+    expect(row.entityId).toBe('ent-coffee');
+    expect(row.entityName).toBe('Coffee Co');
     expect(row.type).toBe('purchase');
   });
 
@@ -227,7 +228,7 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
     expect(row.entityId).toBeNull();
   });
 
-  it('skips a sub-threshold entity-less transfer rule (uncertain, not written)', () => {
+  it('applies a sub-threshold entity-less transfer rule too — it names no merchant to resolve', () => {
     const txnId = seedTxn({ description: 'AMBIGUOUS MOVE', type: 'purchase', entityId: null });
     seedRule({
       descriptionPattern: 'AMBIGUOUS MOVE',
@@ -238,8 +239,8 @@ describe('reclassifyExistingTransactions — classification gate (CF006)', () =>
 
     const count = reclassifyExistingTransactions(db, []);
 
-    expect(count).toBe(0);
-    expect(readTxn(txnId).type).toBe('purchase');
+    expect(count).toBe(1);
+    expect(readTxn(txnId).type).toBe('transfer');
   });
 });
 
@@ -464,14 +465,14 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
     expect(readTxn(txnId).entityId).toBe('ent-user-picked');
   });
 
-  it('reports skippedUncertain for a sub-threshold match, applying nothing', () => {
+  it('reports skippedUncertain for an entity-less purchase rule, applying nothing', () => {
     seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
     const ruleId = seedRule({
       descriptionPattern: 'WOOLWORTHS',
-      entityId: 'ent-woolies',
-      entityName: 'Woolworths',
+      entityId: null,
+      entityName: null,
       transactionType: 'purchase',
-      confidence: 0.8,
+      confidence: 0.95,
     });
 
     const result = applyCorrectionRuleToExistingTransactions(db, ruleId);

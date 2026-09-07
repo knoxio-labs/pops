@@ -10,7 +10,6 @@ export {
   correctionToRow,
   toCorrection,
   normalizeDescription,
-  HIGH_CONFIDENCE_THRESHOLD,
   type Correction,
   type CorrectionRow,
 } from './corrections-pure.js';
