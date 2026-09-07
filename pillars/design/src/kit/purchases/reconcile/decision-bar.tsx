@@ -10,6 +10,8 @@ interface DecisionBarProps {
   activeEntry: QueueEntry | undefined;
   lastOutcome: DecisionOutcome | null;
   onDecide: (entry: QueueEntry, kind: DecisionKind) => void;
+  /** A decision on this entry is already in flight, so the bar refuses a second one until it resolves. */
+  isPending?: boolean;
 }
 
 const OUTCOME_MESSAGE: Record<DecisionKind, string> = {
@@ -35,8 +37,9 @@ export function DecisionBar({
   activeEntry,
   lastOutcome,
   onDecide,
+  isPending = false,
 }: DecisionBarProps): ReactElement {
-  const disabled = activeEntry === undefined || activeEntry.proposed.length === 0;
+  const disabled = activeEntry === undefined || activeEntry.proposed.length === 0 || isPending;
 
   return (
     <div className="space-y-2">
@@ -46,7 +49,7 @@ export function DecisionBar({
           disabled={disabled}
           onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'accept')}
         >
-          Accept
+          {isPending ? 'Accepting…' : 'Accept'}
         </Button>
         <Button
           size="sm"
@@ -54,7 +57,7 @@ export function DecisionBar({
           disabled={disabled}
           onClick={() => activeEntry !== undefined && onDecide(activeEntry, 'reject')}
         >
-          Reject
+          {isPending ? 'Rejecting…' : 'Reject'}
         </Button>
         {activeEntry !== undefined && (
           <a
@@ -70,7 +73,7 @@ export function DecisionBar({
       </div>
 
       <p role="status" aria-live="polite" className="text-sm">
-        {outcomeMessage(lastOutcome)}
+        {isPending ? 'Saving your decision…' : outcomeMessage(lastOutcome)}
       </p>
 
       <p className="text-xs text-muted-foreground">

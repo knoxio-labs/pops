@@ -36,6 +36,20 @@ describe('receiptMediaType', () => {
     expect(receiptMediaType({ name: 'photo.heic', type: 'image/heic' })).toBeNull();
     expect(receiptMediaType({ name: 'photo.heic', type: '' })).toBeNull();
   });
+
+  it('prefers the browser type over a disagreeing extension', () => {
+    expect(receiptMediaType({ name: 'scan.pdf', type: 'image/png' })).toBe('image/png');
+  });
+
+  it('refuses a file with no name and no type at all', () => {
+    expect(receiptMediaType({ name: '', type: '' })).toBeNull();
+  });
+
+  // A prototype property is not an accepted media type, however much an `in`
+  // check would like it to be.
+  it.each(['constructor', 'toString', '__proto__'])('refuses the inherited key %s', (type) => {
+    expect(receiptMediaType({ name: 'x', type })).toBeNull();
+  });
 });
 
 describe('nextPartId', () => {
@@ -72,5 +86,11 @@ describe('movePart', () => {
     const parts = [part('a'), part('b')];
     expect(movePart(parts, 0, -1).map((p) => p.id)).toEqual(['a', 'b']);
     expect(movePart(parts, 1, 1).map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
+  it('does not mutate the list it was given', () => {
+    const original = [part('a'), part('b')];
+    movePart(original, 0, 1);
+    expect(original.map((p) => p.id)).toEqual(['a', 'b']);
   });
 });

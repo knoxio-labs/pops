@@ -260,3 +260,6 @@ export const REFUSED_SUBMISSION: ReceiptSubmission = {
   state: 'refused',
   message: 'The upload service is unavailable. Try again in a moment.',
 };
+
+// More `ReceiptSubmission` fixtures — the review-gate failures and the
+// upload refusal — live in ./purchases-receipt-intake-review.

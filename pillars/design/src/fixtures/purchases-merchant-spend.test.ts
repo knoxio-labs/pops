@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { merchantOrdersByKey, merchantOrderKey } from './purchases-merchant-orders';
-import { merchantKey, merchantSpendGroups } from './purchases-merchant-spend';
+import {
+  generalStoreEntity,
+  generalStoreName,
+  merchantKey,
+  merchantSpendGroups,
+} from './purchases-merchant-spend';
 
 describe('merchantSpendGroups', () => {
   // Literal figures rather than the constructors' own algebra: `accounting()`
@@ -71,5 +76,12 @@ describe('merchantOrderKey', () => {
         expect(merchantOrdersByKey[merchantOrderKey(merchant)]).toBeDefined();
       }
     }
+  });
+
+  it('keeps an entity group and a name group with the same label from colliding', () => {
+    expect(merchantKey(generalStoreEntity.merchant)).not.toBe(
+      merchantKey(generalStoreName.merchant)
+    );
+    expect(merchantOrderKey(generalStoreEntity)).not.toBe(merchantOrderKey(generalStoreName));
   });
 });

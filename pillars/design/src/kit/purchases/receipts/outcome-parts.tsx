@@ -19,6 +19,11 @@ const TONES: Readonly<Record<OutcomeTone, string>> = {
   neutral: 'border-border bg-muted/30',
 };
 
+/**
+ * The one bordered block every outcome renders inside, toned by
+ * {@link OutcomeTone} and labelled for assistive tech via `aria-labelledby`
+ * rather than a heading the section merely happens to contain.
+ */
 export function OutcomeSection({
   tone,
   title,

@@ -1,4 +1,5 @@
 import { dictionaryProducts } from '@/fixtures/purchases-dictionary';
+import { manyWordingsProduct } from '@/fixtures/purchases-dictionary-many-wordings';
 import { matchesDictionaryFilters, sourcesOf } from '@/kit/purchases/product-dictionary/assertion';
 import { DictionaryBody } from '@/kit/purchases/product-dictionary/dictionary-body';
 import { editStatusMessage } from '@/kit/purchases/product-dictionary/edit-status';
@@ -31,6 +32,8 @@ interface ProductDictionaryPageProps {
   initialFilters?: DictionaryFilterState;
   initialPass?: PassState;
   initialEditOutcome?: EditOutcome | null;
+  /** Renders every edit control mid-write — a design state only. */
+  initialIsEditPending?: boolean;
   /** Renders one product's forget control pre-armed — a design state only. */
   startArmedProductId?: string;
 }
@@ -48,12 +51,14 @@ export function ProductDictionaryPage({
   initialFilters,
   initialPass,
   initialEditOutcome,
+  initialIsEditPending,
   startArmedProductId,
 }: ProductDictionaryPageProps): ReactElement {
   const state = useProductDictionaryPage(initialProducts, {
     initialFilters,
     initialPass,
     initialEditOutcome,
+    initialIsEditPending,
   });
 
   const visible = useMemo(
@@ -74,35 +79,58 @@ export function ProductDictionaryPage({
 
       <p className="text-muted-foreground text-xs">{CAVEAT}</p>
 
-      {error !== null && (
+      {error !== null ? (
         <RetryableError
           title="Could not load the product dictionary"
           message={error}
           retryLabel="Retry"
           onRetry={() => {}}
         />
-      )}
-
-      {error === null && (
-        <>
-          <DictionaryFilters
-            value={state.filters}
-            sources={sourcesOf(state.products)}
-            onChange={state.setFilters}
-          />
-          <p role="status" aria-live="polite" className="text-sm">
-            {editStatusMessage(state.editOutcome)}
-          </p>
-          <DictionaryBody
-            products={state.products}
-            visible={visible}
-            isLoading={isLoading}
-            onEdit={state.applyEdit}
-            startArmedProductId={startArmedProductId}
-          />
-        </>
+      ) : (
+        <DictionaryContent
+          state={state}
+          visible={visible}
+          isLoading={isLoading}
+          startArmedProductId={startArmedProductId}
+        />
       )}
     </div>
+  );
+}
+
+interface DictionaryContentProps {
+  state: ReturnType<typeof useProductDictionaryPage>;
+  visible: DictionaryProduct[];
+  isLoading: boolean;
+  startArmedProductId?: string;
+}
+
+/** The loaded dictionary's filters, edit status and listing, once there's no load error to show instead. */
+function DictionaryContent({
+  state,
+  visible,
+  isLoading,
+  startArmedProductId,
+}: DictionaryContentProps): ReactElement {
+  return (
+    <>
+      <DictionaryFilters
+        value={state.filters}
+        sources={sourcesOf(state.products)}
+        onChange={state.setFilters}
+      />
+      <p role="status" aria-live="polite" className="text-sm">
+        {editStatusMessage(state.editOutcome)}
+      </p>
+      <DictionaryBody
+        products={state.products}
+        visible={visible}
+        isLoading={isLoading}
+        isEditPending={state.isEditPending}
+        onEdit={state.applyEdit}
+        startArmedProductId={startArmedProductId}
+      />
+    </>
   );
 }
 
@@ -158,6 +186,12 @@ export const states: ScreenStates = {
       products={dictionaryProducts}
       startArmedProductId="prod_charcoal_receipt"
     />
+  ),
+  'edit-pending': () => (
+    <ProductDictionaryPage products={dictionaryProducts} initialIsEditPending />
+  ),
+  'many-wordings': () => (
+    <ProductDictionaryPage products={[...dictionaryProducts, manyWordingsProduct]} />
   ),
 };
 

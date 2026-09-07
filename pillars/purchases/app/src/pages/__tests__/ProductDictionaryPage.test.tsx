@@ -336,10 +336,10 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     await productEntries();
 
     await userEvent.selectOptions(
-      screen.getByLabelText('Point “CHK BRST 1KG” at another product'),
+      screen.getByLabelText('Point “CHK BRST 1KG” in Chicken breast at another product'),
       'product-2'
     );
-    await userEvent.click(control('Point CHK BRST 1KG at the chosen product'));
+    await userEvent.click(control('Point CHK BRST 1KG in Chicken breast at the chosen product'));
 
     await waitFor(() =>
       expect(productUpdateAliasMock).toHaveBeenCalledWith({
@@ -354,7 +354,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    expect(control('Point CHK BRST 1KG at the chosen product')).toBeDisabled();
+    expect(control('Point CHK BRST 1KG in Chicken breast at the chosen product')).toBeDisabled();
   });
 
   // The undo for a wrong merge, and the reason this page exists: a merge
@@ -364,7 +364,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Give CHK BRST 1KG its own product'));
+    await userEvent.click(control('Give CHK BRST 1KG in Chicken breast its own product'));
 
     await waitFor(() =>
       expect(productUpdateAliasMock).toHaveBeenCalledWith({
@@ -381,8 +381,10 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    expect(screen.queryByRole('button', { name: 'Give MLK 2L its own product' })).toBeNull();
-    expect(control('Give CHK BRST 1KG its own product')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Give MLK 2L in Milk 2L its own product' })
+    ).toBeNull();
+    expect(control('Give CHK BRST 1KG in Chicken breast its own product')).toBeInTheDocument();
   });
 
   it('asserts a proposal, and retracts an assertion back to a proposal', async () => {
@@ -401,7 +403,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Assert ONE'));
+    await userEvent.click(control('Assert ONE in Chicken breast 1kg'));
     await waitFor(() =>
       expect(productUpdateAliasMock).toHaveBeenCalledWith({
         path: { aliasId: 'alias-1' },
@@ -409,7 +411,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
       })
     );
 
-    await userEvent.click(control('Retract TWO'));
+    await userEvent.click(control('Retract TWO in Chicken breast 1kg'));
     await waitFor(() =>
       expect(productUpdateAliasMock).toHaveBeenCalledWith({
         path: { aliasId: 'alias-2' },
@@ -423,7 +425,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording CHK BRST 1KG'));
+    await userEvent.click(control('Forget the wording CHK BRST 1KG in Chicken breast'));
 
     await waitFor(() =>
       expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-1' } })
@@ -496,7 +498,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording CHK BRST 1KG'));
+    await userEvent.click(control('Forget the wording CHK BRST 1KG in Chicken breast'));
 
     await waitFor(async () => expect(await productEntries()).toHaveLength(1));
     expect(screen.getByText(enAUPurchases['products.status.forgetWording'])).toBeInTheDocument();
@@ -517,7 +519,7 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording MLK 2L'));
+    await userEvent.click(control('Forget the wording MLK 2L in Full cream milk 2L'));
 
     await waitFor(() =>
       expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-1' } })
@@ -533,9 +535,40 @@ describe('ProductDictionaryPage — correcting an entry', () => {
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Give CHK BRST 1KG its own product'));
+    await userEvent.click(control('Give CHK BRST 1KG in Chicken breast its own product'));
 
     expect(await screen.findByText(/no such product/)).toBeInTheDocument();
+  });
+});
+
+// POPS-3139: a printed wording is the only evidence two adapters give, so the
+// dictionary states plainly that two products a merchant prints identically
+// cannot be told apart. Naming every control from the wording alone
+// reintroduces that collision one level down.
+describe('ProductDictionaryPage — two products printed identically', () => {
+  it('gives every control a unique accessible name even when a wording collides', async () => {
+    dictionaryReturns([
+      buildProduct({
+        id: 'product-1',
+        label: 'Kitchen sponge 4pk',
+        aliases: [buildAlias({ id: 'alias-1', printedName: 'SPONGE' })],
+      }),
+      buildProduct({
+        id: 'product-2',
+        label: 'Bath sponge',
+        aliases: [buildAlias({ id: 'alias-2', printedName: 'SPONGE' })],
+      }),
+    ]);
+    renderDictionary();
+    await productEntries();
+
+    const names = [
+      ...screen.getAllByRole('button').map((button) => button.getAttribute('aria-label')),
+      ...screen.getAllByRole('combobox').map((select) => select.getAttribute('aria-label')),
+    ].filter((name): name is string => name !== null);
+
+    expect(names.length).toBeGreaterThan(0);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
 
@@ -557,10 +590,12 @@ describe('ProductDictionaryPage — the last wording of a product somebody named
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording MLK 2L'));
+    await userEvent.click(control('Forget the wording MLK 2L in Full cream milk 2L'));
     expect(productDeleteAliasMock).not.toHaveBeenCalled();
 
-    await userEvent.click(control('Forget MLK 2L, and the product Full cream milk 2L with it'));
+    await userEvent.click(
+      control('Forget MLK 2L in Full cream milk 2L, and the product Full cream milk 2L with it')
+    );
     await waitFor(() =>
       expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-only' } })
     );
@@ -571,10 +606,10 @@ describe('ProductDictionaryPage — the last wording of a product somebody named
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording MLK 2L'));
-    await userEvent.click(control('Keep the wording MLK 2L'));
+    await userEvent.click(control('Forget the wording MLK 2L in Full cream milk 2L'));
+    await userEvent.click(control('Keep the wording MLK 2L in Full cream milk 2L'));
 
-    expect(control('Forget the wording MLK 2L')).toBeInTheDocument();
+    expect(control('Forget the wording MLK 2L in Full cream milk 2L')).toBeInTheDocument();
     expect(productDeleteAliasMock).not.toHaveBeenCalled();
   });
 
@@ -585,8 +620,10 @@ describe('ProductDictionaryPage — the last wording of a product somebody named
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording MLK 2L'));
-    await userEvent.click(control('Forget MLK 2L, and the product Full cream milk 2L with it'));
+    await userEvent.click(control('Forget the wording MLK 2L in Full cream milk 2L'));
+    await userEvent.click(
+      control('Forget MLK 2L in Full cream milk 2L, and the product Full cream milk 2L with it')
+    );
 
     expect(
       await screen.findByText(enAUPurchases['products.status.forgetWordingWithProduct'])
@@ -613,7 +650,7 @@ describe('ProductDictionaryPage — the last wording of a product somebody named
     renderDictionary();
     await productEntries();
 
-    await userEvent.click(control('Forget the wording MLK 2L'));
+    await userEvent.click(control('Forget the wording MLK 2L in MLK 2L'));
 
     await waitFor(() =>
       expect(productDeleteAliasMock).toHaveBeenCalledWith({ path: { aliasId: 'alias-only' } })

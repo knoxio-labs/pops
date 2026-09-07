@@ -2,11 +2,16 @@ import { MAX_RECEIPT_PARTS } from './parts';
 
 import type { StagedPart, StagingProblem } from '@/fixtures/purchases-receipt-intake';
 
+/**
+ * A receipt as staged in the browser before submission: the parts that made
+ * it in, and what happened to the ones from the last batch that did not.
+ */
 export interface Staging {
   readonly parts: StagedPart[];
   readonly problems: StagingProblem[];
 }
 
+/** The drop zone's staging before anything has been chosen. */
 export const EMPTY_STAGING: Staging = { parts: [], problems: [] };
 
 /** One batch of chosen files, classified before it is folded into the staged receipt. */

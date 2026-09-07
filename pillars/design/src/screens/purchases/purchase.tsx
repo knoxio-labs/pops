@@ -137,6 +137,63 @@ export const states: ScreenStates = {
       <LoadedOrder detail={minimalPurchaseOrder} highlightedItemId={null} />
     </Page>
   ),
+  /**
+   * A `?item=` deep link naming a line the order no longer carries — the
+   * line was removed or the id was stale by the time the link was opened.
+   * No line matches, so nothing is highlighted; the page still renders.
+   */
+  'item-link-stale': () => (
+    <Page>
+      <LoadedOrder detail={purchaseOrder} highlightedItemId="item_no-longer-on-this-order" />
+    </Page>
+  ),
+  'awaiting-import': () => (
+    <Page>
+      <LoadedOrder
+        detail={{
+          ...purchaseOrder,
+          accounting: {
+            ...purchaseOrder.accounting,
+            matchedCents: 20000,
+            awaitingImportCents: 1449,
+          },
+        }}
+        highlightedItemId={null}
+      />
+    </Page>
+  ),
+  'unit-linked-to-inventory': () => (
+    <Page>
+      <LoadedOrder
+        detail={{
+          ...purchaseOrder,
+          items: purchaseOrder.items.map((line, index) =>
+            index === 0
+              ? {
+                  ...line,
+                  units: line.units.map((unit) => ({
+                    ...unit,
+                    inventoryItemUri: 'pops://inventory/item/inv_9F3KQ2XW7M1VND5R',
+                  })),
+                }
+              : line
+          ),
+        }}
+        highlightedItemId={null}
+      />
+    </Page>
+  ),
+  'merchant-unnamed': () => (
+    <Page>
+      <LoadedOrder
+        detail={{
+          ...purchaseOrder,
+          purchase: { ...purchaseOrder.purchase, merchantEntityName: null, merchantEntityId: null },
+        }}
+        highlightedItemId={null}
+      />
+    </Page>
+  ),
 };
 
 export default function PurchaseDetailScreen() {

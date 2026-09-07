@@ -32,6 +32,11 @@ interface AliasRowProps {
  * corrections are offered at: a mapping stated once applies to every line that
  * ever prints it, past or future, and there is nothing per-line to fix.
  *
+ * **Every control names both the wording and the product it acts on.** Two
+ * products a merchant prints identically hold the same wording, and a wording
+ * alone in the accessible name is indistinguishable from its twin to anyone
+ * navigating by control rather than by eye.
+ *
  * Both undo paths sit beside the paths they undo — `split` gives the wording a
  * product of its own again, `retract` returns the entry to a proposal —
  * because an undo a reader has to go looking for is one they will not find at
@@ -50,11 +55,6 @@ interface AliasRowProps {
  * recoverable is the last wording reaching a product a human named — the
  * product goes in the same write and the name is reconstructible from nothing
  * — and there the control asks twice, exactly as forgetting the product does.
- *
- * **Every control names the wording it acts on.** The visible label is the
- * verb, because the wording is right beside it; the accessible name carries
- * both, because a list of a hundred entries otherwise offers a hundred buttons
- * called "Assert" to anyone navigating by control rather than by eye.
  */
 export function AliasRow({
   alias,
@@ -68,7 +68,10 @@ export function AliasRow({
 }: AliasRowProps): ReactElement {
   const { t } = useTranslation('purchases');
   const asserted = aliasIsAsserted(alias);
-  const wording = alias.printedName;
+  // Qualified by the product it sits under: two products a merchant prints
+  // identically hold the same wording, so the wording alone cannot tell their
+  // controls apart to anyone navigating by control rather than by eye.
+  const wording = `${alias.printedName} in ${currentProductLabel}`;
 
   return (
     <li className="border-border space-y-2 rounded-md border p-3">
@@ -107,6 +110,7 @@ export function AliasRow({
 
         <MergeControl
           alias={alias}
+          currentProductLabel={currentProductLabel}
           targets={allProducts.filter((product) => product.id !== currentProductId)}
           isPending={isPending}
           onEdit={onEdit}
@@ -145,7 +149,7 @@ function ForgetWordingControl({
   onEdit,
 }: ForgetWordingControlProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const wording = alias.printedName;
+  const wording = `${alias.printedName} in ${productLabel}`;
   const arm = {
     text: t('products.action.forgetWording'),
     accessible: t('products.action.forgetWordingNamed', { wording }),
@@ -223,6 +227,8 @@ function WordingSummary({ alias }: { alias: DictionaryAlias }): ReactElement {
 
 interface MergeControlProps {
   alias: DictionaryAlias;
+  /** The product the wording sits under today, which qualifies the control. */
+  currentProductLabel: string;
   targets: readonly DictionaryProduct[];
   isPending: boolean;
   onEdit: (edit: DictionaryEdit) => void;
@@ -242,6 +248,7 @@ interface MergeControlProps {
  */
 function MergeControl({
   alias,
+  currentProductLabel,
   targets,
   isPending,
   onEdit,
@@ -254,7 +261,10 @@ function MergeControl({
   return (
     <>
       <Select
-        aria-label={t('products.action.mergeLabel', { wording: alias.printedName })}
+        aria-label={t('products.action.mergeLabel', {
+          wording: alias.printedName,
+          label: currentProductLabel,
+        })}
         containerClassName="max-w-xs"
         value={target}
         placeholder={t('products.action.mergePlaceholder')}
@@ -264,7 +274,10 @@ function MergeControl({
       <Button
         size="sm"
         disabled={isPending || target === ''}
-        aria-label={t('products.action.mergeNamed', { wording: alias.printedName })}
+        aria-label={t('products.action.mergeNamed', {
+          wording: alias.printedName,
+          label: currentProductLabel,
+        })}
         onClick={() => onEdit({ kind: 'merge', aliasId: alias.id, productId: target })}
       >
         {t('products.action.merge')}

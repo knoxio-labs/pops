@@ -199,6 +199,15 @@ export const purchasesQueue: QueueEntry[] = [
 ];
 
 /**
+ * Every charge here already carries a proposal, so filtering this set down
+ * to "Unexplained" finds nothing — the filter-flavored empty state, not a
+ * queue with nothing in it.
+ */
+export const allProposedQueue: QueueEntry[] = purchasesQueue.filter(
+  (entry) => entry.proposed.length > 0
+);
+
+/**
  * A page that came back full, so the truncation notice can be read at the
  * size it really carries rather than at a number invented to fit seven rows.
  *

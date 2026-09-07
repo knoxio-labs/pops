@@ -10,6 +10,11 @@ import {
   UNREADABLE_SUBMISSION,
   type ReceiptSubmission,
 } from '@/fixtures/purchases-receipt-intake';
+import {
+  NEEDS_REVIEW_NO_CURRENCY_SUBMISSION,
+  NEEDS_REVIEW_NO_LINES_SUBMISSION,
+  OVERSIZED_UPLOAD_SUBMISSION,
+} from '@/fixtures/purchases-receipt-intake-review';
 import { OutcomePanel } from '@/kit/purchases/receipts/outcome-panel';
 import { ReceiptIntake } from '@/kit/purchases/receipts/receipt-intake';
 import { EMPTY_STAGING, type Staging } from '@/kit/purchases/receipts/staging';
@@ -80,8 +85,15 @@ export const states: ScreenStates = {
   ),
   duplicate: () => <ReceiptDropZonePage submission={DUPLICATE_SUBMISSION} />,
   'needs-review': () => <ReceiptDropZonePage submission={NEEDS_REVIEW_SUBMISSION} />,
+  'needs-review-no-currency': () => (
+    <ReceiptDropZonePage submission={NEEDS_REVIEW_NO_CURRENCY_SUBMISSION} />
+  ),
+  'needs-review-no-lines': () => (
+    <ReceiptDropZonePage submission={NEEDS_REVIEW_NO_LINES_SUBMISSION} />
+  ),
   unreadable: () => <ReceiptDropZonePage submission={UNREADABLE_SUBMISSION} />,
   refused: () => <ReceiptDropZonePage submission={REFUSED_SUBMISSION} />,
+  'refused-oversized': () => <ReceiptDropZonePage submission={OVERSIZED_UPLOAD_SUBMISSION} />,
   'staging-problem': () => (
     <ReceiptDropZonePage
       initialStaging={{ parts: FULL_STAGED_PARTS, problems: STAGING_PROBLEMS }}

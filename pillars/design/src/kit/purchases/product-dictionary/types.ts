@@ -17,11 +17,13 @@ export type AssertionFilter = 'all' | 'asserted' | 'unasserted';
 /** The unfiltered case. */
 export const ANY_SOURCE = 'all';
 
+/** What the filter row owns: the source to narrow to, and which side of the assertion boundary. */
 export interface DictionaryFilterState {
   readonly source: string;
   readonly assertion: AssertionFilter;
 }
 
+/** The filter row's own starting point — everything, from every source. */
 export const DEFAULT_DICTIONARY_FILTERS: DictionaryFilterState = {
   source: ANY_SOURCE,
   assertion: 'all',
@@ -45,6 +47,12 @@ export type DictionaryEdit =
 
 export type DictionaryEditKind = DictionaryEdit['kind'];
 
+/**
+ * What became of one submitted edit, kept just long enough to render the
+ * status line beside the filters. `message` is populated only on `error` —
+ * an `ok` outcome says which kind of edit landed and nothing more, since the
+ * list below it already shows the result.
+ */
 export interface EditOutcome {
   readonly kind: DictionaryEditKind;
   readonly status: 'ok' | 'error';

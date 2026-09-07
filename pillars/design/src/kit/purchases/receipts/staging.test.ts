@@ -48,6 +48,12 @@ describe('stage', () => {
     const result = stage(withProblem, { staged: [part('a')], rejected: [] });
     expect(result.problems).toEqual([]);
   });
+
+  it('does not mutate the staging it was given', () => {
+    const current = stage(EMPTY_STAGING, { staged: [part('one')], rejected: [] });
+    stage(current, { staged: [part('two')], rejected: [] });
+    expect(current.parts.map((p) => p.id)).toEqual(['one']);
+  });
 });
 
 describe('withRefused', () => {

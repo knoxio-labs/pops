@@ -2,9 +2,12 @@ import {
   amazonUs,
   audUnattributed,
   bunnings,
+  generalStoreEntity,
+  generalStoreName,
   merchantKey,
   overLinked,
   sliverResidual,
+  unnamedEntityMerchant,
   usdUnattributed,
   wooliesBroadway,
   woolworths,
@@ -94,5 +97,14 @@ export const merchantOrdersByKey: Record<string, MerchantOrder[]> = {
   ]),
   [merchantOrderKey(usdUnattributed)]: orderList('USD', [
     ['o-au-2', '2026-05-30', null, 'awaiting_settlement', 1_500],
+  ]),
+  [merchantOrderKey(unnamedEntityMerchant)]: orderList('EUR', [
+    ['o-un-1', '2026-04-02', 'UN-1122', 'linked', 4_500],
+  ]),
+  [merchantOrderKey(generalStoreEntity)]: orderList('EUR', [
+    ['o-gs-e-1', '2026-02-19', 'GS-3001', 'linked', 6_000],
+  ]),
+  [merchantOrderKey(generalStoreName)]: orderList('EUR', [
+    ['o-gs-n-1', '2026-03-27', null, 'linked', 2_200],
   ]),
 };
