@@ -97,7 +97,7 @@ export interface TransactionCorrectionListQuery {
  * (see `corrections.md`'s table-boundary note). A row with neither an entity
  * nor a transaction type but non-empty tags is a tags-only row that violates
  * that boundary and can never surface as a classification match (CF061/#3650):
- * it sits at or below the matching floor with nothing for `findMatch` to
+ * it carries no entity and no type, so there is nothing for `findMatch` to
  * apply, existing only as rule-manager clutter.
  */
 export function isTagsOnlyCorrectionInput(input: {
