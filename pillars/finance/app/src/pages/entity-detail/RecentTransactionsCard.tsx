@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  Alert,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -52,7 +54,9 @@ function Row({ transaction }: { transaction: Transaction }) {
 /**
  * The entity's recent transactions, read from finance by `entityId`
  * (POPS-3076). Empty is its own state, not hidden — a brand-new entity has
- * simply never posted one yet.
+ * simply never posted one yet. A fetch failure is its own state too, not
+ * folded into empty — an unreachable finance-api should read as an error,
+ * not as "this entity has no transactions".
  */
 export function RecentTransactionsCard({ entityId }: { entityId: string }) {
   const query = useRecentTransactionsForEntity(entityId);
@@ -64,14 +68,23 @@ export function RecentTransactionsCard({ entityId }: { entityId: string }) {
         <CardTitle className="text-sm font-medium">Recent transactions</CardTitle>
       </CardHeader>
       <CardContent>
-        {query.isLoading && <Skeleton className="h-24 w-full" />}
-        {!query.isLoading && transactions.length === 0 && (
+        {query.error && (
+          <Alert variant="destructive">
+            <p className="font-semibold">Failed to load transactions</p>
+            <p className="text-sm">{query.error.message}</p>
+            <Button variant="outline" size="sm" onClick={() => query.refetch()} className="mt-4">
+              Try again
+            </Button>
+          </Alert>
+        )}
+        {!query.error && query.isLoading && <Skeleton className="h-24 w-full" />}
+        {!query.error && !query.isLoading && transactions.length === 0 && (
           <EmptyState
             title="No transactions yet"
             description="No transactions matched to this entity yet."
           />
         )}
-        {!query.isLoading && transactions.length > 0 && (
+        {!query.error && !query.isLoading && transactions.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>

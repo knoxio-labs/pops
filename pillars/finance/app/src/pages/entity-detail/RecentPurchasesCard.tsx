@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
+  formatCents,
   formatDate,
   Skeleton,
   Table,
@@ -48,7 +49,7 @@ function Row({ purchase }: { purchase: Purchase }) {
       </TableCell>
       <TableCell className="text-sm capitalize">{purchase.source}</TableCell>
       <TableCell className="text-right text-sm tabular-nums">
-        ${(purchase.totalCents / 100).toFixed(2)}
+        {formatCents(purchase.totalCents, purchase.currency)}
       </TableCell>
     </TableRow>
   );

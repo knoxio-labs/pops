@@ -45,6 +45,16 @@ describe('RecentTransactionsCard', () => {
     expect(await screen.findByText('No transactions yet')).toBeInTheDocument();
   });
 
+  it('shows an error state, not the empty state, when the query fails', async () => {
+    transactionsListMock.mockRejectedValue(new Error('finance-api unreachable'));
+
+    render(<RecentTransactionsCard entityId="ent-1" />, { wrapper });
+
+    expect(await screen.findByText('Failed to load transactions')).toBeInTheDocument();
+    expect(screen.getByText('finance-api unreachable')).toBeInTheDocument();
+    expect(screen.queryByText('No transactions yet')).not.toBeInTheDocument();
+  });
+
   it('renders each matching transaction', async () => {
     transactionsListMock.mockResolvedValue({
       data: {

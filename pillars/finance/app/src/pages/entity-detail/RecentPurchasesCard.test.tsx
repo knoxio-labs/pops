@@ -94,4 +94,45 @@ describe('RecentPurchasesCard', () => {
 
     expect(await screen.findByText('$129.00')).toBeInTheDocument();
   });
+
+  it('formats a non-AUD purchase using its own currency', async () => {
+    purchaseListMock.mockResolvedValue({
+      data: {
+        items: [
+          {
+            id: 'p2',
+            checksum: 'c2',
+            createdAt: '2026-08-19T00:00:00.000Z',
+            currency: 'EUR',
+            discountCents: 0,
+            ingestMethod: 'manual',
+            itemCount: 1,
+            merchantEntityId: 'ent-1',
+            merchantEntityName: 'Galeries Lafayette',
+            orderedAt: '2026-08-19',
+            orderedAtOffsetMinutes: null,
+            paymentHint: null,
+            rawRef: null,
+            receiptUri: null,
+            settlementMode: 'card',
+            shippingCents: 0,
+            source: 'manual',
+            sourceOrderId: null,
+            status: 'settled_cash',
+            subtotalCents: 5_000,
+            surchargeCents: 0,
+            taxCents: 0,
+            totalCents: 5_000,
+            updatedAt: '2026-08-19T00:00:00.000Z',
+          },
+        ],
+      },
+      error: undefined,
+    });
+
+    render(<RecentPurchasesCard entityId="ent-1" />, { wrapper });
+
+    expect(await screen.findByText('EUR 50.00')).toBeInTheDocument();
+    expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
+  });
 });
