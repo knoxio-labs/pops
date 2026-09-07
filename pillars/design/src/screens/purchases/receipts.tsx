@@ -3,6 +3,7 @@ import {
   DUPLICATE_SUBMISSION,
   NEEDS_REVIEW_SUBMISSION,
   REFUSED_SUBMISSION,
+  FULL_STAGED_PARTS,
   STAGED_PARTS,
   STAGING_PROBLEMS,
   UNREADABLE_SUBMISSION,
@@ -78,7 +79,9 @@ export const states: ScreenStates = {
   unreadable: () => <ReceiptDropZonePage submission={UNREADABLE_SUBMISSION} />,
   refused: () => <ReceiptDropZonePage submission={REFUSED_SUBMISSION} />,
   'staging-problem': () => (
-    <ReceiptDropZonePage initialStaging={{ parts: [], problems: STAGING_PROBLEMS }} />
+    <ReceiptDropZonePage
+      initialStaging={{ parts: FULL_STAGED_PARTS, problems: STAGING_PROBLEMS }}
+    />
   ),
 };
 

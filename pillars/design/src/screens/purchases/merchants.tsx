@@ -128,7 +128,7 @@ export const states: ScreenStates = {
     <Shell selection={ALL_TIME} onSelectionChange={() => {}} now={new Date()}>
       <RetryableError
         title="Could not load merchant spend"
-        message="Request failed with status 503"
+        message="The spend roll-up could not be computed: the analytics read timed out after 30s."
         retryLabel="Retry"
         onRetry={() => {}}
       />

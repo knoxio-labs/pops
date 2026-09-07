@@ -126,8 +126,29 @@ export const STAGED_PARTS: StagedPart[] = [
   { id: 'staged-part-3', name: null, mediaType: 'text/plain', byteLength: 412 },
 ];
 
+/**
+ * A receipt already at the eight-part bound, which is the only way parts can
+ * be dropped: a ninth and tenth frame have nowhere to go, and the overflow is
+ * reported rather than trimmed in silence.
+ */
+export const FULL_STAGED_PARTS: StagedPart[] = Array.from(
+  { length: 8 },
+  (_, index): StagedPart => ({
+    id: `full-part-${index + 1}`,
+    name: `woolworths-receipt-${index + 1}.jpg`,
+    mediaType: 'image/jpeg',
+    byteLength: 1_900_000 + index * 24_000,
+  })
+);
+
+/**
+ * What one gesture left behind: a file whose type the upload does not take,
+ * one the device would not hand over, and two frames that arrived after the
+ * bound was already reached.
+ */
 export const STAGING_PROBLEMS: StagingProblem[] = [
   { kind: 'rejected', names: ['receipt.heic'] },
+  { kind: 'unreadable', names: ['blurred-frame.jpg'] },
   { kind: 'tooMany', dropped: 2 },
 ];
 

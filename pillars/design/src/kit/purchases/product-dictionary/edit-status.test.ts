@@ -18,7 +18,23 @@ describe('editStatusMessage', () => {
     );
   });
 
-  it('reports the outcome wording for every successful correction kind', () => {
+  // The wordings themselves, not merely that one exists: what each correction
+  // says it did is the whole reason the status line is there, and a length
+  // check passes just as happily with two of them swapped.
+  it.each([
+    ['merge', 'Pointed at that product.'],
+    ['split', 'Given a product of its own again.'],
+    ['assert', 'Asserted.'],
+    ['retract', 'Retracted.'],
+    ['forgetWording', 'Wording forgotten.'],
+    ['forgetWordingWithProduct', 'Wording forgotten, and the product it was the last one reaching'],
+    ['rename', 'Renamed.'],
+    ['forgetProduct', 'Product forgotten, and every wording with it.'],
+  ] as const)('says what a %s did', (kind, opening) => {
+    expect(editStatusMessage({ kind, status: 'ok', message: null })).toContain(opening);
+  });
+
+  it('never gives two corrections the same wording', () => {
     const kinds = [
       'merge',
       'split',
@@ -29,10 +45,8 @@ describe('editStatusMessage', () => {
       'rename',
       'forgetProduct',
     ] as const;
-    for (const kind of kinds) {
-      const message = editStatusMessage({ kind, status: 'ok', message: null });
-      expect(message.length).toBeGreaterThan(0);
-    }
+    const messages = kinds.map((kind) => editStatusMessage({ kind, status: 'ok', message: null }));
+    expect(new Set(messages).size).toBe(kinds.length);
   });
 
   it('gives forgetting a named product its own wording, distinct from an ordinary forget', () => {

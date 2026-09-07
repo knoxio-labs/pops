@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { movePart, nextPartId, receiptMediaType, removePartAt } from './parts';
 import { EMPTY_STAGING, stage, withRefused, type Staging } from './staging';
@@ -40,8 +40,20 @@ export function useReceiptStaging(initial: Staging = EMPTY_STAGING): ReceiptStag
     setStaging((current) => stage(current, { staged, rejected }));
   }, []);
 
+  // The drop zone reports each refused file before it hands over the ones it
+  // accepted, and folding a batch in replaces the problems wholesale — so a
+  // refusal applied on the spot is erased by the accepted file arriving
+  // beside it. Buffering to the end of the task puts it back on top of the
+  // batch's own problems instead of under them.
+  const refused = useRef<string[]>([]);
+
   const refuse = useCallback((name: string): void => {
-    setStaging((current) => withRefused(current, [name]));
+    refused.current.push(name);
+    queueMicrotask(() => {
+      const names = refused.current;
+      refused.current = [];
+      if (names.length > 0) setStaging((current) => withRefused(current, names));
+    });
   }, []);
 
   const addText = useCallback((text: string): void => {

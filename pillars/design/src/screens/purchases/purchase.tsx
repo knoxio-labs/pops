@@ -110,7 +110,7 @@ function ErrorState() {
     <Page>
       <RetryableError
         title="Could not load this order"
-        message="Request failed with status 503"
+        message="The purchases pillar did not answer in time. The order may still be there."
         retryLabel="Retry"
         onRetry={() => {}}
       />

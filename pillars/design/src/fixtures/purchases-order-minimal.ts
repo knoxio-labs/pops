@@ -22,9 +22,9 @@ export const minimalPurchaseOrder: PurchaseOrderDetail = {
   },
   accounting: {
     totalCents: 450,
-    matchedCents: 0,
+    matchedCents: 450,
     awaitingImportCents: 0,
-    residualCents: 450,
+    residualCents: 0,
     refundedCents: 0,
     netSpendCents: 450,
   },
