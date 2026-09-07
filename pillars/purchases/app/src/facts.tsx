@@ -18,9 +18,12 @@ export interface FactProps {
 export function Fact({ label, value, missingLabel }: FactProps): ReactElement {
   const missing = value === null || value.trim() === '';
   return (
-    <div>
+    // `min-w-0` and the wrap: a grid item will not shrink below its content,
+    // so an unbroken value — an entity id, a pops:// uri — pushes into the
+    // next column instead of wrapping inside its own.
+    <div className="min-w-0">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={missing ? 'text-muted-foreground text-sm italic' : 'text-sm'}>
+      <dd className={missing ? 'text-muted-foreground text-sm italic' : 'text-sm break-words'}>
         {missing ? missingLabel : value}
       </dd>
     </div>
