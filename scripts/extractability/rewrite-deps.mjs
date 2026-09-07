@@ -20,11 +20,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /**
- * The root `allowBuilds` block, verbatim, so the sandbox inherits the same
- * install-script allowlist the repo enforces.
+ * The root `allowBuilds` map, so the sandbox inherits the same install-script
+ * allowlist the repo enforces.
  *
  * Without it pnpm 11 refuses the sandbox install outright
  * (`ERR_PNPM_IGNORED_BUILDS`) the moment the closure contains a package with a
@@ -33,19 +35,66 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
  * the sandbox proving a build under a *different* allowlist would not be an
  * honest proof.
  *
- * @returns {string[]} the block's lines, or `[]` if the root declares none
+ * Read with a real parser rather than matched line by line. The previous
+ * reader anchored on `allowBuilds:` at exactly zero indent with nothing after
+ * the colon, and returned `[]` — indistinguishable from "the root declares
+ * none" — for the flow form, a trailing comment, a quoted key, a blank line
+ * between entries, or a column-0 comment inside the block. The file is the
+ * block form today, so that was latent; a formatter run was enough to trigger
+ * it, and the failure mode is a sandbox proving a build under an allowlist the
+ * workspace does not use.
+ *
+ * @param {string} [source] The workspace YAML. Defaults to the repo root's.
+ * @returns {Record<string, unknown> | null} The map, or `null` if undeclared.
+ * @throws if the file or the key is present in a shape this cannot use.
  */
-function rootAllowBuilds() {
-  const yaml = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
-  const lines = yaml.split('\n');
-  const start = lines.findIndex((l) => l.trimEnd() === 'allowBuilds:');
-  if (start === -1) return [];
-  const out = ['allowBuilds:'];
-  for (const line of lines.slice(start + 1)) {
-    if (!/^\s+\S/.test(line)) break;
-    out.push(line.trimEnd());
+export function rootAllowBuilds(
+  source = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8')
+) {
+  const doc = parseYaml(source);
+  if (typeof doc !== 'object' || doc === null || Array.isArray(doc)) {
+    throw new Error('pnpm-workspace.yaml does not parse to a mapping');
   }
-  return out;
+  /** @type {Record<string, unknown>} */
+  const root = doc;
+  if (!Object.hasOwn(root, 'allowBuilds')) return null;
+  const allowBuilds = root.allowBuilds;
+  if (typeof allowBuilds !== 'object' || allowBuilds === null || Array.isArray(allowBuilds)) {
+    throw new Error(
+      `pnpm-workspace.yaml declares allowBuilds as ${Array.isArray(allowBuilds) ? 'a sequence' : typeof allowBuilds}, ` +
+        'not a mapping — the sandbox cannot inherit an allowlist it cannot read'
+    );
+  }
+  return /** @type {Record<string, unknown>} */ (allowBuilds);
+}
+
+/**
+ * The sandbox's own `pnpm-workspace.yaml`, emitted by the YAML writer rather
+ * than concatenated.
+ *
+ * `packages: []` makes the sandbox its own workspace root, which is what
+ * replaces the old `--ignore-workspace` flag — that flag would now ignore this
+ * very file. The overrides pin every `@pops/*` edge, including the transitive
+ * ones a packed dep declares as concrete versions, to the tarballs, so the
+ * closure resolves entirely offline.
+ *
+ * Emitted rather than hand-written because a tarball path containing a quote
+ * produced a broken workspace file, and the sandbox would then fail for a
+ * reason that has nothing to do with the unit under test.
+ *
+ * @param {Record<string, string>} manifest Packed `@pops/*` name -> tarball path.
+ * @param {Record<string, unknown> | null} allowBuilds
+ * @returns {string}
+ */
+export function sandboxWorkspaceYaml(manifest, allowBuilds) {
+  /** @type {Record<string, unknown>} */
+  const doc = { packages: [] };
+  if (allowBuilds !== null) doc.allowBuilds = allowBuilds;
+  const packed = Object.entries(manifest);
+  if (packed.length > 0) {
+    doc.overrides = Object.fromEntries(packed.map(([name, tgz]) => [name, `file:${tgz}`]));
+  }
+  return stringifyYaml(doc);
 }
 
 /** @param {string[]} argv */
@@ -107,18 +156,10 @@ function main(argv) {
   // sandbox its own workspace root, which is what replaces the old
   // `--ignore-workspace` flag — that flag would now ignore this very file.
   const allowBuilds = rootAllowBuilds();
-  if (Object.keys(manifest).length > 0 || allowBuilds.length > 0) {
-    const lines = ['packages: []'];
-    if (allowBuilds.length > 0) lines.push('', ...allowBuilds);
-    if (Object.keys(manifest).length > 0) {
-      lines.push('', 'overrides:');
-      for (const [name, tgz] of Object.entries(manifest)) {
-        lines.push(`  '${name}': 'file:${tgz}'`);
-      }
-    }
+  if (Object.keys(manifest).length > 0 || allowBuilds !== null) {
     writeFileSync(
       pkgPath.replace(/package\.json$/, 'pnpm-workspace.yaml'),
-      `${lines.join('\n')}\n`
+      sandboxWorkspaceYaml(manifest, allowBuilds)
     );
   }
 
@@ -129,4 +170,6 @@ function main(argv) {
   return 0;
 }
 
-process.exit(main(process.argv.slice(2)));
+if (import.meta.main) {
+  process.exit(main(process.argv.slice(2)));
+}
