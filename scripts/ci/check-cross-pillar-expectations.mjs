@@ -257,18 +257,6 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'finance',
-    operationId: 'institutions.list',
-    path: '/institutions',
-    method: 'get',
-    // No query at all: bfm reads the whole list once and indexes it by id, so
-    // there is nothing here to lose. It resolves the name behind an account's
-    // `institutionId`, which finance's account row does not carry.
-    query: [],
-    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
-  },
-  {
-    consumer: 'bfm',
-    producer: 'finance',
     operationId: 'checkpoints.history',
     path: '/accounts/{id}/balance-history',
     method: 'get',
@@ -2659,9 +2647,9 @@ function selfTest() {
   // made is about resolution, not about file layout.
   const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    bfmFinanceSites.length === 6,
+    bfmFinanceSites.length === 5,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these six calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these five calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
     new Set(bfmFinanceSites.map((s) => s.file)).size === 2,

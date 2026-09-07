@@ -46,12 +46,11 @@ export interface EntityAvatarFieldProps {
 }
 
 /**
- * Choose/replace/remove control for an entity's avatar — the entity-scoped
- * mirror of `InstitutionLogoField`. Upload/removal are immediate, not
- * deferred to the dialog's own Save button, since the avatar is a separate
- * resource (`avatar_asset_id`) from the name/type PATCH the form submits.
- * Only rendered once the entity exists (contacts has no way to attach an
- * avatar before an id is minted).
+ * Choose/replace/remove control for an entity's avatar. Upload/removal are
+ * immediate, not deferred to the dialog's own Save button, since the avatar
+ * is a separate resource (`avatar_asset_id`) from the name/type PATCH the
+ * form submits. Only rendered once the entity exists (contacts has no way to
+ * attach an avatar before an id is minted).
  */
 export function EntityAvatarField(props: EntityAvatarFieldProps) {
   const { entity, uploadAvatar, removeAvatar, uploadIsPending, removeIsPending, onError } = props;

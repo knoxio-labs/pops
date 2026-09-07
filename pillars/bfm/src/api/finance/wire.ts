@@ -139,14 +139,13 @@ export const FinanceAccountRowSchema = z.object({
   kind: z.string(),
   currency: z.string(),
   archivedAt: z.string().nullable(),
-  institutionId: z.string().nullable(),
   /**
-   * Finance resolves this from contacts for a `person` account and leaves it
-   * null for every other kind. bfm passes it through as `contact` without
-   * reading `entityDisplayNameStale` beside it: the phone has no editing
-   * surface where a stale name could be corrected, so the flag would be a
-   * fact it could only display.
+   * The counterparty (`person` accounts) or issuing bank (every other kind
+   * that carries one — not `cash`) — one unified concept on finance's side.
+   * `entityDisplayName` resolves it in the same round trip; bfm never fetches
+   * a separate id → name lookup for either case.
    */
+  entityId: z.string().nullable(),
   entityDisplayName: z.string().nullable(),
   balance: FinanceAccountBalanceSchema,
   /** Every transaction on the account (POPS-2924) — finance's own literal count. */
@@ -163,21 +162,6 @@ export const FinanceAccountGetResponseSchema = z.object({
   data: FinanceAccountRowSchema,
 });
 
-/**
- * The subset of finance's `InstitutionSchema` bfm reads (POPS-2803). The
- * brand colour and logo asset are deliberately not carried: the phone's mark
- * draws initials on a neutral surface and has nowhere to put either
- * (POPS-2923).
- */
-export const FinanceInstitutionRowSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
-export const FinanceInstitutionListResponseSchema = z.object({
-  data: z.array(FinanceInstitutionRowSchema),
-});
-
 /** Finance's month-end series, as returned by `accounts/:id/balance-history`. */
 export const FinanceBalanceHistoryResponseSchema = z.object({
   data: z.array(z.object({ month: z.string(), balanceCents: z.number().int() })),
@@ -188,25 +172,23 @@ export type FinanceBalanceHistoryResponse = z.infer<typeof FinanceBalanceHistory
 /**
  * Finance record → mobile record. `archivedAt` collapses to a plain boolean.
  *
- * `institutionName` is passed in rather than read off the row because finance
- * carries only the id: the caller holds whatever the institutions lookup
- * produced, and `null` from a failed lookup is indistinguishable here from
- * `null` for an account that has no institution. `institutionId` is on the
- * mobile record precisely so a consumer that cares can still tell them apart.
+ * `entityId`/`entityDisplayName` cover both a person account's counterparty
+ * and every other kind's issuing bank, resolved together by finance in the
+ * same row — `kind` is what tells them apart here, the same discriminator
+ * finance itself uses (`hasIssuingInstitution`): `person` maps to `contact`,
+ * everything else maps to `institutionId`/`institutionName`.
  */
-export function toMobileAccount(
-  row: FinanceAccountRow,
-  institutionName: string | null
-): MobileAccount {
+export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
+  const isPersonAccount = row.kind === 'person';
   return {
     id: row.id,
     name: row.name,
     kind: row.kind,
     currency: row.currency,
     archived: row.archivedAt !== null,
-    institutionId: row.institutionId,
-    institutionName,
-    contact: row.entityDisplayName,
+    institutionId: isPersonAccount ? null : row.entityId,
+    institutionName: isPersonAccount ? null : row.entityDisplayName,
+    contact: isPersonAccount ? row.entityDisplayName : null,
     transactionCount: row.transactionCount,
     balance: {
       balanceCents: row.balance.balanceCents,

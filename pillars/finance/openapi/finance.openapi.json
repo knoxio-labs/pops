@@ -230,31 +230,6 @@
                             ],
                             "type": "object"
                           },
-                          "institution": {
-                            "additionalProperties": false,
-                            "nullable": true,
-                            "properties": {
-                              "colour": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "logoAssetId": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["id", "name", "colour", "logoAssetId"],
-                            "type": "object"
-                          },
-                          "institutionId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "checking",
@@ -290,7 +265,6 @@
                         "required": [
                           "id",
                           "name",
-                          "institutionId",
                           "kind",
                           "currency",
                           "archivedAt",
@@ -301,7 +275,6 @@
                           "entityColour",
                           "entityAvatarAssetId",
                           "resolvedEntityId",
-                          "institution",
                           "balance",
                           "importStatus",
                           "transactionCount",
@@ -362,10 +335,6 @@
                     "type": "integer"
                   },
                   "entityId": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "institutionId": {
                     "nullable": true,
                     "type": "string"
                   },
@@ -558,31 +527,6 @@
                           ],
                           "type": "object"
                         },
-                        "institution": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "colour": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "logoAssetId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["id", "name", "colour", "logoAssetId"],
-                          "type": "object"
-                        },
-                        "institutionId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "checking",
@@ -618,7 +562,6 @@
                       "required": [
                         "id",
                         "name",
-                        "institutionId",
                         "kind",
                         "currency",
                         "archivedAt",
@@ -629,7 +572,6 @@
                         "entityColour",
                         "entityAvatarAssetId",
                         "resolvedEntityId",
-                        "institution",
                         "balance",
                         "importStatus",
                         "transactionCount",
@@ -945,31 +887,6 @@
                             ],
                             "type": "object"
                           },
-                          "institution": {
-                            "additionalProperties": false,
-                            "nullable": true,
-                            "properties": {
-                              "colour": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              },
-                              "logoAssetId": {
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["id", "name", "colour", "logoAssetId"],
-                            "type": "object"
-                          },
-                          "institutionId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
                           "kind": {
                             "enum": [
                               "checking",
@@ -1005,7 +922,6 @@
                         "required": [
                           "id",
                           "name",
-                          "institutionId",
                           "kind",
                           "currency",
                           "archivedAt",
@@ -1016,7 +932,6 @@
                           "entityColour",
                           "entityAvatarAssetId",
                           "resolvedEntityId",
-                          "institution",
                           "balance",
                           "importStatus",
                           "transactionCount",
@@ -1298,31 +1213,6 @@
                           ],
                           "type": "object"
                         },
-                        "institution": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "colour": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "logoAssetId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["id", "name", "colour", "logoAssetId"],
-                          "type": "object"
-                        },
-                        "institutionId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "checking",
@@ -1358,7 +1248,6 @@
                       "required": [
                         "id",
                         "name",
-                        "institutionId",
                         "kind",
                         "currency",
                         "archivedAt",
@@ -1369,7 +1258,6 @@
                         "entityColour",
                         "entityAvatarAssetId",
                         "resolvedEntityId",
-                        "institution",
                         "balance",
                         "importStatus",
                         "transactionCount",
@@ -1635,31 +1523,6 @@
                           ],
                           "type": "object"
                         },
-                        "institution": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "colour": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "logoAssetId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["id", "name", "colour", "logoAssetId"],
-                          "type": "object"
-                        },
-                        "institutionId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "checking",
@@ -1695,7 +1558,6 @@
                       "required": [
                         "id",
                         "name",
-                        "institutionId",
                         "kind",
                         "currency",
                         "archivedAt",
@@ -1706,7 +1568,6 @@
                         "entityColour",
                         "entityAvatarAssetId",
                         "resolvedEntityId",
-                        "institution",
                         "balance",
                         "importStatus",
                         "transactionCount",
@@ -1828,10 +1689,6 @@
                     "type": "integer"
                   },
                   "entityId": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "institutionId": {
                     "nullable": true,
                     "type": "string"
                   },
@@ -2023,31 +1880,6 @@
                           ],
                           "type": "object"
                         },
-                        "institution": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "colour": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "logoAssetId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["id", "name", "colour", "logoAssetId"],
-                          "type": "object"
-                        },
-                        "institutionId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "checking",
@@ -2083,7 +1915,6 @@
                       "required": [
                         "id",
                         "name",
-                        "institutionId",
                         "kind",
                         "currency",
                         "archivedAt",
@@ -2094,7 +1925,6 @@
                         "entityColour",
                         "entityAvatarAssetId",
                         "resolvedEntityId",
-                        "institution",
                         "balance",
                         "importStatus",
                         "transactionCount",
@@ -5522,31 +5352,6 @@
                           ],
                           "type": "object"
                         },
-                        "institution": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "colour": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            },
-                            "logoAssetId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": ["id", "name", "colour", "logoAssetId"],
-                          "type": "object"
-                        },
-                        "institutionId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
                         "kind": {
                           "enum": [
                             "checking",
@@ -5582,7 +5387,6 @@
                       "required": [
                         "id",
                         "name",
-                        "institutionId",
                         "kind",
                         "currency",
                         "archivedAt",
@@ -5593,7 +5397,6 @@
                         "entityColour",
                         "entityAvatarAssetId",
                         "resolvedEntityId",
-                        "institution",
                         "balance",
                         "importStatus",
                         "transactionCount",
@@ -5924,31 +5727,6 @@
                               ],
                               "type": "object"
                             },
-                            "institution": {
-                              "additionalProperties": false,
-                              "nullable": true,
-                              "properties": {
-                                "colour": {
-                                  "type": "string"
-                                },
-                                "id": {
-                                  "type": "string"
-                                },
-                                "logoAssetId": {
-                                  "nullable": true,
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": ["id", "name", "colour", "logoAssetId"],
-                              "type": "object"
-                            },
-                            "institutionId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
                             "kind": {
                               "enum": [
                                 "checking",
@@ -5984,7 +5762,6 @@
                           "required": [
                             "id",
                             "name",
-                            "institutionId",
                             "kind",
                             "currency",
                             "archivedAt",
@@ -5995,7 +5772,6 @@
                             "entityColour",
                             "entityAvatarAssetId",
                             "resolvedEntityId",
-                            "institution",
                             "balance",
                             "importStatus",
                             "transactionCount",
@@ -6164,31 +5940,6 @@
                               ],
                               "type": "object"
                             },
-                            "institution": {
-                              "additionalProperties": false,
-                              "nullable": true,
-                              "properties": {
-                                "colour": {
-                                  "type": "string"
-                                },
-                                "id": {
-                                  "type": "string"
-                                },
-                                "logoAssetId": {
-                                  "nullable": true,
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": ["id", "name", "colour", "logoAssetId"],
-                              "type": "object"
-                            },
-                            "institutionId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
                             "kind": {
                               "enum": [
                                 "checking",
@@ -6224,7 +5975,6 @@
                           "required": [
                             "id",
                             "name",
-                            "institutionId",
                             "kind",
                             "currency",
                             "archivedAt",
@@ -6235,7 +5985,6 @@
                             "entityColour",
                             "entityAvatarAssetId",
                             "resolvedEntityId",
-                            "institution",
                             "balance",
                             "importStatus",
                             "transactionCount",
@@ -19121,945 +18870,6 @@
         },
         "summary": "Re-evaluate the import session against merged (DB + pending) rules; no DB writes",
         "tags": ["imports"]
-      }
-    },
-    "/institutions": {
-      "get": {
-        "operationId": "institutions.list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "colour": {
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "logoAssetId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "updatedAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "colour",
-                          "logoAssetId",
-                          "createdAt",
-                          "updatedAt"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "required": ["data"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          }
-        },
-        "summary": "List every institution",
-        "tags": ["institutions"]
-      },
-      "post": {
-        "operationId": "institutions.create",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "colour": {
-                    "pattern": "^#[0-9a-f]{6}$",
-                    "type": "string"
-                  },
-                  "logoAssetId": {
-                    "nullable": true,
-                    "type": "string"
-                  },
-                  "name": {
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                },
-                "required": ["name", "colour"],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "colour": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "logoAssetId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["id", "name", "colour", "logoAssetId", "createdAt", "updatedAt"],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "201"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Register a new institution",
-        "tags": ["institutions"]
-      }
-    },
-    "/institutions/{id}": {
-      "delete": {
-        "operationId": "institutions.delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {},
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Delete an institution, refused while any account still references it",
-        "tags": ["institutions"]
-      },
-      "patch": {
-        "operationId": "institutions.update",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "colour": {
-                    "pattern": "^#[0-9a-f]{6}$",
-                    "type": "string"
-                  },
-                  "name": {
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "colour": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "logoAssetId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["id", "name", "colour", "logoAssetId", "createdAt", "updatedAt"],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Rename an institution and/or change its colour",
-        "tags": ["institutions"]
-      }
-    },
-    "/institutions/{id}/logo": {
-      "delete": {
-        "operationId": "institutions.removeLogo",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {},
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "colour": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "logoAssetId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["id", "name", "colour", "logoAssetId", "createdAt", "updatedAt"],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Remove an institution logo, falling back to the initials mark",
-        "tags": ["institutions"]
-      },
-      "post": {
-        "operationId": "institutions.uploadLogo",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "contentBase64": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "contentType": {
-                    "enum": ["image/png", "image/jpeg", "image/webp"],
-                    "type": "string"
-                  }
-                },
-                "required": ["contentType", "contentBase64"],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "colour": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "logoAssetId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["id", "name", "colour", "logoAssetId", "createdAt", "updatedAt"],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Upload (or replace) an institution logo (base64, 2 MiB cap, PNG/JPEG/WEBP only)",
-        "tags": ["institutions"]
-      }
-    },
-    "/institutions/{id}/merge": {
-      "post": {
-        "operationId": "institutions.merge",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "targetId": {
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                },
-                "required": ["targetId"],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "colour": {
-                          "type": "string"
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "id": {
-                          "type": "string"
-                        },
-                        "logoAssetId": {
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": ["id", "name", "colour", "logoAssetId", "createdAt", "updatedAt"],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "409"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "messageKey": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "422"
-          }
-        },
-        "summary": "Merge institution :id (the source) into targetId: repoint every account onto targetId and delete it outright. Rejects merging an institution into itself with 422. The survivor keeps its own colour and logoAssetId — targetId's values win unqualified.",
-        "tags": ["institutions"]
       }
     },
     "/search": {

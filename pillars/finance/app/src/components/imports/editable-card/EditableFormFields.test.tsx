@@ -30,11 +30,10 @@ beforeEach(() => {
   accountsList.mockResolvedValue({
     data: {
       data: [
-        { id: 'acc-1', name: 'Everyday', institutionId: null, kind: 'checking', archivedAt: null },
+        { id: 'acc-1', name: 'Everyday', kind: 'checking', archivedAt: null },
         {
           id: 'acc-2',
           name: 'Emergency Fund',
-          institutionId: null,
           kind: 'savings',
           archivedAt: null,
         },

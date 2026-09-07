@@ -4,10 +4,9 @@ import { ACCOUNT_KINDS, DAY_ONE_ACCOUNT_KINDS, hasIssuingInstitution } from '@po
 
 import type { FieldNamesMarkedBoolean } from 'react-hook-form';
 
-import type { AccountsListResponses, InstitutionsListResponses } from '../../finance-api/index.js';
+import type { AccountsListResponses } from '../../finance-api/index.js';
 
 export type Account = AccountsListResponses[200]['data'][number];
-export type Institution = InstitutionsListResponses[200]['data'][number];
 
 export function isDayOneKind(kind: string): boolean {
   return (DAY_ONE_ACCOUNT_KINDS as readonly string[]).includes(kind);
@@ -24,13 +23,7 @@ export const AccountFormSchema = z.object({
   kind: z.enum(ACCOUNT_KINDS),
   /**
    * The issuing `bank`-typed contacts Entity (POPS-3063) — set directly by
-   * the picker for every kind {@link hasInstitution} allows. No
-   * `institutionId` field: a NEW account is created with `entityId` alone,
-   * never via finance's own `institutions` table. An EXISTING account
-   * carrying a legacy `institutionId` with no `entityId` yet keeps reading
-   * through that fallback server-side (`account-entity-display.ts`) until
-   * either this form's picker sets an `entityId` for it, or the POPS-3099
-   * backfill does.
+   * the picker for every kind {@link hasInstitution} allows.
    */
   entityId: z.string().nullable(),
   currency: z.string().min(1, 'Currency is required'),

@@ -1,7 +1,7 @@
 /**
  * Account identity and the reference data hanging off it: the accounts table
  * itself, merges, name/id lookup, entity display, and the per-account-kind
- * detail tables (currencies, institutions, logos, gift cards, loans).
+ * detail tables (currencies, gift cards, loans).
  *
  * Balances and checkpoints are deliberately NOT here — they are their own
  * group in `./account-balances.ts`, because they are the half that grows.
@@ -33,11 +33,7 @@ export { resolvePendingPersonAccountEntity } from '../services/account-entity-re
 
 export { resolveAccountEntityDisplays } from '../services/account-entity-display.js';
 
-export type {
-  AccountEntityDisplay,
-  AccountIssuerInstitution,
-  InstitutionsById,
-} from '../services/account-entity-display.js';
+export type { AccountEntityDisplay } from '../services/account-entity-display.js';
 
 export * as currenciesService from '../services/currencies.js';
 
@@ -46,18 +42,6 @@ export type {
   CreateCurrencyInput,
   UpdateCurrencyInput,
 } from '../services/currencies.js';
-
-export * as institutionsService from '../services/institutions.js';
-
-export type {
-  InstitutionRow,
-  CreateInstitutionInput,
-  UpdateInstitutionInput,
-} from '../services/institutions.js';
-
-export * as logoBlobsService from '../services/logo-blobs.js';
-
-export type { LogoBlobRow, CreateLogoBlobInput } from '../services/logo-blobs.js';
 
 export * as giftCardDetailsService from '../services/gift-card-details.js';
 

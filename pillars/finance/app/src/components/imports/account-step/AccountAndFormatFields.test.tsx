@@ -30,36 +30,33 @@ vi.mock('../../../contacts-api/index.js', () => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-/** The not-yet-migrated institution fallback embedded on an account response (POPS-3063). */
-function institutionFallback(overrides: Partial<Account['institution']> = {}) {
+/** The server-resolved issuer entity embedded on an account response (POPS-3063). */
+function issuerEntity(overrides: { id?: string; name?: string; colour?: string } = {}) {
   return {
-    id: 'inst-anz',
+    id: 'entity-anz',
     name: 'ANZ',
     colour: '#0072ac',
-    logoAssetId: null,
     ...overrides,
   };
 }
 
-const ANZ_INSTITUTION = institutionFallback();
-const ING_INSTITUTION = institutionFallback({ id: 'inst-ing', name: 'ING', colour: '#ff6200' });
+const ANZ_ENTITY = issuerEntity();
+const ING_ENTITY = issuerEntity({ id: 'entity-ing', name: 'ING', colour: '#ff6200' });
 
 function account(overrides: Partial<Account>): Account {
   return {
     id: 'acc-1',
     name: 'ANZ Everyday',
-    institutionId: ANZ_INSTITUTION.id,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
     displayOrder: 0,
-    entityId: null,
-    entityDisplayName: null,
+    entityId: ANZ_ENTITY.id,
+    entityDisplayName: ANZ_ENTITY.name,
     entityDisplayNameStale: false,
-    entityColour: null,
+    entityColour: ANZ_ENTITY.colour,
     entityAvatarAssetId: null,
-    resolvedEntityId: null,
-    institution: ANZ_INSTITUTION,
+    resolvedEntityId: ANZ_ENTITY.id,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -136,14 +133,18 @@ describe('AccountAndFormatFields', () => {
       account({
         id: 'acc-anz',
         name: 'ANZ Everyday',
-        institutionId: ANZ_INSTITUTION.id,
-        institution: ANZ_INSTITUTION,
+        entityId: ANZ_ENTITY.id,
+        entityDisplayName: ANZ_ENTITY.name,
+        entityColour: ANZ_ENTITY.colour,
+        resolvedEntityId: ANZ_ENTITY.id,
       }),
       account({
         id: 'acc-ing',
         name: 'ING Everyday',
-        institutionId: ING_INSTITUTION.id,
-        institution: ING_INSTITUTION,
+        entityId: ING_ENTITY.id,
+        entityDisplayName: ING_ENTITY.name,
+        entityColour: ING_ENTITY.colour,
+        resolvedEntityId: ING_ENTITY.id,
       }),
     ]);
 
@@ -164,8 +165,10 @@ describe('AccountAndFormatFields', () => {
       account({
         id: 'acc-cash',
         name: 'Wallet cash',
-        institutionId: null,
-        institution: null,
+        entityId: null,
+        entityDisplayName: null,
+        entityColour: null,
+        resolvedEntityId: null,
         kind: 'cash',
       }),
     ]);

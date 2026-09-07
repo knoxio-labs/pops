@@ -10,8 +10,6 @@ export const accounts = sqliteTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
-    /** Nullable — `cash` and `person` accounts have no issuing institution. */
-    institutionId: text('institution_id'),
     kind: text('kind', { enum: ACCOUNT_KINDS }).notNull(),
     /** `currencies.code` this account is denominated in. */
     currency: text('currency').notNull(),
@@ -21,10 +19,8 @@ export const accounts = sqliteTable(
     /**
      * Nullable — the contacts Entity this account is linked to: the contact a
      * `person` account is owed by/owes, or (POPS-3063) the `bank`-typed
-     * Entity an issuer-bearing account's institution was migrated to. Null
-     * for `cash`, for a `person` account still pending outbox resolution,
-     * and for an issuer-bearing account whose institution has not migrated
-     * yet — the latter falls back to `institutionId` at read time.
+     * Entity that issues the account. Null for `cash`, and for a `person`
+     * account still pending outbox resolution.
      */
     entityId: text('entity_id'),
     createdAt: text('created_at')
@@ -35,8 +31,7 @@ export const accounts = sqliteTable(
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (table) => [
-    // Case-insensitive uniqueness — migration hand-edited for `COLLATE
-    // NOCASE`, same as `institutions.name`.
+    // Case-insensitive uniqueness — migration hand-edited for `COLLATE NOCASE`.
     index('idx_accounts_name_nocase').on(table.name),
     // One `person` account per contact per currency (POPS-2771). Scoped to
     // `kind = 'person'` (POPS-3063) — `entity_id` now also carries a

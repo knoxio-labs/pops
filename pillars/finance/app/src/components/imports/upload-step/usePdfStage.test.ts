@@ -34,7 +34,6 @@ vi.mock('../pdf/anz-pdf-import', () => ({
 const ACCOUNT = {
   id: 'acc-1',
   name: 'Card',
-  institutionId: null,
   kind: 'credit-card',
   currency: 'AUD',
   archivedAt: null,
@@ -45,7 +44,6 @@ const ACCOUNT = {
   entityColour: null,
   entityAvatarAssetId: null,
   resolvedEntityId: null,
-  institution: null,
   balance: NO_BALANCE,
   importStatus: NO_IMPORT_STATUS,
   createdAt: '2026-01-01T00:00:00.000Z',

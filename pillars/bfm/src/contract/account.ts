@@ -36,17 +36,17 @@ export const MobileAccountSchema = z.object({
   /** ISO 4217 code, or a points-program code — finance's own vocabulary (POPS-2802). */
   currency: z.string(),
   archived: z.boolean(),
-  /** `institutions` id this account is held at, or `null` for cash and person accounts. */
+  /** The issuing bank entity's id, or `null` for cash and person accounts. */
   institutionId: z.string().nullable(),
   /**
-   * The institution's display name, resolved by bfm against finance's
-   * institutions list (POPS-2803) — finance's account row carries only the id.
+   * The issuing bank's display name, resolved by finance itself as part of
+   * the account row.
    *
    * `null` covers two different facts, and `institutionId` is what separates
    * them: a null id means the account has no institution, while a present id
-   * with a null name means the lookup did not come back. A caller that only
-   * draws a mark can treat both the same, which is why the resolution failing
-   * does not fail the account.
+   * with a null name means finance's own resolution did not come back. A
+   * caller that only draws a mark can treat both the same, which is why that
+   * failing does not fail the account.
    */
   institutionName: z.string().nullable(),
   /**

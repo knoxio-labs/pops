@@ -12,7 +12,6 @@ import type { Entity } from '../../contacts-api/index.js';
 import type { Account } from './types';
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const accountsCreate = vi.fn();
 const accountsUpdate = vi.fn();
@@ -28,13 +27,11 @@ const loanUnlinkOffsetAccount = vi.fn();
 
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   accountsCreate: (...args: unknown[]) => accountsCreate(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
   transactionsList: (...args: unknown[]) => transactionsList(...args),
   transactionsAvailableTags: vi.fn(),
-  institutionsCreate: vi.fn(),
   giftCardDetailsGet: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
   giftCardDetailsReveal: vi.fn(),
@@ -56,7 +53,6 @@ function account(overrides: Partial<Account>): Account {
   return {
     id: 'id',
     name: 'Account',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -67,7 +63,6 @@ function account(overrides: Partial<Account>): Account {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -94,7 +89,6 @@ function renderPage(accounts: Account[], entities: Entity[] = []) {
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
   entitiesList.mockResolvedValue({
     data: {
@@ -128,7 +122,6 @@ function renderDetailPage(accounts: Account[], id: string) {
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
   transactionsList.mockResolvedValue({
     data: { data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } },
@@ -223,7 +216,7 @@ describe('AccountFormDialog — create', () => {
     expect(dialog.getByText(/looks up or creates a matching contact/)).toBeInTheDocument();
   });
 
-  it('lists bank-typed contacts entities in the institution picker, not finance institutions (POPS-3063)', async () => {
+  it('lists bank-typed contacts entities in the institution picker (POPS-3063)', async () => {
     const anz: Entity = {
       id: 'entity-anz',
       name: 'ANZ',
@@ -245,7 +238,6 @@ describe('AccountFormDialog — create', () => {
     expect(entitiesList).toHaveBeenCalledWith(
       expect.objectContaining({ query: expect.objectContaining({ type: 'bank' }) })
     );
-    expect(institutionsList).not.toHaveBeenCalled();
   });
 
   it('creates a bank-typed contacts entity from the institution picker and submits its id as entityId', async () => {

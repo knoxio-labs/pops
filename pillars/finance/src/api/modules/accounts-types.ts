@@ -7,7 +7,6 @@ import type { AccountKind } from '../../contract/account-kind.js';
 import type {
   AccountBalance,
   AccountEntityDisplay,
-  AccountIssuerInstitution,
   ImportStatus,
   AccountMergePreview,
   AccountRow,
@@ -19,7 +18,6 @@ import type {
 export interface Account {
   id: string;
   name: string;
-  institutionId: string | null;
   kind: AccountKind;
   currency: string;
   archivedAt: string | null;
@@ -37,13 +35,6 @@ export interface Account {
   /** The contacts Entity id the three fields above were actually resolved
    * from — see `AccountEntityDisplay.resolvedEntityId`. */
   resolvedEntityId: string | null;
-  /**
-   * The issuing institution's own name/colour/logo — the not-yet-migrated
-   * fallback (POPS-3099) for an issuer-bearing account with no resolvable
-   * `entityId`. Mutually exclusive with a non-null `entityDisplayName`; both
-   * null for `cash`, and for an account genuinely unlinked to any issuer.
-   */
-  institution: AccountIssuerInstitution | null;
   /** What the account holds today, checkpoint-anchored (ADR-051). */
   balance: AccountBalance;
   /** When the account last got data and how it is fed (POPS-2917). */
@@ -61,7 +52,6 @@ export interface Account {
 /** Wire body accepted by `POST /accounts`. */
 export interface CreateAccountBody {
   name: string;
-  institutionId?: string | null;
   kind: AccountKind;
   currency: string;
   displayOrder?: number;
@@ -71,7 +61,6 @@ export interface CreateAccountBody {
 /** Wire body accepted by `PATCH /accounts/:id`. */
 export interface UpdateAccountBody {
   name?: string;
-  institutionId?: string | null;
   kind?: AccountKind;
   currency?: string;
   displayOrder?: number;
@@ -104,7 +93,6 @@ export function toAccount(
     transactionCount: derived.transactionCount,
     id: row.id,
     name: row.name,
-    institutionId: row.institutionId,
     kind: row.kind,
     currency: row.currency,
     archivedAt: row.archivedAt,
@@ -115,7 +103,6 @@ export function toAccount(
     entityColour: entityDisplay.entityColour,
     entityAvatarAssetId: entityDisplay.entityAvatarAssetId,
     resolvedEntityId: entityDisplay.resolvedEntityId,
-    institution: entityDisplay.institution,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -125,7 +112,6 @@ export function toAccount(
 export function toCreateAccountInput(body: CreateAccountBody): CreateAccountInput {
   return {
     name: body.name,
-    institutionId: body.institutionId ?? null,
     kind: body.kind,
     currency: body.currency,
     displayOrder: body.displayOrder,
@@ -137,7 +123,6 @@ export function toCreateAccountInput(body: CreateAccountBody): CreateAccountInpu
 export function toUpdateAccountInput(body: UpdateAccountBody): UpdateAccountInput {
   return {
     name: body.name,
-    institutionId: body.institutionId,
     kind: body.kind,
     currency: body.currency,
     displayOrder: body.displayOrder,

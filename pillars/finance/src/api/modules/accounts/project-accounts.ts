@@ -15,14 +15,12 @@
 import {
   balancesFor,
   importStatusFor,
-  institutionsService,
   resolveAccountEntityDisplays,
   today,
   transactionCountsFor,
   type AccountBalance,
   type AccountEntityDisplay,
   type ImportStatus,
-  type InstitutionsById,
 } from '../../../db/index.js';
 import { toAccount, type Account } from '../accounts-types.js';
 
@@ -35,17 +33,7 @@ const NO_ISSUER: AccountEntityDisplay = {
   entityColour: null,
   entityAvatarAssetId: null,
   resolvedEntityId: null,
-  institution: null,
 };
-
-/** Every institution keyed by id, for {@link resolveAccountEntityDisplays}'s
- * not-yet-migrated fallback — the table is small enough to read whole per
- * request rather than filtering to just the ids the current page uses. */
-function institutionsById(db: FinanceDb): InstitutionsById {
-  return new Map(
-    institutionsService.listInstitutions(db).map((institution) => [institution.id, institution])
-  );
-}
 
 /**
  * The balance shown when there is nothing to compute one from. Unreachable in
@@ -79,7 +67,7 @@ export interface AccountProjector {
 
 export function makeAccountProjector(db: FinanceDb, contacts: ContactsClient): AccountProjector {
   async function many(rows: AccountRow[], date = today()): Promise<Account[]> {
-    const displays = await resolveAccountEntityDisplays(contacts, rows, institutionsById(db));
+    const displays = await resolveAccountEntityDisplays(contacts, rows);
     const ids = rows.map((row) => row.id);
     const balances = balancesFor(db, ids, date);
     const statuses = importStatusFor(db, ids);

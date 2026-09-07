@@ -7,9 +7,9 @@ import { sortAccounts, type AccountSort } from './account-list-sort';
 import type { Currency } from './account-subtotals';
 import type { Account } from './types';
 
-/** The issuer name to search against, whichever side resolved it (POPS-3063) — see `Account.institution`. */
+/** The issuer name to search against, server-resolved (POPS-3063) — see `Account.entityDisplayName`. */
 function issuerName(account: Account): string {
-  return account.entityDisplayName ?? account.institution?.name ?? '';
+  return account.entityDisplayName ?? '';
 }
 
 function searchText(account: Account): string {

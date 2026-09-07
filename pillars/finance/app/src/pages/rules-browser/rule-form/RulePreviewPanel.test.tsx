@@ -9,11 +9,9 @@ import { RulePreviewPanel } from './RulePreviewPanel';
 import type { RulePreviewMatch, RulePreviewResult } from './types';
 
 const mockAccountsList = vi.fn();
-const mockInstitutionsList = vi.fn();
 
 vi.mock('../../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => mockAccountsList(...args),
-  institutionsList: (...args: unknown[]) => mockInstitutionsList(...args),
 }));
 
 function makeMatch(overrides: Partial<RulePreviewMatch> = {}): RulePreviewMatch {
@@ -59,7 +57,6 @@ function renderPanel(data: RulePreviewResult | undefined) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockInstitutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
 });
 
 describe('RulePreviewPanel — account resolution', () => {
@@ -70,7 +67,6 @@ describe('RulePreviewPanel — account resolution', () => {
           {
             id: 'a1',
             name: 'Up Everyday',
-            institutionId: null,
             kind: 'checking',
             currency: 'AUD',
             archivedAt: null,
@@ -81,7 +77,6 @@ describe('RulePreviewPanel — account resolution', () => {
             entityColour: null,
             entityAvatarAssetId: null,
             resolvedEntityId: null,
-            institution: null,
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },

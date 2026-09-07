@@ -2,10 +2,8 @@
  * `accounts.*` sub-router — full account CRUD (POPS-2767).
  *
  * `transactions.account_id` foreign-keys onto this table — the sole account
- * identity a transaction carries. `institutionId` and
- * `currency` are nullable/required FKs onto `institutions` (POPS-2803) and
- * `currencies` (POPS-2802) respectively — `institutionId` is null for `cash`
- * and `person` accounts, which have no issuing institution.
+ * identity a transaction carries. `currency` is a required FK onto
+ * `currencies` (POPS-2802).
  *
  * `delete` archives rather than hard-deletes (`archivedAt`): an account is
  * referenced by every transaction it ever carried, so removing the row would
@@ -16,16 +14,11 @@
  * receivable/payable ledger for (POPS-2771) — required eventually, though
  * transiently null while `entity_precreate_outbox` resolves a name-only
  * create against a down contacts pillar. An issuer-bearing account's
- * `entityId` (POPS-3063) instead names the `bank`-typed contacts Entity its
- * institution was migrated to — resolved directly when set, or through
- * `institutionId`'s `migratedEntityId` as a read-only transition-window
- * fallback when it isn't. `entityDisplayName` / `entityDisplayNameStale` /
- * `entityColour` / `entityAvatarAssetId` are read-only response fields: the
- * linked contact's current name/colour/avatar resolved live from contacts,
- * degrading to the account's own stored `name` (marked stale) when contacts
- * can't be reached. `institution` is the not-yet-migrated fallback: the
- * issuing institution's own name/colour/logo, populated only when no
- * `entityId` resolved at all.
+ * `entityId` (POPS-3063) instead names the `bank`-typed contacts Entity that
+ * issues it. `entityDisplayName` / `entityDisplayNameStale` / `entityColour`
+ * / `entityAvatarAssetId` are read-only response fields: the linked contact's
+ * current name/colour/avatar resolved live from contacts, degrading to the
+ * account's own stored `name` (marked stale) when contacts can't be reached.
  *
  * `merge`/`previewMerge` (POPS-2812) fold `:id` (the source) into `targetId`:
  * every transaction repoints onto `targetId` and the source row is deleted
@@ -44,19 +37,10 @@ import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from '
 
 const c = initContract();
 
-/** The not-yet-migrated institution fallback shape — see `AccountSchema.institution`. */
-export const AccountIssuerInstitutionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  colour: z.string(),
-  logoAssetId: z.string().nullable(),
-});
-
 /** Wire shape served by the accounts handlers. */
 export const AccountSchema = z.object({
   id: z.string(),
   name: z.string(),
-  institutionId: z.string().nullable(),
   kind: z.enum(ACCOUNT_KINDS),
   currency: z.string(),
   archivedAt: z.string().nullable(),
@@ -76,14 +60,6 @@ export const AccountSchema = z.object({
    * case, where `entityId` is still null. A caller needs this id (not
    * `entityId`) to build the contacts avatar URL. */
   resolvedEntityId: z.string().nullable(),
-  /**
-   * The issuing institution's own name/colour/logo — populated ONLY as the
-   * not-yet-migrated fallback (POPS-3099) for an issuer-bearing account with
-   * no resolvable `entityId`. Mutually exclusive with a non-null
-   * `entityDisplayName`; lets a caller render an account's issuer without a
-   * separate institutions fetch/join regardless of which side resolved it.
-   */
-  institution: AccountIssuerInstitutionSchema.nullable(),
   /**
    * What the account holds today, checkpoint-anchored (ADR-051). Read-only,
    * and never a stored column: `basis` says whether it is a real balance or
@@ -109,7 +85,6 @@ export const AccountSchema = z.object({
 
 const CreateAccountBody = z.object({
   name: z.string().min(1, 'Name is required'),
-  institutionId: z.string().nullable().optional(),
   kind: z.enum(ACCOUNT_KINDS),
   currency: z.string().min(1, 'Currency is required'),
   displayOrder: z.number().int().optional(),
@@ -118,7 +93,6 @@ const CreateAccountBody = z.object({
 
 const UpdateAccountBody = z.object({
   name: z.string().min(1, 'Name cannot be empty').optional(),
-  institutionId: z.string().nullable().optional(),
   kind: z.enum(ACCOUNT_KINDS).optional(),
   currency: z.string().min(1, 'Currency cannot be empty').optional(),
   displayOrder: z.number().int().optional(),

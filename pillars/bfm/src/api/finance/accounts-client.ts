@@ -4,7 +4,7 @@
  *
  * Split from `client.ts` rather than sharing its file because the two answer
  * different screens and reach different parts of finance — this one also calls
- * `institutions` and `checkpoints`, which the transaction list never touches.
+ * `checkpoints`, which the transaction list never touches.
  * The failure discipline is the same and stated there: nothing here throws,
  * catches, or substitutes an empty list for a failure.
  *
@@ -18,7 +18,6 @@ import {
   FinanceAccountGetResponseSchema,
   FinanceAccountListResponseSchema,
   FinanceBalanceHistoryResponseSchema,
-  FinanceInstitutionListResponseSchema,
   toMobileAccount,
   toMobileBalancePoints,
 } from './wire.js';
@@ -31,9 +30,6 @@ export type FinanceAccountsRouter = {
   accounts: {
     list: (input: { limit?: number }) => Promise<unknown>;
     get: (input: { id: string }) => Promise<unknown>;
-  };
-  institutions: {
-    list: () => Promise<unknown>;
   };
   checkpoints: {
     history: (input: { id: string; months?: number }) => Promise<unknown>;
@@ -64,32 +60,6 @@ const ACCOUNT_LIST_LIMIT = 500;
  * default ever moves.
  */
 const BALANCE_HISTORY_MONTHS = 12;
-
-/**
- * Institution id → display name, for every institution finance knows.
- *
- * An empty map when the lookup does not come back, which is why this returns
- * a map rather than a {@link GatewayOutcome}: an unreachable institutions
- * route costs the accounts their marks, and failing the whole list over that
- * would cost somebody every balance on the screen to spare them some
- * initials. The accounts themselves still carry `institutionId`, so a caller
- * that needs to tell "no institution" from "name unresolved" can.
- */
-async function resolveInstitutionNames(gateway: PillarGateway): Promise<Map<string, string>> {
-  const outcome = await gateway.call<FinanceAccountsRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
-    handle.institutions.list()
-  );
-
-  const list = parseOrMismatch(
-    FINANCE_PILLAR_ID,
-    outcome,
-    FinanceInstitutionListResponseSchema,
-    'institutions.list'
-  );
-  if (!isGatewayOk(list)) return new Map();
-
-  return new Map(list.value.data.map((institution) => [institution.id, institution.name]));
-}
 
 /** One raw finance account row, before any mobile shaping. */
 async function fetchAccountRow(
@@ -126,21 +96,10 @@ export async function listAccounts(
   );
   if (!isGatewayOk(page)) return page;
 
-  // Skipped entirely when nothing on the screen is held anywhere — a wallet of
-  // cash and person ledgers should not pay for an institutions round trip.
-  const names = page.value.data.some((row) => row.institutionId !== null)
-    ? await resolveInstitutionNames(gateway)
-    : new Map<string, string>();
-
   return {
     kind: 'ok',
     value: {
-      data: page.value.data.map((row) =>
-        toMobileAccount(
-          row,
-          row.institutionId === null ? null : (names.get(row.institutionId) ?? null)
-        )
-      ),
+      data: page.value.data.map((row) => toMobileAccount(row)),
     },
   };
 }
@@ -160,11 +119,6 @@ export async function getAccountDetail(
   const row = await fetchAccountRow(gateway, id);
   if (!isGatewayOk(row)) return row;
 
-  const names =
-    row.value.institutionId === null
-      ? new Map<string, string>()
-      : await resolveInstitutionNames(gateway);
-
   const historyOutcome = await gateway.call<FinanceAccountsRouter, unknown>(
     FINANCE_PILLAR_ID,
     (handle) => handle.checkpoints.history({ id, months: BALANCE_HISTORY_MONTHS })
@@ -179,10 +133,7 @@ export async function getAccountDetail(
   return {
     kind: 'ok',
     value: {
-      account: toMobileAccount(
-        row.value,
-        row.value.institutionId === null ? null : (names.get(row.value.institutionId) ?? null)
-      ),
+      account: toMobileAccount(row.value),
       history: isGatewayOk(history) ? toMobileBalancePoints(history.value) : [],
     },
   };

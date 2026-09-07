@@ -103,7 +103,6 @@ describe('createAccount', () => {
     expect(created.name).toBe('Wallet');
     expect(created.kind).toBe('cash');
     expect(created.currency).toBe('AUD');
-    expect(created.institutionId).toBeNull();
     expect(created.archivedAt).toBeNull();
     expect(created.entityId).toBeNull();
     expect(created.displayOrder).toBe(0);

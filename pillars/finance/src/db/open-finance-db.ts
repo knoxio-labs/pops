@@ -58,11 +58,19 @@ export interface OpenedFinanceDb {
  *
  * Side effects:
  *   - The parent directory of `path` is created if missing (recursive).
- *   - `journal_mode=WAL`, `foreign_keys=ON`, and `busy_timeout=5000`
- *     are enabled.
+ *   - `journal_mode=WAL` and `busy_timeout=5000` are enabled.
  *   - Every migration in `migrations/meta/_journal.json` is applied via
  *     drizzle's built-in migrator (idempotent — re-running against the
- *     same DB short-circuits on the `__drizzle_migrations` hash check).
+ *     same DB short-circuits on the `__drizzle_migrations` hash check),
+ *     with `foreign_keys` held OFF for the duration: a table-rebuild
+ *     migration on a table other tables reference by FK (e.g. dropping a
+ *     column from `accounts`, which `transactions` et al. point at) makes
+ *     SQLite run an implicit FK check on the intermediate `DROP TABLE`,
+ *     and a `PRAGMA foreign_keys` toggle inside the migration SQL itself
+ *     is a no-op — drizzle's migrator runs the whole pending batch as one
+ *     transaction, and SQLite ignores this pragma mid-transaction.
+ *   - `foreign_keys=ON` for every query after that, for the lifetime of
+ *     the returned connection.
  *
  * If the migration apply throws (corrupt DB, malformed migration,
  * missing folder), the raw handle is closed before the error is
@@ -204,7 +212,7 @@ export function openFinanceDb(path: string): OpenedFinanceDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
   raw.pragma('journal_mode = WAL');
-  raw.pragma('foreign_keys = ON');
+  raw.pragma('foreign_keys = OFF');
   raw.pragma('busy_timeout = 5000');
   registerFinanceSqlFunctions(raw);
   const db = drizzle(raw) as FinanceDb;
@@ -218,5 +226,6 @@ export function openFinanceDb(path: string): OpenedFinanceDb {
     raw.close();
     throw err;
   }
+  raw.pragma('foreign_keys = ON');
   return { db, raw };
 }

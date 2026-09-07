@@ -20,7 +20,6 @@ import { makeDataQualityHandlers } from './data-quality-handlers.js';
 import { makeEntityUsageHandlers } from './entity-usage-handlers.js';
 import { makeGiftCardDetailsHandlers } from './gift-card-details-handlers.js';
 import { makeImportsHandlers } from './imports-handlers.js';
-import { makeInstitutionsHandlers } from './institutions-handlers.js';
 import { makeLoanHandlers } from './loan-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
@@ -39,7 +38,6 @@ export function makeFinanceRestHandlers(deps: {
     wishlist: makeWishlistHandlers(db),
     budgets: makeBudgetsHandlers(db),
     currencies: makeCurrenciesHandlers(db),
-    institutions: makeInstitutionsHandlers(db),
     accounts: makeAccountsHandlers(db, deps.contacts),
     checkpoints: makeCheckpointsHandlers(db),
     accountImports: makeAccountImportsHandlers(db, deps.contacts),

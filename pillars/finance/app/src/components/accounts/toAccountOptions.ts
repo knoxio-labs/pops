@@ -1,7 +1,6 @@
 import { hasIssuingInstitution } from '@pops/finance';
 
 import { avatarUrlFor } from '../../entity-avatar-url.js';
-import { logoUrlFor } from '../../logo-url.js';
 
 import type { AccountInstitution, AccountOption } from '@pops/ui';
 
@@ -20,19 +19,11 @@ const FALLBACK_INSTITUTION_COLOUR = '#6b7280';
 /**
  * The issuer chip an issuer-bearing account renders, read straight off the
  * server-resolved fields (POPS-3063) — no client-side join against a
- * separately-fetched institutions list. Two mutually exclusive sources, both
- * already resolved by `project-accounts.ts`:
- *
- *   - `entityDisplayName` set: a contacts Entity resolved, either directly
- *     via the account's own `entityId` or through its migrated
- *     institution's fallback. `resolvedEntityId` names which Entity, for the
- *     avatar URL — it can differ from `account.entityId` in the fallback
- *     case.
- *   - `institution` set: the not-yet-migrated institution fallback
- *     (POPS-3099) — finance's own institution row, embedded on the response.
- *
- * `undefined` for `cash`/`person` (no issuing institution at all) and for an
- * issuer-bearing account genuinely unlinked to either.
+ * separately-fetched entity list. `entityDisplayName` set means a contacts
+ * Entity resolved via the account's own `entityId`; `resolvedEntityId` names
+ * which Entity, for the avatar URL. `undefined` for `cash`/`person` (no
+ * issuing institution at all) and for an issuer-bearing account genuinely
+ * unlinked to one.
  */
 function resolveInstitution(account: ApiAccount): AccountInstitution | undefined {
   if (!hasIssuingInstitution(account.kind)) return undefined;
@@ -49,16 +40,6 @@ function resolveInstitution(account: ApiAccount): AccountInstitution | undefined
         account.entityAvatarAssetId != null && account.resolvedEntityId != null
           ? avatarUrlFor(account.resolvedEntityId)
           : undefined,
-    };
-  }
-  if (account.institution != null) {
-    return {
-      id: account.institution.id,
-      name: account.institution.name,
-      colour: account.institution.colour,
-      logoUrl: account.institution.logoAssetId
-        ? logoUrlFor(account.institution.logoAssetId)
-        : undefined,
     };
   }
   return undefined;

@@ -15,7 +15,6 @@ const transactionsUnlinkTransferMock = vi.hoisted(() => vi.fn());
 
 const entitiesListMock = vi.hoisted(() => vi.fn());
 const accountsListMock = vi.hoisted(() => vi.fn());
-const institutionsListMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../finance-api/index.js', () => ({
   transactionsList: (...args: unknown[]) => transactionsListMock(...args),
@@ -26,7 +25,6 @@ vi.mock('../../finance-api/index.js', () => ({
   transactionsRestore: (...args: unknown[]) => transactionsRestoreMock(...args),
   transactionsUnlinkTransfer: (...args: unknown[]) => transactionsUnlinkTransferMock(...args),
   accountsList: (...args: unknown[]) => accountsListMock(...args),
-  institutionsList: (...args: unknown[]) => institutionsListMock(...args),
 }));
 
 // The entity picker now reads `entities.list` over the generated contacts REST
@@ -132,7 +130,6 @@ beforeEach(() => {
         {
           id: 'acc-credit',
           name: 'Credit Card',
-          institutionId: null,
           kind: 'credit-card',
           currency: 'AUD',
           archivedAt: null,
@@ -143,14 +140,12 @@ beforeEach(() => {
           entityColour: null,
           entityAvatarAssetId: null,
           resolvedEntityId: null,
-          institution: null,
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
         {
           id: 'acc-debit',
           name: 'Debit Card',
-          institutionId: null,
           kind: 'checking',
           currency: 'AUD',
           archivedAt: null,
@@ -161,7 +156,6 @@ beforeEach(() => {
           entityColour: null,
           entityAvatarAssetId: null,
           resolvedEntityId: null,
-          institution: null,
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
@@ -170,7 +164,6 @@ beforeEach(() => {
     },
     error: undefined,
   });
-  institutionsListMock.mockResolvedValue({ data: { data: [] }, error: undefined });
 });
 
 describe('TransactionFormSchema — amount', () => {

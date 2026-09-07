@@ -344,36 +344,29 @@ const emptyEntitiesBody = {
 };
 
 /**
- * The one account the Upload step's account picker offers. Its embedded
- * `institution.name` is named 'Amex' to match `BANK_TYPE_BY_INSTITUTION_NAME`
- * in `account-step/import-formats.ts` — the Upload step derives the mocked
- * account's available bank dialects from this institution name, and an
- * unmatched name (or no `institution` at all) leaves it with zero formats
- * (the "no format for account" empty state, which never renders the file
- * dropzone).
+ * The one account the Upload step's account picker offers. `entityDisplayName`
+ * is named 'Amex' to match `BANK_TYPE_BY_INSTITUTION_NAME` in
+ * `account-step/import-formats.ts` — the Upload step derives the mocked
+ * account's available bank dialects from this name (read via the
+ * client-derived `AccountOption.institution.name`), and an unmatched name
+ * (or `null`) leaves it with zero formats (the "no format for account" empty
+ * state, which never renders the file dropzone).
  */
 const accountsBody = {
   data: [
     {
       id: 'acc-amex',
       name: 'Amex Everyday',
-      institutionId: 'inst-amex',
       kind: 'credit-card',
       currency: 'AUD',
       archivedAt: null,
       displayOrder: 0,
-      entityId: null,
-      entityDisplayName: null,
+      entityId: 'ent-amex',
+      entityDisplayName: 'Amex',
       entityDisplayNameStale: false,
-      entityColour: null,
+      entityColour: '#2563eb',
       entityAvatarAssetId: null,
-      resolvedEntityId: null,
-      institution: {
-        id: 'inst-amex',
-        name: 'Amex',
-        colour: '#2563eb',
-        logoAssetId: null,
-      },
+      resolvedEntityId: 'ent-amex',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     },

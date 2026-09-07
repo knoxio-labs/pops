@@ -20,7 +20,7 @@ export interface AccountFakeRow {
   kind: string;
   currency: string;
   archivedAt: string | null;
-  institutionId: string | null;
+  entityId: string | null;
   entityDisplayName: string | null;
   transactionCount: number;
   balance: {
@@ -32,26 +32,14 @@ export interface AccountFakeRow {
   };
 }
 
-/** One row of finance's institutions list, as bfm reads it. */
-export interface InstitutionFakeRow {
-  id: string;
-  name: string;
-}
-
 /**
- * What a fake finance answers beyond the accounts themselves — the two
- * lookups the mobile accounts routes make on the side (POPS-2848).
- *
- * Each has its own failure switch rather than sharing `failWith`, because the
- * whole point of both is that they degrade independently: an institutions
- * outage must not cost the list its balances, and a history outage must not
- * cost the dashboard its account.
+ * What a fake finance answers beyond the accounts themselves — the
+ * balance-history lookup the account-detail route makes on the side
+ * (POPS-2848).
  */
 export interface AccountsFakeExtras {
-  readonly institutions?: readonly InstitutionFakeRow[];
   /** Account id → its month-end series. A missing id answers an empty series. */
   readonly history?: Readonly<Record<string, readonly { month: string; balanceCents: number }[]>>;
-  readonly institutionsFailWith?: Exclude<CallResult<unknown>, { kind: 'ok' }>;
   readonly historyFailWith?: Exclude<CallResult<unknown>, { kind: 'ok' }>;
 }
 
@@ -59,8 +47,6 @@ export interface AccountsFake {
   factory: PillarHandleFactory;
   /** Every `accounts.list` input bfm sent, in order. */
   listCalls: unknown[];
-  /** Every `institutions.list` call bfm made — length is what tests assert on. */
-  institutionCalls: unknown[];
   /** Every `checkpoints.history` input bfm sent, in order. */
   historyCalls: unknown[];
 }
@@ -71,7 +57,7 @@ export function accountRow(overrides: Partial<AccountFakeRow> & { id: string }):
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
-    institutionId: null,
+    entityId: null,
     entityDisplayName: null,
     transactionCount: 0,
     balance: {
@@ -97,7 +83,6 @@ export function createAccountsFake(
   extras: AccountsFakeExtras = {}
 ): AccountsFake {
   const listCalls: unknown[] = [];
-  const institutionCalls: unknown[] = [];
   const historyCalls: unknown[] = [];
 
   const list = (rawInput: unknown): Promise<CallResult<unknown>> => {
@@ -116,14 +101,6 @@ export function createAccountsFake(
     return Promise.resolve({ kind: 'ok', value: { data: found } });
   };
 
-  const listInstitutions = (rawInput: unknown): Promise<CallResult<unknown>> => {
-    institutionCalls.push(rawInput);
-    if (extras.institutionsFailWith !== undefined) {
-      return Promise.resolve(extras.institutionsFailWith);
-    }
-    return Promise.resolve({ kind: 'ok', value: { data: extras.institutions ?? [] } });
-  };
-
   const history = (input: unknown): Promise<CallResult<unknown>> => {
     historyCalls.push(input);
     if (extras.historyFailWith !== undefined) return Promise.resolve(extras.historyFailWith);
@@ -136,11 +113,9 @@ export function createAccountsFake(
     factory: <TRouter>() =>
       fakePillarHandle<TRouter>('finance', {
         accounts: { list, get },
-        institutions: { list: listInstitutions },
         checkpoints: { history },
       }),
     listCalls,
-    institutionCalls,
     historyCalls,
   };
 }
@@ -156,7 +131,6 @@ export function createMalformedAccountsFake(value: unknown): PillarHandleFactory
       list: (): CallResult<unknown> => ({ kind: 'ok', value }),
       get: (): CallResult<unknown> => ({ kind: 'ok', value }),
     },
-    institutions: { list: (): CallResult<unknown> => ({ kind: 'ok', value: { data: [] } }) },
     checkpoints: { history: (): CallResult<unknown> => ({ kind: 'ok', value: { data: [] } }) },
   };
   return <TRouter>() => fakePillarHandle<TRouter>('finance', routes);

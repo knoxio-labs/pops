@@ -13,7 +13,6 @@ import type { Account } from './accounts/types';
 type Checkpoint = NonNullable<CheckpointsListResponse['data']>[number];
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const checkpointsList = vi.fn();
 const checkpointsCreate = vi.fn();
@@ -21,7 +20,6 @@ const checkpointsRemove = vi.fn();
 
 vi.mock('../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   checkpointsList: (...args: unknown[]) => checkpointsList(...args),
   checkpointsCreate: (...args: unknown[]) => checkpointsCreate(...args),
@@ -36,7 +34,6 @@ function account(overrides: Partial<Account>): Account {
   return {
     id: 'a1',
     name: 'Everyday',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -47,7 +44,6 @@ function account(overrides: Partial<Account>): Account {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -83,7 +79,6 @@ function renderPage(accounts: Account[], id: string, checkpoints: Checkpoint[] =
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
   checkpointsList.mockResolvedValue({ data: { data: checkpoints }, error: undefined });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

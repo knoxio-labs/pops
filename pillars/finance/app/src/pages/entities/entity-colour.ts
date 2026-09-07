@@ -24,8 +24,7 @@ export function entityColourStyle(
 /**
  * `GET /entities/{id}/avatar` is content-addressed by ENTITY id, not by the
  * blob's own asset id, so the URL is stable across a replace — the `v` query
- * param busts the browser's cache the way `logoUrlFor`'s content-addressed
- * path does for institution logos.
+ * param busts the browser's cache instead.
  */
 export function entityAvatarUrlFor(entityId: string, avatarAssetId: string): string {
   return `/contacts-api/entities/${entityId}/avatar?v=${avatarAssetId}`;

@@ -3,18 +3,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { processMock, progressMock, accountsListMock, institutionsListMock } = vi.hoisted(() => ({
+const { processMock, progressMock, accountsListMock } = vi.hoisted(() => ({
   processMock: vi.fn(),
   progressMock: vi.fn(),
   accountsListMock: vi.fn(),
-  institutionsListMock: vi.fn(),
 }));
 vi.mock('../finance-api/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../finance-api/index.js')>()),
   importsProcessImport: (...args: unknown[]) => processMock(...args),
   importsGetImportProgress: (...args: unknown[]) => progressMock(...args),
   accountsList: (...args: unknown[]) => accountsListMock(...args),
-  institutionsList: (...args: unknown[]) => institutionsListMock(...args),
 }));
 
 import {
@@ -39,7 +37,6 @@ import type { Account } from './accounts/types';
 const ANZ_EVERYDAY: Account = {
   id: 'acc-1',
   name: 'ANZ Everyday',
-  institutionId: null,
   kind: 'checking',
   currency: 'AUD',
   archivedAt: null,
@@ -50,7 +47,6 @@ const ANZ_EVERYDAY: Account = {
   entityColour: null,
   entityAvatarAssetId: null,
   resolvedEntityId: null,
-  institution: null,
   balance: NO_BALANCE,
   importStatus: NO_IMPORT_STATUS,
   transactionCount: NO_TRANSACTION_COUNT,
@@ -124,7 +120,6 @@ beforeEach(() => {
     },
     error: undefined,
   });
-  institutionsListMock.mockResolvedValue({ data: { data: [] }, error: undefined });
   useImportStore.getState().reset();
   storage = createMemoryPersistStorage();
   useImportStore.persist.setOptions({ storage });
