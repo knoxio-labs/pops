@@ -191,7 +191,9 @@ describe('re-evaluation is visible while it runs', () => {
 
   it('clears isReevaluating when the run fails', async () => {
     useImportStore.getState().setProcessSessionId('live-session');
-    reevaluateMock.mockResolvedValue(deadResponse(500));
+    // A non-5xx status: the run must fail without waiting out the transient
+    // retry delay this test isn't set up to advance.
+    reevaluateMock.mockResolvedValue(deadResponse(400));
     const { result } = renderHook(() => useReevaluatePending());
 
     await result.current.runReevaluate();

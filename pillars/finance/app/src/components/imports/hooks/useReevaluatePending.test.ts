@@ -186,9 +186,33 @@ describe('useReevaluatePending', () => {
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 
-  it.each([400, 500])('never recovers on a %i: one error toast, null result', async (status) => {
+  it('shows one error toast, not one per hook instance, when an outage spans an active and a queued run', async () => {
+    vi.useFakeTimers();
+    try {
+      useImportStore.getState().setProcessSessionId('live-session');
+      reevaluateMock.mockResolvedValue(deadResponse(503));
+
+      const first = renderHook(() => useReevaluatePending());
+      const second = renderHook(() => useReevaluatePending());
+      const outcomes = Promise.all([
+        first.result.current.runReevaluate(),
+        second.result.current.runReevaluate(),
+      ]);
+      // Two chain rounds (active, then the queued follow-up), each with one
+      // transient retry: 4 requests, each pair separated by the retry delay.
+      await vi.advanceTimersByTimeAsync(6000);
+
+      expect(await outcomes).toEqual([null, null]);
+      expect(reevaluateMock).toHaveBeenCalledTimes(4);
+      expect(toastMock.error).toHaveBeenCalledExactlyOnceWith(ERROR_TOAST);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never recovers on a 400: one error toast, null result, no retry', async () => {
     seedRecoverableSession();
-    reevaluateMock.mockResolvedValue(deadResponse(status));
+    reevaluateMock.mockResolvedValue(deadResponse(400));
 
     const { result } = renderHook(() => useReevaluatePending());
 
@@ -196,6 +220,46 @@ describe('useReevaluatePending', () => {
     expect(reevaluateMock).toHaveBeenCalledTimes(1);
     expect(processMock).not.toHaveBeenCalled();
     expect(toastMock.error).toHaveBeenCalledExactlyOnceWith(ERROR_TOAST);
+  });
+
+  it('retries once on a 500 (transient) before giving up: one error toast, null result', async () => {
+    vi.useFakeTimers();
+    try {
+      seedRecoverableSession();
+      reevaluateMock.mockResolvedValue(deadResponse(500));
+
+      const { result } = renderHook(() => useReevaluatePending());
+      const outcome = result.current.runReevaluate();
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(await outcome).toBeNull();
+      // Both attempts hit the transient-retry path, not dead-session recovery.
+      expect(reevaluateMock).toHaveBeenCalledTimes(2);
+      expect(processMock).not.toHaveBeenCalled();
+      expect(toastMock.error).toHaveBeenCalledExactlyOnceWith(ERROR_TOAST);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not toast when the transient retry succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      useImportStore.getState().setProcessSessionId('live-session');
+      reevaluateMock
+        .mockResolvedValueOnce(deadResponse(503))
+        .mockResolvedValueOnce(reevaluateSuccess(4));
+
+      const { result } = renderHook(() => useReevaluatePending());
+      const outcome = result.current.runReevaluate();
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect((await outcome)?.affectedCount).toBe(4);
+      expect(reevaluateMock).toHaveBeenCalledTimes(2);
+      expect(toastMock.error).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not misfire recovery on an untyped error whose message mentions 404', async () => {
