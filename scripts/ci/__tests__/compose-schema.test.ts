@@ -59,11 +59,20 @@ describe('ComposeServiceSchema', () => {
   it('strips fields no scripts/ci guard reads, rather than rejecting them', () => {
     expect(
       ComposeServiceSchema.parse({
-        image: 'ghcr.io/knoxio-labs/pops-fixture:main',
         ports: ['3000:3000'],
         depends_on: ['redis'],
+        restart: 'unless-stopped',
       })
     ).toEqual({});
+  });
+
+  it('keeps image, which the Dockerfile-deployment guard reads', () => {
+    const service = { image: 'ghcr.io/knoxio-labs/pops-fixture:main' };
+    expect(ComposeServiceSchema.parse(service)).toEqual(service);
+  });
+
+  it('rejects an image declared as anything but a string', () => {
+    expect(() => ComposeServiceSchema.parse({ image: 42 })).toThrow();
   });
 
   it('keeps healthcheck, which the pops-mcp readiness-probe guard reads', () => {

@@ -4,7 +4,10 @@
  * parses it. `smoke-image.mjs` reads a service's `build` and `volumes` to
  * derive which `/data/...` paths a pillar's image must mount fresh;
  * `check-compose-cloudflare-access-env.test.ts` reads `environment` to assert
- * two services forward the Cloudflare Access identity vars. Both validate
+ * two services forward the Cloudflare Access identity vars;
+ * `dockerfile-deployment-coverage.test.ts` reads `build` and `image` to assert
+ * every pillar Dockerfile on disk is one production actually deploys. All
+ * validate
  * against this one schema rather than each declaring its own narrower slice,
  * so a third field a future guard needs is one more optional property here,
  * not a third independently-drifting definition of what a Compose service is.
@@ -60,7 +63,7 @@ export const ComposeHealthcheckSchema = z.object({
 });
 
 /**
- * A Compose service: `build`, `volumes`, `secrets`, `environment` and
+ * A Compose service: `build`, `image`, `volumes`, `secrets`, `environment` and
  * `healthcheck` — every field a scripts/ci guard has needed out of
  * `infra/docker-compose.yml` so far. Nullable because `some-service:` with no
  * value is valid Compose (typically paired with a YAML anchor elsewhere), not
@@ -69,6 +72,7 @@ export const ComposeHealthcheckSchema = z.object({
 export const ComposeServiceSchema = z
   .object({
     build: z.union([z.string(), z.object({ dockerfile: z.string().optional() })]).optional(),
+    image: z.string().optional(),
     volumes: z.array(ComposeVolumeEntrySchema).optional(),
     secrets: z.array(ComposeSecretEntrySchema).optional(),
     environment: z.record(z.string(), z.unknown()).optional(),
