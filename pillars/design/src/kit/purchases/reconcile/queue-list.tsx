@@ -38,8 +38,7 @@ interface QueueListProps {
 }
 
 /**
- * The queue as a single listbox. Ported from
- * `pillars/purchases/app/src/pages/reconcile/queue-list.tsx`.
+ * The queue as a single listbox.
  *
  * One tab stop for the whole inbox, with `aria-activedescendant` naming the
  * row under the cursor. Hundreds of rows each holding their own tab stop is

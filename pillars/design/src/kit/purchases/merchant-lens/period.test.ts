@@ -34,8 +34,8 @@ describe('periodToSpendPeriod', () => {
 
   it('bounds a year from its first instant to its last', () => {
     expect(periodToSpendPeriod('2026')).toEqual({
-      from: '2026-01-01T00:00:00Z',
-      to: '2026-12-31T23:59:59Z',
+      from: '2026-01-01',
+      to: '2026-12-31',
     });
   });
 });

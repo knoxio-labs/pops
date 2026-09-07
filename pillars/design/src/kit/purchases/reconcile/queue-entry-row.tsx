@@ -18,7 +18,7 @@ interface QueueEntryRowProps {
 /**
  * One decision, laid out as the inbox reads it: the charge on the left, what
  * the engine proposes on the right, the arithmetic between them in the
- * middle. Ported from `pillars/purchases/app/src/pages/reconcile/queue-entry-row.tsx`.
+ * middle.
  *
  * Nothing inside is focusable. The list owns the keyboard as a single
  * listbox, and interactive children inside a `role="option"` would take

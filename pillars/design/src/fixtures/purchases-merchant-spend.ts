@@ -52,15 +52,6 @@ export interface SpendPeriod {
   to: string | null;
 }
 
-export interface MerchantOrder {
-  id: string;
-  orderedAt: string;
-  sourceOrderId: string | null;
-  status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
-  totalCents: number;
-  currency: string;
-}
-
 function accounting(input: {
   totalCents: number;
   matchedCents: number;
@@ -109,14 +100,16 @@ const entity = (entityId: string, name: string | null): MerchantIdentity => ({
 const named = (name: string): MerchantIdentity => ({ resolution: 'name', entityId: null, name });
 const unattributed: MerchantIdentity = { resolution: 'unattributed', entityId: null, name: null };
 
-const woolworths: MerchantSpend = {
+/** A resolved entity whose every dollar is explained. */
+export const woolworths: MerchantSpend = {
   merchant: entity('woolworths', 'Woolworths Metro George St'),
   currency: 'AUD',
   orderCount: 6,
   accounting: accounting({ totalCents: 45_230, matchedCents: 45_230 }),
 };
 
-const bunnings: MerchantSpend = {
+/** The row carrying every figure at once — matched, awaiting, refunded and a residual. */
+export const bunnings: MerchantSpend = {
   merchant: entity('bunnings', 'Bunnings Warehouse Alexandria'),
   currency: 'AUD',
   orderCount: 3,
@@ -128,28 +121,55 @@ const bunnings: MerchantSpend = {
   }),
 };
 
-const wooliesBroadway: MerchantSpend = {
+/** A bare label the roll-up could not resolve to an entity. */
+export const wooliesBroadway: MerchantSpend = {
   merchant: named('Woolies Metro Broadway'),
   currency: 'AUD',
   orderCount: 2,
   accounting: accounting({ totalCents: 8_900, matchedCents: 8_900 }),
 };
 
-const audUnattributed: MerchantSpend = {
+/**
+ * A residual of one cent against a five-figure total. The share must read
+ * 99%, never the 100% it rounds to: the whole point of the bucket is that a
+ * reader can tell "nothing is unexplained" from "almost nothing is".
+ */
+export const sliverResidual: MerchantSpend = {
+  merchant: entity('coles', 'Coles Broadway'),
+  currency: 'AUD',
+  orderCount: 2,
+  accounting: accounting({ totalCents: 52_000, matchedCents: 51_999 }),
+};
+
+/**
+ * More linked than was ever spent. This is not a part of a whole, so no
+ * share is offered at all and the meter is withheld rather than clamped.
+ */
+export const overLinked: MerchantSpend = {
+  merchant: named('IGA Surry Hills'),
+  currency: 'AUD',
+  orderCount: 1,
+  accounting: accounting({ totalCents: 12_000, matchedCents: 13_500 }),
+};
+
+/** Spend the roll-up attributed to no merchant at all. */
+export const audUnattributed: MerchantSpend = {
   merchant: unattributed,
   currency: 'AUD',
   orderCount: 1,
   accounting: accounting({ totalCents: 3_200, matchedCents: 0 }),
 };
 
-const amazonUs: MerchantSpend = {
+/** The second currency, so nothing can be blended into one number. */
+export const amazonUs: MerchantSpend = {
   merchant: entity('amazon-us', 'Amazon.com'),
   currency: 'USD',
   orderCount: 4,
   accounting: accounting({ totalCents: 21_999, matchedCents: 15_000, awaitingImportCents: 4_000 }),
 };
 
-const usdUnattributed: MerchantSpend = {
+/** The unattributed bucket of the second currency — the key collision to avoid. */
+export const usdUnattributed: MerchantSpend = {
   merchant: unattributed,
   currency: 'USD',
   orderCount: 1,
@@ -160,18 +180,20 @@ const usdUnattributed: MerchantSpend = {
  * Identifies a merchant grouping within one currency section — used as the
  * React list key and, combined with currency, as the fixture order lookup
  * below. Two unattributed identities in different currencies must not
- * collide, which is why the order lookup below keys on `merchantOrderKey`
- * rather than on this alone.
+ * collide, which is why the order lookup keys on the currency as well.
  */
 export function merchantKey(identity: MerchantIdentity): string {
   return `${identity.resolution}:${identity.entityId ?? identity.name ?? ''}`;
 }
 
-export function merchantOrderKey(spend: MerchantSpend): string {
-  return `${spend.currency}:${merchantKey(spend.merchant)}`;
-}
-
-const audMerchants = [woolworths, bunnings, wooliesBroadway, audUnattributed];
+const audMerchants = [
+  woolworths,
+  bunnings,
+  sliverResidual,
+  overLinked,
+  wooliesBroadway,
+  audUnattributed,
+];
 const usdMerchants = [amazonUs, usdUnattributed];
 
 const audTotal: CurrencySpend = {
@@ -200,58 +222,13 @@ export const merchantSpendGroupsSingleCurrency: CurrencyGroup[] = [
 /** No spend reached the roll-up in the selected window. */
 export const merchantSpendGroupsEmpty: CurrencyGroup[] = [];
 
-type OrderTuple = [
-  id: string,
-  orderedAt: string,
-  sourceOrderId: string | null,
-  status: MerchantOrder['status'],
-  totalCents: number,
-];
-
-function orderList(currency: string, entries: OrderTuple[]): MerchantOrder[] {
-  return entries.map(([id, orderedAt, sourceOrderId, status, totalCents]) => ({
-    id,
-    orderedAt,
-    sourceOrderId,
-    status,
-    totalCents,
-    currency,
-  }));
-}
-
 /**
- * The orders behind each merchant row, keyed by `merchantOrderKey`. Order
- * counts are deliberately at odds with each row's `orderCount` for three of
- * the six merchants, so the drill-down's disagreement notice
- * (`short`/`none`/`over`) has something real to render in this fixture
- * rather than only in a unit test: Woolworths is short (4 shown of 6),
- * Woolies Metro Broadway has none (0 shown of 2), and Bunnings is over (4
- * shown of 3).
+ * The window the roll-up reported it computed over, which is not the window
+ * the picker is showing. The screen captions the figures with this rather
+ * than with the selection, so a total can never be read against a window it
+ * was not computed over.
  */
-export const merchantOrdersByKey: Record<string, MerchantOrder[]> = {
-  [merchantOrderKey(woolworths)]: orderList('AUD', [
-    ['o-ww-1', '2026-01-12', 'WW-88213', 'linked', 8_420],
-    ['o-ww-2', '2026-02-03', 'WW-88940', 'linked', 6_110],
-    ['o-ww-3', '2026-03-21', null, 'settled_cash', 4_990],
-    ['o-ww-4', '2026-05-02', 'WW-90112', 'linked', 5_500],
-  ]),
-  [merchantOrderKey(bunnings)]: orderList('AUD', [
-    ['o-bw-1', '2026-01-05', 'BW-10021', 'linked', 21_400],
-    ['o-bw-2', '2026-01-19', 'BW-10099', 'linked', 8_600],
-    ['o-bw-3', '2026-02-14', 'BW-10182', 'partial', 12_300],
-    ['o-bw-4', '2026-03-02', 'BW-10240', 'linked', 9_800],
-  ]),
-  [merchantOrderKey(wooliesBroadway)]: [],
-  [merchantOrderKey(audUnattributed)]: orderList('AUD', [
-    ['o-au-1', '2026-04-18', null, 'awaiting_settlement', 3_200],
-  ]),
-  [merchantOrderKey(amazonUs)]: orderList('USD', [
-    ['o-az-1', '2026-01-22', '112-3384921', 'linked', 5_499],
-    ['o-az-2', '2026-02-27', '112-3401183', 'linked', 6_200],
-    ['o-az-3', '2026-04-09', '112-3455012', 'partial', 4_800],
-    ['o-az-4', '2026-06-14', '112-3502279', 'awaiting_settlement', 5_500],
-  ]),
-  [merchantOrderKey(usdUnattributed)]: orderList('USD', [
-    ['o-au-2', '2026-05-30', null, 'awaiting_settlement', 1_500],
-  ]),
-};
+export const allTimePeriod: SpendPeriod = { from: null, to: null };
+
+/** The response a bounded selection came back with. */
+export const boundedPeriod: SpendPeriod = { from: '2026-01-01', to: '2026-12-31' };

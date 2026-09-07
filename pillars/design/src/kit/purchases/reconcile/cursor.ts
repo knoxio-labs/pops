@@ -43,9 +43,11 @@ export function chargeIdAfterSkip(entries: readonly QueueEntry[], chargeId: stri
 }
 
 /**
- * Where the keyboard is pointing, keyed by charge rather than by index —
- * see `pillars/purchases/app/src/pages/reconcile/useQueueCursor.ts` for why
- * an index-based cursor cannot survive both an accept and a reject.
+ * Where the keyboard is pointing, keyed by charge rather than by index.
+ *
+ * An index cannot survive both decisions: accepting drains the row out from
+ * under the cursor, while rejecting leaves the charge in place as
+ * unexplained, so the same index means two different rows.
  */
 export function useQueueCursor(
   entries: readonly QueueEntry[],

@@ -4,13 +4,15 @@
  * shapes mirror the pillar's upload contract only as far as the screen reads
  * from it.
  *
- * The upload answers one of six ways, and every one is representable here:
- * `uploading` while the model reads it, then `created` (a purchase was
- * written), `duplicate` (already on record, nothing written), `needs-review`
- * (read, but it does not add up — nothing written), `unreadable` (nothing
- * could be read at all — nothing written), or `refused` (the upload itself
- * failed). `needs-review` and `unreadable` write no purchase, which is why
- * both carry `receiptUris`: the store is the only trace of the upload.
+ * The endpoint's own three answers are `created` (a purchase was written),
+ * `needs-review` (read, but it does not add up — nothing written) and
+ * `unreadable` (nothing could be read at all — nothing written). Three more
+ * shapes reach the panel without being answers of that kind: `uploading`
+ * while the model reads, `duplicate` for the 409 that means already on
+ * record, and `refused` for an upload the pillar would not take.
+ *
+ * `needs-review` and `unreadable` write no purchase, which is why both carry
+ * `receiptUris`: the store is then the only trace of the upload.
  */
 
 /** One part of a receipt already staged in the browser, before submission. */

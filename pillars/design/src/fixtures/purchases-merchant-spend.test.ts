@@ -1,35 +1,42 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  merchantKey,
-  merchantOrderKey,
-  merchantOrdersByKey,
-  merchantSpendGroups,
-} from './purchases-merchant-spend';
+import { merchantOrdersByKey, merchantOrderKey } from './purchases-merchant-orders';
+import { merchantKey, merchantSpendGroups } from './purchases-merchant-spend';
 
 describe('merchantSpendGroups', () => {
-  it("sums each currency's total component-wise from its own merchants", () => {
-    for (const group of merchantSpendGroups) {
-      if (group.total === null) continue;
-      const summed = group.merchants.reduce(
-        (sum, merchant) => sum + merchant.accounting.totalCents,
-        0
-      );
-      expect(group.total.accounting.totalCents).toBe(summed);
-      expect(group.total.orderCount).toBe(
-        group.merchants.reduce((sum, merchant) => sum + merchant.orderCount, 0)
-      );
-    }
+  // Literal figures rather than the constructors' own algebra: `accounting()`
+  // defines the residual and `sumAccounting()` defines the total, so asserting
+  // those relations back at them holds for any numbers at all. These are the
+  // figures a reviewer reads off the screen.
+  it('heads AUD with the figures the section shows', () => {
+    const aud = merchantSpendGroups.find((group) => group.currency === 'AUD');
+    expect(aud?.total).toEqual({
+      currency: 'AUD',
+      orderCount: 15,
+      accounting: {
+        totalCents: 249_830,
+        matchedCents: 217_629,
+        awaitingImportCents: 15_000,
+        refundedCents: 5_000,
+        residualCents: 17_201,
+        netSpendCents: 244_830,
+      },
+    });
   });
 
-  it('keeps the explained/unexplained split consistent: residual plus explained equals the total', () => {
-    for (const group of merchantSpendGroups) {
-      for (const merchant of group.merchants) {
-        const { totalCents, residualCents, matchedCents, awaitingImportCents } =
-          merchant.accounting;
-        expect(matchedCents + awaitingImportCents + residualCents).toBe(totalCents);
-      }
-    }
+  it('carries a residual too small to round away, so the share is read at its clamp', () => {
+    const sliver = merchantSpendGroups
+      .flatMap((group) => group.merchants)
+      .filter((merchant) => merchant.accounting.residualCents > 0)
+      .map((merchant) => merchant.accounting.residualCents);
+    expect(Math.min(...sliver)).toBe(1);
+  });
+
+  it('carries a merchant with more linked than was ever spent', () => {
+    const overLinked = merchantSpendGroups
+      .flatMap((group) => group.merchants)
+      .filter((merchant) => merchant.accounting.residualCents < 0);
+    expect(overLinked).toHaveLength(1);
   });
 
   it('includes at least one merchant with a genuine, non-zero residual', () => {

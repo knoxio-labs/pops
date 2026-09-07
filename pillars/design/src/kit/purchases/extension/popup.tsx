@@ -3,6 +3,7 @@ import { popupDisabled, popupGuidance } from '@/kit/purchases/extension/popup-gu
 import { Button, cn } from '@pops/ui';
 
 import type { CaptureStatus } from '@/fixtures/purchases-everyday-export';
+import type { PopupDisabled, PopupGuidance } from '@/kit/purchases/extension/popup-guidance';
 import type { ReactNode } from 'react';
 
 /**
@@ -14,17 +15,15 @@ import type { ReactNode } from 'react';
  * inherited.
  */
 export function CapturePopup({ status }: { status: CaptureStatus | null }) {
-  if (status === null) return <DetachedPopup />;
-
-  const disabled = popupDisabled(status);
-  const guidance = popupGuidance(status);
+  const disabled = status === null ? DETACHED_DISABLED : popupDisabled(status);
+  const guidance = status === null ? DETACHED_GUIDANCE : popupGuidance(status);
 
   return (
     <PopupFrame>
       <dl className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5">
-        <Count label="Receipts seen in the list" value={status.listed} />
-        <Count label="Fully captured" value={status.captured} />
-        <Count label="Still to fetch" value={status.pending} />
+        <Count label="Receipts seen in the list" value={status?.listed} />
+        <Count label="Fully captured" value={status?.captured} />
+        <Count label="Still to fetch" value={status?.pending} />
       </dl>
 
       <div className="space-y-1.5">
@@ -39,39 +38,31 @@ export function CapturePopup({ status }: { status: CaptureStatus | null }) {
 }
 
 /**
- * The popup opened over a tab the content scripts never attached to. It can
- * report nothing at all, so it says how to make itself work instead.
+ * A popup opened over a tab the content scripts never attached to reports
+ * nothing at all. The counts keep their placeholders rather than reading
+ * zero, because none seen and none reported are different answers.
  */
-function DetachedPopup() {
-  return (
-    <PopupFrame>
-      <div className="space-y-1.5">
-        <PopupButton disabled>Load full history</PopupButton>
-        <PopupButton disabled>Fetch remaining receipts</PopupButton>
-        <PopupButton disabled>Download JSON</PopupButton>
-      </div>
-      <Message
-        text="Open everyday.com.au and reload the page, so the extension is running on it."
-        isError
-      />
-    </PopupFrame>
-  );
-}
+const DETACHED_DISABLED: PopupDisabled = { history: true, fetch: true, download: true };
+
+const DETACHED_GUIDANCE: PopupGuidance = {
+  text: 'Open everyday.com.au and reload the page, so the extension is running on it.',
+  isError: true,
+};
 
 function PopupFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-background text-foreground w-[300px] space-y-3 border p-3.5 text-[13px]/[1.45]">
+    <div className="bg-background text-foreground w-[300px] space-y-3 p-3.5 text-[13px]/[1.45]">
       <h1 className="text-[13px] font-medium">Everyday Rewards → POPS</h1>
       {children}
     </div>
   );
 }
 
-function Count({ label, value }: { label: string; value: number }) {
+function Count({ label, value }: { label: string; value: number | undefined }) {
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right tabular-nums">{value.toLocaleString('en-AU')}</dd>
+      <dd className="text-right tabular-nums">{value === undefined ? '–' : String(value)}</dd>
     </>
   );
 }

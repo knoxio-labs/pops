@@ -8,7 +8,8 @@ import { ExplainedSplitView } from './explained-split-view';
 import { merchantLabel } from './merchant-label';
 import { orderCountAgreement, orderCountLabel } from './order-count-agreement';
 
-import type { MerchantOrder, MerchantSpend } from '@/fixtures/purchases-merchant-spend';
+import type { MerchantOrder } from '@/fixtures/purchases-merchant-orders';
+import type { MerchantSpend } from '@/fixtures/purchases-merchant-spend';
 
 import type { OrderCountAgreement } from './order-count-agreement';
 

@@ -40,11 +40,19 @@ export function periodYears(now: Date): YearSelection[] {
 }
 
 /**
- * The window a selection covers, for display. All time covers everything, so
- * both bounds are `null` — the same shape the roll-up itself reports, which
- * is what the "Covering …" line under the picker reads.
+ * The window a selection asks for. All time asks for everything, so both
+ * bounds are `null`.
+ *
+ * This is what the picker would send, not what the screen reports: the
+ * "Covering …" line echoes the window the response came back with, because a
+ * picker that has already moved while a refetch is in flight would otherwise
+ * caption one window's figures with another's.
+ *
+ * Bare dates rather than instants: an offset-bearing bound rendered through a
+ * local formatter reads as a different year either side of Greenwich, and the
+ * playground has no wire to sort against.
  */
 export function periodToSpendPeriod(selection: PeriodSelection): SpendPeriod {
   if (selection === ALL_TIME) return { from: null, to: null };
-  return { from: `${selection}-01-01T00:00:00Z`, to: `${selection}-12-31T23:59:59Z` };
+  return { from: `${selection}-01-01`, to: `${selection}-12-31` };
 }

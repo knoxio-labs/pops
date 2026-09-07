@@ -14,10 +14,10 @@ export interface QueueDecisions {
 }
 
 /**
- * What `accept` and `reject` leave behind, mirroring what the shipped page's
- * two endpoints actually persist (see `useReconcileDecisions.ts` in the
- * app): accepting pins the link and drops the row, rejecting only deletes
- * the link, which the queue then shows as unexplained rather than removing.
+ * What `accept` and `reject` leave behind, which is narrower than the words
+ * suggest: accepting pins the link and drops the row, while rejecting only
+ * deletes the link, so the charge returns to the queue as unexplained rather
+ * than leaving it.
  */
 export function applyQueueDecision(
   entries: readonly QueueEntry[],

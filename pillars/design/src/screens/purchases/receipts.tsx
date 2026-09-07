@@ -25,10 +25,12 @@ const IDLE_SUBMISSION: ReceiptSubmission = { state: 'idle' };
  * `/purchases/receipts` — the way in.
  *
  * `POST /receipts` reads a photographed till slip, a PDF tax invoice or a
- * pasted order confirmation, and answers with one of six materially
- * different outcomes. This page keeps them apart: a reading that disagreed
- * with the receipt's own total wrote nothing, and rendering it as a success
- * would turn a known unknown into a recorded fact.
+ * pasted order confirmation, and answers three materially different ways.
+ * The three stay three: a reading that disagreed with the receipt's own
+ * total wrote nothing, and rendering it as a success would turn a known
+ * unknown into a recorded fact. The states below add the two the transport
+ * contributes — an upload in flight, and one the pillar refused outright —
+ * and the 409 that is not an error but an answer.
  */
 export function ReceiptDropZonePage({
   initialStaging = EMPTY_STAGING,
@@ -50,9 +52,10 @@ export function ReceiptDropZonePage({
       <ReceiptIntake intake={intake} disabled={isUploading} onSubmit={() => undefined} />
 
       {/*
-        The one live region on this surface — kept over the inner
-        `role="status"`/`role="alert"` a couple of outcomes carry, because it
-        is the only mechanism that reaches every outcome, not just those two.
+        The one live region on this surface, and deliberately on the wrapper
+        rather than on each outcome: a live region nested inside another
+        announces unpredictably in several screen readers, and only the
+        wrapper reaches every outcome rather than a couple of them.
       */}
       <div aria-live="polite">
         <OutcomePanel submission={submission} />

@@ -1,7 +1,7 @@
 /**
  * Fictional product dictionary entries, shaped like the wire payload the
  * purchases pillar's `GET /products` returns (see
- * `pillars/purchases/app/src/pages/product-dictionary/types.ts`), typed here
+ * the pillar's product contract), typed here
  * rather than imported so the design surface never depends on a generated
  * client.
  *

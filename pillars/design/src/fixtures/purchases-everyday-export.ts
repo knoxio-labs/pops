@@ -1,7 +1,6 @@
 /**
  * The status the Everyday Rewards capture extension reports to its popup,
- * shaped like `window.__popsEveryday.status()` in
- * `pillars/purchases/extension/capture.js`.
+ * shaped like the frozen `status()` its content script publishes.
  *
  * The popup holds no state of its own — it is a remote control for the
  * content script — so one status object is the whole input to everything the

@@ -1,7 +1,7 @@
 /**
  * Fictional data for the reconcile queue (`/purchases`), shaped like
  * `GET /reconcile/queue`'s 200 response
- * (`purchases-api/types.gen.ts:ReconcileQueueResponses`). Typed locally
+ * (the generated `ReconcileQueueResponses`). Typed locally
  * rather than imported — the playground reaches no pillar contract — so this
  * mirrors the wire shape by hand and will drift if the real one changes.
  *
@@ -33,7 +33,11 @@ export interface QueueEntry {
   orderedAt: string;
   amountCents: number;
   currency: string;
-  /** `Σ proposed − amountCents`. Zero when there are no proposals. */
+  /**
+   * `Σ proposed − amountCents`, so an unexplained charge carries the whole
+   * charge as a negative rather than zero: nothing proposed is short by the
+   * full amount, and zero would read as balanced.
+   */
   deltaCents: number;
   proposed: ProposedLink[];
   /**
@@ -95,7 +99,7 @@ export const purchasesQueue: QueueEntry[] = [
     orderedAt: '2026-09-03',
     amountCents: 289_900,
     currency: 'AUD',
-    deltaCents: 39_900,
+    deltaCents: 40_000,
     autoLinkedSource: false,
     proposed: [
       {
@@ -167,7 +171,7 @@ export const purchasesQueue: QueueEntry[] = [
     orderedAt: '2026-02-11',
     amountCents: 540,
     currency: 'AUD',
-    deltaCents: 0,
+    deltaCents: -540,
     autoLinkedSource: false,
     proposed: [],
   },
@@ -192,3 +196,25 @@ export const purchasesQueue: QueueEntry[] = [
     ],
   },
 ];
+
+/**
+ * A page that came back full, so the truncation notice can be read at the
+ * size it really carries rather than at a number invented to fit seven rows.
+ *
+ * The seven above are cycled with fresh charge ids; every clone keeps its
+ * original's arithmetic, so a row read out of this page says the same thing
+ * as the row it came from.
+ */
+export function fullQueuePage(size: number): QueueEntry[] {
+  return Array.from({ length: size }, (_, index) => {
+    const entry = purchasesQueue[index % purchasesQueue.length];
+    if (entry === undefined) throw new Error('the queue fixture is empty');
+    return index < purchasesQueue.length
+      ? entry
+      : {
+          ...entry,
+          chargeId: `${entry.chargeId}-${index}`,
+          purchaseId: `${entry.purchaseId}-${index}`,
+        };
+  });
+}

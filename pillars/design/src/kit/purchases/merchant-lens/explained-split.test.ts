@@ -4,7 +4,11 @@ import { explainedSplit } from './explained-split';
 
 import type { SpendAccounting } from '@/fixtures/purchases-merchant-spend';
 
-function accounting(totalCents: number, residualCents: number): SpendAccounting {
+function accounting(
+  totalCents: number,
+  residualCents: number,
+  parts: Partial<SpendAccounting> = {}
+): SpendAccounting {
   return {
     totalCents,
     matchedCents: totalCents - residualCents,
@@ -12,6 +16,7 @@ function accounting(totalCents: number, residualCents: number): SpendAccounting 
     refundedCents: 0,
     residualCents,
     netSpendCents: totalCents,
+    ...parts,
   };
 }
 
@@ -53,5 +58,17 @@ describe('explainedSplit', () => {
     expect(split.explainedPercent).toBeNull();
     expect(split.hasResidual).toBe(true);
     expect(split.residualCents).toBe(-200);
+  });
+  it('takes the residual as given rather than re-deriving it from the matched figures', () => {
+    // matched + awaiting disagrees with total - residual. The residual is the
+    // figure that must survive; explained is the one allowed to absorb the
+    // disagreement. Deriving it the other way round is the dropped-residual
+    // error one layer down, one dimension over.
+    const split = explainedSplit(
+      accounting(10_000, 2_500, { matchedCents: 1, awaitingImportCents: 1 })
+    );
+
+    expect(split.residualCents).toBe(2_500);
+    expect(split.explainedCents).toBe(7_500);
   });
 });

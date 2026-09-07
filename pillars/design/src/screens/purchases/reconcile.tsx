@@ -1,4 +1,4 @@
-import { purchasesQueue } from '@/fixtures/purchases-queue';
+import { fullQueuePage, purchasesQueue } from '@/fixtures/purchases-queue';
 import { EmptyPanel } from '@/kit/purchases/empty-panel';
 import { useQueueCursor } from '@/kit/purchases/reconcile/cursor';
 import { DecisionBar } from '@/kit/purchases/reconcile/decision-bar';
@@ -19,6 +19,9 @@ import type { QueueFilterState } from '@/kit/purchases/reconcile/types';
 import type { ReactElement } from 'react';
 
 export const meta: ScreenMeta = { title: 'Reconcile queue', order: 1, frame: 'web' };
+
+/** The server's own default, which the read takes rather than asking for one. */
+const QUEUE_PAGE_SIZE = 50;
 
 interface QueueBodyProps {
   entries: QueueEntry[];
@@ -57,7 +60,11 @@ interface ReconcileQueuePageProps {
   allEntries?: QueueEntry[];
   isLoading?: boolean;
   error?: string | null;
-  /** Caps how many charges the "server" hands back, to show the truncation notice. */
+  /**
+   * How many charges came back. The read takes the server's page size and
+   * says when the page came back full; there is no offset cursor, because
+   * confirming drains the queue from under it.
+   */
   limit?: number;
   initialChargeId?: string;
   /** The states view renders every case at once; only the default owns the page's focus. */
@@ -69,7 +76,7 @@ export function ReconcileQueuePage({
   allEntries = purchasesQueue,
   isLoading = false,
   error = null,
-  limit,
+  limit = QUEUE_PAGE_SIZE,
   initialChargeId,
   autoFocus = true,
 }: ReconcileQueuePageProps): ReactElement {
@@ -77,8 +84,8 @@ export function ReconcileQueuePage({
   const [filters, setFilters] = useState<QueueFilterState>({ ...DEFAULT_QUEUE_FILTERS });
 
   const matched = filterQueueEntries(entries, filters);
-  const visible = limit === undefined ? matched : matched.slice(0, limit);
-  const isTruncated = limit !== undefined && matched.length > limit;
+  const visible = matched.slice(0, limit);
+  const isTruncated = matched.length > limit;
 
   const cursor = useQueueCursor(visible, initialChargeId ?? null);
   const decisions = useQueueDecisions(entries, setEntries, cursor.skipPast);
@@ -132,7 +139,9 @@ export const states: ScreenStates = {
     <ReconcileQueuePage error="The reconcile queue took too long to respond." autoFocus={false} />
   ),
   empty: () => <ReconcileQueuePage allEntries={[]} autoFocus={false} />,
-  truncated: () => <ReconcileQueuePage limit={5} autoFocus={false} />,
+  truncated: () => (
+    <ReconcileQueuePage allEntries={fullQueuePage(QUEUE_PAGE_SIZE + 12)} autoFocus={false} />
+  ),
   'row-selected': () => (
     <ReconcileQueuePage initialChargeId="chg_01K5Q3F7Y2W9J3HNRK6BMS" autoFocus={false} />
   ),

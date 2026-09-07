@@ -1,9 +1,5 @@
-import {
-  merchantKey,
-  merchantOrderKey,
-  type CurrencyGroup,
-  type MerchantOrder,
-} from '@/fixtures/purchases-merchant-spend';
+import { merchantOrderKey } from '@/fixtures/purchases-merchant-orders';
+import { merchantKey } from '@/fixtures/purchases-merchant-spend';
 
 import { formatCents } from '@pops/ui';
 
@@ -11,6 +7,9 @@ import { explainedSplit } from './explained-split';
 import { ExplainedSplitView } from './explained-split-view';
 import { MerchantRow } from './merchant-row';
 import { orderCountLabel } from './order-count-agreement';
+
+import type { MerchantOrder } from '@/fixtures/purchases-merchant-orders';
+import type { CurrencyGroup } from '@/fixtures/purchases-merchant-spend';
 
 /**
  * One currency's merchants, under that currency's own total.
