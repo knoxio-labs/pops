@@ -117,9 +117,9 @@ export function listActiveTransactionCorrectionsForMatching(
  * The pure counterpart of {@link findAllMatchingTransactionCorrections}: same
  * ordering, grouping and pattern predicate, but over rows the caller already
  * holds rather than a fresh SELECT. `rows` is expected to already be filtered
- * to active + `minConfidence`-and-above (what
- * {@link listActiveTransactionCorrectionsForMatching} returns) — this
- * function does not re-apply that filter.
+ * to active (what {@link listActiveTransactionCorrectionsForMatching}
+ * returns) — this function does not re-apply that filter. No confidence
+ * floor either way (ADR-053).
  */
 export function findAllMatchingTransactionCorrectionsFromRows(
   rows: readonly TransactionCorrectionRow[],
