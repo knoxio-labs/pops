@@ -1,6 +1,10 @@
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
-import { checkUnit, parseDirsArg, selectUnits } from '../check-exports.mjs';
+import { checkUnit, parseDirsArg, selectUnits, unresolvableDirs } from '../check-exports.mjs';
 
 type Unit = Parameters<typeof checkUnit>[0];
 
@@ -289,5 +293,106 @@ describe('selectUnits', () => {
 
   it('selects nothing for an empty scope (a PR that touched no unit)', () => {
     expect(selectUnits(units, [])).toEqual([]);
+  });
+});
+
+/**
+ * POPS-1630: a scoped run that selects zero units used to print
+ * `OK — every unit's exports/files manifest is self-consistent.` and exit 0,
+ * including when the scope named a path that is not in the tree at all. That is
+ * the CI path, so any drift in how quality.yml computes the changed-unit list
+ * made this gate pass on the very PR that changed the unit.
+ *
+ * Mutation-checked: making `unresolvableDirs` always return `[]` fails 5 of
+ * these; dropping the trailing-slash strip fails 2; leaving `main()` to ignore
+ * the report fails 2.
+ */
+describe('unresolvableDirs', () => {
+  const onDisk = (dirs: string[]) => (d: string) => dirs.includes(d);
+
+  it('reports nothing for the full-tree sweep, which has no scope to validate', () => {
+    expect(unresolvableDirs(null)).toEqual([]);
+  });
+
+  it('accepts a scoped dir that exists but owns no unit', () => {
+    expect(unresolvableDirs(['scripts'], onDisk(['scripts']))).toEqual([]);
+  });
+
+  it('reports a scoped dir that names no path in the checkout', () => {
+    expect(unresolvableDirs(['pillars/gone'], onDisk(['scripts']))).toEqual(['pillars/gone']);
+  });
+
+  it('reports only the offending entries, keeping the order given', () => {
+    const probe = onDisk(['scripts', 'libs/types']);
+    expect(unresolvableDirs(['libs/gone', 'scripts', 'pillars/gone', 'libs/types'], probe)).toEqual(
+      ['libs/gone', 'pillars/gone']
+    );
+  });
+
+  it('reports nothing for an empty scope (a PR that touched no unit)', () => {
+    expect(unresolvableDirs([], onDisk([]))).toEqual([]);
+  });
+
+  it('probes each entry with the repo-relative dir it was given, unchanged', () => {
+    const seen: string[] = [];
+    unresolvableDirs(['pillars/finance', 'scripts'], (d) => {
+      seen.push(d);
+      return true;
+    });
+    expect(seen).toEqual(['pillars/finance', 'scripts']);
+  });
+});
+
+describe('a trailing slash in the scope', () => {
+  const units: Unit[] = [
+    { dir: 'pillars/finance', name: '@pops/finance', pkg: {} },
+    { dir: 'pillars/finance/app', name: '@pops/app-finance', pkg: {} },
+    { dir: 'libs/types', name: '@pops/types', pkg: {} },
+  ];
+
+  it('is stripped by parseDirsArg, including a doubled one', () => {
+    expect(parseDirsArg(['--dirs=pillars/finance/,libs/types//'])).toEqual([
+      'pillars/finance',
+      'libs/types',
+    ]);
+  });
+
+  it('still selects the unit and its nested app rather than nothing', () => {
+    const scope = parseDirsArg(['--dirs=pillars/finance/']);
+    expect(selectUnits(units, scope).map((u) => u.dir)).toEqual([
+      'pillars/finance',
+      'pillars/finance/app',
+    ]);
+  });
+});
+
+describe('the CLI, run against this checkout', () => {
+  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+  const run = (...args: string[]) =>
+    spawnSync(process.execPath, [resolve(repoRoot, 'scripts/check-exports.mjs'), ...args], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+
+  it('fails on a scope entry that names no path, instead of reporting OK', () => {
+    const result = run('--dirs=pillars/DOES-NOT-EXIST');
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('pillars/DOES-NOT-EXIST');
+    expect(result.stdout).not.toContain('OK —');
+  });
+
+  it('still passes the literal scripts entry the scope job always prepends', () => {
+    const result = run('--dirs=scripts');
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toContain('Checked 0 unit(s) (scoped).');
+  });
+
+  it('names every offending entry, not just the first', () => {
+    const result = run('--dirs=scripts,pillars/gone-a,libs/gone-b');
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('pillars/gone-a');
+    expect(result.stderr).toContain('libs/gone-b');
+    expect(result.stderr).not.toContain('- scripts');
   });
 });
