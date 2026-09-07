@@ -1103,3 +1103,73 @@ describe('CorrectionProposalDialog — impact reaches past the import', () => {
     expect(screen.getByText('No existing transactions match.')).toBeInTheDocument();
   });
 });
+
+describe('CorrectionProposalDialog — the impact panel tracks its inputs', () => {
+  type PreviewCall = {
+    changeSet: { ops: Array<{ data: { descriptionPattern?: string } }> };
+    transactions: Array<{ description: string }>;
+  };
+
+  function previewCalls(): PreviewCall[] {
+    return mockPreviewMutateAsync.mock.calls.map((call) => call[0] as PreviewCall);
+  }
+
+  /** The selected-op slot previews one op; the combined slot previews them all. */
+  function selectedSlotCalls(): PreviewCall[] {
+    return previewCalls().filter((c) => c.changeSet.ops.length === 1);
+  }
+
+  it('re-previews the selected op after its pattern is edited', async () => {
+    // The selected slot used to key its preview on the op's clientId alone, so
+    // an edit — which leaves the id untouched — froze the panel on the
+    // pre-edit numbers, with no `(stale)` marker to say so.
+    seedTwoAddOps();
+    renderDialog();
+
+    await waitFor(() => expect(mockPreviewMutateAsync).toHaveBeenCalled());
+    const patternInput = await screen.findByDisplayValue('WOOLWORTHS');
+    await userEvent.type(patternInput, ' 1234');
+
+    await waitFor(() => {
+      expect(selectedSlotCalls().at(-1)?.changeSet.ops[0]?.data.descriptionPattern).toBe(
+        'WOOLWORTHS 1234'
+      );
+    });
+  });
+
+  it('re-previews once the database descriptions arrive after the first run', async () => {
+    // `useDbPreviewDescriptions` resolves independently of the proposal, so the
+    // first preview can be computed against an empty database list. Nothing in
+    // the op content changes when the rows land, so a content-only key left the
+    // panel reporting "no transactions match this scope" for good.
+    let resolveDbRows = (): void => undefined;
+    mockDescriptionsForPreview.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDbRows = () =>
+          resolve({
+            data: {
+              data: [{ checksum: 'db-1', description: 'WOOLWORTHS 4321 MELB' }],
+              total: 1,
+              truncated: false,
+            },
+            error: undefined,
+          });
+      })
+    );
+    seedTwoAddOps();
+    renderDialog();
+
+    await waitFor(() => expect(mockPreviewMutateAsync).toHaveBeenCalled());
+    expect(previewCalls().flatMap((c) => c.transactions.map((t) => t.description))).not.toContain(
+      'WOOLWORTHS 4321 MELB'
+    );
+
+    resolveDbRows();
+
+    await waitFor(() => {
+      expect(previewCalls().flatMap((c) => c.transactions.map((t) => t.description))).toContain(
+        'WOOLWORTHS 4321 MELB'
+      );
+    });
+  });
+});

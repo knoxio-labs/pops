@@ -41,30 +41,32 @@ export interface CombinedEffectArgs extends BaseEffectShared {
   lastTokenRef: React.MutableRefObject<number>;
 }
 
-function opContentSig(o: LocalOp): string {
-  if (o.kind === 'add') {
-    const d = o.data;
-    return JSON.stringify([
-      o.clientId,
-      d.descriptionPattern,
-      d.matchType,
-      d.entityName ?? '',
-      d.transactionType ?? '',
-      d.location ?? '',
-    ]);
-  }
-  if (o.kind === 'edit') {
-    const d = o.data;
-    return JSON.stringify([
-      o.clientId,
-      d.descriptionPattern ?? '',
-      d.matchType ?? '',
-      d.entityName ?? '',
-      d.transactionType ?? '',
-      d.location ?? '',
-    ]);
-  }
-  return JSON.stringify([o.clientId, o.rationale]);
+/**
+ * Identity of an op's *content*, for deciding whether a preview still stands.
+ *
+ * Everything in `data` participates, not a hand-picked subset: the preview is
+ * a function of the whole rule, so a field left out of the signature is a
+ * field whose edit leaves a stale impact panel on screen (`entityId`, `tags`
+ * and `confidence` all used to be omitted).
+ */
+export function opContentSig(o: LocalOp): string {
+  if (o.kind === 'add' || o.kind === 'edit') return JSON.stringify([o.clientId, o.kind, o.data]);
+  return JSON.stringify([o.clientId, o.kind, o.rationale]);
+}
+
+/**
+ * Identity of the transaction lists a preview was computed against.
+ *
+ * Both lists arrive asynchronously — the session rows as the review step
+ * reconciles them, the database rows as `useDbPreviewDescriptions` resolves —
+ * and a preview computed before they landed scoped to nothing and said "no
+ * transactions match this scope" forever, because the op content had not
+ * changed. Sizes, not identities: `previewTransactions` is rebuilt on every
+ * render of the review step, so keying on the array itself would re-run the
+ * preview continuously.
+ */
+function txnInputsSig(args: BaseEffectShared): string {
+  return `${args.previewTransactions.length}:${args.normalisedDbTransactions.length}`;
 }
 
 export function useCombinedEffect(args: CombinedEffectArgs): void {
@@ -84,13 +86,14 @@ export function useCombinedEffect(args: CombinedEffectArgs): void {
   // `combined` directly would cancel in-flight previews via the cleanup
   // each time setTruncated fires synchronously inside runPreview.
   const { setPreview, setDbPreview, setError: setCombinedError, setTruncated } = combined;
+  const txnSig = txnInputsSig(args);
   useEffect(() => {
     if (!open) {
       lastSigRef.current = null;
       return;
     }
     if (localOps.length === 0) return;
-    const sig = localOps.map(opContentSig).join('|');
+    const sig = `${localOps.map(opContentSig).join('|')}#${txnSig}`;
     if (lastSigRef.current === sig && lastTokenRef.current === rerunToken) return;
     lastSigRef.current = sig;
     lastTokenRef.current = rerunToken;
@@ -112,6 +115,7 @@ export function useCombinedEffect(args: CombinedEffectArgs): void {
   }, [
     open,
     localOps,
+    txnSig,
     rerunToken,
     previewTransactions,
     normalisedDbTransactions,
@@ -144,6 +148,7 @@ export function useSelectedOpEffect(args: SelectedEffectArgs): void {
   // `useCombinedEffect` — otherwise the effect re-runs and cancels its own
   // in-flight preview on every render.
   const { setPreview, setDbPreview, setError: setSelectedError, setTruncated } = selected;
+  const txnSig = txnInputsSig(args);
   useEffect(() => {
     if (!open) return;
     if (!selectedOp) {
@@ -153,14 +158,15 @@ export function useSelectedOpEffect(args: SelectedEffectArgs): void {
       selectedOpPreviewKeyRef.current = null;
       return;
     }
-    if (
-      selectedOpPreviewKeyRef.current === selectedOp.clientId &&
-      lastTokenRef.current === rerunToken
-    )
+    // Keyed on the op's content, not just its `clientId`: editing the selected
+    // op leaves the id untouched, so an id-only key froze the panel on the
+    // pre-edit numbers — with no `(stale)` marker, since the combined effect
+    // clears `dirty` as soon as it re-runs.
+    const previewKey = `${opContentSig(selectedOp)}#${txnSig}`;
+    if (selectedOpPreviewKeyRef.current === previewKey && lastTokenRef.current === rerunToken)
       return;
-    selectedOpPreviewKeyRef.current = selectedOp.clientId;
+    selectedOpPreviewKeyRef.current = previewKey;
     lastTokenRef.current = rerunToken;
-    const previewKey = selectedOp.clientId;
     const handle = runPreview({
       ops: [selectedOp],
       sessionTxns: previewTransactions,
@@ -178,6 +184,7 @@ export function useSelectedOpEffect(args: SelectedEffectArgs): void {
   }, [
     open,
     selectedOp,
+    txnSig,
     rerunToken,
     previewTransactions,
     normalisedDbTransactions,
