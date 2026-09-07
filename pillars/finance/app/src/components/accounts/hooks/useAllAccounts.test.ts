@@ -7,11 +7,9 @@ import { NO_BALANCE, NO_IMPORT_STATUS } from '../../../test-utils.js';
 import { useAllAccounts } from './useAllAccounts';
 
 const mockAccountsList = vi.fn();
-const mockInstitutionsList = vi.fn();
 
 vi.mock('../../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => mockAccountsList(...args),
-  institutionsList: (...args: unknown[]) => mockInstitutionsList(...args),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -19,7 +17,6 @@ function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client }, children);
 }
 
-const ANZ = { id: 'anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null };
 const EVERYDAY = {
   id: 'a1',
   name: 'Everyday',
@@ -28,9 +25,13 @@ const EVERYDAY = {
   currency: 'AUD',
   archivedAt: null,
   displayOrder: 0,
-  entityId: null,
-  entityDisplayName: null,
+  entityId: 'entity-anz',
+  entityDisplayName: 'ANZ',
   entityDisplayNameStale: false,
+  entityColour: '#0072ac',
+  entityAvatarAssetId: null,
+  resolvedEntityId: 'entity-anz',
+  institution: null,
   balance: NO_BALANCE,
   importStatus: NO_IMPORT_STATUS,
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -43,7 +44,6 @@ beforeEach(() => {
     data: { data: [EVERYDAY], pagination: { total: 1, limit: 500, offset: 0, hasMore: false } },
     error: undefined,
   });
-  mockInstitutionsList.mockResolvedValue({ data: { data: [ANZ] }, error: undefined });
 });
 
 describe('useAllAccounts', () => {
@@ -54,7 +54,7 @@ describe('useAllAccounts', () => {
     expect(mockAccountsList).toHaveBeenCalledExactlyOnceWith({ query: { limit: 500 } });
   });
 
-  it('joins the account onto its institution before handing it back', async () => {
+  it('reads the resolved issuer straight off the account response, with no separate institutions fetch', async () => {
     const { result } = renderHook(() => useAllAccounts(), { wrapper });
 
     await waitFor(() => expect(result.current.accounts).toHaveLength(1));
@@ -63,28 +63,19 @@ describe('useAllAccounts', () => {
       name: 'Everyday',
       kind: 'checking',
       archived: false,
-      institution: { id: 'anz', name: 'ANZ', colour: '#0072ac' },
+      institution: { id: 'entity-anz', name: 'ANZ', colour: '#0072ac' },
     });
   });
 
-  it('leaves accounts undefined until both queries resolve, so absence is never asserted early', () => {
+  it('leaves accounts undefined until the query resolves, so absence is never asserted early', () => {
     mockAccountsList.mockReturnValue(new Promise(() => {}));
-    mockInstitutionsList.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useAllAccounts(), { wrapper });
 
     expect(result.current.accounts).toBeUndefined();
     expect(result.current.isLoading).toBe(true);
   });
 
-  it('leaves accounts undefined while only the institutions query is still pending', async () => {
-    mockInstitutionsList.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useAllAccounts(), { wrapper });
-
-    await waitFor(() => expect(mockAccountsList).toHaveBeenCalled());
-    expect(result.current.accounts).toBeUndefined();
-  });
-
-  it('surfaces a failure from either query as error', async () => {
+  it('surfaces a failure from the query as error', async () => {
     const failure = new Error('accounts unavailable');
     mockAccountsList.mockResolvedValue({
       data: undefined,

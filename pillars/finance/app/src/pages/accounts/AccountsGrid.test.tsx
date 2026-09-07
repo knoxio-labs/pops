@@ -46,6 +46,10 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    entityColour: null,
+    entityAvatarAssetId: null,
+    resolvedEntityId: null,
+    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -56,12 +60,11 @@ function account(overrides: Partial<Account>): Account {
 }
 
 function Harness({ accounts, currencies }: { accounts: Account[]; currencies: Currency[] }) {
-  const filters = useAccountListFilters(accounts, [], []);
+  const filters = useAccountListFilters(accounts, []);
   return (
     <AccountsGrid
       isLoading={false}
       accounts={accounts}
-      institutions={[]}
       currencies={currencies}
       filters={filters}
       onAdd={vi.fn()}

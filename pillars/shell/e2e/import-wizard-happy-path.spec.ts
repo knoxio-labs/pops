@@ -33,11 +33,12 @@
  *   GET  /contacts-api/entities                    → { data:[], pagination }
  *   GET  /finance-api/transactions/available-tags  → { tags:[] }
  *   GET  /finance-api/accounts                     → { data:[…1 account…], pagination }
- *   GET  /finance-api/institutions                 → { data:[] }
  *
- * The last two are POPS-2840: the Upload step now opens on a real account
+ * The last one is POPS-2840: the Upload step now opens on a real account
  * picker (`useAllAccounts`) before the file dropzone appears at all, so the
  * walk below picks the one mocked account before touching the file input.
+ * The mocked account carries its issuing institution embedded (POPS-3063) —
+ * `useAllAccounts` no longer joins a separate institutions fetch onto it.
  *
  * Crash detection is wired via beforeEach/afterEach so the test also
  * verifies the wizard doesn't throw uncaught errors during the full flow.
@@ -45,10 +46,7 @@
 import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
-import {
-  AccountsListResponseSchema,
-  InstitutionsListResponseSchema,
-} from './helpers/finance-accounts';
+import { AccountsListResponseSchema } from './helpers/finance-accounts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
@@ -345,7 +343,15 @@ const emptyEntitiesBody = {
   pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
 };
 
-/** The one account the Upload step's account picker offers. */
+/**
+ * The one account the Upload step's account picker offers. Its embedded
+ * `institution.name` is named 'Amex' to match `BANK_TYPE_BY_INSTITUTION_NAME`
+ * in `account-step/import-formats.ts` — the Upload step derives the mocked
+ * account's available bank dialects from this institution name, and an
+ * unmatched name (or no `institution` at all) leaves it with zero formats
+ * (the "no format for account" empty state, which never renders the file
+ * dropzone).
+ */
 const accountsBody = {
   data: [
     {
@@ -359,29 +365,20 @@ const accountsBody = {
       entityId: null,
       entityDisplayName: null,
       entityDisplayNameStale: false,
+      entityColour: null,
+      entityAvatarAssetId: null,
+      resolvedEntityId: null,
+      institution: {
+        id: 'inst-amex',
+        name: 'Amex',
+        colour: '#2563eb',
+        logoAssetId: null,
+      },
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     },
   ],
   pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
-};
-
-// Named 'Amex' to match `BANK_TYPE_BY_INSTITUTION_NAME` in
-// `account-step/import-formats.ts` — the Upload step derives the mocked
-// account's available bank dialects from this institution name, and an
-// unmatched name leaves it with zero formats (the "no format for account"
-// empty state, which never renders the file dropzone).
-const institutionsBody = {
-  data: [
-    {
-      id: 'inst-amex',
-      name: 'Amex',
-      colour: '#2563eb',
-      logoAssetId: null,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    },
-  ],
 };
 
 async function setupMocks(page: Page): Promise<void> {
@@ -413,10 +410,6 @@ async function setupMocks(page: Page): Promise<void> {
   await page.route(
     '**/finance-api/accounts?**',
     fulfilWith(200, AccountsListResponseSchema, accountsBody, 'accounts.list')
-  );
-  await page.route(
-    '**/finance-api/institutions',
-    fulfilWith(200, InstitutionsListResponseSchema, institutionsBody, 'institutions.list')
   );
 }
 

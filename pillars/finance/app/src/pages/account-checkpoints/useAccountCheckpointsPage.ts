@@ -6,7 +6,7 @@ import { useAccountsData } from '../accounts/useAccountsPage';
 import { accountCheckpointsKey } from './queryKeys';
 
 import type { CurrenciesListResponses } from '../../finance-api/index.js';
-import type { Account, Institution } from '../accounts/types';
+import type { Account } from '../accounts/types';
 
 type Currency = CurrenciesListResponses[200]['data'][number];
 
@@ -27,9 +27,8 @@ function findCurrency(currencies: Currency[], code: string | undefined): Currenc
  * bad id never fires a doomed request against `/accounts/:id/checkpoints`.
  */
 export function useAccountCheckpointsPage(accountId: string) {
-  const { accounts, institutions, currencies } = useAccountsData();
+  const { accounts, currencies } = useAccountsData();
   const accountRows = accounts.data?.data ?? [];
-  const institutionRows: Institution[] = institutions.data?.data ?? [];
   const currencyRows = currencies.data?.data ?? [];
   const account = findAccount(accountRows, accountId);
 
@@ -41,9 +40,8 @@ export function useAccountCheckpointsPage(accountId: string) {
 
   return {
     accounts,
-    isLoading: accounts.isLoading || institutions.isLoading || currencies.isLoading,
+    isLoading: accounts.isLoading || currencies.isLoading,
     account,
-    institutions: institutionRows,
     currency: findCurrency(currencyRows, account?.currency),
     checkpoints,
   };

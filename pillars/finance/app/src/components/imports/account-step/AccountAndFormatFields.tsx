@@ -60,9 +60,9 @@ function NewAccountDialog({ state }: { state: AccountAndFormatState }) {
       onOpenChange={state.dialog.setIsDialogOpen}
       editingAccount={null}
       form={state.dialog.form}
-      institutions={state.institutions}
+      bankEntities={state.bankEntities}
       currencies={state.currencies}
-      onCreateInstitution={state.createInstitution}
+      onCreateBankEntity={state.createBankEntity}
       isSubmitting={state.isCreating}
       onSubmit={state.handleCreate}
       onArchiveToggle={() => {}}

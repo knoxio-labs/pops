@@ -71,7 +71,6 @@ export function AccountDetailPage() {
       {isArchived && <ArchivedBanner />}
       <AccountDetailHeader
         account={account}
-        institutions={state.institutions}
         onEdit={() => state.handleEdit(account)}
         onAddTransaction={addTransaction.openDialog}
       />
@@ -83,9 +82,9 @@ export function AccountDetailPage() {
         onOpenChange={state.setIsDialogOpen}
         editingAccount={state.editingAccount}
         form={state.form}
-        institutions={state.institutions}
+        bankEntities={state.bankEntities}
         currencies={state.currencies}
-        onCreateInstitution={state.createInstitution}
+        onCreateBankEntity={state.createBankEntity}
         isSubmitting={state.isSubmitting}
         onSubmit={state.onSubmit}
         onArchiveToggle={state.onArchiveToggle}

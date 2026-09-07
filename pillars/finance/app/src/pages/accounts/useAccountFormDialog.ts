@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 
+import { useAllEntities } from '../../lib/useAllEntities';
 import { mapAccountApiError } from './account-error-mapping';
 import {
   loanTermsFieldsDirty,
@@ -9,7 +10,10 @@ import {
 } from './types';
 import { useAccountFormDialogState } from './useAccountFormDialogState';
 import { toggleArchived, useAccountMutations } from './useAccountMutations';
-import { useCreateInstitution } from './useCreateInstitution';
+import { useCreateBankEntity } from './useCreateBankEntity';
+
+/** The contacts entity `type` the institution picker lists/creates (POPS-3063). */
+const BANK_ENTITY_TYPE = 'bank';
 
 /**
  * Gift-card secrets are never echoed back into the form (they're encrypted at
@@ -41,7 +45,9 @@ export function useAccountFormDialog() {
   const { createMutation, updateMutation, archiveMutation } = useAccountMutations(
     dialog.closeDialog
   );
-  const createInstitution = useCreateInstitution(dialog.form);
+  const createBankEntity = useCreateBankEntity(dialog.form);
+  const bankEntitiesQuery = useAllEntities({ type: BANK_ENTITY_TYPE });
+  const bankEntities = bankEntitiesQuery.data?.data ?? [];
 
   const onArchiveToggle = (account: Account) => {
     archiveMutation.mutate({ id: account.id, archivedAt: toggleArchived(account) });
@@ -77,7 +83,8 @@ export function useAccountFormDialog() {
   return {
     ...dialog,
     onSubmit,
-    createInstitution,
+    createBankEntity,
+    bankEntities,
     isSubmitting: createMutation.isPending || updateMutation.isPending,
     onArchiveToggle,
     isArchiving: archiveMutation.isPending,

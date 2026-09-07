@@ -49,6 +49,8 @@ export type AccountsListResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -70,6 +72,12 @@ export type AccountsListResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -84,6 +92,7 @@ export type AccountsListResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     }>;
@@ -184,6 +193,8 @@ export type AccountsCreateResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -205,6 +216,12 @@ export type AccountsCreateResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -219,6 +236,7 @@ export type AccountsCreateResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     };
@@ -293,6 +311,8 @@ export type AccountsReorderResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -314,6 +334,12 @@ export type AccountsReorderResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -328,6 +354,7 @@ export type AccountsReorderResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     }>;
@@ -401,6 +428,8 @@ export type AccountsDeleteResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -422,6 +451,12 @@ export type AccountsDeleteResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -436,6 +471,7 @@ export type AccountsDeleteResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     };
@@ -504,6 +540,8 @@ export type AccountsGetResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -525,6 +563,12 @@ export type AccountsGetResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -539,6 +583,7 @@ export type AccountsGetResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     };
@@ -636,6 +681,8 @@ export type AccountsUpdateResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -657,6 +704,12 @@ export type AccountsUpdateResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -671,6 +724,7 @@ export type AccountsUpdateResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     };
@@ -1974,6 +2028,8 @@ export type AccountsMergeResponses = {
       createdAt: string;
       currency: string;
       displayOrder: number;
+      entityAvatarAssetId: string | null;
+      entityColour: string | null;
       entityDisplayName: string | null;
       entityDisplayNameStale: boolean;
       entityId: string | null;
@@ -1995,6 +2051,12 @@ export type AccountsMergeResponses = {
           to: string;
         } | null;
       };
+      institution: {
+        colour: string;
+        id: string;
+        logoAssetId: string | null;
+        name: string;
+      } | null;
       institutionId: string | null;
       kind:
         | 'checking'
@@ -2009,6 +2071,7 @@ export type AccountsMergeResponses = {
         | 'crypto'
         | 'other';
       name: string;
+      resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
     };
@@ -2095,6 +2158,8 @@ export type AccountsPreviewMergeResponses = {
         createdAt: string;
         currency: string;
         displayOrder: number;
+        entityAvatarAssetId: string | null;
+        entityColour: string | null;
         entityDisplayName: string | null;
         entityDisplayNameStale: boolean;
         entityId: string | null;
@@ -2116,6 +2181,12 @@ export type AccountsPreviewMergeResponses = {
             to: string;
           } | null;
         };
+        institution: {
+          colour: string;
+          id: string;
+          logoAssetId: string | null;
+          name: string;
+        } | null;
         institutionId: string | null;
         kind:
           | 'checking'
@@ -2130,6 +2201,7 @@ export type AccountsPreviewMergeResponses = {
           | 'crypto'
           | 'other';
         name: string;
+        resolvedEntityId: string | null;
         transactionCount: number;
         updatedAt: string;
       };
@@ -2149,6 +2221,8 @@ export type AccountsPreviewMergeResponses = {
         createdAt: string;
         currency: string;
         displayOrder: number;
+        entityAvatarAssetId: string | null;
+        entityColour: string | null;
         entityDisplayName: string | null;
         entityDisplayNameStale: boolean;
         entityId: string | null;
@@ -2170,6 +2244,12 @@ export type AccountsPreviewMergeResponses = {
             to: string;
           } | null;
         };
+        institution: {
+          colour: string;
+          id: string;
+          logoAssetId: string | null;
+          name: string;
+        } | null;
         institutionId: string | null;
         kind:
           | 'checking'
@@ -2184,6 +2264,7 @@ export type AccountsPreviewMergeResponses = {
           | 'crypto'
           | 'other';
         name: string;
+        resolvedEntityId: string | null;
         transactionCount: number;
         updatedAt: string;
       };

@@ -7,6 +7,7 @@ import type { AccountKind } from '../../contract/account-kind.js';
 import type {
   AccountBalance,
   AccountEntityDisplay,
+  AccountIssuerInstitution,
   ImportStatus,
   AccountMergePreview,
   AccountRow,
@@ -29,6 +30,20 @@ export interface Account {
    * couldn't be reached to refresh it. `null` for a non-`person` account. */
   entityDisplayName: string | null;
   entityDisplayNameStale: boolean;
+  /** The linked contact's colour/avatar (POPS-3063), set only alongside a
+   * non-null `entityDisplayName` resolved via a contacts Entity. */
+  entityColour: string | null;
+  entityAvatarAssetId: string | null;
+  /** The contacts Entity id the three fields above were actually resolved
+   * from — see `AccountEntityDisplay.resolvedEntityId`. */
+  resolvedEntityId: string | null;
+  /**
+   * The issuing institution's own name/colour/logo — the not-yet-migrated
+   * fallback (POPS-3099) for an issuer-bearing account with no resolvable
+   * `entityId`. Mutually exclusive with a non-null `entityDisplayName`; both
+   * null for `cash`, and for an account genuinely unlinked to any issuer.
+   */
+  institution: AccountIssuerInstitution | null;
   /** What the account holds today, checkpoint-anchored (ADR-051). */
   balance: AccountBalance;
   /** When the account last got data and how it is fed (POPS-2917). */
@@ -97,6 +112,10 @@ export function toAccount(
     entityId: row.entityId,
     entityDisplayName: entityDisplay.entityDisplayName,
     entityDisplayNameStale: entityDisplay.entityDisplayNameStale,
+    entityColour: entityDisplay.entityColour,
+    entityAvatarAssetId: entityDisplay.entityAvatarAssetId,
+    resolvedEntityId: entityDisplay.resolvedEntityId,
+    institution: entityDisplay.institution,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -9,11 +9,9 @@ import { EditableFormFields } from './EditableFormFields';
 import type { ProcessedTransaction } from '@pops/finance';
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 
 vi.mock('../../../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
 }));
 
 function renderFields(editedFields: Partial<ProcessedTransaction>, setEditedFields = vi.fn()) {
@@ -45,7 +43,6 @@ beforeEach(() => {
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
 });
 
 describe('EditableFormFields AccountField picker branch', () => {

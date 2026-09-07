@@ -57,7 +57,7 @@ export function AccountCheckpointsPage() {
     return <EmptyState title="No such account" description="It may have been deleted." />;
   }
 
-  const [option] = toAccountOptions([account], state.institutions);
+  const [option] = toAccountOptions([account]);
   const checkpoints = state.checkpoints.data?.data ?? [];
   const currency = currencyFormat(state.currency);
 

@@ -6,7 +6,7 @@ import { toAccountOptions } from '../../components/accounts/toAccountOptions.js'
 import { currencyFormat, formatBalanceCents } from './balance-display';
 
 import type { Currency } from './account-subtotals';
-import type { Account, Institution } from './types';
+import type { Account } from './types';
 
 /**
  * The note under a person ledger's balance: the one kind whose sign does not
@@ -63,20 +63,19 @@ function Balance({ account, currencies }: { account: Account; currencies: Curren
  * the balance headline in ledger tone (POPS-2886), and the kind and
  * person-ledger context `AccountChip` does not carry. Reusing
  * `toAccountOptions` (built for the account picker, POPS-2774) rather than
- * duplicating the institution join.
+ * duplicating the issuer resolution — POPS-3063 moved that resolution
+ * server-side, so there is no institutions list left to join against.
  */
 export function AccountCard({
   account,
-  institutions,
   currencies,
   onSelect,
 }: {
   account: Account;
-  institutions: Institution[];
   currencies: Currency[];
   onSelect: () => void;
 }) {
-  const [option] = toAccountOptions([account], institutions);
+  const [option] = toAccountOptions([account]);
   if (!option) return null;
   return (
     <button

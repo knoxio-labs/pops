@@ -36,6 +36,10 @@ function account(overrides: Partial<Account>): Account {
     entityId: null,
     entityDisplayName: null,
     entityDisplayNameStale: false,
+    entityColour: null,
+    entityAvatarAssetId: null,
+    resolvedEntityId: null,
+    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -46,14 +50,7 @@ function account(overrides: Partial<Account>): Account {
 }
 
 function renderCard(overrides: Partial<Account>, currencies: Currency[] = [AUD]) {
-  render(
-    <AccountCard
-      account={account(overrides)}
-      institutions={[]}
-      currencies={currencies}
-      onSelect={vi.fn()}
-    />
-  );
+  render(<AccountCard account={account(overrides)} currencies={currencies} onSelect={vi.fn()} />);
 }
 
 describe('AccountCard', () => {

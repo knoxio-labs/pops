@@ -10,7 +10,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { institutionsService, openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { ContactsPermanentError } from '../contacts/client.js';
 import { startReconcileContactsOutboxWorker } from '../cron/reconcile-contacts-outbox.js';
@@ -412,6 +412,101 @@ describe('accounts — person accounts (POPS-2771)', () => {
     const downRow = down.data.find((a) => a.id === created.data.id);
     expect(downRow?.entityDisplayName).toBe('Gail');
     expect(downRow?.entityDisplayNameStale).toBe(true);
+  });
+});
+
+describe('accounts — issuer entity resolution (POPS-3063)', () => {
+  it('resolves an issuer-bearing account via a direct entityId', async () => {
+    const contacts = makeContactsFake({
+      seed: [{ id: 'entity-amex', name: 'Amex', type: 'bank', colour: '#d5001c' }],
+    });
+    const created = await client(contacts).accounts.create({
+      name: 'Amex Card',
+      kind: 'credit-card',
+      currency: 'AUD',
+      entityId: 'entity-amex',
+    });
+    expect(created.data.entityDisplayName).toBe('Amex');
+    expect(created.data.entityColour).toBe('#d5001c');
+    expect(created.data.institution).toBeNull();
+  });
+
+  it('falls back to the institution mapping when entityId is null but the institution has migrated', async () => {
+    const contacts = makeContactsFake({
+      seed: [{ id: 'entity-westpac', name: 'Westpac', type: 'bank', colour: '#d5001c' }],
+    });
+    const institution = await client(contacts).institutions.create({
+      name: 'Westpac',
+      colour: '#d5001c',
+    });
+    institutionsService.setInstitutionMigratedEntityId(
+      financeDb.db,
+      institution.data.id,
+      'entity-westpac'
+    );
+
+    const created = await client(contacts).accounts.create({
+      name: 'Westpac Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: institution.data.id,
+    });
+    // The write path (the 0099 backfill migration) never runs against a live
+    // request — a freshly created account still carries a null `entityId`
+    // here, and the read side resolves it through `institutionId` instead.
+    expect(created.data.entityId).toBeNull();
+    expect(created.data.entityDisplayName).toBe('Westpac');
+    expect(created.data.entityColour).toBe('#d5001c');
+    expect(created.data.institution).toBeNull();
+  });
+
+  it("falls back to the institution's own name/colour/logo when it has not migrated (POPS-3099)", async () => {
+    const contacts = makeContactsFake();
+    const institution = await client(contacts).institutions.create({
+      name: 'Bendigo Bank',
+      colour: '#0057b8',
+    });
+
+    const created = await client(contacts).accounts.create({
+      name: 'Bendigo Everyday',
+      kind: 'checking',
+      currency: 'AUD',
+      institutionId: institution.data.id,
+    });
+    expect(created.data.entityDisplayName).toBeNull();
+    expect(created.data.institution).toMatchObject({
+      id: institution.data.id,
+      name: 'Bendigo Bank',
+      colour: '#0057b8',
+    });
+  });
+
+  it("degrades to the account's own stored name when contacts cannot resolve a linked entity", async () => {
+    const contacts = makeContactsFake({
+      seed: [{ id: 'entity-amex', name: 'Amex', type: 'bank' }],
+    });
+    const created = await client(contacts).accounts.create({
+      name: 'Amex Card',
+      kind: 'credit-card',
+      currency: 'AUD',
+      entityId: 'entity-amex',
+    });
+
+    contacts.setUnavailable(true);
+    const down = await client(contacts).accounts.get(created.data.id);
+    expect(down.data.entityDisplayName).toBe('Amex Card');
+    expect(down.data.entityDisplayNameStale).toBe(true);
+    expect(down.data.institution).toBeNull();
+  });
+
+  it('an account with no institution and no entityId carries neither', async () => {
+    const created = await client().accounts.create({
+      name: 'Wallet',
+      kind: 'cash',
+      currency: 'AUD',
+    });
+    expect(created.data.entityDisplayName).toBeNull();
+    expect(created.data.institution).toBeNull();
   });
 });
 

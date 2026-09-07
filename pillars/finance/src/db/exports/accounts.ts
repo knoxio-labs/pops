@@ -33,7 +33,11 @@ export { resolvePendingPersonAccountEntity } from '../services/account-entity-re
 
 export { resolveAccountEntityDisplays } from '../services/account-entity-display.js';
 
-export type { AccountEntityDisplay } from '../services/account-entity-display.js';
+export type {
+  AccountEntityDisplay,
+  AccountIssuerInstitution,
+  InstitutionsById,
+} from '../services/account-entity-display.js';
 
 export * as currenciesService from '../services/currencies.js';
 
