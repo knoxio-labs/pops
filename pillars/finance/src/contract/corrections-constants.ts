@@ -1,20 +1,11 @@
 /**
- * Confidence-floor constant shared by both the correction-rule pure helpers
- * (`corrections-pure.ts`) and the REST zod schemas (`rest-corrections-schemas.ts`
- * et al). Split into its own dependency-free module so the schemas can import
- * it without creating a cycle back through `corrections-pure.ts` (which itself
- * imports the `ChangeSet`/`ChangeSetOp` types from the schemas module).
+ * Dependency-free constants and helpers shared by both the correction-rule
+ * pure helpers (`corrections-pure.ts`) and the REST zod schemas
+ * (`rest-corrections-schemas.ts` et al). Split into its own module so the
+ * schemas can import from it without creating a cycle back through
+ * `corrections-pure.ts` (which itself imports the `ChangeSet`/`ChangeSetOp`
+ * types from the schemas module).
  */
-
-/**
- * No matcher filters on this any more (ADR-053/POPS-3129 dropped the
- * confidence floor from matching), and POPS-3130 removed the last three
- * readers: the invented default for a hand-written rule, the schema column
- * default, and the create/update validation floor. Nothing reads this value
- * to decide anything any more; it survives only as an exported constant
- * until POPS-3132 deletes it.
- */
-export const MIN_MATCH_CONFIDENCE = 0.7;
 
 /**
  * The canonical transaction-type taxonomy. This is the single source of truth

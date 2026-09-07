@@ -11,13 +11,15 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { MIN_MATCH_CONFIDENCE } from '../../../../contract/corrections-constants.js';
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { suggestTags } from '../index.js';
 
 import type Database from 'better-sqlite3';
 
 const ENTITY_ID = 'entity-2601';
+
+/** The matching floor removed by ADR-053/POPS-3129 — kept only as a fixture anchor. */
+const OLD_MATCHING_FLOOR = 0.7;
 
 function seedCorrection(raw: Database.Database, id: string, confidence: number, tag: string): void {
   raw
@@ -33,7 +35,7 @@ describe('suggestTags correction pass — no confidence floor (ADR-053)', () => 
   it('contributes a tag from a below-the-old-floor correction on the entity-matcher path', () => {
     const { db, raw } = freshMigratedFinanceDb();
     try {
-      seedCorrection(raw, 'corr-weak', MIN_MATCH_CONFIDENCE - 0.01, 'Groceries');
+      seedCorrection(raw, 'corr-weak', OLD_MATCHING_FLOOR - 0.01, 'Groceries');
 
       const suggestions = suggestTags(db, {
         description: 'WOOLWORTHS 1234 SYDNEY',
@@ -50,7 +52,7 @@ describe('suggestTags correction pass — no confidence floor (ADR-053)', () => 
   it('contributes a tag from a correction at the old floor too', () => {
     const { db, raw } = freshMigratedFinanceDb();
     try {
-      seedCorrection(raw, 'corr-at-floor', MIN_MATCH_CONFIDENCE, 'Groceries');
+      seedCorrection(raw, 'corr-at-floor', OLD_MATCHING_FLOOR, 'Groceries');
 
       const suggestions = suggestTags(db, {
         description: 'WOOLWORTHS 1234 SYDNEY',
@@ -67,7 +69,7 @@ describe('suggestTags correction pass — no confidence floor (ADR-053)', () => 
   it('still trusts caller-supplied correction tags without re-scanning', () => {
     const { db, raw } = freshMigratedFinanceDb();
     try {
-      seedCorrection(raw, 'corr-weak', MIN_MATCH_CONFIDENCE - 0.01, 'Groceries');
+      seedCorrection(raw, 'corr-weak', OLD_MATCHING_FLOOR - 0.01, 'Groceries');
 
       const suggestions = suggestTags(db, {
         description: 'WOOLWORTHS 1234 SYDNEY',
