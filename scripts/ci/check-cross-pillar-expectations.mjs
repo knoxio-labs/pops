@@ -2647,9 +2647,9 @@ function selfTest() {
   // made is about resolution, not about file layout.
   const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    bfmFinanceSites.length === 6,
+    bfmFinanceSites.length === 5,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these six calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these five calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
     new Set(bfmFinanceSites.map((s) => s.file)).size === 2,

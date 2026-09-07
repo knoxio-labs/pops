@@ -1,8 +1,9 @@
 /**
  * Stand-ins for the finance account reads the import wizard makes before it
  * shows a file input (POPS-2840): the account picker's list, whose issuing
- * institution now arrives embedded on each account row (POPS-3063) rather
- * than through a separate institutions fetch/join.
+ * institution is one contacts Entity resolved through `entityId` — the same
+ * mechanism a person account's counterparty uses — rather than a separate
+ * institutions fetch/join or table.
  *
  * Hand-mirrored from `rest-accounts.ts`'s `AccountSchema`, for the reason
  * every per-spec schema here is mirrored rather than imported:
@@ -15,21 +16,10 @@ import { fulfilWith } from './pillar-rest';
 
 import type { Page } from '@playwright/test';
 
-/** The not-yet-migrated institution fallback shape — see `AccountSchema.institution`. */
-export const AccountIssuerInstitutionSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    colour: z.string(),
-    logoAssetId: z.string().nullable(),
-  })
-  .strict();
-
 export const AccountSchema = z
   .object({
     id: z.string(),
     name: z.string(),
-    institutionId: z.string().nullable(),
     kind: z.string(),
     currency: z.string(),
     archivedAt: z.string().nullable(),
@@ -40,7 +30,6 @@ export const AccountSchema = z
     entityColour: z.string().nullable(),
     entityAvatarAssetId: z.string().nullable(),
     resolvedEntityId: z.string().nullable(),
-    institution: AccountIssuerInstitutionSchema.nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
@@ -58,10 +47,11 @@ export const AccountsListResponseSchema = z
 export type StubAccount = z.infer<typeof AccountSchema>;
 
 /**
- * Serve one account. The embedded `institution.name` is what the Upload step
- * keys the account's bank dialects off (`BANK_TYPE_BY_INSTITUTION_NAME` in
- * `account-step/import-formats.ts`); an unrecognised name — or no
- * `institution` at all — leaves the account with no format and no dropzone.
+ * Serve one account. `entityDisplayName` is what the Upload step keys the
+ * account's bank dialects off (`BANK_TYPE_BY_INSTITUTION_NAME` in
+ * `account-step/import-formats.ts`, read via the client-derived
+ * `AccountOption.institution.name`); an unrecognised name — or `null` —
+ * leaves the account with no format and no dropzone.
  */
 export async function stubFinanceAccount(page: Page, account: StubAccount): Promise<void> {
   await page.route(
