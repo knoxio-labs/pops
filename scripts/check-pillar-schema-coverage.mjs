@@ -46,7 +46,8 @@
  * by one filename cuts both ways, so two things follow from it. A pillar that
  * carries a `migrations/` or `src/db/` directory and no barrel is REPORTED and
  * fails the run rather than quietly leaving the set, because leaving the set
- * also removes it from the job matrix `--list-pillars` feeds. And a pillar
+ * also removes it from the job matrix `scripts/list-pillars.mjs` feeds, which
+ * is why both read the same discovery. And a pillar
  * that is discovered but yields no table symbols, or no references to them,
  * fails as "could not analyse" instead of scoring as full coverage — that
  * branch used to return the guard's success value before the database was
@@ -55,7 +56,6 @@
  * Usage:
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance
  *   node scripts/check-pillar-schema-coverage.mjs --all
- *   node scripts/check-pillar-schema-coverage.mjs --list-pillars
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --ignore-allowlist
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --inject-fake-table finance:fake_table
  *   node scripts/check-pillar-schema-coverage.mjs --pillar finance --inject-fake-default
@@ -68,6 +68,14 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import ts from 'typescript';
+
+import {
+  discoverPillars,
+  discoverUnanalysablePillars,
+  reportUnanalysablePillars,
+} from './list-pillars.mjs';
 
 /**
  * The expectation `--inject-fake-default` plants so the workflow can prove the
@@ -90,11 +98,7 @@ const repoRoot = resolve(here, '..');
  * @property {string} expected Normalised default, as `normaliseDdlDefault` would render the DDL side.
  */
 
-/**
- * @typedef {object} Pillar
- * @property {string} name    Pillar dir name, e.g. `finance`.
- * @property {string} pkgDir  Repo-relative pillar root, e.g. `pillars/finance`.
- */
+/** @typedef {import('./list-pillars.mjs').Pillar} Pillar */
 
 /**
  * The narrow slice of the better-sqlite3 `Database` surface this script
@@ -112,68 +116,6 @@ const repoRoot = resolve(here, '..');
  * @property {(sql: string) => SqliteStatement} prepare
  * @property {() => void} close
  */
-
-/**
- * Discover the pillar set from disk. A pillar is any `pillars/<x>` that
- * exposes a `src/db/schema.ts` barrel — the canonical signal that it owns
- * a migrated schema surface this guard can check. No static list.
- *
- * @param {string} [pillarsRoot] Absolute path to the `pillars` directory.
- * @returns {Pillar[]}
- */
-export function discoverPillars(pillarsRoot = join(repoRoot, 'pillars')) {
-  if (!existsSync(pillarsRoot)) return [];
-  /** @type {Pillar[]} */
-  const out = [];
-  for (const entry of readdirSync(pillarsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    if (!existsSync(join(pillarsRoot, entry.name, 'src', 'db', 'schema.ts'))) continue;
-    out.push({ name: entry.name, pkgDir: join('pillars', entry.name) });
-  }
-  return out.toSorted((a, b) => a.name.localeCompare(b.name));
-}
-
-/**
- * The pillars this guard would want to check and cannot: a `pillars/<x>`
- * carrying a `migrations/` or a `src/db/` directory but exposing no
- * `src/db/schema.ts` barrel for `discoverPillars` to find.
- *
- * Discovery by one hardcoded filename means a renamed barrel does not fail
- * the guard, it removes the pillar from it — and nine of ten pillars passing
- * prints exactly the same as ten of ten. The workflow mirrors this discovery
- * to build its job matrix, so the pillar loses its CI job too and the
- * workflow still reports green. Naming the pillars that fell out is what
- * makes that difference visible; `main` turns the list into a failure.
- *
- * A `pillars/<x>` with neither directory is not a candidate — plenty of
- * units under `pillars/` legitimately persist nothing.
- *
- * Nor is a pillar without a root `package.json`. This guard reads drizzle
- * schema declarations out of TypeScript and applies migrations through a
- * pillar's `open<Pillar>Db()` export; a pillar written in another language
- * has neither, and `pillars/contacts` is exactly that — Rust, with a
- * `migrations/` directory and a `Cargo.toml`. Reporting it would be a
- * standing false failure that teaches people to ignore this message, which
- * costs more than the case it would catch.
- *
- * @param {string} [pillarsRoot] Absolute path to the `pillars` directory.
- * @returns {string[]} Pillar directory names, sorted.
- */
-export function discoverUnanalysablePillars(pillarsRoot = join(repoRoot, 'pillars')) {
-  if (!existsSync(pillarsRoot)) return [];
-  /** @type {string[]} */
-  const out = [];
-  for (const entry of readdirSync(pillarsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const dir = join(pillarsRoot, entry.name);
-    if (existsSync(join(dir, 'src', 'db', 'schema.ts'))) continue;
-    if (!existsSync(join(dir, 'package.json'))) continue;
-    const looksPersistent =
-      existsSync(join(dir, 'migrations')) || existsSync(join(dir, 'src', 'db'));
-    if (looksPersistent) out.push(entry.name);
-  }
-  return out.toSorted((a, b) => a.localeCompare(b));
-}
 
 const PILLARS = discoverPillars();
 const PILLARS_WITHOUT_BARREL = discoverUnanalysablePillars();
@@ -470,12 +412,13 @@ function parseTableEntriesInFile(src, file) {
       throw new Error(`failed to parse table block for ${symbol} in ${file}`, { cause: err });
     }
     const block = src.slice(openParen, closeParen + 1);
-    /** @type {string[]} */
-    const indexNames = [];
-    const indexRe = /(?:uniqueIndex|index)\(\s*['"]([^'"]+)['"]\s*\)/g;
-    for (const im of block.matchAll(indexRe)) {
-      const indexName = im[1];
-      if (indexName !== undefined) indexNames.push(indexName);
+    const { indexNames, unreadable } = parseIndexNames(block, symbol, file);
+    if (unreadable.length > 0) {
+      throw new Error(
+        `${file}: ${symbol} names ${unreadable.length} index(es) with an expression this guard ` +
+          `cannot read (${unreadable.join(', ')}). A name it cannot read is an index it cannot ` +
+          'check, and a missing index would be invisible. Use a string literal.'
+      );
     }
     out.push({
       symbol,
@@ -485,6 +428,61 @@ function parseTableEntriesInFile(src, file) {
     });
   }
   return out;
+}
+
+/**
+ * Collect the index names declared inside one `sqliteTable(...)` call.
+ *
+ * This used to be `/(?:uniqueIndex|index)\(\s*['"]([^'"]+)['"]\s*\)/g`, which
+ * sees string literals and nothing else. A template literal or a const-derived
+ * name simply did not match, so the index was never collected — and an index
+ * this guard never collects is one whose absence from the migrations it can
+ * never report. Silence was the failure mode, which ADR-045 does not allow.
+ *
+ * The AST reads the same calls without caring how they are written, and a name
+ * that genuinely cannot be resolved statically is returned in `unreadable` so
+ * the caller can say so out loud instead of dropping it.
+ *
+ * @param {string} block The `(` … `)` of the sqliteTable call, inclusive.
+ * @param {string} symbol
+ * @param {string} file
+ * @returns {{ indexNames: string[]; unreadable: string[] }}
+ */
+function parseIndexNames(block, symbol, file) {
+  const sourceFile = ts.createSourceFile(
+    `${file}#${symbol}`,
+    `sqliteTable${block}`,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS
+  );
+  /** @type {string[]} */
+  const indexNames = [];
+  /** @type {string[]} */
+  const unreadable = [];
+
+  /** @param {import('typescript').Node} node */
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      const callee = node.expression.text;
+      if (callee === 'index' || callee === 'uniqueIndex') {
+        const [arg] = node.arguments;
+        if (arg === undefined) {
+          unreadable.push(`${callee}() with no name`);
+        } else if (ts.isStringLiteralLike(arg)) {
+          // Covers `'x'`, `"x"` and `` `x` `` — a template with no
+          // substitutions is a literal name however it is spelled.
+          indexNames.push(arg.text);
+        } else {
+          unreadable.push(`${callee}(${arg.getText(sourceFile)})`);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sourceFile, visit);
+
+  return { indexNames, unreadable };
 }
 
 /**
@@ -607,66 +605,116 @@ export function analysabilityFailure({ pillar, symbolCount, usedCount }) {
 }
 
 /**
- * Parse a single TS file's imports and return the list of `from`-clauses
- * paired with their imported specifiers. Handles:
- *   - `import { a, b as c } from '...'`
- *   - `import { type T } from '...'`
- *   - `import * as ns from '...'`
- *   - multi-line `import { ... } from '...'`
+ * @typedef {object} ModuleReference
+ * @property {'import' | 'export'} kind  Which declaration it came from.
+ * @property {string} from         The module specifier.
+ * @property {string[]} symbols    Names as the *source* module exports them
+ *   (so `{ users as u }` yields `users`), plus a default binding's local name.
+ * @property {boolean} isNamespace Whether the whole module is pulled in
+ *   (`import * as ns`, `export * from`), which the caller answers with the
+ *   barrel's full re-export set.
+ */
+
+/**
+ * Parse a TS source with the TypeScript compiler's own AST and return every
+ * `from`-clause paired with the runtime names it brings in.
  *
- * Skips type-only specifiers (`type T` inside the destructure) because
- * we only care about runtime tables. A pure `import type` line is also
- * skipped (it never produces runtime references).
+ * This used to be a regex over three alternation branches — a brace group, a
+ * namespace, or a bare identifier. `import db, { users } from './schema.js'`
+ * matches none of them, so the whole statement was dropped and every table it
+ * imported went uncounted; `export { users } from '../schema.js'` was missed
+ * the same way. An uncounted symbol shrinks the used set, and the guard reads
+ * a shrunken used set as a coverage gap it cannot explain (POPS-1628). The AST
+ * models the grammar instead of a subset of it, which is what
+ * `scripts/extractability/lib.mjs` already does for the same job.
+ *
+ * Type-only imports and type-only specifiers are skipped: they produce no
+ * runtime reference to a table.
+ *
+ * Exported for its own tests: every form below either is or is not modelled,
+ * and driving it through `collectUsedTableSymbols` cannot tell the difference
+ * — the schema barrel seeds the reference set on its own, so a dropped import
+ * still comes out covered.
  *
  * @param {string} src
- * @returns {Array<{ from: string; symbols: string[]; isNamespace: boolean }>}
+ * @param {string} [fileName] Used only in AST diagnostics.
+ * @returns {ModuleReference[]}
  */
-function parseImports(src) {
-  /** @type {Array<{ from: string; symbols: string[]; isNamespace: boolean }>} */
+export function parseImports(src, fileName = 'source.ts') {
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    src,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS
+  );
+  /** @type {ModuleReference[]} */
   const out = [];
 
-  const importRe = /import\s+(type\s+)?(\{[\s\S]*?\}|\*\s+as\s+\w+|\w+)\s+from\s+['"]([^'"]+)['"]/g;
-  for (const m of src.matchAll(importRe)) {
-    const isTypeOnly = Boolean(m[1]);
-    const clause = m[2];
-    const from = m[3];
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+      const from = statement.moduleSpecifier.text;
+      const clause = statement.importClause;
+      // `import './schema.js'` binds nothing; there is no symbol to count.
+      if (!clause || clause.isTypeOnly) continue;
 
-    if (isTypeOnly) continue;
-    if (clause === undefined || from === undefined) continue;
+      /** @type {string[]} */
+      const symbols = [];
+      if (clause.name) symbols.push(clause.name.text);
 
-    if (clause.startsWith('*')) {
-      out.push({ from, symbols: [], isNamespace: true });
+      const bindings = clause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) {
+        out.push({ kind: 'import', from, symbols, isNamespace: true });
+        continue;
+      }
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const spec of bindings.elements) {
+          if (spec.isTypeOnly) continue;
+          symbols.push((spec.propertyName ?? spec.name).text);
+        }
+      }
+      out.push({ kind: 'import', from, symbols, isNamespace: false });
       continue;
     }
 
-    if (!clause.startsWith('{')) {
-      out.push({ from, symbols: [clause.trim()], isNamespace: false });
-      continue;
-    }
+    if (ts.isExportDeclaration(statement)) {
+      // A re-export without a specifier (`export { x }`) re-exports a local
+      // binding, not another module's — nothing to attribute to a schema file.
+      if (!statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+      if (statement.isTypeOnly) continue;
+      const from = statement.moduleSpecifier.text;
+      const clause = statement.exportClause;
 
-    const inner = clause.slice(1, -1);
-    /** @type {string[]} */
-    const symbols = [];
-    for (const raw of inner.split(',')) {
-      const piece = raw.trim();
-      if (!piece) continue;
-      if (piece.startsWith('type ')) continue;
-      const nameCandidate = piece.split(/\s+as\s+/u)[0];
-      if (nameCandidate === undefined) continue;
-      const name = nameCandidate.trim();
-      if (name) symbols.push(name);
+      // `export * from './schema.js'` surfaces the whole module, exactly like
+      // a namespace import does.
+      if (!clause || ts.isNamespaceExport(clause)) {
+        out.push({ kind: 'export', from, symbols: [], isNamespace: true });
+        continue;
+      }
+
+      /** @type {string[]} */
+      const symbols = [];
+      for (const spec of clause.elements) {
+        if (spec.isTypeOnly) continue;
+        symbols.push((spec.propertyName ?? spec.name).text);
+      }
+      out.push({ kind: 'export', from, symbols, isNamespace: false });
     }
-    out.push({ from, symbols, isNamespace: false });
   }
   return out;
 }
 
 /**
- * Inspect a `<pillar>/src/db/schema.ts` barrel and return the set of
- * symbol names it re-exports from its local table modules
- * (`export { x } from './schema/x.js'`). These are the tables the pillar
- * legitimately surfaces — used as the fallback for `import * as schema`
+ * Inspect a `<pillar>/src/db/schema.ts` barrel and return the set of symbol
+ * names it re-exports from its local table modules. These are the tables the
+ * pillar legitimately surfaces — used as the fallback for `import * as schema`
  * style imports.
+ *
+ * `export * from './schema/x.js'` contributes nothing here on purpose: this
+ * function answers "which names does the barrel put on the table", and a star
+ * re-export names none. The star's own coverage is decided where the barrel is
+ * consumed, not here.
  *
  * @param {string} schemaFile
  * @returns {Set<string>}
@@ -675,19 +723,11 @@ function parsePillarSchemaReExports(schemaFile) {
   const src = readFileSync(schemaFile, 'utf8');
   /** @type {Set<string>} */
   const out = new Set();
-  const reExportRe = /export\s*\{([\s\S]*?)\}\s*from\s*['"][^'"]+['"]/g;
-  for (const m of src.matchAll(reExportRe)) {
-    const group = m[1];
-    if (group === undefined) continue;
-    for (const raw of group.split(',')) {
-      const piece = raw.trim();
-      if (!piece) continue;
-      if (piece.startsWith('type ')) continue;
-      const nameCandidate = piece.split(/\s+as\s+/u)[0];
-      if (nameCandidate === undefined) continue;
-      const name = nameCandidate.trim();
-      if (name) out.add(name);
-    }
+  for (const ref of parseImports(src, schemaFile)) {
+    // Imports the barrel makes for its own use (`sqliteTable`, column
+    // builders) are not names it surfaces, so only re-exports count.
+    if (ref.kind !== 'export' || ref.isNamespace) continue;
+    for (const symbol of ref.symbols) out.add(symbol);
   }
   return out;
 }
@@ -1091,13 +1131,12 @@ async function checkPillar(pillar, options = {}) {
 
 /**
  * @param {string[]} argv
- * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; listPillars: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]>; injectFakeDefault: boolean }}
+ * @returns {{ pillars: typeof PILLARS[number][]; help: boolean; ignoreAllowlist: boolean; injections: Map<string, string[]>; injectFakeDefault: boolean }}
  */
 function parseArgs(argv) {
   let pillar = '';
   let all = false;
   let help = false;
-  let listPillars = false;
   let ignoreAllowlist = false;
   let injectFakeDefault = false;
   /**
@@ -1114,7 +1153,6 @@ function parseArgs(argv) {
     if (arg === '--pillar') pillar = argv[++i] ?? '';
     else if (arg === '--all') all = true;
     else if (arg === '--help' || arg === '-h') help = true;
-    else if (arg === '--list-pillars') listPillars = true;
     else if (arg === '--ignore-allowlist') ignoreAllowlist = true;
     else if (arg === '--inject-fake-default') injectFakeDefault = true;
     else if (arg === '--inject-fake-table') {
@@ -1133,7 +1171,7 @@ function parseArgs(argv) {
       help = true;
     }
   }
-  const rest = { listPillars, ignoreAllowlist, injections, injectFakeDefault };
+  const rest = { ignoreAllowlist, injections, injectFakeDefault };
   if (help) return { pillars: [], help: true, ...rest };
   if (all) return { pillars: [...PILLARS], help: false, ...rest };
   if (!pillar) return { pillars: [...PILLARS], help: false, ...rest };
@@ -1148,15 +1186,15 @@ function parseArgs(argv) {
 function usage() {
   console.log(
     [
-      'Usage: node scripts/check-pillar-schema-coverage.mjs [--pillar <name>] [--all] [--list-pillars] [--ignore-allowlist] [--inject-fake-table <pillar>:<table>] [--inject-fake-default]',
+      'Usage: node scripts/check-pillar-schema-coverage.mjs [--pillar <name>] [--all] [--ignore-allowlist] [--inject-fake-table <pillar>:<table>] [--inject-fake-default]',
       '',
       'Pillars: ' + PILLARS.map((p) => p.name).join(', '),
       '',
       'With no args, every pillar is checked.',
       '',
-      '--list-pillars prints the discovered pillar names as a JSON array on',
-      'stdout and exits. The workflow builds its job matrix from this, so the',
-      'matrix cannot disagree with the guard about which pillars exist.',
+      'The job matrix comes from `node scripts/list-pillars.mjs`, which',
+      'exports the discovery this script imports — so the matrix cannot',
+      'disagree with the guard about which pillars exist.',
       '',
       '--ignore-allowlist disables the in-script grandfather list so the',
       'true diff (including known pre-existing drift) is reported. Use to',
@@ -1175,32 +1213,8 @@ function usage() {
   );
 }
 
-/**
- * Report the pillars that carry a persistence surface this guard cannot
- * discover, and say what it costs. Called before anything else so the
- * `--list-pillars` matrix and a full run fail at the same point and for the
- * same reason.
- *
- * @returns {boolean} True when nothing fell out of discovery.
- */
-function reportUnanalysablePillars() {
-  if (PILLARS_WITHOUT_BARREL.length === 0) return true;
-  console.error(
-    `FAIL — ${PILLARS_WITHOUT_BARREL.length} pillar(s) carry a migrations/ or src/db/ ` +
-      'directory but expose no src/db/schema.ts barrel, so this guard cannot see them ' +
-      'and neither can the job matrix derived from the same discovery:'
-  );
-  for (const name of PILLARS_WITHOUT_BARREL) console.error(`  - pillars/${name}`);
-  console.error(
-    '\nEither restore the barrel at src/db/schema.ts, or — if the pillar genuinely ' +
-      'persists nothing — remove the migrations/ and src/db/ directories that say it does. ' +
-      'Silently dropping out of the guard is the one outcome that is not available (ADR-045).'
-  );
-  return false;
-}
-
 async function main() {
-  const { pillars, help, listPillars, ignoreAllowlist, injections, injectFakeDefault } = parseArgs(
+  const { pillars, help, ignoreAllowlist, injections, injectFakeDefault } = parseArgs(
     process.argv.slice(2)
   );
   // Ahead of the usage branch on purpose. A barrel renamed out from under
@@ -1208,18 +1222,10 @@ async function main() {
   // answered with "unknown pillar" and a usage dump — the least informative
   // reading of the situation available. Running the report before `usage()`
   // puts the actual diagnosis between the two, rather than never.
-  const analysable = reportUnanalysablePillars();
+  const analysable = reportUnanalysablePillars(PILLARS_WITHOUT_BARREL);
   if (help) {
     usage();
     process.exit(2);
-  }
-  // The workflow builds its job matrix from this, so it has to be the same
-  // discovery the run itself uses rather than a `find` that agrees with it
-  // only by inspection. Written to stdout alone; every diagnostic goes to
-  // stderr so the JSON stays machine-readable.
-  if (listPillars) {
-    console.log(JSON.stringify(PILLARS.map((p) => p.name)));
-    process.exit(analysable ? 0 : 1);
   }
   if (!analysable) process.exit(1);
   if (pillars.length === 0) {

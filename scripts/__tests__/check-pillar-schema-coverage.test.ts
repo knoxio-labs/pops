@@ -1,32 +1,30 @@
 /**
- * The pillar schema-coverage guard's discovery and analysability decisions.
+ * The pillar schema-coverage guard's analysability decision and the import
+ * forms it has to read to make it.
  *
- * The script had no test file at all, and the two branches covered here are
- * the ones its CI self-test is structurally blind to. `--inject-fake-table`
- * plants its expectation *after* the point where a pillar the analyser could
- * not read already returned the guard's success value, so no amount of
- * self-testing downstream could ever see it (POPS-1626). Discovery is worse
- * again: a renamed barrel removed a pillar from the guard AND from the job
- * matrix derived from the same rule, and nine of ten pillars passing prints
- * identically to ten of ten (POPS-1629).
+ * `--inject-fake-table`, the guard's own CI self-test, plants its expectation
+ * *after* the point where a pillar the analyser could not read already returned
+ * the guard's success value, so no amount of self-testing downstream could see
+ * that branch (POPS-1626). The import forms are the other half of the same
+ * blindness: a form the parser did not model produced an empty reference set,
+ * and an empty reference set used to score as full coverage. The parser was a
+ * regex over three alternation branches until POPS-1628; `import db, { users }`
+ * and `export { users } from` matched none of them.
  *
- * Every assertion here is written to fail against the previous behaviour.
- * Measured, not asserted — turning each knob and counting what breaks:
- * making `analysabilityFailure` return `null` unconditionally (the old
- * `return true`) fails 3 of the 12; dropping the `package.json` condition
- * from `discoverUnanalysablePillars` fails 2; dropping its `looksPersistent`
- * condition fails 2. The one analysability case that keeps passing under the
- * first mutation is the one asserting a healthy pillar is not reported,
- * which is correct — a guard that fails everything is not a guard either.
+ * Measured, not asserted — turning each knob and counting what breaks: making
+ * `analysabilityFailure` return `null` unconditionally (the old `return true`)
+ * fails 3. The one analysability case that keeps passing under that mutation is
+ * the one asserting a healthy pillar is not reported, which is correct — a
+ * guard that fails everything is not a guard either.
+ *
+ * Discovery moved to `list-pillars.test.ts` with the code it covers.
  *
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -34,11 +32,8 @@ import {
   analysabilityFailure,
   buildSymbolToTableMap,
   collectUsedTableSymbols,
-  discoverPillars,
-  discoverUnanalysablePillars,
+  parseImports,
 } from '../check-pillar-schema-coverage.mjs';
-
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 let root: string;
 
@@ -81,61 +76,6 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
-});
-
-describe('discoverPillars', () => {
-  it('finds only the directories exposing a src/db/schema.ts barrel, sorted', () => {
-    drizzlePillar('media');
-    drizzlePillar('finance');
-    write(join('shell', 'package.json'), '{}');
-    write('README.md', '# not a pillar\n');
-
-    expect(discoverPillars(root).map((p) => p.name)).toEqual(['finance', 'media']);
-  });
-
-  it('returns nothing when the pillars root does not exist', () => {
-    expect(discoverPillars(join(root, 'absent'))).toEqual([]);
-  });
-});
-
-describe('discoverUnanalysablePillars', () => {
-  it('reports a pillar with migrations but no barrel', () => {
-    write(join('ghost', 'package.json'), '{}');
-    write(join('ghost', 'migrations', '0001_init.sql'), 'CREATE TABLE t (id TEXT);\n');
-
-    expect(discoverUnanalysablePillars(root)).toEqual(['ghost']);
-  });
-
-  it('reports a pillar whose barrel was renamed out from under the guard', () => {
-    drizzlePillar('finance');
-    renameSync(
-      join(root, 'finance', 'src', 'db', 'schema.ts'),
-      join(root, 'finance', 'src', 'db', 'schema', 'index.ts')
-    );
-
-    expect(discoverPillars(root)).toEqual([]);
-    expect(discoverUnanalysablePillars(root)).toEqual(['finance']);
-  });
-
-  it('says nothing about a pillar the guard can already see', () => {
-    drizzlePillar('finance');
-
-    expect(discoverUnanalysablePillars(root)).toEqual([]);
-  });
-
-  it('says nothing about a pillar that persists nothing', () => {
-    write(join('shell', 'package.json'), '{}');
-    write(join('shell', 'src', 'app.ts'), 'export const app = 1;\n');
-
-    expect(discoverUnanalysablePillars(root)).toEqual([]);
-  });
-
-  it('says nothing about a pillar in another language, migrations and all', () => {
-    write(join('contacts', 'Cargo.toml'), '[package]\nname = "contacts"\n');
-    write(join('contacts', 'migrations', '0001_init.sql'), 'CREATE TABLE entities (id TEXT);\n');
-
-    expect(discoverUnanalysablePillars(root)).toEqual([]);
-  });
 });
 
 describe('analysabilityFailure', () => {
@@ -197,17 +137,205 @@ describe('the chain a renamed services directory breaks', () => {
   });
 });
 
-describe('--list-pillars', () => {
-  it('prints the real repo pillar set as JSON on stdout, and agrees with discoverPillars', () => {
-    const stdout = execFileSync(
-      process.execPath,
-      ['scripts/check-pillar-schema-coverage.mjs', '--list-pillars'],
-      { cwd: repoRoot, encoding: 'utf8' }
-    );
+describe('parseImports', () => {
+  const namesFrom = (src: string): string[] =>
+    parseImports(src)
+      .flatMap((ref) => ref.symbols)
+      .toSorted();
 
-    const listed: unknown = JSON.parse(stdout);
-    expect(Array.isArray(listed)).toBe(true);
-    expect(listed).toEqual(discoverPillars(join(repoRoot, 'pillars')).map((p) => p.name));
-    expect(listed).toContain('finance');
+  it('reads a plain named import', () => {
+    expect(namesFrom("import { widgets } from './schema.js';")).toEqual(['widgets']);
+  });
+
+  it('reads a renamed specifier by the name the source module exports', () => {
+    expect(namesFrom("import { widgets as w } from './schema.js';")).toEqual(['widgets']);
+  });
+
+  it('reads the named half of a default-and-named import', () => {
+    // The form the old regex dropped whole: none of its three alternation
+    // branches matched `db, { widgets }`, so the statement vanished and every
+    // table it brought in went uncounted.
+    expect(namesFrom("import db, { widgets, gadgets } from './schema.js';")).toEqual([
+      'db',
+      'gadgets',
+      'widgets',
+    ]);
+  });
+
+  it('reads a re-export with a module specifier', () => {
+    expect(namesFrom("export { widgets } from '../schema.js';")).toEqual(['widgets']);
+  });
+
+  it('reads a renamed re-export by the name the source module exports', () => {
+    expect(namesFrom("export { widgets as public_widgets } from '../schema.js';")).toEqual([
+      'widgets',
+    ]);
+  });
+
+  it('marks a namespace import as covering the whole module', () => {
+    expect(parseImports("import * as schema from './schema.js';")).toEqual([
+      { kind: 'import', from: './schema.js', symbols: [], isNamespace: true },
+    ]);
+  });
+
+  it('marks a star re-export as covering the whole module', () => {
+    expect(parseImports("export * from './schema.js';")).toEqual([
+      { kind: 'export', from: './schema.js', symbols: [], isNamespace: true },
+    ]);
+  });
+
+  it('marks a renamed namespace re-export as covering the whole module', () => {
+    expect(parseImports("export * as schema from './schema.js';")).toEqual([
+      { kind: 'export', from: './schema.js', symbols: [], isNamespace: true },
+    ]);
+  });
+
+  it('distinguishes an import from a re-export', () => {
+    expect(
+      parseImports(["import { a } from './x.js';", "export { b } from './y.js';"].join('\n')).map(
+        (ref) => ref.kind
+      )
+    ).toEqual(['import', 'export']);
+  });
+
+  it('skips a type-only import', () => {
+    expect(parseImports("import type { widgets } from './schema.js';")).toEqual([]);
+  });
+
+  it('skips a type-only specifier inside a value import', () => {
+    expect(namesFrom("import { type widgets, gadgets } from './schema.js';")).toEqual(['gadgets']);
+  });
+
+  it('skips a type-only re-export', () => {
+    expect(parseImports("export type { Widget } from './schema.js';")).toEqual([]);
+  });
+
+  it('binds nothing for a side-effect import', () => {
+    expect(parseImports("import './register.js';")).toEqual([]);
+  });
+
+  it('ignores an export that re-exports a local binding, with no source module', () => {
+    expect(parseImports('const widgets = 1;\nexport { widgets };')).toEqual([]);
+  });
+
+  it('reads a multi-line import the way it reads a single-line one', () => {
+    expect(
+      namesFrom(['import {', '  widgets,', '  gadgets,', "} from './schema.js';"].join('\n'))
+    ).toEqual(['gadgets', 'widgets']);
+  });
+
+  it('does not read a specifier out of a string or a comment', () => {
+    expect(
+      parseImports(
+        [
+          "// import { ghost } from './schema.js';",
+          'const sql = "import { phantom } from \'./schema.js\'";',
+        ].join('\n')
+      )
+    ).toEqual([]);
+  });
+});
+
+describe('the reference set a service contributes', () => {
+  /**
+   * Replace the fixture pillar's one service with `body` and re-read the
+   * references, with `src/db/schema.ts` deleted. The barrel's own re-exports
+   * seed the reference set unconditionally, so a case that keeps it passes
+   * whether or not the service's import was read at all.
+   */
+  function usedWithService(body: string): string[] {
+    drizzlePillar('finance');
+    write(join('finance', 'src', 'db', 'services', 'widgets.ts'), body);
+    rmSync(join(root, 'finance', 'src', 'db', 'schema.ts'));
+    const symbolToTable = buildSymbolToTableMap({ name: 'finance', pkgDir: 'finance' }, root);
+    return [...collectUsedTableSymbols(join(root, 'finance'), symbolToTable)].toSorted();
+  }
+
+  it('credits a table a service imports plainly', () => {
+    expect(usedWithService("import { widgets } from '../schema/widgets.js';\n")).toEqual([
+      'widgets',
+    ]);
+  });
+
+  it('credits the named half of a default-and-named import', () => {
+    expect(usedWithService("import db, { widgets } from '../schema/widgets.js';\n")).toEqual([
+      'widgets',
+    ]);
+  });
+
+  it('credits a table a service re-exports', () => {
+    expect(usedWithService("export { widgets } from '../schema/widgets.js';\n")).toEqual([
+      'widgets',
+    ]);
+  });
+
+  it('counts a table reached twice once', () => {
+    expect(
+      usedWithService(
+        [
+          "import { widgets } from '../schema/widgets.js';",
+          "export { widgets as alias } from '../schema/widgets.js';",
+          '',
+        ].join('\n')
+      )
+    ).toEqual(['widgets']);
+  });
+
+  it('credits nothing for a type-only import', () => {
+    expect(usedWithService("import type { widgets } from '../schema/widgets.js';\n")).toEqual([]);
+  });
+
+  it('credits nothing for an import of a non-table symbol', () => {
+    expect(usedWithService("import { helper } from '../schema/widgets.js';\n")).toEqual([]);
+  });
+
+  it('credits nothing for a table imported from outside the pillar schema', () => {
+    expect(usedWithService("import { widgets } from '@pops/elsewhere';\n")).toEqual([]);
+  });
+});
+
+describe('index names inside a sqliteTable block', () => {
+  function indexesOf(tableModule: string): string[] {
+    drizzlePillar('finance');
+    write(join('finance', 'src', 'db', 'schema', 'widgets.ts'), tableModule);
+    const map = buildSymbolToTableMap({ name: 'finance', pkgDir: 'finance' }, root);
+    return map.get('widgets')?.indexNames ?? [];
+  }
+
+  const table = (indexExpr: string): string =>
+    [
+      "import { sqliteTable, text, index, uniqueIndex } from 'drizzle-orm/sqlite-core';",
+      '',
+      "export const widgets = sqliteTable('widgets', {",
+      "  id: text('id').primaryKey(),",
+      "  kind: text('kind'),",
+      `}, (t) => [${indexExpr}]);`,
+      '',
+    ].join('\n');
+
+  it('collects a single-quoted name', () => {
+    expect(indexesOf(table("index('idx_kind').on(t.kind)"))).toEqual(['idx_kind']);
+  });
+
+  it('collects a uniqueIndex alongside an index', () => {
+    expect(indexesOf(table("index('idx_kind').on(t.kind), uniqueIndex('uq_id').on(t.id)"))).toEqual(
+      ['idx_kind', 'uq_id']
+    );
+  });
+
+  it('collects a template literal with no substitutions, which the regex could not see', () => {
+    expect(indexesOf(table('index(`idx_kind`).on(t.kind)'))).toEqual(['idx_kind']);
+  });
+
+  it('refuses a name it cannot read rather than dropping the index', () => {
+    // Silently collecting nothing is the failure this replaced: an index the
+    // guard never collects is one whose absence it can never report.
+    expect(() => indexesOf(table('index(`idx_${prefix}_kind`).on(t.kind)'))).toThrow(
+      /cannot read/u
+    );
+  });
+
+  it('names the offending expression when it refuses', () => {
+    expect(() => indexesOf(table('index(INDEX_NAME).on(t.kind)'))).toThrow(/INDEX_NAME/u);
   });
 });
