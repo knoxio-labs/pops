@@ -3,8 +3,9 @@
  * disable/delete browser, #3659). `descriptionPattern` and `matchType` are
  * shown read-only — the backend treats them as the rule's immutable
  * identity (see `UpdateTransactionTagRuleInput`) — while entity scope, tags,
- * confidence, priority, and the active flag are editable. A side panel shows
- * the usage telemetry and a full-DB match-history preview.
+ * priority, and the active flag are editable. `confidence` is not: it
+ * decides nothing (ADR-053/POPS-3131). A side panel shows the usage
+ * telemetry and a full-DB match-history preview.
  */
 import { Loader2 } from 'lucide-react';
 import { type UseFormReturn } from 'react-hook-form';
@@ -22,7 +23,6 @@ import {
 
 import {
   ActiveField,
-  ConfidenceField,
   EntityField,
   PatternContext,
   PriorityField,
@@ -60,7 +60,6 @@ function EditFields({
         <PriorityField form={form} />
       </div>
       <TagsField form={form} />
-      <ConfidenceField form={form} />
       <ActiveField form={form} />
     </div>
   );
@@ -102,7 +101,7 @@ export function TagRuleEditDialog(props: TagRuleEditDialogProps) {
           <DialogHeader>
             <DialogTitle>Edit Tag Rule</DialogTitle>
             <DialogDescription className="sr-only">
-              Edit the entity scope, tags, confidence, priority, and active flag for this tag rule
+              Edit the entity scope, tags, priority, and active flag for this tag rule
             </DialogDescription>
           </DialogHeader>
           {rule && (

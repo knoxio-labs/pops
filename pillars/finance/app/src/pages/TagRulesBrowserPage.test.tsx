@@ -387,10 +387,10 @@ describe('TagRulesBrowserPage', () => {
     expect(screen.getByText('Global')).toBeInTheDocument();
   });
 
-  it('renders confidence, priority, and usage telemetry', async () => {
+  it('renders priority and usage telemetry, never a confidence (ADR-053/POPS-3131)', async () => {
     renderPage();
     await screen.findByText('WOOLWORTHS');
-    expect(screen.getByText('95%')).toBeInTheDocument();
+    expect(screen.queryByText('95%')).not.toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('Never')).toBeInTheDocument();
   });
@@ -494,7 +494,6 @@ describe('TagRulesBrowserPage', () => {
         body: {
           entityId: 'ent-1',
           tags: ['contains:groceries'],
-          confidence: 0.95,
           priority: 0,
           isActive: true,
         },
@@ -522,7 +521,6 @@ describe('TagRulesBrowserPage', () => {
         body: {
           entityId: null,
           tags: ['contains:groceries'],
-          confidence: 0.95,
           priority: 0,
           isActive: true,
         },

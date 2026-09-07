@@ -47,13 +47,12 @@ function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
 
 function ruleMatchedTitle(ruleProvenance: ProcessedTransaction['ruleProvenance']): string {
   if (!ruleProvenance) return 'Rule matched';
+  // No confidence line (ADR-053/POPS-3131): a stored rule applies
+  // unconditionally, so a percentage here would misread as "provisional".
   return [
     'Rule matched',
     `Pattern: ${ruleProvenance.pattern}`,
     `Match type: ${ruleProvenance.matchType}`,
-    ...(ruleProvenance.confidence !== null
-      ? [`Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`]
-      : []),
   ].join('\n');
 }
 
@@ -147,7 +146,6 @@ function OverriddenRulesPopover({ rules }: { rules: MatchedRule[] }) {
               </div>
               <div className="text-muted-foreground">
                 Priority: {rule.priority}
-                {rule.confidence !== null && ` • ${Math.round(rule.confidence * 100)}%`}
                 {rule.entityName && ` • ${rule.entityName}`}
               </div>
             </li>

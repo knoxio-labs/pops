@@ -58,7 +58,7 @@ describe('HeaderBadges — Auto-matched badge', () => {
     expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
   });
 
-  it('reports the rule confidence in the tooltip when the rule has one', () => {
+  it('never reports a confidence in the rule-matched tooltip, even when the rule has one (ADR-053/POPS-3131)', () => {
     render(
       <HeaderBadges
         transaction={makeTx('learned', {
@@ -73,28 +73,8 @@ describe('HeaderBadges — Auto-matched badge', () => {
       />
     );
     const badge = screen.getByText('Rule matched');
-    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute(
-      'title',
-      expect.stringContaining('Confidence: 80%')
-    );
-  });
-
-  it('omits the confidence line for a hand-written rule that was never assessed (ADR-053/POPS-3130)', () => {
-    render(
-      <HeaderBadges
-        transaction={makeTx('learned', {
-          ruleProvenance: {
-            source: 'correction',
-            ruleId: 'r1',
-            pattern: 'WOOLWORTHS',
-            matchType: 'contains',
-            confidence: null,
-          },
-        })}
-      />
-    );
-    const badge = screen.getByText('Rule matched');
     const title = badge.closest('[data-slot="badge"]')?.getAttribute('title');
+    expect(title).toContain('Pattern: WOOLWORTHS');
     expect(title).not.toContain('Confidence');
   });
 });

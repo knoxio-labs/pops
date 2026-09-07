@@ -13,7 +13,6 @@ import {
   type EntityOption,
   Label,
   NumberInput,
-  Slider,
 } from '@pops/ui';
 
 import { type TagRuleEditFormValues } from './types';
@@ -86,34 +85,6 @@ export function TagsField({ form }: { form: UseFormReturn<TagRuleEditFormValues>
         <p className="text-sm text-destructive">{form.formState.errors.tags.message}</p>
       )}
     </div>
-  );
-}
-
-export function ConfidenceField({ form }: { form: UseFormReturn<TagRuleEditFormValues> }) {
-  return (
-    <Controller
-      control={form.control}
-      name="confidence"
-      render={({ field }) => (
-        <div className="flex flex-col gap-1.5 w-full">
-          <Label>Confidence</Label>
-          <div className="flex items-center gap-2">
-            <Slider
-              min={0}
-              max={1}
-              step={0.01}
-              value={[field.value]}
-              onValueChange={(values) => field.onChange(values[0] ?? field.value)}
-              className="w-full"
-              aria-label="Confidence"
-            />
-            <span className="text-xs tabular-nums w-10 text-right">
-              {(field.value * 100).toFixed(0)}%
-            </span>
-          </div>
-        </div>
-      )}
-    />
   );
 }
 

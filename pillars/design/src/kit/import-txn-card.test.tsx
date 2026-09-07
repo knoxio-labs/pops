@@ -39,7 +39,7 @@ describe('ruleMatchedTitle', () => {
     expect(ruleMatchedTitle(undefined)).toBe('Rule matched');
   });
 
-  it('lists the pattern, match type and confidence when provenance is present', () => {
+  it('lists the pattern and match type, never a confidence, when provenance is present (ADR-053/POPS-3131)', () => {
     const title = ruleMatchedTitle({
       pattern: 'WOOLWORTHS',
       matchType: 'contains',
@@ -47,6 +47,6 @@ describe('ruleMatchedTitle', () => {
     });
     expect(title).toContain('Pattern: WOOLWORTHS');
     expect(title).toContain('Match type: contains');
-    expect(title).toContain('Confidence: 98%');
+    expect(title).not.toContain('Confidence');
   });
 });

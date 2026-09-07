@@ -54,7 +54,6 @@ function RuleDetailFields({ rule }: { rule: CorrectionRule }) {
       {rule.transactionType && <DetailField label="Type" value={rule.transactionType} />}
       {rule.location && <DetailField label="Location" value={rule.location} />}
       <div className="flex gap-4 text-xs text-muted-foreground pt-1">
-        {rule.confidence !== null && <span>confidence: {(rule.confidence * 100).toFixed(0)}%</span>}
         {rule.timesApplied != null && <span>applied: {rule.timesApplied}×</span>}
       </div>
     </div>
