@@ -120,7 +120,6 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
           db,
           contacts,
           result,
-          minConfidence: body.minConfidence,
         });
         updateProgress(db, body.sessionId, { result: nextResult });
         return { status: 200 as const, body: { result: nextResult, affectedCount } };
@@ -139,7 +138,6 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
           db,
           contacts,
           result,
-          minConfidence: body.minConfidence,
           pendingChangeSets: body.pendingChangeSets,
         });
         updateProgress(db, body.sessionId, { result: nextResult });

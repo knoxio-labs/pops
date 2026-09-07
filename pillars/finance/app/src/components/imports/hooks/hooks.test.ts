@@ -219,7 +219,6 @@ describe('usePreviewEffects — interface contract', () => {
       open: true,
       localOps: [],
       selectedOp: null,
-      minConfidence: 0.5,
       previewTransactions: [],
       pendingChangeSets: [],
     };

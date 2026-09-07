@@ -25,7 +25,6 @@ export interface CorrectionProposalWorkflowProps {
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: PreviewTransactionEntry[];
-  minConfidence: number;
   /** True while the proposal signal is still being generated (analysis in flight). */
   generating?: boolean;
   /** The AI's reported confidence (0.0-1.0) in `signal`'s pattern, when AI-derived (CF038/#3655). */
@@ -33,25 +32,18 @@ export interface CorrectionProposalWorkflowProps {
   onApproved?: (changeSet: ServerChangeSet) => void;
 }
 
-export function useProposalQuery(
-  signal: CorrectionSignal | null,
-  open: boolean,
-  minConfidence: number
-) {
+export function useProposalQuery(signal: CorrectionSignal | null, open: boolean) {
   const disabledSignal: CorrectionSignal = useMemo(
     () => ({ descriptionPattern: '_', matchType: 'exact', tags: [] }),
     []
   );
-  const proposeInput = useMemo(
-    () => (signal ? { signal, minConfidence, maxPreviewItems: 200 } : null),
-    [signal, minConfidence]
-  );
+  const proposeInput = useMemo(() => (signal ? { signal, maxPreviewItems: 200 } : null), [signal]);
   return useQuery({
     queryKey: ['finance', 'corrections', 'proposeChangeSet', proposeInput],
     queryFn: async (): Promise<ProposeChangeSetOutput> =>
       unwrap(
         await correctionsProposeChangeSet({
-          body: proposeInput ?? { signal: disabledSignal, minConfidence, maxPreviewItems: 200 },
+          body: proposeInput ?? { signal: disabledSignal, maxPreviewItems: 200 },
         })
       ),
     enabled: Boolean(open && proposeInput),
@@ -66,7 +58,7 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
     () => toRestPendingChangeSets(pendingChangeSetsRaw),
     [pendingChangeSetsRaw]
   );
-  const proposeQuery = useProposalQuery(props.signal, props.open, props.minConfidence);
+  const proposeQuery = useProposalQuery(props.signal, props.open);
   const localOpsHook = useLocalOps({
     open: props.open,
     signal: props.signal,
@@ -83,7 +75,6 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
       open: props.open,
       localOps: localOpsHook.localOps,
       selectedOp: localOpsHook.selectedOp,
-      minConfidence: props.minConfidence,
       previewTransactions: props.previewTransactions,
       dbTransactions: dbTxnsQuery.data?.data ?? [],
       pendingChangeSets,

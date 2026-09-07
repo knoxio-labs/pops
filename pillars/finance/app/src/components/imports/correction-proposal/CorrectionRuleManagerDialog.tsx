@@ -17,7 +17,6 @@ export interface CorrectionRuleManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBrowseClose?: (hadChanges: boolean) => void;
-  minConfidence: number;
   previewTransactions: PreviewTransactionEntry[];
 }
 

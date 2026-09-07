@@ -53,7 +53,6 @@ describe('proposeChangeSetFromCorrectionSignal — regex pattern storage', () =>
 
     const result = await proposeChangeSetFromCorrectionSignal(db, {
       signal,
-      minConfidence: 0,
       maxPreviewItems: 10,
     });
 
@@ -77,7 +76,6 @@ describe('proposeChangeSetFromCorrectionSignal — regex pattern storage', () =>
 
     const result = await proposeChangeSetFromCorrectionSignal(db, {
       signal,
-      minConfidence: 0,
       maxPreviewItems: 10,
     });
 

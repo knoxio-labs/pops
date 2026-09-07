@@ -67,8 +67,7 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
         const matches = transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb(
           db,
           body.description,
-          body.accountId ?? null,
-          body.minConfidence
+          body.accountId ?? null
         );
         const first = matches[0];
         if (!first) return { status: 200 as const, body: { data: null, status: null } };
@@ -170,7 +169,6 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
           rules: mergedRules(db, body.pendingChangeSets),
           changeSet: body.changeSet,
           transactions: body.transactions,
-          minConfidence: body.minConfidence,
         }),
       })),
 

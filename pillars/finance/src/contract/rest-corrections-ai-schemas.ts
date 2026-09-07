@@ -6,7 +6,6 @@
  */
 import { z } from 'zod';
 
-import { MIN_MATCH_CONFIDENCE } from './corrections-constants.js';
 import {
   ChangeSetPreviewSummarySchema,
   ChangeSetSchema,
@@ -62,7 +61,6 @@ export const ProposedRuleSchema = z.object({
 
 export const ProposeChangeSetBody = z.object({
   signal: CorrectionSignalSchema,
-  minConfidence: z.number().min(0).max(1).default(MIN_MATCH_CONFIDENCE),
   maxPreviewItems: z.number().int().positive().max(500).default(200),
 });
 

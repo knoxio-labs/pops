@@ -43,7 +43,6 @@ export interface CorrectionProposalDialogProps {
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: PreviewTransactionEntry[];
-  minConfidence?: number;
   /** True while the proposal signal is still being generated (analysis in flight). */
   generating?: boolean;
   /** The AI's reported confidence (0.0-1.0) in `signal`'s pattern, when AI-derived (CF038/#3655). */
@@ -54,14 +53,12 @@ export interface CorrectionProposalDialogProps {
 }
 
 export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
-  const minConfidence = props.minConfidence ?? 0.7;
   if (props.mode === 'browse') {
     return (
       <CorrectionRuleManagerDialog
         open={props.open}
         onOpenChange={props.onOpenChange}
         onBrowseClose={props.onBrowseClose}
-        minConfidence={minConfidence}
         previewTransactions={props.previewTransactions}
       />
     );
@@ -75,7 +72,6 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
       signal={props.signal}
       triggeringTransaction={props.triggeringTransaction}
       previewTransactions={props.previewTransactions}
-      minConfidence={minConfidence}
       generating={props.generating}
       patternConfidence={props.patternConfidence}
       onApproved={props.onApproved}

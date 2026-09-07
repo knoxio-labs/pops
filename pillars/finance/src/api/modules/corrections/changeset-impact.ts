@@ -161,29 +161,18 @@ function withTagsMerged(
 function buildImpactItem(
   candidate: CandidateTransaction,
   rulesBefore: CorrectionRow[],
-  rulesAfter: CorrectionRow[],
-  minConfidence: number
+  rulesAfter: CorrectionRow[]
 ): ChangeSetImpactItem | null {
   const txTags = parseCorrectionTags(candidate.tags ?? '[]');
   const before = withTagsMerged(
     outcomeFromMatch(
-      findMatchingCorrectionFromRules(
-        candidate.description,
-        rulesBefore,
-        candidate.accountId,
-        minConfidence
-      )
+      findMatchingCorrectionFromRules(candidate.description, rulesBefore, candidate.accountId)
     ),
     txTags
   );
   const after = withTagsMerged(
     outcomeFromMatch(
-      findMatchingCorrectionFromRules(
-        candidate.description,
-        rulesAfter,
-        candidate.accountId,
-        minConfidence
-      )
+      findMatchingCorrectionFromRules(candidate.description, rulesAfter, candidate.accountId)
     ),
     txTags
   );
@@ -195,7 +184,6 @@ export interface ImpactPreviewArgs {
   changeSet: ChangeSet;
   matchType: 'exact' | 'contains' | 'regex';
   normalizedPattern: string;
-  minConfidence: number;
   maxPreviewItems: number;
 }
 
@@ -218,7 +206,7 @@ export function computeChangeSetImpact(
 
   const changed: ChangeSetImpactItem[] = [];
   for (const c of candidates) {
-    const item = buildImpactItem(c, rulesBefore, rulesAfter, args.minConfidence);
+    const item = buildImpactItem(c, rulesBefore, rulesAfter);
     if (item) changed.push(item);
   }
   return {

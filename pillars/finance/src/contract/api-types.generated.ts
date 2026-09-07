@@ -5061,8 +5061,6 @@ export interface operations {
         'application/json': {
           accountId?: string | null;
           description: string;
-          /** @default 0.7 */
-          minConfidence: number;
         };
       };
     };
@@ -5504,8 +5502,6 @@ export interface operations {
             reason?: string;
             source?: string;
           };
-          /** @default 0.7 */
-          minConfidence: number;
           pendingChangeSets?: {
             changeSet: {
               ops: (
@@ -5770,8 +5766,6 @@ export interface operations {
         'application/json': {
           /** @default 200 */
           maxPreviewItems: number;
-          /** @default 0.7 */
-          minConfidence: number;
           signal: {
             descriptionPattern: string;
             entityId?: string | null;
@@ -7459,8 +7453,6 @@ export interface operations {
             reason?: string;
             source?: string;
           };
-          /** @default 0.7 */
-          minConfidence: number;
           /** Format: uuid */
           sessionId: string;
         };
@@ -8738,8 +8730,6 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          /** @default 0.7 */
-          minConfidence: number;
           pendingChangeSets: {
             changeSet: {
               ops: (

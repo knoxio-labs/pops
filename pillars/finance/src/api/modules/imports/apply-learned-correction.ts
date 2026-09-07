@@ -27,7 +27,6 @@ import type { MatchedRule, ParsedTransaction, ProcessedTransaction } from './typ
 
 export interface ApplyLearnedCorrectionArgs {
   transaction: ParsedTransaction;
-  minConfidence: number;
   knownTags: string[];
   rules?: CorrectionRow[];
   /**
@@ -196,20 +195,18 @@ export function applyLearnedCorrection(
   db: FinanceDb,
   args: ApplyLearnedCorrectionArgs
 ): ApplyLearnedCorrectionResult | null {
-  const { transaction, minConfidence, rules } = args;
+  const { transaction, rules } = args;
 
   const allMatchingRules = rules
     ? findAllMatchingCorrectionFromRules(
         transaction.description,
         rules,
-        transaction.accountId ?? null,
-        minConfidence
+        transaction.accountId ?? null
       )
     : transactionCorrectionsService.findAllMatchingTransactionCorrectionsFromDb(
         db,
         transaction.description,
-        transaction.accountId ?? null,
-        minConfidence
+        transaction.accountId ?? null
       );
 
   const correction = allMatchingRules[0];

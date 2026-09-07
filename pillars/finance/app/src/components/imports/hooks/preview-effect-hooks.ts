@@ -25,7 +25,6 @@ export interface PreviewSlotState {
 
 interface BaseEffectShared {
   open: boolean;
-  minConfidence: number;
   previewTransactions: PreviewTransactionEntry[];
   pendingChangeSets: Array<{ changeSet: ServerChangeSet }>;
   normalisedDbTransactions: Array<{ checksum?: string; description: string }>;
@@ -70,7 +69,7 @@ function txnInputsSig(args: BaseEffectShared): string {
 }
 
 export function useCombinedEffect(args: CombinedEffectArgs): void {
-  const { open, localOps, minConfidence, previewTransactions, pendingChangeSets } = args;
+  const { open, localOps, previewTransactions, pendingChangeSets } = args;
   const {
     combined,
     setLocalOps,
@@ -101,7 +100,6 @@ export function useCombinedEffect(args: CombinedEffectArgs): void {
       ops: localOps,
       sessionTxns: previewTransactions,
       dbTxns: normalisedDbTransactions,
-      minConfidence,
       pendingChangeSets,
       previewMutateAsync,
       setSession: setPreview,
@@ -119,7 +117,6 @@ export function useCombinedEffect(args: CombinedEffectArgs): void {
     rerunToken,
     previewTransactions,
     normalisedDbTransactions,
-    minConfidence,
     previewMutateAsync,
     pendingChangeSets,
     setLocalOps,
@@ -140,7 +137,7 @@ export interface SelectedEffectArgs extends BaseEffectShared {
 }
 
 export function useSelectedOpEffect(args: SelectedEffectArgs): void {
-  const { open, selectedOp, minConfidence, previewTransactions, pendingChangeSets } = args;
+  const { open, selectedOp, previewTransactions, pendingChangeSets } = args;
   const { selected, normalisedDbTransactions, rerunToken, previewMutateAsync } = args;
   const { selectedOpPreviewKeyRef, lastTokenRef } = args;
   // Depend on the stable React dispatch functions individually rather than on
@@ -171,7 +168,6 @@ export function useSelectedOpEffect(args: SelectedEffectArgs): void {
       ops: [selectedOp],
       sessionTxns: previewTransactions,
       dbTxns: normalisedDbTransactions,
-      minConfidence,
       pendingChangeSets,
       previewMutateAsync,
       shouldApply: () => selectedOpPreviewKeyRef.current === previewKey,
@@ -188,7 +184,6 @@ export function useSelectedOpEffect(args: SelectedEffectArgs): void {
     rerunToken,
     previewTransactions,
     normalisedDbTransactions,
-    minConfidence,
     previewMutateAsync,
     pendingChangeSets,
     setPreview,

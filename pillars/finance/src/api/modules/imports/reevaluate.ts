@@ -64,7 +64,6 @@ export async function reevaluateImportSessionResult(args: {
   db: FinanceDb;
   contacts: ContactsClient;
   result: ProcessImportOutput;
-  minConfidence: number;
 }): Promise<{ nextResult: ProcessImportOutput; affectedCount: number }> {
   const rules = transactionCorrectionsService.listTransactionCorrections(args.db, {
     limit: 50_000,
@@ -79,7 +78,6 @@ export async function reevaluateImportSessionResult(args: {
       db: args.db,
       rules,
       isPreview: false,
-      minConfidence: args.minConfidence,
       knownTags: loadKnownTags(args.db),
       entityLookup,
       aliases,
@@ -94,7 +92,6 @@ export async function reevaluateImportSessionWithRules(args: {
   db: FinanceDb;
   contacts: ContactsClient;
   result: ProcessImportOutput;
-  minConfidence: number;
   pendingChangeSets: { changeSet: ChangeSet }[];
 }): Promise<{ nextResult: ProcessImportOutput; affectedCount: number }> {
   const dbRules = transactionCorrectionsService.listTransactionCorrections(args.db, {
@@ -117,7 +114,6 @@ export async function reevaluateImportSessionWithRules(args: {
       db: args.db,
       rules: mergedRules,
       isPreview: true,
-      minConfidence: args.minConfidence,
       knownTags: loadKnownTags(args.db),
       entityLookup,
       aliases,

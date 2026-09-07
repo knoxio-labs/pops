@@ -43,7 +43,6 @@ export function makeCorrectionsAiHandlers(db: FinanceDb) {
         status: 200 as const,
         body: await proposeChangeSetFromCorrectionSignal(db, {
           signal: body.signal,
-          minConfidence: body.minConfidence,
           maxPreviewItems: body.maxPreviewItems,
         }),
       })),

@@ -33,7 +33,6 @@ export interface UsePreviewEffectsOptions {
   open: boolean;
   localOps: LocalOp[];
   selectedOp: LocalOp | null;
-  minConfidence: number;
   previewTransactions: PreviewTransactionEntry[];
   /** Optional: existing DB transactions to include in browse-mode preview. */
   dbTransactions?: Array<{ checksum?: string | null; description: string }>;
@@ -76,7 +75,6 @@ function usePreviewEffectRunners(args: RunEffectsArgs): void {
   useCombinedEffect({
     open: options.open,
     localOps: options.localOps,
-    minConfidence: options.minConfidence,
     previewTransactions: options.previewTransactions,
     pendingChangeSets: options.pendingChangeSets,
     combined,
@@ -90,7 +88,6 @@ function usePreviewEffectRunners(args: RunEffectsArgs): void {
   useSelectedOpEffect({
     open: options.open,
     selectedOp: options.selectedOp,
-    minConfidence: options.minConfidence,
     previewTransactions: options.previewTransactions,
     pendingChangeSets: options.pendingChangeSets,
     selected,

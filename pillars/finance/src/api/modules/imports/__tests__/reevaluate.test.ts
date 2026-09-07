@@ -213,7 +213,6 @@ describe('reevaluateImportSessionResult — fetch-once + real usage (CF040/#3664
       db,
       contacts: makeContactsFake(),
       result,
-      minConfidence: 0.7,
     });
 
     expect(listSpy).toHaveBeenCalledTimes(1);
@@ -241,7 +240,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [wronglyMatched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(affectedCount).toBe(1);
@@ -270,7 +268,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
         failed: [],
         skipped: [],
       },
-      minConfidence: 0.7,
     });
 
     expect(affectedCount).toBe(2);
@@ -291,7 +288,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [untouched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(affectedCount).toBe(0);
@@ -300,11 +296,16 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
   });
 
   it('applies a below-the-bar rule to a matched row without demoting it', async () => {
-    // 0.72 clears minConfidence (0.7) so the rule matches, but sits under
-    // HIGH_CONFIDENCE_THRESHOLD (0.9), so its outcome bucket is `uncertain`.
-    // That bucket used to make the whole outcome be discarded, which turned
-    // every hand-written rule (they default to 0.7) into a no-op on the rows
-    // it was written for. The row takes the rule and stays matched.
+    // `seedWeakRule` names an entity (Coles), so its outcome bucket is
+    // `matched` regardless of the confidence stored on it — provenance
+    // decides the bucket now, not confidence (ADR-053/POPS-3128), and there
+    // is no confidence floor on matching either (POPS-3129). It used to be
+    // otherwise: a rule below the old minConfidence floor (0.7) never
+    // matched at all, and one between that floor and the old
+    // HIGH_CONFIDENCE_THRESHOLD (0.9) routed to `uncertain`, which used to
+    // make the whole outcome get discarded — turning every hand-written rule
+    // (they defaulted to 0.7) into a no-op on the rows it was written for.
+    // The row takes the rule and stays matched.
     seedWeakRule('r-weak');
     const alreadyMatched = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
@@ -316,7 +317,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [alreadyMatched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(affectedCount).toBe(1);
@@ -348,7 +348,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [autoMatched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(affectedCount).toBe(1);
@@ -371,7 +370,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [alreadyMatched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(nextResult.matched[0]?.entity).toMatchObject({
@@ -393,7 +391,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(timesApplied('r-1')).toBe(1);
@@ -411,7 +408,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
       pendingChangeSets: [],
     });
 
@@ -429,7 +425,6 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       db,
       contacts: makeContactsFake(),
       result: { matched: [first, second, third], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(nextResult.matched.map((t) => t.checksum)).toEqual([
@@ -450,7 +445,6 @@ describe('reevaluateImportSessionWithRules — pending preview never counts as u
       db,
       contacts: makeContactsFake(),
       result,
-      minConfidence: 0.7,
       pendingChangeSets: [],
     });
 
@@ -476,13 +470,11 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result,
-      minConfidence: 0.7,
     });
     const second = await reevaluateImportSessionResult({
       db,
       contacts,
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(first.affectedCount).toBe(2);
@@ -498,13 +490,11 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
-      minConfidence: 0.7,
     });
     const second = await reevaluateImportSessionResult({
       db,
       contacts,
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     const tagsOf = (output: ProcessImportOutput): string[] =>
@@ -533,13 +523,11 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts: makeContactsFake(),
       result: input,
-      minConfidence: 0.7,
     });
     const second = await reevaluateImportSessionResult({
       db,
       contacts: makeContactsFake(),
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(first.affectedCount).toBe(0);
@@ -554,7 +542,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
-      minConfidence: 0.7,
     });
     expect(timesApplied('r-1')).toBe(1);
     // A sentinel rather than the real stamp: both runs land in the same
@@ -566,7 +553,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(second.affectedCount).toBe(0);
@@ -586,7 +572,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
-      minConfidence: 0.7,
     });
     expect(first.nextResult.uncertain).toHaveLength(1);
     expect(timesApplied('r-purchase-only')).toBe(1);
@@ -595,7 +580,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(timesApplied('r-purchase-only')).toBe(1);
@@ -610,7 +594,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
-      minConfidence: 0.7,
     });
     expect(tagRuleTimesApplied('COLES')).toBe(1);
 
@@ -618,7 +601,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts,
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(tagRuleTimesApplied('COLES')).toBe(1);
@@ -636,7 +618,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts: makeContactsFake(),
       result: { matched: [wronglyMatched], uncertain: [], failed: [], skipped: [] },
-      minConfidence: 0.7,
     });
 
     expect(first.affectedCount).toBe(1);
@@ -646,7 +627,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       db,
       contacts: makeContactsFake(),
       result: first.nextResult,
-      minConfidence: 0.7,
     });
 
     expect(timesApplied('r-1')).toBe(1);

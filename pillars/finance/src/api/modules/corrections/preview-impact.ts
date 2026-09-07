@@ -65,26 +65,15 @@ export function previewChangeSetImpact(args: {
   rules: CorrectionRow[];
   changeSet: ChangeSet;
   transactions: PreviewTransaction[];
-  minConfidence: number;
 }): { diffs: ChangeSetPreviewDiff[]; summary: ChangeSetPreviewSummary } {
   const rulesAfter = applyChangeSetToRules(args.rules, args.changeSet);
 
   const diffs: ChangeSetPreviewDiff[] = args.transactions.map((t) => {
     const before = summarizeMatch(
-      findMatchingCorrectionFromRules(
-        t.description,
-        args.rules,
-        t.accountId ?? null,
-        args.minConfidence
-      )
+      findMatchingCorrectionFromRules(t.description, args.rules, t.accountId ?? null)
     );
     const after = summarizeMatch(
-      findMatchingCorrectionFromRules(
-        t.description,
-        rulesAfter,
-        t.accountId ?? null,
-        args.minConfidence
-      )
+      findMatchingCorrectionFromRules(t.description, rulesAfter, t.accountId ?? null)
     );
     const changed =
       before.matched !== after.matched ||

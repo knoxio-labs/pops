@@ -75,11 +75,10 @@ function freshDb(): TestHarness {
 }
 
 /**
- * `confidence` defaults to 0.5 — mirroring the column default, and BELOW
- * `MIN_MATCH_CONFIDENCE`. Any test that runs a matcher over a seeded row must
- * set `confidence` explicitly: on the default, a matcher returns nothing
- * because the row is sub-floor, so an emptiness assertion passes without
- * exercising what its name claims (POPS-2601, POPS-2638).
+ * `confidence` defaults to 0.5, mirroring the column default — no matcher
+ * filters on it any more (ADR-053/POPS-3129), so this is just the schema's
+ * invented default for a row this helper doesn't set confidence on
+ * explicitly, not a value that changes what a matcher returns.
  */
 function seedCorrection(
   raw: Database.Database,
@@ -791,7 +790,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
     expect(matches.map((m) => m.id)).toEqual(['rule-a', 'rule-b', 'rule-z']);
   });
 
-  it('honours minConfidence as an inclusive lower bound', () => {
+  it('matches every active rule regardless of confidence — no floor (ADR-053)', () => {
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
@@ -800,15 +799,10 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
-      confidence: 0.65,
+      confidence: 0.2,
     });
 
-    expect(
-      findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null, 0.7)
-    ).toHaveLength(1);
-    expect(
-      findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null, 0.6)
-    ).toHaveLength(2);
+    expect(findAllMatchingTransactionCorrectionsFromDb(harness.db, 'coffee', null)).toHaveLength(2);
   });
 
   it('ignores inactive rules', () => {
@@ -948,7 +942,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     expect(findAllMatchingTransactionCorrections(harness.db, 'coffee', null)).toEqual([]);
   });
 
-  it('excludes sub-floor rules by default and includes them at the floor', () => {
+  it('includes both an at-the-old-floor and a below-it rule — no confidence floor (ADR-053)', () => {
     seedCorrection(harness.raw, {
       id: 'at-floor',
       descriptionPattern: 'COFFEE',
@@ -964,10 +958,10 @@ describe('findAllMatchingTransactionCorrections', () => {
 
     expect(
       findAllMatchingTransactionCorrections(harness.db, 'coffee', null).map((m) => m.id)
-    ).toEqual(['at-floor']);
+    ).toEqual(['at-floor', 'below-floor']);
   });
 
-  it('surfaces sub-floor rules when the caller lowers minConfidence', () => {
+  it('surfaces a below-the-old-floor rule too — no confidence floor (ADR-053)', () => {
     seedCorrection(harness.raw, {
       id: 'below-floor',
       descriptionPattern: 'COFFEE',
@@ -976,7 +970,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     });
 
     expect(
-      findAllMatchingTransactionCorrections(harness.db, 'coffee', null, 0).map((m) => m.id)
+      findAllMatchingTransactionCorrections(harness.db, 'coffee', null).map((m) => m.id)
     ).toEqual(['below-floor']);
   });
 
