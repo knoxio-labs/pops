@@ -40,11 +40,12 @@ function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
 
 export function ruleMatchedTitle(ruleProvenance: ImportTxn['ruleProvenance']): string {
   if (!ruleProvenance) return 'Rule matched';
+  // No confidence line (ADR-053/POPS-3131): a stored rule applies
+  // unconditionally, so a percentage here would misread as "provisional".
   return [
     'Rule matched',
     `Pattern: ${ruleProvenance.pattern}`,
     `Match type: ${ruleProvenance.matchType}`,
-    `Confidence: ${Math.round(ruleProvenance.confidence * 100)}%`,
   ].join('\n');
 }
 
@@ -96,7 +97,7 @@ function OverriddenRulesPopover({ rules }: { rules: OverriddenRule[] }) {
                 </Badge>
               </div>
               <div className="text-muted-foreground">
-                Priority: {rule.priority} • {Math.round(rule.confidence * 100)}%
+                Priority: {rule.priority}
                 {rule.entityName && ` • ${rule.entityName}`}
               </div>
             </li>
@@ -167,9 +168,7 @@ export function TxnCard({ txn }: { txn: ImportTxn }) {
       </div>
       {txn.ruleProvenance && (
         <div className="mt-1 text-xs text-muted-foreground">
-          <span className="font-mono">
-            {txn.ruleProvenance.matchType} • {Math.round(txn.ruleProvenance.confidence * 100)}%
-          </span>
+          <span className="font-mono">{txn.ruleProvenance.matchType}</span>
           {' • '}
           <span
             className="inline-block max-w-[28ch] truncate align-bottom font-mono"

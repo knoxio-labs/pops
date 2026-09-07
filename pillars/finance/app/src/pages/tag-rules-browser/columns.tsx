@@ -68,14 +68,6 @@ const tagsColumn: ColumnDef<TagRule> = {
   ),
 };
 
-const confidenceColumn: ColumnDef<TagRule> = {
-  accessorKey: 'confidence',
-  header: ({ column }) => <SortableHeader column={column}>Confidence</SortableHeader>,
-  cell: ({ row }) => (
-    <span className="tabular-nums">{(row.original.confidence * 100).toFixed(0)}%</span>
-  ),
-};
-
 const priorityColumn: ColumnDef<TagRule> = {
   accessorKey: 'priority',
   header: ({ column }) => <SortableHeader column={column}>Priority</SortableHeader>,
@@ -196,7 +188,6 @@ export function buildTagRulesColumns(options: BuildOptions): ColumnDef<TagRule>[
     matchTypeColumn,
     entityColumn(options.entityNames),
     tagsColumn,
-    confidenceColumn,
     priorityColumn,
     timesAppliedColumn,
     lastUsedColumn,

@@ -47,11 +47,7 @@ export function CardHeader({
         </div>
         {ruleProvenance && (
           <div className="mt-1 text-xs text-muted-foreground">
-            <span className="font-mono">
-              {ruleProvenance.matchType}
-              {ruleProvenance.confidence !== null &&
-                ` • ${Math.round(ruleProvenance.confidence * 100)}%`}
-            </span>
+            <span className="font-mono">{ruleProvenance.matchType}</span>
             {' • '}
             <span
               className="font-mono truncate inline-block max-w-[28ch] align-bottom"

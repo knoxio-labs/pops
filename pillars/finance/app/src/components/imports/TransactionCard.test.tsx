@@ -28,12 +28,12 @@ function makeTx(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransac
 }
 
 describe('TransactionCard rule provenance', () => {
-  it('renders the Rule matched badge and details when ruleProvenance is present', () => {
+  it('renders the Rule matched badge and details, never a confidence, when ruleProvenance is present (ADR-053/POPS-3131)', () => {
     render(<TransactionCard transaction={makeTx()} readonly={true} variant="matched" />);
 
     expect(screen.getByText('Rule matched')).toBeInTheDocument();
     expect(screen.getByText(/contains/i)).toBeInTheDocument();
-    expect(screen.getByText(/92%/i)).toBeInTheDocument();
+    expect(screen.queryByText(/92%/i)).not.toBeInTheDocument();
     expect(screen.getByText('WOOLWORTHS')).toBeInTheDocument();
   });
 

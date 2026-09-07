@@ -33,8 +33,6 @@ interface FilterState {
   setMatchType: (v: string) => void;
   isActive: string;
   setIsActive: (v: string) => void;
-  minConfidence: string;
-  setMinConfidence: (v: string) => void;
   offset: number;
   setOffset: (next: number | ((prev: number) => number)) => void;
 }
@@ -42,7 +40,6 @@ interface FilterState {
 function useFilterState(): FilterState {
   const [matchType, setMatchType] = useState('');
   const [isActive, setIsActive] = useState('');
-  const [minConfidence, setMinConfidence] = useState('');
   const [offset, setOffsetState] = useState(0);
   const setOffset = useCallback((next: number | ((prev: number) => number)) => {
     setOffsetState((prev) => (typeof next === 'function' ? next(prev) : next));
@@ -52,8 +49,6 @@ function useFilterState(): FilterState {
     setMatchType,
     isActive,
     setIsActive,
-    minConfidence,
-    setMinConfidence,
     offset,
     setOffset,
   };
@@ -63,7 +58,6 @@ function useTagRulesListQuery(filters: FilterState) {
   const query = {
     matchType: parseMatchType(filters.matchType),
     isActive: parseIsActive(filters.isActive),
-    minConfidence: filters.minConfidence ? parseFloat(filters.minConfidence) : undefined,
     limit: PAGE_SIZE,
     offset: filters.offset,
   };
@@ -194,8 +188,6 @@ export function useTagRulesBrowserModel() {
     setMatchType: filters.setMatchType,
     isActive: filters.isActive,
     setIsActive: filters.setIsActive,
-    minConfidence: filters.minConfidence,
-    setMinConfidence: filters.setMinConfidence,
     offset: filters.offset,
     setOffset: filters.setOffset,
     resetPage,

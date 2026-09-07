@@ -30,7 +30,7 @@ export function useTagRuleEditForm({ rule, onClose }: UseTagRuleEditFormOptions)
   const queryClient = useQueryClient();
   const form = useForm<TagRuleEditFormValues>({
     resolver: standardSchemaResolver(TagRuleEditFormSchema),
-    defaultValues: { entityId: null, tags: [], confidence: 0.95, priority: 0, isActive: true },
+    defaultValues: { entityId: null, tags: [], priority: 0, isActive: true },
   });
 
   useEffect(() => {
@@ -38,7 +38,6 @@ export function useTagRuleEditForm({ rule, onClose }: UseTagRuleEditFormOptions)
     form.reset({
       entityId: rule.entityId,
       tags: rule.tags,
-      confidence: rule.confidence,
       priority: rule.priority,
       isActive: rule.isActive,
     });
