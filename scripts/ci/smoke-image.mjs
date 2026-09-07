@@ -145,7 +145,7 @@ export function normalizeVolumeEntry(entry) {
  * @param {string} path
  * @returns {string}
  */
-function normalizeDockerfilePath(path) {
+export function normalizeDockerfilePath(path) {
   return path.replace(/^\.\//u, '');
 }
 
