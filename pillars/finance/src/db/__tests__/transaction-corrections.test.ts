@@ -75,11 +75,10 @@ function freshDb(): TestHarness {
 }
 
 /**
- * `confidence` defaults to 0.5 — mirroring the column default, and BELOW
- * `MIN_MATCH_CONFIDENCE`. Any test that runs a matcher over a seeded row must
- * set `confidence` explicitly: on the default, a matcher returns nothing
- * because the row is sub-floor, so an emptiness assertion passes without
- * exercising what its name claims (POPS-2601, POPS-2638).
+ * `confidence` defaults to 0.5, mirroring the column default — no matcher
+ * filters on it any more (ADR-053/POPS-3129), so this is just the schema's
+ * invented default for a row this helper doesn't set confidence on
+ * explicitly, not a value that changes what a matcher returns.
  */
 function seedCorrection(
   raw: Database.Database,

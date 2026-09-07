@@ -7,14 +7,12 @@
  */
 
 /**
- * Confidence floor below which a correction rule is never eligible to match:
- * every matcher (`findAllMatchingCorrectionFromRules`,
- * `findAllMatchingTransactionCorrectionsFromDb`,
- * `findAllMatchingTransactionCorrections`, the live-import call site)
- * filters out rules with `confidence < MIN_MATCH_CONFIDENCE` — when
- * classifying a transaction and equally when contributing its tags. Also the schema
- * default and the create/update validation floor, so a rule can never be
- * persisted below the threshold that would make it structurally inert.
+ * No matcher filters on this any more (ADR-053/POPS-3129 dropped the
+ * confidence floor from matching). What is left: the invented default for a
+ * rule created with no explicit confidence (`corrections-pure.ts`,
+ * `api/modules/corrections/service.ts`), the schema column default
+ * (`db/schema/corrections.ts`), and the create/update validation floor
+ * (`rest-corrections-schemas.ts`) — all three removed by POPS-3130.
  */
 export const MIN_MATCH_CONFIDENCE = 0.7;
 
