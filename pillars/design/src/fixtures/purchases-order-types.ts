@@ -1,3 +1,10 @@
+import type { LinkType, PurchaseAccounting, PurchaseStatus } from '@/fixtures/purchases-vocabulary';
+
+export type { LinkType, PurchaseStatus } from '@/fixtures/purchases-vocabulary';
+
+/** The order-grain name for the pillar's one accounting split. */
+export type OrderAccounting = PurchaseAccounting;
+
 /**
  * View types for one order, typed locally for the playground and mirroring
  * the shape `GET /purchases/{id}` answers with.
@@ -5,13 +12,6 @@
  * here, and a field the server stops sending should not silently vanish from
  * these.
  */
-
-export type PurchaseStatus =
-  | 'awaiting_settlement'
-  | 'linked'
-  | 'partial'
-  | 'settled_cash'
-  | 'ignored';
 
 export type IngestMethod = 'email' | 'export' | 'upload' | 'manual';
 
@@ -25,8 +25,6 @@ export type SkuScheme = 'asin' | 'merchant';
 export type ChargeRole = 'capture' | 'authorization' | 'refund' | 'adjustment';
 
 export type ChargeOrigin = 'merchant' | 'derived';
-
-export type LinkType = 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
 
 export type ShipmentStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
 
@@ -54,14 +52,6 @@ export interface OrderPurchase {
 }
 
 /** The order's own reconciliation split, computed by the pillar. */
-export interface OrderAccounting {
-  totalCents: number;
-  matchedCents: number;
-  awaitingImportCents: number;
-  residualCents: number;
-  refundedCents: number;
-  netSpendCents: number;
-}
 
 export interface OrderLineTag {
   tag: string;

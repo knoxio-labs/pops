@@ -11,13 +11,14 @@ import {
 } from '@/fixtures/purchases-merchant-spend';
 
 import type { MerchantSpend } from '@/fixtures/purchases-merchant-spend';
+import type { PurchaseStatus } from '@/fixtures/purchases-vocabulary';
 
 /** One order behind a merchant row, as the order index reports it. */
 export interface MerchantOrder {
   id: string;
   orderedAt: string;
   sourceOrderId: string | null;
-  status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+  status: PurchaseStatus;
   totalCents: number;
   currency: string;
 }

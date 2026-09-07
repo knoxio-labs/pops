@@ -1,8 +1,10 @@
+import { LINK_TYPE_LABELS } from '@/kit/purchases/labels';
+
 import { cn, formatCents, formatDate } from '@pops/ui';
 
 import { deltaState } from './money';
 
-import type { LinkType, ProposedLink, QueueEntry } from '@/fixtures/purchases-queue';
+import type { ProposedLink, QueueEntry } from '@/fixtures/purchases-queue';
 import type { ReactElement } from 'react';
 
 export function entryDomId(chargeId: string): string {
@@ -102,15 +104,6 @@ function DeltaCell({ entry }: { entry: QueueEntry }): ReactElement {
   );
 }
 
-const LINK_TYPE_LABEL: Record<LinkType, string> = {
-  exact: 'Exact',
-  split: 'Split',
-  combined: 'Combined',
-  partial: 'Partial',
-  rule: 'Rule',
-  manual: 'Manual',
-};
-
 interface ProposalLineProps {
   link: ProposedLink;
   currency: string;
@@ -122,7 +115,7 @@ function ProposalLine({ link, currency }: ProposalLineProps): ReactElement {
       <p className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="tabular-nums">{formatCents(link.amountCents, currency)}</span>
         <span className="text-xs text-muted-foreground">
-          {LINK_TYPE_LABEL[link.linkType]} · {Math.round(link.confidence * 100)}% confident
+          {LINK_TYPE_LABELS[link.linkType]} · {Math.round(link.confidence * 100)}% confident
         </span>
       </p>
       <p className="truncate font-mono text-xs text-muted-foreground">{link.transactionUri}</p>

@@ -1,3 +1,5 @@
+import type { PurchaseAccounting } from '@/fixtures/purchases-vocabulary';
+
 /**
  * Fictional merchant roll-ups for the purchases merchant lens screen. Shaped
  * like the `/analytics/merchant-spend` and `/purchases` responses, not
@@ -17,14 +19,8 @@ export type MerchantIdentity =
   | { resolution: 'name'; entityId: null; name: string }
   | { resolution: 'unattributed'; entityId: null; name: null };
 
-export interface SpendAccounting {
-  totalCents: number;
-  matchedCents: number;
-  awaitingImportCents: number;
-  refundedCents: number;
-  residualCents: number;
-  netSpendCents: number;
-}
+/** The roll-up-grain name for the pillar's one accounting split. */
+export type SpendAccounting = PurchaseAccounting;
 
 export interface MerchantSpend {
   merchant: MerchantIdentity;

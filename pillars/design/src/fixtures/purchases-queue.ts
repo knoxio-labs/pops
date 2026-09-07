@@ -1,3 +1,5 @@
+import type { LinkType } from '@/fixtures/purchases-vocabulary';
+
 /**
  * Fictional data for the reconcile queue (`/purchases`), shaped like
  * `GET /reconcile/queue`'s 200 response
@@ -10,8 +12,7 @@
  * big-ticket amount, and a charge that has sat unexplained for months.
  */
 
-/** `purchase_links.link_type` — how a proposal was derived. */
-export type LinkType = 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+export type { LinkType } from '@/fixtures/purchases-vocabulary';
 
 /** One unconfirmed link: a transaction the engine thinks settles the charge. */
 export interface ProposedLink {

@@ -1,3 +1,4 @@
+import { PURCHASE_STATUS_LABELS } from '@/kit/purchases/labels';
 import { useId, useState } from 'react';
 
 import { Badge, Button, formatCents, formatDate } from '@pops/ui';
@@ -19,14 +20,6 @@ import type { OrderCountAgreement } from './order-count-agreement';
  * what it could not fit rather than offering a second page.
  */
 const ORDERS_LIMIT = 500;
-
-const STATUS_LABEL: Record<MerchantOrder['status'], string> = {
-  awaiting_settlement: 'Awaiting settlement',
-  linked: 'Linked',
-  partial: 'Partly linked',
-  settled_cash: 'Settled in cash',
-  ignored: 'Ignored',
-};
 
 /** One merchant, one currency: the headline, the split, the figures it is made of, and its orders. */
 export function MerchantRow({
@@ -158,7 +151,9 @@ function OrderRow({ order }: { order: MerchantOrder }) {
         <span className="text-muted-foreground text-xs">
           {order.sourceOrderId ?? 'No order reference'}
         </span>
-        <span className="text-muted-foreground text-xs">{STATUS_LABEL[order.status]}</span>
+        <span className="text-muted-foreground text-xs">
+          {PURCHASE_STATUS_LABELS[order.status]}
+        </span>
       </span>
       <span className="text-sm font-medium tabular-nums">
         {formatCents(order.totalCents, order.currency)}

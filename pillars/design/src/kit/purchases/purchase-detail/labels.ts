@@ -1,3 +1,5 @@
+export { LINK_TYPE_LABELS, PURCHASE_STATUS_LABELS } from '@/kit/purchases/labels';
+
 /**
  * The order-detail vocabulary, copied verbatim from `purchase.*` in
  * `libs/locales/en-AU/purchases.json`. Keyed by the enum so a variant added
@@ -10,19 +12,9 @@ import type {
   DocumentKind,
   IngestMethod,
   ItemKind,
-  LinkType,
-  PurchaseStatus,
   SettlementMode,
   ShipmentStatus,
 } from '@/fixtures/purchases-order-types';
-
-export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
-  awaiting_settlement: 'Awaiting settlement',
-  linked: 'Linked',
-  partial: 'Partly linked',
-  settled_cash: 'Settled in cash',
-  ignored: 'Ignored',
-};
 
 export const INGEST_METHOD_LABELS: Record<IngestMethod, string> = {
   email: 'Email',
@@ -54,15 +46,6 @@ export const CHARGE_ROLE_LABELS: Record<ChargeRole, string> = {
 export const CHARGE_ORIGIN_LABELS: Record<ChargeOrigin, string> = {
   merchant: 'stated by the merchant',
   derived: 'derived by the pillar',
-};
-
-export const LINK_TYPE_LABELS: Record<LinkType, string> = {
-  exact: 'Exact',
-  split: 'Split',
-  combined: 'Combined',
-  partial: 'Partial',
-  rule: 'Rule',
-  manual: 'Manual',
 };
 
 export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
