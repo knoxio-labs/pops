@@ -111,9 +111,12 @@ it was the closest number lying around.
 - The corrections and imports module READMEs currently describe the 0.9/0.7
   split as the ladder's classification rule
   (`api/modules/imports/README.md`, "Learned corrections" bullet;
-  `api/modules/corrections/README.md`, the account-scope paragraph's
-  "regardless of `priority` or `confidence`" aside). Both are rewritten in
-  POPS-3128 to describe provenance instead of restating this ADR.
+  `api/modules/corrections/README.md`, the "type-only rules are terminal"
+  bullet's "no matter how confident the rule is" aside). Both are rewritten
+  in POPS-3128 to describe provenance instead of restating this ADR. The
+  account-scope bullet's separate "regardless of `priority` or `confidence`"
+  aside needs no rewrite — it already describes ordering, not routing, and
+  was accurate before this ADR too.
 - `classifyCorrectionMatch`, `resolveCorrectionApplyStatus` and
   `correctionOutcomeBucket` are the three functions whose docstrings
   currently explain the confidence bar; POPS-3128 rewrites them to explain
