@@ -23,7 +23,6 @@ import {
   assertPatternCompiles,
 } from '../../modules/corrections/add-op-guards.js';
 import { assertPersistableEntityId } from '../../modules/imports/commit-validation.js';
-import { LOGO_MAX_BYTES } from '../../modules/logo-upload.js';
 import { translateCorrectionError } from '../../rest/corrections-handlers-support.js';
 import { mapHttpError } from '../../rest/error-mapping.js';
 import { ValidationError } from '../errors.js';
@@ -59,22 +58,20 @@ describe('ValidationError', () => {
   it('puts a one-argument message on the wire', () => {
     expect(
       wireBodyOf(() => {
-        throw new ValidationError('Logo upload is empty.');
+        throw new ValidationError('Upload is empty.');
       })
-    ).toMatchObject({ message: 'Logo upload is empty.', code: 'ValidationError' });
+    ).toMatchObject({ message: 'Upload is empty.', code: 'ValidationError' });
   });
 
   it('still puts the message on the wire when structured details are supplied', () => {
+    const maxBytes = 2 * 1024 * 1024;
     expect(
       wireBodyOf(() => {
-        throw new ValidationError(
-          `Logo exceeds the maximum allowed size of ${LOGO_MAX_BYTES} bytes.`,
-          {
-            byteLength: LOGO_MAX_BYTES + 1,
-          }
-        );
+        throw new ValidationError(`Exceeds the maximum allowed size of ${maxBytes} bytes.`, {
+          byteLength: maxBytes + 1,
+        });
       }).message
-    ).toBe(`Logo exceeds the maximum allowed size of ${LOGO_MAX_BYTES} bytes.`);
+    ).toBe(`Exceeds the maximum allowed size of ${maxBytes} bytes.`);
   });
 
   it('never serves the generic default for a site that supplied prose', () => {

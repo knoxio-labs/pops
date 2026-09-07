@@ -8,10 +8,8 @@
  * `kind === 'person'` requires an `entityId` (a receivable/payable ledger
  * with no contact behind it has nothing to key the balance to). Every
  * `hasIssuingInstitution` kind MAY carry one (its issuing bank), and it is
- * genuinely optional there — many accounts still point at an institution
- * that has not been migrated to a contacts Entity yet (POPS-3099) and
- * resolve display data through that fallback instead (see
- * `account-entity-display.ts`). Every remaining kind (`cash`, the reserved
+ * genuinely optional there — plenty of accounts have no issuer linked at
+ * all. Every remaining kind (`cash`, the reserved
  * placeholders) must NOT carry one — `entityId` names either a `person`
  * account's contact or an issuer, never anything else. `allowPendingEntity`
  * is the one exception on the `person` side — a `person` account may

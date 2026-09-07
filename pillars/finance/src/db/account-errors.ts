@@ -1,8 +1,8 @@
 /**
- * Typed errors raised by the accounts/currencies/institutions/gift-card
- * domain (POPS-2767/2802/2803/2772) — split out of `errors.ts` once that
- * file's single-file line cap made a further split unavoidable. Re-exported
- * from `errors.ts` so existing `from '../errors.js'` imports keep working.
+ * Typed errors raised by the accounts/currencies/gift-card domain
+ * (POPS-2767/2802/2772) — split out of `errors.ts` once that file's
+ * single-file line cap made a further split unavoidable. Re-exported from
+ * `errors.ts` so existing `from '../errors.js'` imports keep working.
  */
 
 export class CurrencyNotFoundError extends Error {
@@ -56,70 +56,6 @@ export class CurrencyDecimalsInUseError extends Error {
   constructor(code: string) {
     super(`Currency '${code}' is in use — its decimals cannot be changed`);
     this.code = code;
-  }
-}
-
-export class InstitutionNotFoundError extends Error {
-  override readonly name = 'InstitutionNotFoundError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Institution '${id}' not found`);
-    this.id = id;
-  }
-}
-
-export class InstitutionConflictError extends Error {
-  override readonly name = 'InstitutionConflictError' as const;
-  readonly institutionName: string;
-
-  constructor(institutionName: string) {
-    super(`Institution '${institutionName}' already exists`);
-    this.institutionName = institutionName;
-  }
-}
-
-/**
- * An institution cannot be deleted because some other table's
- * `institution_id` FK references it — `accounts.institution_id` (POPS-2767)
- * is the first such table. `institutionsService.isInstitutionInUse` scans for
- * it generically, so this stays accurate as further tables gain an
- * `institution_id` column.
- */
-export class InstitutionInUseError extends Error {
-  override readonly name = 'InstitutionInUseError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Institution '${id}' is in use and cannot be deleted`);
-    this.id = id;
-  }
-}
-
-/**
- * A merge named the same institution as both source and target — there is
- * nothing to repoint, and deleting it anyway would remove an institution the
- * caller still expects to exist. Mirrors `AccountMergeSameAccountError`
- * (`merge-account-errors.ts`, POPS-2812).
- */
-export class InstitutionMergeSameInstitutionError extends Error {
-  override readonly name = 'InstitutionMergeSameInstitutionError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Institution '${id}' cannot be merged into itself`);
-    this.id = id;
-  }
-}
-
-/** No `logo_blobs` row for the given id — the logo was never uploaded, or was already removed. */
-export class LogoBlobNotFoundError extends Error {
-  override readonly name = 'LogoBlobNotFoundError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Logo blob '${id}' not found`);
-    this.id = id;
   }
 }
 

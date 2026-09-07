@@ -358,6 +358,13 @@
       "when": 1781913600044,
       "tag": "0099_accounts_entity_id_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1781913600045,
+      "tag": "0100_drop_institutions",
+      "breakpoints": true
     }
   ]
 }

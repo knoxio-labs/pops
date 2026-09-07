@@ -257,18 +257,6 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'finance',
-    operationId: 'institutions.list',
-    path: '/institutions',
-    method: 'get',
-    // No query at all: bfm reads the whole list once and indexes it by id, so
-    // there is nothing here to lose. It resolves the name behind an account's
-    // `institutionId`, which finance's account row does not carry.
-    query: [],
-    usedBy: 'pillars/bfm/src/api/finance/accounts-client.ts',
-  },
-  {
-    consumer: 'bfm',
-    producer: 'finance',
     operationId: 'checkpoints.history',
     path: '/accounts/{id}/balance-history',
     method: 'get',

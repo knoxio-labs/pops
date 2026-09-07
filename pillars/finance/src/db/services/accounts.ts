@@ -30,7 +30,6 @@ export type AccountRow = typeof accounts.$inferSelect;
 /** Fields accepted on create. */
 export interface CreateAccountInput {
   name: string;
-  institutionId?: string | null;
   kind: AccountKind;
   currency: string;
   displayOrder?: number;
@@ -40,7 +39,6 @@ export interface CreateAccountInput {
 /** Same shape as create — all fields optional for PATCH semantics, plus `archivedAt`. */
 export interface UpdateAccountInput {
   name?: string;
-  institutionId?: string | null;
   kind?: AccountKind;
   currency?: string;
   displayOrder?: number;
@@ -130,7 +128,6 @@ function insertAccountRow(db: FinanceDb, id: string, input: CreateAccountInput):
     .values({
       id,
       name: input.name,
-      institutionId: input.institutionId ?? null,
       kind: input.kind,
       currency: input.currency,
       displayOrder: input.displayOrder ?? 0,
@@ -192,7 +189,6 @@ export function createAccount(
 function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts.$inferInsert> {
   const updates: Partial<typeof accounts.$inferInsert> = {};
   if (input.name !== undefined) updates.name = input.name;
-  if (input.institutionId !== undefined) updates.institutionId = input.institutionId ?? null;
   if (input.kind !== undefined) updates.kind = input.kind;
   if (input.currency !== undefined) updates.currency = input.currency;
   if (input.displayOrder !== undefined) updates.displayOrder = input.displayOrder;

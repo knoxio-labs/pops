@@ -2,8 +2,7 @@
  * better-sqlite3 surfaces a UNIQUE index violation with
  * `code = 'SQLITE_CONSTRAINT_UNIQUE'` and a message naming the index.
  * Drizzle wraps these in a `DrizzleError` carrying the original as `.cause`,
- * so we walk the cause chain. See `institution-conflict.ts` for the same
- * pattern against `institutions`.
+ * so we walk the cause chain.
  *
  * `accounts` carries two independent UNIQUE indexes, so two distinct
  * matchers: `idx_accounts_name_nocase` (a duplicate account name) and

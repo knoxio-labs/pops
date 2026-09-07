@@ -10,16 +10,13 @@ import { AccountsPage } from './AccountsPage';
 import type { Account } from './accounts/types';
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 
 vi.mock('../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   accountsCreate: vi.fn(),
   accountsUpdate: vi.fn(),
-  institutionsCreate: vi.fn(),
   giftCardDetailsGet: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
   giftCardDetailsReveal: vi.fn(),
@@ -29,7 +26,6 @@ function account(overrides: Partial<Account>): Account {
   return {
     id: 'id',
     name: 'Account',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -40,7 +36,6 @@ function account(overrides: Partial<Account>): Account {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -72,7 +67,6 @@ function mockLists(accounts: Account[]) {
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({
     data: {
       data: [

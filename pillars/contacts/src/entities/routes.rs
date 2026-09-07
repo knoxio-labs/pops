@@ -28,15 +28,13 @@ use crate::blobs;
 use crate::time::now_rfc3339;
 
 /// Content types an avatar/poster upload is accepted in. SVG is deliberately
-/// excluded (unlike the ticket's illustrative list) for the same reason
-/// finance's institution-logo upload excludes it
-/// (`pillars/finance/src/api/modules/logo-upload.ts`): an SVG can carry
+/// excluded (unlike the ticket's illustrative list): an SVG can carry
 /// `<script>`/`onload=`/`foreignObject` payloads that execute in the
 /// viewer's origin, and this monorepo has no SVG sanitiser dependency.
 const ASSET_ALLOWED_CONTENT_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 
-/// Size cap on an avatar/poster upload, matching finance's institution-logo
-/// cap (a small square mark, not a photo).
+/// Size cap on an avatar/poster upload — a small square mark or a modest
+/// banner image, not a full-resolution photo.
 const ASSET_MAX_BYTES: usize = 2 * 1024 * 1024;
 
 /// Which entity asset an upload/serve request targets.

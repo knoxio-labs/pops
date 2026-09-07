@@ -72,13 +72,6 @@ export type AccountsListResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -115,7 +108,6 @@ export type AccountsCreateData = {
     currency: string;
     displayOrder?: number;
     entityId?: string | null;
-    institutionId?: string | null;
     kind:
       | 'checking'
       | 'savings'
@@ -216,13 +208,6 @@ export type AccountsCreateResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -334,13 +319,6 @@ export type AccountsReorderResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -451,13 +429,6 @@ export type AccountsDeleteResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -563,13 +534,6 @@ export type AccountsGetResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -601,7 +565,6 @@ export type AccountsUpdateData = {
     currency?: string;
     displayOrder?: number;
     entityId?: string | null;
-    institutionId?: string | null;
     kind?:
       | 'checking'
       | 'savings'
@@ -704,13 +667,6 @@ export type AccountsUpdateResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -2051,13 +2007,6 @@ export type AccountsMergeResponses = {
           to: string;
         } | null;
       };
-      institution: {
-        colour: string;
-        id: string;
-        logoAssetId: string | null;
-        name: string;
-      } | null;
-      institutionId: string | null;
       kind:
         | 'checking'
         | 'savings'
@@ -2181,13 +2130,6 @@ export type AccountsPreviewMergeResponses = {
             to: string;
           } | null;
         };
-        institution: {
-          colour: string;
-          id: string;
-          logoAssetId: string | null;
-          name: string;
-        } | null;
-        institutionId: string | null;
         kind:
           | 'checking'
           | 'savings'
@@ -2244,13 +2186,6 @@ export type AccountsPreviewMergeResponses = {
             to: string;
           } | null;
         };
-        institution: {
-          colour: string;
-          id: string;
-          logoAssetId: string | null;
-          name: string;
-        } | null;
-        institutionId: string | null;
         kind:
           | 'checking'
           | 'savings'
@@ -6615,413 +6550,6 @@ export type ImportsReevaluateWithPendingRulesResponses = {
 
 export type ImportsReevaluateWithPendingRulesResponse =
   ImportsReevaluateWithPendingRulesResponses[keyof ImportsReevaluateWithPendingRulesResponses];
-
-export type InstitutionsListData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/institutions';
-};
-
-export type InstitutionsListResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: Array<{
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    }>;
-  };
-};
-
-export type InstitutionsListResponse = InstitutionsListResponses[keyof InstitutionsListResponses];
-
-export type InstitutionsCreateData = {
-  /**
-   * Body
-   */
-  body?: {
-    colour: string;
-    logoAssetId?: string | null;
-    name: string;
-  };
-  path?: never;
-  query?: never;
-  url: '/institutions';
-};
-
-export type InstitutionsCreateErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsCreateError = InstitutionsCreateErrors[keyof InstitutionsCreateErrors];
-
-export type InstitutionsCreateResponses = {
-  /**
-   * 201
-   */
-  201: {
-    data: {
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type InstitutionsCreateResponse =
-  InstitutionsCreateResponses[keyof InstitutionsCreateResponses];
-
-export type InstitutionsDeleteData = {
-  /**
-   * Body
-   */
-  body?: {
-    [key: string]: never;
-  };
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/institutions/{id}';
-};
-
-export type InstitutionsDeleteErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsDeleteError = InstitutionsDeleteErrors[keyof InstitutionsDeleteErrors];
-
-export type InstitutionsDeleteResponses = {
-  /**
-   * 200
-   */
-  200: {
-    message: string;
-  };
-};
-
-export type InstitutionsDeleteResponse =
-  InstitutionsDeleteResponses[keyof InstitutionsDeleteResponses];
-
-export type InstitutionsUpdateData = {
-  /**
-   * Body
-   */
-  body?: {
-    colour?: string;
-    name?: string;
-  };
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/institutions/{id}';
-};
-
-export type InstitutionsUpdateErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsUpdateError = InstitutionsUpdateErrors[keyof InstitutionsUpdateErrors];
-
-export type InstitutionsUpdateResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: {
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type InstitutionsUpdateResponse =
-  InstitutionsUpdateResponses[keyof InstitutionsUpdateResponses];
-
-export type InstitutionsRemoveLogoData = {
-  /**
-   * Body
-   */
-  body?: {
-    [key: string]: never;
-  };
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/institutions/{id}/logo';
-};
-
-export type InstitutionsRemoveLogoErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsRemoveLogoError =
-  InstitutionsRemoveLogoErrors[keyof InstitutionsRemoveLogoErrors];
-
-export type InstitutionsRemoveLogoResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: {
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type InstitutionsRemoveLogoResponse =
-  InstitutionsRemoveLogoResponses[keyof InstitutionsRemoveLogoResponses];
-
-export type InstitutionsUploadLogoData = {
-  /**
-   * Body
-   */
-  body?: {
-    contentBase64: string;
-    contentType: 'image/png' | 'image/jpeg' | 'image/webp';
-  };
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/institutions/{id}/logo';
-};
-
-export type InstitutionsUploadLogoErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsUploadLogoError =
-  InstitutionsUploadLogoErrors[keyof InstitutionsUploadLogoErrors];
-
-export type InstitutionsUploadLogoResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: {
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type InstitutionsUploadLogoResponse =
-  InstitutionsUploadLogoResponses[keyof InstitutionsUploadLogoResponses];
-
-export type InstitutionsMergeData = {
-  /**
-   * Body
-   */
-  body?: {
-    targetId: string;
-  };
-  path: {
-    id: string;
-  };
-  query?: never;
-  url: '/institutions/{id}/merge';
-};
-
-export type InstitutionsMergeErrors = {
-  /**
-   * 400
-   */
-  400: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 404
-   */
-  404: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 409
-   */
-  409: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-  /**
-   * 422
-   */
-  422: {
-    code?: string;
-    message: string;
-    messageKey?: string;
-  };
-};
-
-export type InstitutionsMergeError = InstitutionsMergeErrors[keyof InstitutionsMergeErrors];
-
-export type InstitutionsMergeResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: {
-      colour: string;
-      createdAt: string;
-      id: string;
-      logoAssetId: string | null;
-      name: string;
-      updatedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type InstitutionsMergeResponse =
-  InstitutionsMergeResponses[keyof InstitutionsMergeResponses];
 
 export type SearchSearchData = {
   /**

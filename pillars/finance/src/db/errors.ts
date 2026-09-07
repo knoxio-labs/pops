@@ -3,7 +3,7 @@
  *
  * Plain Error subclasses — the service layer stays HTTP-agnostic. The API
  * layer maps each to its status code when surfacing to clients. The
- * accounts/currencies/institutions/gift-card error family lives in
+ * accounts/currencies/gift-card error family lives in
  * `account-errors.ts`, the account-merge refusal family (POPS-2812) in
  * `merge-account-errors.ts`, the loan family in `loan-errors.ts`, and the
  * account-checkpoint family in `checkpoint-errors.ts` — all split out once

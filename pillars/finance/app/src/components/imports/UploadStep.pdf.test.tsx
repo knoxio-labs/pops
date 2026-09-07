@@ -21,7 +21,6 @@ import type { PlacedText } from './pdf/synthetic-pdf.test-helpers';
 // (POPS-2840) — see UploadStep.test.tsx for the same rationale.
 vi.mock('../../finance-api/index.js', () => ({
   accountsList: async () => ({ data: { data: [], pagination: { total: 0 } } }),
-  institutionsList: async () => ({ data: { data: [] } }),
   currenciesList: async () => ({ data: { data: [] } }),
 }));
 

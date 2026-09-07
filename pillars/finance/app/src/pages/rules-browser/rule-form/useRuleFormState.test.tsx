@@ -20,13 +20,11 @@ import type { Correction } from '../types';
 const correctionsCreateOrUpdate = vi.fn();
 const correctionsUpdate = vi.fn();
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 
 vi.mock('../../../finance-api/index.js', () => ({
   correctionsCreateOrUpdate: (...a: unknown[]) => correctionsCreateOrUpdate(...a),
   correctionsUpdate: (...a: unknown[]) => correctionsUpdate(...a),
   accountsList: (...a: unknown[]) => accountsList(...a),
-  institutionsList: (...a: unknown[]) => institutionsList(...a),
 }));
 
 vi.mock('../../../lib/useAllEntities', () => ({
@@ -80,14 +78,12 @@ beforeEach(() => {
           id: ACCOUNT_ID,
           name: 'Bank A Card',
           kind: 'credit-card',
-          institutionId: null,
           archivedAt: null,
         },
       ],
       pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
     })
   );
-  institutionsList.mockResolvedValue(envelope({ data: [] }));
   correctionsCreateOrUpdate.mockResolvedValue(envelope({ data: existingRule(), message: 'ok' }));
   correctionsUpdate.mockResolvedValue(envelope({ data: existingRule(), message: 'ok' }));
 });

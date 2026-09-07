@@ -20,7 +20,6 @@ function wrapper({ children }: { children: ReactNode }) {
 const EVERYDAY = {
   id: 'a1',
   name: 'Everyday',
-  institutionId: 'anz',
   kind: 'checking',
   currency: 'AUD',
   archivedAt: null,
@@ -31,7 +30,6 @@ const EVERYDAY = {
   entityColour: '#0072ac',
   entityAvatarAssetId: null,
   resolvedEntityId: 'entity-anz',
-  institution: null,
   balance: NO_BALANCE,
   importStatus: NO_IMPORT_STATUS,
   createdAt: '2026-01-01T00:00:00.000Z',

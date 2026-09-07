@@ -66,7 +66,6 @@ import type {
   CreateEntityOutput,
   ProcessImportOutput,
 } from '../modules/imports/types.js';
-import type { Institution } from '../modules/institutions-types.js';
 import type { LoanOffsetLink, LoanRate, LoanTerms } from '../modules/loan-types.js';
 import type { SuggestedTag } from '../modules/tag-suggester/index.js';
 import type { Transaction } from '../modules/transactions-types.js';
@@ -456,26 +455,6 @@ export function makeClient(app: Express) {
       update: (code: string, data: Record<string, unknown>) =>
         call<{ data: Currency; message: string }>((r) => r.patch(`/currencies/${code}`).send(data)),
       delete: (code: string) => call<{ message: string }>((r) => r.delete(`/currencies/${code}`)),
-    },
-    institutions: {
-      list: () => call<{ data: Institution[] }>((r) => r.get('/institutions')),
-      create: (body: Record<string, unknown>) =>
-        call<{ data: Institution; message: string }>((r) => r.post('/institutions').send(body)),
-      update: (id: string, data: Record<string, unknown>) =>
-        call<{ data: Institution; message: string }>((r) =>
-          r.patch(`/institutions/${id}`).send(data)
-        ),
-      delete: (id: string) => call<{ message: string }>((r) => r.delete(`/institutions/${id}`)),
-      merge: (id: string, body: { targetId: string }) =>
-        call<{ data: Institution; message: string }>((r) =>
-          r.post(`/institutions/${id}/merge`).send(body)
-        ),
-      uploadLogo: (id: string, body: { contentType: string; contentBase64: string }) =>
-        call<{ data: Institution; message: string }>((r) =>
-          r.post(`/institutions/${id}/logo`).send(body)
-        ),
-      removeLogo: (id: string) =>
-        call<{ data: Institution; message: string }>((r) => r.delete(`/institutions/${id}/logo`)),
     },
     accounts: {
       list: (query: AccountQuery = {}) =>

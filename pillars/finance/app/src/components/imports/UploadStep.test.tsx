@@ -150,26 +150,24 @@ describe('UploadStep — an ANZ transaction-account export', () => {
     // Unlike the other tests in this file, this one needs the format radio
     // itself on screen to pick 'ANZ' — so, just this once, the account list
     // resolves to a real ANZ checking account (POPS-2854), carrying its
-    // not-yet-migrated institution fallback (POPS-3063) so the format picker
-    // resolves a bank name with no separate institutions fetch.
+    // server-resolved issuer entity (POPS-3063) so the format picker
+    // resolves a bank name with no separate entity fetch.
     accountsList.mockResolvedValueOnce({
       data: {
         data: [
           {
             id: 'acc-1',
             name: 'Test Account',
-            institutionId: 'inst-anz',
             kind: 'checking',
             currency: 'AUD',
             archivedAt: null,
             displayOrder: 0,
-            entityId: null,
-            entityDisplayName: null,
+            entityId: 'entity-anz',
+            entityDisplayName: 'ANZ',
             entityDisplayNameStale: false,
-            entityColour: null,
+            entityColour: '#0072ac',
             entityAvatarAssetId: null,
-            resolvedEntityId: null,
-            institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
+            resolvedEntityId: 'entity-anz',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },
@@ -214,7 +212,6 @@ describe('UploadStep — an account with no derivable import format (POPS-2854)'
           {
             id: 'acc-1',
             name: 'Test Account',
-            institutionId: 'inst-anz',
             kind: 'cash',
             currency: 'AUD',
             archivedAt: null,
@@ -225,7 +222,6 @@ describe('UploadStep — an account with no derivable import format (POPS-2854)'
             entityColour: null,
             entityAvatarAssetId: null,
             resolvedEntityId: null,
-            institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:00:00.000Z',
           },
@@ -288,18 +284,16 @@ describe('UploadStep — creating an account mid-import (POPS-2820)', () => {
     const anzAccount = {
       id: 'acc-1',
       name: 'Test Account',
-      institutionId: 'inst-anz',
       kind: 'checking' as const,
       currency: 'AUD',
       archivedAt: null,
       displayOrder: 0,
-      entityId: null,
-      entityDisplayName: null,
+      entityId: 'entity-anz',
+      entityDisplayName: 'ANZ',
       entityDisplayNameStale: false,
-      entityColour: null,
+      entityColour: '#0072ac',
       entityAvatarAssetId: null,
-      resolvedEntityId: null,
-      institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
+      resolvedEntityId: 'entity-anz',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     };

@@ -25,7 +25,7 @@ export function AccountDetailHeader({
   onAddTransaction: () => void;
 }) {
   const [option] = toAccountOptions([account]);
-  const issuerName = account.entityDisplayName ?? account.institution?.name ?? null;
+  const issuerName = account.entityDisplayName ?? null;
   const isArchived = account.archivedAt !== null;
 
   return (

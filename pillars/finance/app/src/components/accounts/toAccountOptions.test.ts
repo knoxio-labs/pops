@@ -9,7 +9,6 @@ function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
   return {
     id: 'a1',
     name: 'Everyday',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -20,7 +19,6 @@ function account(overrides: Partial<ApiAccount> = {}): ApiAccount {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -54,26 +52,6 @@ describe('toAccountOptions', () => {
       }),
     ]);
     expect(option?.institution?.logoUrl).toBe('/contacts-api/entities/entity-anz/avatar');
-  });
-
-  it('falls back to the not-yet-migrated institution object when no entity resolved', () => {
-    const [option] = toAccountOptions([
-      account({
-        institutionId: 'inst-anz',
-        institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: null },
-      }),
-    ]);
-    expect(option?.institution).toEqual({ id: 'inst-anz', name: 'ANZ', colour: '#0072ac' });
-  });
-
-  it("resolves the institution fallback's logoAssetId to finance's own logo route", () => {
-    const [option] = toAccountOptions([
-      account({
-        institutionId: 'inst-anz',
-        institution: { id: 'inst-anz', name: 'ANZ', colour: '#0072ac', logoAssetId: 'asset-1' },
-      }),
-    ]);
-    expect(option?.institution?.logoUrl).toBe('/finance-api/logos/asset-1');
   });
 
   it('leaves institution undefined for a cash account', () => {

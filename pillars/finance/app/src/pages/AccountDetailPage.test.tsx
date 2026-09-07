@@ -17,7 +17,6 @@ type Transaction = NonNullable<TransactionsListResponse['data']>[number];
 type Currency = CurrenciesListResponses[200]['data'][number];
 
 const accountsList = vi.fn();
-const institutionsList = vi.fn();
 const currenciesList = vi.fn();
 const transactionsList = vi.fn();
 const accountsUpdate = vi.fn();
@@ -25,13 +24,11 @@ const entitiesList = vi.fn();
 
 vi.mock('../finance-api/index.js', () => ({
   accountsList: (...args: unknown[]) => accountsList(...args),
-  institutionsList: (...args: unknown[]) => institutionsList(...args),
   currenciesList: (...args: unknown[]) => currenciesList(...args),
   transactionsList: (...args: unknown[]) => transactionsList(...args),
   accountsUpdate: (...args: unknown[]) => accountsUpdate(...args),
   checkpointsHistory: vi.fn().mockResolvedValue({ data: { data: [] }, error: undefined }),
   transactionsAvailableTags: vi.fn(),
-  institutionsCreate: vi.fn(),
   giftCardDetailsGet: vi.fn(),
   giftCardDetailsWrite: vi.fn(),
   giftCardDetailsReveal: vi.fn(),
@@ -49,7 +46,6 @@ function account(overrides: Partial<Account>): Account {
   return {
     id: 'a1',
     name: 'Everyday',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -60,7 +56,6 @@ function account(overrides: Partial<Account>): Account {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,
@@ -109,7 +104,6 @@ function renderDetail(
     },
     error: undefined,
   });
-  institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
   currenciesList.mockResolvedValue({ data: { data: opts.currencies ?? [AUD] }, error: undefined });
   const transactions = opts.transactions ?? [];
   transactionsList.mockResolvedValue({
@@ -140,7 +134,6 @@ describe('AccountDetailPage', () => {
 
   it('shows an error panel with a retry when the accounts query fails', async () => {
     accountsList.mockRejectedValue(new Error('network down'));
-    institutionsList.mockResolvedValue({ data: { data: [] }, error: undefined });
     currenciesList.mockResolvedValue({ data: { data: [AUD] }, error: undefined });
     render(
       <QueryClientProvider

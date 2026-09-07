@@ -9,9 +9,9 @@
  * caller's job (`linkTransferPair`); scheduling the passes that invoke it is the
  * commit-time phase and the reconcile worker.
  *
- * The "different account" predicate compares `accountId` (POPS-2769) — real,
- * per-institution accounts now exist, so this is an exact identity check
- * rather than a comparison of free-text names. The engine itself stays OFF in
+ * The "different account" predicate compares `accountId` (POPS-2769) — real
+ * accounts now exist, so this is an exact identity check rather than a
+ * comparison of free-text names. The engine itself stays OFF in
  * production ({@link isTransferPairEnabled} gates both trigger points and
  * defaults to disabled) pending a separate decision to enable it; this ticket
  * does not flip that flag.

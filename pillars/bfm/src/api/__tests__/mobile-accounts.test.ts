@@ -183,7 +183,7 @@ describe('the account row is mobile-shaped', () => {
   });
 
   it('passes through a null institutionId rather than dropping the field', async () => {
-    const { app, token } = openWithRows([accountRow({ id: 'acc-1', institutionId: null })]);
+    const { app, token } = openWithRows([accountRow({ id: 'acc-1', entityId: null })]);
 
     const res = await get(app, token, LIST_PATH);
 
@@ -324,25 +324,23 @@ describe('the perimeter still applies', () => {
   });
 });
 
-describe('the institution behind an account (POPS-2848)', () => {
-  it('resolves the name finance holds against the id on the row', async () => {
-    const { app, token } = openWithRows([accountRow({ id: 'acc-1', institutionId: 'inst-anz' })], {
-      institutions: [
-        { id: 'inst-up', name: 'Up' },
-        { id: 'inst-anz', name: 'ANZ' },
-      ],
-    });
+describe('the institution behind an account', () => {
+  it('carries the id and name finance resolved onto the row, unchanged', async () => {
+    const { app, token } = openWithRows([
+      accountRow({ id: 'acc-1', entityId: 'inst-anz', entityDisplayName: 'ANZ' }),
+    ]);
 
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
+    expect(res.body.data[0].institutionId).toBe('inst-anz');
     expect(res.body.data[0].institutionName).toBe('ANZ');
   });
 
-  it('leaves the name null for an id the institutions list does not contain', async () => {
-    const { app, token } = openWithRows([accountRow({ id: 'acc-1', institutionId: 'inst-gone' })], {
-      institutions: [{ id: 'inst-up', name: 'Up' }],
-    });
+  it("leaves the name null when finance's own resolution did not come back", async () => {
+    const { app, token } = openWithRows([
+      accountRow({ id: 'acc-1', entityId: 'inst-gone', entityDisplayName: null }),
+    ]);
 
     const res = await get(app, token, LIST_PATH);
 
@@ -351,51 +349,27 @@ describe('the institution behind an account (POPS-2848)', () => {
     expect(res.body.data[0].institutionName).toBeNull();
   });
 
-  it('still serves every balance when the institutions lookup does not come back', async () => {
-    const { app, token } = openWithRows(
-      [
-        accountRow({
-          id: 'acc-1',
-          institutionId: 'inst-anz',
-          balance: {
-            balanceCents: -213_755,
-            asOf: '2026-09-02',
-            basis: 'checkpoint',
-            anchor: { checkpointId: 'chk-1', asOf: '2026-09-02', source: 'manual' },
-            inconsistent: false,
-          },
-        }),
-      ],
-      { institutionsFailWith: { kind: 'unavailable', pillar: 'finance' } }
-    );
+  it('leaves both null for a cash account, which carries no issuer', async () => {
+    const { app, token } = openWithRows([accountRow({ id: 'cash', kind: 'cash', entityId: null })]);
 
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
-    expect(res.body.data[0].balance.balanceCents).toBe(-213_755);
+    expect(res.body.data[0].institutionId).toBeNull();
     expect(res.body.data[0].institutionName).toBeNull();
   });
 
-  it('does not ask finance for institutions when no account is held at one', async () => {
-    const { app, token, fake } = openWithRows([
-      accountRow({ id: 'cash', kind: 'cash', institutionId: null }),
-    ]);
-
-    const res = await get(app, token, LIST_PATH);
-
-    expect(res.status).toBe(200);
-    expect(fake.institutionCalls).toHaveLength(0);
-  });
-
-  it("carries a person ledger's contact through as `contact`", async () => {
+  it("carries a person ledger's contact through as `contact`, not as an institution", async () => {
     const { app, token } = openWithRows([
-      accountRow({ id: 'acc-jo', kind: 'person', entityDisplayName: 'Jo' }),
+      accountRow({ id: 'acc-jo', kind: 'person', entityId: 'ent-jo', entityDisplayName: 'Jo' }),
     ]);
 
     const res = await get(app, token, LIST_PATH);
 
     expect(res.status).toBe(200);
     expect(res.body.data[0].contact).toBe('Jo');
+    expect(res.body.data[0].institutionId).toBeNull();
+    expect(res.body.data[0].institutionName).toBeNull();
   });
 });
 

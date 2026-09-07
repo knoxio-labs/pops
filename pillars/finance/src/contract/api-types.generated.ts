@@ -802,77 +802,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/institutions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List every institution */
-    get: operations['institutions.list'];
-    put?: never;
-    /** Register a new institution */
-    post: operations['institutions.create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/institutions/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Delete an institution, refused while any account still references it */
-    delete: operations['institutions.delete'];
-    options?: never;
-    head?: never;
-    /** Rename an institution and/or change its colour */
-    patch: operations['institutions.update'];
-    trace?: never;
-  };
-  '/institutions/{id}/logo': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Upload (or replace) an institution logo (base64, 2 MiB cap, PNG/JPEG/WEBP only) */
-    post: operations['institutions.uploadLogo'];
-    /** Remove an institution logo, falling back to the initials mark */
-    delete: operations['institutions.removeLogo'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/institutions/{id}/merge': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Merge institution :id (the source) into targetId: repoint every account onto targetId and delete it outright. Rejects merging an institution into itself with 422. The survivor keeps its own colour and logoAssetId — targetId's values win unqualified. */
-    post: operations['institutions.merge'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/search': {
     parameters: {
       query?: never;
@@ -1466,13 +1395,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -1516,7 +1438,6 @@ export interface operations {
           currency: string;
           displayOrder?: number;
           entityId?: string | null;
-          institutionId?: string | null;
           /** @enum {string} */
           kind:
             | 'checking'
@@ -1585,13 +1506,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -1737,13 +1651,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -1868,13 +1775,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -2003,13 +1903,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -2090,7 +1983,6 @@ export interface operations {
           currency?: string;
           displayOrder?: number;
           entityId?: string | null;
-          institutionId?: string | null;
           /** @enum {string} */
           kind?:
             | 'checking'
@@ -2159,13 +2051,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -3851,13 +3736,6 @@ export interface operations {
                   to: string;
                 } | null;
               };
-              institution: {
-                colour: string;
-                id: string;
-                logoAssetId: string | null;
-                name: string;
-              } | null;
-              institutionId: string | null;
               /** @enum {string} */
               kind:
                 | 'checking'
@@ -4006,13 +3884,6 @@ export interface operations {
                     to: string;
                   } | null;
                 };
-                institution: {
-                  colour: string;
-                  id: string;
-                  logoAssetId: string | null;
-                  name: string;
-                } | null;
-                institutionId: string | null;
                 /** @enum {string} */
                 kind:
                   | 'checking'
@@ -4074,13 +3945,6 @@ export interface operations {
                     to: string;
                   } | null;
                 };
-                institution: {
-                  colour: string;
-                  id: string;
-                  logoAssetId: string | null;
-                  name: string;
-                } | null;
-                institutionId: string | null;
                 /** @enum {string} */
                 kind:
                   | 'checking'
@@ -9336,507 +9200,6 @@ export interface operations {
       };
       /** @description 412 */
       412: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.list': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            }[];
-          };
-        };
-      };
-    };
-  };
-  'institutions.create': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          colour: string;
-          logoAssetId?: string | null;
-          name: string;
-        };
-      };
-    };
-    responses: {
-      /** @description 201 */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.delete': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': Record<string, never>;
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.update': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          colour?: string;
-          name?: string;
-        };
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.uploadLogo': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          contentBase64: string;
-          /** @enum {string} */
-          contentType: 'image/png' | 'image/jpeg' | 'image/webp';
-        };
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.removeLogo': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': Record<string, never>;
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'institutions.merge': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          targetId: string;
-        };
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              colour: string;
-              createdAt: string;
-              id: string;
-              logoAssetId: string | null;
-              name: string;
-              updatedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            code?: string;
-            message: string;
-            messageKey?: string;
-          };
-        };
-      };
-      /** @description 422 */
-      422: {
         headers: {
           [name: string]: unknown;
         };

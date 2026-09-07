@@ -38,7 +38,6 @@ function account(overrides: Partial<Account>): Account {
   return {
     id: 'id',
     name: 'Account',
-    institutionId: null,
     kind: 'checking',
     currency: 'AUD',
     archivedAt: null,
@@ -49,7 +48,6 @@ function account(overrides: Partial<Account>): Account {
     entityColour: null,
     entityAvatarAssetId: null,
     resolvedEntityId: null,
-    institution: null,
     balance: NO_BALANCE,
     importStatus: NO_IMPORT_STATUS,
     transactionCount: NO_TRANSACTION_COUNT,

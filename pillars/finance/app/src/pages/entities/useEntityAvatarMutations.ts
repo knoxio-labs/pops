@@ -1,10 +1,8 @@
 /**
  * Avatar upload/remove + colour reroll mutations for the entity edit dialog.
- * Split out of `useEntitiesPage` for the same reason
- * `useInstitutionLogoMutations` is split from `useInstitutionsSettings`: the
- * dialog needs the freshly-mutated entity back to show the new avatar/colour
- * without closing, a different success shape from the name/type PATCH the
- * list re-fetches for.
+ * Split out of `useEntitiesPage`: the dialog needs the freshly-mutated entity
+ * back to show the new avatar/colour without closing, a different success
+ * shape from the name/type PATCH the list re-fetches for.
  *
  * `entitiesUploadAvatar` (the generated SDK wrapper) is unsafe to call as-is:
  * its `body` type is `Array<number>`, generated from the Rust route's
