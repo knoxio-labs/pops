@@ -1,6 +1,6 @@
 # .github/workflows
 
-23 workflow YAML files (this README isn't one): 21 that trigger on their own (the table below) plus 2 reusable `workflow_call`-only helpers with no trigger of their own — `_discover-units.yml` and `_extractability-sandbox-matrix.yml`, each documented in its own section instead of the table. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
+Every workflow YAML file in this directory is documented here exactly once: as a row in [The rest](#the-rest) below, or — where a row is not enough — under its own `##` section. The sectioned ones are `ci-gate.yml` and the two reusable `workflow_call`-only helpers no event triggers on its own, `_discover-units.yml` and `_extractability-sandbox-matrix.yml`. `scripts/ci/__tests__/workflow-readme-coverage.test.ts` asserts that split against disk, so a new workflow cannot land undocumented and a deleted one cannot leave a row behind. Every job runs on `ubuntu-latest` except `ios-quality.yml`, which needs macOS to compile Swift at all.
 
 ## `ci-gate.yml` — the one static aggregate context
 
@@ -285,7 +285,7 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 
 | File                             | Trigger                                                       | Runs                                                                                                             |
 | -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `quality.yml`                    | every PR + push to `main` + every merge group — **no path filter, deliberately** | 15 jobs incl. `Lint`, `Format`, `Module boundaries`, `Duplication check`; scoped to changed units on PRs, whole tree on `main`. No job is advisory — see the `CI Gate` rules above |
+| `quality.yml`                    | every PR + push to `main` + every merge group — **no path filter, deliberately** | The repo-wide gate: `Lint`, `Format`, `Module boundaries`, `Duplication check` and the cross-cutting drift checks; scoped to changed units on PRs, whole tree on `main`. No job is advisory, and no job count is recorded here — it rotted twice; the file's own header is the list. See the `CI Gate` rules above |
 | `unit-quality.yml`               | PR/push on unit + shared-root paths; every merge group        | ts and rust lanes over the changed-unit matrix                                                                      |
 | `app-quality.yml`                | PR/push on `pillars/*/app/**`, `pillars/*/openapi/**`, FE libs; every merge group | each `@pops/app-*`'s own typecheck + test                                                                           |
 | `fe-quality.yml`                 | PR/push on `pillars/shell/**`, apps, openapi, FE libs; every merge group | the shell's `Quality Checks` job                                                                                     |
