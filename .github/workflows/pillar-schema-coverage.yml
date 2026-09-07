@@ -7,12 +7,14 @@ on:
       - "pillars/*/src/db/**"
       - "pillars/*/migrations/**"
       - "scripts/check-pillar-schema-coverage.mjs"
+      - "scripts/list-pillars.mjs"
       - ".github/workflows/pillar-schema-coverage.yml"
   pull_request:
     paths:
       - "pillars/*/src/db/**"
       - "pillars/*/migrations/**"
       - "scripts/check-pillar-schema-coverage.mjs"
+      - "scripts/list-pillars.mjs"
       - ".github/workflows/pillar-schema-coverage.yml"
 
 # cancel-in-progress is deliberately OFF — see the matching note in
@@ -37,27 +39,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # Pinned to the same major the other jobs use rather than the runner's
-      # preinstalled node: `--list-pillars` runs the guard's own module scope,
-      # which uses `import.meta.main`, and that is not in every node the image
-      # might ship. No pnpm and no cache — this step installs nothing.
+      # preinstalled node: the lister uses `import.meta.main`, and that is not
+      # in every node the image might ship. No pnpm and no cache — this step
+      # installs nothing.
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - id: list
         name: Enumerate pillars with a migrated schema surface
-        # Asks the guard itself rather than re-deriving the set with `find`.
-        # The two used to agree only by inspection, and a pillar whose
-        # `src/db/schema.ts` barrel was renamed fell out of BOTH at once —
-        # no job in this matrix and a green workflow, which is the one
-        # failure this job exists to make impossible (POPS-1629).
+        # Runs the same discovery the guard itself imports, rather than
+        # re-deriving the set with `find`. The two used to agree only by
+        # inspection, and a pillar whose `src/db/schema.ts` barrel was renamed
+        # fell out of BOTH at once — no job in this matrix and a green
+        # workflow, which is the one failure this job exists to make
+        # impossible (POPS-1629).
         #
-        # `--list-pillars` needs no install: the script's module scope
-        # touches nothing but node builtins. It also exits non-zero when a
-        # pillar carries a persistence surface it cannot discover, so that
+        # It is its own file, not a flag on the guard, because this step
+        # installs nothing and the guard reads TypeScript with the compiler's
+        # AST — a `typescript` import in the module this job loads would be a
+        # MODULE_NOT_FOUND inside a required check (ADR-045 Tier A). The
+        # lister touches nothing but node builtins. It exits non-zero when a
+        # pillar carries a persistence surface discovery cannot see, so that
         # drift fails here rather than disappearing into an empty matrix.
         run: |
           set -euo pipefail
-          json=$(node scripts/check-pillar-schema-coverage.mjs --list-pillars)
+          json=$(node scripts/list-pillars.mjs)
           count=$(echo "$json" | jq 'length')
           echo "pillars=$json" >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
