@@ -31,13 +31,19 @@ export interface ProductDictionaryPageState {
   applyEdit: (edit: DictionaryEdit) => void;
 }
 
+/**
+ * What a run reports. `retired` is the figure that matters most and is the
+ * easiest to leave at zero: a pass takes back the unasserted entries no line
+ * prints any more, which can include a proposal the reader was about to act
+ * on, so a run that retired nothing is the one case that says least.
+ */
 function simulatedOutcome(products: readonly DictionaryProduct[]): ProposalOutcome {
   const aliases = products.flatMap((product) => product.aliases);
   return {
     scannedLines: 482,
     observedWordings: aliases.length,
-    proposed: 0,
-    retired: 0,
+    proposed: 2,
+    retired: 3,
     confirmed: aliases.filter((alias) => alias.confirmedAt !== null).length,
   };
 }

@@ -21,15 +21,27 @@ import type { OrderCountAgreement } from './order-count-agreement';
  */
 const ORDERS_LIMIT = 500;
 
+/**
+ * How the merchant's own orders came back. A drill-down that is still loading
+ * or that failed says so: the row already counted orders here, so an empty
+ * list would be a claim about the data rather than about the read.
+ */
+export type DrillDownState = 'ready' | 'loading' | 'failed';
+
 /** One merchant, one currency: the headline, the split, the figures it is made of, and its orders. */
 export function MerchantRow({
   merchant,
   orders,
+  initiallyOpen = false,
+  drillDown = 'ready',
 }: {
   merchant: MerchantSpend;
   orders: MerchantOrder[];
+  /** Opens the drill-down on first render, so a states view can show it. */
+  initiallyOpen?: boolean;
+  drillDown?: DrillDownState;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const regionId = useId();
   const { accounting, currency } = merchant;
   const label = merchantLabel(merchant.merchant);
@@ -72,7 +84,13 @@ export function MerchantRow({
       </Button>
 
       {open && (
-        <MerchantOrders merchant={merchant} orders={orders} regionId={regionId} label={label} />
+        <MerchantOrders
+          merchant={merchant}
+          orders={orders}
+          regionId={regionId}
+          label={label}
+          state={drillDown}
+        />
       )}
     </article>
   );
@@ -83,13 +101,37 @@ function MerchantOrders({
   orders,
   regionId,
   label,
+  state,
 }: {
   merchant: MerchantSpend;
   orders: MerchantOrder[];
   regionId: string;
   label: string;
+  state: DrillDownState;
 }) {
   const agreement = orderCountAgreement(orders.length, merchant.orderCount, ORDERS_LIMIT);
+
+  if (state === 'loading') {
+    return (
+      <p id={regionId} role="status" className="text-muted-foreground text-xs">
+        Loading this merchant&rsquo;s orders…
+      </p>
+    );
+  }
+
+  if (state === 'failed') {
+    return (
+      <div id={regionId} role="alert" className="space-y-2">
+        <p className="text-xs font-medium">Could not load this merchant&rsquo;s orders</p>
+        <p className="text-muted-foreground text-xs">
+          The order index did not answer. The figures above still stand.
+        </p>
+        <Button size="sm" variant="outline">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div id={regionId} className="space-y-2">

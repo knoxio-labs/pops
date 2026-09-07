@@ -17,6 +17,12 @@ const OUTCOME_MESSAGE: Record<DecisionKind, string> = {
   reject: 'Link removed. The next sweep may propose it again.',
 };
 
+function outcomeMessage(outcome: DecisionOutcome | null): string {
+  if (outcome === null) return '';
+  if (outcome.status === 'failed') return `That decision did not stick: ${outcome.message}`;
+  return OUTCOME_MESSAGE[outcome.kind];
+}
+
 /**
  * The mouse path, and the place the keyboard contract is written down.
  *
@@ -64,7 +70,7 @@ export function DecisionBar({
       </div>
 
       <p role="status" aria-live="polite" className="text-sm">
-        {lastOutcome === null ? '' : OUTCOME_MESSAGE[lastOutcome.kind]}
+        {outcomeMessage(lastOutcome)}
       </p>
 
       <p className="text-xs text-muted-foreground">

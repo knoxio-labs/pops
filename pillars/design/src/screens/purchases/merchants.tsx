@@ -19,6 +19,7 @@ import { formatDate, PageHeader } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { CurrencyGroup, SpendPeriod } from '@/fixtures/purchases-merchant-spend';
+import type { DrillDownState } from '@/kit/purchases/merchant-lens/merchant-row';
 import type { PeriodSelection } from '@/kit/purchases/merchant-lens/period';
 import type { ReactNode } from 'react';
 
@@ -83,6 +84,8 @@ export function MerchantLensPage({
   groups,
   period = allTimePeriod,
   initialSelection = ALL_TIME,
+  openDrillDowns = false,
+  drillDown = 'ready',
 }: {
   groups: CurrencyGroup[];
   /**
@@ -92,6 +95,8 @@ export function MerchantLensPage({
    */
   period?: SpendPeriod;
   initialSelection?: PeriodSelection;
+  openDrillDowns?: boolean;
+  drillDown?: DrillDownState;
 }) {
   const [now] = useState(() => new Date());
   const [selection, setSelection] = useState<PeriodSelection>(initialSelection);
@@ -108,6 +113,8 @@ export function MerchantLensPage({
               key={group.currency}
               group={group}
               ordersByMerchant={merchantOrdersByKey}
+              openDrillDowns={openDrillDowns}
+              drillDown={drillDown}
             />
           ))
         )}
@@ -135,6 +142,23 @@ export const states: ScreenStates = {
     </Shell>
   ),
   empty: () => <MerchantLensPage groups={merchantSpendGroupsEmpty} />,
+  'orders-open': () => (
+    <MerchantLensPage groups={merchantSpendGroupsSingleCurrency} openDrillDowns />
+  ),
+  'orders-loading': () => (
+    <MerchantLensPage
+      groups={merchantSpendGroupsSingleCurrency}
+      openDrillDowns
+      drillDown="loading"
+    />
+  ),
+  'orders-failed': () => (
+    <MerchantLensPage
+      groups={merchantSpendGroupsSingleCurrency}
+      openDrillDowns
+      drillDown="failed"
+    />
+  ),
   'single-currency': () => <MerchantLensPage groups={merchantSpendGroupsSingleCurrency} />,
   'bounded-period': () => (
     <MerchantLensPage groups={merchantSpendGroups} period={boundedPeriod} initialSelection="2026" />

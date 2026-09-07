@@ -15,6 +15,7 @@ import { PageHeader } from '@pops/ui';
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { QueueEntry } from '@/fixtures/purchases-queue';
 import type { QueueCursor } from '@/kit/purchases/reconcile/cursor';
+import type { DecisionOutcome } from '@/kit/purchases/reconcile/decisions';
 import type { QueueFilterState } from '@/kit/purchases/reconcile/types';
 import type { ReactElement } from 'react';
 
@@ -67,6 +68,8 @@ interface ReconcileQueuePageProps {
    */
   limit?: number;
   initialChargeId?: string;
+  /** A decision the server refused, which the surface has no way to produce. */
+  lastOutcome?: DecisionOutcome;
   /** The states view renders every case at once; only the default owns the page's focus. */
   autoFocus?: boolean;
 }
@@ -78,6 +81,7 @@ export function ReconcileQueuePage({
   error = null,
   limit = QUEUE_PAGE_SIZE,
   initialChargeId,
+  lastOutcome,
   autoFocus = true,
 }: ReconcileQueuePageProps): ReactElement {
   const [entries, setEntries] = useState(allEntries);
@@ -112,7 +116,7 @@ export function ReconcileQueuePage({
         <>
           <DecisionBar
             activeEntry={cursor.activeEntry}
-            lastOutcome={decisions.lastOutcome}
+            lastOutcome={lastOutcome ?? decisions.lastOutcome}
             onDecide={decisions.decide}
           />
           <QueueBody
@@ -141,6 +145,16 @@ export const states: ScreenStates = {
   empty: () => <ReconcileQueuePage allEntries={[]} autoFocus={false} />,
   truncated: () => (
     <ReconcileQueuePage allEntries={fullQueuePage(QUEUE_PAGE_SIZE + 12)} autoFocus={false} />
+  ),
+  'decision-failed': () => (
+    <ReconcileQueuePage
+      autoFocus={false}
+      lastOutcome={{
+        status: 'failed',
+        kind: 'accept',
+        message: 'the finance pillar did not answer, so nothing was pinned',
+      }}
+    />
   ),
   'row-selected': () => (
     <ReconcileQueuePage initialChargeId="chg_01K5Q3F7Y2W9J3HNRK6BMS" autoFocus={false} />

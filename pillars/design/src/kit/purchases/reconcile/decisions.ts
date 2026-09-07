@@ -4,9 +4,10 @@ import type { QueueEntry } from '@/fixtures/purchases-queue';
 
 import type { DecisionKind } from './types';
 
-export interface DecisionOutcome {
-  readonly kind: DecisionKind;
-}
+export type DecisionOutcome =
+  | { readonly status: 'ok'; readonly kind: DecisionKind }
+  /** The server's own explanation, shown as sent. */
+  | { readonly status: 'failed'; readonly kind: DecisionKind; readonly message: string };
 
 export interface QueueDecisions {
   decide: (entry: QueueEntry, kind: DecisionKind) => void;
@@ -48,7 +49,7 @@ export function useQueueDecisions(
       // A charge with nothing proposed has no link to confirm or remove.
       if (entry.proposed.length === 0) return;
       setEntries(applyQueueDecision(entries, entry.chargeId, kind));
-      setLastOutcome({ kind });
+      setLastOutcome({ status: 'ok', kind });
       onDecided(entry);
     },
     [entries, setEntries, onDecided]

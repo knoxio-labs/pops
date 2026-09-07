@@ -127,6 +127,26 @@ export const states: ScreenStates = {
       initialPass={{ isPending: true, outcome: null, error: null }}
     />
   ),
+  'pass-failed': () => (
+    <ProductDictionaryPage
+      products={dictionaryProducts}
+      initialPass={{
+        isPending: false,
+        outcome: null,
+        error: 'The pass could not read the lines: the store was locked by another writer.',
+      }}
+    />
+  ),
+  'edit-failed': () => (
+    <ProductDictionaryPage
+      products={dictionaryProducts}
+      initialEditOutcome={{
+        kind: 'merge',
+        status: 'error',
+        message: 'the target product was forgotten while this page was open',
+      }}
+    />
+  ),
   'edit-applied': () => (
     <ProductDictionaryPage
       products={dictionaryProducts}

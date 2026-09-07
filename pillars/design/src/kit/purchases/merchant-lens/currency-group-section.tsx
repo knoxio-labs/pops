@@ -11,6 +11,8 @@ import { orderCountLabel } from './order-count-agreement';
 import type { MerchantOrder } from '@/fixtures/purchases-merchant-orders';
 import type { CurrencyGroup } from '@/fixtures/purchases-merchant-spend';
 
+import type { DrillDownState } from './merchant-row';
+
 /**
  * One currency's merchants, under that currency's own total.
  *
@@ -22,9 +24,14 @@ import type { CurrencyGroup } from '@/fixtures/purchases-merchant-spend';
 export function CurrencyGroupSection({
   group,
   ordersByMerchant,
+  openDrillDowns = false,
+  drillDown = 'ready',
 }: {
   group: CurrencyGroup;
   ordersByMerchant: Record<string, MerchantOrder[]>;
+  /** Opens every row's drill-down, so a states view can show what it holds. */
+  openDrillDowns?: boolean;
+  drillDown?: DrillDownState;
 }) {
   const { currency, total } = group;
 
@@ -61,6 +68,8 @@ export function CurrencyGroupSection({
             <MerchantRow
               merchant={merchant}
               orders={ordersByMerchant[merchantOrderKey(merchant)] ?? []}
+              initiallyOpen={openDrillDowns}
+              drillDown={drillDown}
             />
           </li>
         ))}

@@ -167,6 +167,27 @@ export const CREATED_SUBMISSION: ReceiptSubmission = {
   },
 };
 
+/**
+ * Read and recorded, but the bytes were already in the store — a second
+ * upload of a frame the pillar had kept. The purchase is the answer either
+ * way, and the panel says which so a reader is not left wondering whether
+ * they have just filed the same receipt twice.
+ */
+export const CREATED_ALREADY_STORED_SUBMISSION: ReceiptSubmission = {
+  state: 'created',
+  outcome: {
+    alreadyStored: true,
+    purchase: {
+      id: 'pur_01JQ8W2M6B4H7C1XKD9PFA',
+      merchantEntityName: 'Kmart Broadway',
+      totalCents: 3_100,
+      currency: 'AUD',
+      orderedAt: '2026-08-20T17:42:00+10:00',
+      itemCount: 3,
+    },
+  },
+};
+
 export const DUPLICATE_SUBMISSION: ReceiptSubmission = {
   state: 'duplicate',
   message:

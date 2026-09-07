@@ -1,4 +1,5 @@
 import {
+  CREATED_ALREADY_STORED_SUBMISSION,
   CREATED_SUBMISSION,
   DUPLICATE_SUBMISSION,
   NEEDS_REVIEW_SUBMISSION,
@@ -74,6 +75,9 @@ export const states: ScreenStates = {
     />
   ),
   created: () => <ReceiptDropZonePage submission={CREATED_SUBMISSION} />,
+  'created-already-stored': () => (
+    <ReceiptDropZonePage submission={CREATED_ALREADY_STORED_SUBMISSION} />
+  ),
   duplicate: () => <ReceiptDropZonePage submission={DUPLICATE_SUBMISSION} />,
   'needs-review': () => <ReceiptDropZonePage submission={NEEDS_REVIEW_SUBMISSION} />,
   unreadable: () => <ReceiptDropZonePage submission={UNREADABLE_SUBMISSION} />,
