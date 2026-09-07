@@ -114,9 +114,10 @@ function handleNoEntityCorrection(
  * beyond the rule itself and no suggestion build.
  *
  * Exists so a caller can find out where a rule would put a row *before*
- * applying it, and skip the work entirely when the outcome is one it would
- * discard. The bucket decision lives here rather than in that caller so it
- * cannot drift from `resolveApplyResult`, which reads it back below.
+ * applying it — the re-evaluation's matched path reads it to skip a rule with
+ * nothing to apply without building that row's suggested tags. The bucket
+ * decision lives here rather than in that caller so it cannot drift from
+ * `resolveApplyResult`, which reads it back below.
  */
 export function correctionOutcomeBucket(correction: CorrectionRow): 'matched' | 'uncertain' | null {
   if (!correction.entityId) return resolveCorrectionApplyStatus(correction);

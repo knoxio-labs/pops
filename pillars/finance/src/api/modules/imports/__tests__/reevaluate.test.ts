@@ -86,6 +86,38 @@ function seedWeakRule(id: string): void {
     .run();
 }
 
+function seedTypedRule(id: string): void {
+  db.insert(transactionCorrections)
+    .values({
+      id,
+      descriptionPattern: '4564XXXXXXXX7373',
+      matchType: 'contains',
+      entityId: 'ent-anz',
+      entityName: 'ANZ',
+      transactionType: 'transfer',
+      tags: '[]',
+      isActive: true,
+      confidence: 0.7,
+      priority: 0,
+    })
+    .run();
+}
+
+function seedTypeOnlyRule(id: string): void {
+  db.insert(transactionCorrections)
+    .values({
+      id,
+      descriptionPattern: 'COLES',
+      matchType: 'contains',
+      transactionType: 'transfer',
+      tags: '[]',
+      isActive: true,
+      confidence: 0.7,
+      priority: 0,
+    })
+    .run();
+}
+
 function correctionRow(id: string): { timesApplied: number; lastUsedAt: string | null } {
   const row = db
     .select()
@@ -252,15 +284,72 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
     expect(nextResult.uncertain).toHaveLength(0);
   });
 
-  it('never demotes a matched row when the covering rule resolves below the match bar', async () => {
-    // A rule whose confidence keeps it short of `matched` would hand a row the
-    // user had already dealt with back to the uncertain pile. Re-evaluation
-    // propagates approved rules; it does not relitigate settled rows.
+  it('applies a below-the-bar rule to a matched row without demoting it', async () => {
+    // 0.72 clears minConfidence (0.7) so the rule matches, but sits under
+    // HIGH_CONFIDENCE_THRESHOLD (0.9), so its outcome bucket is `uncertain`.
+    // That bucket used to make the whole outcome be discarded, which turned
+    // every hand-written rule (they default to 0.7) into a no-op on the rows
+    // it was written for. The row takes the rule and stays matched.
     seedWeakRule('r-weak');
     const alreadyMatched = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
       entityName: 'Woolworths',
       matchType: 'ai',
+    });
+
+    const { nextResult, affectedCount } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [alreadyMatched], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+    });
+
+    expect(affectedCount).toBe(1);
+    expect(nextResult.uncertain).toHaveLength(0);
+    expect(nextResult.matched).toHaveLength(1);
+    expect(nextResult.matched[0]?.status).toBe('matched');
+    expect(nextResult.matched[0]?.entity).toMatchObject({
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'learned',
+    });
+    expect(timesApplied('r-weak')).toBe(1);
+  });
+
+  it('gives a matched row the type a below-the-bar rule names (POPS-3120)', async () => {
+    // The reported bug: rows auto-matched to ANZ as an expense, a hand-written
+    // rule saying "this descriptor is an ANZ transfer", and nothing changing.
+    seedTypedRule('r-transfer');
+    const autoMatched: ProcessedTransaction = {
+      ...matchedTxn('ANZ M-BANKING FUNDS TFER TRANSFER 754244 TO 4564XXXXXXXX7373', {
+        entityId: 'ent-anz',
+        entityName: 'ANZ',
+        matchType: 'exact',
+      }),
+      transactionType: 'purchase',
+    };
+
+    const { nextResult, affectedCount } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [autoMatched], uncertain: [], failed: [], skipped: [] },
+      minConfidence: 0.7,
+    });
+
+    expect(affectedCount).toBe(1);
+    expect(nextResult.matched).toHaveLength(1);
+    expect(nextResult.matched[0]?.transactionType).toBe('transfer');
+    expect(nextResult.matched[0]?.status).toBe('matched');
+  });
+
+  it('keeps the row entity when a below-the-bar type-only rule re-decides it', async () => {
+    // An entity-less rule builds an entity-less placeholder, which would erase
+    // the merchant of a row that already had one.
+    seedTypeOnlyRule('r-type-only');
+    const alreadyMatched = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'exact',
     });
 
     const { nextResult } = await reevaluateImportSessionResult({
@@ -270,16 +359,11 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       minConfidence: 0.7,
     });
 
-    // 0.72 clears minConfidence (0.7) so the rule matches, but sits under
-    // HIGH_CONFIDENCE_THRESHOLD (0.9) so it resolves to `uncertain` — the
-    // discarded outcome. Asserting the entity is untouched proves the guard
-    // fired rather than the rule quietly resolving to `matched`.
-    expect(nextResult.uncertain).toHaveLength(0);
-    expect(nextResult.matched).toHaveLength(1);
-    expect(nextResult.matched[0]?.entity.entityName).toBe('Woolworths');
-    // The discarded outcome must not credit the rule: `timesApplied` records
-    // real applications, and this rule changed nothing.
-    expect(timesApplied('r-weak')).toBe(0);
+    expect(nextResult.matched[0]?.entity).toMatchObject({
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+    });
+    expect(nextResult.matched[0]?.transactionType).toBe('transfer');
   });
 
   it('credits usage exactly once for a matched row the rule does re-decide', async () => {

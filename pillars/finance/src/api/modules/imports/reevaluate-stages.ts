@@ -8,7 +8,11 @@
  * are already matched.
  */
 import { type FinanceDb } from '../../../db/index.js';
-import { findAllMatchingCorrectionFromRules, type CorrectionRow } from '../corrections/index.js';
+import {
+  findAllMatchingCorrectionFromRules,
+  normalizeEntityId,
+  type CorrectionRow,
+} from '../corrections/index.js';
 import { applyLearnedCorrection, correctionOutcomeBucket } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import { transactionChanged } from './reevaluate-diff.js';
@@ -126,6 +130,33 @@ export function processRemainingItem(
 }
 
 /**
+ * The outcome a matched row takes from a rule that re-decides it.
+ *
+ * The row stays in `matched` whatever bucket the rule's confidence would map
+ * to: a rule below the high-confidence bar means "apply this, but ask
+ * me", and there is nothing to ask about a row the user has already settled.
+ * Discarding the outcome instead made every rule written by hand a no-op on
+ * matched rows — an added rule defaults to `MIN_MATCH_CONFIDENCE` (0.7), so it
+ * matched the row, previewed as covering it, and then changed nothing
+ * (POPS-3120).
+ *
+ * A rule that names no entity keeps the row's own: `buildTypeOnlyMatch`
+ * writes an entity-less placeholder, which is right for a row that had no
+ * merchant and would erase one here.
+ */
+function keepMatched(
+  prev: ProcessedTransaction,
+  applied: ProcessedTransaction,
+  winner: CorrectionRow
+): ProcessedTransaction {
+  return {
+    ...applied,
+    entity: normalizeEntityId(winner.entityId) ? applied.entity : prev.entity,
+    status: 'matched',
+  };
+}
+
+/**
  * Re-decide an already-matched transaction against the correction rules.
  *
  * A correction rule is created precisely to overrule a match the system got
@@ -139,26 +170,26 @@ export function processRemainingItem(
  * supposed to be a no-op, would credit every covered rule again (POPS-2641).
  *
  * Deliberately narrower than `processRemainingItem`: only correction rules
- * apply, never the alias/exact/prefix/contains entity matcher, and an outcome
- * that would drop the row out of `matched` is discarded. Re-evaluation exists
- * to propagate a rule the user just approved, not to relitigate matches they
- * did not ask about — and a demotion here would silently hand back a row they
- * had already dealt with.
+ * apply, never the alias/exact/prefix/contains entity matcher, and the row can
+ * never leave `matched` — see {@link keepMatched}. Re-evaluation exists to
+ * propagate a rule the user just approved, not to relitigate matches they did
+ * not ask about, and a demotion here would silently hand back a row they had
+ * already dealt with.
  */
 export function reapplyCorrectionToMatched(
   tx: ProcessedTransaction,
   ctx: ReevaluateContext,
   buckets: BucketAccumulator
 ): boolean {
-  // Decide from the winning rule before applying it: an outcome this path
-  // would discard is not worth building the suggested tags for.
+  // Decide from the winning rule before applying it: a rule with nothing to
+  // apply is not worth building the suggested tags for.
   const winner = findAllMatchingCorrectionFromRules(
     tx.description,
     ctx.rules,
     tx.accountId ?? null,
     ctx.minConfidence
   )[0];
-  if (!winner || correctionOutcomeBucket(winner) !== 'matched') {
+  if (!winner || correctionOutcomeBucket(winner) === null) {
     buckets.matched.push(tx);
     return false;
   }
@@ -170,12 +201,13 @@ export function reapplyCorrectionToMatched(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
-    countsAsUsage: (applied) => transactionChanged(tx, applied.processed),
+    countsAsUsage: (applied) => transactionChanged(tx, keepMatched(tx, applied.processed, winner)),
   });
   if (!correctionApplied) {
     buckets.matched.push(tx);
     return false;
   }
-  buckets.matched.push(correctionApplied.processed);
-  return transactionChanged(tx, correctionApplied.processed);
+  const next = keepMatched(tx, correctionApplied.processed, winner);
+  buckets.matched.push(next);
+  return transactionChanged(tx, next);
 }
