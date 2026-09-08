@@ -219,6 +219,39 @@ describe('TagEditor', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(['Groceries']));
   });
 
+  it('reverts an unsaved edit and does not call onSave when dismissed by an outside click', async () => {
+    const onSave = vi.fn();
+    render(
+      <TagEditor
+        currentTags={['Groceries']}
+        availableTags={['Groceries', 'Dining']}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.change(input, { target: { value: 'Dining' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    // The trigger is hidden while the popover is open, so this only asserts
+    // against the panel; the regression is in what the trigger shows next.
+    expect(screen.getByRole('button', { name: /Remove Dining/i })).toBeInTheDocument();
+
+    // Radix's dismissable layer closes the popover on an outside pointerdown,
+    // bypassing the panel's own Cancel button entirely. It wires its listener
+    // a tick after mount and, for the primary button, defers to the trailing
+    // click — both must be awaited/fired for the dismissal to fire in jsdom.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fireEvent.pointerDown(document.body, { button: 0 });
+    fireEvent.click(document.body);
+
+    await waitFor(() => expect(screen.queryByPlaceholderText(/Type to add a tag/i)).toBeNull());
+    expect(onSave).not.toHaveBeenCalled();
+    // Without the fix, the trigger keeps showing "Dining" even though it was
+    // never saved, because closing left the editor's local `tags` state dirty.
+    expect(screen.getByRole('button', { name: /Edit tags/i }).textContent).toBe('Groceries');
+  });
+
   it('offers no creation when the taxonomy has not loaded', () => {
     render(<TagEditor currentTags={[]} availableTags={[]} onSave={vi.fn()} />);
 

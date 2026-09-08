@@ -219,5 +219,15 @@ export function useTagEditorState(props: TagEditorProps) {
       onSave: handleSave,
     }),
   };
-  return { open: s.open, setOpen: s.setOpen, tags: s.tags, handlers };
+
+  // Radix fires this for backdrop clicks and Escape alike, bypassing the
+  // panel's own Cancel button — without this, an outside click would close
+  // the popover with `s.tags` still holding the unsaved edit, which the
+  // trigger renders as if it had been applied.
+  const onOpenChange = (next: boolean) => {
+    if (next) s.setOpen(true);
+    else handleCancel();
+  };
+
+  return { open: s.open, setOpen: onOpenChange, tags: s.tags, handlers };
 }
