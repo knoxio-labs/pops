@@ -58,6 +58,25 @@ describe('classifyFromDescription — fees', () => {
     expect(classifyFromDescription('')).toBeNull();
     expect(classifyFromDescription('   ')).toBeNull();
   });
+
+  // A foreign-currency ATM withdrawal is a cash withdrawal that happens to
+  // disclose its fee inline, not a standalone fee charge — typing the whole
+  // amount `fee` would put the entire withdrawal in a fee report instead of
+  // the few dollars that are actually one.
+  it('types a foreign-currency ATM withdrawal as a purchase, not a fee', () => {
+    expect(
+      classifyFromDescription(
+        'ATM CARD 2200 SHINJUKU-KU TOKYO FOREIGN CURRENCY AMT JPY 10 110 INCL OVERSEAS TRANSACTION FEE $3.22'
+      )
+    ).toMatchObject({ type: 'purchase' });
+  });
+
+  it('still types a standalone ATM fee charge as fee:atm', () => {
+    expect(classifyFromDescription('ATM WITHDRAWAL FEE')).toMatchObject({
+      type: 'fee',
+      tag: 'fee:atm',
+    });
+  });
 });
 
 describe('classifyFromDescription — inbound account payments', () => {

@@ -372,6 +372,13 @@
       "when": 1788800000000,
       "tag": "0101_corrections_confidence_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1788800000001,
+      "tag": "0102_atm_foreign_fee_reclassified",
+      "breakpoints": true
     }
   ]
 }
