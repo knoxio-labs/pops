@@ -2,41 +2,16 @@
  * ChipInput component for multi-value input like email tags
  * Similar to Gmail's "To" field where entries become chips
  */
-import { cva, type VariantProps } from 'class-variance-authority';
+import { type VariantProps } from 'class-variance-authority';
 import { forwardRef, type InputHTMLAttributes } from 'react';
 
-import { cn } from '../lib/utils';
-import { Chip } from './Chip';
-import { useChipInput } from './ChipInput.hooks';
+import { ChipInputBody } from './ChipInput.suggestions';
+import { type ChipInputSuggestion, useChipInputSuggestions } from './ChipInput.suggestions.hooks';
+import { inputVariants } from './ChipInput.variants';
 
-const containerVariants = cva(
-  'flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11',
-  {
-    variants: {
-      variant: {
-        default: 'border border-border',
-        ghost: 'border-0 hover:bg-accent',
-        underline: 'border-0 border-b border-border rounded-none',
-      },
-      shape: {
-        default: 'rounded-md',
-        pill: 'rounded-full',
-      },
-    },
-    compoundVariants: [{ variant: 'underline', shape: 'pill', class: 'rounded-none' }],
-    defaultVariants: { variant: 'default', shape: 'default' },
-  }
-);
+import type { containerVariants } from './ChipInput.variants';
 
-const inputVariants = cva(
-  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-30',
-  {
-    variants: {
-      size: { sm: 'text-xs', default: 'text-sm', lg: 'text-base' },
-    },
-    defaultVariants: { size: 'default' },
-  }
-);
+export type { ChipInputSuggestion };
 
 export interface ChipInputProps
   extends
@@ -50,41 +25,56 @@ export interface ChipInputProps
   allowDuplicates?: boolean;
   chipVariant?: 'default' | 'primary' | 'success';
   containerClassName?: string;
-}
-
-function ChipList({
-  values,
-  chipVariant,
-  onRemove,
-}: {
-  values: string[];
-  chipVariant: 'default' | 'primary' | 'success';
-  onRemove: (i: number) => void;
-}) {
-  return (
-    <>
-      {values.map((value, index) => (
-        <Chip
-          key={`${value}-${index}`}
-          variant={chipVariant}
-          size="sm"
-          removable
-          onRemove={() => onRemove(index)}
-        >
-          {value}
-        </Chip>
-      ))}
-    </>
-  );
+  /**
+   * Existing values to suggest in a filtered dropdown as the user types.
+   * `ChipInput` always renders as a combobox (Radix `Popover` + cmdk
+   * `Command`) with arrow-key navigation, Enter-to-commit, Escape and
+   * click-outside dismissal, and `role="combobox"`/`listbox` semantics — a
+   * typed value that matches none of these can still be committed as a chip.
+   * Omit `suggestions` (or pass `[]`) to keep the field free-text: the
+   * dropdown then simply never opens. Safe to populate asynchronously —
+   * going from `undefined`/`[]` to a loaded list never remounts the `<input>`
+   * DOM node or drops in-progress focus and typed text, since there is only
+   * ever one rendered shell, driven by one `useChipInputSuggestions` hook
+   * instance.
+   */
+  suggestions?: ChipInputSuggestion[];
+  /**
+   * Normalises a value right before it becomes a chip — applied to a typed
+   * free-text value and a picked suggestion alike, and regardless of
+   * whether Enter, a delimiter key (comma/Tab by default), or blur
+   * committed it. Only used when `suggestions` is supplied. Defaults to a
+   * trim.
+   */
+  normalize?: (raw: string) => string;
+  /** Message shown when no suggestion matches. Only used with `suggestions`. */
+  suggestionsEmptyMessage?: string;
 }
 
 /**
  * ChipInput component
  *
+ * Always renders as a combobox with a filtered suggestions dropdown, built
+ * on the same Radix `Popover` + cmdk `Command` primitives as
+ * `ComboboxSelect` and `Autocomplete` — whether or not the caller ever
+ * passes `suggestions`. There is exactly one rendered shell and one
+ * `useChipInputSuggestions` hook instance, so the underlying `<input>` DOM
+ * node stays mounted at a stable tree position across every `suggestions`
+ * change (e.g. an async fetch resolving mid-type): React never sees a
+ * different component type at that position, so it never unmounts and
+ * remounts the field, and neither the field's React state nor real browser
+ * keyboard focus is lost.
+ *
  * @example
  * ```tsx
  * <ChipInput placeholder="Add emails..." />
  * <ChipInput value={emails} onChange={setEmails} />
+ * <ChipInput
+ *   value={tags}
+ *   onChange={setTags}
+ *   suggestions={[{ label: 'urgent', value: 'urgent' }]}
+ *   normalize={(v) => v.trim().toLowerCase().replace(/\s+/g, '-')}
+ * />
  * ```
  */
 export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
@@ -98,56 +88,45 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
       defaultValue = [],
       onChange,
       onValidate,
+      normalize,
       delimiters = ['Enter', ',', 'Tab'],
       allowDuplicates = false,
       chipVariant = 'default',
       placeholder,
+      suggestions,
+      suggestionsEmptyMessage = 'No matching suggestions.',
       disabled,
-      ...props
+      ...domProps
     },
     ref
   ) => {
-    const chip = useChipInput({
+    const ariaLabel = domProps['aria-label'];
+    const chip = useChipInputSuggestions({
       controlledValue,
       defaultValue,
       onChange,
       onValidate,
       delimiters,
       allowDuplicates,
+      suggestions: suggestions ?? [],
+      normalize: normalize ?? ((raw: string) => raw.trim()),
     });
 
-    const setRefs = (node: HTMLInputElement | null) => {
-      if (typeof ref === 'function') ref(node);
-      else if (ref) ref.current = node;
-      chip.inputRef.current = node;
-    };
-
     return (
-      <div
-        className={cn(
-          containerVariants({ variant, shape }),
-          disabled && 'opacity-50 cursor-not-allowed',
-          containerClassName
-        )}
-        style={chip.isFocused ? { borderColor: 'var(--ring)' } : undefined}
-        onClick={() => chip.inputRef.current?.focus()}
-      >
-        <ChipList values={chip.values} chipVariant={chipVariant} onRemove={chip.removeChip} />
-        <input
-          ref={setRefs}
-          type="text"
-          className={cn(inputVariants({ className }))}
-          value={chip.inputValue}
-          onChange={(e) => chip.setInputValue(e.target.value)}
-          onKeyDown={chip.handleKeyDown}
-          onFocus={() => chip.setIsFocused(true)}
-          onBlur={chip.handleBlur}
-          onPaste={chip.handlePaste}
-          disabled={disabled}
-          placeholder={chip.values.length === 0 ? placeholder : undefined}
-          {...props}
-        />
-      </div>
+      <ChipInputBody
+        chip={chip}
+        forwardedRef={ref}
+        variant={variant}
+        shape={shape}
+        chipVariant={chipVariant}
+        containerClassName={containerClassName}
+        disabled={disabled}
+        placeholder={placeholder}
+        domProps={domProps}
+        ariaLabel={ariaLabel}
+        inputClassName={inputVariants({ className })}
+        emptyMessage={suggestionsEmptyMessage}
+      />
     );
   }
 );
