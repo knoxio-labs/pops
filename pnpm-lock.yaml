@@ -560,6 +560,9 @@ importers:
       '@lezer/lr':
         specifier: ^1.4.10
         version: 1.4.10
+      '@pops/date':
+        specifier: workspace:*
+        version: link:../date
       '@pops/locales':
         specifier: workspace:*
         version: link:../locales
