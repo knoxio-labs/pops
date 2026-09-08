@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Checkbox, Input, Label } from '@pops/ui';
+import { Checkbox, Input, Label, Select, type SelectOption } from '@pops/ui';
 
 import {
   GENERATION_MODES,
@@ -16,23 +16,20 @@ interface FieldsProps {
 
 export function ModeField({ form, setForm }: FieldsProps) {
   const { t } = useTranslation('cerebrum');
+  const modeOptions: SelectOption[] = GENERATION_MODES.map((mode) => ({
+    value: mode,
+    label: t(`documents.modes.${mode}`),
+  }));
   return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor="doc-mode">{t('documents.form.mode')}</Label>
-      <select
-        id="doc-mode"
-        aria-label={t('documents.form.mode')}
-        className={`rounded-md border border-border bg-background px-2 text-sm ${TOUCH_TARGET_MIN_HEIGHT}`}
-        value={form.mode}
-        onChange={(e) => setForm({ ...form, mode: e.target.value as GenerationMode })}
-      >
-        {GENERATION_MODES.map((mode) => (
-          <option key={mode} value={mode}>
-            {t(`documents.modes.${mode}`)}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select
+      id="doc-mode"
+      label={t('documents.form.mode')}
+      aria-label={t('documents.form.mode')}
+      className={TOUCH_TARGET_MIN_HEIGHT}
+      value={form.mode}
+      options={modeOptions}
+      onChange={(e) => setForm({ ...form, mode: e.target.value as GenerationMode })}
+    />
   );
 }
 
