@@ -33,6 +33,14 @@ description: >-
 # recover from its failure. The retry has to live inside the action itself,
 # which makes the version the only lever this repo has — and makes pinning it
 # in ONE place the whole point of this file.
+#
+# WHY THE MISE CLI ITSELF IS ALSO PINNED. Unpinned, mise-action installs
+# whatever version its own release-resolution reports as latest. On 2026-09-08
+# that reported v2026.9.3 while github.com/jdx/mise/releases/tags/v2026.9.3
+# did not exist and the download 404'd on every job repo-wide — the retry
+# above cannot help a URL that will never resolve. Pinning MISE_VERSION to the
+# last release whose assets are confirmed published removes that dependency on
+# mise's own release publishing being atomic from the runner's point of view.
 
 inputs:
   working_directory:
@@ -48,6 +56,7 @@ runs:
   steps:
     - uses: jdx/mise-action@v4.3.0
       with:
+        version: 2026.9.2
         working_directory: ${{ inputs.working_directory }}
 
     # The nested action failing already fails this composite and the job, so

@@ -10,7 +10,7 @@ const MS_PER_DAY = 86_400_000;
 const MAX_RANGE_DAYS = 90;
 
 export function todayIso(today: Date = new Date()): string {
-  return formatIso(today);
+  return toLocalIso(today);
 }
 
 export function addDaysIso(iso: string, days: number): string {
@@ -22,13 +22,16 @@ export function addDaysIso(iso: string, days: number): string {
 }
 
 export function defaultRange(today: Date = new Date()): { start: string; end: string } {
-  const start = formatIso(today);
+  const start = toLocalIso(today);
   return { start, end: addDaysIso(start, 6) };
 }
 
 export function isoMondayFor(today: Date = new Date()): string {
-  // Normalise to UTC midnight so DST/TZ never shifts the weekday, then walk back to ISO Monday (dow=1).
-  const utc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  // Read today's LOCAL calendar day first (see toLocalIso), then normalise to
+  // UTC midnight so DST/TZ never shifts the weekday during the walk back to
+  // ISO Monday (dow=1).
+  const localIso = toLocalIso(today);
+  const utc = new Date(parseIsoDate(localIso) as number);
   const dow = utc.getUTCDay(); // 0=Sun..6=Sat
   const offset = dow === 0 ? -6 : 1 - dow;
   utc.setUTCDate(utc.getUTCDate() + offset);
@@ -61,10 +64,26 @@ export function validateRange(start: string, end: string): RangeValidation {
   return { ok: true, days };
 }
 
+// Formats a Date that is already UTC-anchored (from parseIsoDate or UTC-only
+// arithmetic) back into YYYY-MM-DD. Never call this on a `new Date()` wall-clock
+// value — use toLocalIso for that; see the trap this fixes in
+// pillars/finance/app/src/lib/local-date.ts.
 function formatIso(d: Date): string {
   const year = d.getUTCFullYear();
   const month = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// A wall-clock Date's LOCAL calendar day as YYYY-MM-DD. `toISOString()` /
+// UTC getters convert to UTC first, which is a day ahead of the local
+// calendar day for every hour local time leads UTC (e.g. 00:00-10:00 AEST)
+// and a day behind west of UTC — see
+// pillars/finance/app/src/lib/local-date.ts for the full writeup.
+function toLocalIso(d: Date): string {
+  const year = String(d.getFullYear()).padStart(4, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
