@@ -115,7 +115,7 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
     expect(setLocalTransactions).not.toHaveBeenCalled();
   });
 
-  it('saves a field-only edit on a rule-matched row outright when Save Once is used', () => {
+  it('does not treat a non-entity edit on a rule-matched row as a correction', () => {
     // Regression: Save Once (shouldLearn=false) on a rule-matched row — e.g.
     // fixing a merchant-rule-assigned transaction type from "purchase" to
     // "refund" — used to be routed into generateProposal() regardless of the
