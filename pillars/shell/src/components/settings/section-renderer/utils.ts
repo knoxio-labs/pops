@@ -36,16 +36,33 @@ export function validateNumberRange({ val, v, fallbackMsg }: ValidateNumberArgs)
   return null;
 }
 
+function validateJson(field: SettingsField, val: string): string | null {
+  if (field.type !== 'json' || !val) return null;
+  try {
+    JSON.parse(val);
+    return null;
+  } catch {
+    return 'Invalid JSON';
+  }
+}
+
+function validatePattern(v: NonNullable<SettingsField['validation']>, val: string): string | null {
+  if (!v.pattern || !val || new RegExp(v.pattern).test(val)) return null;
+  return v.message ?? 'Invalid format';
+}
+
 export function validateField(field: SettingsField, val: string): string {
   const v = field.validation;
-  if (!v) return '';
-  if (v.required && !val.trim()) return v.message ?? `${field.label} is required`;
-  if (field.type === 'number') {
+  if (v?.required && !val.trim()) return v.message ?? `${field.label} is required`;
+  if (field.type === 'number' && v) {
     const numErr = validateNumberRange({ val, v, fallbackMsg: 'Must be a number' });
     if (numErr) return numErr;
   }
-  if (v.pattern && val && !new RegExp(v.pattern).test(val)) {
-    return v.message ?? 'Invalid format';
+  const jsonErr = validateJson(field, val);
+  if (jsonErr) return jsonErr;
+  if (v) {
+    const patternErr = validatePattern(v, val);
+    if (patternErr) return patternErr;
   }
   return '';
 }
