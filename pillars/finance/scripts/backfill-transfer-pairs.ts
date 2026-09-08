@@ -6,10 +6,11 @@
  * reconcile worker's own doc comment anticipated but never wired up
  * (`src/api/cron/reconcile-paired-transfers.ts`).
  *
- * DRY RUN by default — reports what each row would resolve to (linked,
- * ambiguous, or no-match) without writing. Pass `--apply` to actually link.
- * Uses the same `findPairForTransaction`/`findPairCandidates` the live engine
- * uses, so a dry run's prediction and a subsequent `--apply` run agree exactly.
+ * DRY RUN by default — reports what each row would resolve to (match,
+ * ambiguous, or no-match) without writing, via the same `predictPairOutcome`
+ * (mutuality check included) that `attemptPairForRow` uses to actually link —
+ * so a dry run's prediction and a subsequent `--apply` run agree exactly.
+ * Pass `--apply` to write for real.
  *
  *   # dry run (default): show what would link
  *   FINANCE_SQLITE_PATH=... pnpm --filter @pops/finance exec tsx scripts/backfill-transfer-pairs.ts
@@ -21,11 +22,12 @@
  * link (every row is either linked or genuinely has no counterpart).
  */
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
-import { attemptPairForRow } from '../src/api/modules/transfers/pair-runner.js';
 import {
-  findPairForTransaction,
-  type PairCandidate,
-} from '../src/api/modules/transfers/pair-transfers.js';
+  attemptPairForRow,
+  predictPairOutcome,
+  type PairPrediction,
+} from '../src/api/modules/transfers/pair-runner.js';
+import { getTransferPairWindowDays } from '../src/api/modules/transfers/pair-transfers.js';
 import {
   openFinanceDb,
   transactionsService,
@@ -33,55 +35,12 @@ import {
   type FinanceDb,
 } from '../src/db/index.js';
 
-const DEFAULT_WINDOW_DAYS = 3;
-
-function toPairCandidate(row: {
-  id: string;
-  amountCents: number;
-  accountId: string;
-  date: string;
-  relatedTransactionId: string | null;
-}): PairCandidate {
-  return {
-    id: row.id,
-    amount: row.amountCents,
-    accountId: row.accountId,
-    date: row.date,
-    relatedTransactionId: row.relatedTransactionId,
-  };
-}
-
-function windowDays(): number {
-  const raw = process.env['FINANCE_TRANSFER_PAIR_WINDOW_DAYS'];
-  const parsed = raw !== undefined && raw !== '' ? Number(raw) : Number.NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_WINDOW_DAYS;
-}
-
-interface DryRunOutcome {
-  id: string;
-  kind: 'match' | 'ambiguous' | 'none';
-  counterpartId?: string;
-}
-
-function predictOutcome(db: FinanceDb, id: string, days: number): DryRunOutcome {
-  const row = transactionsService.getTransaction(db, id);
-  const candidates = transferPairsService.findPairCandidates(db, row, days);
-  const result = findPairForTransaction(
-    toPairCandidate(row),
-    candidates.map(toPairCandidate),
-    days
-  );
-  if (result.kind === 'match') return { id, kind: 'match', counterpartId: result.id };
-  if (result.kind === 'ambiguous') return { id, kind: 'ambiguous' };
-  return { id, kind: 'none' };
-}
-
-function logMatch(id: string, outcome: DryRunOutcome, seenMatches: Set<string>): boolean {
-  if (outcome.kind !== 'match' || !outcome.counterpartId) return false;
-  const key = [id, outcome.counterpartId].toSorted().join('|');
+function logIfMatch(id: string, prediction: PairPrediction, seenMatches: Set<string>): boolean {
+  if (prediction.kind !== 'match') return false;
+  const key = [id, prediction.counterpart.id].toSorted().join('|');
   if (seenMatches.has(key)) return false;
   seenMatches.add(key);
-  console.warn(`  MATCH ${id} <-> ${outcome.counterpartId}`);
+  console.warn(`  MATCH ${id} <-> ${prediction.counterpart.id}`);
   return true;
 }
 
@@ -90,12 +49,13 @@ function runDryRun(db: FinanceDb, ids: readonly string[], days: number): void {
   let ambiguous = 0;
   const seenMatches = new Set<string>();
   for (const id of ids) {
-    const outcome = predictOutcome(db, id, days);
-    if (logMatch(id, outcome, seenMatches)) {
+    const row = transactionsService.getTransaction(db, id);
+    const prediction = predictPairOutcome(db, row, days);
+    if (logIfMatch(id, prediction, seenMatches)) {
       matches += 1;
       continue;
     }
-    if (outcome.kind === 'ambiguous') {
+    if (prediction.kind === 'ambiguous') {
       ambiguous += 1;
       console.warn(
         `  AMBIGUOUS ${id} (multiple equally-close candidates, left for manual resolution)`
@@ -108,9 +68,28 @@ function runDryRun(db: FinanceDb, ids: readonly string[], days: number): void {
   );
 }
 
+function runApply(db: FinanceDb, ids: readonly string[], days: number): void {
+  let linked = 0;
+  let ambiguous = 0;
+  let noMatch = 0;
+  let skipped = 0;
+  for (const id of ids) {
+    const row = transactionsService.getTransaction(db, id);
+    const outcome = attemptPairForRow(db, row, days);
+    if (outcome === 'linked') linked += 1;
+    else if (outcome === 'ambiguous') ambiguous += 1;
+    else if (outcome === 'no-match') noMatch += 1;
+    else skipped += 1;
+  }
+  console.warn(
+    `[backfill-transfer-pairs] APPLIED — examined=${ids.length} linked=${linked} ` +
+      `ambiguous=${ambiguous} no-match=${noMatch} skipped=${skipped}`
+  );
+}
+
 function main(): void {
   const apply = process.argv.includes('--apply');
-  const days = windowDays();
+  const days = getTransferPairWindowDays();
 
   const opened = openFinanceDb(resolveFinanceSqlitePath());
   try {
@@ -119,27 +98,8 @@ function main(): void {
       `[backfill-transfer-pairs] examining ${ids.length} unpaired row(s), window=${days}d`
     );
 
-    if (!apply) {
-      runDryRun(opened.db, ids, days);
-      return;
-    }
-
-    let linked = 0;
-    let ambiguous = 0;
-    let noMatch = 0;
-    let skipped = 0;
-    for (const id of ids) {
-      const row = transactionsService.getTransaction(opened.db, id);
-      const outcome = attemptPairForRow(opened.db, row, days);
-      if (outcome === 'linked') linked += 1;
-      else if (outcome === 'ambiguous') ambiguous += 1;
-      else if (outcome === 'no-match') noMatch += 1;
-      else skipped += 1;
-    }
-    console.warn(
-      `[backfill-transfer-pairs] APPLIED — examined=${ids.length} linked=${linked} ` +
-        `ambiguous=${ambiguous} no-match=${noMatch} skipped=${skipped}`
-    );
+    if (apply) runApply(opened.db, ids, days);
+    else runDryRun(opened.db, ids, days);
   } finally {
     opened.raw.close();
   }

@@ -16,6 +16,18 @@ import { findPairForTransaction, type PairCandidate } from './pair-transfers.js'
 /** The outcome of trying to pair one row. */
 export type PairAttemptOutcome = 'linked' | 'ambiguous' | 'no-match' | 'skipped';
 
+/**
+ * The read-only prediction behind {@link attemptPairForRow} — same mutuality
+ * check, no write. `kind: 'match'` carries the counterpart row so a caller can
+ * link it (the live path) or just report it (a dry run), without the two
+ * diverging on what counts as a match.
+ */
+export type PairPrediction =
+  | { readonly kind: 'match'; readonly counterpart: TransactionRow }
+  | { readonly kind: 'ambiguous' }
+  | { readonly kind: 'no-match' }
+  | { readonly kind: 'skipped' };
+
 function toPairCandidate(row: TransactionRow): PairCandidate {
   return {
     id: row.id,
@@ -41,6 +53,38 @@ function uniqueCounterpartId(
 }
 
 /**
+ * Predict what {@link attemptPairForRow} would do with `row`, without writing.
+ * Applies the same mutuality check (the candidate's own best match must point
+ * back at `row`) — a caller that skipped this and re-implemented only the
+ * one-directional `findPairForTransaction` call would over-report matches on
+ * exactly the "two identical debits competing for one credit" case the
+ * mutuality check exists to catch.
+ */
+export function predictPairOutcome(
+  db: FinanceDb,
+  row: TransactionRow,
+  windowDays: number
+): PairPrediction {
+  if (row.relatedTransactionId !== null || row.matchRuleId !== null) return { kind: 'skipped' };
+
+  const candidates = transferPairsService.findPairCandidates(db, row, windowDays);
+  const forward = findPairForTransaction(
+    toPairCandidate(row),
+    candidates.map(toPairCandidate),
+    windowDays
+  );
+  if (forward.kind === 'none') return { kind: 'no-match' };
+  if (forward.kind === 'ambiguous') return { kind: 'ambiguous' };
+
+  const counterpart = candidates.find((candidate) => candidate.id === forward.id);
+  if (!counterpart) return { kind: 'no-match' };
+
+  if (uniqueCounterpartId(db, counterpart, windowDays) !== row.id) return { kind: 'ambiguous' };
+
+  return { kind: 'match', counterpart };
+}
+
+/**
  * Try to pair `row` with its unique transfer counterpart, linking both sides on
  * success.
  *
@@ -56,21 +100,10 @@ export function attemptPairForRow(
   row: TransactionRow,
   windowDays: number
 ): PairAttemptOutcome {
-  if (row.relatedTransactionId !== null || row.matchRuleId !== null) return 'skipped';
+  const prediction = predictPairOutcome(db, row, windowDays);
+  if (prediction.kind !== 'match') return prediction.kind;
 
-  const candidates = transferPairsService.findPairCandidates(db, row, windowDays);
-  const forward = findPairForTransaction(
-    toPairCandidate(row),
-    candidates.map(toPairCandidate),
-    windowDays
-  );
-  if (forward.kind === 'none') return 'no-match';
-  if (forward.kind === 'ambiguous') return 'ambiguous';
-
-  const counterpart = candidates.find((candidate) => candidate.id === forward.id);
-  if (!counterpart) return 'no-match';
-
-  if (uniqueCounterpartId(db, counterpart, windowDays) !== row.id) return 'ambiguous';
-
-  return transferPairsService.linkTransferPair(db, row.id, counterpart.id) ? 'linked' : 'skipped';
+  return transferPairsService.linkTransferPair(db, row.id, prediction.counterpart.id)
+    ? 'linked'
+    : 'skipped';
 }
