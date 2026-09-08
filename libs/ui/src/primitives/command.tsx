@@ -21,8 +21,26 @@ function normalizeForSearch(value: string): string {
     .toLowerCase();
 }
 
+/** Whether every character of `needle` appears in `haystack`, in order, with gaps allowed. */
+function isSubsequence(needle: string, haystack: string): boolean {
+  let i = 0;
+  for (let j = 0; i < needle.length && j < haystack.length; j++) {
+    if (needle[i] === haystack[j]) i++;
+  }
+  return i === needle.length;
+}
+
+/**
+ * A contiguous, normalized match ranks above a scattered one so typo/fuzzy
+ * tolerance (cmdk's default behavior) survives diacritic normalization
+ * instead of being replaced by strict substring matching.
+ */
 function defaultFilter(value: string, search: string): number {
-  return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
+  const normalizedValue = normalizeForSearch(value);
+  const normalizedSearch = normalizeForSearch(search);
+  if (!normalizedSearch) return 1;
+  if (normalizedValue.includes(normalizedSearch)) return 1;
+  return isSubsequence(normalizedSearch, normalizedValue) ? 0.3 : 0;
 }
 
 function Command({ className, filter, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
