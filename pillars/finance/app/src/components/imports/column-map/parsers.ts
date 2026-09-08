@@ -1,11 +1,17 @@
-import type { AmountSign, BankDialect, SplitAmountColumns } from '../bank-dialect';
+import type { AmountSign, BankDialect, DateOrder, SplitAmountColumns } from '../bank-dialect';
 
-export function parseDate(dateStr: string | undefined): string | null {
+/**
+ * Read a slash-delimited date into the bank's own day/month order. A
+ * hardcoded order would silently transpose any date where both sides read as
+ * a valid day, for any bank whose export prints the other order.
+ */
+export function parseDate(dateStr: string | undefined, order: DateOrder): string | null {
   if (!dateStr) return null;
   const parts = dateStr.split('/');
   if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
+  const [first, second, year] = parts;
+  if (!first || !second || !year) return null;
+  const [day, month] = order === 'DMY' ? [first, second] : [second, first];
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 

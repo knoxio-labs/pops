@@ -70,6 +70,7 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
       onBlur,
       disabled,
       type,
+      lang,
       ...props
     },
     ref
@@ -89,6 +90,11 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
         <input
           ref={ref}
           type={type}
+          // Chromium and Firefox pick the native date/time widget's display
+          // order from `lang` before falling back to the OS locale, so this
+          // pins the picker to en-AU rather than leaving it to whatever
+          // locale the browser happens to be set to.
+          lang={lang ?? 'en-AU'}
           className={cn(inputVariants({ size, className }))}
           onFocus={(e) => {
             setIsFocused(true);

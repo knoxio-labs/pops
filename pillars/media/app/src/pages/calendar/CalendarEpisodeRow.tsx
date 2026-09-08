@@ -80,9 +80,10 @@ export function CalendarEpisodeRow({ ep }: { ep: Episode }) {
         </div>
       </div>
       <div className="text-xs text-muted-foreground shrink-0 self-center">
-        {new Date(ep.airDateUtc).toLocaleTimeString(undefined, {
-          hour: 'numeric',
+        {new Date(ep.airDateUtc).toLocaleTimeString('en-AU', {
+          hour: '2-digit',
           minute: '2-digit',
+          hour12: false,
         })}
       </div>
     </Link>
