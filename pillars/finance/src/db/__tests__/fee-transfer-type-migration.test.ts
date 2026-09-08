@@ -77,9 +77,11 @@ function migrationSql(): string {
  */
 function laterTypeBackfills(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
-  return ['0077_correct_mistyped_rows.sql', '0080_retype_rule_shadowed_rows.sql'].map((name) =>
-    readFileSync(join(here, '..', '..', '..', 'migrations', name), 'utf8')
-  );
+  return [
+    '0077_correct_mistyped_rows.sql',
+    '0080_retype_rule_shadowed_rows.sql',
+    '0102_atm_foreign_fee_reclassified.sql',
+  ].map((name) => readFileSync(join(here, '..', '..', '..', 'migrations', name), 'utf8'));
 }
 
 let raw: Database.Database;
@@ -308,6 +310,32 @@ describe('0070_fee_and_transfer_types — agreement with the classifier', () => 
         derived?.tag ? [derived.tag] : []
       );
     }
+  });
+
+  // 0102: a foreign-currency ATM withdrawal imported before the classifier
+  // learned `ATM CARD` stored `fee`/`fee:conversion`, same as a fresh import
+  // would have before this change. The row must end up agreeing with
+  // `classifyFromDescription`'s current answer, not its stored history.
+  it('retypes a pre-existing ATM-withdrawal fee row to purchase', () => {
+    const description =
+      'ATM CARD 2200 SHINJUKU-KU TOKYO FOREIGN CURRENCY AMT JPY 10 110 INCL OVERSEAS TRANSACTION FEE $3.22';
+    seed({ id: 'atm', description, type: 'fee', tags: ['fee:conversion'] });
+
+    raw.exec(migrationSql());
+    for (const sql of laterTypeBackfills()) raw.exec(sql);
+
+    const derived = classifyFromDescription(description);
+    expect(rowOf('atm')).toEqual({ type: derived?.type, tags: [] });
+    expect(rowOf('atm').type).toBe('purchase');
+  });
+
+  it('does not touch a standalone ATM fee row', () => {
+    seed({ id: 'atm-fee-only', description: 'ATM WITHDRAWAL FEE', type: 'fee', tags: ['fee:atm'] });
+
+    raw.exec(migrationSql());
+    for (const sql of laterTypeBackfills()) raw.exec(sql);
+
+    expect(rowOf('atm-fee-only')).toEqual({ type: 'fee', tags: ['fee:atm'] });
   });
 
   it('agrees that an ordinary merchant descriptor is neither', () => {
