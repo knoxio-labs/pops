@@ -45,6 +45,10 @@ export const FEE_TAG_PREFIX = 'fee:';
  * dollars of it that actually are one. The cash is still gone, so such a row
  * is typed `purchase` instead of left to fall through to whatever the entity
  * matcher or AI fallback would have guessed.
+ *
+ * A row imported before this pattern existed is backfilled by migration
+ * `0102_atm_foreign_fee_reclassified.sql`, on the same convention as 0077/0080
+ * — see `fee-transfer-type-migration.test.ts`.
  */
 const ATM_CASH_WITHDRAWAL_PATTERN = 'ATM CARD';
 
