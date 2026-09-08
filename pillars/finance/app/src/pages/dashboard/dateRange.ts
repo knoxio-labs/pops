@@ -1,4 +1,4 @@
-import { toISODate } from '../../lib/local-date';
+import { toISODate } from '@pops/date';
 
 export interface DateRange {
   startDate: string;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { todayISODate } from '../../lib/local-date';
+import { todayISODate } from '@pops/date';
 
 import type { AccountKindBehaviour } from '@pops/finance';
 
