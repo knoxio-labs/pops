@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Label, TextInput } from '@pops/ui';
+import { Button, Label, Select, type SelectOption, TextInput } from '@pops/ui';
 
 import {
   buildSubmitInput,
@@ -43,6 +43,13 @@ function EndpointFields({
   );
 }
 
+function scopeOptions(t: (key: string) => string): SelectOption[] {
+  return [
+    { value: 'global', label: t('data.substitutions.scope.global') },
+    { value: 'recipe', label: t('data.substitutions.scope.recipe') },
+  ];
+}
+
 function RatioScopeFields({
   form,
   setForm,
@@ -62,18 +69,13 @@ function RatioScopeFields({
           inputMode="decimal"
         />
       </div>
-      <div className="grid gap-1.5">
-        <Label htmlFor="sub-create-scope">{t('data.substitutions.create.scope')}</Label>
-        <select
-          id="sub-create-scope"
-          value={form.scope}
-          onChange={(e) => setForm({ ...form, scope: e.target.value as SubstitutionScope })}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-        >
-          <option value="global">{t('data.substitutions.scope.global')}</option>
-          <option value="recipe">{t('data.substitutions.scope.recipe')}</option>
-        </select>
-      </div>
+      <Select
+        id="sub-create-scope"
+        label={t('data.substitutions.create.scope')}
+        value={form.scope}
+        onChange={(e) => setForm({ ...form, scope: e.target.value as SubstitutionScope })}
+        options={scopeOptions(t)}
+      />
       {form.scope === 'recipe' ? (
         <div className="grid gap-1.5">
           <Label htmlFor="sub-create-recipe">{t('data.substitutions.create.recipeId')}</Label>

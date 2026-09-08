@@ -1,8 +1,8 @@
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
 
+import { IngredientPickerSection } from './AddBatchModal.ingredientSection.js';
 import {
   DateAndNotesSection,
-  IngredientPickerSection,
   PrepAndQtySection,
   SourceAndLocationSection,
 } from './AddBatchModal.sections.js';

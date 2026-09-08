@@ -6,7 +6,7 @@
  */
 import { type ChangeEvent, type ReactElement } from 'react';
 
-import { Badge, Button } from '@pops/ui';
+import { Badge, Button, Select, type SelectOption } from '@pops/ui';
 
 import {
   ALL_BANDS,
@@ -131,21 +131,18 @@ function SortDropdown({
   onChange: (sort: DraftSort) => void;
   t: (key: string) => string;
 }): ReactElement {
+  const options: SelectOption[] = SORT_OPTIONS.map((opt) => ({
+    value: opt,
+    label: t(`inbox.drafts.sort.${opt}`),
+  }));
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <span className="font-medium text-muted-foreground">{t('inbox.drafts.filters.sort')}</span>
-      <select
-        value={value}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as DraftSort)}
-        className="rounded-md border bg-background px-2 py-1 text-sm"
-        data-testid="drafts-sort"
-      >
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt} value={opt}>
-            {t(`inbox.drafts.sort.${opt}`)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label={t('inbox.drafts.filters.sort')}
+      value={value}
+      onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value as DraftSort)}
+      options={options}
+      className="w-44"
+      data-testid="drafts-sort"
+    />
   );
 }

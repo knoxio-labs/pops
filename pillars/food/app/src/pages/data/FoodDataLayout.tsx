@@ -1,11 +1,13 @@
 /**
  * Layout shell for `/food/data`. Renders the page header + a tab strip
  * that links to each sub-route under `/food/data/<slug>`. On narrow
- * viewports the strip collapses to a native `<select>`. Active tab comes
+ * viewports the strip collapses to a kit Select dropdown. Active tab comes
  * from the URL — no client-side tab state.
  */
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+
+import { Select, type SelectOption } from '@pops/ui';
 
 import { GlobalSearchBar } from './GlobalSearchBar.js';
 import { DEFAULT_TAB_SLUG, FOOD_DATA_TABS, type FoodDataTab } from './tab-config.js';
@@ -67,22 +69,19 @@ function FoodDataDesktopTabs({ activeSlug }: { activeSlug: FoodDataTab['slug'] }
 function FoodDataMobileTabs({ activeSlug }: { activeSlug: FoodDataTab['slug'] }) {
   const { t } = useTranslation('food');
   const navigate = useNavigate();
+  const options: SelectOption[] = FOOD_DATA_TABS.map((tab) => ({
+    value: tab.slug,
+    label: t(tab.labelKey),
+  }));
   return (
-    <label className="flex flex-col gap-1 sm:hidden">
-      <span className="sr-only">{t('data.tabs.ariaLabel')}</span>
-      <select
+    <div className="sm:hidden">
+      <Select
         aria-label={t('data.tabs.ariaLabel')}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
         value={activeSlug}
         onChange={(event) => navigate(event.target.value)}
-      >
-        {FOOD_DATA_TABS.map((tab) => (
-          <option key={tab.slug} value={tab.slug}>
-            {t(tab.labelKey)}
-          </option>
-        ))}
-      </select>
-    </label>
+        options={options}
+      />
+    </div>
   );
 }
 
