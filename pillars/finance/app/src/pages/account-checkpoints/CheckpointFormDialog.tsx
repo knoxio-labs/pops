@@ -30,6 +30,16 @@ interface CheckpointFormDialogProps {
   isSubmitting: boolean;
 }
 
+function AsOfField({ form }: { form: UseFormReturn<CheckpointFormValues> }) {
+  const error = form.formState.errors.asOf?.message;
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      <FieldLabel htmlFor="checkpoint-as-of" label="As of" error={error} />
+      <DateInput id="checkpoint-as-of" max={today()} {...form.register('asOf')} error={error} />
+    </div>
+  );
+}
+
 /**
  * Recording what's true right now, not editing what happened before —
  * checkpoints are append-only (ADR-051), so this dialog has no counterpart
@@ -65,14 +75,7 @@ export function CheckpointFormDialog({
             {...form.register('amount')}
             error={form.formState.errors.amount?.message}
           />
-          <div className="flex flex-col gap-1.5 w-full">
-            <FieldLabel
-              htmlFor="checkpoint-as-of"
-              label="As of"
-              error={form.formState.errors.asOf?.message}
-            />
-            <DateInput id="checkpoint-as-of" max={today()} {...form.register('asOf')} />
-          </div>
+          <AsOfField form={form} />
           <div className="space-y-1.5">
             <Label>Note (optional)</Label>
             <Textarea

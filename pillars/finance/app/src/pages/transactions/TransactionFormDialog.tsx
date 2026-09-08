@@ -42,7 +42,11 @@ function PrimaryFields({ form }: { form: UseFormReturn<TransactionFormValues> })
           label="Date"
           error={form.formState.errors.date?.message}
         />
-        <DateInput id="transaction-date" {...form.register('date')} />
+        <DateInput
+          id="transaction-date"
+          {...form.register('date')}
+          error={form.formState.errors.date?.message}
+        />
       </div>
       <TextInput
         type="number"
