@@ -62,6 +62,56 @@ function makeSyntheticChange(value: number): React.ChangeEvent<HTMLInputElement>
   return { target: { value: String(value) } } as React.ChangeEvent<HTMLInputElement>;
 }
 
+function makeEmptySyntheticChange(): React.ChangeEvent<HTMLInputElement> {
+  return { target: { value: '' } } as React.ChangeEvent<HTMLInputElement>;
+}
+
+function isEmptyValue(v: UseNumberInputArgs['controlledValue']): boolean {
+  return v === undefined || v === '';
+}
+
+/** Coerces a raw prop value to a display value: `''` means "no value entered". */
+function toDisplayValue(v: UseNumberInputArgs['controlledValue']): number | '' {
+  if (isEmptyValue(v)) return '';
+  const n = Number(v);
+  return isNaN(n) ? '' : n;
+}
+
+interface UseValueStateArgs {
+  controlledValue: UseNumberInputArgs['controlledValue'];
+  defaultValue: UseNumberInputArgs['defaultValue'];
+  min?: number;
+  max?: number;
+  onChange?: UseNumberInputArgs['onChange'];
+}
+
+function useValueState({ controlledValue, defaultValue, min, max, onChange }: UseValueStateArgs) {
+  const [internalValue, setInternalValue] = useState<number | ''>(() =>
+    toDisplayValue(defaultValue)
+  );
+  const isControlled = controlledValue !== undefined;
+  const value = isControlled ? toDisplayValue(controlledValue) : internalValue;
+  const isEmpty = value === '';
+
+  const commitValue = (next: number, e?: React.ChangeEvent<HTMLInputElement>) => {
+    const clamped = clamp(next, min, max);
+    if (!isControlled) setInternalValue(clamped);
+    onChange?.(e ?? makeSyntheticChange(clamped));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value === '') {
+      if (!isControlled) setInternalValue('');
+      onChange?.(makeEmptySyntheticChange());
+      return;
+    }
+    const newValue = Number(e.target.value);
+    if (!isNaN(newValue)) commitValue(newValue, e);
+  };
+
+  return { value, isEmpty, commitValue, handleChange };
+}
+
 export function useNumberInput({
   controlledValue,
   defaultValue,
@@ -72,30 +122,32 @@ export function useNumberInput({
   disabled,
   onChange,
 }: UseNumberInputArgs) {
-  const [internalValue, setInternalValue] = useState<number>(Number(defaultValue) || 0);
   const [isFocused, setIsFocused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number>(0);
   const dragStartValue = useRef<number>(0);
-  const isControlled = controlledValue !== undefined;
-  const value = isControlled ? Number(controlledValue) : internalValue;
 
-  const commitValue = (next: number, e?: React.ChangeEvent<HTMLInputElement>) => {
-    const clamped = clamp(next, min, max);
-    if (!isControlled) setInternalValue(clamped);
-    onChange?.(e ?? makeSyntheticChange(clamped));
+  const { value, commitValue, handleChange } = useValueState({
+    controlledValue,
+    defaultValue,
+    min,
+    max,
+    onChange,
+  });
+
+  // Incrementing/decrementing from an unset value has no principled baseline
+  // (0? min? the last cleared value?), so the steppers and drag gesture are
+  // disabled until the field holds a real number — see decrementDisabled /
+  // incrementDisabled and handleMouseDown below.
+  const increment = () => {
+    if (value !== '') commitValue(value + step);
   };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = Number(e.target.value);
-    if (!isNaN(newValue)) commitValue(newValue, e);
+  const decrement = () => {
+    if (value !== '') commitValue(value - step);
   };
-
-  const increment = () => commitValue(value + step);
-  const decrement = () => commitValue(value - step);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!enableDrag || disabled) return;
+    if (!enableDrag || disabled || value === '') return;
     e.preventDefault();
     setIsDragging(true);
     dragStartY.current = e.clientY;
@@ -119,7 +171,7 @@ export function useNumberInput({
     increment,
     decrement,
     handleMouseDown,
-    decrementDisabled: disabled ?? (min !== undefined && value <= min),
-    incrementDisabled: disabled ?? (max !== undefined && value >= max),
+    decrementDisabled: disabled ?? (value === '' || (min !== undefined && value <= min)),
+    incrementDisabled: disabled ?? (value === '' || (max !== undefined && value >= max)),
   };
 }
