@@ -14,7 +14,8 @@ export interface UseBulkAssignmentArgs {
   handleEntitySelect: (
     transaction: ProcessedTransaction,
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
   openRuleProposalDialog: (
     triggeringTransaction: ProcessedTransaction,
@@ -52,7 +53,8 @@ export function pluralize(count: number): string {
 export function moveToMatched(
   prev: LocalTxState,
   transactions: ProcessedTransaction[],
-  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' }
+  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' },
+  transactionType?: TransactionType
 ): LocalTxState {
   // Default to 'manual' so EntitySection (which renders the AI-suggestion
   // panel for matchType === 'ai') doesn't keep prompting the user to accept
@@ -65,6 +67,7 @@ export function moveToMatched(
       entityId: entity.entityId,
       entityName: entity.entityName,
       matchType,
+      transactionType,
     });
   }
   return updated;

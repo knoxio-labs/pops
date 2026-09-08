@@ -14,8 +14,13 @@ import {
   isUnresolvedEntity,
   type UnresolvedEntityState,
 } from '../lib/assigned-entity';
+import { needsTransactionType } from '../review/buildConfirmed';
+import { ForcedTypePrompt } from './ForcedTypePrompt';
+import { usePendingTypedAssignment } from './usePendingTypedAssignment';
 
 import type { ProcessedTransaction } from '@pops/finance';
+
+import type { TransactionType } from '../../../lib/transaction-type';
 
 interface AiSuggestionProps {
   transaction: ProcessedTransaction;
@@ -92,11 +97,78 @@ interface EntitySectionProps {
   onEntitySelect?: (
     transaction: ProcessedTransaction,
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
   /** Create a new entity named after the picker's search term and assign it. */
-  onCreateEntityWithName?: (transaction: ProcessedTransaction, entityName: string) => void;
+  onCreateEntityWithName?: (
+    transaction: ProcessedTransaction,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
+}
+
+type TypedEntityPickerProps = Pick<
+  EntitySectionProps,
+  'transaction' | 'entities' | 'onEntitySelect' | 'onCreateEntityWithName'
+>;
+
+/**
+ * The picker itself, plus the forced-type prompt for a credit with no type
+ * yet (POPS-2754) — `moveOneToMatched` would otherwise carry the row into
+ * `matched` still untyped. Split out of `EntitySection` to keep the pending-
+ * assignment state machine's branching out of the parent component.
+ */
+function TypedEntityPicker({
+  transaction,
+  entities,
+  onEntitySelect,
+  onCreateEntityWithName,
+}: TypedEntityPickerProps) {
+  const forceType = needsTransactionType(transaction);
+  const { pending, type, setType, request, cancel, confirm } = usePendingTypedAssignment(
+    (assignment, chosenType) =>
+      assignment.kind === 'select'
+        ? onEntitySelect?.(transaction, assignment.entityId, assignment.entityName, chosenType)
+        : onCreateEntityWithName?.(transaction, assignment.entityName, chosenType)
+  );
+
+  return (
+    <>
+      <EntitySelect
+        entities={entities ?? []}
+        value={pending?.kind === 'select' ? pending.entityId : (transaction.entity?.entityId ?? '')}
+        onChange={(entityId, entityName) => {
+          if (forceType) {
+            request({ kind: 'select', entityId, entityName });
+            return;
+          }
+          onEntitySelect?.(transaction, entityId, entityName);
+        }}
+        onCreate={
+          onCreateEntityWithName
+            ? (entityName) => {
+                if (forceType) {
+                  request({ kind: 'create', entityName });
+                  return;
+                }
+                onCreateEntityWithName(transaction, entityName);
+              }
+            : undefined
+        }
+      />
+      {pending && (
+        <ForcedTypePrompt
+          message={`This is a credit with no type yet — choose one to finish assigning “${pending.entityName}”.`}
+          type={type}
+          onTypeChange={setType}
+          onConfirm={confirm}
+          onCancel={cancel}
+        />
+      )}
+    </>
+  );
 }
 
 /**
@@ -119,6 +191,7 @@ export function EntitySection(props: EntitySectionProps) {
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
   const assigned = classifyAssignedEntity(transaction, entities);
+
   return (
     <div className="mb-3">
       {suggestedName && onAcceptAiSuggestion && (
@@ -132,15 +205,11 @@ export function EntitySection(props: EntitySectionProps) {
       {isUnresolvedEntity(assigned) && (
         <UnresolvedEntityNotice state={assigned} entityName={transaction.entity?.entityName} />
       )}
-      <EntitySelect
-        entities={entities ?? []}
-        value={transaction.entity?.entityId ?? ''}
-        onChange={(entityId, entityName) => onEntitySelect?.(transaction, entityId, entityName)}
-        onCreate={
-          onCreateEntityWithName
-            ? (entityName) => onCreateEntityWithName(transaction, entityName)
-            : undefined
-        }
+      <TypedEntityPicker
+        transaction={transaction}
+        entities={entities}
+        onEntitySelect={onEntitySelect}
+        onCreateEntityWithName={onCreateEntityWithName}
       />
     </div>
   );

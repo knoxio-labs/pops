@@ -5,6 +5,7 @@ import { type CreatedEntity, useAssignCreatedToGroup } from './use-entity-create
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { TransactionType } from '../../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { useEntities } from '../useEntities';
 import type { LocalTxState, UseBulkAssignmentArgs } from './types';
@@ -65,17 +66,22 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
   });
 
   const handleCreateAndAssignAll = useCallback(
-    (transactions: ProcessedTransaction[], entityName: string) => {
+    (
+      transactions: ProcessedTransaction[],
+      entityName: string,
+      transactionType?: TransactionType
+    ) => {
       const entity = createPendingEntity(entityName);
-      if (entity) assignCreatedToGroup(transactions, entity);
+      if (entity) assignCreatedToGroup(transactions, entity, transactionType);
     },
     [createPendingEntity, assignCreatedToGroup]
   );
 
   const handleCreateEntityWithName = useCallback(
-    (transaction: ProcessedTransaction, entityName: string) => {
+    (transaction: ProcessedTransaction, entityName: string, transactionType?: TransactionType) => {
       const entity = createPendingEntity(entityName);
-      if (entity) handleEntitySelect(transaction, entity.entityId, entity.entityName);
+      if (entity)
+        handleEntitySelect(transaction, entity.entityId, entity.entityName, transactionType);
     },
     [createPendingEntity, handleEntitySelect]
   );

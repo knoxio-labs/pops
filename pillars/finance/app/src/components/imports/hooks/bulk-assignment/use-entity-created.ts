@@ -5,6 +5,7 @@ import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { TransactionType } from '../../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 
 export interface CreatedEntity {
@@ -30,10 +31,14 @@ interface UseAssignCreatedToGroupArgs {
 export function useAssignCreatedToGroup(args: UseAssignCreatedToGroupArgs) {
   const { setLocalTransactions, generateProposal, recomputeForEntity } = args;
   return useCallback(
-    (transactions: ProcessedTransaction[], entity: CreatedEntity) => {
+    (
+      transactions: ProcessedTransaction[],
+      entity: CreatedEntity,
+      transactionType?: TransactionType
+    ) => {
       const firstTx = transactions[0];
       if (!firstTx) return;
-      setLocalTransactions((prev) => moveToMatched(prev, transactions, entity));
+      setLocalTransactions((prev) => moveToMatched(prev, transactions, entity, transactionType));
       void recomputeForEntity(transactions, entity.entityId);
       toast.success(
         `Created "${entity.entityName}" and assigned to ${pluralize(transactions.length)}`
@@ -43,7 +48,7 @@ export function useAssignCreatedToGroup(args: UseAssignCreatedToGroupArgs) {
         entityId: entity.entityId,
         entityName: entity.entityName,
         location: firstTx.location ?? null,
-        transactionType: firstTx.transactionType ?? null,
+        transactionType: transactionType ?? firstTx.transactionType ?? null,
       });
     },
     [setLocalTransactions, generateProposal, recomputeForEntity]

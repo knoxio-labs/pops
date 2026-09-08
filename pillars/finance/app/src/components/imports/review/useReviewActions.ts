@@ -25,6 +25,13 @@ export interface MoveArgs {
   entityId: string;
   entityName: string;
   matchType: 'manual' | 'ai';
+  /**
+   * A type chosen alongside this entity assignment (the inline picker's
+   * forced-type prompt, for a row that needed one). Falls back to whatever
+   * type the row already carried — a rule/AI/descriptor match is never
+   * clobbered by a plain entity re-pick.
+   */
+  transactionType?: TransactionType;
 }
 
 /**
@@ -38,14 +45,21 @@ export interface MoveArgs {
  * (e.g. re-assigning the entity on a rule-matched card) the replacement keeps
  * the original card's position; otherwise it is appended.
  *
+ * Also clears a stale `error` left over from the row's earlier `uncertain`/
+ * `failed` life — the blind `...transaction` spread used to carry it forward
+ * onto an otherwise fully-resolved row, showing a bogus "No entity match
+ * found" under a card that had, in fact, just been matched.
+ *
  * Exported for unit testing the dedupe/replace invariant.
  */
 export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxState {
-  const { transaction, entityId, entityName, matchType } = args;
+  const { transaction, entityId, entityName, matchType, transactionType } = args;
   return replaceByChecksum(prev, transaction.checksum, 'matched', () => ({
     ...transaction,
     entity: { entityId, entityName, matchType, confidence: 1 },
     status: 'matched' as const,
+    transactionType: transactionType ?? transaction.transactionType,
+    error: undefined,
   }));
 }
 
@@ -92,14 +106,23 @@ interface UseReviewActionsArgs {
   recomputeForEntity: RecomputeForEntity;
 }
 
-export function useReviewActions({
+type BulkArgs = Pick<
+  UseReviewActionsArgs,
+  'setLocalTransactions' | 'generateProposal' | 'recomputeForEntity'
+>;
+
+function useHandleBulkEntitySelect({
   setLocalTransactions,
-  findSimilar,
   generateProposal,
   recomputeForEntity,
-}: UseReviewActionsArgs) {
-  const handleBulkEntitySelect = useCallback(
-    (transactions: ProcessedTransaction[], entityId: string, entityName: string) => {
+}: BulkArgs) {
+  return useCallback(
+    (
+      transactions: ProcessedTransaction[],
+      entityId: string,
+      entityName: string,
+      transactionType?: TransactionType
+    ) => {
       if (transactions.length === 0) return;
       setLocalTransactions((prev) => {
         let updated = prev;
@@ -109,6 +132,7 @@ export function useReviewActions({
             entityId,
             entityName,
             matchType: 'manual',
+            transactionType,
           });
         }
         return updated;
@@ -119,12 +143,30 @@ export function useReviewActions({
     },
     [generateProposal, recomputeForEntity, setLocalTransactions]
   );
+}
 
-  const handleEntitySelect = useCallback(
-    (transaction: ProcessedTransaction, entityId: string, entityName: string) => {
+function useHandleEntitySelect({
+  setLocalTransactions,
+  findSimilar,
+  generateProposal,
+  recomputeForEntity,
+}: UseReviewActionsArgs) {
+  return useCallback(
+    (
+      transaction: ProcessedTransaction,
+      entityId: string,
+      entityName: string,
+      transactionType?: TransactionType
+    ) => {
       const similar = findSimilar(transaction);
       setLocalTransactions((prev) =>
-        moveOneToMatched(prev, { transaction, entityId, entityName, matchType: 'manual' })
+        moveOneToMatched(prev, {
+          transaction,
+          entityId,
+          entityName,
+          matchType: 'manual',
+          transactionType,
+        })
       );
       void recomputeForEntity([transaction], entityId);
       const propose = () => generateProposal(proposalArgs(transaction, entityId, entityName));
@@ -141,6 +183,10 @@ export function useReviewActions({
     },
     [findSimilar, generateProposal, recomputeForEntity, setLocalTransactions]
   );
+}
 
+export function useReviewActions(args: UseReviewActionsArgs) {
+  const handleBulkEntitySelect = useHandleBulkEntitySelect(args);
+  const handleEntitySelect = useHandleEntitySelect(args);
   return { handleBulkEntitySelect, handleEntitySelect };
 }

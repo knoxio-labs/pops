@@ -143,3 +143,96 @@ describe('EntitySection — an entity the picker cannot show', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
+
+/**
+ * POPS-2754/manual-entity-pick gap: `moveOneToMatched` never wrote a
+ * `transactionType`, so a credit assigned through this picker stayed
+ * "Untyped" forever and was silently excluded from import. The picker now
+ * forces the choice before the assignment fires at all.
+ */
+describe('EntitySection — forcing a type on an untyped credit', () => {
+  function untypedCredit(): ProcessedTransaction {
+    return {
+      date: '2026-05-27',
+      description: 'PAYMENT FROM J COSTA-MIRANDA',
+      amount: 1000,
+      dialectAccountLabel: 'ANZ Everyday',
+      rawRow: '{"checksum":"credit-1"}',
+      checksum: 'credit-1',
+      entity: { matchType: 'none' },
+      status: 'uncertain',
+    };
+  }
+
+  it('does not assign immediately — it prompts for a type first', async () => {
+    const user = userEvent.setup();
+    const onEntitySelect = vi.fn();
+    renderSection({ transaction: untypedCredit(), onEntitySelect });
+
+    await openPickerAndSearch(user, 'Coles');
+    await user.click(screen.getByRole('option', { name: /coles/i }));
+
+    expect(onEntitySelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('group', { name: /transaction type required/i })).toBeInTheDocument();
+  });
+
+  it('keeps Confirm disabled until a type is chosen, then fires with it', async () => {
+    const user = userEvent.setup();
+    const onEntitySelect = vi.fn();
+    renderSection({ transaction: untypedCredit(), onEntitySelect });
+
+    await openPickerAndSearch(user, 'Coles');
+    await user.click(screen.getByRole('option', { name: /coles/i }));
+
+    const confirm = screen.getByRole('button', { name: /confirm/i });
+    expect(confirm).toBeDisabled();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /transaction type/i }), 'income');
+    expect(confirm).not.toBeDisabled();
+
+    await user.click(confirm);
+    expect(onEntitySelect).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: 'credit-1' }),
+      'ent-coles',
+      'Coles',
+      'income'
+    );
+  });
+
+  it('cancel discards the pending pick without assigning anything', async () => {
+    const user = userEvent.setup();
+    const onEntitySelect = vi.fn();
+    renderSection({ transaction: untypedCredit(), onEntitySelect });
+
+    await openPickerAndSearch(user, 'Coles');
+    await user.click(screen.getByRole('option', { name: /coles/i }));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(onEntitySelect).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('group', { name: /transaction type required/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('also forces a type when creating a new entity for an untyped credit', async () => {
+    const user = userEvent.setup();
+    const onCreateEntityWithName = vi.fn();
+    renderSection({ transaction: untypedCredit(), onCreateEntityWithName });
+
+    await openPickerAndSearch(user, 'SaunaX');
+    await user.click(screen.getByText(/create “SaunaX”/i));
+    expect(onCreateEntityWithName).not.toHaveBeenCalled();
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /transaction type/i }),
+      'transfer'
+    );
+    await user.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(onCreateEntityWithName).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: 'credit-1' }),
+      'SaunaX',
+      'transfer'
+    );
+  });
+});
