@@ -105,14 +105,14 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
 
   it('exposes combobox semantics on the input', () => {
     renderSearchInput();
-    const input = screen.getByRole('combobox', { name: 'Search POPS' });
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
     expect(input).toHaveAttribute('aria-autocomplete', 'list');
     expect(input).toHaveAttribute('aria-haspopup', 'listbox');
   });
 
   it('aria-expanded is false when the popup is closed and true once results render', async () => {
     renderSearchInput();
-    const input = screen.getByRole('combobox', { name: 'Search POPS' });
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(input).not.toHaveAttribute('aria-controls');
 
@@ -129,7 +129,7 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
   it('aria-expanded is true and a listbox renders while only recent searches show', () => {
     seedRecentSearches(['matrix']);
     renderSearchInput();
-    const input = screen.getByRole('combobox', { name: 'Search POPS' });
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
 
     fireEvent.focus(input);
 
@@ -141,7 +141,7 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
   it('aria-activedescendant follows ArrowDown/ArrowUp and points at the rendered active option', () => {
     seedRecentSearches(['matrix', 'inception']);
     renderSearchInput();
-    const input = screen.getByRole('combobox', { name: 'Search POPS' });
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
     fireEvent.focus(input);
 
     expect(input).not.toHaveAttribute('aria-activedescendant');
@@ -170,7 +170,7 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
     fireEvent.mouseDown(document.body);
 
     expect(screen.queryByTestId('search-results-panel')).not.toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Search POPS' })).toHaveAttribute(
+    expect(screen.getByRole('textbox', { name: 'Search POPS' })).toHaveAttribute(
       'aria-expanded',
       'false'
     );
@@ -179,7 +179,7 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
   it('dismisses on outside click while only recent searches are shown (previously not handled at all)', () => {
     seedRecentSearches(['matrix']);
     renderSearchInput();
-    const input = screen.getByRole('combobox', { name: 'Search POPS' });
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
     fireEvent.focus(input);
     expect(screen.getByTestId('recent-searches')).toBeInTheDocument();
 
@@ -196,5 +196,23 @@ describe('SearchInput — combobox ARIA and dismissal', () => {
     fireEvent.mouseDown(screen.getByTestId('search-results-panel'));
 
     expect(screen.getByTestId('search-results-panel')).toBeInTheDocument();
+  });
+
+  it('clearing recent searches drops them from keyboard nav too, not just the rendered list', () => {
+    seedRecentSearches(['matrix', 'inception']);
+    renderSearchInput();
+    const input = screen.getByRole('textbox', { name: 'Search POPS' });
+    fireEvent.focus(input);
+    expect(screen.getByTestId('recent-searches')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('clear-recent'));
+
+    expect(screen.queryByTestId('recent-searches')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-controls');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(input).toHaveValue('');
   });
 });

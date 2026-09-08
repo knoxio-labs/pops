@@ -1,4 +1,3 @@
-import { useRecentSearches } from '../recent-searches';
 import { RecentSearches } from '../RecentSearches';
 import { SearchResultsPanel, type SearchResultSection } from '../SearchResultsPanel';
 
@@ -9,10 +8,15 @@ interface SearchInputDropdownProps {
   sections: SearchResultSection[];
   selectedIndex: number;
   listboxId: string;
+  /** Recent-search queries, owned by the parent `SearchInput` so its own
+   *  keyboard-nav item count and this dropdown's rendered list never drift
+   *  apart. */
+  queries: string[];
   onClose: () => void;
   onResultClick: (uri: string, data: SearchHitData) => void;
   onShowMore: (domain: string) => Promise<void> | void;
   onSelectRecent: (query: string) => void;
+  onClearRecent: () => void;
 }
 
 export function SearchInputDropdown({
@@ -20,13 +24,13 @@ export function SearchInputDropdown({
   sections,
   selectedIndex,
   listboxId,
+  queries,
   onClose,
   onResultClick,
   onShowMore,
   onSelectRecent,
+  onClearRecent,
 }: SearchInputDropdownProps) {
-  const { queries, clearAll } = useRecentSearches();
-
   if (query.length > 0) {
     return (
       <SearchResultsPanel
@@ -51,7 +55,7 @@ export function SearchInputDropdown({
       <RecentSearches
         queries={queries}
         onSelect={onSelectRecent}
-        onClear={clearAll}
+        onClear={onClearRecent}
         selectedIndex={selectedIndex}
       />
     </div>

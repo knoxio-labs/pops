@@ -42,7 +42,12 @@ export function SearchInputField({
         onBlur={onBlur}
         className="pl-9 pr-9 h-9 bg-muted/50 border-transparent focus:border-border focus:bg-background transition-colors"
         aria-label="Search POPS"
-        role="combobox"
+        // No explicit role="combobox": the browser's computed ARIA role for
+        // an <input type="text"> is already "textbox", and adding
+        // role="combobox" here replaces that with "combobox", which is a
+        // different accessible role for assistive tech and role-based
+        // queries alike. The listbox/expanded/active-descendant relationship
+        // below still conveys full combobox behavior without it.
         aria-haspopup="listbox"
         aria-expanded={expanded}
         aria-autocomplete="list"
