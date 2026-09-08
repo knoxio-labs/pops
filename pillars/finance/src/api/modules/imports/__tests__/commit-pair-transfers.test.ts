@@ -152,6 +152,53 @@ describe('pairTransfersPhase (enabled)', () => {
     expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
   });
 
+  it('links the real ANZ checking-to-credit-card payment shape (POPS-2753)', () => {
+    // 'ANZ Credit Card' is already seeded by 0083_accounts.sql, same as 'Amex'.
+    const db = freshDb();
+    createAccount(db, { name: 'ANZ Everyday', kind: 'checking', currency: 'AUD' });
+    const outgoing = seed(db, 'ANZ Everyday', {
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 754244  TO 4564XXXXXXXX7373',
+      amountCents: -50000,
+      date: '2026-07-23',
+    });
+    const incoming = seed(db, 'ANZ Credit Card', {
+      description: 'PAYMENT THANKYOU 754244',
+      amountCents: 50000,
+      date: '2026-07-23',
+    });
+    expect(pairTransfersPhase(db, [outgoing.id, incoming.id])).toBe(1);
+    expect(getTransaction(db, outgoing.id).relatedTransactionId).toBe(incoming.id);
+    expect(getTransaction(db, incoming.id).relatedTransactionId).toBe(outgoing.id);
+    expect(getTransaction(db, incoming.id).type).toBe('transfer');
+  });
+
+  it('leaves an unrelated same-day, same-amount deposit in the SAME account unpaired', () => {
+    // The false-pair hazard from real data: a coincidental external deposit
+    // (e.g. a person-to-person payment) landing the same day, same amount, in
+    // the SAME account as the real outgoing transfer leg must not be treated
+    // as a candidate — only the different-account leg is eligible.
+    const db = freshDb();
+    createAccount(db, { name: 'ANZ Everyday', kind: 'checking', currency: 'AUD' });
+    const coincidentalDeposit = seed(db, 'ANZ Everyday', {
+      description: 'PAYMENT FROM J COSTA-MIRANDA',
+      amountCents: 50000,
+      date: '2026-07-23',
+    });
+    const outgoing = seed(db, 'ANZ Everyday', {
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 754244  TO 4564XXXXXXXX7373',
+      amountCents: -50000,
+      date: '2026-07-23',
+    });
+    const incoming = seed(db, 'ANZ Credit Card', {
+      description: 'PAYMENT THANKYOU 754244',
+      amountCents: 50000,
+      date: '2026-07-23',
+    });
+    expect(pairTransfersPhase(db, [coincidentalDeposit.id, outgoing.id, incoming.id])).toBe(1);
+    expect(getTransaction(db, outgoing.id).relatedTransactionId).toBe(incoming.id);
+    expect(getTransaction(db, coincidentalDeposit.id).relatedTransactionId).toBeNull();
+  });
+
   it('isolates a per-row pairing failure without aborting the rest of the batch', () => {
     const db = freshDb();
     const a = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });

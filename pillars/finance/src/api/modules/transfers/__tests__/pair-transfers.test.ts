@@ -112,6 +112,17 @@ describe('findPairForTransaction', () => {
     }
   });
 
+  it('refuses to auto-link when three candidates are equally close (three-way ambiguity)', () => {
+    const one = tx({ id: 'ONE', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
+    const two = tx({ id: 'TWO', amount: 5000, accountId: 'ING', date: '2026-07-01' });
+    const three = tx({ id: 'THREE', amount: 5000, accountId: 'UP', date: '2026-07-01' });
+    const result = findPairForTransaction(target, [one, two, three], 3);
+    expect(result.kind).toBe('ambiguous');
+    if (result.kind === 'ambiguous') {
+      expect([...result.candidateIds].toSorted()).toEqual(['ONE', 'THREE', 'TWO']);
+    }
+  });
+
   it('handles a credit target (positive amount) symmetrically', () => {
     const creditTarget = tx({ id: 'A', amount: 5000, accountId: 'Bendigo', date: '2026-07-01' });
     const debitCounterpart = tx({ id: 'B', amount: -5000, accountId: 'Amex', date: '2026-07-01' });

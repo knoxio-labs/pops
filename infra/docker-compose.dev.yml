@@ -158,6 +158,8 @@ services:
       # Cross-pillar registry — included for parity with siblings even
       # though finance-api today only exposes /health.
       POPS_PILLARS: ${POPS_PILLARS:-registry:http://registry-api:3001,inventory:http://inventory-api:3002,media:http://media-api:3003,finance:http://finance-api:3004,food:http://food-api:3005,lists:http://lists-api:3006}
+      # Paired-transfer matching (POPS-2753): pillars/finance/src/api/modules/transfers/pair-transfers.ts
+      FINANCE_TRANSFER_PAIR_ENABLED: 'true'
     expose:
       - '3004'
     depends_on:
