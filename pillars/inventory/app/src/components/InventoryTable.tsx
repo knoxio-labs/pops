@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   formatAUD,
+  formatDate,
   LocationBreadcrumb,
   type LocationSegment,
   SortableHeader,
@@ -82,7 +83,7 @@ function conditionCell(condition: string | null): React.ReactNode {
 
 function purchaseDateCell(date: string | null): React.ReactNode {
   if (!date) return <span className="text-muted-foreground">—</span>;
-  return <span className="text-sm tabular-nums">{new Date(date).toLocaleDateString()}</span>;
+  return <span className="text-sm tabular-nums">{formatDate(date)}</span>;
 }
 
 function buildActionsColumn(args: {

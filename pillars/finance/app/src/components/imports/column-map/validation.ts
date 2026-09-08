@@ -85,7 +85,7 @@ function validateRow(
   const { dialectId, accountId } = identity;
   const dialect = bankDialect(dialectId);
   const dateStr = row[columnMap.date];
-  const parsedDate = parseDate(dateStr);
+  const parsedDate = parseDate(dateStr, dialect.dateOrder);
   if (!parsedDate) return { error: `Row ${rowNum}: Invalid date format "${dateStr}"` };
   const { raw: amountStr, amount: parsedAmount } = readRowAmount(row, columnMap, dialect);
   if (parsedAmount === null) return { error: `Row ${rowNum}: Invalid amount "${amountStr ?? ''}"` };

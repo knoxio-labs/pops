@@ -17,7 +17,7 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 function formatDate(dateStr: string): string {
-  return parseLocalDate(dateStr).toLocaleDateString(undefined, {
+  return parseLocalDate(dateStr).toLocaleDateString('en-AU', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
