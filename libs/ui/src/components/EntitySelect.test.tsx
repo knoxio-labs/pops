@@ -159,3 +159,25 @@ describe('EntitySelect — searching by alias', () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith('e1', "McDonald's");
   });
 });
+
+describe('EntitySelect — diacritic-insensitive search', () => {
+  it('matches an accented entity name when the search term has none', async () => {
+    const withAccent: EntityOption[] = [{ id: 'e1', name: 'João Miranda', type: 'individual' }];
+    render(<EntitySelect entities={withAccent} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'joao');
+
+    expect(screen.getByRole('option', { name: /João Miranda/ })).toBeInTheDocument();
+  });
+
+  it('still matches out-of-order characters, preserving fuzzy/typo tolerance', async () => {
+    const entities: EntityOption[] = [{ id: 'e1', name: 'Woolworths', type: 'company' }];
+    render(<EntitySelect entities={entities} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'wolwrths');
+
+    expect(screen.getByRole('option', { name: /Woolworths/ })).toBeInTheDocument();
+  });
+});

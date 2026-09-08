@@ -7,10 +7,47 @@ import * as React from 'react';
 import { cn } from '../lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
 
-function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
+/**
+ * Strips diacritics so "joao" matches "João": cmdk's built-in filter compares
+ * characters as typed, and a plain "a" never matches an "ã" in that
+ * comparison — so typing the full accented name in its unaccented form finds
+ * nothing, even though a shorter prefix happens to subsequence-match into an
+ * unrelated word.
+ */
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/** Whether every character of `needle` appears in `haystack`, in order, with gaps allowed. */
+function isSubsequence(needle: string, haystack: string): boolean {
+  let i = 0;
+  for (let j = 0; i < needle.length && j < haystack.length; j++) {
+    if (needle[i] === haystack[j]) i++;
+  }
+  return i === needle.length;
+}
+
+/**
+ * A contiguous, normalized match ranks above a scattered one so typo/fuzzy
+ * tolerance (cmdk's default behavior) survives diacritic normalization
+ * instead of being replaced by strict substring matching.
+ */
+function defaultFilter(value: string, search: string): number {
+  const normalizedValue = normalizeForSearch(value);
+  const normalizedSearch = normalizeForSearch(search);
+  if (!normalizedSearch) return 1;
+  if (normalizedValue.includes(normalizedSearch)) return 1;
+  return isSubsequence(normalizedSearch, normalizedValue) ? 0.3 : 0;
+}
+
+function Command({ className, filter, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
       data-slot="command"
+      filter={filter ?? defaultFilter}
       className={cn(
         'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md',
         className
