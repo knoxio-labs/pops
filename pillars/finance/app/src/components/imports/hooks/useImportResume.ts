@@ -33,8 +33,18 @@ function useHydrationGate(setStatus: (status: ResumeStatus) => void): void {
         state.goToStep(clampResumeStep(state));
         setStatus('prompt');
       } else {
+        // Reset the in-memory store so the wizard starts fresh, but do NOT
+        // delete the persisted copy (POPS-3159): "not resumable" is a
+        // predicate over the rehydrated state, and it can go
+        // false-negative — a version mismatch against an older tab's build,
+        // a transient IndexedDB read failure — for reasons that say nothing
+        // about whether the underlying session was actually dead. Deleting
+        // here destroyed a real, hours-deep in-progress import with no
+        // confirmation and no way back. A genuinely stale record still goes
+        // away on its own via `getItem`'s maxAge expiry, or gets overwritten
+        // by this session's own next write; only an explicit Discard or a
+        // successful commit should ever call `clearPersistedImport`.
         state.reset();
-        clearPersistedImport(false);
         setStatus('ready');
       }
     };

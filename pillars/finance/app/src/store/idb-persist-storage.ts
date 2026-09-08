@@ -49,18 +49,35 @@ class IdbPersistStorage<S> implements PersistStorage<S> {
   async getItem(name: string): Promise<StorageValue<S> | null> {
     try {
       const record = await this.enqueue(() => this.read(name));
-      if (!isEnvelope(record)) return null;
+      if (record === undefined) return null;
+      if (!isEnvelope(record)) {
+        console.warn('[idb-persist-storage] stored record is not a recognizable envelope', {
+          name,
+        });
+        return null;
+      }
       const { maxAgeMs } = this.options;
       if (maxAgeMs !== undefined && Date.now() - record.savedAt > maxAgeMs) {
         void this.enqueue(() => this.delete(name)).catch(() => undefined);
         return null;
       }
-      if (!isStorageValue(record.value)) return null;
+      if (!isStorageValue(record.value)) {
+        console.warn('[idb-persist-storage] envelope value has no "state" key', { name });
+        return null;
+      }
       // Written by setItem as a StorageValue<S> and round-tripped intact by IDB's
       // structured clone; this is the one narrow assertion at the deserialization
       // boundary (the same one JSON-based persist storages make after parse).
       return record.value as StorageValue<S>;
-    } catch {
+    } catch (error) {
+      // A rejected rehydrate must never wedge the page gate (hence swallowing
+      // rather than throwing), but a silent catch here previously left no
+      // trace of *why* a real, in-progress session read back as unresumable
+      // (POPS-3159) — log before giving up.
+      console.warn('[idb-persist-storage] getItem failed; treating as no persisted state', {
+        name,
+        error,
+      });
       return null;
     }
   }

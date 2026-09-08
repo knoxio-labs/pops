@@ -169,7 +169,16 @@ describe('useImportResume', () => {
     expect(result.current.status).toBe('ready');
   });
 
-  it('silently clears a committed leftover snapshot without broadcasting', async () => {
+  it('resets in memory for a committed leftover snapshot but leaves the persisted copy alone (POPS-3159)', async () => {
+    // "Not resumable" (here: commitResult already set) must reset the live
+    // wizard so no resume prompt appears, but must NOT delete the persisted
+    // record itself — the auto-clear that used to run here also fired for
+    // false-negative reasons unrelated to genuine completion (a version
+    // mismatch against an older tab's build, a transient IndexedDB read
+    // failure) and destroyed real in-progress imports with no way back.
+    // Only an explicit Discard or a successful commit deletes storage now;
+    // a genuinely dead record like this one still expires on its own via
+    // `getItem`'s maxAge check.
     seedStorage({ currentStep: 8, rows: [{ A: '1' }], commitResult: makeCommitResult() });
     const received = listenForClears();
 
@@ -177,9 +186,34 @@ describe('useImportResume', () => {
 
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(useImportStore.getState().currentStep).toBe(1);
-    expect(storage.dump()).toBeNull();
+    expect(storage.dump()).not.toBeNull();
     await flushMicrotasks();
     expect(received).toEqual([]);
+  });
+
+  it('survives a version-mismatched snapshot without deleting it (POPS-3159 regression)', async () => {
+    // A version bump discards the whole persisted state with no fallback
+    // (no `migrate` configured) — this is exactly the failure mode that, before
+    // this fix, silently destroyed a real, hours-deep in-progress import: the
+    // rehydrated in-memory state reads as fresh/unresumable purely because the
+    // version didn't match, which says nothing about whether the record itself
+    // held real work.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    storage.setItem(IMPORT_PERSIST_KEY, {
+      state: {
+        ...partializeImportState(useImportStore.getState()),
+        currentStep: 7,
+        rows: [{ A: '1' }],
+      },
+      version: IMPORT_PERSIST_VERSION - 1,
+    });
+
+    const { result } = renderHook(() => useImportResume());
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(useImportStore.getState().currentStep).toBe(1);
+    expect(storage.dump()).not.toBeNull();
+    errorSpy.mockRestore();
   });
 
   it('resets a resumable wizard when another tab broadcasts a clear', async () => {
