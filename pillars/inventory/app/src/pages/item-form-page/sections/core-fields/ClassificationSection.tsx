@@ -115,6 +115,7 @@ export function ClassificationSection({
       <div className="space-y-1.5">
         <FieldLabel htmlFor="locationId" label="Location" />
         <LocationPicker
+          id="locationId"
           locations={locationTree}
           value={watch('locationId') || null}
           onChange={(id) => setValue('locationId', id ?? '', { shouldDirty: true })}

@@ -16,6 +16,8 @@ import { NoMatches, PickerFooter } from './TreePicker.footer';
 import { type TreeNode, TreeView } from './TreeView';
 
 export interface TreePickerProps<T> {
+  /** Applied to the default trigger `Button` so an external `<label htmlFor>` can target it. Ignored when `trigger` is supplied. */
+  id?: string;
   nodes: TreeNode<T>[];
   getLabel: (data: T) => string;
   selectedId?: string | null;
@@ -140,6 +142,7 @@ function PickerBody<T>({
 }
 
 export function TreePicker<T>({
+  id,
   nodes,
   getLabel,
   selectedId = null,
@@ -176,7 +179,7 @@ export function TreePicker<T>({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" disabled={disabled} className={className}>
+          <Button id={id} variant="outline" disabled={disabled} className={className}>
             {triggerLabel ?? 'Select…'}
           </Button>
         )}
