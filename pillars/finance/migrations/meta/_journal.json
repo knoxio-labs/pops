@@ -379,6 +379,13 @@
       "when": 1788800000001,
       "tag": "0102_atm_foreign_fee_reclassified",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1788800000002,
+      "tag": "0103_enrich_open_facet",
+      "breakpoints": true
     }
   ]
 }

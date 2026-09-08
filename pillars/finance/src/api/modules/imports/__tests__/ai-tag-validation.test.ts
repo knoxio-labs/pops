@@ -76,7 +76,7 @@ describe('validateAiTags — a value outside the closed set', () => {
 });
 
 describe('validateAiTags — namespaces that are not the model’s to write', () => {
-  it.each(['enrich:amazon', 'person:rosane', 'flag:needs-review'])(
+  it.each(['person:rosane', 'flag:needs-review'])(
     'rejects the marker value %s even though it exists in the vocabulary',
     (tag) => {
       const result = validateAiTags({ tags: [tag] }, VOCAB);
@@ -86,12 +86,15 @@ describe('validateAiTags — namespaces that are not the model’s to write', ()
     }
   );
 
-  it('rejects an open-namespace value that exists in the vocabulary', () => {
-    const result = validateAiTags({ tags: ['trip:hunter-valley-2026'] }, VOCAB);
+  it.each(['trip:hunter-valley-2026', 'enrich:amazon'])(
+    'rejects an open-namespace value that exists in the vocabulary but is not classified: %s',
+    (tag) => {
+      const result = validateAiTags({ tags: [tag] }, VOCAB);
 
-    expect(result.tags).toEqual([]);
-    expect(result.rejected[0]?.reason).toBe('facet-not-classified');
-  });
+      expect(result.tags).toEqual([]);
+      expect(result.rejected[0]?.reason).toBe('facet-not-classified');
+    }
+  );
 
   it('ignores a marker field the model invents alongside the real ones', () => {
     const result = validateAiTags({ enrich: 'amazon', contains: ['food'] }, VOCAB);
@@ -191,13 +194,13 @@ describe('logRejectedTagValues', () => {
     try {
       logRejectedTagValues([
         { facet: 'venue', value: 'casino', reason: 'value-not-listed' },
-        { facet: 'enrich', value: 'amazon', reason: 'facet-not-classified' },
+        { facet: 'person', value: 'rosane', reason: 'facet-not-classified' },
       ]);
 
       expect(warn).toHaveBeenCalledTimes(2);
       expect(warn.mock.calls[0]?.[0]).toContain('venue:casino');
       expect(warn.mock.calls[0]?.[0]).toContain('value-not-listed');
-      expect(warn.mock.calls[1]?.[0]).toContain('enrich is marker');
+      expect(warn.mock.calls[1]?.[0]).toContain('person is marker');
     } finally {
       warn.mockRestore();
     }

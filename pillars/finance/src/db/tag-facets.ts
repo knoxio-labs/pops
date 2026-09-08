@@ -10,9 +10,14 @@
  *
  * - `closed` — a fixed set. Nobody mints; a value outside the set is a
  *   validation error, not a suggestion.
- * - `open` — a human, or another pillar, adds a value deliberately.
- * - `marker` — the system writes it from provenance (an enrichment provider,
- *   a person link, a review flag).
+ * - `open` — a human, or another pillar, adds a value deliberately. `enrich:`
+ *   lives here despite usually being system-written (0103): an automated pass
+ *   writes `enrich:paypal` from provenance, but a human who recognises a
+ *   payment aggregator before any such pass exists for it — `enrich:zip` —
+ *   needs the identical value to be mintable by hand, the same way `contains:`
+ *   is both classified and open.
+ * - `marker` — the system writes it from provenance (a person link, a review
+ *   flag) and a human may not mint a value on it.
  *
  * **Classified** — whether the categorizer fills the axis in, listed in
  * {@link CLASSIFIED_TAG_FACETS}. The model always chooses from the values the
@@ -54,7 +59,7 @@ export const TAG_FACET_KINDS = {
   project: 'open',
   hobby: 'open',
   tax: 'open',
-  enrich: 'marker',
+  enrich: 'open',
   person: 'marker',
   flag: 'marker',
 } as const satisfies Record<string, TagFacetKind>;

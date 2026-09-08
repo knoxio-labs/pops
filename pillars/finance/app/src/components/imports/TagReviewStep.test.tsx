@@ -30,7 +30,7 @@ vi.mock('../../store/importStore', () => ({
 const { mockAvailableTags } = vi.hoisted(() => ({ mockAvailableTags: vi.fn() }));
 
 vi.mock('../../finance-api/index.js', () => ({
-  transactionsAvailableTags: (...args: unknown[]) => mockAvailableTags(...args),
+  tagRulesVocabulary: (...args: unknown[]) => mockAvailableTags(...args),
 }));
 
 const mockToastInfo = vi.fn();

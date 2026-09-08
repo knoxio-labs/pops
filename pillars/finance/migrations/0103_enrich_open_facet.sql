@@ -1,0 +1,22 @@
+-- Make `enrich` an open facet: a human may mint a value on it, not only the
+-- system.
+--
+-- `enrich:` names the provider a transaction's description already told us
+-- about — `enrich:amazon`, `enrich:paypal` — and until now only an automated
+-- enrichment pass could write one. A payment aggregator a human recognises
+-- before any such pass exists for it (POPS-3132's `enrich:zip`, say) had
+-- nowhere to go: the picker refused to create it, because `enrich` was a
+-- marker, and a marker's standing comes from the system that derived it, not
+-- from a human asserting it. Open, a human may add exactly the same kind of
+-- value the system already writes, the way `contains:` was opened in 0079
+-- (`enrich:zip`, for an aggregator merchant spotted before any enrichment
+-- integration exists for it).
+--
+-- `enrich` carries no cardinality rule in `CLASSIFIED_TAG_FACETS` and the
+-- categorizer never writes it, so nothing about classification changes here.
+-- What changes is who may add to the vocabulary, which is `kind`, and nothing
+-- else.
+--
+-- Values are untouched. Only the `kind` column moves, and only on rows whose
+-- facet is `enrich`.
+UPDATE tag_vocabulary SET kind = 'open' WHERE facet = 'enrich';
