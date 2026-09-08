@@ -52,9 +52,9 @@ export interface ChipInputSuggestionsPopoverProps {
 }
 
 /**
- * The Radix `Popover` + cmdk `Command` shell for `ChipInputSuggestionsBody`
- * — split out so that component's render function stays under the repo's
- * function-length limit.
+ * The Radix `Popover` + cmdk `Command` shell for `ChipInputBody` — split out
+ * so that component's render function stays under the repo's function-length
+ * limit.
  */
 export function ChipInputSuggestionsPopover({
   open,
