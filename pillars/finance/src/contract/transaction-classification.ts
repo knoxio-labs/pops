@@ -37,6 +37,18 @@ export type FeeTag = (typeof FEE_TAGS)[number];
 export const FEE_TAG_PREFIX = 'fee:';
 
 /**
+ * A foreign-currency ATM cash withdrawal from a bank account. ANZ appends
+ * `INCL ... TRANSACTION FEE $X.XX` to the withdrawal line itself as a
+ * disclosure of what the total includes — it is not a separate fee charge.
+ * That trailer collides with the `fee:conversion` wording below and would
+ * otherwise type the whole withdrawn amount `fee` rather than the few
+ * dollars of it that actually are one. The cash is still gone, so such a row
+ * is typed `purchase` instead of left to fall through to whatever the entity
+ * matcher or AI fallback would have guessed.
+ */
+const ATM_CASH_WITHDRAWAL_PATTERN = 'ATM CARD';
+
+/**
  * A gift card converts money into a different spendable form; the purchase and
  * the later spend are the same dollars, so booking both as spend double-counts.
  * The tag stays as the descriptor — it is the `type` that excludes the row.
@@ -150,9 +162,19 @@ export function classifyFromDescription(description: string): DerivedClassificat
   const matchable = describeForMatching(description);
   if (matchable.normalized.length === 0) return null;
 
+  const isAtmCashWithdrawal = patternMatchesDescription(
+    ATM_CASH_WITHDRAWAL_PATTERN,
+    'contains',
+    matchable
+  );
+
   for (const { tag, patterns } of FEE_PATTERNS) {
     const hit = patterns.find((p) => patternMatchesDescription(p, 'contains', matchable));
-    if (hit) return { type: 'fee', tag, pattern: hit };
+    if (hit) {
+      return isAtmCashWithdrawal
+        ? { type: 'purchase', pattern: hit }
+        : { type: 'fee', tag, pattern: hit };
+    }
   }
 
   const inbound = INBOUND_TRANSFER_PATTERNS.find((p) =>
