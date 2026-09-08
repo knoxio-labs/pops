@@ -150,6 +150,58 @@ describe('moveOneToMatched', () => {
     expect(next.matched.map((t) => t.checksum)).toEqual(['dupe', 'other']);
   });
 
+  it('clears a stale error left over from the row’s uncertain life once it is matched', () => {
+    const target = makeProcessed('j-costa', {
+      status: 'uncertain',
+      error: 'No entity match found',
+      transactionType: 'transfer',
+    });
+    const prev = emptyState({ uncertain: [target] });
+
+    const next = moveOneToMatched(prev, {
+      transaction: target,
+      entityId: 'ent-joao',
+      entityName: 'João Miranda',
+      matchType: 'manual',
+    });
+
+    expect(next.matched[0]?.error).toBeUndefined();
+    expect(next.matched[0]?.status).toBe('matched');
+  });
+
+  it('preserves a type the row already carried (a rule/AI match) when none is passed', () => {
+    const target = makeProcessed('typed', { status: 'uncertain', transactionType: 'transfer' });
+    const prev = emptyState({ uncertain: [target] });
+
+    const next = moveOneToMatched(prev, {
+      transaction: target,
+      entityId: 'ent-a',
+      entityName: 'A',
+      matchType: 'manual',
+    });
+
+    expect(next.matched[0]?.transactionType).toBe('transfer');
+  });
+
+  it('writes a type passed alongside the assignment — the forced-type-prompt path', () => {
+    const target = makeProcessed('untyped-credit', {
+      status: 'uncertain',
+      amount: 139.72,
+      transactionType: undefined,
+    });
+    const prev = emptyState({ uncertain: [target] });
+
+    const next = moveOneToMatched(prev, {
+      transaction: target,
+      entityId: 'ent-apple',
+      entityName: 'Apple',
+      matchType: 'manual',
+      transactionType: 'refund',
+    });
+
+    expect(next.matched[0]?.transactionType).toBe('refund');
+  });
+
   it('re-selecting the same entity twice is idempotent — no growth on repeated picks', () => {
     const target = makeProcessed('dedupe', { status: 'matched', entity: { matchType: 'manual' } });
     const prev = emptyState({ matched: [target] });
@@ -178,6 +230,39 @@ function setupActions(similar: ProcessedTransaction[] = []) {
   );
   return { result, setLocalTransactions, generateProposal, findSimilar, recomputeForEntity };
 }
+
+describe('handleBulkEntitySelect — a forced type only satisfies the row(s) that needed one', () => {
+  it('does not overwrite the type of an already-typed row elsewhere in the group', () => {
+    const { result, setLocalTransactions } = setupActions();
+    const alreadyTyped = makeProcessed('typed-debit', {
+      status: 'uncertain',
+      amount: -20,
+      transactionType: 'purchase',
+    });
+    const untypedCredit = makeProcessed('untyped-credit', {
+      status: 'uncertain',
+      amount: 50,
+      transactionType: undefined,
+    });
+
+    act(() => {
+      result.current.handleBulkEntitySelect(
+        [alreadyTyped, untypedCredit],
+        'ent-a',
+        'A Corp',
+        'refund'
+      );
+    });
+
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
+      p: LocalTxState
+    ) => LocalTxState;
+    const next = updater(emptyState({ uncertain: [alreadyTyped, untypedCredit] }));
+    const byChecksum = Object.fromEntries(next.matched.map((t) => [t.checksum, t]));
+    expect(byChecksum['typed-debit']?.transactionType).toBe('purchase');
+    expect(byChecksum['untyped-credit']?.transactionType).toBe('refund');
+  });
+});
 
 /** Invoke the "Save & Learn" action the fallback toast offers. */
 function invokeLearnAction(): void {

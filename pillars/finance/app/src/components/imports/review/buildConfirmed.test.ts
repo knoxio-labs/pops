@@ -4,6 +4,7 @@ import {
   buildConfirmedTransactions,
   dropReason,
   isConfirmable,
+  needsTransactionType,
   partitionConfirmable,
 } from './buildConfirmed';
 
@@ -307,5 +308,26 @@ describe('dropReason — an untyped credit is never committed as spend (POPS-275
     expect(confirmed.map((t) => t.description)).toEqual(['WOOLWORTHS 1234']);
     expect(dropped.map((t) => t.description)).toEqual(['APPLE.COM/BILL']);
     expect(buildConfirmedTransactions([credit()])).toEqual([]);
+  });
+});
+
+/**
+ * `needsTransactionType` is the exact predicate `dropReason` uses for its
+ * 'type' branch, extracted so the inline entity picker (`EntitySection`) can
+ * force the same choice at assignment time instead of letting an untyped
+ * credit reach this gate. The two must never drift apart.
+ */
+describe('needsTransactionType — shared with EntitySection’s forced-type prompt', () => {
+  it('is true for a credit with no type', () => {
+    expect(needsTransactionType({ amount: 100, transactionType: undefined })).toBe(true);
+    expect(needsTransactionType({ amount: 0, transactionType: null })).toBe(true);
+  });
+
+  it('is false once a credit names its type', () => {
+    expect(needsTransactionType({ amount: 100, transactionType: 'refund' })).toBe(false);
+  });
+
+  it('is false for a debit regardless of type', () => {
+    expect(needsTransactionType({ amount: -50, transactionType: undefined })).toBe(false);
   });
 });

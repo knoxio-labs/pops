@@ -6,6 +6,7 @@ import { EditableTransactionCard } from '../EditableTransactionCard';
 import { TransactionCard } from '../TransactionCard';
 import { TransactionGroup } from '../TransactionGroup';
 
+import type { TransactionType } from '../../../lib/transaction-type';
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { EntityVerification } from '../entity-existence';
@@ -18,12 +19,30 @@ export interface ReviewTabBaseProps {
   groups: ReturnType<typeof groupTransactionsByEntity>;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  onEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
-  onBulkEntitySelect?: (ts: ProcessedTransaction[], entityId: string, entityName: string) => void;
-  onCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
+  onEntitySelect: (
+    t: ProcessedTransaction,
+    entityId: string,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
+  onBulkEntitySelect?: (
+    ts: ProcessedTransaction[],
+    entityId: string,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
+  onCreateEntityWithName: (
+    t: ProcessedTransaction,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onAcceptAiSuggestion: (t: ProcessedTransaction) => void;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
-  onCreateAndAssignAll: (transactions: ProcessedTransaction[], entityName: string) => void;
+  onCreateAndAssignAll: (
+    transactions: ProcessedTransaction[],
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onEdit: (t: ProcessedTransaction) => void;
   editingTransaction: ProcessedTransaction | null;
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;

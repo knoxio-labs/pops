@@ -1,3 +1,4 @@
+import { needsTransactionType } from '../../review/buildConfirmed';
 import { moveOneToMatched } from '../../review/useReviewActions';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -14,7 +15,8 @@ export interface UseBulkAssignmentArgs {
   handleEntitySelect: (
     transaction: ProcessedTransaction,
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
   openRuleProposalDialog: (
     triggeringTransaction: ProcessedTransaction,
@@ -48,11 +50,18 @@ export function pluralize(count: number): string {
  * re-running Accept All / Create-entity-for-all) gets appended a second time
  * instead of replaced, producing a duplicate-checksum row that fails the
  * unique index at commit (#3620).
+ *
+ * A group is keyed by entity name only, so it can mix an untyped credit with
+ * already-typed debits for the same merchant. `transactionType` is a type
+ * chosen to satisfy whichever row(s) forced that choice — it is only applied
+ * to a row that actually needs one; a row that already carries a type keeps
+ * it, rather than every row in the group being overwritten uniformly.
  */
 export function moveToMatched(
   prev: LocalTxState,
   transactions: ProcessedTransaction[],
-  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' }
+  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' },
+  transactionType?: TransactionType
 ): LocalTxState {
   // Default to 'manual' so EntitySection (which renders the AI-suggestion
   // panel for matchType === 'ai') doesn't keep prompting the user to accept
@@ -65,6 +74,7 @@ export function moveToMatched(
       entityId: entity.entityId,
       entityName: entity.entityName,
       matchType,
+      transactionType: needsTransactionType(transaction) ? transactionType : undefined,
     });
   }
   return updated;

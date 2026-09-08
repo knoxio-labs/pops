@@ -9,6 +9,7 @@ import { EntitySection, ReadonlyEntitySummary } from './transaction-card/EntityS
 
 import type { ProcessedTransaction } from '@pops/finance';
 
+import type { TransactionType } from '../../lib/transaction-type';
 import type { EntityVerification } from './entity-existence';
 
 interface TransactionCardProps {
@@ -16,9 +17,14 @@ interface TransactionCardProps {
   onEntitySelect?: (
     transaction: ProcessedTransaction,
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
-  onCreateEntityWithName?: (transaction: ProcessedTransaction, entityName: string) => void;
+  onCreateEntityWithName?: (
+    transaction: ProcessedTransaction,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;

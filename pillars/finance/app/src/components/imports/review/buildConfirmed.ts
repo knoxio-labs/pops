@@ -10,6 +10,20 @@ import type { ProcessedTransaction } from '../../../store/importStore';
 export type DropReason = 'entity' | 'type';
 
 /**
+ * Whether a row needs an explicit `transactionType` before it can be trusted
+ * — a credit (amount >= 0) with none. Shared by {@link dropReason} (the
+ * commit-time gate) and the inline entity picker (`EntitySection`), which
+ * forces this exact choice at assignment time instead of letting the row
+ * reach the gate untyped.
+ */
+export function needsTransactionType(t: {
+  amount: number;
+  transactionType?: string | null;
+}): boolean {
+  return t.amount >= 0 && !t.transactionType;
+}
+
+/**
  * Why a matched row would be dropped at commit, or `null` when it commits.
  *
  * Two things can be missing. A type that {@link requiresEntity} (a
@@ -32,7 +46,7 @@ export type DropReason = 'entity' | 'type';
  * pre-commit count/notice, so the two can never drift (#3765).
  */
 export function dropReason(t: ProcessedTransaction): DropReason | null {
-  if (t.amount >= 0 && !t.transactionType) return 'type';
+  if (needsTransactionType(t)) return 'type';
   const entityId = t.entity?.entityId;
   const hasEntity = Boolean(entityId && t.entity?.entityName && !isPendingContactId(entityId));
   if (requiresEntity(t.transactionType) && !hasEntity) return 'entity';

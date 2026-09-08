@@ -7,6 +7,7 @@ import { MatchedTab } from './MatchedTab';
 import { SkippedTab } from './SkippedTab';
 import { UncertainTab } from './UncertainTab';
 
+import type { TransactionType } from '../../../lib/transaction-type';
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { EntityVerification } from '../entity-existence';
@@ -30,16 +31,30 @@ export interface ReviewTabsProps {
   handleEdit: (t: ProcessedTransaction) => void;
   handleSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   handleCancelEdit: () => void;
-  handleEntitySelect: (t: ProcessedTransaction, entityId: string, entityName: string) => void;
+  handleEntitySelect: (
+    t: ProcessedTransaction,
+    entityId: string,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   handleBulkEntitySelect: (
     ts: ProcessedTransaction[],
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
-  handleCreateEntityWithName: (t: ProcessedTransaction, entityName: string) => void;
+  handleCreateEntityWithName: (
+    t: ProcessedTransaction,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   handleAcceptAiSuggestion: (t: ProcessedTransaction) => void;
   handleAcceptAll: (ts: ProcessedTransaction[]) => void;
-  handleCreateAndAssignAll: (ts: ProcessedTransaction[], entityName: string) => void;
+  handleCreateAndAssignAll: (
+    ts: ProcessedTransaction[],
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   entities?: Array<{ id: string; name: string }>;
   entityVerification: EntityVerification;
 }

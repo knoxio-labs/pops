@@ -1,29 +1,44 @@
 import { useState } from 'react';
 
-import { Collapsible, CollapsibleContent, Label } from '@pops/ui';
+import { Collapsible, CollapsibleContent } from '@pops/ui';
 
 import { EditableTransactionCard } from './EditableTransactionCard';
 import { resolveEntityExistence, type EntityVerification } from './entity-existence';
-import { EntitySelect } from './EntitySelect';
+import { BulkEntitySelector } from './transaction-group/BulkEntitySelector';
 import { GroupHeader } from './transaction-group/GroupHeader';
 import { TransactionCard } from './TransactionCard';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
+import type { TransactionType } from '../../lib/transaction-type';
 import type { TransactionGroup as TransactionGroupType } from '../../lib/transaction-utils';
 import type { GroupVariant } from './transaction-group/GroupHeader';
 
 interface TransactionGroupProps {
   group: TransactionGroupType;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
-  onCreateAndAssignAll: (transactions: ProcessedTransaction[], entityName: string) => void;
-  onEntitySelect: (transaction: ProcessedTransaction, entityId: string, entityName: string) => void;
+  onCreateAndAssignAll: (
+    transactions: ProcessedTransaction[],
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
+  onEntitySelect: (
+    transaction: ProcessedTransaction,
+    entityId: string,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onBulkEntitySelect?: (
     transactions: ProcessedTransaction[],
     entityId: string,
-    entityName: string
+    entityName: string,
+    transactionType?: TransactionType
   ) => void;
-  onCreateEntityWithName: (transaction: ProcessedTransaction, entityName: string) => void;
+  onCreateEntityWithName: (
+    transaction: ProcessedTransaction,
+    entityName: string,
+    transactionType?: TransactionType
+  ) => void;
   onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
   onEdit: (transaction: ProcessedTransaction) => void;
   editingTransaction?: ProcessedTransaction | null;
@@ -35,50 +50,6 @@ interface TransactionGroupProps {
   entities?: Array<{ id: string; name: string }>;
   entityVerification?: EntityVerification;
   variant?: GroupVariant;
-}
-
-interface BulkEntitySelectorProps {
-  group: TransactionGroupType;
-  entities: Array<{ id: string; name: string }>;
-  onBulkEntitySelect?: TransactionGroupProps['onBulkEntitySelect'];
-  onEntitySelect: TransactionGroupProps['onEntitySelect'];
-  onCreateAndAssignAll: TransactionGroupProps['onCreateAndAssignAll'];
-  onClose: () => void;
-}
-
-function BulkEntitySelector({
-  group,
-  entities,
-  onBulkEntitySelect,
-  onEntitySelect,
-  onCreateAndAssignAll,
-  onClose,
-}: BulkEntitySelectorProps) {
-  return (
-    <div className="mt-3 p-3 bg-card rounded-lg border border-border">
-      <Label className="block mb-2">
-        Select entity to assign to all {group.transactions.length} transactions:
-      </Label>
-      <EntitySelect
-        entities={entities}
-        placeholder="Choose entity..."
-        onChange={(entityId, entityName) => {
-          if (onBulkEntitySelect) {
-            onBulkEntitySelect(group.transactions, entityId, entityName);
-          } else {
-            for (const t of group.transactions) {
-              onEntitySelect(t, entityId, entityName);
-            }
-          }
-          onClose();
-        }}
-        onCreate={(entityName) => {
-          onCreateAndAssignAll(group.transactions, entityName);
-          onClose();
-        }}
-      />
-    </div>
-  );
 }
 
 interface TransactionListProps {

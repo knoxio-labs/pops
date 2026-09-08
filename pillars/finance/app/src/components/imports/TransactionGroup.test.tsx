@@ -112,6 +112,61 @@ describe('TransactionGroup — standardized bulk entity picker', () => {
   });
 });
 
+describe('TransactionGroup — forcing a type for an untyped credit in the bulk picker', () => {
+  function makeCreditTxn(checksum: string): ProcessedTransaction {
+    return { ...makeTxn(checksum), amount: 500 };
+  }
+
+  it('prompts for a type before applying a bulk pick when any row needs one', async () => {
+    const user = userEvent.setup();
+    const onBulkEntitySelect = vi.fn();
+    renderGroup({
+      group: makeGroup({ transactions: [makeCreditTxn('a'), makeTxn('b')] }),
+      onBulkEntitySelect,
+    });
+
+    await user.click(screen.getByRole('button', { name: /choose entity/i }));
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: /coles/i }));
+
+    expect(onBulkEntitySelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('group', { name: /transaction type required/i })).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /transaction type/i }), 'income');
+    await user.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(onBulkEntitySelect).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ checksum: 'a' }),
+        expect.objectContaining({ checksum: 'b' }),
+      ]),
+      'ent-2',
+      'Coles',
+      'income'
+    );
+  });
+
+  it('does not prompt when every row in the group already has a type or is a debit', async () => {
+    const user = userEvent.setup();
+    const onBulkEntitySelect = vi.fn();
+    renderGroup({ onBulkEntitySelect });
+
+    await user.click(screen.getByRole('button', { name: /choose entity/i }));
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: /coles/i }));
+
+    expect(onBulkEntitySelect).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ checksum: 'a' })]),
+      'ent-2',
+      'Coles',
+      undefined
+    );
+    expect(
+      screen.queryByRole('group', { name: /transaction type required/i })
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('TransactionGroup — the accept button names its outcome', () => {
   it('offers to assign when the suggested entity already exists', () => {
     renderGroup({ group: makeGroup({ aiSuggestion: true }) });

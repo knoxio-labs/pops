@@ -131,7 +131,7 @@ describe('MatchedTab (POPS-2448)', () => {
     await user.click(screen.getByRole('combobox'));
     await user.click(screen.getByText('Coles'));
 
-    expect(props.onBulkEntitySelect).toHaveBeenCalledWith(rows, 'ent-Coles', 'Coles');
+    expect(props.onBulkEntitySelect).toHaveBeenCalledWith(rows, 'ent-Coles', 'Coles', undefined);
   });
 
   it('list view still shows every row in order', () => {

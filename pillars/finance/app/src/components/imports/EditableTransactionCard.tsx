@@ -1,16 +1,13 @@
 import { Save, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, EditableFormCard, Label, Select as UiSelect } from '@pops/ui';
+import { Button, EditableFormCard, Label } from '@pops/ui';
 
-import {
-  requiresEntity,
-  TRANSACTION_TYPE_OPTIONS,
-  type TransactionType,
-} from '../../lib/transaction-type';
+import { requiresEntity, type TransactionType } from '../../lib/transaction-type';
 import { EditableFormFields } from './editable-card/EditableFormFields';
 import { RawDataDisclosure } from './editable-card/RawDataDisclosure';
 import { EntitySelect } from './EntitySelect';
+import { TransactionTypeSelect } from './transaction-card/TransactionTypeSelect';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -31,35 +28,6 @@ function parseRaw(rawRow: string): Record<string, string> {
   } catch {
     return { error: 'Failed to parse raw data' };
   }
-}
-
-function TransactionTypeSelect({
-  value,
-  onChange,
-}: {
-  value: TransactionType;
-  onChange: (next: TransactionType) => void;
-}) {
-  return (
-    <div className="mb-4 p-3 bg-info/10 rounded-lg">
-      <Label htmlFor="transactionType" className="block mb-2 font-semibold">
-        Transaction Type
-      </Label>
-      <UiSelect
-        id="transactionType"
-        name="type"
-        value={value}
-        onChange={(e) => onChange(e.target.value as TransactionType)}
-        options={TRANSACTION_TYPE_OPTIONS}
-      />
-      <p className="text-xs mt-1 text-info">
-        {value === 'transfer' &&
-          "Transfers don't need an entity - they move money between accounts"}
-        {value === 'income' && 'Income transactions: salary, interest, refunds, etc.'}
-        {value === 'purchase' && 'Expenses require an entity (merchant/payee)'}
-      </p>
-    </div>
-  );
 }
 
 function EditActions({
