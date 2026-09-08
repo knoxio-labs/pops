@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Button } from '@pops/ui';
+import { Badge, Button, Select } from '@pops/ui';
 
 import {
   DEFAULT_FILTERS,
@@ -120,17 +120,12 @@ function SortPicker({ value, onChange, label, optionLabel }: SortPickerProps): R
   return (
     <label className="flex items-center gap-2">
       <span>{label}</span>
-      <select
+      <Select
         value={value}
         onChange={(e) => onChange(e.target.value as SortOption)}
-        className="rounded border bg-background px-2 py-1"
-      >
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt} value={opt}>
-            {optionLabel(opt)}
-          </option>
-        ))}
-      </select>
+        aria-label={label}
+        options={SORT_OPTIONS.map((opt) => ({ value: opt, label: optionLabel(opt) }))}
+      />
     </label>
   );
 }

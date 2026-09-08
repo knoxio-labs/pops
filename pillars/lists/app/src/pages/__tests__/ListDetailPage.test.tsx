@@ -151,7 +151,7 @@ describe('pillars/lists/docs/prds/crud-ui — ListDetailPage', () => {
     });
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
     expect(await screen.findByRole('heading', { name: 'Weekend shop' })).toBeInTheDocument();
-    expect(screen.getByTestId('list-kind-chip')).toHaveTextContent('Todo');
+    expect(screen.getByText('Todo')).toHaveAttribute('data-kind', 'todo');
     expect(screen.getByTestId('list-item-1')).toBeInTheDocument();
     expect(screen.getByTestId('list-item-2')).toBeInTheDocument();
   });
