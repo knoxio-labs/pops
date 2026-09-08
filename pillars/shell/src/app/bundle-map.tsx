@@ -48,6 +48,23 @@ import { useEffect } from 'react';
  * Adding a new in-repo pillar = adding one entry here. External pillars
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
+ *
+ * **`purchases` is not in this map, and that is not an omission** (POPS-3217).
+ * It is the first in-repo pillar to reach the shell the way an out-of-tree one
+ * does: its wire manifest advertises `assetsBaseUrl` and `pages`, and the
+ * runtime loader imports its built bundle. The shell's build therefore knows
+ * nothing about `@pops/app-purchases` — the package is not a dependency of
+ * this one any more, which is the coupling, rather than the import line being
+ * the coupling. `scripts/check-bundle-map-coverage.mjs` accepts either
+ * arrangement per pillar and refuses a pillar that is in neither.
+ *
+ * One consequence is worth stating where the map is, rather than where the
+ * loader is: `staticFloorEntries()` in `installed-modules.ts` derives the
+ * registry-outage floor from THIS map, so a pillar that leaves it also leaves
+ * the floor. With the registry unreachable the shell still boots and still
+ * mounts every pillar left here — purchases is simply absent until the
+ * registry answers, which is the same condition under which its own API is
+ * undiscoverable.
  */
 import { manifest as aiManifest } from '@pops/app-ai';
 import { manifest as bfmManifest } from '@pops/app-bfm';
@@ -57,7 +74,6 @@ import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
 import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
-import { manifest as purchasesManifest } from '@pops/app-purchases';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
 import type { ComponentType } from 'react';
@@ -127,7 +143,6 @@ const CEREBRUM_INGEST_FORM_BUNDLE: CaptureOverlayBundle = {
 
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
   finance: { manifest: financeManifest, navOrder: 10 },
-  purchases: { manifest: purchasesManifest, navOrder: 15 },
   media: {
     manifest: mediaManifest,
     navOrder: 20,

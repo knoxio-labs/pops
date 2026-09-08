@@ -10,6 +10,7 @@ import {
   forcesRevalidation,
   freshVolumeName,
   freshnessProbePaths,
+  smokeLabel,
   mountSlug,
   normalizeVolumeEntry,
   parseExposedPort,
@@ -1142,5 +1143,86 @@ describe('builderStages', () => {
 
   it('is empty for a single-stage Dockerfile', () => {
     expect(builderStages('FROM nginx:1.31.3-alpine\nEXPOSE 80\n')).toBe('');
+  });
+});
+
+/**
+ * An image that serves a module rather than a page has no entry document to
+ * probe, and giving it a filler `index.html` would make the gate pass by
+ * making the image worse. It declares its own routes instead.
+ */
+describe('smokeLabel', () => {
+  const dockerfile = (body: string): string =>
+    ['FROM nginx:1.31.3-alpine', 'EXPOSE 80', body].join('\n');
+
+  it('reads a quoted label', () => {
+    expect(smokeLabel(dockerfile('LABEL pops.smoke.health="/healthz"'), 'health')).toBe('/healthz');
+  });
+
+  it('reads an unquoted label', () => {
+    expect(smokeLabel(dockerfile('LABEL pops.smoke.health=/healthz'), 'health')).toBe('/healthz');
+  });
+
+  it('reads an indented label', () => {
+    expect(smokeLabel(dockerfile('    LABEL pops.smoke.freshness="/x.js"'), 'freshness')).toBe(
+      '/x.js'
+    );
+  });
+
+  it('returns undefined when the key is absent', () => {
+    expect(smokeLabel(dockerfile('LABEL other=1'), 'health')).toBeUndefined();
+  });
+
+  it('returns undefined for an empty value rather than an empty path', () => {
+    expect(smokeLabel(dockerfile('LABEL pops.smoke.health=""'), 'health')).toBeUndefined();
+  });
+
+  it('does not read one key as another', () => {
+    const src = dockerfile('LABEL pops.smoke.freshness="/x.js"');
+    expect(smokeLabel(src, 'health')).toBeUndefined();
+    expect(smokeLabel(src, 'freshness')).toBe('/x.js');
+  });
+
+  // A LABEL line inside a comment is not a declaration.
+  it('does not read a commented label', () => {
+    expect(
+      smokeLabel(dockerfile('# LABEL pops.smoke.health="/healthz"'), 'health')
+    ).toBeUndefined();
+  });
+});
+
+describe('planSmoke / freshnessProbePaths with declared routes', () => {
+  const moduleHost = [
+    'FROM nginx:1.31.3-alpine',
+    'EXPOSE 80',
+    'LABEL pops.smoke.health="/healthz"',
+    'LABEL pops.smoke.freshness="/purchases.js"',
+  ].join('\n');
+
+  it('probes the declared liveness route instead of /', () => {
+    expect(planSmoke(moduleHost).healthPath).toBe('/healthz');
+  });
+
+  // Both defaults are replaced, not joined: the second exists to catch an SPA
+  // fallback covering one entry route and not the other, and an image with no
+  // fallback has no second route to disagree with the first.
+  it('probes the declared freshness route alone', () => {
+    expect(freshnessProbePaths('nginx:1.31.3-alpine', moduleHost)).toEqual(['/purchases.js']);
+  });
+
+  it('leaves an image that declares nothing on the defaults', () => {
+    const plain = 'FROM nginx:1.31.3-alpine\nEXPOSE 80';
+    expect(planSmoke(plain).healthPath).toBe('/');
+    expect(freshnessProbePaths('nginx:1.31.3-alpine', plain)).toEqual([
+      '/',
+      '/deep/link/smoke-probe',
+    ]);
+  });
+
+  it('ignores a declared freshness route on a non-nginx image', () => {
+    const node = ['FROM node:24-slim', 'EXPOSE 3013', 'LABEL pops.smoke.freshness="/x.js"'].join(
+      '\n'
+    );
+    expect(freshnessProbePaths('node:24-slim', node)).toEqual([]);
   });
 });

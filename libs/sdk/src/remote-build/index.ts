@@ -45,6 +45,40 @@ export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
 ];
 
 /**
+ * Every specifier a remote bundle may actually import, including the subpaths
+ * that resolve to a module of their own.
+ *
+ * `SHARED_RUNTIME_SPECIFIERS` says what a bundle must not contain; this says
+ * what the host has to be able to hand it. They are different lists because a
+ * package root and its subpaths are separate modules to a browser: an import
+ * map keyed only on `react` leaves `react/jsx-runtime` unresolvable, and every
+ * bundle compiled with the automatic JSX runtime imports it. Both JSX runtimes
+ * are here because a bundle built in either mode must load against the same
+ * host.
+ *
+ * `hasDefault` records whether the specifier exports a default binding. The
+ * host's re-export facade needs it and cannot infer it —
+ * `export { default } from 'react-router'` is a build error rather than a
+ * no-op — and `pillars/shell` checks each flag against the real module so the
+ * record cannot quietly go stale.
+ */
+export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
+  readonly specifier: string;
+  readonly hasDefault: boolean;
+}[] = [
+  { specifier: 'react', hasDefault: true },
+  { specifier: 'react/jsx-runtime', hasDefault: true },
+  { specifier: 'react/jsx-dev-runtime', hasDefault: true },
+  { specifier: 'react-dom', hasDefault: true },
+  { specifier: 'react-dom/client', hasDefault: true },
+  { specifier: 'react-router', hasDefault: false },
+  { specifier: '@tanstack/react-query', hasDefault: false },
+  { specifier: 'i18next', hasDefault: true },
+  { specifier: 'react-i18next', hasDefault: false },
+  { specifier: '@pops/ui', hasDefault: false },
+];
+
+/**
  * True when an import specifier names a shared-runtime package or one of its
  * subpaths. Suitable as a Rollup `external` predicate.
  *

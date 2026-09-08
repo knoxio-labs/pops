@@ -110,20 +110,14 @@ describe('synthetic pillar mounts via registry', () => {
 
     expect(ids).toContain(SYNTHETIC_ID);
 
-    const realOrder = [
-      'finance',
-      'purchases',
-      'media',
-      'inventory',
-      'food',
-      'lists',
-      'cerebrum',
-      'ai',
-      'bfm',
-    ];
+    // `purchases` is absent because this walks the STATIC bundle map, which it
+    // left when it moved onto the runtime loader (POPS-3217). It reaches the
+    // rail from the live registry instead, at the same `nav.order: 15` — so
+    // the synthetic pillar's position relative to the mapped ones is what this
+    // asserts, and `src/app/registry-walk.test.ts` covers purchases' own.
+    const realOrder = ['finance', 'media', 'inventory', 'food', 'lists', 'cerebrum', 'ai', 'bfm'];
     expect(ids).toEqual([
       'finance',
-      'purchases',
       'media',
       SYNTHETIC_ID,
       'inventory',

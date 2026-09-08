@@ -59,6 +59,7 @@ export const PAGE_COMPONENTS = {
   'purchases-merchants': MerchantLensPage,
   'purchases-receipts': ReceiptDropZonePage,
   'purchases-products': ProductDictionaryPage,
+  'purchases-order': PurchaseDetailPage,
 } satisfies Record<PurchasesPageSlot, ComponentType>;
 
 /**

@@ -79,3 +79,26 @@ export const NGINX_CONF_REST_INTRO = `    # ── Per-pillar REST surfaces (pil
     # still boots when a pillar container is absent; calls 502 until the
     # upstream is in place.
 `;
+
+/**
+ * Intro comment for the generated per-pillar UI-bundle surfaces, which head
+ * the `/<id>-ui/` blocks the generator emits below them.
+ */
+export const NGINX_CONF_UI_INTRO = `    # ── Per-pillar UI bundles (runtime-loader mounting, generated) ──
+    #
+    # GENERATED FILE — do not hand-edit. Source:
+    #   pillars/shell/scripts/generate-nginx-conf.ts
+    #
+    # A pillar whose UI the shell mounts through its runtime loader rather
+    # than through the static bundle map advertises an \`assetsBaseUrl\` in
+    # its manifest, and the shell \`import()\`s it. Purchases is the first
+    # (POPS-3217); the URL is root-relative, so the module request is
+    # same-origin and the shell's shared-runtime import map governs the bare
+    # specifiers inside the bundle.
+    #
+    # One block per pillar, from the convention \`<pillar>-ui:80\`, not a
+    # list of the pillars that have a UI today: such a list is the central
+    # enumeration the federation model removes. Variable-form
+    # \`proxy_pass\` means an absent UI container 502s on its own path
+    # instead of stopping the shell from booting.
+`;

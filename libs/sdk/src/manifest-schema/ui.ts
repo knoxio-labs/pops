@@ -58,11 +58,29 @@ export const PageDescriptorSchema = z
   .strict();
 
 /**
- * Absolute URL where a pillar's frontend bundle is served from. Reserved
- * for the external-pillar UI loading mechanism (PRD-243 US-05, deferred).
- * Validated at the wire layer in US-01; not consumed by the shell today.
+ * Where a pillar's frontend bundle is served from — the URL the shell's
+ * runtime loader `import()`s (`pillars/shell/src/app/external-ui.tsx`).
+ *
+ * Either an absolute `http(s)` URL, for a pillar hosting its own assets on
+ * another origin, or a root-relative path, for one served through the shell's
+ * own nginx. The relative form is not a convenience: an in-repo pillar has no
+ * way to know the origin the browser reached the shell on — a LAN name, a
+ * Tailscale name and `localhost` all reach the same deployment — so an
+ * absolute URL would have to be configured per host and would be wrong on the
+ * others. It also keeps the module request same-origin, which is what makes
+ * the shared-runtime import map apply to it without any CORS posture at all.
  */
-export const AssetsBaseUrlSchema = z.string().url();
+export const AssetsBaseUrlSchema = z
+  .string()
+  .refine(
+    (value) => value.startsWith('/') || /^https?:\/\//.test(value),
+    'must be an absolute http(s) URL or a root-relative path'
+  )
+  .refine((value) => !value.startsWith('//'), 'must not be protocol-relative')
+  .refine(
+    (value) => !value.startsWith('/') || URL.canParse(value, 'http://placeholder.invalid'),
+    'must be a well-formed path'
+  );
 
 /**
  * Wire-shaped descriptor of a pillar's capture overlay contribution. Declared

@@ -48,13 +48,18 @@ describe('purchases bundles record', () => {
     expect(new Set(Object.values(bundles)).size).toBe(PURCHASES_PAGES.length);
   });
 
-  // The rail-reachable routes and the slots describe one surface. A route
-  // added without a page descriptor is invisible to a loader-mounted pillar;
-  // the order-detail route is the deliberate exception, reached only from
-  // something already holding a purchase id.
-  it('covers every rail-reachable route, and only those', () => {
-    const parameterised = routes.filter((route) => route.path?.includes(':') === true);
-    expect(parameterised).toHaveLength(1);
-    expect(routes).toHaveLength(PURCHASES_PAGES.length + parameterised.length);
+  // The routes and the slots describe one surface, with nothing on either
+  // side the other lacks. A route with no page descriptor behind it does not
+  // exist for a loader-mounted pillar — it is mounted from `pages` alone —
+  // and the order-detail route is the one that would have gone missing
+  // quietly, since no nav item points at it to look broken.
+  it('covers every route the pillar mounts, and only those', () => {
+    expect(routes).toHaveLength(PURCHASES_PAGES.length);
+  });
+
+  it('carries the order page, which no nav item reaches', () => {
+    expect(bundles['purchases-order']).toBeDefined();
+    const orderRoute = routes.find((route) => route.path === ':purchaseId');
+    expect(orderRoute).toBeDefined();
   });
 });

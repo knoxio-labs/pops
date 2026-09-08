@@ -204,3 +204,110 @@ describe('walkRegistry', () => {
     expect(apps.map((a) => a.id)).toEqual(['alpha', 'beta-a', 'beta-b', 'gamma']);
   });
 });
+
+/**
+ * Purchases, mounted the way it now actually arrives (POPS-3217).
+ *
+ * The pillar left `WORKSPACE_BUNDLE_MAP` and `@pops/shell` stopped depending
+ * on `@pops/app-purchases`, so what reaches the shell is a wire snapshot and
+ * a URL. This walks that snapshot against a bundle map that has never heard
+ * of purchases — which is the real map's state — and asserts the whole
+ * surface survives the crossing.
+ *
+ * The descriptor mirrors `pillars/purchases/src/api/manifest.ts`. It is
+ * restated rather than imported because the shell has no dependency on the
+ * purchases contract either, and acquiring one to write a test would put back
+ * a smaller version of the coupling this ticket removed.
+ */
+describe('a pillar that reaches the shell only over the wire', () => {
+  const PURCHASES_NAV: NavConfigDescriptor = {
+    id: 'purchases',
+    label: 'Purchases',
+    labelKey: 'purchases',
+    icon: 'receipt',
+    color: 'rose',
+    basePath: '/purchases',
+    order: 15,
+    items: [
+      { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
+      {
+        path: '/merchants',
+        label: 'Merchants',
+        labelKey: 'purchases.merchants',
+        icon: 'building-2',
+      },
+      { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
+      { path: '/products', label: 'Products', labelKey: 'purchases.products', icon: 'package' },
+    ],
+  };
+
+  const PURCHASES_PAGES: readonly PageDescriptor[] = [
+    { path: '', index: true, bundleSlot: 'purchases-reconcile' },
+    { path: 'merchants', bundleSlot: 'purchases-merchants' },
+    { path: 'receipts', bundleSlot: 'purchases-receipts' },
+    { path: 'products', bundleSlot: 'purchases-products' },
+    { path: ':purchaseId', bundleSlot: 'purchases-order' },
+  ];
+
+  const entry: RegistryEntry = {
+    pillarId: 'purchases',
+    assetsBaseUrl: '/purchases-ui/purchases.js',
+    nav: PURCHASES_NAV,
+    pages: PURCHASES_PAGES,
+  };
+
+  function walkPurchases(): readonly FrontendManifest[] {
+    return walkRegistry([entry], {}, () =>
+      Promise.resolve({
+        bundles: Object.fromEntries(PURCHASES_PAGES.map((page) => [page.bundleSlot, () => null])),
+      })
+    );
+  }
+
+  it('mounts with no bundle-map entry at all', () => {
+    const out = walkPurchases();
+    expect(out).toHaveLength(1);
+    expect(out[0]?.id).toBe('purchases');
+  });
+
+  it('mounts one route per advertised page', () => {
+    const [manifest] = walkPurchases();
+    if (manifest === undefined || !hasRoutes(manifest)) throw new Error('expected routes');
+    expect(manifest.frontend.routes).toHaveLength(PURCHASES_PAGES.length);
+  });
+
+  // The page a rail entry cannot reach, and therefore the one that would have
+  // gone missing without anyone noticing: the reconcile queue, the receipt
+  // drop zone and every global-search hit produce a purchase id and link here.
+  it('mounts the order page, which no nav item points at', () => {
+    const [manifest] = walkPurchases();
+    if (manifest === undefined || !hasRoutes(manifest)) throw new Error('expected routes');
+    expect(manifest.frontend.routes.some((route) => route.path === ':purchaseId')).toBe(true);
+  });
+
+  it('renders the rail entry in its wire position, beside finance', () => {
+    const [manifest] = walkPurchases();
+    if (manifest === undefined) throw new Error('expected a manifest');
+    const apps = buildRegisteredAppsFromBundleMap({
+      finance: {
+        manifest: manifestFor('finance', navFor('finance', 'Finance'), [{ index: true }]),
+        navOrder: 10,
+      },
+      purchases: { manifest, navOrder: 15 },
+      media: {
+        manifest: manifestFor('media', navFor('media', 'Media'), [{ index: true }]),
+        navOrder: 20,
+      },
+    });
+    expect(apps.map((app) => app.id)).toEqual(['finance', 'purchases', 'media']);
+  });
+
+  // The rail comes off the wire and renders at boot; the bundle is fetched on
+  // first navigation. A walk that imported eagerly would put a network fetch
+  // per loader-mounted pillar in front of the first paint.
+  it('does not fetch the bundle during the walk', () => {
+    const importer = vi.fn(() => Promise.resolve({ bundles: {} }));
+    walkRegistry([entry], {}, importer);
+    expect(importer).not.toHaveBeenCalled();
+  });
+});

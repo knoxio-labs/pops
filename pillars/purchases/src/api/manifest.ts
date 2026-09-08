@@ -44,6 +44,22 @@ const PURCHASES_NAV: NavConfigDescriptor = {
 };
 
 /**
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ *
+ * Root-relative rather than absolute: the same deployment is reached by LAN
+ * name, Tailscale name and `localhost`, so no absolute origin written here
+ * would be right on all of them. The path is served by the shell's own nginx
+ * (`pillars/shell/nginx.conf`), which keeps the module request same-origin —
+ * that is what makes the shell's shared-runtime import map apply to it, with
+ * no CORS posture to get wrong.
+ *
+ * The filename is stable because it is half of this URL and the registry
+ * advertises it; the hashed chunks it pulls in beside itself are what carry
+ * cache correctness. `pillars/purchases/app/vite.remote.config.ts` emits both.
+ */
+const PURCHASES_ASSETS_BASE_URL = '/purchases-ui/purchases.js';
+
+/**
  * Wire-format pages contribution for the purchases pillar.
  *
  * Projected from the contract's `PURCHASES_PAGES` rather than restated here:
@@ -171,6 +187,7 @@ export function buildPurchasesManifest(version: string): ManifestPayload {
     consumedSettings: { keys: [] },
     nav: PURCHASES_NAV,
     pages: [...PURCHASES_PAGES],
+    assetsBaseUrl: PURCHASES_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }
