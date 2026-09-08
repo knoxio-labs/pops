@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
+
 import { Badge, formatCurrency, formatDate } from '@pops/ui';
 
 import { isUnavailableError } from '../../../../finance-api-helpers.js';
+import { useImportStore } from '../../../../store/importStore';
 import { useRuleMatchPreview, type RuleMatchPreviewRow } from './useRuleMatchPreview';
 
 import type { CorrectionRule } from '../../RulePicker';
@@ -56,6 +59,26 @@ function ListHeader({ shown, total }: { shown: number; total: number }) {
 }
 
 /**
+ * The impact preview only queries the committed finance DB, so a rule that
+ * exists only as a pending ChangeSet in the current import session (or was
+ * just persisted this session, before the DB rules the preview scans are
+ * refetched) always reads as 0 matches there — even while it is visibly
+ * classifying the rows on screen. Count those separately so the empty state
+ * can say what it's actually scoped to instead of reading as "not working".
+ */
+function useSessionMatchCount(ruleId: string): number {
+  const matched = useImportStore((s) => s.processedTransactions.matched);
+  return useMemo(
+    () =>
+      matched.filter(
+        (t) =>
+          t.ruleProvenance?.ruleId === ruleId || t.matchedRules?.some((m) => m.ruleId === ruleId)
+      ).length,
+    [matched, ruleId]
+  );
+}
+
+/**
  * Lists the transactions the selected rule matches across the whole finance DB
  * — the true match set, not the truncated changeset-preview sample — so a
  * too-broad or malformed pattern is obvious from what it visibly hits.
@@ -65,6 +88,7 @@ export function RuleMatchList({ rule }: { rule: CorrectionRule }) {
     pattern: rule.descriptionPattern,
     matchType: rule.matchType,
   });
+  const sessionMatchCount = useSessionMatchCount(rule.id);
 
   if (query.isPending) {
     return (
@@ -86,6 +110,13 @@ export function RuleMatchList({ rule }: { rule: CorrectionRule }) {
 
   const { matches, totalCount } = query.data;
   if (totalCount === 0) {
+    if (sessionMatchCount > 0) {
+      return (
+        <div className="text-xs text-muted-foreground" data-testid="rule-match-empty-session">
+          No committed transactions match yet — {sessionMatchCount} in this import already do.
+        </div>
+      );
+    }
     return (
       <div className="text-xs text-muted-foreground" data-testid="rule-match-empty">
         No transactions in your library match this rule.
