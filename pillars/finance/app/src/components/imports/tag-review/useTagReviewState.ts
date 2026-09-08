@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { unwrap } from '../../../finance-api-helpers.js';
-import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/index.js';
+import { tagRulesFacets, tagRulesVocabulary } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
 import { groupByEntity } from './tagReviewUtils';
 import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
@@ -85,10 +85,20 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
   return { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta };
 }
 
+/**
+ * Every tag a picker may match or offer, staged tags included.
+ *
+ * Sourced from the tag vocabulary rather than the tags currently sitting on a
+ * transaction (`transactions.availableTags`): a value can be registered —
+ * `fee:atm` created via a tag rule, say — before any loaded transaction
+ * carries it, and a picker built from usage alone would call that value
+ * unrecognised and route it into "create a new one" on a closed facet that
+ * refuses to let it be created at all.
+ */
 function useAvailableTags(localTags: Record<string, string[]>): string[] {
   const { data } = useQuery({
-    queryKey: ['finance', 'transactions', 'availableTags'],
-    queryFn: async () => unwrap(await transactionsAvailableTags()),
+    queryKey: ['finance', 'tagRules', 'vocabulary'],
+    queryFn: async () => unwrap(await tagRulesVocabulary()),
   });
   const serverTags = data?.tags;
   return useMemo(() => {

@@ -139,11 +139,9 @@ export function useFinalReview() {
       clearPersistedImport(true);
       // Commit is the only write path for staged tag rules and their accepted
       // vocabulary tags (POPS-2597), so their caches go stale here, not in the
-      // tag-rule dialog.
+      // tag-rule dialog. This also covers ['finance', 'tagRules', 'vocabulary'],
+      // the availableTags source for the tag pickers.
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules'] });
-      void queryClient.invalidateQueries({
-        queryKey: ['finance', 'transactions', 'availableTags'],
-      });
     },
     onError: (err: Error) => setCommitError(err.message),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['finance', 'imports'] }),

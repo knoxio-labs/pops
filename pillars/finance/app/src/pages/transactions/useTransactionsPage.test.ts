@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Transaction, TransactionFormValues } from './types';
 
 const transactionsListMock = vi.hoisted(() => vi.fn());
-const transactionsAvailableTagsMock = vi.hoisted(() => vi.fn());
+const tagRulesVocabularyMock = vi.hoisted(() => vi.fn());
 const transactionsCreateMock = vi.hoisted(() => vi.fn());
 const transactionsUpdateMock = vi.hoisted(() => vi.fn());
 const transactionsDeleteMock = vi.hoisted(() => vi.fn());
@@ -18,7 +18,7 @@ const accountsListMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../finance-api/index.js', () => ({
   transactionsList: (...args: unknown[]) => transactionsListMock(...args),
-  transactionsAvailableTags: (...args: unknown[]) => transactionsAvailableTagsMock(...args),
+  tagRulesVocabulary: (...args: unknown[]) => tagRulesVocabularyMock(...args),
   transactionsCreate: (...args: unknown[]) => transactionsCreateMock(...args),
   transactionsUpdate: (...args: unknown[]) => transactionsUpdateMock(...args),
   transactionsDelete: (...args: unknown[]) => transactionsDeleteMock(...args),
@@ -99,7 +99,7 @@ beforeEach(() => {
     data: { data: [], pagination: { total: 0, limit: 100, offset: 0, hasMore: false } },
     error: undefined,
   });
-  transactionsAvailableTagsMock.mockResolvedValue({ data: { tags: [] }, error: undefined });
+  tagRulesVocabularyMock.mockResolvedValue({ data: { tags: [] }, error: undefined });
   transactionsCreateMock.mockResolvedValue({ data: { data: makeTransaction() }, error: undefined });
   transactionsUpdateMock.mockResolvedValue({ data: { data: makeTransaction() }, error: undefined });
   transactionsDeleteMock.mockResolvedValue({
@@ -311,7 +311,7 @@ describe('useTransactionsPage — isSubmitting', () => {
 
 describe('useTransactionsPage — list query', () => {
   it('issues a transactions list query with the page-size limit and exposes available tags', async () => {
-    transactionsAvailableTagsMock.mockResolvedValue({
+    tagRulesVocabularyMock.mockResolvedValue({
       data: { tags: ['Groceries', 'Fuel'] },
       error: undefined,
     });

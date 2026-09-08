@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 
 import { useAllAccounts } from '../../components/accounts/hooks/useAllAccounts';
 import { unwrap } from '../../finance-api-helpers.js';
-import { transactionsAvailableTags, transactionsList } from '../../finance-api/index.js';
+import { tagRulesVocabulary, transactionsList } from '../../finance-api/index.js';
 import { fetchAllPages } from '../../lib/fetch-all-pages';
 import { useAllEntities } from '../../lib/useAllEntities';
 import {
@@ -129,8 +129,8 @@ function useTransactionsPageQueries() {
       fetchAllPages(async (page) => unwrap(await transactionsList({ query: page }))),
   });
   const { data: availableTagsData } = useQuery({
-    queryKey: ['finance', 'transactions', 'availableTags'],
-    queryFn: async () => unwrap(await transactionsAvailableTags()),
+    queryKey: ['finance', 'tagRules', 'vocabulary'],
+    queryFn: async () => unwrap(await tagRulesVocabulary()),
   });
   const entitiesQuery = useAllEntities();
   const accountsQuery = useAllAccounts();
