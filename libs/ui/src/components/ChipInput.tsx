@@ -8,6 +8,14 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '../lib/utils';
 import { Chip } from './Chip';
 import { useChipInput } from './ChipInput.hooks';
+import {
+  ChipInputWithSuggestions,
+  type ChipInputWithSuggestionsProps,
+} from './ChipInput.suggestions';
+
+import type { ChipInputSuggestion } from './ChipInput.suggestions.hooks';
+
+export type { ChipInputSuggestion };
 
 const containerVariants = cva(
   'flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11',
@@ -50,6 +58,23 @@ export interface ChipInputProps
   allowDuplicates?: boolean;
   chipVariant?: 'default' | 'primary' | 'success';
   containerClassName?: string;
+  /**
+   * Existing values to suggest in a filtered dropdown as the user types.
+   * When supplied, `ChipInput` renders as a combobox (Radix `Popover` + cmdk
+   * `Command`) with arrow-key navigation, Enter-to-commit, Escape and
+   * click-outside dismissal, and `role="combobox"`/`listbox` semantics — a
+   * typed value that matches none of these can still be committed as a chip.
+   * Omit it to keep the plain free-text `ChipInput` with no dropdown.
+   */
+  suggestions?: ChipInputSuggestion[];
+  /**
+   * Normalises a value right before it becomes a chip — applied to both a
+   * typed free-text value and a picked suggestion. Only used when
+   * `suggestions` is supplied. Defaults to a trim.
+   */
+  normalize?: ChipInputWithSuggestionsProps['normalize'];
+  /** Message shown when no suggestion matches. Only used with `suggestions`. */
+  suggestionsEmptyMessage?: string;
 }
 
 function ChipList({
@@ -78,16 +103,12 @@ function ChipList({
   );
 }
 
-/**
- * ChipInput component
- *
- * @example
- * ```tsx
- * <ChipInput placeholder="Add emails..." />
- * <ChipInput value={emails} onChange={setEmails} />
- * ```
- */
-export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
+type PlainChipInputProps = Omit<
+  ChipInputProps,
+  'suggestions' | 'normalize' | 'suggestionsEmptyMessage'
+>;
+
+const PlainChipInput = forwardRef<HTMLInputElement, PlainChipInputProps>(
   (
     {
       className,
@@ -151,5 +172,45 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
     );
   }
 );
+
+PlainChipInput.displayName = 'PlainChipInput';
+
+/**
+ * ChipInput component
+ *
+ * Renders as a plain free-text chip field, or — when `suggestions` is
+ * supplied — as a combobox with a filtered suggestions dropdown built on
+ * the same Radix `Popover` + cmdk `Command` primitives as `ComboboxSelect`
+ * and `Autocomplete`.
+ *
+ * @example
+ * ```tsx
+ * <ChipInput placeholder="Add emails..." />
+ * <ChipInput value={emails} onChange={setEmails} />
+ * <ChipInput
+ *   value={tags}
+ *   onChange={setTags}
+ *   suggestions={[{ label: 'urgent', value: 'urgent' }]}
+ *   normalize={(v) => v.trim().toLowerCase().replace(/\s+/g, '-')}
+ * />
+ * ```
+ */
+export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>((props, ref) => {
+  const { suggestions, normalize, suggestionsEmptyMessage, variant, shape, ...shared } = props;
+
+  if (suggestions) {
+    return (
+      <ChipInputWithSuggestions
+        {...shared}
+        ref={ref}
+        suggestions={suggestions}
+        normalize={normalize}
+        emptyMessage={suggestionsEmptyMessage}
+      />
+    );
+  }
+
+  return <PlainChipInput {...shared} variant={variant} shape={shape} ref={ref} />;
+});
 
 ChipInput.displayName = 'ChipInput';
