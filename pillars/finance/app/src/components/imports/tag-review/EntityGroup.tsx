@@ -124,11 +124,13 @@ export function EntityGroup(props: EntityGroupProps) {
         <>
           <GroupTagBar
             stagedTags={s.groupStagedTags}
+            currentTags={s.currentUnion}
             availableTags={availableTags}
             facets={facets}
             onAddTag={s.addGroupStagedTag}
             onRemoveTag={s.removeGroupStagedTag}
             onApply={s.handleApplyStagedToGroup}
+            onRemoveCurrentTag={s.handleRemoveCurrentTag}
           />
           <div className="divide-y">
             {group.transactions.map((t) => (

@@ -14,11 +14,13 @@ const FACETS = [
 function renderBar(overrides: Partial<Parameters<typeof GroupTagBar>[0]> = {}) {
   const props = {
     stagedTags: [],
+    currentTags: [],
     availableTags: VOCABULARY,
     facets: [...FACETS],
     onAddTag: vi.fn(),
     onRemoveTag: vi.fn(),
     onApply: vi.fn(),
+    onRemoveCurrentTag: vi.fn(),
     ...overrides,
   };
   render(<GroupTagBar {...props} />);
@@ -203,5 +205,31 @@ describe('GroupTagBar', () => {
 
     expect(props.onAddTag).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Create contains:bar')).toBeInTheDocument();
+  });
+
+  it('renders the tags currently on the group, separately from what is staged', () => {
+    renderBar({ currentTags: ['venue:bar'], stagedTags: ['contains:alcohol'] });
+
+    expect(screen.getByText('On group:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Venue: Bar')).toHaveAttribute('data-tag', 'venue:bar');
+    expect(screen.getByLabelText('Contains: Alcohol')).toHaveAttribute(
+      'data-tag',
+      'contains:alcohol'
+    );
+  });
+
+  it('removes a current tag from the whole group, not just the staged list', () => {
+    const props = renderBar({ currentTags: ['venue:bar'] });
+
+    fireEvent.click(screen.getByLabelText('Remove Venue: Bar'));
+
+    expect(props.onRemoveCurrentTag).toHaveBeenCalledWith('venue:bar');
+    expect(props.onRemoveTag).not.toHaveBeenCalled();
+  });
+
+  it('shows no "On group" row when nothing is currently applied', () => {
+    renderBar({ currentTags: [] });
+
+    expect(screen.queryByText('On group:')).toBeNull();
   });
 });

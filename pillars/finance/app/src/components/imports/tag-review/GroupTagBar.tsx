@@ -18,12 +18,16 @@ const PICKER_LIMIT = 10;
 
 export interface GroupTagBarProps {
   stagedTags: string[];
+  /** Tags currently applied across the group's transactions (the union). */
+  currentTags: string[];
   availableTags: string[];
   /** The taxonomy a typed value may be created on. Empty offers no creation. */
   facets: TagFacetOption[];
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onApply: () => void;
+  /** Strips one tag from every transaction in the group that carries it. */
+  onRemoveCurrentTag: (tag: string) => void;
 }
 
 function useClickOutside(
@@ -45,13 +49,28 @@ function StagedTagPill({ tag, onRemove }: { tag: string; onRemove: () => void })
   return <TagChip tag={tag} removable onRemove={onRemove} className="border" />;
 }
 
+/** The group's currently-applied tags, each removable from every transaction at once. */
+function CurrentGroupTags({ tags, onRemove }: { tags: string[]; onRemove: (tag: string) => void }) {
+  if (tags.length === 0) return null;
+  return (
+    <div className="w-full flex flex-wrap items-center gap-2">
+      <span className="text-muted-foreground shrink-0">On group:</span>
+      {tags.map((tag) => (
+        <StagedTagPill key={tag} tag={tag} onRemove={() => onRemove(tag)} />
+      ))}
+    </div>
+  );
+}
+
 export function GroupTagBar({
   stagedTags,
+  currentTags,
   availableTags,
   facets,
   onAddTag,
   onRemoveTag,
   onApply,
+  onRemoveCurrentTag,
 }: GroupTagBarProps) {
   const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
@@ -71,6 +90,7 @@ export function GroupTagBar({
 
   return (
     <div className="px-4 py-2 border-b bg-muted/10 flex flex-wrap items-center gap-2 text-xs">
+      <CurrentGroupTags tags={currentTags} onRemove={onRemoveCurrentTag} />
       <span className="text-muted-foreground shrink-0">Apply to group:</span>
       {stagedTags.map((tag) => (
         <StagedTagPill key={tag} tag={tag} onRemove={() => onRemoveTag(tag)} />

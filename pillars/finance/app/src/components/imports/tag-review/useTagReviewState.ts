@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
+import { assembleTagReviewOutput } from './assembleTagReviewOutput';
 import { groupByEntity } from './tagReviewUtils';
 import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
 import { useTagActions } from './useTagReviewActions';
@@ -34,6 +35,8 @@ export interface UseTagReviewStateOutput {
   /** Rows an accept-all would change; zero means the control is inert. */
   unappliedSuggestionCount: number;
   handleApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
+  /** Removes one tag from every transaction in a group that carries it. */
+  handleRemoveGroupTag: (group: ConfirmedGroup, tag: string) => void;
   handleContinue: () => void;
   prevStep: () => void;
   confirmedCount: number;
@@ -113,6 +116,35 @@ function useTagFacets(): TagFacetOption[] {
   return data?.facets ?? [];
 }
 
+interface TagRuleWorkflowDeps {
+  localTags: Record<string, string[]>;
+  suggestedTagMeta: Record<string, SuggestedTag[]>;
+  setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+  setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
+  addPendingTagRuleChangeSet: ImportStoreType['addPendingTagRuleChangeSet'];
+}
+
+/** The tag-rule dialog and the handler that folds an applied rule back into local state. */
+function useTagRuleWorkflow(deps: TagRuleWorkflowDeps) {
+  const {
+    localTags,
+    suggestedTagMeta,
+    setLocalTags,
+    setSuggestedTagMeta,
+    addPendingTagRuleChangeSet,
+  } = deps;
+  const dialog = useTagRuleDialog(localTags);
+  const handleTagRuleApplied = useTagRuleHandler({
+    addPendingTagRuleChangeSet,
+    dialogGroupNameRef: dialog.dialogGroupNameRef,
+    dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
+    setLocalTags,
+    setSuggestedTagMeta,
+    suggestedTagMeta,
+  });
+  return { dialog, handleTagRuleApplied };
+}
+
 /** Flushes the step's working copy of the tags into the store before advancing. */
 function useHandleContinue(
   localTags: Record<string, string[]>,
@@ -142,51 +174,38 @@ export function useTagReviewState(): UseTagReviewStateOutput {
   const availableTags = useAvailableTags(localTags);
   const facets = useTagFacets();
 
-  const { updateTag, handleAcceptAll, handleApplyGroupTags, unappliedSuggestionCount } =
-    useTagActions({
-      localTags,
-      setLocalTags,
-      suggestedTagMeta,
-      confirmedTransactions,
-    });
-
+  const tagActions = useTagActions({
+    localTags,
+    setLocalTags,
+    suggestedTagMeta,
+    confirmedTransactions,
+  });
   const handleContinue = useHandleContinue(localTags, updateTransactionTags, nextStep);
-
-  const dialog = useTagRuleDialog(localTags);
-  const handleTagRuleApplied = useTagRuleHandler({
-    addPendingTagRuleChangeSet,
-    dialogGroupNameRef: dialog.dialogGroupNameRef,
-    dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
+  const { dialog, handleTagRuleApplied } = useTagRuleWorkflow({
+    localTags,
+    suggestedTagMeta,
     setLocalTags,
     setSuggestedTagMeta,
-    suggestedTagMeta,
+    addPendingTagRuleChangeSet,
   });
-
   const previewTransactions = usePreviewTransactions({
     confirmedTransactions,
     localTags,
     suggestedTagMeta,
   });
 
-  return {
+  return assembleTagReviewOutput({
     confirmedTransactions,
     groups,
     availableTags,
     facets,
     localTags,
     suggestedTagMeta,
-    updateTag,
-    handleAcceptAll,
-    unappliedSuggestionCount,
-    handleApplyGroupTags,
+    tagActions,
     handleContinue,
     prevStep,
-    confirmedCount: confirmedTransactions.length,
-    tagRuleDialog: dialog.tagRuleDialog,
-    setTagRuleDialogOpen: dialog.setTagRuleDialogOpen,
-    handleOpenTagRuleDialog: dialog.handleOpenTagRuleDialog,
-    handleOpenTagRuleDialogForTransaction: dialog.handleOpenTagRuleDialogForTransaction,
+    dialog,
     previewTransactions,
     handleTagRuleApplied,
-  };
+  });
 }
