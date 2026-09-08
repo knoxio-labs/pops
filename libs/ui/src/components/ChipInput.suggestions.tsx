@@ -1,48 +1,11 @@
-import { cva } from 'class-variance-authority';
-import { forwardRef, type InputHTMLAttributes, type Ref } from 'react';
-
 import { cn } from '../lib/utils';
 import { Chip } from './Chip';
-import { type ChipInputSuggestion, useChipInputSuggestions } from './ChipInput.suggestions.hooks';
+import { type useChipInputSuggestions } from './ChipInput.suggestions.hooks';
 import { ChipInputSuggestionsPopover } from './ChipInput.suggestions.popover';
 
-const inputVariants = cva(
-  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-30',
-  {
-    variants: {
-      size: { sm: 'text-xs', default: 'text-sm', lg: 'text-base' },
-    },
-    defaultVariants: { size: 'default' },
-  }
-);
+import type { Ref } from 'react';
 
-export interface ChipInputWithSuggestionsProps extends Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  'size' | 'value' | 'onChange'
-> {
-  suggestions: ChipInputSuggestion[];
-  value?: string[];
-  defaultValue?: string[];
-  onChange?: (values: string[]) => void;
-  onValidate?: (value: string) => boolean;
-  /**
-   * Normalises a value right before it becomes a chip — applied both to a
-   * typed free-text value and to a picked suggestion. Defaults to a trim.
-   * Pass e.g. `(v) => v.trim().toLowerCase().replace(/\s+/g, '-')` to match
-   * the trim/lowercase/hyphenate convention used elsewhere in the app.
-   */
-  normalize?: (raw: string) => string;
-  delimiters?: string[];
-  allowDuplicates?: boolean;
-  chipVariant?: 'default' | 'primary' | 'success';
-  containerClassName?: string;
-  emptyMessage?: string;
-  size?: 'sm' | 'default' | 'lg';
-  /** Accessible name for the combobox input. */
-  'aria-label'?: string;
-}
-
-function ChipList({
+export function ChipList({
   values,
   chipVariant,
   onRemove,
@@ -68,7 +31,7 @@ function ChipList({
   );
 }
 
-function mergeInputRef(forwarded: Ref<HTMLInputElement>, inner: Ref<HTMLInputElement>) {
+export function mergeInputRef(forwarded: Ref<HTMLInputElement>, inner: Ref<HTMLInputElement>) {
   return (node: HTMLInputElement | null) => {
     if (typeof forwarded === 'function') forwarded(node);
     else if (forwarded) forwarded.current = node;
@@ -76,10 +39,10 @@ function mergeInputRef(forwarded: Ref<HTMLInputElement>, inner: Ref<HTMLInputEle
   };
 }
 
-type ChipState = ReturnType<typeof useChipInputSuggestions>;
+export type ChipInputSuggestionsState = ReturnType<typeof useChipInputSuggestions>;
 
-interface ChipInputSuggestionsBodyProps {
-  chip: ChipState;
+export interface ChipInputSuggestionsBodyProps {
+  chip: ChipInputSuggestionsState;
   forwardedRef: Ref<HTMLInputElement>;
   chipVariant: 'default' | 'primary' | 'success';
   containerClassName?: string;
@@ -91,7 +54,15 @@ interface ChipInputSuggestionsBodyProps {
   domProps: Record<string, unknown>;
 }
 
-function ChipInputSuggestionsBody({
+/**
+ * The combobox shell for `ChipInput` when it is given `suggestions`: a
+ * bordered chip box whose free-text input is wired to a Radix `Popover` +
+ * cmdk `Command` dropdown (`ChipInputSuggestionsPopover`). Purely
+ * presentational — all state comes from `chip` (`useChipInputSuggestions`),
+ * called once by the caller, so switching a `ChipInput` between this shell
+ * and its plain (no-suggestions) one never remounts that state.
+ */
+export function ChipInputSuggestionsBody({
   chip,
   forwardedRef,
   chipVariant,
@@ -138,61 +109,3 @@ function ChipInputSuggestionsBody({
     </div>
   );
 }
-
-/**
- * ChipInput variant with a filtered suggestions dropdown, built on the same
- * Radix Popover + cmdk Command primitives as `ComboboxSelect`/`Autocomplete`.
- * Free-text values not in `suggestions` can still be committed as chips.
- */
-export const ChipInputWithSuggestions = forwardRef<HTMLInputElement, ChipInputWithSuggestionsProps>(
-  (
-    {
-      className,
-      containerClassName,
-      suggestions,
-      value: controlledValue,
-      defaultValue = [],
-      onChange,
-      onValidate,
-      normalize,
-      delimiters = ['Enter', ',', 'Tab'],
-      allowDuplicates = false,
-      chipVariant = 'default',
-      placeholder,
-      emptyMessage = 'No matching suggestions.',
-      disabled,
-      size = 'default',
-      'aria-label': ariaLabel,
-      ...domProps
-    },
-    ref
-  ) => {
-    const chip = useChipInputSuggestions({
-      controlledValue,
-      defaultValue,
-      onChange,
-      onValidate,
-      delimiters,
-      allowDuplicates,
-      suggestions,
-      normalize: normalize ?? ((raw: string) => raw.trim()),
-    });
-
-    return (
-      <ChipInputSuggestionsBody
-        chip={chip}
-        forwardedRef={ref}
-        chipVariant={chipVariant}
-        containerClassName={containerClassName}
-        disabled={disabled}
-        ariaLabel={ariaLabel}
-        inputClassName={inputVariants({ size, className })}
-        placeholder={placeholder}
-        emptyMessage={emptyMessage}
-        domProps={domProps}
-      />
-    );
-  }
-);
-
-ChipInputWithSuggestions.displayName = 'ChipInputWithSuggestions';

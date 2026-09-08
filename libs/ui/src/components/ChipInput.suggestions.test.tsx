@@ -176,4 +176,51 @@ describe('ChipInput — suggestions', () => {
     expect(listbox).toBeInTheDocument();
     expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
   });
+
+  it('applies the normalisation hook when a delimiter key (Tab) commits, not just Enter', async () => {
+    const user = userEvent.setup();
+    render(
+      <ControlledChipInput normalize={(raw) => raw.trim().toLowerCase().replace(/\s+/g, '-')} />
+    );
+
+    const input = screen.getByRole('combobox', { name: 'Tags' });
+    await user.click(input);
+    await user.type(input, '  Vue JS');
+    await user.keyboard('{Tab}');
+
+    expect(await screen.findByText('vue-js')).toBeInTheDocument();
+    expect(screen.queryByText('Vue JS')).not.toBeInTheDocument();
+  });
+
+  it('preserves in-progress typed text and committed chips when suggestions arrive after the field is already mounted (async load)', async () => {
+    function AsyncSuggestionsChipInput() {
+      const [values, setValues] = useState<string[]>([]);
+      const [suggestions, setSuggestions] = useState<ChipInputSuggestion[] | undefined>(undefined);
+      return (
+        <div>
+          <ChipInput
+            aria-label="Tags"
+            value={values}
+            onChange={setValues}
+            suggestions={suggestions}
+          />
+          <button type="button" onClick={() => setSuggestions(SUGGESTIONS)}>
+            load suggestions
+          </button>
+        </div>
+      );
+    }
+
+    const user = userEvent.setup();
+    render(<AsyncSuggestionsChipInput />);
+
+    const input = screen.getByRole('textbox', { name: 'Tags' });
+    await user.click(input);
+    await user.type(input, 'partial');
+
+    await user.click(screen.getByRole('button', { name: 'load suggestions' }));
+
+    const comboboxInput = screen.getByRole('combobox', { name: 'Tags' });
+    expect(comboboxInput).toHaveValue('partial');
+  });
 });

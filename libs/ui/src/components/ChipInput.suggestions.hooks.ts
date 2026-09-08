@@ -36,15 +36,20 @@ interface KeyDownDeps {
   hasSuggestions: boolean;
   inputValue: string;
   hasSelectableMatch: boolean;
+  delimiters: string[];
   commit: (raw: string) => void;
   fallbackKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 /**
- * Enter, when the dropdown is open, either lets cmdk's Command root select
+ * Enter, while the dropdown is open, either lets cmdk's Command root select
  * the highlighted suggestion (left alone) or — when nothing matches what
- * was typed — commits it as a free-text chip ourselves, since cmdk would
- * otherwise call `preventDefault()` on Enter and find nothing selected.
+ * was typed — commits it as a free-text chip through `commit` (which runs
+ * `normalize`), since cmdk would otherwise call `preventDefault()` on Enter
+ * and find nothing selected. Every other configured delimiter (comma, Tab,
+ * and Enter itself when the dropdown isn't open) also commits through
+ * `commit` rather than the base hook's un-normalised `addChip`, so
+ * `normalize` applies uniformly regardless of which key committed the chip.
  * ArrowDown/Up open a closed dropdown instead of doing nothing.
  */
 function makeSuggestionsKeyDownHandler(deps: KeyDownDeps) {
@@ -55,6 +60,7 @@ function makeSuggestionsKeyDownHandler(deps: KeyDownDeps) {
       hasSuggestions,
       inputValue,
       hasSelectableMatch,
+      delimiters,
       commit,
       fallbackKeyDown,
     } = deps;
@@ -66,17 +72,21 @@ function makeSuggestionsKeyDownHandler(deps: KeyDownDeps) {
       return;
     }
 
-    if (e.key === 'Enter') {
-      if (!open) {
-        fallbackKeyDown(e);
-        return;
-      }
+    if (e.key === 'Enter' && open) {
       const trimmed = inputValue.trim();
       if (trimmed && !hasSelectableMatch) {
         e.preventDefault();
         e.stopPropagation();
         commit(trimmed);
       }
+      // Otherwise let the event bubble to cmdk's Command root, which
+      // selects the highlighted suggestion and fires its onSelect.
+      return;
+    }
+
+    if (delimiters.includes(e.key)) {
+      e.preventDefault();
+      if (inputValue.trim()) commit(inputValue);
       return;
     }
 
@@ -119,6 +129,7 @@ export function useChipInputSuggestions({
     hasSuggestions: suggestions.length > 0,
     inputValue: chip.inputValue,
     hasSelectableMatch,
+    delimiters: chipArgs.delimiters,
     commit,
     fallbackKeyDown: chip.handleKeyDown,
   });
