@@ -64,7 +64,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ConfigParseError, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
+import { ConfigParseError, isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -96,6 +96,18 @@ const EXACT_PIN = /^v(\d+)\.(\d+)\.(\d+)$/u;
 const SHA_PIN = /^[0-9a-f]{7,40}$/u;
 
 /**
+ * The `with:` input the wrapper's `jdx/mise-action` step uses to pin the mise
+ * CLI itself, as opposed to the action version pinned above.
+ */
+const MISE_VERSION_INPUT = 'version';
+
+/**
+ * An exact mise CLI release, mise's own CalVer: `2026.9.2`. Unlike the action
+ * pin above this carries no `v` prefix — mise's own release tags don't either.
+ */
+const MISE_VERSION_PIN = /^\d+\.\d+\.\d+$/u;
+
+/**
  * Every `uses:` value in a parsed workflow or action document.
  *
  * Walked rather than line-matched: `uses` is reachable through `jobs.<id>.steps`
@@ -116,6 +128,27 @@ export function usesValues(doc) {
     out.push(text.trim());
   }
   return out;
+}
+
+/**
+ * The wrapper's `jdx/mise-action` step, as a raw mapping rather than just its
+ * `uses:` string — so a caller can also read the `with:` inputs sitting
+ * beside it, in particular the mise CLI version pin.
+ *
+ * @param {unknown} doc  Parsed wrapper YAML document.
+ * @returns {Record<string, unknown> | null}
+ */
+export function findUpstreamStep(doc) {
+  if (!isMapping(doc)) return null;
+  const runs = isMapping(doc.runs) ? doc.runs : undefined;
+  const steps = runs && Array.isArray(runs.steps) ? runs.steps : undefined;
+  if (steps === undefined) return null;
+  for (const step of steps) {
+    if (!isMapping(step)) continue;
+    const uses = scalarText(step.uses);
+    if (uses !== undefined && (uses === UPSTREAM || uses.startsWith(`${UPSTREAM}@`))) return step;
+  }
+  return null;
 }
 
 /**
@@ -238,10 +271,10 @@ export function findViolations({ workflows, actions, wrapper }) {
     return findings;
   }
 
-  /** @type {string[]} */
-  let wrapperUses;
+  /** @type {unknown} */
+  let wrapperDoc;
   try {
-    wrapperUses = usesValues(parseYaml(wrapper, WRAPPER_REL));
+    wrapperDoc = parseYaml(wrapper, WRAPPER_REL);
   } catch (error) {
     findings.push(
       error instanceof ConfigParseError
@@ -251,6 +284,7 @@ export function findViolations({ workflows, actions, wrapper }) {
     return findings;
   }
 
+  const wrapperUses = usesValues(wrapperDoc);
   const upstream = wrapperUses.filter(
     (value) => value === UPSTREAM || value.startsWith(`${UPSTREAM}@`)
   );
@@ -289,6 +323,30 @@ export function findViolations({ workflows, actions, wrapper }) {
       `${WRAPPER_REL} pins \`${UPSTREAM}@${ref}\`, which predates the download retry added in ` +
         `v${floor}. On a cold mise cache one transient release-CDN error fails setup and evicts ` +
         'the merge-queue entry.'
+    );
+  }
+
+  // The action-version retry above only bounds how many times a download is
+  // attempted, not what it downloads. Left unpinned, mise-action resolves the
+  // mise CLI version to install against its own "latest" lookup — which named
+  // v2026.9.3 while that release had no published assets, 404ing every job
+  // repo-wide (2026-09-08). A `with.version` pin is what keeps that class of
+  // outage from recurring silently.
+  const upstreamStep = findUpstreamStep(wrapperDoc);
+  const withBlock = upstreamStep && isMapping(upstreamStep.with) ? upstreamStep.with : null;
+  const versionValue = withBlock ? scalarText(withBlock[MISE_VERSION_INPUT]) : undefined;
+  if (versionValue === undefined || versionValue.trim() === '') {
+    findings.push(
+      `${WRAPPER_REL}'s ${UPSTREAM} step does not pin \`with.${MISE_VERSION_INPUT}\`. Left unpinned, ` +
+        'mise-action installs whatever its own release resolution reports as latest, which can name ' +
+        'a tag whose assets are not yet published on GitHub — the exact outage this check exists to ' +
+        `catch. Pin an exact mise CLI release, e.g. \`${MISE_VERSION_INPUT}: 2026.9.2\`.`
+    );
+  } else if (!MISE_VERSION_PIN.test(versionValue.trim())) {
+    findings.push(
+      `${WRAPPER_REL} pins \`with.${MISE_VERSION_INPUT}: ${versionValue}\`, which is not an exact ` +
+        `mise CLI release this guard can rule on. Pin an exact release, e.g. ` +
+        `\`${MISE_VERSION_INPUT}: 2026.9.2\`.`
     );
   }
 
@@ -380,6 +438,8 @@ const CLEAN_WRAPPER = [
   '  using: composite',
   '  steps:',
   `    - uses: ${UPSTREAM}@v${RETRY_FLOOR.join('.')}`,
+  '      with:',
+  `        ${MISE_VERSION_INPUT}: 2026.9.2`,
   '',
 ].join('\n');
 
@@ -473,6 +533,36 @@ function selfTest() {
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
         wrapper: CLEAN_WRAPPER.replace(`@v${RETRY_FLOOR.join('.')}`, '@v4.2.4'),
       }).some((f) => f.includes('predates the download retry')),
+    ],
+    [
+      'DEGENERATE — a wrapper with no mise CLI version pin is a finding, not silence',
+      findViolations({
+        actions: new Map(),
+        workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
+        wrapper: [
+          'runs:',
+          '  using: composite',
+          '  steps:',
+          `    - uses: ${UPSTREAM}@v${RETRY_FLOOR.join('.')}`,
+          '',
+        ].join('\n'),
+      }).some((f) => f.includes(`with.${MISE_VERSION_INPUT}`) && f.includes('does not pin')),
+    ],
+    [
+      'catches a floating mise CLI version pin (e.g. "latest")',
+      findViolations({
+        actions: new Map(),
+        workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
+        wrapper: CLEAN_WRAPPER.replace(`${MISE_VERSION_INPUT}: 2026.9.2`, `${MISE_VERSION_INPUT}: latest`),
+      }).some((f) => f.includes(`with.${MISE_VERSION_INPUT}: latest`) && f.includes('not an exact')),
+    ],
+    [
+      "PROVES THE BASELINE — a v-prefixed mise CLI pin is refused, since mise's own tags carry no v",
+      findViolations({
+        actions: new Map(),
+        workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
+        wrapper: CLEAN_WRAPPER.replace(`${MISE_VERSION_INPUT}: 2026.9.2`, `${MISE_VERSION_INPUT}: v2026.9.2`),
+      }).some((f) => f.includes('not an exact')),
     ],
     [
       'DEGENERATE — a missing wrapper is a finding, not silence',
