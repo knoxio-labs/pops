@@ -564,23 +564,52 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toBe(renderNginxConf());
     });
 
-    it('emits zero pillar blocks for an empty registry', async () => {
+    /**
+     * POPS-2793: a curated pillar keeps its canonical block even when the
+     * live registry snapshot has nothing at all — this is what lets a
+     * pillar mid-restart (absent from exactly the snapshot an SSE event
+     * regenerates against) stay routable (502ing, not vanishing into the
+     * SPA catch-all) instead of losing its route until some later event
+     * happens to re-include it.
+     */
+    it('still emits every curated pillar block for an empty registry', async () => {
       const rendered = await renderNginxConfDynamic('http://registry-api:3001', makeTransport([]));
       for (const id of PILLARS) {
-        expect(rendered).not.toContain(`location /${id}-api/ {`);
+        expect(rendered).toContain(`location /${id}-api/ {`);
+        const { host, port } = PILLAR_UPSTREAMS[id];
+        expect(rendered).toContain(`set $${id}_api_upstream http://${host}:${port};`);
       }
       expect(rendered).not.toContain('location /trpc {');
       expect(rendered).not.toContain('trpc');
     });
 
-    it('renders a single external pillar with parsed host:port', async () => {
+    /**
+     * The direct regression case: `contacts` is a real, conforming, curated
+     * pillar that is simply missing from this one snapshot — e.g. the exact
+     * restart-race shape seen live on 2026-09-08, twice, an hour apart. It
+     * must still render at its canonical upstream rather than disappear.
+     */
+    it('keeps a curated pillar routable even when the live snapshot omits it', async () => {
+      const transport = makeTransport(
+        PILLARS.filter((id) => id !== 'contacts').map((id) => ({
+          pillarId: id,
+          baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
+        }))
+      );
+      const rendered = await renderNginxConfDynamic('http://registry-api:3001', transport);
+      expect(rendered).toContain('location /contacts-api/ {');
+      const { host, port } = PILLAR_UPSTREAMS.contacts;
+      expect(rendered).toContain(`set $contacts_api_upstream http://${host}:${port};`);
+    });
+
+    it('renders a single external pillar with parsed host:port, alongside every curated pillar', async () => {
       const transport = makeTransport([
         { pillarId: 'plugin-fitness', baseUrl: 'http://fitness-api:4242' },
       ]);
       const rendered = await renderNginxConfDynamic('http://registry-api:3001', transport);
       expect(rendered).toContain('location /plugin-fitness-api/ {');
       expect(rendered).toContain('set $plugin_fitness_api_upstream http://fitness-api:4242;');
-      expect(rendered).not.toContain('location /finance-api/ {');
+      expect(rendered).toContain('location /finance-api/ {');
       expect(rendered).not.toContain('trpc');
     });
 
