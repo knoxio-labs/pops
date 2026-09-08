@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 import { Button } from '@pops/ui';
 
 import { TransactionTypeSelect } from './TransactionTypeSelect';
@@ -24,6 +26,7 @@ export function ForcedTypePrompt({
   onConfirm,
   onCancel,
 }: ForcedTypePromptProps) {
+  const typeSelectId = useId();
   return (
     <div
       className="mt-2 p-2 rounded-md border border-warning/30 bg-warning/10 space-y-2"
@@ -31,7 +34,7 @@ export function ForcedTypePrompt({
       aria-label="Transaction type required"
     >
       <p className="text-xs text-warning">{message}</p>
-      <TransactionTypeSelect value={type} onChange={onTypeChange} />
+      <TransactionTypeSelect id={typeSelectId} value={type} onChange={onTypeChange} />
       <div className="flex gap-2">
         <Button size="sm" onClick={onConfirm} disabled={!type}>
           Confirm
