@@ -2,43 +2,16 @@
  * ChipInput component for multi-value input like email tags
  * Similar to Gmail's "To" field where entries become chips
  */
-import { cva, type VariantProps } from 'class-variance-authority';
-import { forwardRef, type InputHTMLAttributes, type Ref } from 'react';
+import { type VariantProps } from 'class-variance-authority';
+import { forwardRef, type InputHTMLAttributes } from 'react';
 
-import { cn } from '../lib/utils';
-import { ChipList, ChipInputSuggestionsBody } from './ChipInput.suggestions';
+import { ChipInputBody } from './ChipInput.suggestions';
 import { type ChipInputSuggestion, useChipInputSuggestions } from './ChipInput.suggestions.hooks';
+import { inputVariants } from './ChipInput.variants';
+
+import type { containerVariants } from './ChipInput.variants';
 
 export type { ChipInputSuggestion };
-
-const containerVariants = cva(
-  'flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11',
-  {
-    variants: {
-      variant: {
-        default: 'border border-border',
-        ghost: 'border-0 hover:bg-accent',
-        underline: 'border-0 border-b border-border rounded-none',
-      },
-      shape: {
-        default: 'rounded-md',
-        pill: 'rounded-full',
-      },
-    },
-    compoundVariants: [{ variant: 'underline', shape: 'pill', class: 'rounded-none' }],
-    defaultVariants: { variant: 'default', shape: 'default' },
-  }
-);
-
-const inputVariants = cva(
-  'flex-1 bg-transparent border-0 outline-0 shadow-none focus:outline-0 focus:ring-0 focus:shadow-none focus-visible:outline-0 focus-visible:ring-0 placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-30',
-  {
-    variants: {
-      size: { sm: 'text-xs', default: 'text-sm', lg: 'text-base' },
-    },
-    defaultVariants: { size: 'default' },
-  }
-);
 
 export interface ChipInputProps
   extends
@@ -54,14 +27,16 @@ export interface ChipInputProps
   containerClassName?: string;
   /**
    * Existing values to suggest in a filtered dropdown as the user types.
-   * When supplied, `ChipInput` renders as a combobox (Radix `Popover` + cmdk
+   * `ChipInput` always renders as a combobox (Radix `Popover` + cmdk
    * `Command`) with arrow-key navigation, Enter-to-commit, Escape and
    * click-outside dismissal, and `role="combobox"`/`listbox` semantics — a
    * typed value that matches none of these can still be committed as a chip.
-   * Omit it to keep the plain free-text `ChipInput` with no dropdown. Safe
-   * to populate asynchronously — going from `undefined`/`[]` to a loaded
-   * list never remounts the field or drops in-progress typed text, since
-   * both shells share one underlying hook instance.
+   * Omit `suggestions` (or pass `[]`) to keep the field free-text: the
+   * dropdown then simply never opens. Safe to populate asynchronously —
+   * going from `undefined`/`[]` to a loaded list never remounts the `<input>`
+   * DOM node or drops in-progress focus and typed text, since there is only
+   * ever one rendered shell, driven by one `useChipInputSuggestions` hook
+   * instance.
    */
   suggestions?: ChipInputSuggestion[];
   /**
@@ -76,74 +51,19 @@ export interface ChipInputProps
   suggestionsEmptyMessage?: string;
 }
 
-function PlainChipInputBody({
-  chip,
-  forwardedRef,
-  variant,
-  shape,
-  chipVariant,
-  containerClassName,
-  disabled,
-  placeholder,
-  className,
-  domProps,
-}: {
-  chip: ReturnType<typeof useChipInputSuggestions>;
-  forwardedRef: Ref<HTMLInputElement>;
-  variant: ChipInputProps['variant'];
-  shape: ChipInputProps['shape'];
-  chipVariant: 'default' | 'primary' | 'success';
-  containerClassName?: string;
-  disabled?: boolean;
-  placeholder?: string;
-  className?: string;
-  domProps: Record<string, unknown>;
-}) {
-  const setRefs = (node: HTMLInputElement | null) => {
-    if (typeof forwardedRef === 'function') forwardedRef(node);
-    else if (forwardedRef) forwardedRef.current = node;
-    chip.inputRef.current = node;
-  };
-
-  return (
-    <div
-      className={cn(
-        containerVariants({ variant, shape }),
-        disabled && 'opacity-50 cursor-not-allowed',
-        containerClassName
-      )}
-      style={chip.isFocused ? { borderColor: 'var(--ring)' } : undefined}
-      onClick={() => chip.inputRef.current?.focus()}
-    >
-      <ChipList values={chip.values} chipVariant={chipVariant} onRemove={chip.removeChip} />
-      <input
-        ref={setRefs}
-        type="text"
-        className={cn(inputVariants({ className }))}
-        value={chip.inputValue}
-        onChange={(e) => chip.setInputValue(e.target.value)}
-        onKeyDown={chip.handleKeyDown}
-        onFocus={() => chip.setIsFocused(true)}
-        onBlur={chip.handleBlur}
-        onPaste={chip.handlePaste}
-        disabled={disabled}
-        placeholder={chip.values.length === 0 ? placeholder : undefined}
-        {...domProps}
-      />
-    </div>
-  );
-}
-
 /**
  * ChipInput component
  *
- * Renders as a plain free-text chip field, or — when `suggestions` is
- * supplied — as a combobox with a filtered suggestions dropdown built on
- * the same Radix `Popover` + cmdk `Command` primitives as `ComboboxSelect`
- * and `Autocomplete`. Both shells are driven by one `useChipInputSuggestions`
- * hook instance, called unconditionally, so toggling `suggestions` (e.g. an
- * async fetch resolving) swaps only the rendered shell, never the field's
- * state.
+ * Always renders as a combobox with a filtered suggestions dropdown, built
+ * on the same Radix `Popover` + cmdk `Command` primitives as
+ * `ComboboxSelect` and `Autocomplete` — whether or not the caller ever
+ * passes `suggestions`. There is exactly one rendered shell and one
+ * `useChipInputSuggestions` hook instance, so the underlying `<input>` DOM
+ * node stays mounted at a stable tree position across every `suggestions`
+ * change (e.g. an async fetch resolving mid-type): React never sees a
+ * different component type at that position, so it never unmounts and
+ * remounts the field, and neither the field's React state nor real browser
+ * keyboard focus is lost.
  *
  * @example
  * ```tsx
@@ -192,28 +112,22 @@ export const ChipInput = forwardRef<HTMLInputElement, ChipInputProps>(
       normalize: normalize ?? ((raw: string) => raw.trim()),
     });
 
-    const shared = {
-      chip,
-      forwardedRef: ref,
-      chipVariant,
-      containerClassName,
-      disabled,
-      placeholder,
-      domProps,
-    };
-
-    if (suggestions) {
-      return (
-        <ChipInputSuggestionsBody
-          {...shared}
-          ariaLabel={ariaLabel}
-          inputClassName={inputVariants({ className })}
-          emptyMessage={suggestionsEmptyMessage}
-        />
-      );
-    }
-
-    return <PlainChipInputBody {...shared} variant={variant} shape={shape} className={className} />;
+    return (
+      <ChipInputBody
+        chip={chip}
+        forwardedRef={ref}
+        variant={variant}
+        shape={shape}
+        chipVariant={chipVariant}
+        containerClassName={containerClassName}
+        disabled={disabled}
+        placeholder={placeholder}
+        domProps={domProps}
+        ariaLabel={ariaLabel}
+        inputClassName={inputVariants({ className })}
+        emptyMessage={suggestionsEmptyMessage}
+      />
+    );
   }
 );
 

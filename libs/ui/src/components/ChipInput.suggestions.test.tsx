@@ -192,35 +192,36 @@ describe('ChipInput — suggestions', () => {
     expect(screen.queryByText('Vue JS')).not.toBeInTheDocument();
   });
 
-  it('preserves in-progress typed text and committed chips when suggestions arrive after the field is already mounted (async load)', async () => {
-    function AsyncSuggestionsChipInput() {
-      const [values, setValues] = useState<string[]>([]);
-      const [suggestions, setSuggestions] = useState<ChipInputSuggestion[] | undefined>(undefined);
-      return (
-        <div>
-          <ChipInput
-            aria-label="Tags"
-            value={values}
-            onChange={setValues}
-            suggestions={suggestions}
-          />
-          <button type="button" onClick={() => setSuggestions(SUGGESTIONS)}>
-            load suggestions
-          </button>
-        </div>
-      );
-    }
-
+  it('keeps the same <input> DOM node mounted — with focus and the in-progress typed value intact — when suggestions arrive mid-type (async load)', async () => {
+    // A remount would still pass a state-only assertion (inputValue lives in
+    // the hoisted hook, so React state survives regardless), but it swaps
+    // out the underlying DOM node and drops real browser keyboard focus.
+    // Both are asserted here — via a direct `rerender` rather than a click
+    // on some "load" button, so the assertion isn't confounded by the user
+    // themselves clicking focus away — so this test actually distinguishes
+    // "state preserved" from "DOM node preserved".
     const user = userEvent.setup();
-    render(<AsyncSuggestionsChipInput />);
+    const { rerender } = render(
+      <ChipInput aria-label="Tags" defaultValue={[]} suggestions={undefined} />
+    );
 
-    const input = screen.getByRole('textbox', { name: 'Tags' });
-    await user.click(input);
-    await user.type(input, 'partial');
+    // Queried by label, not role — the role can legitimately differ between
+    // the no-suggestions and suggestions shells, so pinning this query to
+    // one role would make the assertion fail for the wrong reason instead
+    // of proving DOM-node identity.
+    const inputBeforeLoad = screen.getByLabelText('Tags');
+    await user.click(inputBeforeLoad);
+    await user.type(inputBeforeLoad, 'partial');
+    expect(inputBeforeLoad).toHaveFocus();
 
-    await user.click(screen.getByRole('button', { name: 'load suggestions' }));
+    rerender(<ChipInput aria-label="Tags" defaultValue={[]} suggestions={SUGGESTIONS} />);
 
-    const comboboxInput = screen.getByRole('combobox', { name: 'Tags' });
-    expect(comboboxInput).toHaveValue('partial');
+    const inputAfterLoad = screen.getByLabelText('Tags');
+    expect(inputAfterLoad).toBe(inputBeforeLoad);
+    expect(inputAfterLoad).toHaveFocus();
+    expect(inputAfterLoad).toHaveValue('partial');
+
+    await user.keyboard('-two');
+    expect(inputAfterLoad).toHaveValue('partial-two');
   });
 });

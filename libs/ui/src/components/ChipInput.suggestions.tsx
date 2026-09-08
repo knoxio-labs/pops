@@ -2,8 +2,11 @@ import { cn } from '../lib/utils';
 import { Chip } from './Chip';
 import { type useChipInputSuggestions } from './ChipInput.suggestions.hooks';
 import { ChipInputSuggestionsPopover } from './ChipInput.suggestions.popover';
+import { containerVariants } from './ChipInput.variants';
 
 import type { Ref } from 'react';
+
+import type { ChipInputShape, ChipInputVariant } from './ChipInput.variants';
 
 export function ChipList({
   values,
@@ -41,9 +44,11 @@ export function mergeInputRef(forwarded: Ref<HTMLInputElement>, inner: Ref<HTMLI
 
 export type ChipInputSuggestionsState = ReturnType<typeof useChipInputSuggestions>;
 
-export interface ChipInputSuggestionsBodyProps {
+export interface ChipInputBodyProps {
   chip: ChipInputSuggestionsState;
   forwardedRef: Ref<HTMLInputElement>;
+  variant: ChipInputVariant;
+  shape: ChipInputShape;
   chipVariant: 'default' | 'primary' | 'success';
   containerClassName?: string;
   disabled?: boolean;
@@ -55,16 +60,25 @@ export interface ChipInputSuggestionsBodyProps {
 }
 
 /**
- * The combobox shell for `ChipInput` when it is given `suggestions`: a
- * bordered chip box whose free-text input is wired to a Radix `Popover` +
- * cmdk `Command` dropdown (`ChipInputSuggestionsPopover`). Purely
- * presentational — all state comes from `chip` (`useChipInputSuggestions`),
- * called once by the caller, so switching a `ChipInput` between this shell
- * and its plain (no-suggestions) one never remounts that state.
+ * The single rendered shell for `ChipInput`: a chip box whose free-text
+ * input sits inside a Radix `Popover` + cmdk `Command` (`ChipInputSuggestionsPopover`)
+ * at all times, whether or not the caller ever supplies `suggestions`. Only
+ * the dropdown's open state — driven by `chip.open`, which never turns true
+ * while there are no suggestions to show — decides whether the popover
+ * content mounts. Keeping this the one and only shell means the underlying
+ * `<input>` DOM node stays at a stable position in the tree across every
+ * `suggestions` transition (`undefined`/`[]` to a populated array and back),
+ * so an in-progress focus and keystroke survive a suggestions list arriving
+ * asynchronously mid-type — React would otherwise treat a change of
+ * component type at this position as an unmount/remount of the field. All
+ * state comes from `chip` (`useChipInputSuggestions`), called once by the
+ * caller.
  */
-export function ChipInputSuggestionsBody({
+export function ChipInputBody({
   chip,
   forwardedRef,
+  variant,
+  shape,
   chipVariant,
   containerClassName,
   disabled,
@@ -73,11 +87,11 @@ export function ChipInputSuggestionsBody({
   placeholder,
   emptyMessage,
   domProps,
-}: ChipInputSuggestionsBodyProps) {
+}: ChipInputBodyProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0 p-2 min-h-11 rounded-md border border-border',
+        containerVariants({ variant, shape }),
         disabled && 'opacity-50 cursor-not-allowed',
         containerClassName
       )}
