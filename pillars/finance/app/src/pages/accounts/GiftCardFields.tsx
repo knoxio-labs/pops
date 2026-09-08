@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { type UseFormReturn } from 'react-hook-form';
 
-import { TextInput } from '@pops/ui';
+import { DateInput, Label, TextInput } from '@pops/ui';
 
 import { unwrap } from '../../finance-api-helpers.js';
 import { giftCardDetailsGet } from '../../finance-api/index.js';
@@ -47,7 +47,10 @@ export function GiftCardFields({
   return (
     <fieldset className="space-y-4 rounded-md border border-border p-4">
       <legend className="px-1 text-xs font-medium text-muted-foreground">Gift card</legend>
-      <TextInput label="Expires" type="date" {...form.register('giftCardExpiresOn')} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="gift-card-expires-on">Expires</Label>
+        <DateInput id="gift-card-expires-on" {...form.register('giftCardExpiresOn')} />
+      </div>
       {existing.data && (
         <GiftCardSecretField accountId={accountId ?? ''} lastFour={existing.data.lastFour} />
       )}

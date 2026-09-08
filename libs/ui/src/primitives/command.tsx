@@ -107,6 +107,29 @@ function CommandInput({
   );
 }
 
+/**
+ * `CommandPrimitive.Input` with none of `CommandInput`'s chrome — no search
+ * icon, no bordered wrapper div. For a consumer that anchors a `Popover`
+ * directly to its own compact, custom-styled input (a combobox embedded
+ * inline in a toolbar, say) rather than the full search-field layout
+ * `CommandInput` renders. Style it entirely via `className`.
+ */
+function CommandBareInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  return (
+    <CommandPrimitive.Input
+      data-slot="command-bare-input"
+      className={cn(
+        'placeholder:text-muted-foreground outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
   return (
     <CommandPrimitive.List
@@ -181,6 +204,7 @@ function CommandShortcut({ className, ...props }: React.ComponentProps<'span'>) 
 
 export {
   Command,
+  CommandBareInput,
   CommandDialog,
   CommandEmpty,
   CommandGroup,

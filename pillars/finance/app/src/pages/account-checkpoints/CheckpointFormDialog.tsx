@@ -1,11 +1,13 @@
 import { getAccountKindBehaviour } from '@pops/finance';
 import {
   Button,
+  DateInput,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  FieldLabel,
   Label,
   Textarea,
   TextInput,
@@ -63,13 +65,14 @@ export function CheckpointFormDialog({
             {...form.register('amount')}
             error={form.formState.errors.amount?.message}
           />
-          <TextInput
-            type="date"
-            label="As of"
-            max={today()}
-            {...form.register('asOf')}
-            error={form.formState.errors.asOf?.message}
-          />
+          <div className="flex flex-col gap-1.5 w-full">
+            <FieldLabel
+              htmlFor="checkpoint-as-of"
+              label="As of"
+              error={form.formState.errors.asOf?.message}
+            />
+            <DateInput id="checkpoint-as-of" max={today()} {...form.register('asOf')} />
+          </div>
           <div className="space-y-1.5">
             <Label>Note (optional)</Label>
             <Textarea
