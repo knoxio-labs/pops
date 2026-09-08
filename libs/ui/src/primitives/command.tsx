@@ -7,10 +7,29 @@ import * as React from 'react';
 import { cn } from '../lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog';
 
-function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
+/**
+ * Strips diacritics so "joao" matches "João": cmdk's built-in filter compares
+ * characters as typed, and a plain "a" never matches an "ã" in that
+ * comparison — so typing the full accented name in its unaccented form finds
+ * nothing, even though a shorter prefix happens to subsequence-match into an
+ * unrelated word.
+ */
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function defaultFilter(value: string, search: string): number {
+  return normalizeForSearch(value).includes(normalizeForSearch(search)) ? 1 : 0;
+}
+
+function Command({ className, filter, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
       data-slot="command"
+      filter={filter ?? defaultFilter}
       className={cn(
         'bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md',
         className
