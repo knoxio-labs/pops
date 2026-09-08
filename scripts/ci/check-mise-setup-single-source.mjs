@@ -64,7 +64,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ConfigParseError, isMapping, parseYaml, scalarText, walkMappings } from './config-parse.mjs';
+import {
+  ConfigParseError,
+  isMapping,
+  parseYaml,
+  scalarText,
+  walkMappings,
+} from './config-parse.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
@@ -553,15 +559,23 @@ function selfTest() {
       findViolations({
         actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
-        wrapper: CLEAN_WRAPPER.replace(`${MISE_VERSION_INPUT}: 2026.9.2`, `${MISE_VERSION_INPUT}: latest`),
-      }).some((f) => f.includes(`with.${MISE_VERSION_INPUT}: latest`) && f.includes('not an exact')),
+        wrapper: CLEAN_WRAPPER.replace(
+          `${MISE_VERSION_INPUT}: 2026.9.2`,
+          `${MISE_VERSION_INPUT}: latest`
+        ),
+      }).some(
+        (f) => f.includes(`with.${MISE_VERSION_INPUT}: latest`) && f.includes('not an exact')
+      ),
     ],
     [
       "PROVES THE BASELINE — a v-prefixed mise CLI pin is refused, since mise's own tags carry no v",
       findViolations({
         actions: new Map(),
         workflows: new Map([['a.yml', CLEAN_WORKFLOW]]),
-        wrapper: CLEAN_WRAPPER.replace(`${MISE_VERSION_INPUT}: 2026.9.2`, `${MISE_VERSION_INPUT}: v2026.9.2`),
+        wrapper: CLEAN_WRAPPER.replace(
+          `${MISE_VERSION_INPUT}: 2026.9.2`,
+          `${MISE_VERSION_INPUT}: v2026.9.2`
+        ),
       }).some((f) => f.includes('not an exact')),
     ],
     [
