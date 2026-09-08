@@ -1,9 +1,14 @@
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
+  createPackageNameResolver,
   findBundledSharedRuntime,
   isSharedRuntimeSpecifier,
   SHARED_RUNTIME_SPECIFIERS,
+  type PackageNameResolver,
 } from './index.js';
 
 const VIRTUAL_STORE = '/repo/node_modules/.pnpm';
@@ -44,38 +49,90 @@ describe('isSharedRuntimeSpecifier', () => {
   });
 });
 
+/**
+ * Stands in for the filesystem walk: a module id is attributed to the
+ * longest declared package directory that contains it, which is what
+ * "nearest package.json" means.
+ */
+function resolverFor(packageDirectories: Record<string, string>): PackageNameResolver {
+  const entries = Object.entries(packageDirectories).toSorted(([a], [b]) => b.length - a.length);
+  return (moduleId) => entries.find(([directory]) => moduleId.startsWith(`${directory}/`))?.[1];
+}
+
+const RESOLVER = resolverFor({
+  [`${VIRTUAL_STORE}/react@19.2.8/node_modules/react`]: 'react',
+  [`${VIRTUAL_STORE}/react-dom@19.2.8/node_modules/react-dom`]: 'react-dom',
+  [`${VIRTUAL_STORE}/@tanstack+react-query@5.101.4/node_modules/@tanstack/react-query`]:
+    '@tanstack/react-query',
+  [`${VIRTUAL_STORE}/clsx@2.1.1/node_modules/clsx`]: 'clsx',
+  '/repo/node_modules/some-widget/node_modules/react': 'react',
+  '/repo/libs/ui': '@pops/ui',
+  '/repo/libs/navigation': '@pops/navigation',
+  '/repo/pillars/purchases/app': '@pops/app-purchases',
+});
+
 describe('findBundledSharedRuntime', () => {
   it('reports nothing for a bundle of first-party sources only', () => {
     expect(
-      findBundledSharedRuntime([
-        '/repo/pillars/purchases/app/src/bundles.ts',
-        '/repo/pillars/purchases/app/src/pages/MerchantLensPage.tsx',
-      ])
+      findBundledSharedRuntime(
+        [
+          '/repo/pillars/purchases/app/src/bundles.ts',
+          '/repo/pillars/purchases/app/src/pages/MerchantLensPage.tsx',
+        ],
+        RESOLVER
+      )
     ).toEqual([]);
   });
 
   it('names a shared package pulled in through the pnpm virtual store', () => {
     expect(
-      findBundledSharedRuntime([
-        '/repo/pillars/purchases/app/src/bundles.ts',
-        installed('react', '19.2.8', 'index.js'),
-      ])
+      findBundledSharedRuntime(
+        ['/repo/pillars/purchases/app/src/bundles.ts', installed('react', '19.2.8', 'index.js')],
+        RESOLVER
+      )
     ).toEqual(['react']);
   });
 
   it('resolves a scoped package to its full name', () => {
     expect(
-      findBundledSharedRuntime([installed('@tanstack/react-query', '5.101.4', 'build/index.js')])
+      findBundledSharedRuntime(
+        [installed('@tanstack/react-query', '5.101.4', 'build/index.js')],
+        RESOLVER
+      )
     ).toEqual(['@tanstack/react-query']);
   });
 
+  // The defect this function was rewritten for. `@pops/ui` is linked from the
+  // workspace and its `main` points at source, so a bundled copy leaves module
+  // ids with no `node_modules` segment anywhere — the path-segment check this
+  // replaced reported a clean bundle for the one listed package a repo-local
+  // build is most likely to inline.
+  it('catches a workspace package bundled from its own source tree', () => {
+    expect(
+      findBundledSharedRuntime(
+        ['/repo/pillars/purchases/app/src/bundles.ts', '/repo/libs/ui/src/components/button.tsx'],
+        RESOLVER
+      )
+    ).toEqual(['@pops/ui']);
+  });
+
+  it('leaves a bundled workspace package that is not shared alone', () => {
+    expect(findBundledSharedRuntime(['/repo/libs/navigation/src/icon-map.ts'], RESOLVER)).toEqual(
+      []
+    );
+  });
+
   it('reports each offender once and in a stable order', () => {
-    const offenders = findBundledSharedRuntime([
-      installed('react-dom', '19.2.8', 'client.js'),
-      installed('react', '19.2.8', 'index.js'),
-      installed('react', '19.2.8', 'jsx-runtime.js'),
-    ]);
-    expect(offenders).toEqual(['react', 'react-dom']);
+    const offenders = findBundledSharedRuntime(
+      [
+        installed('react-dom', '19.2.8', 'client.js'),
+        installed('react', '19.2.8', 'index.js'),
+        installed('react', '19.2.8', 'jsx-runtime.js'),
+        '/repo/libs/ui/src/index.ts',
+      ],
+      RESOLVER
+    );
+    expect(offenders).toEqual(['@pops/ui', 'react', 'react-dom']);
   });
 
   // A duplicate copy hoisted beside the consumer rather than in the virtual
@@ -83,17 +140,48 @@ describe('findBundledSharedRuntime', () => {
   // shape differs.
   it('catches a nested copy under a consuming package', () => {
     expect(
-      findBundledSharedRuntime(['/repo/node_modules/some-widget/node_modules/react/index.js'])
+      findBundledSharedRuntime(
+        ['/repo/node_modules/some-widget/node_modules/react/index.js'],
+        RESOLVER
+      )
     ).toEqual(['react']);
   });
 
   it('leaves a bundled non-shared dependency alone', () => {
-    expect(findBundledSharedRuntime([installed('clsx', '2.1.1', 'dist/clsx.mjs')])).toEqual([]);
+    expect(
+      findBundledSharedRuntime([installed('clsx', '2.1.1', 'dist/clsx.mjs')], RESOLVER)
+    ).toEqual([]);
   });
 
-  // `.pnpm` is a store directory, not a package. Reading the first
-  // `node_modules/` rather than the last would report it as one.
-  it('does not mistake the virtual-store directory for a package', () => {
-    expect(findBundledSharedRuntime([`${VIRTUAL_STORE}/`])).toEqual([]);
+  it('ignores an id the resolver attributes to no package', () => {
+    expect(findBundledSharedRuntime(['\0virtual:some-plugin', 'not/absolute'], RESOLVER)).toEqual(
+      []
+    );
+  });
+});
+
+describe('createPackageNameResolver', () => {
+  const resolve = createPackageNameResolver();
+  const here = fileURLToPath(new URL('.', import.meta.url));
+
+  it('attributes a workspace source file to its package', () => {
+    expect(resolve(join(here, 'index.ts'))).toBe('@pops/pillar-sdk');
+  });
+
+  it('attributes an installed file to the package that declares it', () => {
+    expect(resolve(fileURLToPath(import.meta.resolve('react')))).toBe('react');
+  });
+
+  it('attributes a scoped installed file to its full name', () => {
+    expect(resolve(fileURLToPath(import.meta.resolve('@pops/types')))).toBe('@pops/types');
+  });
+
+  it('ignores a rollup virtual id and a relative id', () => {
+    expect(resolve('\0virtual:x')).toBeUndefined();
+    expect(resolve('./relative.ts')).toBeUndefined();
+  });
+
+  it('strips a query suffix before walking', () => {
+    expect(resolve(`${join(here, 'index.ts')}?commonjs-proxy`)).toBe('@pops/pillar-sdk');
   });
 });

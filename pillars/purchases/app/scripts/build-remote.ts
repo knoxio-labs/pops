@@ -16,7 +16,7 @@ import path from 'node:path';
 
 import { build } from 'vite';
 
-import { findBundledSharedRuntime } from '@pops/pillar-sdk/remote-build';
+import { createPackageNameResolver, findBundledSharedRuntime } from '@pops/pillar-sdk/remote-build';
 
 import type { RollupOutput, RollupWatcher } from 'rollup';
 
@@ -60,7 +60,10 @@ async function main(): Promise<void> {
     mode: 'production',
   });
 
-  const offenders = findBundledSharedRuntime(moduleIdsOf(singleOutput(result)));
+  const offenders = findBundledSharedRuntime(
+    moduleIdsOf(singleOutput(result)),
+    createPackageNameResolver()
+  );
   if (offenders.length > 0) {
     // The bundle is removed rather than left behind: a violating build that
     // stays on disk is one a later step can still pick up and serve, and the

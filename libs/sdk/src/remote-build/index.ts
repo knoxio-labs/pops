@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute, join } from 'node:path';
+
 /**
  * The shared-runtime contract for a pillar UI the shell mounts through its
  * runtime loader (`pillars/shell/src/app/external-ui.tsx`).
@@ -58,18 +61,38 @@ export function isSharedRuntimeSpecifier(specifier: string): boolean {
 }
 
 /**
+ * Answers which package a resolved module id belongs to, by locating the
+ * nearest `package.json` at or above it and reading its `name`. Returns
+ * `undefined` for an id that belongs to no package.
+ */
+export type PackageNameResolver = (moduleId: string) => string | undefined;
+
+/**
  * The shared-runtime packages that ended up **inside** a built bundle,
  * given the resolved module ids its chunks were assembled from.
  *
  * Reads ids rather than emitted source: a chunk that contains React carries a
- * `.../node_modules/react/index.js` module id, and no amount of minification
+ * module id naming the file it came from, and no amount of minification
  * removes it from the build's own record. Grepping the output for a marker
  * string would pass the day React's minifier renames it.
  *
+ * The id is attributed by walking up to the nearest `package.json`, not by
+ * looking for a `/node_modules/` segment. A workspace package is the reason:
+ * `@pops/ui` resolves to `libs/ui/src/index.ts` — its `main` points at source
+ * and pnpm links it — so its module ids carry no `node_modules` anywhere. A
+ * path-segment check reports a clean bundle for the one package on this list
+ * that a repo-local build is most likely to inline, which is the failure this
+ * function exists to catch.
+ *
  * @param moduleIds Resolved module ids across every emitted chunk.
+ * @param packageNameOf Attributes an id to a package; see
+ *   `createPackageNameResolver` for the filesystem-backed one.
  * @returns The offending package names, sorted, without duplicates.
  */
-export function findBundledSharedRuntime(moduleIds: Iterable<string>): string[] {
+export function findBundledSharedRuntime(
+  moduleIds: Iterable<string>,
+  packageNameOf: PackageNameResolver
+): string[] {
   const offenders = new Set<string>();
   for (const id of moduleIds) {
     const packageName = packageNameOf(id);
@@ -81,21 +104,57 @@ export function findBundledSharedRuntime(moduleIds: Iterable<string>): string[] 
 }
 
 /**
- * The installed package a resolved module id belongs to, or `undefined` for a
- * first-party source file. Reads the last `node_modules/` segment so a
- * pnpm-virtual-store path (`.../node_modules/.pnpm/react@19.2.8/node_modules/
- * react/index.js`) reports `react` and not `.pnpm`.
+ * A filesystem-backed `PackageNameResolver`: walks up from a module id to the
+ * nearest `package.json` and returns its `name`.
+ *
+ * One mechanism covers both kinds of dependency. For an installed package the
+ * nearest manifest is the package's own, so a pnpm virtual-store path
+ * (`.../node_modules/.pnpm/react@19.2.8/node_modules/react/index.js`) reports
+ * `react` rather than `.pnpm`. For a workspace package linked into the build
+ * it reports the same name from `libs/<x>/package.json`, which no path-segment
+ * check could have found.
+ *
+ * Results are memoised per directory: a bundle's module ids cluster into a
+ * handful of packages, and the walk would otherwise `stat` the same
+ * directories once per file.
+ *
+ * Node-only. `@pops/pillar-sdk/remote-build` is imported by build scripts and
+ * never by a shipped bundle.
  */
-function packageNameOf(moduleId: string): string | undefined {
-  const marker = '/node_modules/';
-  const at = moduleId.lastIndexOf(marker);
-  if (at === -1) return undefined;
-  const rest = moduleId.slice(at + marker.length);
-  const segments = rest.split('/');
-  const [first, second] = segments;
-  if (first === undefined || first.length === 0) return undefined;
-  if (first.startsWith('@')) {
-    return second === undefined ? undefined : `${first}/${second}`;
+export function createPackageNameResolver(): PackageNameResolver {
+  const cache = new Map<string, string | undefined>();
+
+  function nameForDirectory(directory: string): string | undefined {
+    const cached = cache.get(directory);
+    if (cached !== undefined || cache.has(directory)) return cached;
+
+    const parent = dirname(directory);
+    const manifest = join(directory, 'package.json');
+    let name: string | undefined;
+    if (existsSync(manifest)) {
+      const parsed: unknown = JSON.parse(readFileSync(manifest, 'utf8'));
+      const declared =
+        typeof parsed === 'object' && parsed !== null && 'name' in parsed
+          ? (parsed as { name: unknown }).name
+          : undefined;
+      // A nameless package.json (a bare `{ "type": "module" }` marker, which
+      // several packages drop into a subdirectory) does not end the walk —
+      // the owning package is still above it.
+      name = typeof declared === 'string' ? declared : nameForDirectory(parent);
+    } else {
+      name = parent === directory ? undefined : nameForDirectory(parent);
+    }
+
+    cache.set(directory, name);
+    return name;
   }
-  return first;
+
+  return (moduleId) => {
+    // Rollup decorates some ids (`\0virtual:…`, `id?query`); neither names a
+    // file on disk, and neither can be a shared-runtime package.
+    if (moduleId.startsWith('\0')) return undefined;
+    const [path] = moduleId.split('?');
+    if (path === undefined || !isAbsolute(path)) return undefined;
+    return nameForDirectory(dirname(path));
+  };
 }
