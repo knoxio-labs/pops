@@ -280,8 +280,16 @@ export async function renderNginxConfDynamic(
   transport: DiscoveryTransport = new HttpDiscoveryTransport({ registryUrl })
 ): Promise<string> {
   const pillars = await transport.fetchSnapshot();
-  const upstreams = pillars.map(resolveUpstreamForEntry);
-  const ordered = orderUpstreams(upstreams);
+  const knownIds = new Set<string>(PILLAR_RENDER_ORDER);
+
+  // A curated pillar always gets its canonical `/<id>-api/` block, snapshot
+  // or not: building this from the snapshot alone let a pillar mid-restart
+  // when an SSE event fired lose its route outright — an SPA-catch-all 200
+  // instead of nginx's own loud 502 on a missing upstream (POPS-2793).
+  const known = PILLAR_RENDER_ORDER.map(upstreamForId);
+  const external = pillars.filter((p) => !knownIds.has(p.pillarId)).map(resolveUpstreamForEntry);
+
+  const ordered = orderUpstreams([...known, ...external]);
   return renderNginxConfFromUpstreams(ordered);
 }
 
