@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useImportStore } from '../../../../store/importStore';
 import { RuleMatchList } from './RuleMatchList';
 
 import type { ReactNode } from 'react';
 
+import type { ProcessedTransaction } from '../../../../store/import-store-types';
 import type { CorrectionRule } from '../../RulePicker';
 
 const correctionsRuleMatchPreview = vi.fn();
@@ -53,6 +55,20 @@ function makeRule(overrides: Partial<CorrectionRule> = {}): CorrectionRule {
   };
 }
 
+function makeMatchedTx(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransaction {
+  return {
+    date: '2026-01-15',
+    description: 'STARBUCKS MELBOURNE',
+    amount: -6.25,
+    dialectAccountLabel: 'Amex',
+    rawRow: '{}',
+    checksum: 'chk-1',
+    entity: { entityId: 'ent-rule', entityName: 'Starbucks', matchType: 'learned' },
+    status: 'matched',
+    ...overrides,
+  };
+}
+
 function renderList(rule: CorrectionRule): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -64,6 +80,12 @@ function renderList(rule: CorrectionRule): void {
 describe('RuleMatchList', () => {
   beforeEach(() => {
     correctionsRuleMatchPreview.mockReset();
+  });
+
+  afterEach(() => {
+    useImportStore.setState({
+      processedTransactions: { matched: [], uncertain: [], failed: [], skipped: [] },
+    });
   });
 
   it('renders the matched transactions across the DB with the full total', async () => {
@@ -141,5 +163,78 @@ describe('RuleMatchList', () => {
 
     expect(await screen.findByTestId('rule-match-empty')).toBeInTheDocument();
     expect(screen.queryByTestId('rule-match-row')).not.toBeInTheDocument();
+  });
+
+  it('reports in-session matches instead of a flat zero when the rule has not reached the DB yet', async () => {
+    mockPreview([], 0);
+    useImportStore.setState({
+      processedTransactions: {
+        matched: [
+          makeMatchedTx({
+            ruleProvenance: {
+              source: 'correction',
+              ruleId: 'rule-1',
+              pattern: 'STARBUCKS',
+              matchType: 'contains',
+              confidence: null,
+            },
+          }),
+          makeMatchedTx({
+            description: 'STARBUCKS SYDNEY',
+            matchedRules: [
+              {
+                ruleId: 'rule-1',
+                pattern: 'STARBUCKS',
+                matchType: 'contains',
+                confidence: null,
+                priority: 0,
+              },
+            ],
+          }),
+          makeMatchedTx({
+            description: 'COLES 123',
+            ruleProvenance: undefined,
+            matchedRules: undefined,
+          }),
+        ],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+    });
+
+    renderList(makeRule());
+
+    expect(await screen.findByTestId('rule-match-empty-session')).toHaveTextContent(
+      'No committed transactions match yet — 2 in this import already do.'
+    );
+    expect(screen.queryByTestId('rule-match-empty')).not.toBeInTheDocument();
+  });
+
+  it('ignores in-session matches belonging to a different rule when the DB has none for this one', async () => {
+    mockPreview([], 0);
+    useImportStore.setState({
+      processedTransactions: {
+        matched: [
+          makeMatchedTx({
+            ruleProvenance: {
+              source: 'correction',
+              ruleId: 'rule-other',
+              pattern: 'COLES',
+              matchType: 'contains',
+              confidence: null,
+            },
+          }),
+        ],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+    });
+
+    renderList(makeRule());
+
+    expect(await screen.findByTestId('rule-match-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('rule-match-empty-session')).not.toBeInTheDocument();
   });
 });
