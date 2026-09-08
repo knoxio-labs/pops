@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useCallback, useRef, useState } from 'react';
 
-import type { TreeNode } from './TreeView';
+import type { TreeNode } from './tree-node';
 
 interface FlatEntry<T> {
   node: TreeNode<T>;
@@ -54,10 +54,17 @@ export function useTreeRovingFocus<T>({
   const itemRefs = useRef(new Map<string, HTMLLIElement>());
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
-  const activeId =
-    focusedId !== null && flat.some((entry) => entry.node.id === focusedId)
-      ? focusedId
-      : (selectedId ?? flat[0]?.node.id ?? null);
+  const isVisible = useCallback(
+    (id: string | null) => id !== null && flat.some((entry) => entry.node.id === id),
+    [flat]
+  );
+
+  function resolveActiveId(): string | null {
+    if (isVisible(focusedId)) return focusedId;
+    if (isVisible(selectedId)) return selectedId;
+    return flat[0]?.node.id ?? null;
+  }
+  const activeId = resolveActiveId();
 
   const focusIndex = useCallback(
     (index: number) => {

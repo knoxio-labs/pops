@@ -16,13 +16,10 @@ import { ChevronRight } from 'lucide-react';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { type TreeNode } from './tree-node';
 import { useTreeRovingFocus } from './useTreeRovingFocus';
 
-export interface TreeNode<T> {
-  id: string;
-  data: T;
-  children: TreeNode<T>[];
-}
+export type { TreeNode } from './tree-node';
 
 export interface TreeViewProps<T> {
   nodes: TreeNode<T>[];

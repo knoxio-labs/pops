@@ -147,6 +147,20 @@ describe('TreeView — roving keyboard navigation', () => {
     expect(rowByLabel('Charlie')).toHaveAttribute('tabindex', '-1');
   });
 
+  it('falls back to the first visible row when selectedId points into a collapsed subtree', () => {
+    renderTree({ selectedId: 'b1', defaultExpandedIds: ['a'] });
+
+    // 'b1' (Bravo-1) is selected but Bravo is collapsed, so it never appears
+    // in the flattened, visible row list — the roving tab stop must still
+    // land on exactly one visible row rather than vanishing.
+    expect(screen.queryByText('Bravo-1')).not.toBeInTheDocument();
+
+    const rows = screen.getAllByRole('treeitem');
+    const tabbable = rows.filter((row) => row.getAttribute('tabindex') === '0');
+    expect(tabbable).toHaveLength(1);
+    expect(rowByLabel('Alpha')).toHaveAttribute('tabindex', '0');
+  });
+
   it('still fires onSelect on Enter/Space without touching focus movement', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
