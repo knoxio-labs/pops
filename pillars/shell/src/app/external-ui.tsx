@@ -134,7 +134,17 @@ async function loadRemoteComponent(
       `external pillar '${descriptor.pillarId}' bundle has no component for slot '${bundleSlot}'`
     );
   }
-  return { default: component };
+  // Wrapped in a plain function component rather than handed back directly.
+  // A `React.lazy` result is a perfectly good component to RENDER, but it is
+  // an object, and React refuses a lazy that resolves to one: "Lazy element
+  // type must resolve to a class or function." A pillar that code-splits its
+  // pages — which is the ordinary thing to do, and what every in-repo pillar
+  // does — therefore puts lazy components in `bundles`, and every page of it
+  // failed to mount with an error naming double-wrapping rather than the
+  // bundle. The wrapper costs one component in the tree and makes the contract
+  // "any component" rather than "any component that is not itself lazy".
+  const Component = component;
+  return { default: () => <Component /> };
 }
 
 const RemoteLoadFallback = (
