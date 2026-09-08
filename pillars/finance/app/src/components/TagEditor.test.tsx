@@ -208,6 +208,17 @@ describe('TagEditor', () => {
     expect(screen.queryByRole('button', { name: /^Create / })).toBeNull();
   });
 
+  it('saves on Enter when the input is empty', async () => {
+    const onSave = vi.fn();
+    render(<TagEditor currentTags={['Groceries']} availableTags={['Groceries']} onSave={onSave} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['Groceries']));
+  });
+
   it('offers no creation when the taxonomy has not loaded', () => {
     render(<TagEditor currentTags={[]} availableTags={[]} onSave={vi.fn()} />);
 

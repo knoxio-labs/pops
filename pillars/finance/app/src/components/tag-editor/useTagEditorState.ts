@@ -44,6 +44,7 @@ interface KeyDownDeps {
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onCancel: () => void;
+  onSave: () => void;
 }
 
 function completeFirstSuggestion({ filtered, onAddTag }: KeyDownDeps): void {
@@ -75,11 +76,16 @@ function removeLastTag({ state, onRemoveTag }: KeyDownDeps): void {
 }
 
 function makeKeyDownHandler(deps: KeyDownDeps) {
-  const { state, filtered, onCancel } = deps;
+  const { state, filtered, onCancel, onSave } = deps;
   return (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Tab' && filtered.length > 0) {
       e.preventDefault();
       completeFirstSuggestion(deps);
+      return;
+    }
+    if (e.key === 'Enter' && !state.inputValue.trim()) {
+      e.preventDefault();
+      onSave();
       return;
     }
     if ((e.key === 'Enter' || e.key === ',') && state.inputValue.trim()) {
@@ -210,6 +216,7 @@ export function useTagEditorState(props: TagEditorProps) {
       onAddTag: addTag,
       onRemoveTag: removeTag,
       onCancel: handleCancel,
+      onSave: handleSave,
     }),
   };
   return { open: s.open, setOpen: s.setOpen, tags: s.tags, handlers };
