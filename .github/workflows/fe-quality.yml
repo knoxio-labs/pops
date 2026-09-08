@@ -11,6 +11,7 @@ on:
       # is covered without editing this list.
       - "pillars/*/openapi/**"
       - "libs/navigation/**"
+      - "libs/date/**"
       - "libs/sdk/**"
       - "libs/types/**"
       - "libs/ui/**"
@@ -22,6 +23,7 @@ on:
       - "pillars/*/app/**"
       - "pillars/*/openapi/**"
       - "libs/navigation/**"
+      - "libs/date/**"
       - "libs/sdk/**"
       - "libs/types/**"
       - "libs/ui/**"
@@ -56,6 +58,7 @@ jobs:
               # + lists, silently skipping FE quality on those changes).
               - 'pillars/*/openapi/**'
               - 'libs/navigation/**'
+              - 'libs/date/**'
               - 'libs/sdk/**'
               - 'libs/types/**'
               - 'libs/ui/**'

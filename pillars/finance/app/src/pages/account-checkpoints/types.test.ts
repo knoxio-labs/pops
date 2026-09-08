@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { toISODate } from '../../lib/local-date';
+import { toISODate } from '@pops/date';
+
 import { checkpointFormSchema, isInconsistent, today } from './types';
 
 describe('isInconsistent', () => {
