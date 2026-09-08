@@ -30,6 +30,7 @@ export function ToggleField({
         onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
         disabled={saveState === 'saving'}
         aria-invalid={!!validationError || undefined}
+        aria-required={field.validation?.required || undefined}
       />
       {envFallbackActive && field.envFallback && <EnvLabel envVar={field.envFallback} />}
     </FieldWrapper>
