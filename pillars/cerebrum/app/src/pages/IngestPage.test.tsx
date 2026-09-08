@@ -143,6 +143,69 @@ vi.mock('@pops/ui', async () => {
             '×'
           )
       ),
+    ChipInput: ({
+      value = [],
+      onChange,
+      normalize,
+      placeholder,
+      disabled,
+      ...rest
+    }: {
+      value?: string[];
+      onChange?: (next: string[]) => void;
+      normalize?: (raw: string) => string;
+      placeholder?: string;
+      disabled?: boolean;
+      [key: string]: unknown;
+    }) => {
+      const [inputValue, setInputValue] = React.useState('');
+      const commit = (raw: string) => {
+        const normalized = normalize ? normalize(raw) : raw.trim();
+        if (!normalized || value.includes(normalized)) {
+          setInputValue('');
+          return;
+        }
+        onChange?.([...value, normalized]);
+        setInputValue('');
+      };
+      return React.createElement(
+        'div',
+        null,
+        value.map((v, i) =>
+          React.createElement(
+            'span',
+            { key: `${v}-${i}`, 'data-testid': 'chip' },
+            v,
+            React.createElement(
+              'button',
+              {
+                onClick: () => onChange?.(value.filter((_, idx) => idx !== i)),
+                'aria-label': `Remove ${v}`,
+              },
+              '×'
+            )
+          )
+        ),
+        React.createElement('input', {
+          type: 'text',
+          value: inputValue,
+          placeholder,
+          disabled,
+          'aria-label': rest['aria-label'] as string,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value),
+          onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+              e.preventDefault();
+              if (inputValue.trim()) commit(inputValue);
+              return;
+            }
+            if (e.key === 'Backspace' && !inputValue && value.length > 0) {
+              onChange?.(value.slice(0, -1));
+            }
+          },
+        })
+      );
+    },
   };
 });
 

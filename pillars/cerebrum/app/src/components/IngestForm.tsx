@@ -10,12 +10,12 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Textarea, TextInput } from '@pops/ui';
+import { Button, ChipInput, Textarea, TextInput } from '@pops/ui';
 
+import { normalizeChipValue } from '../utils/normalizeChipValue';
 import { BulkResultList } from './BulkResultList';
 import { BulkSegmentPreview } from './BulkSegmentPreview';
 import { IngestAdvancedSection } from './IngestAdvancedSection';
-import { ScopePicker } from './ScopePicker';
 import { SubmitResult } from './SubmitResult';
 import { useIngestKeyboard } from './useIngestKeyboard';
 
@@ -51,6 +51,46 @@ function BodyEditor({
         className="min-h-[200px] font-mono text-sm"
         aria-label={t('ingest.body')}
       />
+    </div>
+  );
+}
+
+function getScopePlaceholder(loading: boolean, hasScopes: boolean): string {
+  if (loading) return 'Loading scopes…';
+  if (!hasScopes) return 'Add scopes (type or select)…';
+  return 'Add more…';
+}
+
+function ScopeField({
+  value,
+  suggestions,
+  loading,
+  onChange,
+}: {
+  value: string[];
+  suggestions: { label: string; value: string }[];
+  loading: boolean;
+  onChange: (scopes: string[]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1">
+        Scopes
+      </label>
+      <ChipInput
+        value={value}
+        onChange={onChange}
+        suggestions={suggestions}
+        normalize={normalizeChipValue}
+        placeholder={getScopePlaceholder(loading, value.length > 0)}
+        disabled={loading}
+        aria-label="Scope input"
+      />
+      {value.length === 0 && (
+        <p className="text-xs text-muted-foreground ml-1">
+          Leave empty to infer scopes automatically on submit.
+        </p>
+      )}
     </div>
   );
 }
@@ -125,7 +165,7 @@ function IngestFormFields({
         onChange={(v) => model.updateField('body', v)}
         onKeyDown={onBodyKeyDown}
       />
-      <ScopePicker
+      <ScopeField
         value={model.form.scopes}
         suggestions={model.scopeSuggestions}
         loading={model.scopesLoading}
