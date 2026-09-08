@@ -338,6 +338,25 @@ describe('0070_fee_and_transfer_types — agreement with the classifier', () => 
     expect(rowOf('atm-fee-only')).toEqual({ type: 'fee', tags: ['fee:atm'] });
   });
 
+  // A correction rule "still wins outright" over the descriptor stage
+  // (process-transaction.ts) and can type a row `fee` for a reason the
+  // classifier knows nothing about. `ATM CARD` alone must not be enough to
+  // retype it — only a row the classifier itself would now call `purchase`.
+  it('does not touch an ATM-CARD fee row with no fee-pattern wording', () => {
+    seed({
+      id: 'atm-manual-fee',
+      description: 'ATM CARD 1234 SYDNEY NSW',
+      type: 'fee',
+      tags: ['fee:atm'],
+    });
+
+    raw.exec(migrationSql());
+    for (const sql of laterTypeBackfills()) raw.exec(sql);
+
+    expect(classifyFromDescription('ATM CARD 1234 SYDNEY NSW')).toBeNull();
+    expect(rowOf('atm-manual-fee')).toEqual({ type: 'fee', tags: ['fee:atm'] });
+  });
+
   it('agrees that an ordinary merchant descriptor is neither', () => {
     const ordinary = ['WOOLWORTHS METRO', 'FEE STREET CAFE', 'ANNUAL LEAVE PAYOUT', 'ATM CBA'];
     for (const [index, descriptor] of ordinary.entries()) {

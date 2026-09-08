@@ -13,11 +13,16 @@
 -- `purchase` — the invariant `fee-transfer-type-migration.test.ts` exists to
 -- hold.
 --
--- Matched the same way `classifyFromDescription` now decides it: any `fee`
--- row whose description contains `ATM CARD`. That marker is specific to a
--- bank's ATM-withdrawal narrative and does not appear on a standalone fee
--- line (`ATM WITHDRAWAL FEE`, `ATM OPERATOR FEE`), so this does not touch a
--- row that is genuinely only a fee.
+-- Matched the same way `classifyFromDescription` now decides it, and no
+-- looser: `ATM CARD` alone is not enough, because a `type = 'fee'` row can
+-- also come from a `transaction_corrections` rule, which "still wins outright"
+-- over the descriptor stage (process-transaction.ts) and has nothing to do
+-- with this bug — retyping it here would silently overwrite a deliberate
+-- correction. The classifier only overrides to `purchase` when the
+-- description ALSO matches one of `FEE_PATTERNS`, so this migration repeats
+-- that same phrase list (every tag, not only `fee:conversion` — the override
+-- applies regardless of which fee kind matched) alongside the `ATM CARD`
+-- check.
 --
 -- The stale `fee:` value is stripped along with the type: a `purchase` row
 -- carrying a `fee:` tag is a row two migrations disagree about.
@@ -32,15 +37,77 @@ FROM (SELECT `id` AS nid,
 	    FROM `transactions`) n
 WHERE `transactions`.`id` = n.nid
   AND `transactions`.`type` = 'fee'
-  AND n.norm LIKE '%ATM CARD%';
+  AND n.norm LIKE '%ATM CARD%'
+  AND (n.norm LIKE '%INTEREST CHARGE%'
+	    OR n.norm LIKE '%PURCHASE INTEREST%'
+	    OR n.norm LIKE '%CASH ADVANCE INTEREST%'
+	    OR n.norm LIKE '%BALANCE TRANSFER INTEREST%'
+	    OR n.norm LIKE '%CHARGE FOR OVERDUE PAYMENT%'
+	    OR n.norm LIKE '%OVERDUE PAYMENT FEE%'
+	    OR n.norm LIKE '%LATE PAYMENT FEE%'
+	    OR n.norm LIKE '%LATE FEE%'
+	    OR n.norm LIKE '%MISSED PAYMENT FEE%'
+	    OR n.norm LIKE '%PAYMENT DISHONOUR FEE%'
+	    OR n.norm LIKE '%DISHONOUR FEE%'
+	    OR n.norm LIKE '%FOREIGN CURRENCY CONVERSION FEE%'
+	    OR n.norm LIKE '%CURRENCY CONVERSION FEE%'
+	    OR n.norm LIKE '%INTERNATIONAL TRANSACTION FEE%'
+	    OR n.norm LIKE '%OVERSEAS TRANSACTION FEE%'
+	    OR n.norm LIKE '%FOREIGN TRANSACTION FEE%'
+	    OR n.norm LIKE '%ATM WITHDRAWAL FEE%'
+	    OR n.norm LIKE '%ATM OPERATOR FEE%'
+	    OR n.norm LIKE '%ATM FEE%'
+	    OR n.norm LIKE '%CASH ADVANCE FEE%'
+	    OR n.norm LIKE '%MEMBERSHIP FEE%'
+	    OR n.norm LIKE '%ANNUAL MEMBERSHIP%'
+	    OR n.norm LIKE '%ANNUAL FEE%'
+	    OR n.norm LIKE '%CARD FEE%'
+	    OR n.norm LIKE '%MONTHLY ACCOUNT FEE%'
+	    OR n.norm LIKE '%ACCOUNT SERVICE FEE%'
+	    OR n.norm LIKE '%CARD SURCHARGE%'
+	    OR n.norm LIKE '%PAYMENT SURCHARGE%'
+	    OR n.norm LIKE '%SURCHARGE FEE%');
 --> statement-breakpoint
 UPDATE `transactions`
 SET `tags` = (
 	SELECT json_group_array(je.value) FROM json_each(`transactions`.`tags`) je
 	 WHERE je.value NOT LIKE 'fee:%'
 )
-WHERE `type` = 'purchase'
-  AND REPLACE(REPLACE(REPLACE(UPPER(`description`), '-', ' '), '&', ''), '.', '') LIKE '%ATM CARD%'
+FROM (SELECT `id` AS nid,
+	           REPLACE(REPLACE(REPLACE(UPPER(`description`), '-', ' '), '&', ''), '.', '') AS norm
+	    FROM `transactions`) n
+WHERE `transactions`.`id` = n.nid
+  AND `transactions`.`type` = 'purchase'
+  AND n.norm LIKE '%ATM CARD%'
+  AND (n.norm LIKE '%INTEREST CHARGE%'
+	    OR n.norm LIKE '%PURCHASE INTEREST%'
+	    OR n.norm LIKE '%CASH ADVANCE INTEREST%'
+	    OR n.norm LIKE '%BALANCE TRANSFER INTEREST%'
+	    OR n.norm LIKE '%CHARGE FOR OVERDUE PAYMENT%'
+	    OR n.norm LIKE '%OVERDUE PAYMENT FEE%'
+	    OR n.norm LIKE '%LATE PAYMENT FEE%'
+	    OR n.norm LIKE '%LATE FEE%'
+	    OR n.norm LIKE '%MISSED PAYMENT FEE%'
+	    OR n.norm LIKE '%PAYMENT DISHONOUR FEE%'
+	    OR n.norm LIKE '%DISHONOUR FEE%'
+	    OR n.norm LIKE '%FOREIGN CURRENCY CONVERSION FEE%'
+	    OR n.norm LIKE '%CURRENCY CONVERSION FEE%'
+	    OR n.norm LIKE '%INTERNATIONAL TRANSACTION FEE%'
+	    OR n.norm LIKE '%OVERSEAS TRANSACTION FEE%'
+	    OR n.norm LIKE '%FOREIGN TRANSACTION FEE%'
+	    OR n.norm LIKE '%ATM WITHDRAWAL FEE%'
+	    OR n.norm LIKE '%ATM OPERATOR FEE%'
+	    OR n.norm LIKE '%ATM FEE%'
+	    OR n.norm LIKE '%CASH ADVANCE FEE%'
+	    OR n.norm LIKE '%MEMBERSHIP FEE%'
+	    OR n.norm LIKE '%ANNUAL MEMBERSHIP%'
+	    OR n.norm LIKE '%ANNUAL FEE%'
+	    OR n.norm LIKE '%CARD FEE%'
+	    OR n.norm LIKE '%MONTHLY ACCOUNT FEE%'
+	    OR n.norm LIKE '%ACCOUNT SERVICE FEE%'
+	    OR n.norm LIKE '%CARD SURCHARGE%'
+	    OR n.norm LIKE '%PAYMENT SURCHARGE%'
+	    OR n.norm LIKE '%SURCHARGE FEE%')
   AND EXISTS (SELECT 1 FROM json_each(`transactions`.`tags`) je WHERE je.value LIKE 'fee:%');
 --> statement-breakpoint
 -- The `fee:` values just vacated are still worn by other rows, so recomputed
