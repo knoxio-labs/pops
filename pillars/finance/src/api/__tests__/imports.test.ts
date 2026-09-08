@@ -1358,7 +1358,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     const c = client();
     await c.imports.commitImport({
       tagRuleChangeSets: [
-        stagedTagRule('MARKER_DECLINE', ['KeptTag', 'enrich:declined-source'], ['KeptTag']),
+        stagedTagRule('MARKER_DECLINE', ['KeptTag', 'person:declined-source'], ['KeptTag']),
       ],
       transactions: [
         confirmed({ description: 'MARKER_DECLINE 1', checksum: 'commit-marker-decline' }),
@@ -1366,7 +1366,7 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     });
 
     expect(tagRuleTags()).toEqual(['KeptTag']);
-    expect(vocabularyTags()).not.toContain('enrich:declined-source');
+    expect(vocabularyTags()).not.toContain('person:declined-source');
   });
 
   it('upserts every ChangeSet tag onto the rule and the vocabulary when no accept/decline set is supplied (POPS-2643 boundary)', async () => {
@@ -2021,15 +2021,31 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     await c.imports.commitImport({
       transactions: [
         confirmed({
-          description: 'NEW MARKETPLACE',
+          description: 'NEW CONTACT LINK',
           checksum: 'vocab-marker',
+          tags: ['person:new-contact'],
+        }),
+      ],
+    });
+
+    expect(storedTags()).toEqual([['person:new-contact']]);
+    expect(vocabularyTags()).not.toContain('person:new-contact');
+  });
+
+  it('upserts a new enrich value the way it upserts any other open tag (0103)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'NEW MARKETPLACE',
+          checksum: 'vocab-enrich-open',
           tags: ['enrich:new-marketplace'],
         }),
       ],
     });
 
     expect(storedTags()).toEqual([['enrich:new-marketplace']]);
-    expect(vocabularyTags()).not.toContain('enrich:new-marketplace');
+    expect(vocabularyTags()).toContain('enrich:new-marketplace');
   });
 
   it('treats a value differing only in case as the one already in the vocabulary', async () => {

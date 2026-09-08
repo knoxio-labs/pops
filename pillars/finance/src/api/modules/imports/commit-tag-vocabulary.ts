@@ -16,16 +16,17 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  *   fixed. A value outside it is a validation error at commit, surfaced to the
  *   user, and never upserted. This is the same rule `ai-tag-validation.ts`
  *   applies to the categorizer, now applied to the human too.
- * - **open** (`contains:` `trip:` `asset:` `project:` `hobby:` `tax:`, and any
- *   unprefixed tag) — a new value is legitimate: a deliberately created trip,
- *   asset, or thing a purchase contained must not be lost. It is upserted as
- *   part of the commit. `contains:` is open and still classified — the
- *   categorizer keeps filling it from the vocabulary, this is only who may add
- *   to that vocabulary.
- * - **marker** (`enrich:` `person:` `flag:`) — provenance the system writes.
- *   Admitted, because a contact's `defaultTags` legitimately carries `enrich:`
- *   values onto a transaction, but never upserted from a commit payload: a
- *   marker's standing comes from the system that derived it, not from a payload
+ * - **open** (`contains:` `trip:` `asset:` `project:` `hobby:` `tax:` `enrich:`,
+ *   and any unprefixed tag) — a new value is legitimate: a deliberately
+ *   created trip, asset, or thing a purchase contained must not be lost. It is
+ *   upserted as part of the commit. `contains:` and `enrich:` are open and
+ *   also written by automation (the categorizer for `contains:`, an
+ *   enrichment pass for `enrich:`) — this is only who else, namely a human,
+ *   may add to that same vocabulary.
+ * - **marker** (`person:` `flag:`) — provenance the system writes. Admitted,
+ *   because a contact's `defaultTags` legitimately carries `person:` values
+ *   onto a transaction, but never upserted from a commit payload: a marker's
+ *   standing comes from the system that derived it, not from a payload
  *   asserting it.
  *
  * Scope is the two writers the vocabulary is compared against — the tags going

@@ -76,7 +76,8 @@ describe('tagRules — facets', () => {
 
     expect(kindOf('venue')).toBe('closed');
     expect(kindOf('trip')).toBe('open');
-    expect(kindOf('enrich')).toBe('marker');
+    expect(kindOf('enrich')).toBe('open');
+    expect(kindOf('flag')).toBe('marker');
   });
 
   it('reports contains as open — the axis a human names a new value on', async () => {
