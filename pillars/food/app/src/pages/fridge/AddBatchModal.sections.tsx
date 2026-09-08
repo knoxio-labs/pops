@@ -1,11 +1,12 @@
-import { Input } from '@pops/ui';
+import { Input, Select, type SelectOption } from '@pops/ui';
 
+import { type AddFormState } from './AddBatchModal.ingredientSection.js';
 import { FieldRow, RadioRow } from './form-controls.js';
-import { type AddBatchFormState, type useAddBatchForm } from './useAddBatchForm.js';
 
 /**
  * JSX sub-sections for `AddBatchModal` — kept here so the modal file
- * itself stays under the `max-lines` budget.
+ * itself stays under the `max-lines` budget. `IngredientPickerSection`
+ * lives in its own file for the same reason.
  */
 import type { ReactElement } from 'react';
 
@@ -28,81 +29,25 @@ const LOCATION_OPTIONS = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-export type AddFormState = ReturnType<typeof useAddBatchForm>;
-
-export function IngredientPickerSection({ state }: { state: AddFormState }): ReactElement {
-  return (
-    <>
-      <FieldRow label="Search ingredient">
-        <Input
-          value={state.form.search}
-          placeholder="tomato"
-          onChange={(e) => state.setForm({ ...state.form, search: e.target.value })}
-        />
-      </FieldRow>
-      <FieldRow label="Ingredient">
-        <select
-          className="w-full rounded border bg-background px-2 py-1"
-          value={state.form.ingredientId}
-          onChange={(e) =>
-            state.setForm({ ...state.form, ingredientId: e.target.value, variantId: '' })
-          }
-          required
-        >
-          <option value="">Pick an ingredient…</option>
-          {state.ingredients.map((ing) => (
-            <option key={ing.id} value={String(ing.id)}>
-              {ing.name} ({ing.slug})
-            </option>
-          ))}
-        </select>
-      </FieldRow>
-      <FieldRow label="Variant">
-        <select
-          className="w-full rounded border bg-background px-2 py-1"
-          value={state.form.variantId}
-          onChange={(e) => handleVariantChange(state, e.target.value)}
-          required
-          disabled={state.form.ingredientId.length === 0}
-        >
-          <option value="">Pick a variant…</option>
-          {state.variants.map((v) => (
-            <option key={v.id} value={String(v.id)}>
-              {v.name} ({v.slug})
-            </option>
-          ))}
-        </select>
-      </FieldRow>
-    </>
-  );
-}
-
-function handleVariantChange(state: AddFormState, value: string): void {
-  const variant = state.variants.find((v) => String(v.id) === value);
-  state.setForm({
-    ...state.form,
-    variantId: value,
-    unit: (variant?.defaultUnit as BatchUnit | undefined) ?? state.form.unit,
-  });
-}
+const UNIT_OPTIONS: SelectOption[] = [
+  { value: 'g', label: 'g' },
+  { value: 'ml', label: 'ml' },
+  { value: 'count', label: 'count' },
+];
 
 export function PrepAndQtySection({ state }: { state: AddFormState }): ReactElement {
+  const prepStateOptions: SelectOption[] = [
+    { value: '', label: '— none —' },
+    ...state.prepStates.map((p) => ({ value: String(p.id), label: p.name })),
+  ];
   return (
     <>
-      <FieldRow label="Prep state (optional)">
-        <select
-          className="w-full rounded border bg-background px-2 py-1"
-          value={state.form.prepStateId}
-          onChange={(e) => state.setForm({ ...state.form, prepStateId: e.target.value })}
-        >
-          <option value="">— none —</option>
-          {state.prepStates.map((p) => (
-            <option key={p.id} value={String(p.id)}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </FieldRow>
+      <Select
+        label="Prep state (optional)"
+        value={state.form.prepStateId}
+        onChange={(e) => state.setForm({ ...state.form, prepStateId: e.target.value })}
+        options={prepStateOptions}
+      />
       <div className="grid grid-cols-2 gap-2">
         <FieldRow label="Quantity">
           <Input
@@ -114,17 +59,12 @@ export function PrepAndQtySection({ state }: { state: AddFormState }): ReactElem
             required
           />
         </FieldRow>
-        <FieldRow label="Unit">
-          <select
-            className="w-full rounded border bg-background px-2 py-1"
-            value={state.form.unit}
-            onChange={(e) => state.setForm({ ...state.form, unit: e.target.value as BatchUnit })}
-          >
-            <option value="g">g</option>
-            <option value="ml">ml</option>
-            <option value="count">count</option>
-          </select>
-        </FieldRow>
+        <Select
+          label="Unit"
+          value={state.form.unit}
+          onChange={(e) => state.setForm({ ...state.form, unit: e.target.value as BatchUnit })}
+          options={UNIT_OPTIONS}
+        />
       </div>
     </>
   );
@@ -154,7 +94,7 @@ export function SourceAndLocationSection({ state }: { state: AddFormState }): Re
 }
 
 export function DateAndNotesSection({ state }: { state: AddFormState }): ReactElement {
-  const set = (patch: Partial<AddBatchFormState>): void =>
+  const set = (patch: Partial<AddFormState['form']>): void =>
     state.setForm({ ...state.form, ...patch });
   return (
     <>

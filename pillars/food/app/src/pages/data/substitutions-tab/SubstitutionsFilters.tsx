@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button, Label, TextInput } from '@pops/ui';
+import { Button, Label, Select, type SelectOption, TextInput } from '@pops/ui';
 
 import { EndpointPicker } from './EndpointPicker';
 
@@ -44,22 +44,21 @@ function ScopeFilter({
   onChange: (next: SubstitutionScope | null) => void;
 }) {
   const { t } = useTranslation('food');
+  const options: SelectOption[] = [
+    { value: '', label: t('data.substitutions.filters.scopeAny') },
+    { value: 'global', label: t('data.substitutions.scope.global') },
+    { value: 'recipe', label: t('data.substitutions.scope.recipe') },
+  ];
   return (
-    <div className="grid gap-1.5">
-      <Label htmlFor="sub-filter-scope">{t('data.substitutions.filters.scope')}</Label>
-      <select
-        id="sub-filter-scope"
-        value={scope ?? ''}
-        onChange={(e) =>
-          onChange(e.target.value === '' ? null : (e.target.value as SubstitutionScope))
-        }
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-      >
-        <option value="">{t('data.substitutions.filters.scopeAny')}</option>
-        <option value="global">{t('data.substitutions.scope.global')}</option>
-        <option value="recipe">{t('data.substitutions.scope.recipe')}</option>
-      </select>
-    </div>
+    <Select
+      id="sub-filter-scope"
+      label={t('data.substitutions.filters.scope')}
+      value={scope ?? ''}
+      onChange={(e) =>
+        onChange(e.target.value === '' ? null : (e.target.value as SubstitutionScope))
+      }
+      options={options}
+    />
   );
 }
 

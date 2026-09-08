@@ -6,7 +6,16 @@
  */
 import { type FormEvent, type ReactElement } from 'react';
 
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input } from '@pops/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Select,
+  type SelectOption,
+} from '@pops/ui';
 
 import { FieldRow, FormError } from './form-controls.js';
 import { type EditState, useEditBatchState } from './useEditBatchState.js';
@@ -105,26 +114,12 @@ function EditFields({ form, setForm, isFromRun, prepStates }: EditFieldsProps): 
           onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
         />
       </FieldRow>
-      <FieldRow label="Prep state">
-        <select
-          className="w-full rounded border bg-background px-2 py-1"
-          value={form.prepStateId}
-          onChange={(e) => setForm({ ...form, prepStateId: e.target.value })}
-          disabled={isFromRun}
-        >
-          <option value="">— none —</option>
-          {prepStates.map((p) => (
-            <option key={p.id} value={String(p.id)}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        {isFromRun && (
-          <span className="text-xs text-muted-foreground">
-            Cook-yielded batches keep their original prep state.
-          </span>
-        )}
-      </FieldRow>
+      <PrepStateSelect
+        form={form}
+        setForm={setForm}
+        isFromRun={isFromRun}
+        prepStates={prepStates}
+      />
       <FieldRow label="Notes">
         <textarea
           className="min-h-[60px] w-full rounded border bg-background px-2 py-1"
@@ -134,6 +129,39 @@ function EditFields({ form, setForm, isFromRun, prepStates }: EditFieldsProps): 
         />
       </FieldRow>
     </>
+  );
+}
+
+function PrepStateSelect({
+  form,
+  setForm,
+  isFromRun,
+  prepStates,
+}: {
+  form: EditState;
+  setForm: (next: EditState) => void;
+  isFromRun: boolean;
+  prepStates: readonly { id: number; name: string }[];
+}): ReactElement {
+  const options: SelectOption[] = [
+    { value: '', label: '— none —' },
+    ...prepStates.map((p) => ({ value: String(p.id), label: p.name })),
+  ];
+  return (
+    <div className="space-y-1">
+      <Select
+        label="Prep state"
+        value={form.prepStateId}
+        onChange={(e) => setForm({ ...form, prepStateId: e.target.value })}
+        options={options}
+        disabled={isFromRun}
+      />
+      {isFromRun && (
+        <span className="text-xs text-muted-foreground">
+          Cook-yielded batches keep their original prep state.
+        </span>
+      )}
+    </div>
   );
 }
 

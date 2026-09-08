@@ -11,7 +11,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, Select, type SelectOption } from '@pops/ui';
 
 import type { ReactElement } from 'react';
 
@@ -121,26 +121,25 @@ function TagsInput({ filters, onChange }: SolveFiltersProps): ReactElement {
 
 function MaxTimeSelect({ filters, onChange }: SolveFiltersProps): ReactElement {
   const { t } = useTranslation('food');
+  const options: SelectOption[] = [
+    { value: '', label: t('solve.filters.maxTimeAny') },
+    ...MAX_TIME_CHOICES.map((mins) => ({
+      value: String(mins),
+      label: t('solve.filters.maxTimeOption', { minutes: mins }),
+    })),
+  ];
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <span>{t('solve.filters.maxTime')}</span>
-      <select
-        value={filters.maxMinutes ?? ''}
-        onChange={(e) =>
-          onChange({
-            ...filters,
-            maxMinutes: e.target.value === '' ? null : Number(e.target.value),
-          })
-        }
-        className="rounded border px-2 py-1 text-sm"
-      >
-        <option value="">{t('solve.filters.maxTimeAny')}</option>
-        {MAX_TIME_CHOICES.map((mins) => (
-          <option key={mins} value={mins}>
-            {t('solve.filters.maxTimeOption', { minutes: mins })}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label={t('solve.filters.maxTime')}
+      value={filters.maxMinutes === null ? '' : String(filters.maxMinutes)}
+      onChange={(e) =>
+        onChange({
+          ...filters,
+          maxMinutes: e.target.value === '' ? null : Number(e.target.value),
+        })
+      }
+      options={options}
+      className="w-44"
+    />
   );
 }
