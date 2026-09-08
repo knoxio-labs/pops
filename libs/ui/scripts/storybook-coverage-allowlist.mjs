@@ -33,7 +33,6 @@ export const STORY_COVERAGE_ALLOWLIST = {
     'Sibling export of the already-allowlisted ScrollShelf.tsx (predates the story-coverage gate); only became visible to this gate once it started following two-hop re-export chains.',
   'components/ScrollShelf.tsx': 'Predates the story-coverage gate.',
   'components/SearchPickerDialog.tsx': 'Predates the story-coverage gate.',
-  'components/SettingsForm.tsx': 'Predates the story-coverage gate.',
   'components/SortableGrid.tsx': 'Predates the story-coverage gate.',
   'components/TierListBoard.row.tsx':
     'Sibling export of the already-allowlisted TierListBoard.tsx (predates the story-coverage gate); only became visible to this gate once it started following two-hop re-export chains.',

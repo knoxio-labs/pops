@@ -145,7 +145,6 @@ export * from './components/Sparkline';
 export * from './components/TierListBoard';
 export * from './components/ActionButtonWithDetailPicker';
 export * from './components/DurationFieldInput';
-export * from './components/SettingsForm';
 
 // Hooks
 export * from './hooks/useImageProcessor';
