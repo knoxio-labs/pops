@@ -6,56 +6,18 @@ import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/
 import { useImportStore } from '../../../store/importStore';
 import { assembleTagReviewOutput } from './assembleTagReviewOutput';
 import { groupByEntity } from './tagReviewUtils';
-import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
+import { usePreviewTransactions } from './usePreviewTransactions';
 import { useTagActions } from './useTagReviewActions';
-import { type TagRuleDialogState, useTagRuleDialog } from './useTagRuleDialog';
+import { useTagRuleDialog } from './useTagRuleDialog';
 import { useTagRuleHandler } from './useTagRuleHandler';
 
-import type {
-  ConfirmedTransaction,
-  SuggestedTag,
-  TagRuleChangeSet,
-  TagRuleImpactItem,
-} from '@pops/finance';
+import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
 import type { ImportStore as ImportStoreType } from '../../../store/import-store-types';
-import type { ConfirmedGroup } from './tagReviewUtils';
+import type { UseTagReviewStateOutput } from './tagReviewStateTypes';
 
-export interface UseTagReviewStateOutput {
-  confirmedTransactions: ConfirmedTransaction[];
-  groups: ConfirmedGroup[];
-  availableTags: string[];
-  /** The tag taxonomy, for the pickers that mint a value on one of its axes. */
-  facets: TagFacetOption[];
-  localTags: Record<string, string[]>;
-  suggestedTagMeta: Record<string, SuggestedTag[]>;
-  updateTag: (checksum: string, tags: string[]) => void;
-  handleAcceptAll: () => void;
-  /** Rows an accept-all would change; zero means the control is inert. */
-  unappliedSuggestionCount: number;
-  handleApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
-  /** Removes one tag from every transaction in a group that carries it. */
-  handleRemoveGroupTag: (group: ConfirmedGroup, tag: string) => void;
-  handleContinue: () => void;
-  prevStep: () => void;
-  confirmedCount: number;
-  tagRuleDialog: TagRuleDialogState | null;
-  setTagRuleDialogOpen: (open: boolean) => void;
-  handleOpenTagRuleDialog: (group: ConfirmedGroup) => void;
-  handleOpenTagRuleDialogForTransaction: (
-    transaction: ConfirmedTransaction,
-    tags: string[]
-  ) => void;
-  previewTransactions: PreviewTransaction[];
-  handleTagRuleApplied: (
-    changeSet: TagRuleChangeSet,
-    affected: TagRuleImpactItem[],
-    acceptedNewTags: string[]
-  ) => void;
-}
-
-export type { PreviewTransaction };
+export type { UseTagReviewStateOutput, PreviewTransaction } from './tagReviewStateTypes';
 
 interface LocalTagsState {
   localTags: Record<string, string[]>;

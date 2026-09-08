@@ -1,10 +1,9 @@
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
+import type { PreviewTransaction, UseTagReviewStateOutput } from './tagReviewStateTypes';
 import type { ConfirmedGroup } from './tagReviewUtils';
-import type { PreviewTransaction } from './usePreviewTransactions';
 import type { useTagActions } from './useTagReviewActions';
-import type { UseTagReviewStateOutput } from './useTagReviewState';
 import type { useTagRuleDialog } from './useTagRuleDialog';
 
 interface AssembleOutputArgs {
