@@ -5,17 +5,21 @@
  * objects via `nodes`, where each node includes its `children`, along with a
  * `renderNode` renderer. Selection and expansion are controlled or
  * uncontrolled via `defaultExpandedIds` / `expandedIds` + `onExpandedChange`.
+ *
+ * Follows the WAI-ARIA tree pattern for keyboard focus: a single roving tab
+ * stop (only the active row carries `tabIndex={0}`, every other row is
+ * `tabIndex={-1}`), with ArrowUp/ArrowDown/Home/End moving that tab stop
+ * across visible rows — a collapsed node's children are not visited.
+ * ArrowRight/ArrowLeft still expand/collapse and never move focus.
  */
 import { ChevronRight } from 'lucide-react';
-import { type KeyboardEvent, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { type TreeNode } from './tree-node';
+import { useTreeRovingFocus } from './useTreeRovingFocus';
 
-export interface TreeNode<T> {
-  id: string;
-  data: T;
-  children: TreeNode<T>[];
-}
+export type { TreeNode } from './tree-node';
 
 export interface TreeViewProps<T> {
   nodes: TreeNode<T>[];
@@ -98,27 +102,64 @@ function TreeRow<T>({
   );
 }
 
-function makeKeyHandler<T>(
-  flat: { node: TreeNode<T>; level: number }[],
-  expanded: Set<string>,
-  toggle: (id: string) => void,
-  onSelect?: (node: TreeNode<T>) => void
-) {
-  return (index: number) => (e: KeyboardEvent<HTMLLIElement>) => {
-    const entry = flat[index];
-    if (!entry) return;
-    const { node } = entry;
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      if (node.children.length > 0 && !expanded.has(node.id)) toggle(node.id);
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      if (expanded.has(node.id)) toggle(node.id);
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect?.(node);
-    }
-  };
+interface TreeRowListProps<T> {
+  flat: { node: TreeNode<T>; level: number }[];
+  expanded: Set<string>;
+  selectedId: string | null;
+  activeId: string | null;
+  registerItem: (id: string, el: HTMLLIElement | null) => void;
+  handleKeyDown: ReturnType<typeof useTreeRovingFocus<T>>['handleKeyDown'];
+  onItemFocus: (id: string) => void;
+  toggle: (id: string) => void;
+  onSelect?: (node: TreeNode<T>) => void;
+  renderNode: TreeViewProps<T>['renderNode'];
+}
+
+function TreeRowList<T>({
+  flat,
+  expanded,
+  selectedId,
+  activeId,
+  registerItem,
+  handleKeyDown,
+  onItemFocus,
+  toggle,
+  onSelect,
+  renderNode,
+}: TreeRowListProps<T>) {
+  return (
+    <>
+      {flat.map((entry, i) => {
+        const { node, level } = entry;
+        const isExpanded = expanded.has(node.id);
+        const isSelected = node.id === selectedId;
+        return (
+          <li
+            key={node.id}
+            ref={(el) => registerItem(node.id, el)}
+            role="treeitem"
+            aria-expanded={node.children.length > 0 ? isExpanded : undefined}
+            aria-selected={isSelected}
+            aria-level={level + 1}
+            tabIndex={node.id === activeId ? 0 : -1}
+            onKeyDown={handleKeyDown(i)}
+            onFocus={() => onItemFocus(node.id)}
+            className="outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+          >
+            <TreeRow
+              node={node}
+              level={level}
+              isExpanded={isExpanded}
+              isSelected={isSelected}
+              toggle={toggle}
+              onSelect={onSelect}
+              renderNode={renderNode}
+            />
+          </li>
+        );
+      })}
+    </>
+  );
 }
 
 export function TreeView<T>({
@@ -148,37 +189,29 @@ export function TreeView<T>({
   );
 
   const flat = useMemo(() => flattenTree(nodes, expanded), [nodes, expanded]);
-  const handleKeyDown = makeKeyHandler(flat, expanded, toggle, onSelect);
+
+  const { activeId, registerItem, handleKeyDown, onItemFocus } = useTreeRovingFocus({
+    flat,
+    expanded,
+    toggle,
+    onSelect,
+    selectedId,
+  });
 
   return (
     <ul role="tree" className={cn('flex flex-col', className)}>
-      {flat.map((entry, i) => {
-        const { node, level } = entry;
-        const isExpanded = expanded.has(node.id);
-        const isSelected = node.id === selectedId;
-        return (
-          <li
-            key={node.id}
-            role="treeitem"
-            aria-expanded={node.children.length > 0 ? isExpanded : undefined}
-            aria-selected={isSelected}
-            aria-level={level + 1}
-            tabIndex={0}
-            onKeyDown={handleKeyDown(i)}
-            className="outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-          >
-            <TreeRow
-              node={node}
-              level={level}
-              isExpanded={isExpanded}
-              isSelected={isSelected}
-              toggle={toggle}
-              onSelect={onSelect}
-              renderNode={renderNode}
-            />
-          </li>
-        );
-      })}
+      <TreeRowList
+        flat={flat}
+        expanded={expanded}
+        selectedId={selectedId}
+        activeId={activeId}
+        registerItem={registerItem}
+        handleKeyDown={handleKeyDown}
+        onItemFocus={onItemFocus}
+        toggle={toggle}
+        onSelect={onSelect}
+        renderNode={renderNode}
+      />
     </ul>
   );
 }
