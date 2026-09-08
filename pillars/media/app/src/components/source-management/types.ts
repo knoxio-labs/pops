@@ -1,3 +1,5 @@
+import { formatDate } from '@pops/ui';
+
 export const SOURCE_TYPE_LABELS: Record<string, string> = {
   plex_watchlist: 'Plex Watchlist',
   plex_friends: 'Plex Friends',
@@ -12,7 +14,7 @@ export function sourceTypeLabel(type: string): string {
 
 export function formatSyncDate(iso: string | null): string {
   if (!iso) return 'Never';
-  return new Date(iso).toLocaleString();
+  return formatDate(iso, 'datetime');
 }
 
 export interface Source {

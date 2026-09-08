@@ -3,7 +3,7 @@ import { FileText, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button, SearchPickerDialog, Select } from '@pops/ui';
+import { Button, formatDate, SearchPickerDialog, Select } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink, paperlessSearch } from '../inventory-api/index.js';
@@ -43,7 +43,7 @@ function DocumentResultRow({ doc, linkingId, isPending, onLink }: DocumentResult
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm truncate">{doc.title}</div>
         <div className="text-xs text-muted-foreground">
-          {doc.created ? new Date(doc.created).toLocaleDateString() : 'No date'}
+          {doc.created ? formatDate(doc.created) : 'No date'}
           {doc.originalFileName ? ` · ${doc.originalFileName}` : ''}
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Badge } from '@pops/ui';
+import { Badge, formatDate } from '@pops/ui';
 
 import { ExcludedActions, PendingActions } from './CandidateActions';
 import { useCardMutations } from './useCardMutations';
@@ -43,7 +43,7 @@ function CandidateMeta({ candidate }: { candidate: Candidate }) {
             P{candidate.sourcePriority}
           </Badge>
         )}
-        <span>{new Date(candidate.discoveredAt).toLocaleDateString()}</span>
+        <span>{formatDate(candidate.discoveredAt)}</span>
       </div>
     </div>
   );

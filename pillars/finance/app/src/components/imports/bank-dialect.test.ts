@@ -72,6 +72,12 @@ describe('bankDialect', () => {
       expect(bankDialect(bank).splitAmount).toBeUndefined();
     }
   });
+
+  it('declares a day/month order for every bank rather than assuming one', () => {
+    for (const bank of ['ANZ', 'ANZ Credit Card', 'Amex', 'ING', 'Up'] as const) {
+      expect(bankDialect(bank).dateOrder).toBe('DMY');
+    }
+  });
 });
 
 describe('headerless parse', () => {

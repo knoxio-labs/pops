@@ -23,7 +23,7 @@ export function formatExpiry(expiresAt: string | null, daysToExpiry: number | nu
   // Date-only stamps come back as UTC midnight. We render in UTC so the
   // visible day matches `daysToExpiry` (which is also UTC-anchored);
   // showing the local-tz day would skew by one in negative offsets.
-  const formatted = date.toLocaleDateString(undefined, {
+  const formatted = date.toLocaleDateString('en-AU', {
     month: 'short',
     day: 'numeric',
     timeZone: 'UTC',

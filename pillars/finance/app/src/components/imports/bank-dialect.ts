@@ -37,6 +37,14 @@ export const HEADERLESS_ANZ_COLUMNS = [
  */
 export type AmountSign = 'debit-negative' | 'debit-positive';
 
+/**
+ * The day/month order a bank's export prints, since both are Australian
+ * conventions and neither can be inferred from the string alone: `31/07/2026`
+ * and `07/31/2026` are each unambiguous only if the reader already knows which
+ * side is the day.
+ */
+export type DateOrder = 'DMY' | 'MDY';
+
 /** Extra fields a bank's parser can recover from a row the columns cannot describe. */
 export interface DerivedFields {
   description: string;
@@ -69,6 +77,13 @@ export interface BankDialect {
   columns?: readonly string[];
   amountSign: AmountSign;
   /**
+   * Every dialect states its own day/month order rather than inheriting a
+   * default, so a bank whose export prints the American order is a declared
+   * fact instead of a silent transposition of every date where both sides
+   * read as valid days.
+   */
+  dateOrder: DateOrder;
+  /**
    * Set when the export splits the amount across two columns (ING). The
    * mapper then offers no Amount field: the two columns are found by name
    * and combined per row instead.
@@ -93,10 +108,11 @@ export interface BankDialect {
 }
 
 /** The shared CSV layout exported by ANZ transaction and credit-card accounts. */
-const ANZ_HEADERLESS: Pick<BankDialect, 'hasHeader' | 'columns' | 'amountSign'> = {
+const ANZ_HEADERLESS: Pick<BankDialect, 'hasHeader' | 'columns' | 'amountSign' | 'dateOrder'> = {
   hasHeader: false,
   columns: HEADERLESS_ANZ_COLUMNS,
   amountSign: 'debit-negative',
+  dateOrder: 'DMY',
 };
 
 /** ANZ's credit-card descriptions additionally carry fixed-width merchant and FX details. */
@@ -119,6 +135,7 @@ const ANZ: BankDialect = {
 const DEFAULT_DIALECT: BankDialect = {
   hasHeader: true,
   amountSign: 'debit-positive',
+  dateOrder: 'DMY',
   fxCaptureSource: 'unavailable',
 };
 
@@ -132,6 +149,7 @@ const DEFAULT_DIALECT: BankDialect = {
 const AMEX: BankDialect = {
   hasHeader: true,
   amountSign: 'debit-positive',
+  dateOrder: 'DMY',
   deriveFields: (description, row) => ({ description, ...parseAmexRow(row) }),
   fxCaptureSource: 'unavailable',
 };
@@ -144,6 +162,7 @@ const AMEX: BankDialect = {
 const ING: BankDialect = {
   hasHeader: true,
   amountSign: 'debit-negative',
+  dateOrder: 'DMY',
   splitAmount: { credit: 'Credit', debit: 'Debit' },
   fxCaptureSource: 'unavailable',
 };

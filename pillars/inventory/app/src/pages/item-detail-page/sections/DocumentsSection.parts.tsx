@@ -1,7 +1,7 @@
 import { ExternalLink, FileText, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Button, formatDate, Skeleton } from '@pops/ui';
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   receipt: 'Receipts',
@@ -67,7 +67,7 @@ export function DocumentRow({
             {doc.title ?? `Document #${doc.paperlessDocumentId}`}
           </span>
           <span className="text-xs text-muted-foreground">
-            Linked {new Date(doc.createdAt).toLocaleDateString()}
+            Linked {formatDate(new Date(doc.createdAt).toISOString())}
           </span>
         </div>
       </div>

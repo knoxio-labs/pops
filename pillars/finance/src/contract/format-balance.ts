@@ -22,7 +22,7 @@ export interface CurrencyFormat {
  * front of the symbol (`-$12.00`).
  */
 export function formatBalance(amount: number, currency: CurrencyFormat): string {
-  const magnitude = Math.abs(amount).toLocaleString('en-US', {
+  const magnitude = Math.abs(amount).toLocaleString('en-AU', {
     minimumFractionDigits: currency.decimals,
     maximumFractionDigits: currency.decimals,
   });

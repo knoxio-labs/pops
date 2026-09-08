@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 
-import { Button, Card, CardContent } from '@pops/ui';
+import { Button, Card, CardContent, formatDate } from '@pops/ui';
 
 import { MovieTitle } from './MovieTitle';
 
@@ -88,7 +88,7 @@ export function ComparisonRow({
                 </span>
               )}
               <span className="text-2xs text-muted-foreground">
-                {new Date(comparison.comparedAt).toLocaleDateString()}
+                {formatDate(comparison.comparedAt)}
               </span>
             </div>
           </div>

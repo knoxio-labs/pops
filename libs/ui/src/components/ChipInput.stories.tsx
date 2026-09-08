@@ -379,6 +379,59 @@ export const PasteMultipleValues: Story = {
   },
 };
 
+// Suggestions
+export const WithSuggestions: Story = {
+  render: () => {
+    const [tags, setTags] = useState<string[]>(['react']);
+
+    const suggestions = [
+      { label: 'TypeScript', value: 'typescript' },
+      { label: 'JavaScript', value: 'javascript' },
+      { label: 'Vite', value: 'vite' },
+      { label: 'Storybook', value: 'storybook' },
+      { label: 'Legacy (retired)', value: 'legacy', disabled: true },
+    ];
+
+    return (
+      <div className="space-y-2 max-w-lg">
+        <label className="block text-sm font-medium">Tags</label>
+        <ChipInput
+          value={tags}
+          onChange={setTags}
+          suggestions={suggestions}
+          normalize={(v) => v.trim().toLowerCase().replace(/\s+/g, '-')}
+          placeholder="Add a tag or pick a suggestion..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Arrow keys navigate the dropdown, Enter commits the highlighted suggestion or, when
+          nothing matches, the typed text as a new chip. Escape or a click outside closes it.
+        </p>
+      </div>
+    );
+  },
+};
+
+export const SuggestionsEmptyState: Story = {
+  render: () => {
+    const [values, setValues] = useState<string[]>([]);
+    return (
+      <div className="space-y-2 max-w-lg">
+        <ChipInput
+          value={values}
+          onChange={setValues}
+          suggestions={[{ label: 'Groceries', value: 'groceries' }]}
+          suggestionsEmptyMessage="No saved values yet — type to create one."
+          placeholder="Type something that doesn't match..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Only &quot;Groceries&quot; is suggested — typing anything else shows the empty state and
+          still lets you commit it as a free-text chip.
+        </p>
+      </div>
+    );
+  },
+};
+
 // Interactive playground
 export const Playground: Story = {
   args: {

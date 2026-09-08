@@ -3,7 +3,7 @@ import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Button, formatDate, Skeleton } from '@pops/ui';
 
 import { unwrap } from '../../media-api-helpers.js';
 import { rotationListExclusions, rotationRemoveExclusion } from '../../media-api/index.js';
@@ -34,7 +34,7 @@ function ExclusionRow({
         <span className="font-medium truncate">{e.title}</span>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
           {e.reason && <span>{e.reason}</span>}
-          <span>{new Date(e.excludedAt).toLocaleDateString()}</span>
+          <span>{formatDate(e.excludedAt)}</span>
         </div>
       </div>
       <Button

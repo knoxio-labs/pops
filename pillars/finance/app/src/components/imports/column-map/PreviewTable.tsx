@@ -8,7 +8,7 @@ import type { ColumnMap } from './parsers';
 interface PreviewTableProps {
   rows: Record<string, string>[];
   columnMap: ColumnMap;
-  dialect: Pick<BankDialect, 'amountSign' | 'splitAmount'>;
+  dialect: Pick<BankDialect, 'amountSign' | 'splitAmount' | 'dateOrder'>;
 }
 
 function CellWithStatus({
@@ -53,7 +53,10 @@ export function PreviewTable({ rows, columnMap, dialect }: PreviewTableProps) {
                 <tr key={idx} className="hover:bg-muted">
                   <td className="px-4 py-2 text-muted-foreground">{idx + 1}</td>
                   <td className="px-4 py-2">
-                    <CellWithStatus value={dateStr} parsed={parseDate(dateStr)} />
+                    <CellWithStatus
+                      value={dateStr}
+                      parsed={parseDate(dateStr, dialect.dateOrder)}
+                    />
                   </td>
                   <td className="px-4 py-2">{row[columnMap.description ?? '']}</td>
                   <td className="px-4 py-2">

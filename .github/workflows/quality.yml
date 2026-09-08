@@ -1109,6 +1109,27 @@ jobs:
       - name: No new unsized raw interactive elements vs baseline
         run: node scripts/check-touch-targets.mjs
 
+  raw-form-controls:
+    name: Raw form control ratchet
+    # POPS-3168 "every form control is a kit component": no raw <select>,
+    # <input>, or <textarea> in pillar UI — @pops/ui's kit primitives exist
+    # to replace them. Per-pillar counts in .raw-form-control-baseline.json
+    # may only ever match the real tree exactly; both growth and an
+    # un-rebaselined improvement fail. It reads pillar source directly and
+    # pulls in no third-party deps, so it skips `pnpm install`. Never scans
+    # libs/ui — the kit legitimately wraps these elements. See
+    # scripts/ci/check-raw-form-controls.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard reports a new control and a stale baseline)
+        run: node scripts/ci/check-raw-form-controls.mjs --self-test
+      - name: No raw form controls beyond the committed per-pillar baseline
+        run: node scripts/ci/check-raw-form-controls.mjs
+
   title-icon-consistency:
     name: Title-icon consistency
     # Within one pillar app, top-level (navConfig) pages must either all pass
