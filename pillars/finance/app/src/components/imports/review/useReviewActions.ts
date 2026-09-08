@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import { promptToLearn } from '../hooks/learn-prompt';
 import { replaceByChecksum } from '../hooks/local-tx-reconcile';
+import { needsTransactionType } from './buildConfirmed';
 
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -132,7 +133,10 @@ function useHandleBulkEntitySelect({
             entityId,
             entityName,
             matchType: 'manual',
-            transactionType,
+            // A group mixes an untyped credit with already-typed rows for the
+            // same merchant; the chosen type only satisfies whichever row(s)
+            // needed one, never overwriting a row that already had a type.
+            transactionType: needsTransactionType(t) ? transactionType : undefined,
           });
         }
         return updated;

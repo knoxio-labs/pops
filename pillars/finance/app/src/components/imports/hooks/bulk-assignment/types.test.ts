@@ -106,4 +106,29 @@ describe('moveToMatched', () => {
 
     expect(next.matched[0]?.entity).toMatchObject({ matchType: 'manual' });
   });
+
+  it('applies a chosen type only to the row(s) that needed one, not the whole group', () => {
+    const alreadyTyped = makeProcessed('typed-debit', {
+      status: 'uncertain',
+      amount: -20,
+      transactionType: 'purchase',
+    });
+    const untypedCredit = makeProcessed('untyped-credit', {
+      status: 'uncertain',
+      amount: 50,
+      transactionType: undefined,
+    });
+    const prev = emptyState({ uncertain: [alreadyTyped, untypedCredit] });
+
+    const next = moveToMatched(
+      prev,
+      [alreadyTyped, untypedCredit],
+      { entityId: 'ent-a', entityName: 'A Corp' },
+      'refund'
+    );
+
+    const byChecksum = Object.fromEntries(next.matched.map((t) => [t.checksum, t]));
+    expect(byChecksum['typed-debit']?.transactionType).toBe('purchase');
+    expect(byChecksum['untyped-credit']?.transactionType).toBe('refund');
+  });
 });

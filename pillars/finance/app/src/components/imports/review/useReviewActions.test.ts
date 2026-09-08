@@ -231,6 +231,39 @@ function setupActions(similar: ProcessedTransaction[] = []) {
   return { result, setLocalTransactions, generateProposal, findSimilar, recomputeForEntity };
 }
 
+describe('handleBulkEntitySelect — a forced type only satisfies the row(s) that needed one', () => {
+  it('does not overwrite the type of an already-typed row elsewhere in the group', () => {
+    const { result, setLocalTransactions } = setupActions();
+    const alreadyTyped = makeProcessed('typed-debit', {
+      status: 'uncertain',
+      amount: -20,
+      transactionType: 'purchase',
+    });
+    const untypedCredit = makeProcessed('untyped-credit', {
+      status: 'uncertain',
+      amount: 50,
+      transactionType: undefined,
+    });
+
+    act(() => {
+      result.current.handleBulkEntitySelect(
+        [alreadyTyped, untypedCredit],
+        'ent-a',
+        'A Corp',
+        'refund'
+      );
+    });
+
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
+      p: LocalTxState
+    ) => LocalTxState;
+    const next = updater(emptyState({ uncertain: [alreadyTyped, untypedCredit] }));
+    const byChecksum = Object.fromEntries(next.matched.map((t) => [t.checksum, t]));
+    expect(byChecksum['typed-debit']?.transactionType).toBe('purchase');
+    expect(byChecksum['untyped-credit']?.transactionType).toBe('refund');
+  });
+});
+
 /** Invoke the "Save & Learn" action the fallback toast offers. */
 function invokeLearnAction(): void {
   const options = toastMock.info.mock.calls.at(-1)?.[1] as
