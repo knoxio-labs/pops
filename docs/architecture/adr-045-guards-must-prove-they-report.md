@@ -98,6 +98,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`                                          | `.oxlintrc.json`, `git diff`/`git show` of touched files        |
 | `scripts/ci/check-cross-pr-line-budget.mjs`         | `quality.yml` → `cross-pr-line-budget`                                          | `.oxlintrc.json`, `git show` of two branches, open PRs via REST |
 | `scripts/ci/check-pops-uri-pattern-adoption.mjs`    | `quality.yml` → `pops-uri-pattern-adoption`                                     | `pillars/purchases/src/**` TS source                            |
+| `scripts/ci/check-raw-form-controls.mjs`            | `quality.yml` → `raw-form-controls`                                             | `pillars/**` TSX/JSX source, JSON baseline                      |
 | `scripts/ci/pr-review.mjs`                          | `pr-review.yml` → `review`                                                      | `git diff`/`git show`, the sticky comment's state block         |
 | `scripts/ci/check-review-findings.mjs`              | `review-findings-gate.yml` → `review-findings-gate`                             | the sticky comment's state block, via the GitHub REST API       |
 | `scripts/ci/design-surface-only.mjs`                | `pr-review.yml` → `review`, `review-findings-gate.yml` → `review-findings-gate` | the PR's changed-file list, via the GitHub REST API             |

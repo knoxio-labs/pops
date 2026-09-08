@@ -93,6 +93,16 @@ export const REAL_TREE_PROOFS = [
     script: 'scripts/ci/resolve-report-base.mjs',
     args: ['--self-test'],
   },
+  {
+    id: 'check-raw-form-controls',
+    script: 'scripts/ci/check-raw-form-controls.mjs',
+    args: [],
+  },
+  {
+    id: 'check-raw-form-controls:self-test',
+    script: 'scripts/ci/check-raw-form-controls.mjs',
+    args: ['--self-test'],
+  },
 ] as const satisfies readonly RealTreeProof[];
 
 /** Key of a registered proof. */
