@@ -1,16 +1,18 @@
 /**
- * TreePicker — TreeView inside a Popover with search and optional inline create.
+ * TreePicker — TreeView inside a Popover with search, an optional inline
+ * create, and an optional footer slot (clear selection + persistent create).
  *
  * Generic over the node data. Consumers resolve display labels through
  * `getLabel(data)`. Filter is a recursive substring match on labels.
  */
-import { Check, Plus, Search } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
 import { Input } from '../primitives/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
+import { NoMatches, PickerFooter } from './TreePicker.footer';
 import { type TreeNode, TreeView } from './TreeView';
 
 export interface TreePickerProps<T> {
@@ -18,8 +20,15 @@ export interface TreePickerProps<T> {
   getLabel: (data: T) => string;
   selectedId?: string | null;
   onSelect: (node: TreeNode<T>) => void;
-  /** Optional inline create action. */
+  /** Optional inline create action, also offered from the footer's persistent create row. */
   onCreate?: (query: string, parent: TreeNode<T> | null) => void;
+  /**
+   * Optional clear action. When supplied, a "Clear selection" row appears in
+   * the footer while `selectedId` is set, returning the field to empty.
+   */
+  onClear?: () => void;
+  /** Label for the footer's persistent create row. Defaults to "Create new". */
+  createLabel?: string;
   placeholder?: string;
   trigger?: ReactNode;
   triggerLabel?: ReactNode;
@@ -46,30 +55,19 @@ function collectIds<T>(nodes: TreeNode<T>[], into: Set<string> = new Set()): Set
   return into;
 }
 
-interface NoMatchesProps<T> {
-  query: string;
-  onCreate?: (query: string, parent: TreeNode<T> | null) => void;
-  onCreated: () => void;
-}
+function useFilteredNodes<T>(nodes: TreeNode<T>[], getLabel: (data: T) => string, query: string) {
+  const filtered = useMemo(() => {
+    if (!query.trim()) return nodes;
+    const needle = query.toLowerCase();
+    return filterNodes(nodes, (d) => getLabel(d).toLowerCase().includes(needle));
+  }, [nodes, query, getLabel]);
 
-function NoMatches<T>({ query, onCreate, onCreated }: NoMatchesProps<T>) {
-  return (
-    <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
-      <div>No matches for &ldquo;{query}&rdquo;</div>
-      {onCreate && query.trim() ? (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            onCreate(query.trim(), null);
-            onCreated();
-          }}
-        >
-          <Plus /> Create &ldquo;{query.trim()}&rdquo;
-        </Button>
-      ) : null}
-    </div>
-  );
+  const expandedIds = useMemo(() => {
+    if (query.trim()) return collectIds(filtered);
+    return new Set<string>();
+  }, [filtered, query]);
+
+  return { filtered, expandedIds };
 }
 
 interface PickerBodyProps<T> {
@@ -79,6 +77,8 @@ interface PickerBodyProps<T> {
   filtered: TreeNode<T>[];
   expandedIds: Set<string>;
   onCreate?: (q: string, parent: TreeNode<T> | null) => void;
+  onClear?: () => void;
+  createLabel: string;
   selectedId: string | null;
   onSelect: (n: TreeNode<T>) => void;
   getLabel: (data: T) => string;
@@ -91,6 +91,8 @@ function PickerBody<T>({
   filtered,
   expandedIds,
   onCreate,
+  onClear,
+  createLabel,
   selectedId,
   onSelect,
   getLabel,
@@ -127,6 +129,12 @@ function PickerBody<T>({
           />
         )}
       </div>
+      <PickerFooter
+        hasSelection={selectedId != null}
+        onClear={onClear}
+        onCreate={onCreate}
+        createLabel={createLabel}
+      />
     </PopoverContent>
   );
 }
@@ -137,6 +145,8 @@ export function TreePicker<T>({
   selectedId = null,
   onSelect,
   onCreate,
+  onClear,
+  createLabel = 'Create new',
   placeholder = 'Search…',
   trigger,
   triggerLabel,
@@ -145,17 +155,7 @@ export function TreePicker<T>({
 }: TreePickerProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return nodes;
-    const needle = query.toLowerCase();
-    return filterNodes(nodes, (d) => getLabel(d).toLowerCase().includes(needle));
-  }, [nodes, query, getLabel]);
-
-  const expandedIds = useMemo(() => {
-    if (query.trim()) return collectIds(filtered);
-    return new Set<string>();
-  }, [filtered, query]);
+  const { filtered, expandedIds } = useFilteredNodes(nodes, getLabel, query);
 
   const handleSelect = useCallback(
     (node: TreeNode<T>) => {
@@ -165,6 +165,12 @@ export function TreePicker<T>({
     },
     [onSelect]
   );
+
+  const handleClear = useCallback(() => {
+    onClear?.();
+    setOpen(false);
+    setQuery('');
+  }, [onClear]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -182,6 +188,8 @@ export function TreePicker<T>({
         filtered={filtered}
         expandedIds={expandedIds}
         onCreate={onCreate}
+        onClear={onClear ? handleClear : undefined}
+        createLabel={createLabel}
         selectedId={selectedId}
         onSelect={handleSelect}
         getLabel={getLabel}

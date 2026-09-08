@@ -38,7 +38,6 @@ export const STORY_COVERAGE_ALLOWLIST = {
   'components/TierListBoard.row.tsx':
     'Sibling export of the already-allowlisted TierListBoard.tsx (predates the story-coverage gate); only became visible to this gate once it started following two-hop re-export chains.',
   'components/TierListBoard.tsx': 'Predates the story-coverage gate.',
-  'components/TreePicker.tsx': 'Predates the story-coverage gate.',
   'components/TreeView.tsx': 'Predates the story-coverage gate.',
   'components/UriCard.tsx': 'Predates the story-coverage gate.',
   'components/WarrantyBadge.tsx': 'Predates the story-coverage gate.',

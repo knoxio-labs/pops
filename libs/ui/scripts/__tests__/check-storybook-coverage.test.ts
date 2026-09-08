@@ -23,7 +23,7 @@ import { STORY_COVERAGE_ALLOWLIST } from '../storybook-coverage-allowlist.mjs';
  * with every run green. Pinning the size makes taking debt on a visible edit
  * here: lower it when an entry earns a story, raise it only deliberately.
  */
-const ALLOWLIST_PINNED_SIZE = 35;
+const ALLOWLIST_PINNED_SIZE = 34;
 
 const tempRoots: string[] = [];
 
