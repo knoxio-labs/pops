@@ -7,45 +7,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@pops/ui';
 
+import { FilterSelect } from '../../components/FilterSelect';
 import { ENGRAM_SOURCES, ENGRAM_STATUSES, type EngramStatus } from '../../engrams/types';
 import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 
 import type { useEngramListModel } from '../../engrams/useEngramListModel';
 
 type Model = ReturnType<typeof useEngramListModel>;
-
-function FilterSelect({
-  label,
-  value,
-  options,
-  emptyLabel,
-  onChange,
-}: {
-  label: string;
-  value: string | null;
-  options: readonly string[];
-  emptyLabel: string;
-  onChange: (next: string | null) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-      {label}
-      <select
-        aria-label={label}
-        className={`rounded-md border border-border bg-background px-2 text-sm ${TOUCH_TARGET_MIN_HEIGHT}`}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-      >
-        <option value="">{emptyLabel}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 export function EngramFilterBar({ model }: { model: Model }) {
   const { t } = useTranslation('cerebrum');

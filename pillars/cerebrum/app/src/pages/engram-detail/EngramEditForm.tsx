@@ -5,7 +5,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Button, ChipInput, Textarea, TextInput } from '@pops/ui';
+import { Button, ChipInput, Select, Textarea, TextInput, type SelectOption } from '@pops/ui';
 
 import { ENGRAM_STATUSES, type EngramStatus } from '../../engrams/types';
 import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
@@ -13,6 +13,11 @@ import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 import type { useEngramDetailModel } from '../../engrams/useEngramDetailModel';
 
 type Model = ReturnType<typeof useEngramDetailModel>;
+
+const STATUS_OPTIONS: SelectOption[] = ENGRAM_STATUSES.map((status) => ({
+  value: status,
+  label: status,
+}));
 
 function StatusSelect({
   value,
@@ -24,21 +29,14 @@ function StatusSelect({
   label: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-      {label}
-      <select
-        aria-label={label}
-        className={`rounded-md border border-border bg-background px-2 text-sm ${TOUCH_TARGET_MIN_HEIGHT}`}
-        value={value}
-        onChange={(e) => onChange(e.currentTarget.value as EngramStatus)}
-      >
-        {ENGRAM_STATUSES.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label={label}
+      aria-label={label}
+      className={TOUCH_TARGET_MIN_HEIGHT}
+      value={value}
+      options={STATUS_OPTIONS}
+      onChange={(e) => onChange(e.currentTarget.value as EngramStatus)}
+    />
   );
 }
 
