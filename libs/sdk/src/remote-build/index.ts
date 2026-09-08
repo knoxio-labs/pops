@@ -103,6 +103,17 @@ export function findBundledSharedRuntime(
   return [...offenders].toSorted();
 }
 
+/** The two filesystem reads the package walk performs. */
+export interface ManifestFiles {
+  readonly exists: (path: string) => boolean;
+  readonly read: (path: string) => string;
+}
+
+const nodeFiles: ManifestFiles = {
+  exists: (path) => existsSync(path),
+  read: (path) => readFileSync(path, 'utf8'),
+};
+
 /**
  * A filesystem-backed `PackageNameResolver`: walks up from a module id to the
  * nearest `package.json` and returns its `name`.
@@ -120,8 +131,12 @@ export function findBundledSharedRuntime(
  *
  * Node-only. `@pops/pillar-sdk/remote-build` is imported by build scripts and
  * never by a shipped bundle.
+ *
+ * @param files Filesystem reads, injectable so the walk's termination can be
+ *   driven over layouts a test cannot create — a nameless `package.json` at
+ *   the root among them.
  */
-export function createPackageNameResolver(): PackageNameResolver {
+export function createPackageNameResolver(files: ManifestFiles = nodeFiles): PackageNameResolver {
   const cache = new Map<string, string | undefined>();
 
   function nameForDirectory(directory: string): string | undefined {
@@ -129,10 +144,18 @@ export function createPackageNameResolver(): PackageNameResolver {
     if (cached !== undefined || cache.has(directory)) return cached;
 
     const parent = dirname(directory);
+    // `dirname('/')` is `/`, so this is where the walk stops. It gates BOTH
+    // branches below: a nameless `package.json` at the filesystem root would
+    // otherwise recurse into itself until the stack ran out, which is the
+    // same non-termination the missing-manifest case guards against and has
+    // no reason to be treated differently.
+    const atRoot = parent === directory;
+    const climb = (): string | undefined => (atRoot ? undefined : nameForDirectory(parent));
+
     const manifest = join(directory, 'package.json');
     let name: string | undefined;
-    if (existsSync(manifest)) {
-      const parsed: unknown = JSON.parse(readFileSync(manifest, 'utf8'));
+    if (files.exists(manifest)) {
+      const parsed: unknown = JSON.parse(files.read(manifest));
       const declared =
         typeof parsed === 'object' && parsed !== null && 'name' in parsed
           ? (parsed as { name: unknown }).name
@@ -140,9 +163,9 @@ export function createPackageNameResolver(): PackageNameResolver {
       // A nameless package.json (a bare `{ "type": "module" }` marker, which
       // several packages drop into a subdirectory) does not end the walk —
       // the owning package is still above it.
-      name = typeof declared === 'string' ? declared : nameForDirectory(parent);
+      name = typeof declared === 'string' ? declared : climb();
     } else {
-      name = parent === directory ? undefined : nameForDirectory(parent);
+      name = climb();
     }
 
     cache.set(directory, name);

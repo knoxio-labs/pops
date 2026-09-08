@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createPackageNameResolver,
+  type ManifestFiles,
   findBundledSharedRuntime,
   isSharedRuntimeSpecifier,
   SHARED_RUNTIME_SPECIFIERS,
@@ -183,5 +184,72 @@ describe('createPackageNameResolver', () => {
 
   it('strips a query suffix before walking', () => {
     expect(resolve(`${join(here, 'index.ts')}?commonjs-proxy`)).toBe('@pops/pillar-sdk');
+  });
+});
+
+/**
+ * A synthetic tree, so the walk's termination can be driven over layouts the
+ * real filesystem will not hold still for.
+ */
+function filesystem(manifests: Record<string, string>): ManifestFiles {
+  return {
+    exists: (path) => Object.hasOwn(manifests, path),
+    read: (path) => manifests[path] ?? '',
+  };
+}
+
+describe('createPackageNameResolver — walking to the nearest manifest', () => {
+  it('stops at the first named manifest above the file', () => {
+    const resolve = createPackageNameResolver(
+      filesystem({
+        '/repo/package.json': JSON.stringify({ name: 'root' }),
+        '/repo/libs/ui/package.json': JSON.stringify({ name: '@pops/ui' }),
+      })
+    );
+    expect(resolve('/repo/libs/ui/src/components/button.tsx')).toBe('@pops/ui');
+  });
+
+  it('climbs past a nameless manifest to the package that owns it', () => {
+    const resolve = createPackageNameResolver(
+      filesystem({
+        '/repo/libs/ui/package.json': JSON.stringify({ name: '@pops/ui' }),
+        '/repo/libs/ui/dist/package.json': JSON.stringify({ type: 'module' }),
+      })
+    );
+    expect(resolve('/repo/libs/ui/dist/index.js')).toBe('@pops/ui');
+  });
+
+  // Both ways of reaching the root have to stop there. The nameless-manifest
+  // branch used to recurse into itself instead, which is a stack overflow
+  // rather than an unresolved id.
+  it('terminates at the root when nothing above the file is named', () => {
+    const resolve = createPackageNameResolver(filesystem({}));
+    expect(resolve('/deeply/nested/file.js')).toBeUndefined();
+  });
+
+  it('terminates at the root when the root manifest itself is nameless', () => {
+    const resolve = createPackageNameResolver(
+      filesystem({ '/package.json': JSON.stringify({ type: 'module' }) })
+    );
+    expect(resolve('/file.js')).toBeUndefined();
+    expect(resolve('/deeply/nested/file.js')).toBeUndefined();
+  });
+
+  it('reads each directory once across repeated lookups', () => {
+    const reads: string[] = [];
+    const manifests = { '/repo/libs/ui/package.json': JSON.stringify({ name: '@pops/ui' }) };
+    const resolve = createPackageNameResolver({
+      exists: (path) => {
+        reads.push(path);
+        return Object.hasOwn(manifests, path);
+      },
+      read: (path) => manifests[path as keyof typeof manifests] ?? '',
+    });
+
+    resolve('/repo/libs/ui/src/a.ts');
+    const afterFirst = reads.length;
+    resolve('/repo/libs/ui/src/b.ts');
+
+    expect(reads.length).toBe(afterFirst);
   });
 });
