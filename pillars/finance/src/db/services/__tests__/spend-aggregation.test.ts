@@ -9,8 +9,9 @@
  * was no way to keep them out that did not depend on someone having tagged
  * them.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { pairTransfersPhase } from '../../../api/modules/imports/commit-pair-transfers.js';
 import {
   classifyFromDescription,
   resolveCommittedType,
@@ -18,6 +19,7 @@ import {
 import { freshMigratedFinanceDb } from '../../__tests__/migrated-db.js';
 import { seededAccountId } from '../../__tests__/seeded-account.js';
 import { bulkComputeSpend, spendMapKey } from '../budget-spend.js';
+import { createTransaction } from '../transactions.js';
 
 import type Database from 'better-sqlite3';
 
@@ -140,5 +142,43 @@ describe('bulkComputeSpend — which types are spend', () => {
     });
 
     expect(spendOn(db)).toBe(5000);
+  });
+});
+
+describe('bulkComputeSpend — after paired-transfer linking (POPS-2753)', () => {
+  const ORIGINAL_ENABLED = process.env['FINANCE_TRANSFER_PAIR_ENABLED'];
+
+  beforeEach(() => {
+    process.env['FINANCE_TRANSFER_PAIR_ENABLED'] = 'true';
+  });
+
+  it('drops both legs of a newly-linked transfer out of spend, even though each leg was tagged as if it were a purchase', () => {
+    // Each leg is seeded carrying the category tag a miscategorized row would
+    // carry — the assertion is that *linking* (not manual retyping) is what
+    // removes them from spend, on both accounts, leaving zero net effect.
+    const outgoing = createTransaction(db, {
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 754244',
+      accountId: seededAccountId(db, 'Amex'),
+      amountCents: -50_000,
+      date: '2026-05-10',
+      type: 'purchase',
+      tags: [CATEGORY],
+    });
+    const incoming = createTransaction(db, {
+      description: 'PAYMENT THANKYOU 754244',
+      accountId: seededAccountId(db, 'ANZ Credit Card'),
+      amountCents: 50_000,
+      date: '2026-05-10',
+      type: 'income',
+      tags: [CATEGORY],
+    });
+
+    expect(pairTransfersPhase(db, [outgoing.id, incoming.id])).toBe(1);
+    expect(spendOn(db)).toBe(0);
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_ENABLED === undefined) delete process.env['FINANCE_TRANSFER_PAIR_ENABLED'];
+    else process.env['FINANCE_TRANSFER_PAIR_ENABLED'] = ORIGINAL_ENABLED;
   });
 });
