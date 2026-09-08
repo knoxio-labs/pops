@@ -6,6 +6,7 @@
  * threaded in, so their inner service calls nest as savepoints rather than
  * opening transactions of their own.
  */
+import { reconcilePendingCorrectionChangeSets } from '../../../contract/corrections-reconcile.js';
 import {
   applyChangeSet,
   dropUnusableAddOps,
@@ -48,7 +49,8 @@ export function applyChangeSetsPhase(
 ): CorrectionChangeSetPhaseResult {
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
   const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
-  for (const cs of payload.changeSets) {
+  const reconciled = reconcilePendingCorrectionChangeSets(payload.changeSets);
+  for (const cs of reconciled) {
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
     const sanitized = dropUnusableAddOps(resolved);
     if (sanitized.ops.length === 0) continue;

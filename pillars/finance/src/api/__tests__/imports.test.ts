@@ -943,6 +943,64 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
     expect(rule.entity_id).toBe(contact?.id);
   });
 
+  it('resolves an edit/disable/remove targeting a still-pending rule by its preview temp:<n> id (POPS-3158)', async () => {
+    const c = client();
+    const res = await c.imports.commitImport({
+      changeSets: [
+        // Preview-numbered temp:1: an add later edited by a separate pending ChangeSet.
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'MAXXIA_EV',
+                matchType: 'contains',
+                transactionType: 'transfer',
+              },
+            },
+          ],
+        },
+        {
+          ops: [
+            { op: 'edit', id: 'temp:1', data: { descriptionPattern: 'MAXXIA', tags: ['lease'] } },
+          ],
+        },
+        // Preview-numbered temp:2: an add later removed outright before ever committing.
+        {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'THROWAWAY',
+                matchType: 'contains',
+                transactionType: 'transfer',
+              },
+            },
+          ],
+        },
+        { ops: [{ op: 'remove', id: 'temp:2' }] },
+      ],
+      transactions: [confirmed({ checksum: 'commit-pending-temp-chain' })],
+    });
+    expect(res.data.rulesApplied).toEqual({ add: 1, edit: 0, disable: 0, remove: 0 });
+
+    const rows = financeDb.raw
+      .prepare('SELECT description_pattern, tags FROM transaction_corrections')
+      .all() as { description_pattern: string; tags: string }[];
+    expect(rows.map((r) => r.description_pattern)).toEqual(['MAXXIA']);
+    expect(JSON.parse(rows[0]!.tags)).toEqual(['lease']);
+  });
+
+  it('still 404s on a temp:<n> id with no matching pending add (a genuine dangling reference)', async () => {
+    const c = client();
+    await expect(
+      c.imports.commitImport({
+        changeSets: [{ ops: [{ op: 'edit', id: 'temp:1', data: { tags: ['x'] } }] }],
+        transactions: [confirmed({ checksum: 'commit-dangling-temp-n' })],
+      })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
   it('degrades a bundled tags-only add op instead of rolling back the whole commit (CF061/#3650)', async () => {
     const contacts = makeContactsFake();
     const c = client(contacts);
