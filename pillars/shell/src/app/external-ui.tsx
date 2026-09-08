@@ -22,6 +22,32 @@ import { lazy, Suspense, type ComponentType } from 'react';
  * This adds no bundler coupling and does not change how in-repo pillars are
  * bundled: it is a runtime dynamic `import()` of a URL, native to ES modules
  * and Vite. ADR-002 stands — the in-repo FE is still one static SPA.
+ *
+ * ## The shared-runtime contract
+ *
+ * A remote bundle is a separate build, so anything it contains is a second
+ * copy at runtime. For a package holding React context or module-global
+ * state, a second copy is a correctness failure rather than a size one: two
+ * React copies give two dispatchers and the pillar's first hook throws
+ * `Invalid hook call`; two `@tanstack/react-query` copies give a component
+ * reading an empty cache through a provider it cannot see; two `i18next`
+ * copies give a pillar rendering raw keys. None of that fails at build time,
+ * and each presents as a bug in the pillar rather than in the packaging.
+ *
+ * So: **the shell owns one instance of every specifier in
+ * `SHARED_RUNTIME_SPECIFIERS` (`@pops/pillar-sdk/remote-build`), and a remote
+ * bundle imports them rather than containing them.** The pillar build marks
+ * them external — `pillars/purchases/app/vite.remote.config.ts` is the
+ * reference, and its `scripts/build-remote.ts` fails the build if one slips
+ * inside — and the shell resolves the resulting bare specifiers to its own
+ * chunks through an import map it emits.
+ *
+ * Externalising without that import map is the point rather than a gap: the
+ * browser refuses a bare specifier it cannot resolve, so a shell that has not
+ * published its runtime fails the import loudly, into the `<ErrorBoundary>`
+ * below, instead of a pillar quietly running on its own React. Emitting the
+ * import map is the shell's half of this and lands with the first
+ * loader-mounted in-repo pillar (POPS-3217).
  */
 import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
@@ -70,7 +96,7 @@ export interface RemoteUiDescriptor {
  */
 export type RemoteModuleImporter = (assetsBaseUrl: string) => Promise<unknown>;
 
-const defaultRemoteModuleImporter: RemoteModuleImporter = (assetsBaseUrl) =>
+export const defaultRemoteModuleImporter: RemoteModuleImporter = (assetsBaseUrl) =>
   import(/* @vite-ignore */ assetsBaseUrl);
 
 /**
