@@ -1,7 +1,5 @@
-import { useRef } from 'react';
-
 import { SectionView } from './search-results/SectionView';
-import { sortSections, usePanelDismiss } from './search-results/usePanelDismiss';
+import { sortSections } from './search-results/usePanelDismiss';
 
 import type { ReactNode } from 'react';
 
@@ -35,25 +33,27 @@ export interface SearchResultsPanelProps {
   onShowMore?: (domain: string) => void;
   /** Index of the currently keyboard-selected result (flat, across all sections). -1 = none. */
   selectedIndex?: number;
+  /** id applied to the listbox root, referenced by the input's `aria-controls`. */
+  listboxId?: string;
 }
 
 export function SearchResultsPanel({
   sections,
   query,
-  onClose,
+  onClose: _onClose,
   onResultClick,
   onShowMore,
   selectedIndex = -1,
+  listboxId,
 }: SearchResultsPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  usePanelDismiss(panelRef, onClose);
-
   const sortedSections = sortSections(sections);
 
   if (sortedSections.length === 0) {
     return (
       <div
-        ref={panelRef}
+        id={listboxId}
+        role="listbox"
+        aria-label="Search results"
         className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border bg-popover p-4 text-center text-sm text-muted-foreground shadow-lg"
         data-testid="search-results-panel"
       >
@@ -65,7 +65,9 @@ export function SearchResultsPanel({
   let cursor = 0;
   return (
     <div
-      ref={panelRef}
+      id={listboxId}
+      role="listbox"
+      aria-label="Search results"
       className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-lg border bg-popover shadow-lg"
       data-testid="search-results-panel"
     >

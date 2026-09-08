@@ -5,9 +5,12 @@ import { SearchInputDropdown } from './search-input/SearchInputDropdown';
 import { SearchInputField } from './search-input/SearchInputField';
 import { useSearchInputData } from './search-input/useSearchInputData';
 import { useCmdKShortcut, useSearchInputHandlers } from './search-input/useSearchInputHandlers';
-import { useSearchKeyboardNav } from './search-keyboard-nav';
+import { useSearchInputSelection } from './search-input/useSearchInputSelection';
+import { usePanelDismiss } from './search-results/usePanelDismiss';
 import { useSearchStore } from './searchStore';
 import { useFocusTrap } from './useFocusTrap';
+
+const SEARCH_LISTBOX_ID = 'global-search-listbox';
 
 export function SearchInput() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,13 +26,13 @@ export function SearchInput() {
     inputRef,
   });
 
-  const { selectedIndex } = useSearchKeyboardNav({
+  const { selectedIndex, activeDescendantId, selectRecentQuery } = useSearchInputSelection({
     containerRef,
-    resultCount: orderedHits.length,
-    onSelect: (index) => {
-      const hit = orderedHits[index];
-      if (hit !== undefined) handleResultClick(hit.uri, hit.data);
-    },
+    inputRef,
+    isRecentView: query.length === 0,
+    queries,
+    orderedHits,
+    onSelectHit: handleResultClick,
     onClose: handleClose,
   });
 
@@ -37,6 +40,7 @@ export function SearchInput() {
 
   const showPanel = isOpen && (query.length > 0 || (isFocused && queries.length > 0));
   useFocusTrap({ containerRef, active: showPanel });
+  usePanelDismiss(containerRef, handleClose);
 
   return (
     <div ref={containerRef} className="hidden md:flex relative items-center max-w-sm w-full mx-4">
@@ -54,16 +58,20 @@ export function SearchInput() {
             setIsFocused(false);
           }
         }}
+        expanded={showPanel}
+        listboxId={SEARCH_LISTBOX_ID}
+        activeDescendantId={activeDescendantId}
       />
       {showPanel && (
         <SearchInputDropdown
-          inputRef={inputRef}
           query={query}
           sections={sections}
           selectedIndex={selectedIndex}
+          listboxId={SEARCH_LISTBOX_ID}
           onClose={handleClose}
           onResultClick={handleResultClick}
           onShowMore={handleShowMore}
+          onSelectRecent={selectRecentQuery}
         />
       )}
     </div>
