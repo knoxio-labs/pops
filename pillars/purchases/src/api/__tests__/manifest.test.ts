@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
+import { PURCHASES_PAGES } from '../../contract/pages.js';
 import { buildPurchasesManifest, PURCHASES_PILLAR_ID } from '../manifest.js';
 import { resolvePurchasesSqlitePath } from '../purchases-sqlite-path.js';
 
@@ -55,27 +56,25 @@ describe('buildPurchasesManifest', () => {
   // three the app actually mounted, with a comment still claiming they
   // matched. Nothing else in the repo compares them — the in-repo shell rail
   // is built from `@pops/app-purchases`'s own exported `navConfig`, never
-  // from this manifest — so this reads the app's route source directly rather
-  // than restating it a third time, the same way the literal wire values
-  // above would restate it a second time.
+  // from this manifest.
   //
-  // Reading the file as TEXT instead of importing `navConfig`/`routes` from
-  // `@pops/app-purchases` is deliberate, and the import is not the available
-  // simplification it looks like. `pillars/purchases/Dockerfile` hand-curates
-  // the `COPY <pkg>/package.json` list it builds from and then runs
-  // `pnpm install --frozen-lockfile --filter "@pops/purchases..."`, which
-  // resolves devDependencies as well as dependencies. Naming the app package
-  // in either block of `pillars/purchases/package.json` therefore fails the
-  // image build on a workspace package that was never copied into the build
-  // context — and nothing local catches it, only the Docker Build job does.
-  // Reading the source keeps the app out of this package's dependency graph.
+  // The route half of that comparison no longer needs reading at all: the
+  // page paths and their bundle slots moved into `../../contract/pages.js`,
+  // which both this manifest and the app derive from, so drift between them
+  // stopped being possible rather than being detected. What remains readable
+  // only as TEXT is the app's `navConfig`, and importing it is not the
+  // available simplification it looks like: `pillars/purchases/Dockerfile`
+  // hand-curates the `COPY <pkg>/package.json` list it builds from and then
+  // runs `pnpm install --frozen-lockfile --filter "@pops/purchases..."`,
+  // which resolves devDependencies as well as dependencies. Naming the app
+  // package in either block of `pillars/purchases/package.json` therefore
+  // fails the image build on a workspace package that was never copied into
+  // the build context — and nothing local catches it, only the Docker Build
+  // job does. Reading the source keeps the app out of this package's
+  // dependency graph.
   describe('nav + pages mirror the app (no silent drift)', () => {
-    const appRoutesPath = fileURLToPath(new URL('../../../app/src/routes.tsx', import.meta.url));
-    const appRoutesSource = readFileSync(appRoutesPath, 'utf8');
-    // `navConfig` moved out of `routes.tsx` into its own module so that reading
-    // the nav does not pull the route table's lazy page imports with it. Both
-    // files are read here, and every error below names the one it was reading:
-    // a matcher that has stopped seeing a file must say which file.
+    // Every error below names the file it was reading: a matcher that has
+    // stopped seeing a file must say which file.
     const appNavPath = fileURLToPath(new URL('../../../app/src/nav.ts', import.meta.url));
     const appNavSource = readFileSync(appNavPath, 'utf8');
 
@@ -145,7 +144,7 @@ describe('buildPurchasesManifest', () => {
     // and the app declares none", which points at drift that does not exist.
     function requireFound<T>(found: T[], what: string): T[] {
       if (found.length === 0) {
-        throw new Error(`extracted no ${what} from ${appRoutesPath} / ${appNavPath}`);
+        throw new Error(`extracted no ${what} from ${appNavPath}`);
       }
       return found;
     }
@@ -182,38 +181,28 @@ describe('buildPurchasesManifest', () => {
       return requireFound(items, 'nav items');
     }
 
-    // Rooted paths for every route the rail can reach — the index route is
-    // `''`, whether it is spelled `index: true` or `path: ''`, and a dynamic
-    // segment (`:purchaseId`) is excluded because a rail entry has no id to
-    // put in its path. Mirrors
-    // `pillars/purchases/app/src/__tests__/manifest.test.ts`'s `navPathOf` /
-    // `isReachableFromTheRail`, which prove this set equals `navConfig.items`
-    // over the real exported objects inside the app package.
-    function reachableRoutePaths(block: string): string[] {
-      const paths = [...block.matchAll(/\{\s*(?:index:\s*true|path:\s*'([^']*)')/g)]
-        .map((m) => (m[1] === undefined || m[1] === '' ? '' : `/${m[1]}`))
-        .filter((path) => !path.includes(':'));
-      return requireFound(paths, 'rail-reachable route paths');
+    /**
+     * Rooted paths for the pages the rail can reach, from the contract both
+     * the app and this manifest derive from. The index route is `''` whether
+     * the app spells it `index: true` or `path: ''`, and nothing dynamic
+     * appears here — a rail entry has no id to put in a `:purchaseId`.
+     */
+    function reachablePagePaths(): string[] {
+      return PURCHASES_PAGES.map((page) => ('index' in page && page.index ? '' : `/${page.path}`));
     }
 
     it('carries every app nav item across the wire, in rail order', () => {
-      const routesBlock = extractAssignedBracket(
-        appRoutesPath,
-        appRoutesSource,
-        'export const routes',
-        '['
-      );
       const appNavItems = navItems(navItemsBlock(appNavSource));
-      const appRoutePaths = reachableRoutePaths(routesBlock);
 
-      // Guards the extraction rather than the manifest: if these two
-      // disagree, the matchers above have drifted from the file's shape
-      // rather than the file from itself. Sorted, because nothing requires
-      // the app to declare its nav items in the order it mounts its routes.
+      // A nav item with no page behind it is the dead link this pillar's
+      // manifest was kept empty to avoid. Sorted, because nothing requires
+      // the app to declare its nav items in the order the pages are listed.
       // The app package's own suite asserts the same equality over the real
       // exported objects, but it runs in a different unit — `app/**` is
       // excluded from this vitest project — so it cannot stand in here.
-      expect(appNavItems.map((item) => item.path).toSorted()).toEqual(appRoutePaths.toSorted());
+      expect(appNavItems.map((item) => item.path).toSorted()).toEqual(
+        reachablePagePaths().toSorted()
+      );
 
       // Unsorted: rail order is what the reader sees, and a wire nav shuffled
       // against the app's is drift that a set comparison would wave through.
@@ -240,12 +229,12 @@ describe('buildPurchasesManifest', () => {
     // answer confidently is worse than one that refuses.
     it('throws rather than returning a wrong block when the source stops matching', () => {
       expect(() =>
-        extractAssignedBracket(appRoutesPath, 'const other = [1];', 'export const routes', '[')
+        extractAssignedBracket(appNavPath, 'const other = [1];', 'export const routes', '[')
       ).toThrow(/could not find/);
 
       expect(() =>
         extractAssignedBracket(
-          appRoutesPath,
+          appNavPath,
           'const other = [1];\nexport const routes',
           'export const routes',
           '['
@@ -254,7 +243,7 @@ describe('buildPurchasesManifest', () => {
 
       expect(() =>
         extractAssignedBracket(
-          appRoutesPath,
+          appNavPath,
           'const other = [1];\nexport const routes = undefined;',
           'export const routes',
           '['
@@ -268,18 +257,16 @@ describe('buildPurchasesManifest', () => {
       // The discovery floor: a block the matchers no longer recognise reports
       // that, rather than reporting an app with no nav.
       expect(() => navItems('[]')).toThrow(/extracted no nav items/);
-      expect(() => reachableRoutePaths('[]')).toThrow(/extracted no rail-reachable route paths/);
 
       // A nav item that lost a field the wire carries is a gap, not an item
       // with an empty one.
       expect(() => navItems("[{ path: '/x', label: 'X' }]")).toThrow(/declares no "labelKey"/);
     });
 
-    // `{ path: '' }` is a legal spelling of the index route. Reading it as
-    // `/` would report drift against a nav item that in fact matches.
-    it('reads an empty route path as the index route, however it is spelled', () => {
-      expect(reachableRoutePaths('[{ index: true, element: <A /> }]')).toEqual(['']);
-      expect(reachableRoutePaths("[{ path: '', element: <A /> }]")).toEqual(['']);
+    // The index page is `''`, not `/`. Reading it as `/` would report drift
+    // against a nav item that in fact matches.
+    it('reads the index page as the empty path', () => {
+      expect(reachablePagePaths()[0]).toBe('');
     });
   });
 

@@ -12,12 +12,22 @@
  *     not crash.
  *   - In-repo pillars never reach this path: the synthesizer only consumes
  *     the wire descriptor, leaving the static bundle map untouched.
+ *
+ * Those all inject a fake importer. The last describe here does not: it runs
+ * `defaultRemoteModuleImporter` — the function production uses — against a
+ * real ESM file on disk, because until POPS-3216 audited it nothing in the
+ * repo had ever imported anything through this loader, and a loader proven
+ * only against object literals is a loader whose import path is untested.
  */
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  defaultRemoteModuleImporter,
   synthesizeExternalBundleEntry,
   type RemoteModuleImporter,
   type RemoteUiDescriptor,
@@ -188,5 +198,47 @@ describe('external pillar UI — runtime mount (Option A)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('external-pillar-load-error')).toBeInTheDocument()
     );
+  });
+});
+
+/**
+ * The production importer, against a real module.
+ *
+ * `defaultRemoteModuleImporter` had never been run by anything: every test
+ * above injects a fake resolving an object literal, so what was covered was
+ * the synthesis and the failure containment, never the import itself
+ * (POPS-3216 §1). The subject here is a hand-written ESM fixture in the shape
+ * a pillar's remote build emits — whether a given pillar's build actually
+ * produces such a module is that pillar's test to own.
+ */
+describe('defaultRemoteModuleImporter — the production import path', () => {
+  const FIXTURE = pathToFileURL(
+    path.join(import.meta.dirname, '__fixtures__/remote-pillar-bundle.mjs')
+  ).href;
+
+  it('imports a real ESM module and exposes its bundles record', async () => {
+    const imported = await defaultRemoteModuleImporter(FIXTURE);
+
+    expect(imported).toHaveProperty('bundles');
+    const { bundles } = imported as { bundles: Record<string, unknown> };
+    expect(typeof bundles['home']).toBe('function');
+  });
+
+  it('mounts a component that came from a real import, through the loader', async () => {
+    const entry = synthesizeExternalBundleEntry(descriptor({ assetsBaseUrl: FIXTURE }));
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+
+    await waitFor(() => expect(screen.getByTestId('imported-from-disk')).toBeInTheDocument());
+  });
+
+  // A URL that resolves to nothing is the ordinary production failure — a
+  // pillar deployed with its bundle missing, or an `assetsBaseUrl` that has
+  // moved. It has to reach the boundary as a rejection rather than as an
+  // unhandled load.
+  it('rejects for a URL that does not resolve', async () => {
+    const missing = pathToFileURL(path.join(import.meta.dirname, '__fixtures__/absent.mjs')).href;
+    await expect(defaultRemoteModuleImporter(missing)).rejects.toThrow();
   });
 });

@@ -61,6 +61,10 @@
       "types": "./dist/react/index.d.ts",
       "default": "./dist/react/index.js"
     },
+    "./remote-build": {
+      "types": "./dist/remote-build/index.d.ts",
+      "default": "./dist/remote-build/index.js"
+    },
     "./ranking": {
       "types": "./dist/ranking/index.d.ts",
       "default": "./dist/ranking/index.js"
