@@ -4,55 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { unwrap } from '../../../finance-api-helpers.js';
 import { tagRulesFacets, transactionsAvailableTags } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
+import { assembleTagReviewOutput } from './assembleTagReviewOutput';
 import { groupByEntity } from './tagReviewUtils';
-import { type PreviewTransaction, usePreviewTransactions } from './usePreviewTransactions';
+import { usePreviewTransactions } from './usePreviewTransactions';
 import { useTagActions } from './useTagReviewActions';
-import { type TagRuleDialogState, useTagRuleDialog } from './useTagRuleDialog';
+import { useTagRuleDialog } from './useTagRuleDialog';
 import { useTagRuleHandler } from './useTagRuleHandler';
 
-import type {
-  ConfirmedTransaction,
-  SuggestedTag,
-  TagRuleChangeSet,
-  TagRuleImpactItem,
-} from '@pops/finance';
+import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
 import type { ImportStore as ImportStoreType } from '../../../store/import-store-types';
-import type { ConfirmedGroup } from './tagReviewUtils';
+import type { UseTagReviewStateOutput } from './tagReviewStateTypes';
 
-export interface UseTagReviewStateOutput {
-  confirmedTransactions: ConfirmedTransaction[];
-  groups: ConfirmedGroup[];
-  availableTags: string[];
-  /** The tag taxonomy, for the pickers that mint a value on one of its axes. */
-  facets: TagFacetOption[];
-  localTags: Record<string, string[]>;
-  suggestedTagMeta: Record<string, SuggestedTag[]>;
-  updateTag: (checksum: string, tags: string[]) => void;
-  handleAcceptAll: () => void;
-  /** Rows an accept-all would change; zero means the control is inert. */
-  unappliedSuggestionCount: number;
-  handleApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
-  handleContinue: () => void;
-  prevStep: () => void;
-  confirmedCount: number;
-  tagRuleDialog: TagRuleDialogState | null;
-  setTagRuleDialogOpen: (open: boolean) => void;
-  handleOpenTagRuleDialog: (group: ConfirmedGroup) => void;
-  handleOpenTagRuleDialogForTransaction: (
-    transaction: ConfirmedTransaction,
-    tags: string[]
-  ) => void;
-  previewTransactions: PreviewTransaction[];
-  handleTagRuleApplied: (
-    changeSet: TagRuleChangeSet,
-    affected: TagRuleImpactItem[],
-    acceptedNewTags: string[]
-  ) => void;
-}
-
-export type { PreviewTransaction };
+export type { UseTagReviewStateOutput, PreviewTransaction } from './tagReviewStateTypes';
 
 interface LocalTagsState {
   localTags: Record<string, string[]>;
@@ -113,6 +78,35 @@ function useTagFacets(): TagFacetOption[] {
   return data?.facets ?? [];
 }
 
+interface TagRuleWorkflowDeps {
+  localTags: Record<string, string[]>;
+  suggestedTagMeta: Record<string, SuggestedTag[]>;
+  setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+  setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
+  addPendingTagRuleChangeSet: ImportStoreType['addPendingTagRuleChangeSet'];
+}
+
+/** The tag-rule dialog and the handler that folds an applied rule back into local state. */
+function useTagRuleWorkflow(deps: TagRuleWorkflowDeps) {
+  const {
+    localTags,
+    suggestedTagMeta,
+    setLocalTags,
+    setSuggestedTagMeta,
+    addPendingTagRuleChangeSet,
+  } = deps;
+  const dialog = useTagRuleDialog(localTags);
+  const handleTagRuleApplied = useTagRuleHandler({
+    addPendingTagRuleChangeSet,
+    dialogGroupNameRef: dialog.dialogGroupNameRef,
+    dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
+    setLocalTags,
+    setSuggestedTagMeta,
+    suggestedTagMeta,
+  });
+  return { dialog, handleTagRuleApplied };
+}
+
 /** Flushes the step's working copy of the tags into the store before advancing. */
 function useHandleContinue(
   localTags: Record<string, string[]>,
@@ -142,51 +136,38 @@ export function useTagReviewState(): UseTagReviewStateOutput {
   const availableTags = useAvailableTags(localTags);
   const facets = useTagFacets();
 
-  const { updateTag, handleAcceptAll, handleApplyGroupTags, unappliedSuggestionCount } =
-    useTagActions({
-      localTags,
-      setLocalTags,
-      suggestedTagMeta,
-      confirmedTransactions,
-    });
-
+  const tagActions = useTagActions({
+    localTags,
+    setLocalTags,
+    suggestedTagMeta,
+    confirmedTransactions,
+  });
   const handleContinue = useHandleContinue(localTags, updateTransactionTags, nextStep);
-
-  const dialog = useTagRuleDialog(localTags);
-  const handleTagRuleApplied = useTagRuleHandler({
-    addPendingTagRuleChangeSet,
-    dialogGroupNameRef: dialog.dialogGroupNameRef,
-    dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
+  const { dialog, handleTagRuleApplied } = useTagRuleWorkflow({
+    localTags,
+    suggestedTagMeta,
     setLocalTags,
     setSuggestedTagMeta,
-    suggestedTagMeta,
+    addPendingTagRuleChangeSet,
   });
-
   const previewTransactions = usePreviewTransactions({
     confirmedTransactions,
     localTags,
     suggestedTagMeta,
   });
 
-  return {
+  return assembleTagReviewOutput({
     confirmedTransactions,
     groups,
     availableTags,
     facets,
     localTags,
     suggestedTagMeta,
-    updateTag,
-    handleAcceptAll,
-    unappliedSuggestionCount,
-    handleApplyGroupTags,
+    tagActions,
     handleContinue,
     prevStep,
-    confirmedCount: confirmedTransactions.length,
-    tagRuleDialog: dialog.tagRuleDialog,
-    setTagRuleDialogOpen: dialog.setTagRuleDialogOpen,
-    handleOpenTagRuleDialog: dialog.handleOpenTagRuleDialog,
-    handleOpenTagRuleDialogForTransaction: dialog.handleOpenTagRuleDialogForTransaction,
+    dialog,
     previewTransactions,
     handleTagRuleApplied,
-  };
+  });
 }

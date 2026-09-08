@@ -11,6 +11,8 @@ import {
 
 import type { ConfirmedTransaction, SuggestedTag, TagRuleImpactItem } from '@pops/finance';
 
+import type { ConfirmedGroup } from './tagReviewUtils';
+
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
 
@@ -177,6 +179,41 @@ describe('useTagActions — handleAcceptAll', () => {
       metaFor(txns)
     );
     expect(next.a).toEqual(['Groceries', 'Supermarket']);
+  });
+});
+
+describe('useTagActions — handleRemoveGroupTag', () => {
+  function group(transactions: ConfirmedTransaction[]): ConfirmedGroup {
+    return { entityName: 'ANZ', transactions };
+  }
+
+  it('strips the tag from every transaction in the group that carries it', () => {
+    const txns = [makeTransaction('a', ['Interest']), makeTransaction('b', ['Interest'])];
+    const { result } = renderTagActions(txns);
+
+    act(() => result.current.handleRemoveGroupTag(group(txns), 'Interest'));
+
+    expect(result.current.localTags.a).toEqual([]);
+    expect(result.current.localTags.b).toEqual([]);
+  });
+
+  it('leaves other tags on the same transaction untouched', () => {
+    const txns = [makeTransaction('a', ['Interest'])];
+    const { result } = renderTagActions(txns);
+    act(() => result.current.updateTag('a', ['Interest', 'Mine']));
+
+    act(() => result.current.handleRemoveGroupTag(group(txns), 'Interest'));
+
+    expect(result.current.localTags.a).toEqual(['Mine']);
+  });
+
+  it('does not touch transactions in the group that never had the tag', () => {
+    const txns = [makeTransaction('a', ['Interest']), makeTransaction('b', ['Groceries'])];
+    const { result } = renderTagActions(txns);
+
+    act(() => result.current.handleRemoveGroupTag(group(txns), 'Interest'));
+
+    expect(result.current.localTags.b).toEqual(['Groceries']);
   });
 });
 

@@ -22,14 +22,44 @@ export interface EntityGroupStateInput {
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   onUpdateTag: (checksum: string, tags: string[]) => void;
   onApplyGroupTags: (group: ConfirmedGroup, tags: string[]) => void;
+  onRemoveGroupTag: (group: ConfirmedGroup, tag: string) => void;
 }
 
 function pluralizeTransactions(count: number): string {
   return `${count} transaction${count !== 1 ? 's' : ''}`;
 }
 
+/** Applies each transaction's own outstanding suggestions, skipping rows with none pending. */
+function applySuggestionsToGroup(
+  group: ConfirmedGroup,
+  localTags: Record<string, string[]>,
+  suggestedTagMeta: Record<string, SuggestedTag[]>,
+  onUpdateTag: (checksum: string, tags: string[]) => void
+): number {
+  let applied = 0;
+  for (const tx of group.transactions) {
+    const currentTags = localTags[tx.checksum] ?? [];
+    const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
+    if (suggestions.length === 0) continue;
+    const mergedTags = Array.from(new Set([...currentTags, ...suggestions]));
+    if (mergedTags.length === currentTags.length) continue; // all suggestions already present
+    onUpdateTag(tx.checksum, mergedTags);
+    applied++;
+  }
+  return applied;
+}
+
+function countTaggedTransactions(
+  group: ConfirmedGroup,
+  localTags: Record<string, string[]>,
+  tag: string
+): number {
+  return group.transactions.filter((t) => (localTags[t.checksum] ?? []).includes(tag)).length;
+}
+
 export function useEntityGroupState(props: EntityGroupStateInput) {
-  const { group, localTags, suggestedTagMeta, onApplyGroupTags, onUpdateTag } = props;
+  const { group, localTags, suggestedTagMeta, onApplyGroupTags, onRemoveGroupTag, onUpdateTag } =
+    props;
   const [expanded, setExpanded] = useState(true);
   const [groupStagedTags, setGroupStagedTags] = useState<string[]>([]);
 
@@ -44,24 +74,25 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
 
   const handleApplySuggestions = useCallback(() => {
     if (suggestedUnion.length === 0) return;
-    let applied = 0;
-    for (const tx of group.transactions) {
-      const currentTags = localTags[tx.checksum] ?? [];
-      const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
-      if (suggestions.length === 0) continue;
-      const mergedTags = Array.from(new Set([...currentTags, ...suggestions]));
-      if (mergedTags.length === currentTags.length) continue; // all suggestions already present
-      onUpdateTag(tx.checksum, mergedTags);
-      applied++;
-    }
+    const applied = applySuggestionsToGroup(group, localTags, suggestedTagMeta, onUpdateTag);
     if (applied > 0) toast.success(`Suggestions applied to ${pluralizeTransactions(applied)}`);
-  }, [group.transactions, suggestedUnion, suggestedTagMeta, localTags, onUpdateTag]);
+  }, [group, suggestedUnion, suggestedTagMeta, localTags, onUpdateTag]);
   const handleApplyStagedToGroup = useCallback(() => {
     if (groupStagedTags.length === 0) return;
     onApplyGroupTags(group, groupStagedTags);
     toast.success(`Tags merged into ${pluralizeTransactions(group.transactions.length)}`);
     setGroupStagedTags([]);
   }, [group, groupStagedTags, onApplyGroupTags]);
+
+  const handleRemoveCurrentTag = useCallback(
+    (tag: string) => {
+      const affected = countTaggedTransactions(group, localTags, tag);
+      if (affected === 0) return;
+      onRemoveGroupTag(group, tag);
+      toast.success(`Tag removed from ${pluralizeTransactions(affected)}`);
+    },
+    [group, localTags, onRemoveGroupTag]
+  );
 
   const removeGroupStagedTag = useCallback(
     (tag: string) => setGroupStagedTags((prev) => prev.filter((t) => t !== tag)),
@@ -80,6 +111,7 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
     groupStagedTags,
     handleApplySuggestions,
     handleApplyStagedToGroup,
+    handleRemoveCurrentTag,
     addGroupStagedTag,
     removeGroupStagedTag,
   };

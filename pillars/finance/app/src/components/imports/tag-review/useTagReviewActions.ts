@@ -71,6 +71,33 @@ export function rowsMissingSuggestions(
   return missing;
 }
 
+function mergeGroupTags(
+  prev: Record<string, string[]>,
+  group: ConfirmedGroup,
+  newTags: string[]
+): Record<string, string[]> {
+  const next = { ...prev };
+  for (const t of group.transactions) {
+    const existing = prev[t.checksum] ?? [];
+    next[t.checksum] = Array.from(new Set([...existing, ...newTags]));
+  }
+  return next;
+}
+
+function subtractGroupTag(
+  prev: Record<string, string[]>,
+  group: ConfirmedGroup,
+  tag: string
+): Record<string, string[]> {
+  const next = { ...prev };
+  for (const t of group.transactions) {
+    const existing = prev[t.checksum];
+    if (!existing?.includes(tag)) continue;
+    next[t.checksum] = existing.filter((x) => x !== tag);
+  }
+  return next;
+}
+
 interface TagActionsDeps {
   localTags: Record<string, string[]>;
   setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
@@ -111,17 +138,23 @@ export function useTagActions(deps: TagActionsDeps) {
 
   const handleApplyGroupTags = useCallback(
     (group: ConfirmedGroup, newTags: string[]) => {
-      setLocalTags((prev) => {
-        const next = { ...prev };
-        for (const t of group.transactions) {
-          const existing = prev[t.checksum] ?? [];
-          next[t.checksum] = Array.from(new Set([...existing, ...newTags]));
-        }
-        return next;
-      });
+      setLocalTags((prev) => mergeGroupTags(prev, group, newTags));
     },
     [setLocalTags]
   );
 
-  return { updateTag, handleAcceptAll, handleApplyGroupTags, unappliedSuggestionCount };
+  const handleRemoveGroupTag = useCallback(
+    (group: ConfirmedGroup, tag: string) => {
+      setLocalTags((prev) => subtractGroupTag(prev, group, tag));
+    },
+    [setLocalTags]
+  );
+
+  return {
+    updateTag,
+    handleAcceptAll,
+    handleApplyGroupTags,
+    handleRemoveGroupTag,
+    unappliedSuggestionCount,
+  };
 }

@@ -69,6 +69,7 @@ function EntityGroups({ state }: { state: ReturnType<typeof useTagReviewState> }
           facets={state.facets}
           onUpdateTag={state.updateTag}
           onApplyGroupTags={state.handleApplyGroupTags}
+          onRemoveGroupTag={state.handleRemoveGroupTag}
           onSaveTagRule={state.handleOpenTagRuleDialog}
           onSaveTagRuleForTransaction={state.handleOpenTagRuleDialogForTransaction}
         />
