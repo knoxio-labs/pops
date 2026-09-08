@@ -266,10 +266,10 @@ vi.mock('./EditableTransactionCard', async () => {
         {
           'data-testid': `save-edit-${transaction.description}`,
           onClick: () => {
-            onSave(transaction, { description: `${transaction.description} FIXED` }, false);
+            onSave(transaction, { description: `${transaction.description} FIXED` }, true);
           },
         },
-        'Save Once'
+        'Save & Learn'
       ),
   };
 });

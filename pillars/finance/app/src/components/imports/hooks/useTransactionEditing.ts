@@ -28,6 +28,13 @@ interface UseTransactionEditingArgs {
 
 const COMPARABLE_FIELDS = ['description', 'amount', 'location', 'transactionType'] as const;
 
+function detectEntityChange(
+  transaction: ProcessedTransaction,
+  editedFields: Partial<ProcessedTransaction>
+): boolean {
+  return 'entity' in editedFields && editedFields.entity?.entityId !== transaction.entity?.entityId;
+}
+
 function detectChange(
   transaction: ProcessedTransaction,
   editedFields: Partial<ProcessedTransaction>
@@ -35,9 +42,7 @@ function detectChange(
   const fieldChanged = COMPARABLE_FIELDS.some(
     (field) => field in editedFields && editedFields[field] !== transaction[field]
   );
-  const entityChanged =
-    'entity' in editedFields && editedFields.entity?.entityId !== transaction.entity?.entityId;
-  return fieldChanged || entityChanged;
+  return fieldChanged || detectEntityChange(transaction, editedFields);
 }
 
 function pickValue<T>(edited: T | undefined, original: T | undefined, fallback: T): T {
@@ -130,8 +135,13 @@ function buildSaveEdit(deps: SaveEditDeps) {
     const isRuleMatched =
       Boolean(transaction.ruleProvenance) || transaction.entity?.matchType === 'learned';
     const hasChanges = detectChange(transaction, editedFields);
+    const entityChanged = detectEntityChange(transaction, editedFields);
 
-    if (isRuleMatched && hasChanges) {
+    // Repointing the merchant on a rule-matched row is itself a correction —
+    // always route it to the proposal flow. A plain field edit (e.g. fixing
+    // the transaction type) only does when the user opted to learn a rule
+    // ("Save & Learn"); "Save Once" must save the row outright.
+    if (isRuleMatched && entityChanged) {
       deps.setEditingTransaction(null);
       void deps.generateProposal(buildLearnArgs(transaction, editedFields));
       return;

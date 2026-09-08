@@ -115,6 +115,33 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
     expect(setLocalTransactions).not.toHaveBeenCalled();
   });
 
+  it('does not treat a non-entity edit on a rule-matched row as a correction', () => {
+    // Regression: Save Once (shouldLearn=false) on a rule-matched row — e.g.
+    // fixing a merchant-rule-assigned transaction type from "purchase" to
+    // "refund" — used to be routed into generateProposal() regardless of the
+    // shouldLearn flag, forcing the correction-proposal dialog open instead
+    // of just saving the row. Only an entity repoint should do that
+    // unconditionally.
+    const { result, generateProposal, setLocalTransactions } = setup();
+    const transaction = makeTransaction();
+
+    act(() => {
+      result.current.handleSaveEdit(
+        transaction,
+        { transactionType: 'refund' },
+        false // Save Once
+      );
+    });
+
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(setLocalTransactions).toHaveBeenCalledTimes(1);
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0] as (
+      prev: ReturnType<typeof emptyLocalTx>
+    ) => ReturnType<typeof emptyLocalTx>;
+    const next = updater({ ...emptyLocalTx(), matched: [transaction] });
+    expect(next.matched[0]).toMatchObject({ transactionType: 'refund' });
+  });
+
   it('forces the edited transaction status to match its current bucket when a reconcile moved it', () => {
     // The `transaction` snapshot is captured at edit start with status
     // 'uncertain'. A server reconciliation between edit start and save moved
