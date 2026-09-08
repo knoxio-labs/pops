@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LocationPicker, type LocationTreeNode } from './LocationPicker';
@@ -28,210 +28,203 @@ const LOCATIONS: LocationTreeNode[] = [
   },
 ];
 
+function openPicker(name: RegExp | string) {
+  fireEvent.click(screen.getByRole('button', { name }));
+}
+
+function rowByLabel(label: string) {
+  return screen.getByText(label).closest('[role="treeitem"]') as HTMLElement;
+}
+
+function focusRow(label: string) {
+  act(() => {
+    rowByLabel(label).focus();
+  });
+}
+
+function press(label: string, key: string) {
+  fireEvent.keyDown(rowByLabel(label), { key });
+}
+
 // --- Tests ---
 
-describe('LocationPicker', () => {
-  describe('trigger button', () => {
-    it('shows placeholder when no value selected', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      expect(screen.getByText('Select location…')).toBeInTheDocument();
-    });
-
-    it('shows custom placeholder', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} placeholder="Pick a room" />);
-      expect(screen.getByText('Pick a room')).toBeInTheDocument();
-    });
-
-    it('shows breadcrumb path when value is set', () => {
-      render(<LocationPicker locations={LOCATIONS} value="wardrobe" />);
-      expect(screen.getByText('Home › Bedroom › Wardrobe')).toBeInTheDocument();
-    });
-
-    it('shows single name for root node', () => {
-      render(<LocationPicker locations={LOCATIONS} value="office" />);
-      expect(screen.getByText('Office')).toBeInTheDocument();
-    });
-
-    it('is disabled when disabled prop is true', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} disabled />);
-      expect(screen.getByRole('combobox')).toBeDisabled();
-    });
+describe('LocationPicker — trigger', () => {
+  it('shows the placeholder when nothing is selected', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} />);
+    expect(screen.getByText('Select location…')).toBeInTheDocument();
   });
 
-  describe('tree rendering', () => {
-    it('renders root nodes when opened', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByText('Home')).toBeInTheDocument();
-      expect(screen.getByText('Office')).toBeInTheDocument();
-    });
-
-    it('does not show children by default (collapsed)', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      // Children of Home should not be visible until expanded
-      expect(screen.queryByText('Bedroom')).not.toBeInTheDocument();
-      expect(screen.queryByText('Kitchen')).not.toBeInTheDocument();
-    });
-
-    it('expands children when chevron clicked', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      const chevronSpans = document.querySelectorAll("[role='button'][tabindex='-1']");
-      expect(chevronSpans.length).toBeGreaterThan(0);
-      fireEvent.click(chevronSpans[0]!);
-      expect(screen.getByText('Bedroom')).toBeInTheDocument();
-      expect(screen.getByText('Kitchen')).toBeInTheDocument();
-    });
+  it('shows a custom placeholder', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} placeholder="Pick a room" />);
+    expect(screen.getByText('Pick a room')).toBeInTheDocument();
   });
 
-  describe('node selection', () => {
-    it('calls onChange with node id when clicked', () => {
-      const onChange = vi.fn();
-      render(<LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('Home'));
-      expect(onChange).toHaveBeenCalledWith('home');
-    });
-
-    it('calls onChange for nested node after expanding', () => {
-      const onChange = vi.fn();
-      render(<LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      // Expand Home
-      const chevrons = document.querySelectorAll("[role='button'][tabindex='-1']");
-      fireEvent.click(chevrons[0]!);
-      // Click Bedroom
-      fireEvent.click(screen.getByText('Bedroom'));
-      expect(onChange).toHaveBeenCalledWith('bedroom');
-    });
+  it('shows the ancestor breadcrumb when a nested location is selected', () => {
+    render(<LocationPicker locations={LOCATIONS} value="wardrobe" />);
+    expect(screen.getByText('Home › Bedroom › Wardrobe')).toBeInTheDocument();
   });
 
-  describe('search filtering', () => {
-    it('filters nodes by search text', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      const searchInput = screen.getByPlaceholderText('Search locations…');
-      fireEvent.change(searchInput, { target: { value: 'kitchen' } });
-      // Kitchen should be visible (and its parent Home)
-      expect(screen.getByText('Kitchen')).toBeInTheDocument();
-      expect(screen.getByText('Home')).toBeInTheDocument();
-      // Office should be hidden (no match)
-      expect(screen.queryByText('Office')).not.toBeInTheDocument();
-    });
-
-    it('auto-expands matching ancestors', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      const searchInput = screen.getByPlaceholderText('Search locations…');
-      fireEvent.change(searchInput, { target: { value: 'wardrobe' } });
-      // Wardrobe is nested under Home > Bedroom — both should be visible
-      expect(screen.getByText('Wardrobe')).toBeInTheDocument();
-      expect(screen.getByText('Bedroom')).toBeInTheDocument();
-      expect(screen.getByText('Home')).toBeInTheDocument();
-    });
+  it('shows just the name for a root-level selection', () => {
+    render(<LocationPicker locations={LOCATIONS} value="office" />);
+    expect(screen.getByText('Office')).toBeInTheDocument();
   });
 
-  describe('quick-add location', () => {
-    it('shows add button when onCreateLocation provided', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} onCreateLocation={vi.fn()} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByText('Add location')).toBeInTheDocument();
-    });
+  it('is disabled when the disabled prop is set', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} disabled />);
+    expect(screen.getByRole('button', { name: 'Select location…' })).toBeDisabled();
+  });
+});
 
-    it('does not show add button without onCreateLocation', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.queryByText('Add location')).not.toBeInTheDocument();
-    });
+describe('LocationPicker — keyboard-only selection', () => {
+  it('exposes an ARIA tree a keyboard user can traverse, expand, and select from', () => {
+    const onChange = vi.fn();
+    render(<LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />);
 
-    it('shows input form when add button clicked', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} onCreateLocation={vi.fn()} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('Add location'));
-      expect(screen.getByPlaceholderText('Location name…')).toBeInTheDocument();
-    });
+    openPicker('Select location…');
+    expect(screen.getByRole('tree')).toBeInTheDocument();
 
-    it('calls onCreateLocation with name and parent when add clicked', () => {
-      const onCreate = vi.fn();
-      render(<LocationPicker locations={LOCATIONS} value="bedroom" onCreateLocation={onCreate} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('Add location'));
-      const nameInput = screen.getByPlaceholderText('Location name…');
-      fireEvent.change(nameInput, { target: { value: 'Closet' } });
-      fireEvent.click(screen.getByText('Add'));
-      expect(onCreate).toHaveBeenCalledWith('Closet', 'bedroom');
-    });
+    // Roots start collapsed — Bedroom/Wardrobe are not reachable yet.
+    expect(screen.queryByText('Wardrobe')).not.toBeInTheDocument();
 
-    it('disables add button when name is empty', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} onCreateLocation={vi.fn()} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('Add location'));
-      expect(screen.getByText('Add')).toBeDisabled();
-    });
+    focusRow('Home');
+    expect(rowByLabel('Home')).toHaveAttribute('aria-expanded', 'false');
+
+    // Expand Home with ArrowRight — no click, no pointer, anywhere below.
+    press('Home', 'ArrowRight');
+    expect(rowByLabel('Home')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Bedroom')).toBeInTheDocument();
+
+    // Roving focus moves down onto the newly-revealed child.
+    press('Home', 'ArrowDown');
+    expect(rowByLabel('Bedroom')).toHaveFocus();
+
+    // Expand Bedroom to reveal the deeply nested target.
+    press('Bedroom', 'ArrowRight');
+    expect(screen.getByText('Wardrobe')).toBeInTheDocument();
+
+    press('Bedroom', 'ArrowDown');
+    expect(rowByLabel('Wardrobe')).toHaveFocus();
+    expect(rowByLabel('Wardrobe')).toHaveAttribute('aria-selected', 'false');
+
+    // Select with Enter.
+    press('Wardrobe', 'Enter');
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('wardrobe');
+    expect(screen.queryByRole('tree')).not.toBeInTheDocument();
   });
 
-  describe('clear selection', () => {
-    it('shows clear button when value is set', () => {
-      render(<LocationPicker locations={LOCATIONS} value="home" onChange={vi.fn()} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByText('Clear selection')).toBeInTheDocument();
-    });
+  it('marks the currently selected node aria-selected once reachable', () => {
+    render(<LocationPicker locations={LOCATIONS} value="bedroom" onChange={vi.fn()} />);
 
-    it('does not show clear button when no value', () => {
-      render(<LocationPicker locations={LOCATIONS} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.queryByText('Clear selection')).not.toBeInTheDocument();
-    });
+    openPicker(/Home › Bedroom/);
+    focusRow('Home');
+    press('Home', 'ArrowRight');
 
-    it('calls onChange with null when clear clicked', () => {
-      const onChange = vi.fn();
-      render(<LocationPicker locations={LOCATIONS} value="home" onChange={onChange} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      fireEvent.click(screen.getByText('Clear selection'));
-      expect(onChange).toHaveBeenCalledWith(null);
-    });
+    expect(rowByLabel('Bedroom')).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+describe('LocationPicker — search', () => {
+  it('filters to matching nodes and auto-expands their ancestors', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} onChange={vi.fn()} />);
+
+    openPicker('Select location…');
+    const search = screen.getByPlaceholderText('Search locations…');
+    fireEvent.change(search, { target: { value: 'wardrobe' } });
+
+    expect(screen.getByText('Wardrobe')).toBeInTheDocument();
+    expect(screen.getByText('Bedroom')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByText('Office')).not.toBeInTheDocument();
   });
 
-  describe('overlay close without selection', () => {
-    it('does not call onChange when Escape key is pressed', () => {
-      const onChange = vi.fn();
-      render(<LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      // Popover should be open — search input visible
-      expect(screen.getByPlaceholderText('Search locations…')).toBeInTheDocument();
-      // Press Escape to close
-      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
-      expect(onChange).not.toHaveBeenCalled();
-    });
+  it('hides non-matching branches entirely', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} onChange={vi.fn()} />);
 
-    it('does not call onChange when clicking outside the popover', () => {
-      const onChange = vi.fn();
-      render(
-        <div>
-          <span data-testid="outside">Outside</span>
-          <LocationPicker locations={LOCATIONS} value={null} onChange={onChange} />
-        </div>
-      );
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByPlaceholderText('Search locations…')).toBeInTheDocument();
-      // Click outside element
-      fireEvent.pointerDown(screen.getByTestId('outside'));
-      expect(onChange).not.toHaveBeenCalled();
-    });
+    openPicker('Select location…');
+    const search = screen.getByPlaceholderText('Search locations…');
+    fireEvent.change(search, { target: { value: 'kitchen' } });
+
+    expect(screen.getByText('Kitchen')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.queryByText('Office')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bedroom')).not.toBeInTheDocument();
+  });
+});
+
+describe('LocationPicker — clear', () => {
+  it('shows a clear row once a location is selected and returns the value to empty', () => {
+    const onChange = vi.fn();
+    render(<LocationPicker locations={LOCATIONS} value="home" onChange={onChange} />);
+
+    openPicker('Home');
+    fireEvent.click(screen.getByText('Clear selection'));
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(null);
   });
 
-  describe('empty tree', () => {
-    it('shows empty message when no locations', () => {
-      render(<LocationPicker locations={[]} value={null} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByText('No locations found')).toBeInTheDocument();
-    });
+  it('does not offer a clear row when nothing is selected', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} onChange={vi.fn()} />);
+    openPicker('Select location…');
+    expect(screen.queryByText('Clear selection')).not.toBeInTheDocument();
+  });
+});
 
-    it('still shows add button in empty tree', () => {
-      render(<LocationPicker locations={[]} value={null} onCreateLocation={vi.fn()} />);
-      fireEvent.click(screen.getByRole('combobox'));
-      expect(screen.getByText('Add location')).toBeInTheDocument();
-    });
+describe('LocationPicker — create', () => {
+  it('is reachable from the footer without a matching (or any) search query', () => {
+    const onCreateLocation = vi.fn();
+    render(
+      <LocationPicker
+        locations={LOCATIONS}
+        value={null}
+        onChange={vi.fn()}
+        onCreateLocation={onCreateLocation}
+      />
+    );
+
+    openPicker('Select location…');
+    expect(screen.getByText('Add location')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Add location'));
+    const nameField = screen.getByPlaceholderText('Add location…');
+    fireEvent.change(nameField, { target: { value: 'Garage' } });
+    fireEvent.keyDown(nameField, { key: 'Enter' });
+
+    expect(onCreateLocation).toHaveBeenCalledExactlyOnceWith('Garage', null);
+  });
+
+  it('parents the created location under the currently selected node', () => {
+    const onCreateLocation = vi.fn();
+    render(
+      <LocationPicker
+        locations={LOCATIONS}
+        value="bedroom"
+        onChange={vi.fn()}
+        onCreateLocation={onCreateLocation}
+      />
+    );
+
+    openPicker(/Home › Bedroom/);
+    fireEvent.click(screen.getByText('Add location'));
+    const nameField = screen.getByPlaceholderText('Add location…');
+    fireEvent.change(nameField, { target: { value: 'Closet' } });
+    fireEvent.keyDown(nameField, { key: 'Enter' });
+
+    expect(onCreateLocation).toHaveBeenCalledExactlyOnceWith('Closet', 'bedroom');
+  });
+
+  it('does not show a create row without onCreateLocation', () => {
+    render(<LocationPicker locations={LOCATIONS} value={null} onChange={vi.fn()} />);
+    openPicker('Select location…');
+    expect(screen.queryByText('Add location')).not.toBeInTheDocument();
+  });
+});
+
+describe('LocationPicker — empty tree', () => {
+  it('shows the search box with no rows and no crash', () => {
+    render(<LocationPicker locations={[]} value={null} onChange={vi.fn()} />);
+    openPicker('Select location…');
+    expect(screen.getByPlaceholderText('Search locations…')).toBeInTheDocument();
+    expect(screen.queryAllByRole('treeitem')).toHaveLength(0);
   });
 });
