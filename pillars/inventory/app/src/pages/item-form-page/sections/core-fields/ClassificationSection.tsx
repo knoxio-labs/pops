@@ -1,11 +1,10 @@
 import { Controller } from 'react-hook-form';
 
 import { INVENTORY_CONDITIONS } from '@pops/inventory';
-import { CheckboxInput, Select } from '@pops/ui';
+import { CheckboxInput, FieldLabel, fieldLabelDescribedBy, Select } from '@pops/ui';
 
 import { LocationPicker } from '../../../../components/LocationPicker';
 import { type ItemFormValues } from '../../useItemFormPageModel';
-import { FormField } from './FormField';
 
 import type {
   Control,
@@ -91,23 +90,30 @@ export function ClassificationSection({
         Classification
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Type *" error={errors.type?.message}>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="type" label="Type" required error={errors.type?.message} />
           <Select
+            id="type"
+            aria-invalid={!!errors.type}
+            aria-describedby={fieldLabelDescribedBy('type', { error: errors.type?.message })}
             {...register('type', { required: 'Type is required' })}
             options={[
               { value: '', label: 'Select type...' },
               ...ITEM_TYPES.map((t) => ({ value: t, label: t })),
             ]}
           />
-        </FormField>
-        <FormField label="Condition">
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="condition" label="Condition" />
           <Select
+            id="condition"
             {...register('condition')}
             options={[{ value: '', label: 'Select condition...' }, ...CONDITIONS]}
           />
-        </FormField>
+        </div>
       </div>
-      <FormField label="Location">
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor="locationId" label="Location" />
         <LocationPicker
           locations={locationTree}
           value={watch('locationId') || null}
@@ -115,7 +121,7 @@ export function ClassificationSection({
           onCreateLocation={onCreateLocation}
           placeholder="Select location…"
         />
-      </FormField>
+      </div>
       <div className="flex gap-6 p-4 rounded-xl bg-app-accent/5">
         <BooleanCheckbox name="inUse" control={control} label="In Use" />
         <BooleanCheckbox name="deductible" control={control} label="Tax Deductible" />

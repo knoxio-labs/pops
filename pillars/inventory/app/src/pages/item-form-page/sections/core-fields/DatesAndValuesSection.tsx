@@ -1,7 +1,6 @@
-import { DateInput, TextInput } from '@pops/ui';
+import { DateInput, FieldLabel, TextInput } from '@pops/ui';
 
 import { type ItemFormValues } from '../../useItemFormPageModel';
-import { FormField } from './FormField';
 
 import type { UseFormRegister } from 'react-hook-form';
 
@@ -17,25 +16,31 @@ export function DatesAndValuesSection({ register }: DatesAndValuesSectionProps) 
         Dates & Values
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Purchase Date">
-          <DateInput {...register('purchaseDate')} />
-        </FormField>
-        <FormField label="Warranty Expires">
-          <DateInput {...register('warrantyExpires')} />
-        </FormField>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="purchaseDate" label="Purchase Date" />
+          <DateInput id="purchaseDate" {...register('purchaseDate')} />
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="warrantyExpires" label="Warranty Expires" />
+          <DateInput id="warrantyExpires" {...register('warrantyExpires')} />
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField label="Purchase Price ($)">
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="purchasePrice" label="Purchase Price ($)" />
           <TextInput
+            id="purchasePrice"
             type="number"
             step="0.01"
             min="0"
             {...register('purchasePrice')}
             placeholder="0.00"
           />
-        </FormField>
-        <FormField label="Replacement Value ($)">
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="replacementValue" label="Replacement Value ($)" />
           <TextInput
+            id="replacementValue"
             type="number"
             step="0.01"
             min="0"
@@ -43,16 +48,18 @@ export function DatesAndValuesSection({ register }: DatesAndValuesSectionProps) 
             placeholder="0.00"
             className="font-bold text-app-accent"
           />
-        </FormField>
-        <FormField label="Resale Value ($)">
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="resaleValue" label="Resale Value ($)" />
           <TextInput
+            id="resaleValue"
             type="number"
             step="0.01"
             min="0"
             {...register('resaleValue')}
             placeholder="0.00"
           />
-        </FormField>
+        </div>
       </div>
     </section>
   );
