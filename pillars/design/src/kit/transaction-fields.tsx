@@ -91,13 +91,14 @@ export function DateField({
 }) {
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <FieldLabel htmlFor="transaction-date" label="Date" error={error} />
+      <FieldLabel htmlFor="transaction-date" label="Date" />
       <DateInput
         id="transaction-date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         error={error}
       />
+      <FieldError message={error} />
     </div>
   );
 }
