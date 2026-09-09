@@ -54,6 +54,7 @@ export {
 
 export type { TagsOnlyEntry, TagsOnlyInput } from './ai-tags-only-api.js';
 
+import type { TagDescriptions } from './ai-categorizer-prompt.js';
 import type {
   AiBatchCallResult,
   AiCallResult,
@@ -75,6 +76,22 @@ function requireApiKey(): string {
   return apiKey;
 }
 
+/**
+ * The optional grounding a categorizer call may carry beyond the closed
+ * vocabulary itself.
+ *
+ * One object rather than a positional tail: both members are hints the caller
+ * supplies when it has them, neither is meaningful without `knownTags`, and a
+ * third would otherwise push these signatures past the parameter cap — which is
+ * the cap doing its job rather than an obstacle to route around.
+ */
+export interface CategorizerHints {
+  /** Bounded closed-set hint of existing entity names (CF062/#3661). */
+  knownEntityNames?: string[];
+  /** `facet:value` → the vocabulary's definition of it, where it has one (POPS-3285). */
+  tagDescriptions?: TagDescriptions;
+}
+
 function contextIdOf(importBatchId: string | undefined): { contextId?: string } {
   return importBatchId !== undefined && importBatchId !== ''
     ? { contextId: `import_batch:${importBatchId}` }
@@ -92,7 +109,7 @@ export async function categorizeWithAi(
   input: CategorizerInput,
   importBatchId: string | undefined,
   knownTags: string[],
-  knownEntityNames: string[] = []
+  hints: CategorizerHints = {}
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
 
@@ -103,7 +120,8 @@ export async function categorizeWithAi(
     model: getModel(),
     maxTokens: getMaxTokens(),
     knownTags,
-    knownEntityNames,
+    knownEntityNames: hints.knownEntityNames ?? [],
+    ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),
     ...contextIdOf(importBatchId),
   });
 
@@ -128,7 +146,7 @@ export async function categorizeBatchWithAi(
   inputs: CategorizerInput[],
   importBatchId: string | undefined,
   knownTags: string[],
-  knownEntityNames: string[] = []
+  hints: CategorizerHints = {}
 ): Promise<AiBatchCallResult> {
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
@@ -139,7 +157,8 @@ export async function categorizeBatchWithAi(
     model: getModel(),
     maxTokens: getBatchMaxTokens(inputs.length),
     knownTags,
-    knownEntityNames,
+    knownEntityNames: hints.knownEntityNames ?? [],
+    ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),
     ...contextIdOf(importBatchId),
   });
 
@@ -164,7 +183,8 @@ export async function categorizeBatchWithAi(
 export async function tagsOnlyBatchWithAi(
   inputs: TagsOnlyInput[],
   importBatchId: string | undefined,
-  knownTags: string[]
+  knownTags: string[],
+  hints: CategorizerHints = {}
 ): Promise<TagsOnlyBatchResult> {
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
@@ -175,6 +195,7 @@ export async function tagsOnlyBatchWithAi(
     model: getModel(),
     maxTokens: getTagsOnlyMaxTokens(inputs.length),
     knownTags,
+    ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),
     ...contextIdOf(importBatchId),
   });
 

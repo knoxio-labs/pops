@@ -36,6 +36,20 @@ export function loadKnownTags(db: FinanceDb): string[] {
   );
 }
 
+/**
+ * Load the definition of every vocabulary value that carries one, keyed by tag
+ * (POPS-3285).
+ *
+ * The sibling of {@link loadKnownTags}, called once per import batch for the
+ * same reason and threaded to the same place. Kept a separate call rather than
+ * folded into the tag list because `knownTags` is the closed set every model
+ * reply is validated against, and a value's definition has no business in that
+ * check — what a tag means cannot make an unlisted tag admissible.
+ */
+export function loadTagDescriptions(db: FinanceDb): ReadonlyMap<string, string> {
+  return tagVocabularyService.listVocabularyDescriptions(db);
+}
+
 export interface BuildSuggestedTagsOptions {
   description: string;
   entityId: string | null;

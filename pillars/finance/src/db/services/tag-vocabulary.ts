@@ -97,6 +97,32 @@ export function listVocabularyTagsForFacets(db: FinanceDb, facets: readonly stri
 }
 
 /**
+ * The description of every active vocabulary tag that has one, keyed by tag.
+ *
+ * A tag with no description is absent from the map rather than present with an
+ * empty value: the column is nullable on purpose (POPS-3285) — `trip:cairns-2026`
+ * needs no gloss and requiring one would produce filler — so "has no
+ * description" and "has an empty description" must not be the same state to a
+ * caller deciding whether to render one.
+ *
+ * Unscoped by facet, unlike {@link listVocabularyTagsForFacets}: this is a
+ * lookup, not an offer. The caller already holds the tags it is about to
+ * render and asks this only what they mean, so scoping it would add a way for
+ * the two queries to disagree without adding an answer.
+ */
+export function listVocabularyDescriptions(db: FinanceDb): ReadonlyMap<string, string> {
+  const described = new Map<string, string>();
+  for (const row of db
+    .select({ tag: tagVocabulary.tag, description: tagVocabulary.description })
+    .from(tagVocabulary)
+    .where(eq(tagVocabulary.isActive, true))
+    .all()) {
+    if (row.description !== null && row.description !== '') described.set(row.tag, row.description);
+  }
+  return described;
+}
+
+/**
  * Upsert a tag into the vocabulary, marking it active.
  *
  * On insert the row gets `(tag, facet, kind, source, isActive=true)` with the

@@ -14,10 +14,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v2.0';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.0';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.0';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -25,7 +25,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v1.0';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.0';
 
 const PROMPT_FIELD_MAX_CHARS = 200;
 
@@ -80,8 +80,10 @@ export const ENTITY_NAME_RULES = `entityName rules:
 
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.
+- Where a value is followed by a description, that description is its definition. Classify against it, not against what the word suggests on its own.
+- The fields ask three different questions and a transaction often answers only some of them: occasion is the social setting the money was spent in, venue is what kind of place it was spent at, and contains is what was actually bought. Do not restate one field's answer in another.
 - A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
-- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at.`;
+- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at. Omitting is a correct answer rather than a failure: routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
 
 export const CONFIDENCE_RULES = `confidence rules:
 - Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
@@ -98,11 +100,39 @@ export class EmptyClosedVocabularyError extends Error {
   }
 }
 
+/**
+ * One offered value, with the definition the vocabulary holds for it or null
+ * when it holds none (POPS-3285).
+ */
+export interface ClosedFacetValue {
+  value: string;
+  description: string | null;
+}
+
 /** One classified facet's values, in the order they were loaded (most-used first). */
 export interface ClosedFacetOptions {
   facet: ClassifiedTagFacet;
   single: boolean;
-  values: string[];
+  values: ClosedFacetValue[];
+}
+
+/** `facet:value` → its one-line definition, for the values that have one. */
+export type TagDescriptions = ReadonlyMap<string, string>;
+
+/**
+ * A vocabulary description as it may be rendered: sanitized at the boundary
+ * like every other interpolated field, and null when there is nothing left.
+ *
+ * The sanitization is not ceremony. A description is stored data, so a newline
+ * in one would inject prompt lines exactly the way an unsanitized merchant
+ * description would — the risk `sanitizePromptField` exists for — and a
+ * whitespace-only value must read as "no description" rather than render a
+ * value followed by a dangling colon.
+ */
+function renderableDescription(description: string | undefined): string | null {
+  if (description === undefined) return null;
+  const sanitized = sanitizePromptField(description);
+  return sanitized === '' ? null : sanitized;
 }
 
 /**
@@ -123,14 +153,21 @@ export interface ClosedFacetOptions {
  * reintroduced the pre-migration taxonomy, including values that never existed
  * in `tag_vocabulary`.
  */
-export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
-  const byFacet = new Map<string, string[]>();
+export function closedFacetOptions(
+  knownTags: string[],
+  descriptions: TagDescriptions = new Map()
+): ClosedFacetOptions[] {
+  const byFacet = new Map<string, ClosedFacetValue[]>();
   for (const tag of knownTags) {
     const { facet, value } = parseTagFacet(tag);
     if (facet === null) continue;
+    const entry: ClosedFacetValue = {
+      value,
+      description: renderableDescription(descriptions.get(tag)),
+    };
     const bucket = byFacet.get(facet);
-    if (bucket) bucket.push(value);
-    else byFacet.set(facet, [value]);
+    if (bucket) bucket.push(entry);
+    else byFacet.set(facet, [entry]);
   }
 
   const options = CLASSIFIED_TAG_FACETS.map(({ facet, single }) => ({
@@ -151,18 +188,40 @@ export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
 /**
  * Render the closed vocabulary as one prompt field per facet.
  *
- * This is the shape the whole ticket turns on: the model is given a set of
+ * This is the shape POPS-2606 turns on: the model is given a set of
  * classification fields with enumerated answers, not an open tag list to
  * generate into. `exactly one of` / `any of` states the cardinality inline as
  * well as in the JSON shape, because the two together are what make a second
  * `occasion` read as a violated instruction rather than an oversight.
+ *
+ * A facet renders in one of two forms, chosen by whether any of its values
+ * carries a definition (POPS-3285):
+ *
+ * - **Compact**, `- channel: exactly one of [online, in-person]`, when none
+ *   does. This is what every facet looked like before descriptions existed,
+ *   and it stays the shape for an axis whose values need no gloss.
+ * - **Block**, one value per line, when at least one does. A bare list of five
+ *   words is what let `occasion:home` collect every row that was not obviously
+ *   one of the other four: the model was asked to pick exactly one and given no
+ *   criteria to pick on.
+ *
+ * Within a block an undescribed value renders as the bare value. Mixing the two
+ * is deliberate — the alternative is either denying a described value its
+ * definition or inventing filler for one that does not need it, and the column
+ * is nullable precisely so neither is necessary.
  */
 export function closedFacetFields(options: ClosedFacetOptions[]): string {
   return options
-    .map(
-      ({ facet, single, values }) =>
-        `- ${facet}: ${single ? 'exactly one of' : 'any of'} [${values.join(', ')}]`
-    )
+    .map(({ facet, single, values }) => {
+      const cardinality = single ? 'exactly one of' : 'any of';
+      if (!values.some((entry) => entry.description !== null)) {
+        return `- ${facet}: ${cardinality} [${values.map((entry) => entry.value).join(', ')}]`;
+      }
+      const lines = values.map(({ value, description }) =>
+        description === null ? `    - ${value}` : `    - ${value}: ${description}`
+      );
+      return [`- ${facet}: ${cardinality}`, ...lines].join('\n');
+    })
     .join('\n');
 }
 

@@ -29,6 +29,7 @@ import {
   knownEntitiesSection,
   PROMPT_VERSION_CATEGORIZE,
   TAGS_RULES,
+  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags } from './ai-tag-validation.js';
 import { sanitizeEntityName } from './entity-name.js';
@@ -57,6 +58,8 @@ export interface ApiCallOptions {
   model: string;
   maxTokens: number;
   knownTags: string[];
+  /** `facet:value` → its definition, for the values the vocabulary describes (POPS-3285). */
+  tagDescriptions?: TagDescriptions;
   /** Bounded closed-set hint of existing entity names (CF062/#3661). */
   knownEntityNames?: string[];
   /** Opaque import-batch key for telemetry correlation (never the description). */
@@ -89,9 +92,10 @@ const SINGLE_KNOWN_ENTITY_INSTRUCTION =
 export function buildPrompt(
   input: CategorizerInput,
   knownTags: string[],
-  knownEntityNames: string[] = []
+  knownEntityNames: string[] = [],
+  tagDescriptions?: TagDescriptions
 ): string {
-  const facets = closedFacetOptions(knownTags);
+  const facets = closedFacetOptions(knownTags, tagDescriptions);
   return `Given this bank transaction, identify the merchant/entity name and classify it on each tag axis below.
 
 ${buildTransactionData(input)}
@@ -160,7 +164,7 @@ export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallRespon
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
   return callRawApi({
     client: opts.client,
-    prompt: buildPrompt(opts.input, opts.knownTags, opts.knownEntityNames),
+    prompt: buildPrompt(opts.input, opts.knownTags, opts.knownEntityNames, opts.tagDescriptions),
     sanitizedDescription: opts.sanitizedDescription,
     model: opts.model,
     maxTokens: opts.maxTokens,
