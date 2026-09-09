@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Button, Select } from '@pops/ui';
+import { Badge, Button, CheckboxInput, Select } from '@pops/ui';
 
 import {
   DEFAULT_FILTERS,
@@ -86,14 +86,12 @@ function ToggleRow({ value, onChange }: ToggleRowProps): ReactElement {
   const { t } = useTranslation('lists');
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={value.includeArchived}
-          onChange={(e) => onChange({ ...value, includeArchived: e.target.checked })}
-        />
-        {t('index.filters.showArchived')}
-      </label>
+      <CheckboxInput
+        label={t('index.filters.showArchived')}
+        labelPosition="right"
+        checked={value.includeArchived}
+        onCheckedChange={(checked) => onChange({ ...value, includeArchived: checked })}
+      />
       <SortPicker
         value={value.sort}
         onChange={(sort) => onChange({ ...value, sort })}
