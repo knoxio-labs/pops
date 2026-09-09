@@ -36,27 +36,29 @@ function PendingNudge({ items }: { items: PendingImport[] }) {
   return (
     <Card
       className={cn(
-        'flex items-center gap-3 px-4 py-3',
+        'px-4 py-3',
         urgent ? 'border-destructive/40' : 'border-primary/30 bg-primary/5'
       )}
     >
-      {urgent ? (
-        <TriangleAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
-      ) : (
-        <History className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {items.length === 1 ? '1 import to finish' : `${items.length} imports to finish`}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {summarise(items)}
-          {first && first.state !== 'unusable' && ` · newest: ${first.step ?? 'unreviewed'}`}
-        </p>
+      <div className="flex items-center gap-3">
+        {urgent ? (
+          <TriangleAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+        ) : (
+          <History className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {items.length === 1 ? '1 import to finish' : `${items.length} imports to finish`}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {summarise(items)}
+            {first && first.state !== 'unusable' && ` · newest: ${first.step ?? 'unreviewed'}`}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" suffix={<ArrowRight className="h-4 w-4" />}>
+          Pending imports
+        </Button>
       </div>
-      <Button size="sm" variant="outline" suffix={<ArrowRight className="h-4 w-4" />}>
-        Pending imports
-      </Button>
     </Card>
   );
 }

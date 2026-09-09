@@ -97,37 +97,35 @@ export function PendingImportCard({
   const badge = STATE_BADGE[item.state];
   return (
     <Card
-      className={cn(
-        'flex items-center gap-3 p-4',
-        item.state === 'unusable' && 'border-destructive/40',
-        compact && 'p-3'
-      )}
+      className={cn(compact ? 'p-3' : 'p-4', item.state === 'unusable' && 'border-destructive/40')}
     >
-      <AccountAvatar account={account} size={compact ? 'sm' : 'md'} />
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {stateIcon(item)}
-          <span className="truncate text-sm font-medium">
-            {account.name} · {sourceLabel(item.source)}
-          </span>
-          <Badge variant={badge.tone} className="font-normal">
-            {badge.label}
-          </Badge>
+      <div className="flex items-center gap-3">
+        <AccountAvatar account={account} size={compact ? 'sm' : 'md'} />
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {stateIcon(item)}
+            <span className="truncate text-sm font-medium">
+              {account.name} · {sourceLabel(item.source)}
+            </span>
+            <Badge variant={badge.tone} className="font-normal">
+              {badge.label}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{progressLine(item)}</p>
+          {!compact && item.span && item.state !== 'unusable' && (
+            <p className="text-xs text-muted-foreground">
+              Covers {item.span.from} – {item.span.to} · saved {when(item.savedAt)}
+            </p>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground">{progressLine(item)}</p>
-        {!compact && item.span && item.state !== 'unusable' && (
-          <p className="text-xs text-muted-foreground">
-            Covers {item.span.from} – {item.span.to} · saved {when(item.savedAt)}
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {item.state === 'saved' && (
-          <Button size="sm" variant="ghost">
-            Discard
-          </Button>
-        )}
-        {action(item)}
+        <div className="flex shrink-0 items-center gap-2">
+          {item.state === 'saved' && (
+            <Button size="sm" variant="ghost">
+              Discard
+            </Button>
+          )}
+          {action(item)}
+        </div>
       </div>
     </Card>
   );
