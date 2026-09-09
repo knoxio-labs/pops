@@ -1,7 +1,10 @@
 import { lazy } from 'react';
 import { Navigate } from 'react-router';
 
+import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
+
+import type { FoodPageSlot } from '@pops/food/manifest';
 
 const FoodLandingPage = lazy(() =>
   import('./pages/FoodLandingPage').then((m) => ({ default: m.FoodLandingPage }))
@@ -73,7 +76,52 @@ const InspectorPage = lazy(() =>
   import('./pages/inbox/inspector/InspectorPage').then((m) => ({ default: m.InspectorPage }))
 );
 
+/**
+ * The `data` layout's index route redirects to the first tab. It is a
+ * component rather than an inline element because the loader resolves a page
+ * slot to a `ComponentType` and renders it itself.
+ */
+const DataIndexRedirect = () => <Navigate to="ingredients" replace />;
+
 export { navConfig } from './nav';
+
+/**
+ * The component behind each page, keyed by the bundle slot the pillar's
+ * manifest advertises for it — the `data` tabs included, which are nested in
+ * `FOOD_PAGES` but flat here because a slot is a slot whatever its depth.
+ *
+ * Keyed by slot rather than by path because that is the key the shell's
+ * runtime loader asks for, and `satisfies` pins the key set in both
+ * directions: a page added to `FOOD_PAGES` with nothing to render fails to
+ * compile here, and a component bound to a slot the contract does not declare
+ * fails the same way. `bundles` is this map under the name the wire uses.
+ */
+export const PAGE_COMPONENTS = {
+  'food-landing': FoodLandingPage,
+  'food-data-layout': FoodDataLayout,
+  'food-data-index': DataIndexRedirect,
+  'food-data-ingredients': IngredientsTab,
+  'food-data-aliases': AliasesTab,
+  'food-data-prep-states': PrepStatesTab,
+  'food-data-substitutions': SubstitutionsTab,
+  'food-data-substitutions-graph': SubGraphPage,
+  'food-data-conversions': ConversionsTab,
+  'food-data-tags': TagsTab,
+  'food-recipe-list': RecipeListPage,
+  'food-recipe-new': RecipeNewPage,
+  'food-recipe-detail': RecipeDetailPage,
+  'food-recipe-version-detail': RecipeVersionDetailPage,
+  'food-recipe-edit': RecipeEditPage,
+  'food-recipe-drafts': RecipeDraftsPage,
+  'food-recipe-draft-edit': RecipeDraftEditPage,
+  'food-prompt-viewer': PromptViewerPage,
+  'food-plan': PlanPage,
+  'food-fridge': FridgePage,
+  'food-solve': SolvePage,
+  'food-shopping-from-plan': FromPlanPage,
+  'food-inbox': InboxPage,
+  'food-inbox-inspector': InspectorPage,
+} satisfies Record<FoodPageSlot, ComponentType>;
 
 export const routes: RouteObject[] = [
   { index: true, element: <FoodLandingPage /> },
@@ -81,7 +129,7 @@ export const routes: RouteObject[] = [
     path: 'data',
     element: <FoodDataLayout />,
     children: [
-      { index: true, element: <Navigate to="ingredients" replace /> },
+      { index: true, element: <DataIndexRedirect /> },
       { path: 'ingredients', element: <IngredientsTab /> },
       { path: 'aliases', element: <AliasesTab /> },
       { path: 'prep-states', element: <PrepStatesTab /> },

@@ -194,7 +194,6 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'media',
       'inventory',
-      'food',
       'lists',
       'cerebrum',
     ]);
@@ -240,7 +239,6 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'media',
       'inventory',
-      'food',
       'lists',
       'cerebrum',
     ]);

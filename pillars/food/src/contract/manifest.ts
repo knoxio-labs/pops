@@ -8,6 +8,9 @@ import type { ModuleManifest } from '@pops/types';
 
 export type { FoodContract } from './manifest.generated.js';
 
+export { FOOD_PAGES } from './pages.js';
+export type { FoodPageSlot } from './pages.js';
+
 export const foodManifest: ModuleManifest = {
   id: 'food',
   name: 'Food',

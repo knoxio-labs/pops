@@ -200,6 +200,68 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  food: {
+    assetsBaseUrl: '/food-ui/food.js',
+    nav: {
+      id: 'food',
+      label: 'Food',
+      labelKey: 'food',
+      icon: 'utensils',
+      color: 'amber',
+      basePath: '/food',
+      order: 40,
+      items: [
+        { path: '', label: 'Home', labelKey: 'food.home', icon: 'layout-dashboard' },
+        { path: '/recipes', label: 'Recipes', labelKey: 'food.recipes', icon: 'book-open' },
+        { path: '/inbox', label: 'Inbox', labelKey: 'food.inbox', icon: 'bell' },
+        { path: '/plan', label: 'Plan', labelKey: 'food.plan', icon: 'clock' },
+        { path: '/fridge', label: 'Fridge', labelKey: 'food.fridge', icon: 'package' },
+        { path: '/solve', label: 'Solve', labelKey: 'food.solve', icon: 'compass' },
+        {
+          path: '/shopping/from-plan',
+          label: 'Shopping',
+          labelKey: 'food.shopping',
+          icon: 'list-checks',
+        },
+        { path: '/data', label: 'Manage data', labelKey: 'food.data', icon: 'database' },
+        { path: '/prompts', label: 'Prompts', labelKey: 'food.prompts', icon: 'file-text' },
+      ],
+    },
+    // The `data` tabs are children of the layout that renders their chrome,
+    // which is the shape POPS-3256 taught the wire to carry. Flattened here,
+    // the layout would remount on every tab switch.
+    pages: [
+      { path: '', index: true, bundleSlot: 'food-landing' },
+      {
+        path: 'data',
+        bundleSlot: 'food-data-layout',
+        children: [
+          { path: '', index: true, bundleSlot: 'food-data-index' },
+          { path: 'ingredients', bundleSlot: 'food-data-ingredients' },
+          { path: 'aliases', bundleSlot: 'food-data-aliases' },
+          { path: 'prep-states', bundleSlot: 'food-data-prep-states' },
+          { path: 'substitutions', bundleSlot: 'food-data-substitutions' },
+          { path: 'substitutions/graph', bundleSlot: 'food-data-substitutions-graph' },
+          { path: 'conversions', bundleSlot: 'food-data-conversions' },
+          { path: 'tags', bundleSlot: 'food-data-tags' },
+        ],
+      },
+      { path: 'recipes', bundleSlot: 'food-recipe-list' },
+      { path: 'recipes/new', bundleSlot: 'food-recipe-new' },
+      { path: 'recipes/:slug', bundleSlot: 'food-recipe-detail' },
+      { path: 'recipes/:slug/v/:versionNo', bundleSlot: 'food-recipe-version-detail' },
+      { path: 'recipes/:slug/edit', bundleSlot: 'food-recipe-edit' },
+      { path: 'recipes/:slug/drafts', bundleSlot: 'food-recipe-drafts' },
+      { path: 'recipes/:slug/drafts/:draftNo', bundleSlot: 'food-recipe-draft-edit' },
+      { path: 'prompts', bundleSlot: 'food-prompt-viewer' },
+      { path: 'plan', bundleSlot: 'food-plan' },
+      { path: 'fridge', bundleSlot: 'food-fridge' },
+      { path: 'solve', bundleSlot: 'food-solve' },
+      { path: 'shopping/from-plan', bundleSlot: 'food-shopping-from-plan' },
+      { path: 'inbox', bundleSlot: 'food-inbox' },
+      { path: 'inbox/:sourceId', bundleSlot: 'food-inbox-inspector' },
+    ],
+  },
   ai: {
     assetsBaseUrl: '/ai-ui/ai.js',
     nav: {

@@ -49,8 +49,9 @@ import { useEffect } from 'react';
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`ai`, `bfm`, `finance` and `purchases` are not in this map, and that is
- * not an omission** (POPS-3217, POPS-3219, POPS-3220, POPS-3221).
+ * **`ai`, `bfm`, `finance`, `food` and `purchases` are not in this map, and
+ * that is not an omission** (POPS-3217, POPS-3219, POPS-3220, POPS-3221,
+ * POPS-3222).
  * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
@@ -67,7 +68,6 @@ import { useEffect } from 'react';
  * undiscoverable.
  */
 import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
-import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
 import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
@@ -148,7 +148,6 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
     },
   },
   inventory: { manifest: inventoryManifest, navOrder: 30 },
-  food: { manifest: foodManifest, navOrder: 40 },
   lists: { manifest: listsManifest, navOrder: 50 },
   cerebrum: {
     manifest: cerebrumManifest,

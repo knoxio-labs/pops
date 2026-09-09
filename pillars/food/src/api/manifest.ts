@@ -1,3 +1,5 @@
+import { FOOD_PAGES } from '../contract/pages.js';
+
 import type {
   ManifestPayload,
   NavConfigDescriptor,
@@ -39,41 +41,16 @@ const FOOD_NAV: NavConfigDescriptor = {
   ],
 };
 
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const FOOD_WIRE_PAGES = [...FOOD_PAGES] as const satisfies readonly PageDescriptor[];
+
 /**
- * Wire-format pages contribution for the food pillar.
- *
- * One descriptor per route declared in `pillars/food/app/src/routes.tsx`.
- * The nested `/food/data/*` subtree is flattened: each child becomes its
- * own descriptor carrying the full `data/<tab>` path. The `FoodDataLayout`
- * wrapper is carried as `food-data-layout` against the bare `data` path so
- * the shell-side bundle map can reconstruct the parent/child mounting that
- * the nested `RouteObject.children` shape gives us.
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ * Root-relative, because the same deployment answers to a LAN name, a
+ * Tailscale name and `localhost`, and no absolute origin is right on all of
+ * them.
  */
-const FOOD_PAGES: readonly PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'food-landing' },
-  { path: 'data', bundleSlot: 'food-data-layout' },
-  { path: 'data/ingredients', bundleSlot: 'food-data-ingredients' },
-  { path: 'data/aliases', bundleSlot: 'food-data-aliases' },
-  { path: 'data/prep-states', bundleSlot: 'food-data-prep-states' },
-  { path: 'data/substitutions', bundleSlot: 'food-data-substitutions' },
-  { path: 'data/substitutions/graph', bundleSlot: 'food-data-substitutions-graph' },
-  { path: 'data/conversions', bundleSlot: 'food-data-conversions' },
-  { path: 'data/tags', bundleSlot: 'food-data-tags' },
-  { path: 'recipes', bundleSlot: 'food-recipe-list' },
-  { path: 'recipes/new', bundleSlot: 'food-recipe-new' },
-  { path: 'recipes/:slug', bundleSlot: 'food-recipe-detail' },
-  { path: 'recipes/:slug/v/:versionNo', bundleSlot: 'food-recipe-version-detail' },
-  { path: 'recipes/:slug/edit', bundleSlot: 'food-recipe-edit' },
-  { path: 'recipes/:slug/drafts', bundleSlot: 'food-recipe-drafts' },
-  { path: 'recipes/:slug/drafts/:draftNo', bundleSlot: 'food-recipe-draft-edit' },
-  { path: 'prompts', bundleSlot: 'food-prompt-viewer' },
-  { path: 'plan', bundleSlot: 'food-plan' },
-  { path: 'fridge', bundleSlot: 'food-fridge' },
-  { path: 'solve', bundleSlot: 'food-solve' },
-  { path: 'shopping/from-plan', bundleSlot: 'food-shopping-from-plan' },
-  { path: 'inbox', bundleSlot: 'food-inbox' },
-  { path: 'inbox/:sourceId', bundleSlot: 'food-inbox-inspector' },
-];
+const FOOD_ASSETS_BASE_URL = '/food-ui/food.js';
 
 /**
  * Builds the food pillar manifest payload sent to the registry on boot.
@@ -93,7 +70,8 @@ export function buildFoodManifest(version: string): ManifestPayload {
     uri: { types: [] },
     consumedSettings: { keys: [] },
     nav: FOOD_NAV,
-    pages: [...FOOD_PAGES],
+    pages: [...FOOD_WIRE_PAGES],
+    assetsBaseUrl: FOOD_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }

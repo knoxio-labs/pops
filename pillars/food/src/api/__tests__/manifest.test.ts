@@ -11,6 +11,24 @@ import { ManifestPayloadSchema, validateManifestPayload } from '@pops/pillar-sdk
 
 import { buildFoodManifest, FOOD_PILLAR_ID } from '../manifest.js';
 
+/** Shape of one wire page, restated so the walk below needs no schema import. */
+interface WirePage {
+  readonly path: string;
+  readonly index?: boolean;
+  readonly bundleSlot: string;
+  readonly children?: readonly WirePage[];
+}
+
+/** Every page in the tree, flattened — `pages.length` counts only the top. */
+function allPages(pages: readonly WirePage[] | undefined): WirePage[] {
+  return (pages ?? []).flatMap((page) => [page, ...allPages(page.children)]);
+}
+
+/** Every page's `path`, at every depth. */
+function pagePaths(pages: readonly WirePage[] | undefined): string[] {
+  return allPages(pages).map((page) => page.path);
+}
+
 describe('buildFoodManifest', () => {
   it('produces a payload that passes the central manifest schema', () => {
     const manifest = buildFoodManifest('0.1.0');
@@ -69,39 +87,65 @@ describe('buildFoodManifest', () => {
       }
     });
 
-    it('declares one descriptor for the index route and one per data tab', () => {
+    /**
+     * The tabs are children of the layout that renders their chrome, with
+     * paths relative to it. They were flattened onto `data/<tab>` before
+     * POPS-3256, against a comment saying the shell would reconstruct the
+     * nesting — which nothing did. Asserting the relative paths is what stops
+     * a well-meaning re-flattening: the loader mounts what it is given, and a
+     * flattened tree remounts the layout on every tab switch.
+     */
+    it('nests the data tabs under their layout, with relative paths', () => {
       const manifest = buildFoodManifest('0.1.0');
-      const paths = manifest.pages?.map((p) => p.path) ?? [];
-      expect(paths).toContain('');
-      expect(paths).toContain('data');
-      expect(paths).toContain('data/ingredients');
-      expect(paths).toContain('data/aliases');
-      expect(paths).toContain('data/prep-states');
-      expect(paths).toContain('data/substitutions');
-      expect(paths).toContain('data/substitutions/graph');
-      expect(paths).toContain('data/conversions');
-      expect(paths).toContain('data/tags');
+      const data = manifest.pages?.find((p) => p.path === 'data');
+      expect(data?.bundleSlot).toBe('food-data-layout');
+
+      const childPaths = data?.children?.map((c) => c.path) ?? [];
+      expect(childPaths).toContain('');
+      expect(childPaths).toContain('ingredients');
+      expect(childPaths).toContain('aliases');
+      expect(childPaths).toContain('prep-states');
+      expect(childPaths).toContain('substitutions');
+      expect(childPaths).toContain('substitutions/graph');
+      expect(childPaths).toContain('conversions');
+      expect(childPaths).toContain('tags');
+
+      // The negative half: no descriptor carries the old flattened form, so a
+      // partial revert fails here rather than producing a tree with both.
+      expect(pagePaths(manifest.pages).filter((path) => path.startsWith('data/'))).toEqual([]);
     });
 
-    it('flags the index page (and only the index page)', () => {
+    it('flags the pillar index and the layout index, and nothing else', () => {
       const manifest = buildFoodManifest('0.1.0');
-      const indexes = manifest.pages?.filter((p) => p.index === true) ?? [];
-      expect(indexes).toHaveLength(1);
-      expect(indexes[0]?.bundleSlot).toBe('food-landing');
+      const indexes = allPages(manifest.pages).filter((p) => p.index === true);
+      expect(indexes.map((p) => p.bundleSlot).toSorted()).toEqual([
+        'food-data-index',
+        'food-landing',
+      ]);
     });
 
-    it('gives every page a unique kebab-case bundleSlot', () => {
+    // Walked rather than mapped: over the top level this would check fifteen
+    // slots and skip the eight the layout carries.
+    it('gives every page a unique kebab-case bundleSlot, nested ones included', () => {
       const manifest = buildFoodManifest('0.1.0');
-      const slots = manifest.pages?.map((p) => p.bundleSlot) ?? [];
+      const slots = allPages(manifest.pages).map((p) => p.bundleSlot);
+      expect(slots.length).toBeGreaterThan(manifest.pages?.length ?? 0);
       expect(new Set(slots).size).toBe(slots.length);
       for (const slot of slots) {
         expect(slot).toMatch(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
       }
     });
 
-    it('does NOT declare assetsBaseUrl', () => {
+    /**
+     * Declaring it is what moves the pillar onto the runtime loader: the shell
+     * imports the bundle from this URL instead of compiling `@pops/app-food`
+     * into its own build (POPS-3222). Root-relative, because one deployment
+     * answers to a LAN name, a Tailscale name and `localhost`, and no absolute
+     * origin is right on all three.
+     */
+    it('declares a root-relative assetsBaseUrl', () => {
       const manifest = buildFoodManifest('0.1.0');
-      expect(manifest.assetsBaseUrl).toBeUndefined();
+      expect(manifest.assetsBaseUrl).toBe('/food-ui/food.js');
     });
 
     it('round-trips the nav + pages dimensions through JSON', () => {

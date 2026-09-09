@@ -1,3 +1,4 @@
+export { bundles } from './bundles';
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
 
