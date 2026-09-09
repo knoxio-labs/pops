@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Autocomplete, Label, useDebouncedValue, type AutocompleteSuggestion } from '@pops/ui';
+import { Label, useDebouncedValue } from '@pops/ui';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import { ingredientsGet, slugsSearch } from '../../../food-api/index.js';
@@ -12,27 +12,20 @@ import type { IngredientsGetResponses, SlugsSearchResponses } from '../../../foo
 type SlugSearchOutput = SlugsSearchResponses[200];
 type IngredientsGetOutput = IngredientsGetResponses[200];
 
+import {
+  IngredientAutocomplete,
+  type SlugSearchItem,
+} from './endpoint-picker/IngredientAutocomplete';
 import { KindToggle } from './endpoint-picker/KindToggle';
 import { SelectedPill } from './endpoint-picker/SelectedPill';
 import { VariantDropdown, type VariantOption } from './endpoint-picker/VariantDropdown';
 
 import type { SubstitutionEndpointInput, SubstitutionEndpointKind } from './types';
 
-export interface SlugSearchItem {
-  slug: string;
-  kind: 'ingredient' | 'recipe' | 'prep_state';
-  targetId: number;
-  name: string;
-}
-
 interface Props {
   labelKey: string;
   value: SubstitutionEndpointInput | null;
   onChange: (next: SubstitutionEndpointInput | null) => void;
-}
-
-function suggestionKey(item: Pick<SlugSearchItem, 'kind' | 'targetId'>): string {
-  return `${item.kind}-${item.targetId}`;
 }
 
 function useEndpointPickerQueries(
@@ -69,45 +62,6 @@ function useEndpointPickerQueries(
     [detailQuery.data]
   );
   return { matches, variants };
-}
-
-function IngredientAutocomplete({
-  inputId,
-  query,
-  setQuery,
-  matches,
-  onPick,
-}: {
-  inputId: string;
-  query: string;
-  setQuery: (s: string) => void;
-  matches: readonly SlugSearchItem[];
-  onPick: (item: SlugSearchItem) => void;
-}) {
-  const { t } = useTranslation('food');
-  const suggestions = useMemo<AutocompleteSuggestion[]>(
-    () =>
-      matches.map((m) => ({
-        value: suggestionKey(m),
-        label: m.name || m.slug,
-        description: m.slug,
-      })),
-    [matches]
-  );
-  return (
-    <Autocomplete
-      id={inputId}
-      suggestions={suggestions}
-      value={query}
-      onChange={setQuery}
-      onSelect={(suggestion) => {
-        const item = matches.find((m) => suggestionKey(m) === suggestion.value);
-        if (item) onPick(item);
-      }}
-      placeholder={t('data.substitutions.endpoint.searchPlaceholder')}
-      emptyMessage={t('data.substitutions.endpoint.noMatches')}
-    />
-  );
 }
 
 function PickerBody({
