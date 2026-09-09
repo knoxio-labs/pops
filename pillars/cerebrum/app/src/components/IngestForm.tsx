@@ -15,7 +15,7 @@ import { Button, Textarea, TextInput } from '@pops/ui';
 import { BulkResultList } from './BulkResultList';
 import { BulkSegmentPreview } from './BulkSegmentPreview';
 import { IngestAdvancedSection } from './IngestAdvancedSection';
-import { ScopePicker } from './ScopePicker';
+import { ScopeField } from './ScopeField';
 import { SubmitResult } from './SubmitResult';
 import { useIngestKeyboard } from './useIngestKeyboard';
 
@@ -125,7 +125,7 @@ function IngestFormFields({
         onChange={(v) => model.updateField('body', v)}
         onKeyDown={onBodyKeyDown}
       />
-      <ScopePicker
+      <ScopeField
         value={model.form.scopes}
         suggestions={model.scopeSuggestions}
         loading={model.scopesLoading}

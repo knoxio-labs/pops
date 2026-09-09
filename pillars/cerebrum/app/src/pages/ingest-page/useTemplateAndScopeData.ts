@@ -48,11 +48,19 @@ export function useTemplateAndScopeData() {
   const scopeSuggestions = useMemo(
     () =>
       knownScopes.map((s) => ({
-        label: s.scope,
+        label: `${s.scope} · ${s.count} engram${s.count === 1 ? '' : 's'}`,
         value: s.scope,
-        description: `${s.count} engram${s.count === 1 ? '' : 's'}`,
       })),
     [knownScopes]
+  );
+
+  const tagSuggestions = useMemo(
+    () =>
+      knownTags.map((t) => ({
+        label: `${t.tag} · ${t.count}`,
+        value: t.tag,
+      })),
+    [knownTags]
   );
 
   return {
@@ -61,7 +69,7 @@ export function useTemplateAndScopeData() {
     knownTags,
     typeOptions: TYPE_OPTIONS,
     scopeSuggestions,
-    tagSuggestions: knownTags,
+    tagSuggestions,
     templatesLoading: templatesQuery.isLoading,
     scopesLoading: scopesQuery.isLoading,
     tagsLoading: tagsQuery.isLoading,
