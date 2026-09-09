@@ -36,7 +36,7 @@ export const transactionCorrections = sqliteTable(
     transactionType: text('transaction_type', { enum: TRANSACTION_TYPES }),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     /**
-     * Audit-only (ADR-053/POPS-3130): never read to decide whether a rule
+     * Audit-only (finance ADR-004/POPS-3130): never read to decide whether a rule
      * matches or how review routes. `null` means no probability was ever
      * assessed — what every rule an operator writes by hand gets now. Non-null
      * only once an explicit action gives it a real number: the rule manager's

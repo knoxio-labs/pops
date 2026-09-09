@@ -1,4 +1,4 @@
-# ADR-025: Theme 07-food — Inline Acceptance Criteria
+# Food ADR-004: Theme 07-food — Inline Acceptance Criteria
 
 ## Status
 

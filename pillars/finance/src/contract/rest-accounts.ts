@@ -61,7 +61,7 @@ export const AccountSchema = z.object({
    * `entityId`) to build the contacts avatar URL. */
   resolvedEntityId: z.string().nullable(),
   /**
-   * What the account holds today, checkpoint-anchored (ADR-051). Read-only,
+   * What the account holds today, checkpoint-anchored (finance ADR-002). Read-only,
    * and never a stored column: `basis` says whether it is a real balance or
    * the sum of whatever happens to have been imported.
    */

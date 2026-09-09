@@ -1,6 +1,6 @@
 /**
  * `accounts/:id/checkpoints` and `accounts/:id/balance*` sub-router
- * (POPS-2880, ADR-051).
+ * (POPS-2880, finance ADR-002).
  *
  * A checkpoint is a balance read off something outside the ledger, and the
  * balance routes are the ledger's answer measured against it. They sit

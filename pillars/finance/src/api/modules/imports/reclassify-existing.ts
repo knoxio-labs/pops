@@ -8,7 +8,7 @@
  * module's pure `findMatchingCorrectionFromRules`, and only review-free
  * matches are applied: retroactive changes pass the same
  * `resolveCorrectionApplyStatus` gate as live import, so an `uncertain`
- * (entity-less purchase — no merchant resolved yet, ADR-053) match is skipped
+ * (entity-less purchase — no merchant resolved yet, finance ADR-004) match is skipped
  * rather than silently written without review. A changed row merges the winning rule's
  * tags in (additive-only) and stamps match provenance (`matchType: 'learned'`,
  * `matchRuleId`, `matchConfidence`) — mirroring the live-import path

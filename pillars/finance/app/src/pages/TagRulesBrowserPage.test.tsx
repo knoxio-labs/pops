@@ -387,7 +387,7 @@ describe('TagRulesBrowserPage', () => {
     expect(screen.getByText('Global')).toBeInTheDocument();
   });
 
-  it('renders priority and usage telemetry, never a confidence (ADR-053/POPS-3131)', async () => {
+  it('renders priority and usage telemetry, never a confidence (finance ADR-004/POPS-3131)', async () => {
     renderPage();
     await screen.findByText('WOOLWORTHS');
     expect(screen.queryByText('95%')).not.toBeInTheDocument();

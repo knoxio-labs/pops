@@ -1,4 +1,4 @@
-# ADR-024: Substitutions Are Single-Hop Only
+# Food ADR-003: Substitutions Are Single-Hop Only
 
 ## Status
 

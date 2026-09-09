@@ -1,5 +1,5 @@
 /**
- * Data access for `account_import_config` (POPS-2916, ADR-052): how an
+ * Data access for `account_import_config` (POPS-2916, finance ADR-003): how an
  * account expects to be fed.
  *
  * The one rule this layer enforces is that a row names what its kind needs —

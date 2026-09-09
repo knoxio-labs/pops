@@ -1,9 +1,9 @@
-# ADR-051: Balances are checkpoint-anchored
+# Finance ADR-002: Balances are checkpoint-anchored
 
 ## Status
 
 Accepted — 2026-09-05. Supersedes one sentence of
-[ADR-050](./adr-050-accounts-as-first-class-records.md): "an account's balance
+[finance ADR-001](./adr-001-accounts-as-first-class-records.md): "an account's balance
 is always the sum of the transactions it carries, never a stored number that
 can drift from that sum."
 
@@ -29,7 +29,7 @@ be checked against, supplied from outside the ledger.
 | Option                                                                | Pros                                                                                                                                                                      | Cons                                                                                                                                                                                                 |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `accounts.opening_balance_cents` + `opening_balance_as_of`            | Two columns, no new table; the sum is a pure function of the account row and its transactions                                                                             | Only ever answers one question, at one date; a balance read off the app today has nowhere to go; there is no way to notice the ledger drifting, because there is nothing later to compare it against |
-| A stored `accounts.balance_cents`, written on every transaction write | Reads are free                                                                                                                                                            | The exact drift ADR-050 refused: two descriptions of one fact, and nothing that can be trusted to keep them in step across an import, a merge, a correction and a delete                             |
+| A stored `accounts.balance_cents`, written on every transaction write | Reads are free                                                                                                                                                            | The exact drift finance ADR-001 refused: two descriptions of one fact, and nothing that can be trusted to keep them in step across an import, a merge, a correction and a delete                     |
 | An append-only `account_checkpoints` table (chosen)                   | Every authoritative reading is recordable, the earliest one _is_ the opening balance, and any two adjacent rows form a testable claim about the transactions between them | A balance is a query rather than a column; a date without a nearby checkpoint is only as good as the nearest one                                                                                     |
 
 ## Decision
@@ -89,7 +89,7 @@ no longer exists would make the anchor lookup answer for a ghost.
 
 ## Consequences
 
-- `accounts` still has no balance column, so ADR-050's actual concern — one
+- `accounts` still has no balance column, so finance ADR-001's actual concern — one
   fact with two descriptions that can drift — is untouched.
 - A balance is a query. It has three bases, and the wire says which: anchored
   forwards from a checkpoint, anchored backwards from the next one (which is

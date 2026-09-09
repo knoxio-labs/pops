@@ -146,7 +146,7 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
     ]);
   });
 
-  it('matches a low-confidence entity rule to "matched" too — confidence is not a gate (ADR-053)', () => {
+  it('matches a low-confidence entity rule to "matched" too — confidence is not a gate (finance ADR-004)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
       knownTags: [],
@@ -193,7 +193,7 @@ describe('applyLearnedCorrection — entity-bearing rule', () => {
     expect(result).toBeNull();
   });
 
-  it('matches a sub-floor rule too — no confidence floor (ADR-053)', () => {
+  it('matches a sub-floor rule too — no confidence floor (finance ADR-004)', () => {
     const result = applyLearnedCorrection(db, {
       transaction: transaction(),
       knownTags: [],
