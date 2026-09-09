@@ -88,6 +88,7 @@ export function AliasTargetPicker({ value, onChange, inputId }: AliasTargetPicke
         placeholder={t('data.aliases.picker.searchPlaceholder')}
         aria-label={t('data.aliases.picker.searchAriaLabel')}
         emptyMessage={t('data.aliases.picker.noResults')}
+        loading={search.isLoading}
       />
     </div>
   );

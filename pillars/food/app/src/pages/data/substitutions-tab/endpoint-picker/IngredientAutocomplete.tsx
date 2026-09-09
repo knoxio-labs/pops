@@ -20,12 +20,14 @@ export function IngredientAutocomplete({
   setQuery,
   matches,
   onPick,
+  loading = false,
 }: {
   inputId: string;
   query: string;
   setQuery: (s: string) => void;
   matches: readonly SlugSearchItem[];
   onPick: (item: SlugSearchItem) => void;
+  loading?: boolean;
 }) {
   const { t } = useTranslation('food');
   const suggestions = useMemo<AutocompleteSuggestion[]>(
@@ -49,6 +51,7 @@ export function IngredientAutocomplete({
       }}
       placeholder={t('data.substitutions.endpoint.searchPlaceholder')}
       emptyMessage={t('data.substitutions.endpoint.noMatches')}
+      loading={loading}
     />
   );
 }

@@ -61,7 +61,7 @@ function useEndpointPickerQueries(
       })),
     [detailQuery.data]
   );
-  return { matches, variants };
+  return { matches, variants, searchLoading: searchQuery.isLoading };
 }
 
 function PickerBody({
@@ -73,6 +73,7 @@ function PickerBody({
   parentIngredientId,
   matches,
   variants,
+  searchLoading,
   onKindChange,
   onSlugPick,
   onVariantPick,
@@ -85,6 +86,7 @@ function PickerBody({
   parentIngredientId: number | null;
   matches: readonly SlugSearchItem[];
   variants: readonly VariantOption[];
+  searchLoading: boolean;
   onKindChange: (next: SubstitutionEndpointKind) => void;
   onSlugPick: (item: SlugSearchItem) => void;
   onVariantPick: (variantId: number) => void;
@@ -99,6 +101,7 @@ function PickerBody({
           setQuery={setQuery}
           matches={matches}
           onPick={onSlugPick}
+          loading={searchLoading}
         />
       ) : (
         <VariantDropdown variants={variants} selectId={variantSelectId} onPick={onVariantPick} />
@@ -116,7 +119,7 @@ export function EndpointPicker({ labelKey, value, onChange }: Props) {
   const [parentIngredientId, setParentIngredientId] = useState<number | null>(null);
   const debounced = useDebouncedValue(query.trim(), 200);
 
-  const { matches, variants } = useEndpointPickerQueries(
+  const { matches, variants, searchLoading } = useEndpointPickerQueries(
     value,
     kind,
     parentIngredientId,
@@ -159,6 +162,7 @@ export function EndpointPicker({ labelKey, value, onChange }: Props) {
           parentIngredientId={parentIngredientId}
           matches={matches}
           variants={variants}
+          searchLoading={searchLoading}
           onKindChange={(next) => {
             setKind(next);
             reset();

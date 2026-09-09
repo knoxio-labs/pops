@@ -61,6 +61,12 @@ export interface AutocompleteProps {
    */
   emptyMessage?: string;
   /**
+   * Suppresses the empty message while a suggestion fetch is in flight, so a
+   * momentarily-empty `suggestions` array (debounce + network round-trip)
+   * doesn't flash "no results" before real results arrive.
+   */
+  loading?: boolean;
+  /**
    * Disabled state
    */
   disabled?: boolean;
@@ -156,6 +162,7 @@ export function Autocomplete({
   onSelect,
   placeholder = 'Search...',
   emptyMessage = 'No results found.',
+  loading = false,
   disabled = false,
   className,
 }: AutocompleteProps) {
@@ -190,7 +197,7 @@ export function Autocomplete({
           onOpenAutoFocus={(e: Event) => e.preventDefault()}
         >
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            {!loading && <CommandEmpty>{emptyMessage}</CommandEmpty>}
             <SuggestionItems suggestions={suggestions} onPick={handleSelect} />
           </CommandList>
         </PopoverContent>
