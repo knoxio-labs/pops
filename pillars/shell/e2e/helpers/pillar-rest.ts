@@ -200,6 +200,20 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  bfm: {
+    assetsBaseUrl: '/bfm-ui/bfm.js',
+    nav: {
+      id: 'bfm',
+      label: 'Devices',
+      labelKey: 'bfm',
+      icon: 'smartphone',
+      color: 'indigo',
+      basePath: '/bfm',
+      order: 80,
+      items: [{ path: '', label: 'Devices', labelKey: 'bfm.devices', icon: 'smartphone' }],
+    },
+    pages: [{ path: '', index: true, bundleSlot: 'bfm-devices' }],
+  },
   finance: {
     assetsBaseUrl: '/finance-ui/finance.js',
     nav: {

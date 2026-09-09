@@ -1,0 +1,67 @@
+import { isValidElement } from 'react';
+import { describe, expect, it } from 'vitest';
+
+import { BFM_PAGES } from '@pops/bfm/manifest';
+
+import { bundles } from '../bundles';
+import { routes } from '../routes';
+
+/**
+ * The shell's loader looks a `PageDescriptor.bundleSlot` up in this record and
+ * throws when it is absent, so a slot the pillar advertises and the bundle
+ * does not carry is a page that fails to mount for whoever navigates there
+ * first. Both directions matter: an orphan component is dead weight, a slot
+ * with nothing behind it is a dead link.
+ */
+describe('bfm bundles record', () => {
+  it('carries exactly the slots the pillar manifest advertises', () => {
+    const declared = BFM_PAGES.map((page) => page.bundleSlot).toSorted();
+    expect(Object.keys(bundles).toSorted()).toEqual(declared);
+  });
+
+  it('resolves every slot to a component', () => {
+    for (const slot of Object.keys(bundles)) {
+      const component = bundles[slot as keyof typeof bundles];
+      expect(component, slot).toBeDefined();
+      expect(['function', 'object'], slot).toContain(typeof component);
+    }
+  });
+
+  // The two mount paths must agree about which component a page is, and the
+  // route table spells its paths out rather than deriving them (the title-icon
+  // gate parses them), so this is where the two are held in step. Comparing
+  // identities rather than counts is what makes that hold: four slots and four
+  // components can still be four wrong pairings.
+  it('binds each slot to the component the route table mounts at that path', () => {
+    for (const page of BFM_PAGES) {
+      const route = routes.find((candidate) =>
+        'index' in page && page.index ? candidate.index === true : candidate.path === page.path
+      );
+      if (route === undefined) throw new Error(`no route for page '${page.path}'`);
+      const element = route.element;
+      if (!isValidElement(element)) throw new Error(`route ${page.bundleSlot} has no element`);
+      expect(element.type, page.bundleSlot).toBe(bundles[page.bundleSlot]);
+    }
+  });
+
+  it('binds a distinct component to every slot', () => {
+    expect(new Set(Object.values(bundles)).size).toBe(BFM_PAGES.length);
+  });
+
+  // The routes and the slots describe one surface, with nothing on either
+  // side the other lacks. A route with no page descriptor behind it does not
+  // exist for a loader-mounted pillar — it is mounted from `pages` alone —
+  // and the order-detail route is the one that would have gone missing
+  // quietly, since no nav item points at it to look broken.
+  it('covers every route the pillar mounts, and only those', () => {
+    expect(routes).toHaveLength(BFM_PAGES.length);
+  });
+
+  // bfm has exactly one page, and the point of naming that is the direction
+  // this list can go wrong in: a slot with no route is as broken as a route
+  // with no slot, and with one of each neither shows up as a count mismatch.
+  it('carries one slot for the one route the app mounts', () => {
+    expect(Object.keys(bundles)).toEqual(['bfm-devices']);
+    expect(routes).toHaveLength(1);
+  });
+});

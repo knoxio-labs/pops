@@ -49,8 +49,8 @@ import { useEffect } from 'react';
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`finance` and `purchases` are not in this map, and that is not an
- * omission** (POPS-3217, POPS-3219).
+ * **`bfm`, `finance` and `purchases` are not in this map, and that is not
+ * an omission** (POPS-3217, POPS-3219, POPS-3221).
  * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
@@ -67,7 +67,6 @@ import { useEffect } from 'react';
  * undiscoverable.
  */
 import { manifest as aiManifest } from '@pops/app-ai';
-import { manifest as bfmManifest } from '@pops/app-bfm';
 import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
 import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
@@ -160,7 +159,6 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
     },
   },
   ai: { manifest: aiManifest, navOrder: 70 },
-  bfm: { manifest: bfmManifest, navOrder: 80 },
   ego: { manifest: egoManifest, navOrder: Number.POSITIVE_INFINITY },
 };
 

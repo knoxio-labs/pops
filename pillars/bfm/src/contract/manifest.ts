@@ -16,6 +16,8 @@
 import type { ModuleManifest } from '@pops/types';
 
 export type { BfmContract } from './rest.js';
+export { BFM_PAGES } from './pages.js';
+export type { BfmPageSlot } from './pages.js';
 
 export const bfmManifest: ModuleManifest = {
   id: 'bfm',
