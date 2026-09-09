@@ -74,9 +74,9 @@ const IN_REPO_IDS = Object.keys(WORKSPACE_BUNDLE_MAP);
 
 describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   it('derives the install set from the snapshot, not the full bundle map', () => {
-    const result = resolveBootRegistry([snapshotEntry('finance'), snapshotEntry('media')]);
+    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('inventory')]);
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['finance', 'media']);
+    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['inventory', 'media']);
     // The bundle map carries seven in-repo pillars; the snapshot narrowed the
     // install set to two, proving the registry is the source of truth.
     expect(result.manifests.length).toBeLessThan(IN_REPO_IDS.length);
@@ -84,27 +84,27 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
 
   it('drops a backend-only registered pillar with no UI surface', () => {
     const result = resolveBootRegistry([
-      snapshotEntry('finance'),
+      snapshotEntry('media'),
       // `registry` is in the snapshot but absent from the bundle map and
       // advertises no assetsBaseUrl → walk drops it silently.
       snapshotEntry('registry'),
     ]);
-    expect(result.manifests.map((m) => m.id)).toEqual(['finance']);
+    expect(result.manifests.map((m) => m.id)).toEqual(['media']);
   });
 
   it('mounts an in-repo pillar AND an external pillar from one snapshot', () => {
     const result = resolveBootRegistry(
-      [snapshotEntry('finance'), externalSnapshotEntry()],
+      [snapshotEntry('media'), externalSnapshotEntry()],
       inertImporter
     );
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['finance', 'weather']);
+    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['media', 'weather']);
 
     const railIds = result.registeredApps.map((a) => a.id);
-    expect(railIds).toContain('finance');
+    expect(railIds).toContain('media');
     expect(railIds).toContain('weather');
     // Wire nav.order (finance=10 in-repo, weather=35) keeps the rail ordered.
-    expect(railIds.indexOf('finance')).toBeLessThan(railIds.indexOf('weather'));
+    expect(railIds.indexOf('media')).toBeLessThan(railIds.indexOf('weather'));
   });
 
   it('mounts an external pillar advertised only via assetsBaseUrl through the runtime loader', () => {
@@ -126,7 +126,7 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   // invisible to the floor-only e2e — fails here.
   it('drives the live registry branch to a non-blank surface (in-repo + external)', () => {
     const result = resolveBootRegistry(
-      [snapshotEntry('finance'), externalSnapshotEntry()],
+      [snapshotEntry('media'), externalSnapshotEntry()],
       inertImporter
     );
 
@@ -134,7 +134,7 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
 
     // Router-facing set: non-empty, both pillars present, external route synthesized.
     expect(result.manifests.length).toBeGreaterThan(0);
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['finance', 'weather']);
+    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['media', 'weather']);
     const external = result.manifests.find((m) => m.id === 'weather');
     expect(external?.surfaces).toContain('app');
     const externalRoutes = external?.frontend?.routes;
@@ -146,7 +146,7 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
     // App rail: non-empty, both pillars present.
     expect(result.registeredApps.length).toBeGreaterThan(0);
     expect(result.registeredApps.map((a) => a.id)).toEqual(
-      expect.arrayContaining(['finance', 'weather'])
+      expect.arrayContaining(['media', 'weather'])
     );
   });
 });
@@ -192,7 +192,6 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     // every pillar still in the map still mounts, which is what never-brick
     // asserts.
     expect(result.registeredApps.map((a) => a.id)).toEqual([
-      'finance',
       'media',
       'inventory',
       'food',
@@ -241,7 +240,6 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
     const result = resolveBootRegistry([]);
     expect(result.registeredApps.length).toBeGreaterThan(0);
     expect(result.registeredApps.map((a) => a.id)).toEqual([
-      'finance',
       'media',
       'inventory',
       'food',
@@ -267,9 +265,9 @@ describe('fetchBootRegistry — fetch-failure resilience', () => {
         jsonResponse({
           pillars: [
             {
-              pillarId: 'finance',
-              baseUrl: 'http://finance-api:3001',
-              manifest: manifestPayload('finance'),
+              pillarId: 'media',
+              baseUrl: 'http://media-api:3003',
+              manifest: manifestPayload('media'),
               lastHeartbeatAt: new Date(0).toISOString(),
             },
           ],
@@ -278,7 +276,7 @@ describe('fetchBootRegistry — fetch-failure resilience', () => {
     );
     const result = await fetchBootRegistry({ fetch: fetchStub });
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id)).toEqual(['finance']);
+    expect(result.manifests.map((m) => m.id)).toEqual(['media']);
   });
 
   it('falls back to the static floor when the fetch rejects (registry unreachable)', async () => {

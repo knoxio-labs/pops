@@ -8,6 +8,7 @@
  * `pillars/finance/app/src/routes.tsx` (icons in the kebab-case wire form
  * required by `NavConfigDescriptorSchema`).
  */
+import { FINANCE_PAGES as CONTRACT_PAGES } from '../contract/pages.js';
 import { financeManifest } from '../contract/settings/index.js';
 
 import type { CapabilityReporter } from '@pops/pillar-sdk/bootstrap';
@@ -59,16 +60,27 @@ const FINANCE_NAV: NavConfigDescriptor = {
   ],
 };
 
-const FINANCE_PAGES: PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'finance-dashboard' },
-  { path: 'transactions', bundleSlot: 'finance-transactions' },
-  { path: 'entities', bundleSlot: 'finance-entities' },
-  { path: 'budgets', bundleSlot: 'finance-budgets' },
-  { path: 'wishlist', bundleSlot: 'finance-wishlist' },
-  { path: 'import', bundleSlot: 'finance-import' },
-  { path: 'rules', bundleSlot: 'finance-rules' },
-  { path: 'prompts', bundleSlot: 'finance-prompts' },
-];
+/**
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ *
+ * Root-relative rather than absolute: the same deployment is reached by LAN
+ * name, Tailscale name and `localhost`, so no absolute origin written here
+ * would be right on all of them. The path is served by the shell's own nginx,
+ * which keeps the module request same-origin — that is what makes the shell's
+ * shared-runtime import map apply to it, with no CORS posture to get wrong.
+ */
+const FINANCE_ASSETS_BASE_URL = '/finance-ui/finance.js';
+
+/**
+ * Wire-format pages contribution for the finance pillar.
+ *
+ * Projected from the contract's `FINANCE_PAGES` rather than restated here:
+ * `@pops/app-finance` binds a component to each of those same slots, and a
+ * second copy of the pairing is free to name a different page than the bundle
+ * does. The `satisfies` is the conformance check — this is the only place that
+ * needs the SDK's `PageDescriptor`, so it is the only place that imports it.
+ */
+const FINANCE_PAGES = [...CONTRACT_PAGES] as const satisfies readonly PageDescriptor[];
 
 export function buildFinanceManifest(version: string): ManifestPayload {
   return {
@@ -108,7 +120,8 @@ export function buildFinanceManifest(version: string): ManifestPayload {
     consumedSettings: { keys: [] },
     settings: { manifests: [financeManifest] },
     nav: FINANCE_NAV,
-    pages: FINANCE_PAGES,
+    pages: [...FINANCE_PAGES],
+    assetsBaseUrl: FINANCE_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }

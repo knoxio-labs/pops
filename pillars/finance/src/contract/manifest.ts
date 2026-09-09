@@ -10,6 +10,8 @@ import { financeManifest as financeSettingsManifest } from './settings/index.js'
 import type { ModuleManifest } from '@pops/types';
 
 export type { FinanceContract } from './manifest.generated.js';
+export { FINANCE_PAGES } from './pages.js';
+export type { FinancePageSlot } from './pages.js';
 
 export const financeManifest: ModuleManifest = {
   id: 'finance',
