@@ -33,13 +33,23 @@ export function FieldInput(props: FieldProps) {
     [field, onChange]
   );
 
+  const effectiveValue = draft === null ? value : draft;
+
   if (field.type === 'duration') {
-    return <DurationField field={field} value={value} onChange={onChange} saveState={saveState} />;
+    return (
+      <DurationField
+        field={field}
+        value={effectiveValue}
+        onChange={(_key, newVal) => handleChange(newVal)}
+        saveState={saveState}
+        validationError={validationError}
+      />
+    );
   }
 
   return (
     <NonDurationField
-      props={draft === null ? props : { ...props, value: draft }}
+      props={{ ...props, value: effectiveValue }}
       handleChange={handleChange}
       validationError={validationError}
     />
@@ -58,13 +68,18 @@ function NonDurationField({ props, handleChange, validationError }: NonDurationF
 
   switch (field.type) {
     case 'toggle':
-      return <ToggleField {...common} onChange={handleChange} />;
+      return <ToggleField {...common} onChange={handleChange} validationError={validationError} />;
     case 'select':
       return (
-        <SelectField {...common} onChange={handleChange} isOptionsLoading={isOptionsLoading} />
+        <SelectField
+          {...common}
+          onChange={handleChange}
+          isOptionsLoading={isOptionsLoading}
+          validationError={validationError}
+        />
       );
     case 'json':
-      return <JsonField {...common} onChange={handleChange} />;
+      return <JsonField {...common} onChange={handleChange} validationError={validationError} />;
     case 'password':
       return (
         <PasswordField

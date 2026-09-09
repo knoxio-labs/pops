@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { Textarea } from '@pops/ui';
 
 import { EnvLabel, FieldWrapper } from '../FieldWrapper';
@@ -14,6 +12,7 @@ interface JsonFieldProps {
   onChange: (val: string) => void;
   envFallbackActive: boolean;
   saveState: SaveState;
+  validationError?: string;
 }
 
 export function JsonField({
@@ -22,28 +21,19 @@ export function JsonField({
   onChange,
   envFallbackActive,
   saveState,
+  validationError,
 }: JsonFieldProps) {
-  const [jsonError, setJsonError] = useState<string>('');
-
-  const handleBlur = (raw: string) => {
-    try {
-      if (raw) JSON.parse(raw);
-      setJsonError('');
-    } catch {
-      setJsonError('Invalid JSON');
-    }
-  };
-
   return (
-    <FieldWrapper field={field} saveState={saveState}>
+    <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={(e) => handleBlur(e.target.value)}
         rows={4}
         className="font-mono text-sm"
+        disabled={saveState === 'saving'}
+        aria-invalid={!!validationError || undefined}
+        aria-required={field.validation?.required || undefined}
       />
-      {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}
       {envFallbackActive && field.envFallback && <EnvLabel envVar={field.envFallback} />}
     </FieldWrapper>
   );

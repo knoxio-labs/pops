@@ -17,6 +17,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  FieldLabel,
   Textarea,
   TextInput,
 } from '@pops/ui';
@@ -43,10 +44,8 @@ interface FormFieldsProps {
 function FormFields({ name, setName, description, setDescription, onEnter }: FormFieldsProps) {
   return (
     <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium" htmlFor="dimension-name">
-          Name
-        </label>
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor="dimension-name" label="Name" required />
         <TextInput
           id="dimension-name"
           placeholder="e.g. Cinematography"
@@ -58,10 +57,8 @@ function FormFields({ name, setName, description, setDescription, onEnter }: For
           autoFocus
         />
       </div>
-      <div>
-        <label className="text-sm font-medium" htmlFor="dimension-description">
-          Description
-        </label>
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor="dimension-description" label="Description" />
         <Textarea
           id="dimension-description"
           placeholder="Optional — describe what this dimension measures"

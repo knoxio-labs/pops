@@ -9,7 +9,7 @@ import { useTestAction } from '../useTestAction';
 
 import type { SettingsField } from '@pops/types';
 
-import type { SaveState } from '../types';
+import type { SaveState, TestState } from '../types';
 
 interface PasswordFieldProps {
   field: SettingsField;
@@ -19,6 +19,23 @@ interface PasswordFieldProps {
   envFallbackActive: boolean;
   saveState: SaveState;
   validationError: string;
+}
+
+interface PasswordTestButtonProps {
+  field: SettingsField;
+  testState: TestState;
+  disabled: boolean;
+  onRun: () => void;
+}
+
+function PasswordTestButton({ field, testState, disabled, onRun }: PasswordTestButtonProps) {
+  if (!field.testAction) return null;
+  return (
+    <Button variant="outline" size="sm" onClick={onRun} disabled={disabled} type="button">
+      <TestActionIcon state={testState} fallback={<RefreshCw className="h-3.5 w-3.5" />} />
+      <span className="ml-1">{field.testAction.label}</span>
+    </Button>
+  );
 }
 
 export function PasswordField({
@@ -32,41 +49,38 @@ export function PasswordField({
 }: PasswordFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const { testState, testError, runTest } = useTestAction(onTestAction);
+  const saving = saveState === 'saving';
 
   const handleTest = () => {
     if (field.testAction) void runTest(field.testAction.procedure);
   };
 
   return (
-    <FieldWrapper field={field} saveState={saveState}>
+    <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <div className="flex gap-2">
         <Input
           type={revealed ? 'text' : 'password'}
           value={value}
           placeholder={envFallbackActive ? '(from environment)' : '••••••••'}
           onChange={(e) => onChange(e.target.value)}
+          disabled={saving}
+          aria-invalid={!!validationError || undefined}
+          aria-required={field.validation?.required || undefined}
           className="flex-1"
         />
         <Button variant="outline" size="sm" onClick={() => setRevealed((r) => !r)} type="button">
           {revealed ? 'Hide' : 'Reveal'}
         </Button>
-        {field.testAction && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTest}
-            disabled={testState === 'loading'}
-            type="button"
-          >
-            <TestActionIcon state={testState} fallback={<RefreshCw className="h-3.5 w-3.5" />} />
-            <span className="ml-1">{field.testAction.label}</span>
-          </Button>
-        )}
+        <PasswordTestButton
+          field={field}
+          testState={testState}
+          disabled={testState === 'loading' || saving}
+          onRun={handleTest}
+        />
       </div>
       {testState === 'error' && testError && (
         <p className="text-xs text-destructive">{testError}</p>
       )}
-      {validationError && <p className="text-xs text-destructive">{validationError}</p>}
       {envFallbackActive && field.envFallback && <EnvLabel envVar={field.envFallback} />}
     </FieldWrapper>
   );
