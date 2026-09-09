@@ -38,6 +38,7 @@ import { synthesizeExternalBundleEntry, type RemoteModuleImporter } from './exte
 import {
   bootEntries,
   ExternalUiLoadError,
+  offlineInstallableSnapshot,
   staticFloorEntries,
   walkRegistry,
   type FrontendManifest,
@@ -225,7 +226,9 @@ export async function fetchBootRegistry(options: BootRegistryOptions = {}): Prom
   // last time is a better floor than whatever this build happens to have
   // compiled in, and it shrinks to nothing as POPS-3215 empties the bundle map
   // (POPS-3239).
-  const cached = readCachedRegistrySnapshot(store);
+  // Narrowed by the install set, because this is the offline floor and the
+  // floor honours `POPS_APPS` — see `offlineInstallableSnapshot`.
+  const cached = offlineInstallableSnapshot(readCachedRegistrySnapshot(store));
   if (cached.length > 0) {
     const fromCache = resolveBootRegistry(cached);
     // `source === 'registry'` is the test, not a non-empty surface.
