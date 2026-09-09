@@ -1,9 +1,8 @@
 import { Loader2, Wand2 } from 'lucide-react';
 
-import { Button, TextInput } from '@pops/ui';
+import { Button, FieldLabel, fieldLabelDescribedBy, TextInput } from '@pops/ui';
 
 import { extractPrefix, type ItemFormValues } from '../../useItemFormPageModel';
-import { FormField } from './FormField';
 
 import type { FieldErrors, UseFormRegister } from 'react-hook-form';
 
@@ -20,16 +19,20 @@ interface BasicInfoSectionProps {
 
 function AssetIdField({
   register,
+  assetIdError,
   assetIdChecking,
   generating,
   typeValue,
   onAutoGenerate,
   onValidateAssetId,
-}: Omit<BasicInfoSectionProps, 'errors' | 'assetIdError'>) {
+}: Omit<BasicInfoSectionProps, 'errors'>) {
   return (
     <div className="flex gap-2">
       <div className="relative flex-1">
         <TextInput
+          id="assetId"
+          aria-invalid={!!assetIdError}
+          aria-describedby={fieldLabelDescribedBy('assetId', { error: assetIdError ?? undefined })}
           {...register('assetId')}
           className="font-mono"
           onBlur={(e) => onValidateAssetId(e.target.value)}
@@ -66,28 +69,41 @@ export function BasicInfoSection(props: BasicInfoSectionProps) {
         <span className="w-1.5 h-1.5 rounded-full bg-app-accent" />
         Basic Information
       </h2>
-      <FormField label="Item Name *" error={errors.itemName?.message}>
+      <div className="space-y-1.5">
+        <FieldLabel
+          htmlFor="itemName"
+          label="Item Name"
+          required
+          error={errors.itemName?.message}
+        />
         <TextInput
+          id="itemName"
+          aria-invalid={!!errors.itemName}
+          aria-describedby={fieldLabelDescribedBy('itemName', { error: errors.itemName?.message })}
           {...register('itemName', { required: 'Item name is required' })}
           placeholder="e.g. MacBook Pro 16-inch"
           className="font-semibold"
         />
-      </FormField>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Brand">
-          <TextInput {...register('brand')} placeholder="e.g. Apple" />
-        </FormField>
-        <FormField label="Model">
-          <TextInput {...register('model')} placeholder="e.g. M3 Max" />
-        </FormField>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Item ID / SKU">
-          <TextInput {...register('itemId')} />
-        </FormField>
-        <FormField label="Asset ID" error={assetIdError ?? undefined}>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="brand" label="Brand" />
+          <TextInput id="brand" {...register('brand')} placeholder="e.g. Apple" />
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="model" label="Model" />
+          <TextInput id="model" {...register('model')} placeholder="e.g. M3 Max" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="itemId" label="Item ID / SKU" />
+          <TextInput id="itemId" {...register('itemId')} />
+        </div>
+        <div className="space-y-1.5">
+          <FieldLabel htmlFor="assetId" label="Asset ID" error={assetIdError ?? undefined} />
           <AssetIdField {...props} />
-        </FormField>
+        </div>
       </div>
     </section>
   );

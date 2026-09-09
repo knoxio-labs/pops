@@ -92,6 +92,7 @@ export * from './components/ChipInput';
 export * from './components/ComboboxSelect';
 export * from './components/DataTable';
 export * from './components/DataTableFilters';
+export * from './components/DateRangeField';
 export * from './components/DateTimeInput';
 export * from './components/DropdownMenu';
 export * from './components/EditableCell';

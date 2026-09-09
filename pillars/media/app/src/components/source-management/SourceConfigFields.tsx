@@ -1,4 +1,4 @@
-import { Label, NumberInput, Select } from '@pops/ui';
+import { Label, NumberInput, Select, TextInput } from '@pops/ui';
 
 interface FieldsProps {
   type: string;
@@ -63,8 +63,8 @@ function LetterboxdField({
   setConfigValues,
 }: Pick<FieldsProps, 'configValues' | 'setConfigValues'>) {
   return (
-    <input
-      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    <TextInput
+      size="sm"
       value={(configValues.listUrl as string) ?? ''}
       onChange={(e) => {
         setConfigValues({ ...configValues, listUrl: e.target.value });

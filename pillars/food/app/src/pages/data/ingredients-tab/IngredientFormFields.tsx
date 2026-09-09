@@ -5,7 +5,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Label, TextInput } from '@pops/ui';
+import { Label, Select, type SelectOption, TextInput } from '@pops/ui';
 
 export function TextFieldRow({
   id,
@@ -52,21 +52,17 @@ export function SelectRow({
   onChange: (next: string) => void;
 }) {
   const { t } = useTranslation('food');
+  const selectOptions: SelectOption[] = options.map((opt) => ({
+    value: opt.value,
+    label: opt.label,
+  }));
   return (
-    <div className="grid gap-1.5">
-      <Label htmlFor={id}>{t(labelKey)}</Label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select
+      id={id}
+      label={t(labelKey)}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      options={selectOptions}
+    />
   );
 }

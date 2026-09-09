@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Checkbox, Label, TextInput } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import { conversionsListWeights, ingredientsList } from '../../../food-api/index.js';
@@ -14,73 +14,10 @@ import { type IngredientOption } from './CreateWeightDialog';
 import { useWeightMutations } from './useWeightMutations';
 import { buildIngredientLookup, useWeightRowViews } from './useWeightRowViews';
 import { WeightsDialogs } from './WeightsDialogs';
+import { useWeightFilters, WeightsFilterRow } from './WeightsFilterRow';
 import { WeightsTable } from './WeightsTable';
 
 import type { IngredientWeightRow } from './types';
-
-function useWeightFilters() {
-  const [search, setSearch] = useState('');
-  const [seededOnly, setSeededOnly] = useState(false);
-  const [ingredientFilter, setIngredientFilter] = useState<string>('');
-  return { search, setSearch, seededOnly, setSeededOnly, ingredientFilter, setIngredientFilter };
-}
-
-function FilterRow({
-  search,
-  onSearchChange,
-  seededOnly,
-  onSeededOnlyChange,
-  ingredientFilter,
-  onIngredientFilterChange,
-  ingredients,
-}: {
-  search: string;
-  onSearchChange: (next: string) => void;
-  seededOnly: boolean;
-  onSeededOnlyChange: (next: boolean) => void;
-  ingredientFilter: string;
-  onIngredientFilterChange: (next: string) => void;
-  ingredients: readonly IngredientOption[];
-}) {
-  const { t } = useTranslation('food');
-  return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="grid w-full max-w-xs gap-1.5">
-        <Label htmlFor="weights-search">{t('data.conversions.weights.searchLabel')}</Label>
-        <TextInput
-          id="weights-search"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t('data.conversions.weights.searchPlaceholder')}
-        />
-      </div>
-      <div className="grid w-full max-w-xs gap-1.5">
-        <Label htmlFor="weights-ingredient-filter">
-          {t('data.conversions.weights.ingredientFilter')}
-        </Label>
-        <select
-          id="weights-ingredient-filter"
-          value={ingredientFilter}
-          onChange={(e) => onIngredientFilterChange(e.target.value)}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-        >
-          <option value="">{t('data.conversions.weights.allIngredients')}</option>
-          {ingredients.map((i) => (
-            <option key={i.id} value={String(i.id)}>{`${i.name} (${i.slug})`}</option>
-          ))}
-        </select>
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="weights-seeded-only"
-          checked={seededOnly}
-          onCheckedChange={(next) => onSeededOnlyChange(next === true)}
-        />
-        <Label htmlFor="weights-seeded-only">{t('data.conversions.seededOnly')}</Label>
-      </div>
-    </div>
-  );
-}
 
 function SectionHeader({ onAdd }: { onAdd: () => void }) {
   const { t } = useTranslation('food');
@@ -173,7 +110,7 @@ export function WeightsSection() {
   return (
     <section aria-label={t('data.conversions.weights.title')} className="space-y-4">
       <SectionHeader onAdd={dialog.openCreate} />
-      <FilterRow
+      <WeightsFilterRow
         search={filters.search}
         onSearchChange={filters.setSearch}
         seededOnly={filters.seededOnly}

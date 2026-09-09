@@ -1,3 +1,5 @@
+import { PURCHASES_PAGES as CONTRACT_PAGES } from '../contract/pages.js';
+
 import type {
   ManifestPayload,
   NavConfigDescriptor,
@@ -44,6 +46,12 @@ const PURCHASES_NAV: NavConfigDescriptor = {
 /**
  * Wire-format pages contribution for the purchases pillar.
  *
+ * Projected from the contract's `PURCHASES_PAGES` rather than restated here:
+ * `@pops/app-purchases` binds a component to each of those same slots, and a
+ * second copy of the pairing is free to name a different page than the bundle
+ * does. The `satisfies` is the conformance check — this is the only place that
+ * needs the SDK's `PageDescriptor`, so it is the only place that imports it.
+ *
  * One descriptor per route declared in the app's `routes` array
  * (`pillars/purchases/app/src/routes.tsx`) that the rail can reach — the
  * order-detail route takes a `:purchaseId` no rail entry can supply, so it
@@ -51,12 +59,7 @@ const PURCHASES_NAV: NavConfigDescriptor = {
  * `pillars/purchases/app/src/routes.tsx` documents for leaving it off
  * `navConfig`.
  */
-const PURCHASES_PAGES: readonly PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'purchases-reconcile' },
-  { path: 'merchants', bundleSlot: 'purchases-merchants' },
-  { path: 'receipts', bundleSlot: 'purchases-receipts' },
-  { path: 'products', bundleSlot: 'purchases-products' },
-];
+const PURCHASES_PAGES = [...CONTRACT_PAGES] as const satisfies readonly PageDescriptor[];
 
 /**
  * The manifest's search-adapter shape, derived from the payload type rather

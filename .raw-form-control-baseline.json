@@ -1,9 +1,9 @@
 {
-  "cerebrum": 7,
+  "cerebrum": 3,
   "design": 5,
-  "finance": 3,
-  "food": 50,
+  "finance": 2,
+  "food": 33,
   "inventory": 1,
   "lists": 15,
-  "media": 5
+  "media": 1
 }

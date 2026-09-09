@@ -685,6 +685,271 @@ describe('SectionRenderer', () => {
     });
   });
 
+  describe('validation errors by field kind', () => {
+    it('shows an error and sets aria-invalid on a select whose value fails a pattern', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Validation',
+            fields: [
+              {
+                key: 'mode',
+                label: 'Mode',
+                type: 'select',
+                default: 'a',
+                options: [
+                  { value: 'a', label: 'Option A' },
+                  { value: 'b', label: 'Option B' },
+                ],
+                validation: { pattern: '^b$', message: 'Must be Option B' },
+              },
+            ],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'a' } });
+
+      expect(screen.getByText('Must be Option B')).toBeInTheDocument();
+      expect(select).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('shows an error and sets aria-invalid on a toggle whose value fails a pattern', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Validation',
+            fields: [
+              {
+                key: 'flag',
+                label: 'Flag',
+                type: 'toggle',
+                default: 'false',
+                validation: { pattern: '^false$', message: 'Must stay off' },
+              },
+            ],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const toggle = screen.getByRole('switch');
+      fireEvent.click(toggle);
+
+      expect(screen.getByText('Must stay off')).toBeInTheDocument();
+      expect(toggle).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('shows "Invalid JSON" on change (not only on blur) for malformed JSON', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Validation',
+            fields: [{ key: 'cfg', label: 'Config', type: 'json', default: '{}' }],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: '{invalid' } });
+
+      // No blur fired — the error must appear from the change alone.
+      expect(screen.getByText('Invalid JSON')).toBeInTheDocument();
+      expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('does not persist malformed JSON to autosave', async () => {
+      vi.useFakeTimers();
+      try {
+        const manifest = makeManifest({
+          groups: [
+            {
+              id: 'g1',
+              title: 'Validation',
+              fields: [{ key: 'cfg', label: 'Config', type: 'json', default: '{}' }],
+            },
+          ],
+        });
+
+        render(<SectionRenderer manifest={manifest} />);
+
+        const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
+        fireEvent.change(textarea, { target: { value: '{bad' } });
+
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mocks.setBulkMutate).not.toHaveBeenCalled();
+      } finally {
+        await act(async () => {
+          await vi.runAllTimersAsync();
+        });
+        vi.useRealTimers();
+      }
+    });
+
+    it('shows an error and sets aria-invalid on a duration field cleared while required', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Validation',
+            fields: [
+              {
+                key: 'ttl',
+                label: 'TTL',
+                type: 'duration',
+                default: '60000',
+                validation: { required: true },
+              },
+            ],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const durationInput = screen.getAllByRole('spinbutton')[0];
+      if (!durationInput) throw new Error('duration numeric input not found');
+      fireEvent.change(durationInput, { target: { value: '' } });
+
+      expect(screen.getByText('TTL is required')).toBeInTheDocument();
+      expect(durationInput).toHaveAttribute('aria-invalid', 'true');
+    });
+  });
+
+  describe('required marker', () => {
+    it('renders a required marker next to the label when validation.required is set', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Required',
+            fields: [
+              {
+                key: 'name',
+                label: 'Name',
+                type: 'text',
+                default: '',
+                validation: { required: true },
+              },
+            ],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const label = screen.getByText('Name').closest('label');
+      expect(label).not.toBeNull();
+      expect(label?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Name *');
+    });
+
+    it('renders no marker when the field is not required', () => {
+      const manifest = makeManifest({
+        groups: [
+          {
+            id: 'g1',
+            title: 'Required',
+            fields: [{ key: 'name', label: 'Name', type: 'text', default: '' }],
+          },
+        ],
+      });
+
+      render(<SectionRenderer manifest={manifest} />);
+
+      const label = screen.getByText('Name').closest('label');
+      expect(label).not.toBeNull();
+      expect(label?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Name');
+    });
+  });
+
+  describe('controls stay locked mid-save', () => {
+    it('disables the text input while the debounced save is in flight, then re-enables it', async () => {
+      vi.useFakeTimers();
+      try {
+        const manifest = makeManifest({
+          groups: [
+            {
+              id: 'g1',
+              title: 'Auto-save',
+              fields: [{ key: 'api_url', label: 'API URL', type: 'text', default: '' }],
+            },
+          ],
+        });
+
+        render(<SectionRenderer manifest={manifest} />);
+
+        const input = screen.getByRole('textbox');
+        fireEvent.change(input, { target: { value: 'https://example.com' } });
+
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mocks.setBulkMutate).toHaveBeenCalledOnce();
+        expect(input).toBeDisabled();
+
+        const [, callbacks] = mocks.setBulkMutate.mock.calls[0] as [
+          unknown,
+          { onSuccess: () => void },
+        ];
+        await act(async () => {
+          callbacks.onSuccess();
+        });
+
+        expect(input).not.toBeDisabled();
+      } finally {
+        await act(async () => {
+          await vi.runAllTimersAsync();
+        });
+        vi.useRealTimers();
+      }
+    });
+
+    it('disables a toggle while its save is in flight', async () => {
+      vi.useFakeTimers();
+      try {
+        const manifest = makeManifest({
+          groups: [
+            {
+              id: 'g1',
+              title: 'Auto-save',
+              fields: [{ key: 'flag', label: 'Flag', type: 'toggle', default: 'false' }],
+            },
+          ],
+        });
+
+        render(<SectionRenderer manifest={manifest} />);
+
+        const toggle = screen.getByRole('switch');
+        fireEvent.click(toggle);
+
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(mocks.setBulkMutate).toHaveBeenCalledOnce();
+        expect(toggle).toBeDisabled();
+      } finally {
+        await act(async () => {
+          await vi.runAllTimersAsync();
+        });
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe('widget slots', () => {
     const widgetManifest = makeManifest({
       groups: [

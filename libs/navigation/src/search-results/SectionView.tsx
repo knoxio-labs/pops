@@ -1,4 +1,5 @@
 import { getResultComponent } from '../result-component-registry';
+import { searchOptionId } from '../search-keyboard-nav';
 
 import type { ReactNode } from 'react';
 
@@ -22,16 +23,18 @@ const COLOR_CLASSES: Record<string, string> = {
 };
 
 interface SectionHeaderProps {
+  id: string;
   icon: ReactNode;
   label: string;
   count: number;
   color: string;
 }
 
-function SectionHeader({ icon, label, count, color }: SectionHeaderProps) {
+function SectionHeader({ id, icon, label, count, color }: SectionHeaderProps) {
   const colorClass = COLOR_CLASSES[color] ?? 'text-foreground';
   return (
     <div
+      id={id}
       className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${colorClass}`}
       data-testid={`section-header-${label.toLowerCase().replaceAll(/\s+/g, '-')}`}
     >
@@ -60,9 +63,16 @@ function ResultButton({
   ResultComponent,
 }: ResultButtonProps) {
   return (
-    <li>
+    <li
+      id={searchOptionId(index)}
+      role="option"
+      aria-selected={isSelected}
+      data-uri={hit.uri}
+      data-result-index={index}
+    >
       <button
         type="button"
+        tabIndex={-1}
         className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none${isSelected ? ' bg-accent' : ''}`}
         onClick={() => onResultClick?.(hit.uri, hit.data)}
         data-uri={hit.uri}
@@ -97,12 +107,16 @@ export function SectionView({
   onShowMore,
 }: SectionViewProps) {
   const ResultComponent = getResultComponent(section.domain);
+  const headerId = `search-section-${section.domain}-header`;
   return (
     <div
+      role="group"
+      aria-labelledby={headerId}
       className={section.isContext ? 'border-l-2 border-l-primary bg-accent/30' : ''}
       data-testid={`section-${section.domain}`}
     >
       <SectionHeader
+        id={headerId}
         icon={section.icon}
         label={section.label}
         count={section.totalCount}

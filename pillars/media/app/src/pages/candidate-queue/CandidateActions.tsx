@@ -1,6 +1,6 @@
 import { Ban, Download, RotateCcw } from 'lucide-react';
 
-import { Button, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import { Button, Popover, PopoverContent, PopoverTrigger, TextInput } from '@pops/ui';
 
 import type { Candidate } from './CandidateCard';
 import type { useCardMutations } from './useCardMutations';
@@ -31,8 +31,8 @@ function ExcludePopover({
       </PopoverTrigger>
       <PopoverContent className="w-64 space-y-2" align="end">
         <p className="text-sm font-medium">Exclude this movie?</p>
-        <input
-          className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 py-1 text-sm"
+        <TextInput
+          size="sm"
           placeholder="Reason (optional)"
           value={excludeReason}
           onChange={(e) => setExcludeReason(e.target.value)}

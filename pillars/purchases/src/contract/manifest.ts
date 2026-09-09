@@ -11,6 +11,8 @@
 import type { ModuleManifest } from '@pops/types';
 
 export type { PurchasesContract } from './manifest.generated.js';
+export { PURCHASES_PAGES } from './pages.js';
+export type { PurchasesPageSlot } from './pages.js';
 
 export const purchasesManifest: ModuleManifest = {
   id: 'purchases',
