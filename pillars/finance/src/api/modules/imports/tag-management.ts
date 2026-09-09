@@ -6,7 +6,6 @@
  * own `suggestTags` (which also takes the handle).
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
-import { CLASSIFIED_TAG_FACETS } from '../../../db/tag-facets.js';
 import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
 
 /**
@@ -30,10 +29,7 @@ import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
  * sets exist to prevent.
  */
 export function loadKnownTags(db: FinanceDb): string[] {
-  return tagVocabularyService.listVocabularyTagsForFacets(
-    db,
-    CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)
-  );
+  return tagVocabularyService.listClassifiedVocabulary(db);
 }
 
 /**
