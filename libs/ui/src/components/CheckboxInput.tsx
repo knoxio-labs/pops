@@ -2,14 +2,17 @@
  * CheckboxInput component - Checkbox with label using shadcn primitives
  * Built on @radix-ui/react-checkbox
  */
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useId, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 import { cn } from '../lib/utils';
 import { Checkbox } from '../primitives/checkbox';
 
-export interface CheckboxInputProps {
+export interface CheckboxInputProps extends Omit<
+  ComponentPropsWithoutRef<typeof Checkbox>,
+  'checked' | 'defaultChecked' | 'onCheckedChange' | 'children'
+> {
   /**
-   * Checkbox ID (links label to input)
+   * Checkbox ID (links label to input). Defaults to a stable generated id.
    */
   id?: string;
   /**
@@ -94,7 +97,8 @@ export const CheckboxInput = forwardRef<HTMLButtonElement, CheckboxInputProps>(
     },
     ref
   ) => {
-    const generatedId = id ?? `checkbox-${Math.random().toString(36).substr(2, 9)}`;
+    const fallbackId = useId();
+    const generatedId = id ?? fallbackId;
     const showError = error && errorMessage;
 
     return (
