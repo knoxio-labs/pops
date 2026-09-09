@@ -2626,9 +2626,6 @@ importers:
       '@pops/app-cerebrum':
         specifier: workspace:*
         version: link:../cerebrum/app
-      '@pops/app-finance':
-        specifier: workspace:*
-        version: link:../finance/app
       '@pops/app-food':
         specifier: workspace:*
         version: link:../food/app

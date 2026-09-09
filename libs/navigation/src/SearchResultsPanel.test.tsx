@@ -118,26 +118,43 @@ describe('SearchResultsPanel', () => {
     expect(sectionElements[1]).toHaveAttribute('data-testid', 'section-budgets');
   });
 
-  it('calls onClose on Escape key', () => {
-    const onClose = vi.fn();
-    render(<SearchResultsPanel sections={[makeSection()]} query="test" onClose={onClose} />);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
+  // Dismissal (Escape + outside click) is owned by the parent `SearchInput` —
+  // one `usePanelDismiss` on its container, one `useSearchKeyboardNav` Escape
+  // handler — so it works uniformly whether this panel or `RecentSearches` is
+  // showing. See SearchInput.test.tsx and search-keyboard-nav.test.tsx.
 
-  it('calls onClose on outside click', () => {
-    const onClose = vi.fn();
-    render(<SearchResultsPanel sections={[makeSection()]} query="test" onClose={onClose} />);
-    fireEvent.mouseDown(document.body);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not close on click inside panel', () => {
-    const onClose = vi.fn();
-    render(<SearchResultsPanel sections={[makeSection()]} query="test" onClose={onClose} />);
+  it('exposes listbox semantics with the given id', () => {
+    render(
+      <SearchResultsPanel
+        sections={[makeSection()]}
+        query="test"
+        onClose={vi.fn()}
+        listboxId="test-listbox"
+      />
+    );
     const panel = screen.getByTestId('search-results-panel');
-    fireEvent.mouseDown(panel);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(panel).toHaveAttribute('role', 'listbox');
+    expect(panel).toHaveAttribute('id', 'test-listbox');
+  });
+
+  it('marks each result row as an option with a stable id and aria-selected', () => {
+    const sections = [
+      makeSection({
+        hits: [
+          { uri: 'm/1', score: 1.0, matchField: 'title', matchType: 'exact', data: {} },
+          { uri: 'm/2', score: 0.8, matchField: 'title', matchType: 'prefix', data: {} },
+        ],
+        totalCount: 2,
+      }),
+    ];
+    render(
+      <SearchResultsPanel sections={sections} query="test" onClose={vi.fn()} selectedIndex={1} />
+    );
+    const options = screen.getAllByRole('option');
+    expect(options[0]).toHaveAttribute('id', 'search-option-0');
+    expect(options[0]).toHaveAttribute('aria-selected', 'false');
+    expect(options[1]).toHaveAttribute('id', 'search-option-1');
+    expect(options[1]).toHaveAttribute('aria-selected', 'true');
   });
 
   // The hit's payload rides along because some types resolve through it — a

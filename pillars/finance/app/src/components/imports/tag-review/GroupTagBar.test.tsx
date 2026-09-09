@@ -70,18 +70,26 @@ describe('GroupTagBar', () => {
     renderBar();
     openPicker();
 
-    expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual([
+    // Order comes from the DOM, since `role="group"`'s accessible name is
+    // sourced via `aria-labelledby` rather than a plain `aria-label`
+    // attribute; each heading below independently proves that wiring names
+    // the group testing-library's own role query resolves.
+    const headings = document.querySelectorAll('[cmdk-group-heading]');
+    expect([...headings].map((heading) => heading.textContent)).toEqual([
       'Contains',
       'Venue',
       'Other',
     ]);
+    expect(screen.getByRole('group', { name: 'Contains' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Venue' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Other' })).toBeInTheDocument();
   });
 
   it('shows picker options as bare values, never as facet:value', () => {
     renderBar();
     openPicker();
 
-    const options = screen.getAllByRole('button').filter((el) => el.hasAttribute('data-tag'));
+    const options = screen.getAllByRole('option').filter((el) => el.hasAttribute('data-tag'));
     expect(options.map((option) => option.textContent)).toEqual([
       'Alcohol',
       'Bar',
@@ -94,7 +102,7 @@ describe('GroupTagBar', () => {
     const props = renderBar();
     openPicker();
 
-    fireEvent.mouseDown(screen.getByLabelText('Venue: Bar'));
+    fireEvent.click(screen.getByLabelText('Venue: Bar'));
 
     expect(props.onAddTag).toHaveBeenCalledWith('venue:bar');
   });
@@ -231,5 +239,29 @@ describe('GroupTagBar', () => {
     renderBar({ currentTags: [] });
 
     expect(screen.queryByText('On group:')).toBeNull();
+  });
+
+  it('is keyboard-operable — arrow to a tag, Enter to apply it', () => {
+    // cmdk auto-highlights the first visible option as soon as the dropdown
+    // opens (`contains:alcohol`, per the facet order asserted above), so one
+    // ArrowDown moves the highlight to the second (`venue:bar`) — the option
+    // Enter must then pick, proving the arrow key actually drives the
+    // highlight rather than Enter falling back to its typed-text shortcut.
+    const props = renderBar();
+    const input = screen.getByPlaceholderText('+ Add tag…');
+    openPicker();
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(props.onAddTag).toHaveBeenCalledWith('venue:bar');
+  });
+
+  it('exposes the dropdown as a listbox of options, not a hand-rolled menu', () => {
+    renderBar();
+    openPicker();
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
   });
 });

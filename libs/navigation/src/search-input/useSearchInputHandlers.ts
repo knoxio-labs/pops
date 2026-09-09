@@ -1,7 +1,6 @@
 import { type RefObject, useCallback, useEffect, useRef } from 'react';
 
 import { useSearchResultNavigation } from '../hooks';
-import { useRecentSearches } from '../recent-searches';
 import { useSearchStore } from '../searchStore';
 
 import type { SearchHitData } from '../uri-resolver';
@@ -10,6 +9,7 @@ const DEBOUNCE_MS = 300;
 
 interface UseSearchInputHandlersArgs {
   inputRef: RefObject<HTMLInputElement | null>;
+  addQuery: (query: string) => void;
 }
 
 export interface SearchInputHandlers {
@@ -21,12 +21,12 @@ export interface SearchInputHandlers {
 
 export function useSearchInputHandlers({
   inputRef,
+  addQuery,
 }: UseSearchInputHandlersArgs): SearchInputHandlers {
   const query = useSearchStore((s) => s.query);
   const setQuery = useSearchStore((s) => s.setQuery);
   const setOpen = useSearchStore((s) => s.setOpen);
   const clear = useSearchStore((s) => s.clear);
-  const { addQuery } = useRecentSearches();
   const { navigateTo } = useSearchResultNavigation();
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

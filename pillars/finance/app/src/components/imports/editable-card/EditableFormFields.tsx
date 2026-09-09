@@ -1,4 +1,4 @@
-import { AccountSelect, Input, Label } from '@pops/ui';
+import { AccountSelect, DateInput, Input, Label } from '@pops/ui';
 
 import { useImportStore } from '../../../store/importStore';
 import { useAllAccounts } from '../../accounts/hooks/useAllAccounts';
@@ -39,6 +39,30 @@ function TextField({
         autoFocus={autoFocus}
         value={value}
         placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-background"
+      />
+    </div>
+  );
+}
+
+function DateField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <DateInput
+        id={id}
+        value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-background"
       />
@@ -118,10 +142,9 @@ export function EditableFormFields({ editedFields, setEditedFields }: FieldProps
         value={editedFields.amount ?? 0}
         onChange={(v) => update('amount', parseFloat(v))}
       />
-      <TextField
+      <DateField
         id="date"
         label="Date"
-        type="date"
         value={editedFields.date ?? ''}
         onChange={(v) => update('date', v)}
       />

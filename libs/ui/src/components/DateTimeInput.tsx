@@ -50,6 +50,12 @@ interface BaseInputProps
   suffix?: ReactNode;
   centered?: boolean;
   containerClassName?: string;
+  /**
+   * Error message driving `aria-invalid` and the destructive border. Matches
+   * `TextInput`'s `error` convention; this component does not render the
+   * message itself, so pair it with `FieldLabel`'s `error` slot.
+   */
+  error?: string;
 }
 
 interface NativeDateTimeInputProps extends BaseInputProps {
@@ -69,6 +75,7 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
       onFocus,
       onBlur,
       disabled,
+      error,
       type,
       lang,
       ...props
@@ -82,9 +89,10 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
         className={cn(
           containerVariants({ variant, size, shape }),
           disabled && 'opacity-50 cursor-not-allowed',
+          error && 'border-destructive ring-destructive/20',
           containerClassName
         )}
-        style={isFocused ? { borderColor: 'var(--ring)' } : undefined}
+        style={isFocused && !error ? { borderColor: 'var(--ring)' } : undefined}
       >
         {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
         <input
@@ -105,6 +113,7 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
             onBlur?.(e);
           }}
           disabled={disabled}
+          aria-invalid={!!error}
           {...props}
         />
         {suffix && <span className="flex-shrink-0 text-muted-foreground">{suffix}</span>}
