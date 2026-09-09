@@ -1,7 +1,7 @@
-import { DateInput, Input, Select, type SelectOption } from '@pops/ui';
+import { DateInput, Input, RadioInput, Select, type SelectOption } from '@pops/ui';
 
 import { type AddFormState } from './AddBatchModal.ingredientSection.js';
-import { FieldRow, RadioRow } from './form-controls.js';
+import { FieldRow } from './form-controls.js';
 
 /**
  * JSX sub-sections for `AddBatchModal` — kept here so the modal file
@@ -73,20 +73,24 @@ export function PrepAndQtySection({ state }: { state: AddFormState }): ReactElem
 export function SourceAndLocationSection({ state }: { state: AddFormState }): ReactElement {
   return (
     <>
-      <FieldRow label="Source">
-        <RadioRow
+      <FieldRow label="Source" grouped>
+        <RadioInput
           name="source"
+          orientation="horizontal"
           value={state.form.sourceType}
-          options={SOURCE_OPTIONS}
-          onChange={(v) => state.setForm({ ...state.form, sourceType: v as ManualBatchSourceType })}
+          options={[...SOURCE_OPTIONS]}
+          onValueChange={(v) =>
+            state.setForm({ ...state.form, sourceType: v as ManualBatchSourceType })
+          }
         />
       </FieldRow>
-      <FieldRow label="Location">
-        <RadioRow
+      <FieldRow label="Location" grouped>
+        <RadioInput
           name="location"
+          orientation="horizontal"
           value={state.form.location}
-          options={LOCATION_OPTIONS}
-          onChange={(v) => state.setForm({ ...state.form, location: v as BatchLocation })}
+          options={[...LOCATION_OPTIONS]}
+          onValueChange={(v) => state.setForm({ ...state.form, location: v as BatchLocation })}
         />
       </FieldRow>
     </>
