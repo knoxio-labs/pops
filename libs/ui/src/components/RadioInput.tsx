@@ -2,7 +2,7 @@
  * RadioInput component - Radio group with labels using shadcn primitives
  * Built on @radix-ui/react-radio-group
  */
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 
 import { cn } from '../lib/utils';
 import { RadioGroup, RadioGroupItem } from '../primitives/radio-group';
@@ -108,19 +108,23 @@ function RadioHeader({
   );
 }
 
-function RadioOptionRow({ option, disabled }: { option: RadioOption; disabled?: boolean }) {
+function RadioOptionRow({
+  option,
+  disabled,
+  groupId,
+}: {
+  option: RadioOption;
+  disabled?: boolean;
+  groupId: string;
+}) {
   const isDisabled = option.disabled ?? disabled;
+  const optionId = `${groupId}-${option.value}`;
   return (
     <div className="flex items-start gap-2">
-      <RadioGroupItem
-        value={option.value}
-        id={`radio-${option.value}`}
-        disabled={isDisabled}
-        className="mt-0.5"
-      />
+      <RadioGroupItem value={option.value} id={optionId} disabled={isDisabled} className="mt-0.5" />
       <div className="flex flex-col gap-0.5">
         <label
-          htmlFor={`radio-${option.value}`}
+          htmlFor={optionId}
           className={cn(
             'text-sm font-medium leading-none cursor-pointer select-none',
             isDisabled && 'opacity-50 cursor-not-allowed'
@@ -156,6 +160,8 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
     },
     ref
   ) => {
+    const groupId = useId();
+
     return (
       <div className={cn('flex flex-col gap-3', className)} ref={ref}>
         <RadioHeader label={label} description={description} required={required} />
@@ -173,7 +179,12 @@ export const RadioInput = forwardRef<HTMLDivElement, RadioInputProps>(
           {...props}
         >
           {options.map((option) => (
-            <RadioOptionRow key={option.value} option={option} disabled={disabled} />
+            <RadioOptionRow
+              key={option.value}
+              option={option}
+              disabled={disabled}
+              groupId={groupId}
+            />
           ))}
         </RadioGroup>
         {error && errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}

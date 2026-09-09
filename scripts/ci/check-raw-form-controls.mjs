@@ -14,15 +14,38 @@
  * `<textarea>` JSX element and, per pillar, ratchets the count against a
  * committed baseline (`.raw-form-control-baseline.json`) — modelled on the
  * escape-hatch gate (`scripts/check-escape-hatches.mjs`, POPS-3151-adjacent).
- * Unlike that gate, this one holds the baseline to the count EXACTLY, not as
- * an upper bound: a pillar whose real count has fallen below its baseline
- * fails too, not just one that has grown past it. A ratchet that only checks
- * `now <= was` cannot tell "somebody paid down three violations and forgot
- * to run `--write`" apart from "somebody hand-edited the baseline file to
- * a number nobody re-derived" — both leave the committed number wrong, and
- * the second is exactly how a ratchet gets silently loosened. Requiring
- * equality collapses the distinction: whichever caused it, the fix is the
- * same `--write`, run after the count it locks in is genuinely correct.
+ *
+ * The baseline is an UPPER BOUND: a pillar that has grown past its entry
+ * fails, a pillar that has fallen below it passes. POPS-3187 shipped this
+ * held to EQUALITY instead, so that a baseline hand-edited above the real
+ * count could not pass unnoticed. Under concurrent work that cost more than
+ * it bought: every migration ticket in POPS-3168 lowers some pillar's count,
+ * so every one of them had to edit this same one-line JSON file, and each
+ * merge invalidated every other open PR — a purely mechanical conflict
+ * resolved four times on one branch and twice on another, O(n²) in the
+ * number of PRs in flight (POPS-3236).
+ *
+ * The inflation hole that opens up is closed from the diff instead, and this
+ * is the property that replaces the downward check: NO CHANGE MAY RAISE A
+ * PILLAR'S BASELINE ENTRY ABOVE THAT PILLAR'S REAL COUNT. Given `--base
+ * <commit>`, the gate reads the baseline as it stood at that commit and
+ * fails any pillar whose entry this change raised while the tree sits below
+ * the raised number. Inflation is reachable only by editing this file, so
+ * comparing the file against its own base is a tighter test than comparing
+ * it against the tree: it still catches the hand-edit, and it stops firing
+ * on the honest staleness that equality could not tell apart from it.
+ *
+ * That is deliberately NOT "does the diff touch that pillar's source", the
+ * shape POPS-3236 sketched. That rule cannot survive its own success: once
+ * one migration lands without a baseline edit, `main` itself sits below its
+ * baseline, and the next PR — which touches some other pillar entirely —
+ * fails on a decrease it did not cause.
+ *
+ * Without `--base` (a local run, or a CI checkout with no usable merge base)
+ * only the growth half runs, and the gate says so on a line that is not its
+ * success line. That is a tolerated degradation, not a silent one: the
+ * inflation rule is a statement about a diff, and a run with no base has no
+ * diff to judge. `.github/workflows/quality.yml` always supplies one.
  *
  * Scope: `pillars/**` only — `libs/ui/src/**` is the kit itself, which
  * legitimately wraps these native elements, and a guard that fires on the
@@ -54,22 +77,28 @@
  * ADR-045 says an unresolved shape is a violation, not a pass), counts.
  *
  * Usage:
- *   node scripts/ci/check-raw-form-controls.mjs              check the real tree
- *   node scripts/ci/check-raw-form-controls.mjs --write       regenerate the baseline
- *   node scripts/ci/check-raw-form-controls.mjs --self-test   prove the gate reports
+ *   node scripts/ci/check-raw-form-controls.mjs                  check the real tree
+ *   node scripts/ci/check-raw-form-controls.mjs --base <commit>  …and check the baseline
+ *                                                                was not raised since <commit>
+ *   node scripts/ci/check-raw-form-controls.mjs --write          regenerate the baseline
+ *   node scripts/ci/check-raw-form-controls.mjs --self-test      prove the gate reports
  *
- * Exit 0 = every pillar's count matches its baseline exactly. Exit 1 = a
- * mismatch (growth, or a stale/inflated baseline) or a self-test failure.
- * Exit 2 = usage error.
+ * Exit 0 = no pillar exceeds its baseline and no entry was raised above the
+ * tree. Exit 1 = growth, an inflated entry, or a self-test failure. Exit 2 =
+ * usage error, an unreadable baseline, or a `--base` that does not resolve.
  */
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { gitEnv } from './resolve-report-base.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
-const BASELINE_PATH = join(repoRoot, '.raw-form-control-baseline.json');
+const BASELINE_REL = '.raw-form-control-baseline.json';
+const BASELINE_PATH = join(repoRoot, BASELINE_REL);
 
 /** Only `pillars/**` — never `libs/**`, so the kit itself is structurally out of scope. */
 const SCAN_ROOTS = ['pillars'];
@@ -367,6 +396,33 @@ function sortKeys(obj) {
   return out;
 }
 
+/**
+ * Parse a baseline document, rejecting any shape that is not a flat map of
+ * pillar id to non-negative integer. `JSON.parse` hands back `any`, and a
+ * baseline whose values are strings would otherwise compare with `>` under
+ * JavaScript's coercion rules rather than being reported.
+ *
+ * @param {string} text
+ * @param {string} source Where the text came from, for the error message.
+ * @returns {Record<string, number>}
+ */
+export function parseBaseline(text, source) {
+  /** @type {unknown} */
+  const parsed = JSON.parse(text);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${source} is not a JSON object of pillar → count`);
+  }
+  /** @type {Record<string, number>} */
+  const counts = {};
+  for (const [pillar, value] of Object.entries(parsed)) {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+      throw new Error(`${source}: pillar "${pillar}" is not a non-negative integer count`);
+    }
+    counts[pillar] = value;
+  }
+  return counts;
+}
+
 /** @returns {Record<string, number>} */
 function loadBaseline() {
   if (!existsSync(BASELINE_PATH)) {
@@ -377,13 +433,45 @@ function loadBaseline() {
     process.exit(2);
   }
   try {
-    return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
+    return parseBaseline(readFileSync(BASELINE_PATH, 'utf8'), BASELINE_REL);
   } catch (e) {
     console.error(
-      `✗ raw-form-control gate: baseline is not valid JSON (${e instanceof Error ? e.message : String(e)})`
+      `✗ raw-form-control gate: baseline is not valid (${e instanceof Error ? e.message : String(e)})`
     );
     process.exit(2);
   }
+}
+
+/**
+ * The baseline document as it stood at `commit`, or `null` when `commit`
+ * itself does not resolve in this checkout (a shallow clone, a ref that was
+ * never fetched). A commit that resolves but predates the baseline file
+ * yields `{}` — an absent file genuinely means "every entry is new", and
+ * collapsing that into `null` would hand a change the un-checked path just
+ * for deleting the file first.
+ *
+ * @param {string} commit
+ * @param {string} [cwd]
+ * @returns {Record<string, number> | null}
+ */
+export function readBaselineAt(commit, cwd = repoRoot) {
+  /** @param {readonly string[]} args @returns {string | null} */
+  const git = (args) => {
+    try {
+      return execFileSync('git', [...args], {
+        cwd,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: gitEnv(),
+      });
+    } catch {
+      return null;
+    }
+  };
+  if (git(['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]) === null) return null;
+  const text = git(['show', `${commit}:${BASELINE_REL}`]);
+  if (text === null) return {};
+  return parseBaseline(text, `${BASELINE_REL} at ${commit}`);
 }
 
 /**
@@ -391,35 +479,65 @@ function loadBaseline() {
  * @property {string} pillar
  * @property {number} was
  * @property {number} now
- * @property {'grew' | 'stale'} kind `grew`: now exceeds baseline — a new
- *   violation. `stale`: baseline exceeds now — either an un-recorded
- *   improvement or an inflated baseline; both need `--write`.
+ * @property {'grew' | 'inflated'} kind `grew`: the tree now exceeds the
+ *   committed baseline — a new raw control. `inflated`: this change raised
+ *   the committed entry above the tree, which is the only way a ratchet on
+ *   an upper bound can be loosened.
  */
 
 /**
- * Compare current per-pillar counts against a baseline. The baseline is held
- * to equality, not just an upper bound — see the file header for why a
- * ratchet that only rejects growth cannot catch a baseline hand-inflated
- * above the real count.
+ * Compare current per-pillar counts against the committed baseline, and —
+ * when `baselineBefore` is supplied — against the baseline as it stood at
+ * the change's base commit.
+ *
+ * The committed baseline is an upper bound: a count below it is a paid-down
+ * pillar and passes, so concurrent migration PRs never have to edit this
+ * file in lockstep. What replaces the old equality rule is `baselineBefore`:
+ * an entry this change RAISED above the real count is reported as
+ * `inflated`. Pass `null` when there is no base to compare against — the
+ * growth half still runs, and the caller must say that the other half did
+ * not (see the file header).
  *
  * @param {Record<string, number>} current
  * @param {Record<string, number>} baseline
+ * @param {Record<string, number> | null} [baselineBefore]
  * @returns {Mismatch[]}
  */
-export function diffAgainstBaseline(current, baseline) {
+export function diffAgainstBaseline(current, baseline, baselineBefore = null) {
   /** @type {Mismatch[]} */
   const mismatches = [];
   const pillars = new Set([...Object.keys(current), ...Object.keys(baseline)]);
   for (const pillar of pillars) {
     const now = current[pillar] ?? 0;
     const was = baseline[pillar] ?? 0;
+    const before = baselineBefore?.[pillar] ?? 0;
     if (now > was) mismatches.push({ pillar, was, now, kind: 'grew' });
-    else if (now < was) mismatches.push({ pillar, was, now, kind: 'stale' });
+    else if (now < was && baselineBefore !== null && was > before) {
+      mismatches.push({ pillar, was, now, kind: 'inflated' });
+    }
   }
   return mismatches.toSorted((a, b) => a.pillar.localeCompare(b.pillar));
 }
 
-function runCheck() {
+/**
+ * @param {string[]} argv
+ * @returns {string | null}
+ */
+function baseFlag(argv) {
+  const index = argv.indexOf('--base');
+  if (index === -1) return null;
+  const value = argv[index + 1];
+  if (value === undefined || value.startsWith('--') || value.trim().length === 0) {
+    console.error('usage: check-raw-form-controls.mjs --base <commit>');
+    process.exit(2);
+  }
+  return value;
+}
+
+/**
+ * @param {string[]} argv
+ */
+function runCheck(argv) {
   const { counts, scanned } = scanRawFormControls();
 
   // A ratchet that reads no files has stopped looking, not been satisfied
@@ -434,13 +552,41 @@ function runCheck() {
   }
 
   const baseline = loadBaseline();
-  const mismatches = diffAgainstBaseline(counts, baseline);
+  const base = baseFlag(argv);
+  /** @type {Record<string, number> | null} */
+  let baselineBefore = null;
+  if (base === null) {
+    console.log(
+      '· raw-form-control gate: no --base given, so only the growth half ran — nothing checked ' +
+        'whether this change raised a baseline entry above its pillar. CI always passes one.'
+    );
+  } else {
+    try {
+      baselineBefore = readBaselineAt(base);
+    } catch (e) {
+      console.error(
+        `✗ raw-form-control gate: the baseline at ${base} is not valid ` +
+          `(${e instanceof Error ? e.message : String(e)})`
+      );
+      process.exit(2);
+    }
+    if (baselineBefore === null) {
+      console.error(
+        `✗ raw-form-control gate: --base ${base} does not resolve to a commit in this checkout. ` +
+          'Fetch it (the CI job checks out with `fetch-depth: 0`) — running without the base ' +
+          'would silently drop the inflated-baseline half of this gate.'
+      );
+      process.exit(2);
+    }
+  }
+
+  const mismatches = diffAgainstBaseline(counts, baseline, baselineBefore);
 
   if (mismatches.length === 0) {
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     console.log(
       `✔ raw-form-control gate: ${total} raw form control(s) across ${Object.keys(counts).length} ` +
-        `pillar(s), matching the committed baseline exactly (${scanned} file(s) scanned).`
+        `pillar(s), none above the committed baseline (${scanned} file(s) scanned).`
     );
     return;
   }
@@ -451,18 +597,18 @@ function runCheck() {
       console.error(`    ${m.pillar}: baseline ${m.was} → now ${m.now} — NEW raw form control(s)`);
     } else {
       console.error(
-        `    ${m.pillar}: baseline ${m.was} → now ${m.now} — baseline is stale (higher than ` +
-          'reality); either it was hand-edited above the real count, or a migration paid down ' +
-          'violations here without locking the win in'
+        `    ${m.pillar}: this change raised the baseline to ${m.was}, but the tree holds only ` +
+          `${m.now} — a baseline above reality is how this ratchet gets loosened. Run ` +
+          '`pnpm check:raw-form-controls:baseline` instead of editing the number by hand'
       );
     }
   }
   console.error(
     '\n  No raw <select>, <input> (other than a literal type="file"), or <textarea> may be\n' +
-      '  added to pillar UI — use the @pops/ui kit primitive instead. If this pillar\n' +
-      '  genuinely changed (a migration ticket paid violations down, or you added one you\n' +
-      '  should not have), run `pnpm check:raw-form-controls:baseline` and, for growth,\n' +
-      '  justify it in review — growth should not happen at all outside a scoped exception.\n' +
+      '  added to pillar UI — use the @pops/ui kit primitive instead. A pillar whose count\n' +
+      '  has FALLEN below its baseline is fine and needs no edit here: the baseline is an\n' +
+      '  upper bound, so concurrent migrations never have to rewrite it in lockstep\n' +
+      '  (POPS-3236). Growth should not happen at all outside a scoped exception.\n' +
       '\n  Why this rule exists, what "extend the kit instead" looks like in practice, and the\n' +
       '  standing exceptions: docs/architecture/adr-051-form-controls-from-the-kit.md'
   );
@@ -488,11 +634,15 @@ function runWrite() {
 
 /**
  * Prove the gate catches a new violation, a grown pillar count, and a
- * baseline hand-inflated above reality — and that it still stays quiet on an
- * exempt file, a `type="file"` input, and text that merely mentions a tag in
- * a comment. Per ADR-045/POPS-2110, this exercises the REPORTING path, not
+ * baseline this change raised above the real count — and that it stays quiet
+ * on an exempt file, a `type="file"` input, text that merely mentions a tag
+ * in a comment, and the paid-down pillar POPS-3236 deliberately stopped
+ * failing. Per ADR-045/POPS-2110, this exercises the REPORTING path, not
  * only the passing one: every positive case below asserts the guard actually
- * flags the planted violation, not merely that a clean run exits 0.
+ * flags the planted violation, not merely that a clean run exits 0. The
+ * cases over `readBaselineAt` are here for the same reason — the inflation
+ * half depends on git answering, so a base it cannot read must report, not
+ * quietly reduce the gate to its growth half.
  */
 function runSelfTest() {
   const { scanned } = scanRawFormControls();
@@ -600,30 +750,74 @@ function runSelfTest() {
       { demo: 1 },
       {}
     ).some((m) => m.pillar === 'demo' && m.kind === 'grew'),
-    // This is the case POPS-3187 explicitly calls out: a baseline hand-set
-    // above the real count must fail, not silently read as "shrank".
-    'a baseline inflated above the real count is flagged as stale': diffAgainstBaseline(
-      { demo: 2 },
-      { demo: 100 }
-    ).some((m) => m.pillar === 'demo' && m.kind === 'stale' && m.was === 100 && m.now === 2),
-    'a genuinely paid-down pillar not yet re-baselined is flagged as stale, not silently passed':
-      diffAgainstBaseline({ demo: 0 }, { demo: 5 }).some(
-        (m) => m.pillar === 'demo' && m.kind === 'stale'
+    // The property that replaces POPS-3187's downward check (POPS-3236): a
+    // baseline RAISED above the real count by this very change must fail.
+    'a baseline this change raised above the real count is flagged as inflated':
+      diffAgainstBaseline({ demo: 2 }, { demo: 100 }, { demo: 2 }).some(
+        (m) => m.pillar === 'demo' && m.kind === 'inflated' && m.was === 100 && m.now === 2
       ),
+    'a brand-new baseline entry invented above the real count is flagged as inflated':
+      diffAgainstBaseline({ demo: 2 }, { demo: 9 }, {}).some(
+        (m) => m.pillar === 'demo' && m.kind === 'inflated'
+      ),
+    // The whole point of the change: a migration lowers its pillar and does
+    // NOT have to touch this file, so it cannot conflict with a sibling PR.
+    'a paid-down pillar whose baseline this change left alone passes':
+      diffAgainstBaseline({ demo: 0 }, { demo: 5 }, { demo: 5 }).length === 0,
+    'a pillar already below its baseline on main does not fail an unrelated change':
+      diffAgainstBaseline({ demo: 2, other: 1 }, { demo: 5, other: 1 }, { demo: 5, other: 1 })
+        .length === 0,
+    'growth is still caught even when the change also lowers the baseline entry':
+      diffAgainstBaseline({ demo: 7 }, { demo: 6 }, { demo: 9 }).some((m) => m.kind === 'grew'),
+    // Without a base there is no diff to judge, so the inflation half cannot
+    // run — runCheck says so on a line that is not its success line.
+    'with no base commit a decrease is not reported at all':
+      diffAgainstBaseline({ demo: 2 }, { demo: 100 }).length === 0,
     'an exact match across several pillars is clean':
-      diffAgainstBaseline({ alpha: 3, beta: 0 }, { alpha: 3, beta: 0 }).length === 0,
+      diffAgainstBaseline({ alpha: 3, beta: 0 }, { alpha: 3, beta: 0 }, { alpha: 3 }).length === 0,
     'a pillar absent from both current and baseline is not a phantom mismatch':
-      diffAgainstBaseline({ alpha: 1 }, { alpha: 1, gamma: 0 }).length === 0,
+      diffAgainstBaseline({ alpha: 1 }, { alpha: 1, gamma: 0 }, { alpha: 1 }).length === 0,
   };
 
-  const checks = { ...scanChecks, ...ratchetChecks };
+  const baselineParseChecks = {
+    'a baseline whose counts are strings is rejected, not compared by coercion': (() => {
+      try {
+        parseBaseline('{"demo":"100"}', 'fixture');
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+    'a baseline that is a JSON array is rejected': (() => {
+      try {
+        parseBaseline('[]', 'fixture');
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+    'a well-formed baseline parses': parseBaseline('{"demo":3}', 'fixture').demo === 3,
+    // ADR-045: the base half must report that it cannot see, never pass
+    // quietly. A ref that resolves to nothing yields null, and runCheck
+    // turns that into exit 2 rather than skipping the inflation check.
+    'a --base that does not resolve reads as null, not as an empty baseline':
+      readBaselineAt('0000000000000000000000000000000000000000') === null,
+    // Not compared against the working tree's copy: a developer who has run
+    // `--write` but not committed would fail that, and this is a check on
+    // whether `git show` still reaches the file, not on staging state.
+    "the repo's own HEAD carries a readable baseline with at least one pillar":
+      Object.keys(readBaselineAt('HEAD') ?? {}).length > 0,
+  };
+
+  const checks = { ...scanChecks, ...ratchetChecks, ...baselineParseChecks };
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
     console.log(
       `✔ self-test: scanner read ${scanned} file(s); reports every raw form-control shape ` +
         `(${dirtyCases.length} cases), stays silent on ${cleanCases.length} legitimate/decoy ` +
-        'shapes, and the per-pillar ratchet flags growth, an un-baselined improvement, and a ' +
-        'hand-inflated baseline alike.'
+        'shapes, flags growth, lets a paid-down pillar through without a baseline edit, and ' +
+        'flags a baseline this change raised above the tree — including when the base commit ' +
+        'cannot be read at all.'
     );
   } else {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
@@ -635,14 +829,21 @@ function runSelfTest() {
 }
 
 function main() {
-  const mode = process.argv[2];
-  if (mode !== '--write' && mode !== '--self-test' && mode !== undefined) {
-    console.error('usage: check-raw-form-controls.mjs [--write|--self-test]');
+  const argv = process.argv.slice(2);
+  const mode = argv[0];
+  if (mode === '--write') {
+    runWrite();
+    return;
+  }
+  if (mode === '--self-test') {
+    runSelfTest();
+    return;
+  }
+  if (mode !== undefined && mode !== '--base') {
+    console.error('usage: check-raw-form-controls.mjs [--write|--self-test|--base <commit>]');
     process.exit(2);
   }
-  if (mode === '--write') runWrite();
-  else if (mode === '--self-test') runSelfTest();
-  else runCheck();
+  runCheck(argv);
 }
 
 if (import.meta.main) {

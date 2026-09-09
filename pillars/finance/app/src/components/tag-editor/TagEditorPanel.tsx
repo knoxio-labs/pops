@@ -1,4 +1,4 @@
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 import {
   describeTag,
@@ -130,14 +130,13 @@ export function TagEditorPanel(props: PanelProps) {
     <div className="space-y-3">
       <p className="text-sm font-medium">Edit tags</p>
       <CurrentTags tags={props.tags} onRemove={props.onRemoveTag} />
-      <input
+      <TextInput
         ref={props.inputRef}
-        type="text"
         value={props.inputValue}
         onChange={(e) => props.setInputValue(e.target.value)}
         onKeyDown={props.onKeyDown}
         placeholder="Type to add a tag…"
-        className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+        aria-label="Add a tag"
         autoFocus
       />
       <TagCreationRow creation={props.creation} onAddTag={props.onAddTag} />

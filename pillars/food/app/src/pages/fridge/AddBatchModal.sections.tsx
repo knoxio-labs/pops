@@ -1,7 +1,7 @@
 import { DateInput, Input, Select, type SelectOption } from '@pops/ui';
 
 import { type AddFormState } from './AddBatchModal.ingredientSection.js';
-import { FieldRow, RadioRow } from './form-controls.js';
+import { FieldRow, NotesField, RadioRow } from './form-controls.js';
 
 /**
  * JSX sub-sections for `AddBatchModal` — kept here so the modal file
@@ -112,14 +112,11 @@ export function DateAndNotesSection({ state }: { state: AddFormState }): ReactEl
           />
         </FieldRow>
       </div>
-      <FieldRow label="Notes (optional)">
-        <textarea
-          className="min-h-[60px] w-full rounded border bg-background px-2 py-1"
-          maxLength={500}
-          value={state.form.notes}
-          onChange={(e) => set({ notes: e.target.value })}
-        />
-      </FieldRow>
+      <NotesField
+        label="Notes (optional)"
+        value={state.form.notes}
+        onChange={(notes) => set({ notes })}
+      />
     </>
   );
 }
