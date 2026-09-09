@@ -44,6 +44,12 @@ import {
   type RegistryEntry,
 } from './installed-modules';
 import { buildRegisteredAppsFromBundleMap } from './nav/registry';
+import {
+  cacheRegistrySnapshot,
+  clearCachedRegistrySnapshot,
+  readCachedRegistrySnapshot,
+  type SnapshotStore,
+} from './snapshot-cache';
 
 import type { PillarSnapshot } from '@pops/pillar-sdk';
 
@@ -66,11 +72,12 @@ export interface BootRegistry {
    */
   readonly remoteBundleUrls: readonly string[];
   /**
-   * `'registry'` when the live snapshot drove the install set, `'static-floor'`
-   * when the registry was unreachable and the in-repo bundle map was used.
-   * Exposed for diagnostics / tests; consumers render identically either way.
+   * Where the install set came from: `'registry'` for a live snapshot,
+   * `'cached-snapshot'` for the last one that worked, `'static-floor'` for the
+   * in-repo bundle map. Exposed for diagnostics / tests; consumers render
+   * identically whichever it is.
    */
-  readonly source: 'registry' | 'static-floor';
+  readonly source: 'registry' | 'cached-snapshot' | 'static-floor';
 }
 
 /**
@@ -187,13 +194,52 @@ export function resolveBootRegistry(
 }
 
 /**
+ * What `fetchBootRegistry` takes: the snapshot fetch's own options, plus the
+ * store the cached-snapshot floor reads and writes. `store` is injectable so a
+ * test can drive its own object rather than the ambient `localStorage`.
+ */
+export interface BootRegistryOptions extends RegistrySnapshotFetchOptions {
+  readonly store?: SnapshotStore;
+}
+
+/**
  * Fetch the live registry snapshot and resolve it into the boot install set.
  * The await boundary `main.tsx` blocks first render on. Never throws: the
  * fetch soft-fails to `[]`, which resolves to the static floor.
  */
-export async function fetchBootRegistry(
-  options: RegistrySnapshotFetchOptions = {}
-): Promise<BootRegistry> {
-  const snapshot = await fetchRegistrySnapshot(options);
-  return resolveBootRegistry(snapshot);
+export async function fetchBootRegistry(options: BootRegistryOptions = {}): Promise<BootRegistry> {
+  const { store, ...fetchOptions } = options;
+  const snapshot = await fetchRegistrySnapshot(fetchOptions);
+
+  const live = resolveBootRegistry(snapshot);
+  if (live.source === 'registry') {
+    // Only a snapshot that actually resolved to a surface is worth keeping: a
+    // cached one that mounts nothing would replace a good floor with a useless
+    // one, which is worse than having no cache at all.
+    cacheRegistrySnapshot(snapshot, store);
+    return live;
+  }
+
+  // The live snapshot gave nothing mountable — unreachable registry, an empty
+  // list, or only backend-only pillars mid-bring-up. The set that answered
+  // last time is a better floor than whatever this build happens to have
+  // compiled in, and it shrinks to nothing as POPS-3215 empties the bundle map
+  // (POPS-3239).
+  const cached = readCachedRegistrySnapshot(store);
+  if (cached.length > 0) {
+    const fromCache = resolveBootRegistry(cached);
+    // `source === 'registry'` is the test, not a non-empty surface.
+    // `resolveBootRegistry` falls back to the static floor internally when a
+    // snapshot resolves to nothing, so a cache of backend-only pillars comes
+    // back non-empty — as the floor — and labelling that `cached-snapshot`
+    // would report a floor the cache did not supply.
+    if (fromCache.source === 'registry') {
+      return { ...fromCache, source: 'cached-snapshot' };
+    }
+    // Cached, and no longer resolves to anything — every pillar in it has left
+    // the build. Keeping it would fail the same way on every boot.
+    clearCachedRegistrySnapshot(store);
+  }
+
+  return live;
 }

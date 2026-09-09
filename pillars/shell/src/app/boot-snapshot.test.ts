@@ -272,28 +272,49 @@ describe('fetchBootRegistry — fetch-failure resilience', () => {
         })
       )
     );
-    const result = await fetchBootRegistry({ fetch: fetchStub });
+    const result = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(result.source).toBe('registry');
     expect(result.manifests.map((m) => m.id)).toEqual(['media']);
   });
 
+  /**
+   * An explicitly empty store on each of these.
+   *
+   * Their subject is "a failed fetch still yields a surface", and since
+   * POPS-3239 the surface is the last good snapshot when there is one. Left
+   * ambient they would read whatever `localStorage` happened to hold — which
+   * is the previous test's leftovers, not a floor anyone chose.
+   */
+  function noCache() {
+    let value: string | null = null;
+    return {
+      getItem: () => value,
+      setItem: (_k: string, next: string) => {
+        value = next;
+      },
+      removeItem: () => {
+        value = null;
+      },
+    };
+  }
+
   it('falls back to the static floor when the fetch rejects (registry unreachable)', async () => {
     const fetchStub = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
-    const result = await fetchBootRegistry({ fetch: fetchStub });
+    const result = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(result.source).toBe('static-floor');
     expect(result.manifests.length).toBeGreaterThan(0);
   });
 
   it('falls back to the static floor on a non-OK status', async () => {
     const fetchStub = vi.fn(() => Promise.resolve(jsonResponse({}, 502)));
-    const result = await fetchBootRegistry({ fetch: fetchStub });
+    const result = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(result.source).toBe('static-floor');
     expect(result.registeredApps.length).toBeGreaterThan(0);
   });
 
   it('falls back to the static floor on an empty pillar list', async () => {
     const fetchStub = vi.fn(() => Promise.resolve(jsonResponse({ pillars: [] })));
-    const result = await fetchBootRegistry({ fetch: fetchStub });
+    const result = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(result.source).toBe('static-floor');
     expect(result.registeredApps.length).toBeGreaterThan(0);
   });
@@ -308,5 +329,115 @@ describe('fetchBootRegistry — fetch-failure resilience', () => {
     const result = await fetchBootRegistry({ fetch: fetchStub, timeoutMs: 1 });
     expect(result.source).toBe('static-floor');
     expect(result.manifests.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The cached-snapshot floor (POPS-3239).
+ *
+ * The shell's offline floor used to be the static bundle map. POPS-3215
+ * empties that map, so the floor empties with it — at the end of the epic a
+ * registry outage would leave the shell with its own chrome, an empty rail and
+ * the settings page. These drive the replacement: the set that answered last
+ * time.
+ */
+describe('fetchBootRegistry — the cached-snapshot floor', () => {
+  function memoryStore(initial?: string) {
+    let value = initial ?? null;
+    return {
+      getItem: () => value,
+      setItem: (_k: string, next: string) => {
+        value = next;
+      },
+      removeItem: () => {
+        value = null;
+      },
+      read: () => value,
+    };
+  }
+
+  function okFetch(pillarIds: readonly string[]) {
+    return vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            pillars: pillarIds.map((pillarId) => ({
+              pillarId,
+              baseUrl: `http://${pillarId}-api:3000`,
+              manifest: manifestPayload(pillarId),
+              lastHeartbeatAt: new Date(0).toISOString(),
+            })),
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    );
+  }
+
+  const deadFetch = () => vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
+
+  it('caches a snapshot that resolved to a usable surface', async () => {
+    const store = memoryStore();
+    const result = await fetchBootRegistry({ fetch: okFetch(['media']), store });
+
+    expect(result.source).toBe('registry');
+    expect(store.read()).toContain('media');
+  });
+
+  // The whole point: the registry is unreachable and the pillars are not.
+  it('mounts the last good snapshot when the registry is unreachable', async () => {
+    const store = memoryStore();
+    await fetchBootRegistry({ fetch: okFetch(['media']), store });
+
+    const offline = await fetchBootRegistry({ fetch: deadFetch(), store });
+
+    expect(offline.source).toBe('cached-snapshot');
+    expect(offline.manifests.map((m) => m.id)).toEqual(['media']);
+  });
+
+  it('prefers a live snapshot over the cached one', async () => {
+    const store = memoryStore();
+    await fetchBootRegistry({ fetch: okFetch(['media']), store });
+
+    const live = await fetchBootRegistry({ fetch: okFetch(['lists']), store });
+
+    expect(live.source).toBe('registry');
+    expect(live.manifests.map((m) => m.id)).toEqual(['lists']);
+  });
+
+  // A snapshot that mounted nothing is not a floor. Caching it would replace a
+  // good one with a useless one.
+  it('does not cache a snapshot that resolved to nothing', async () => {
+    const store = memoryStore();
+    await fetchBootRegistry({ fetch: okFetch(['media']), store });
+    await fetchBootRegistry({ fetch: okFetch(['registry']), store });
+
+    expect(store.read()).toContain('media');
+    expect(store.read()).not.toContain('"pillarId":"registry"');
+  });
+
+  it('falls through to the static floor when there is no cache', async () => {
+    const result = await fetchBootRegistry({ fetch: deadFetch(), store: memoryStore() });
+    expect(result.source).toBe('static-floor');
+  });
+
+  // Every pillar in the cache has left the build, so it resolves to nothing.
+  // Keeping it would fail identically on every boot from here on.
+  it('drops a cache that no longer resolves to anything', async () => {
+    const stale = JSON.stringify([
+      {
+        pillarId: 'a-pillar-that-no-longer-exists',
+        baseUrl: 'http://gone:3000',
+        registered: true,
+        lastSeenAt: new Date(0).toISOString(),
+        manifest: manifestPayload('a-pillar-that-no-longer-exists'),
+      },
+    ]);
+    const store = memoryStore(stale);
+
+    const result = await fetchBootRegistry({ fetch: deadFetch(), store });
+
+    expect(result.source).toBe('static-floor');
+    expect(store.read()).toBeNull();
   });
 });
