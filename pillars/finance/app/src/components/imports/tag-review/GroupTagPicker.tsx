@@ -1,10 +1,34 @@
 /**
- * The vocabulary picker inside `GroupTagBar` — an input, a facet-grouped
- * dropdown, and the keyboard handling that keeps the two in agreement.
+ * The vocabulary picker inside `GroupTagBar` — a combobox input, a
+ * facet-grouped dropdown, and the keyboard handling that keeps the two in
+ * agreement.
+ *
+ * Built on cmdk `Command` + Radix `Popover`, the same primitives every
+ * sibling finance picker composes (`RulePicker`, `ComboboxSelect`, the kit's
+ * own `ChipInput`) — so arrow-key navigation, `role="listbox"`/`"option"`
+ * semantics, and outside-click dismissal come from the kit rather than being
+ * hand-rolled here. `ChipInput` itself doesn't fit this picker's shape: its
+ * `suggestions` are a static label/value list filtered by substring match,
+ * with no way for a caller to see the live typed text and answer "what would
+ * this create" — the facet-aware creation flow (a typed value can offer
+ * several simultaneous "create as <facet>" choices, or explain why an axis
+ * refuses one) needs that live text, and needs more than one item to name
+ * what pressing Enter/Tab does. Composing Command+Popover directly keeps
+ * that logic while still getting the kit's combobox semantics for free.
  */
-import { describeTag, groupTagsByFacet, type TagCreationIntent } from '../../../lib/tags';
-import { FacetHeading } from '../../tags/TagChip';
-import { TagCreationRow } from '../../tags/TagCreationRow';
+import { useState } from 'react';
+
+import {
+  Command,
+  CommandBareInput,
+  CommandList,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@pops/ui';
+
+import { type TagCreationIntent } from '../../../lib/tags';
+import { PickerCreation, PickerOptions } from './GroupTagPicker.dropdown';
 
 export interface PickerInputProps {
   inputValue: string;
@@ -25,116 +49,168 @@ export interface PickerInputProps {
   setShowPicker: (v: boolean) => void;
 }
 
-function handlePickerKeyDown(e: React.KeyboardEvent, props: PickerInputProps): void {
-  const { filtered, exactMatch, creation, onAddTag, setInputValue, setShowPicker } = props;
+interface KeyDownDeps {
+  filtered: string[];
+  exactMatch: string | undefined;
+  creation: TagCreationIntent;
+  hasNavigated: boolean;
+  setHasNavigated: (v: boolean) => void;
+  setInputValue: (v: string) => void;
+  setShowPicker: (v: boolean) => void;
+  onPick: (tag: string) => void;
+}
+
+/**
+ * Enter picks whatever the user has arrow-navigated to (cmdk's default
+ * behaviour, left alone by returning without calling `preventDefault`).
+ * Without a navigation, Enter instead resolves directly against
+ * `exactMatch`/a `ready` creation — the display cap can rank an exact match
+ * out of the visible list entirely, and a typed label must still reuse the
+ * stored tag it names rather than mint a near-duplicate. That shortcut only
+ * makes sense before the user has picked a different option with the arrow
+ * keys, so a navigation turns it off until the next keystroke edits the
+ * query.
+ */
+function handlePickerKeyDown(e: React.KeyboardEvent<HTMLInputElement>, deps: KeyDownDeps) {
+  const {
+    filtered,
+    exactMatch,
+    creation,
+    hasNavigated,
+    setHasNavigated,
+    setInputValue,
+    setShowPicker,
+    onPick,
+  } = deps;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    setHasNavigated(true);
+    return;
+  }
   if (e.key === 'Tab' && filtered.length > 0) {
     e.preventDefault();
     const first = filtered[0];
-    if (first) onAddTag(first);
-    setShowPicker(false);
-    setInputValue('');
+    if (first) onPick(first);
     return;
   }
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' && !hasNavigated) {
     e.preventDefault();
-    // A bare value is not stored on Enter any more: it names no axis, and the
-    // create row below is where one is chosen. Only a tag that already exists,
-    // or typed text that already names an open axis, is unambiguous enough.
     const resolved = exactMatch ?? (creation.kind === 'ready' ? creation.tag : undefined);
     if (resolved === undefined) return;
-    onAddTag(resolved);
-    setShowPicker(false);
-    setInputValue('');
+    onPick(resolved);
     return;
   }
   if (e.key === 'Escape') {
+    e.preventDefault();
     setShowPicker(false);
     setInputValue('');
+    setHasNavigated(false);
   }
 }
 
-function PickerOption({ tag, onPick }: { tag: string; onPick: (tag: string) => void }) {
-  const { label, ariaLabel, title } = describeTag(tag);
-  return (
-    <button
-      className="w-full min-h-11 min-w-11 text-left px-3 py-1 text-xs hover:bg-accent transition-colors"
-      title={title}
-      aria-label={ariaLabel}
-      data-tag={tag}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onPick(tag);
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function PickerOptions({
-  filtered,
-  onPick,
-}: {
+interface PickerDropdownProps {
+  inputValue: string;
+  open: boolean;
   filtered: string[];
+  creation: TagCreationIntent;
+  onOpenChange: (open: boolean) => void;
+  onValueChange: (next: string) => void;
+  onFocus: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onPick: (tag: string) => void;
-}) {
+}
+
+/** The combobox's rendered shell — split out so `PickerInput` stays under the repo's function-length limit. */
+function PickerDropdown({
+  inputValue,
+  open,
+  filtered,
+  creation,
+  onOpenChange,
+  onValueChange,
+  onFocus,
+  onKeyDown,
+  onPick,
+}: PickerDropdownProps) {
   return (
-    <>
-      {groupTagsByFacet(filtered).map((group) => (
-        <div key={group.label} role="group" aria-label={group.label}>
-          <FacetHeading className="text-2xs uppercase tracking-wider text-muted-foreground font-semibold px-3 pt-1.5 pb-0.5">
-            {group.label}
-          </FacetHeading>
-          {group.tags.map((parsed) => (
-            <PickerOption key={parsed.raw} tag={parsed.raw} onPick={onPick} />
-          ))}
-        </div>
-      ))}
-    </>
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <Command shouldFilter={false} className="contents">
+        <PopoverAnchor asChild>
+          <CommandBareInput
+            value={inputValue}
+            onValueChange={onValueChange}
+            onFocus={onFocus}
+            onKeyDown={onKeyDown}
+            placeholder="+ Add tag…"
+            className="w-24 rounded-full border border-dashed border-border bg-background px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </PopoverAnchor>
+        <PopoverContent
+          align="start"
+          sideOffset={4}
+          className="w-auto min-w-32 max-h-40 overflow-y-auto p-1"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <CommandList>
+            {filtered.length > 0 && <PickerOptions filtered={filtered} onPick={onPick} />}
+            <PickerCreation creation={creation} onPick={onPick} />
+          </CommandList>
+        </PopoverContent>
+      </Command>
+    </Popover>
   );
 }
 
-export function PickerInput(
-  props: PickerInputProps & { containerRef: React.RefObject<HTMLDivElement | null> }
-) {
+export function PickerInput(props: PickerInputProps) {
   const {
-    containerRef,
     inputValue,
     setInputValue,
     setShowPicker,
     showPicker,
     filtered,
+    exactMatch,
     creation,
     onAddTag,
   } = props;
-  const handlePick = (tag: string) => {
+  const [hasNavigated, setHasNavigated] = useState(false);
+
+  const onPick = (tag: string) => {
     onAddTag(tag);
     setShowPicker(false);
     setInputValue('');
+    setHasNavigated(false);
   };
+
+  const hasContent = filtered.length > 0 || creation.kind !== 'none';
+
   return (
-    <div ref={containerRef} className="relative">
-      <input
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          setShowPicker(true);
-        }}
-        onFocus={() => setShowPicker(true)}
-        onKeyDown={(e) => handlePickerKeyDown(e, props)}
-        placeholder="+ Add tag…"
-        className="text-xs border border-dashed border-border rounded-full px-2 py-0.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-24"
-      />
-      {showPicker && (filtered.length > 0 || creation.kind !== 'none') && (
-        <div className="absolute top-full left-0 mt-1 z-10 bg-popover border rounded-md shadow-md py-1 min-w-32 max-h-40 overflow-y-auto">
-          {filtered.length > 0 && <PickerOptions filtered={filtered} onPick={handlePick} />}
-          {creation.kind !== 'none' && (
-            <div className="px-3 py-1.5 border-t first:border-t-0">
-              <TagCreationRow creation={creation} onAddTag={handlePick} />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <PickerDropdown
+      inputValue={inputValue}
+      open={showPicker && hasContent}
+      filtered={filtered}
+      creation={creation}
+      onOpenChange={(open) => {
+        setShowPicker(open);
+        if (!open) setInputValue('');
+      }}
+      onValueChange={(next) => {
+        setInputValue(next);
+        setShowPicker(true);
+        setHasNavigated(false);
+      }}
+      onFocus={() => setShowPicker(true)}
+      onKeyDown={(e) =>
+        handlePickerKeyDown(e, {
+          filtered,
+          exactMatch,
+          creation,
+          hasNavigated,
+          setHasNavigated,
+          setInputValue,
+          setShowPicker,
+          onPick,
+        })
+      }
+      onPick={onPick}
+    />
   );
 }

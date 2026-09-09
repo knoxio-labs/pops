@@ -5,6 +5,7 @@ import {
   type AccountOption,
   Button,
   ChipInput,
+  DateInput,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   EntitySelect,
+  FieldLabel,
   Label,
   Textarea,
   TextInput,
@@ -34,12 +36,18 @@ interface DialogProps {
 function PrimaryFields({ form }: { form: UseFormReturn<TransactionFormValues> }) {
   return (
     <div className="grid grid-cols-2 gap-4">
-      <TextInput
-        type="date"
-        label="Date"
-        {...form.register('date')}
-        error={form.formState.errors.date?.message}
-      />
+      <div className="flex flex-col gap-1.5 w-full">
+        <FieldLabel
+          htmlFor="transaction-date"
+          label="Date"
+          error={form.formState.errors.date?.message}
+        />
+        <DateInput
+          id="transaction-date"
+          {...form.register('date')}
+          error={form.formState.errors.date?.message}
+        />
+      </div>
       <TextInput
         type="number"
         step="0.01"

@@ -13,6 +13,20 @@ describe('DateInput', () => {
     render(<DateInput aria-label="As of" lang="fr-FR" />);
     expect(screen.getByLabelText('As of')).toHaveAttribute('lang', 'fr-FR');
   });
+
+  it('marks the field invalid and shows the destructive border when error is set', () => {
+    render(<DateInput aria-label="As of" error="Required" />);
+    const input = screen.getByLabelText('As of');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.parentElement).toHaveClass('border-destructive');
+  });
+
+  it('does not mark the field invalid when no error is set', () => {
+    render(<DateInput aria-label="As of" />);
+    const input = screen.getByLabelText('As of');
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(input.parentElement).not.toHaveClass('border-destructive');
+  });
 });
 
 describe('TimeInput', () => {
