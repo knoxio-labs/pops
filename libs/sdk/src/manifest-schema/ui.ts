@@ -43,19 +43,68 @@ export const NavConfigDescriptorSchema = z
   .strict();
 
 /**
+ * How deep a pillar may nest its pages.
+ *
+ * The wire is parsed from a manifest the shell did not author, and an
+ * unbounded recursive schema is a parsing hazard rather than a feature. Three
+ * levels covers every route tree in the repo with room to spare — food's
+ * deepest is a layout with tabs beneath it, which is two — and a pillar that
+ * wants more has a routing problem the wire should not quietly absorb.
+ */
+export const MAX_PAGE_DEPTH = 3;
+
+/**
  * Wire-shaped descriptor of a routable page contributed by a pillar.
  * Carries the routing surface the shell consumes today; React component
  * refs come from the workspace bundle map at the shell side (US-03), so
  * the descriptor names a `bundleSlot` instead of carrying a component
  * directly.
+ *
+ * `children` carries a layout route's subtree. A pillar whose route table
+ * nests — `food`'s `data` tabs under a layout that renders the tab chrome
+ * around an `<Outlet/>`, `inventory`'s likewise — cannot be described without
+ * it, and flattening the tree to fit a flat wire would make the transport
+ * dictate the app's route structure: the layout would remount on every tab
+ * switch, losing its state, to satisfy a schema (POPS-3256).
  */
-export const PageDescriptorSchema = z
-  .object({
+export interface PageDescriptor {
+  readonly path: string;
+  readonly index?: boolean;
+  readonly bundleSlot: string;
+  readonly children?: readonly PageDescriptor[];
+}
+
+/**
+ * Built per level rather than with `z.lazy`, so the depth bound is structural:
+ * the schema for the last level has no `children` key at all and `.strict()`
+ * rejects one. A `z.lazy` recursion would have to count depth at parse time
+ * and would accept arbitrarily deep input first.
+ */
+function pageDescriptorAtDepth(remaining: number): z.ZodType<PageDescriptor> {
+  const base = {
     path: z.string(),
     index: z.boolean().optional(),
     bundleSlot: KebabIdentifierSchema,
-  })
-  .strict();
+  };
+  if (remaining <= 1) return z.object(base).strict() as z.ZodType<PageDescriptor>;
+  return (
+    z
+      .object({ ...base, children: z.array(pageDescriptorAtDepth(remaining - 1)).optional() })
+      .strict()
+      // React Router rejects a route that is both an index and a layout, and it
+      // rejects it by throwing at router construction — which for a
+      // loader-mounted pillar means the shell's whole router, not just this
+      // pillar's subtree. Refused here, where it is one pillar's manifest
+      // failing to parse and being skipped.
+      .refine(
+        (page) => !(page.index === true && page.children !== undefined && page.children.length > 0),
+        { message: 'an index route cannot have children' }
+      ) as z.ZodType<PageDescriptor>
+  );
+}
+
+export const PageDescriptorSchema: z.ZodType<PageDescriptor> =
+  pageDescriptorAtDepth(MAX_PAGE_DEPTH);
 
 /**
  * Where a pillar's frontend bundle is served from — the URL the shell's
@@ -94,5 +143,4 @@ export const CaptureOverlayDescriptorSchema = ModuleCaptureOverlayConfigSchema;
 
 export type NavConfigDescriptor = z.infer<typeof NavConfigDescriptorSchema>;
 export type NavItemDescriptor = z.infer<typeof NAV_ITEM_DESCRIPTOR>;
-export type PageDescriptor = z.infer<typeof PageDescriptorSchema>;
 export type CaptureOverlayDescriptor = ModuleCaptureOverlayConfig;
