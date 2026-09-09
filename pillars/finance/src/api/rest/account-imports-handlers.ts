@@ -1,5 +1,5 @@
 /**
- * Handlers for the `accountImports.*` sub-router (POPS-2917, ADR-052).
+ * Handlers for the `accountImports.*` sub-router (POPS-2917, finance ADR-003).
  *
  * `getConfig` 404s an account that has no config rather than serving a null:
  * the row is the account's standing instruction for how to be fed, and an

@@ -1,7 +1,7 @@
 # Recipe DSL
 
 Parser, resolver, cycle detector and compiler for the recipe authoring language
-(grammar: `docs/architecture/adr-023-recipe-markdown-dsl.md`). Each stage's
+(grammar: food ADR-002, `pillars/food/docs/architecture/adr-002-recipe-markdown-dsl.md`). Each stage's
 mechanics are on its own file header; `compile.ts` documents the pipeline order.
 What follows is only the part that spans the pillar.
 

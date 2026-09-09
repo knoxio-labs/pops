@@ -1,5 +1,5 @@
 /**
- * Data access for `account_checkpoints` (POPS-2878, ADR-051).
+ * Data access for `account_checkpoints` (POPS-2878, finance ADR-002).
  *
  * Pure persistence: insert, list, find the anchor either side of a date, and
  * delete a hand-typed mistake. No balance maths lives here — `balanceAsOf`

@@ -4,7 +4,7 @@
  * shown read-only — the backend treats them as the rule's immutable
  * identity (see `UpdateTransactionTagRuleInput`) — while entity scope, tags,
  * priority, and the active flag are editable. `confidence` is not: it
- * decides nothing (ADR-053/POPS-3131). A side panel shows the usage
+ * decides nothing (finance ADR-004/POPS-3131). A side panel shows the usage
  * telemetry and a full-DB match-history preview.
  */
 import { Loader2 } from 'lucide-react';

@@ -3,7 +3,7 @@
 Records every curation action as a row in `glia_actions` and tracks, per action
 type, how much autonomy that type has earned. The three-phase model and why it
 exists are in
-[ADR-021](../../../../docs/architecture/adr-021-glia-trust-graduation.md).
+[cerebrum ADR-004](../../../../docs/architecture/adr-004-glia-trust-graduation.md).
 
 ## The action ladder
 

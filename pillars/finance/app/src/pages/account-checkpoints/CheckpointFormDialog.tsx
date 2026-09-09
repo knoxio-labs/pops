@@ -42,7 +42,7 @@ function AsOfField({ form }: { form: UseFormReturn<CheckpointFormValues> }) {
 
 /**
  * Recording what's true right now, not editing what happened before —
- * checkpoints are append-only (ADR-051), so this dialog has no counterpart
+ * checkpoints are append-only (finance ADR-002), so this dialog has no counterpart
  * that loads an existing one to change it. Source is never a field:
  * anything saved here is a manual checkpoint by definition. The balance
  * label and the note placeholder both branch on the account kind's real

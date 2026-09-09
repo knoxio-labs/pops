@@ -1,6 +1,6 @@
 /**
  * Integration tests for the `accounts/:id/checkpoints` and
- * `accounts/:id/balance*` REST surface (POPS-2880, ADR-051).
+ * `accounts/:id/balance*` REST surface (POPS-2880, finance ADR-002).
  *
  * These exist at the route tier because three of the rules only exist there:
  * a future `asOf` and an archived account are refusals about what a person may

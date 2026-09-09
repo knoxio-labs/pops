@@ -4,13 +4,13 @@
  * Precedence: `glia.toml` is the source of truth — it is re-read on every call
  * (mtime-cached) so operator edits take effect on the next evaluation without a
  * restart. Any key the toml file does not set falls back to the hardcoded
- * ADR-021 defaults.
+ * cerebrum ADR-004 defaults.
  */
 import { loadGliaToml } from './toml-config.js';
 
 import type { GraduationThresholds } from './types.js';
 
-/** Hardcoded graduation thresholds per ADR-021 — the last-resort defaults. */
+/** Hardcoded graduation thresholds per cerebrum ADR-004 — the last-resort defaults. */
 export const FALLBACK_THRESHOLDS: GraduationThresholds = {
   proposeToActReportMinApproved: 20,
   proposeToActReportMaxRejectionRate: 0.1,
@@ -21,7 +21,7 @@ export const FALLBACK_THRESHOLDS: GraduationThresholds = {
 
 /**
  * Build a `getThresholds` accessor bound to a glia config path. Each call
- * re-reads the toml (mtime-cached) and overlays it onto the ADR-021 defaults.
+ * re-reads the toml (mtime-cached) and overlays it onto the cerebrum ADR-004 defaults.
  */
 export function makeGliaThresholdReader(configPath: string): () => GraduationThresholds {
   return () => {

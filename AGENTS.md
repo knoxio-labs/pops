@@ -269,7 +269,7 @@ infra/
 
 - **Per-pillar SQLite (ADR-026):** each pillar's DB streams independently. Reference configs at `infra/litestream/<id>.yml` (one per pillar). The deployer mirrors these into the homelab-infra Litestream config; as pillars extract their own SQLite files, each adds a sibling YAML.
 - **Litestream exclusions:** `MEDIA_IMAGES_DIR` and `FOOD_INGEST_DIR` are regeneratable media trees and **must** be excluded from Litestream replication in homelab-infra. The SQLite rows referencing these paths stay backed up; only the bytes are skipped.
-- **Non-SQLite stores (ADR-039 Invariant 2):** a store that isn't SQLite brings its own backup mechanism, scoped to itself. Cerebrum's engrams file tree (`/data/cerebrum/engrams`, ADR-019) backs up via rclone+age, not Litestream — reference config at `infra/backup/<id>-engrams.yml` (currently `cerebrum-engrams.yml`), replicating to its own bucket/prefix.
+- **Non-SQLite stores (ADR-039 Invariant 2):** a store that isn't SQLite brings its own backup mechanism, scoped to itself. Cerebrum's engrams file tree (`/data/cerebrum/engrams`, cerebrum ADR-002) backs up via rclone+age, not Litestream — reference config at `infra/backup/<id>-engrams.yml` (currently `cerebrum-engrams.yml`), replicating to its own bucket/prefix.
 
 ### Architecture stack
 
@@ -403,6 +403,8 @@ Not `// increment the counter`. Full rules in `~/.claude/CLAUDE.md` §10.
 #### ADRs — the WHICH
 
 `adr-NNN` numbering is **frozen and append-only**; new ADRs take the next number and existing numbers never change. An ADR records context, the options genuinely considered, the decision, and its consequences. If there was no real alternative, it is not a decision — it is just how the code works, and that belongs in a README. An ADR moves into a pillar only when that pillar alone references it; a second referent promotes it back to `docs/architecture/`.
+
+**Root and each pillar keep their own number sequence.** `docs/architecture/adr-NNN-slug.md` is one sequence; each `pillars/<id>/docs/architecture/adr-NNN-slug.md` is a separate sequence starting at `001`, independent of root's and of every other pillar's. A bare `ADR-NNN` therefore always means a **root** ADR — a pillar ADR is cited pillar-qualified, e.g. "finance ADR-002", never a bare number, including from another ADR in the same pillar. (POPS-3265 split what had been one shared sequence — pillar ADRs were carved out of root's numbering in blocks that happened to stay collision-free until root's count reached a block a pillar already owned.)
 
 **Status-line dates are UTC** (`Proposed — YYYY-MM-DD`, `Accepted — YYYY-MM-DD`). Take the date from `date -u`, not from the authoring machine's clock: contributors east of UTC roll over first, so a local date produces an ADR that reads as future-dated against its own commit — which reviewers catch and authors do not.
 

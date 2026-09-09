@@ -1,4 +1,4 @@
-# ADR-050: Accounts as first-class records
+# Finance ADR-001: Accounts as first-class records
 
 ## Status
 
@@ -50,7 +50,7 @@ by/owes), `created_at`, `updated_at`. There is no opening-balance column of
 any kind — an account's balance is always the sum of the transactions it
 carries, never a stored number that can drift from that sum.
 
-> **Amended by [ADR-051](./adr-051-balances-are-checkpoint-anchored.md)
+> **Amended by [finance ADR-002](./adr-002-balances-are-checkpoint-anchored.md)
 > (2026-09-05).** That holds only for an account whose history is complete
 > from inception, which none of ours are; summing a partial import gives net
 > flow, not a balance. A balance is now the nearest `account_checkpoints` row
