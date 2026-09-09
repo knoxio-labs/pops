@@ -24,6 +24,19 @@ export interface AutocompleteSuggestion {
 
 export interface AutocompleteProps {
   /**
+   * `id` for the underlying input, so a `<label htmlFor>` (or an
+   * `aria-labelledby` elsewhere) can name it.
+   */
+  id?: string;
+  /**
+   * Accessible name when there is no visible `<label>` to point at.
+   */
+  'aria-label'?: string;
+  /**
+   * Accessible name sourced from another element's text.
+   */
+  'aria-labelledby'?: string;
+  /**
    * Available suggestions
    */
   suggestions: AutocompleteSuggestion[];
@@ -101,19 +114,17 @@ function SuggestionItems({
   );
 }
 
-export function Autocomplete({
-  suggestions,
-  value = '',
+function useAutocompleteState({
+  value,
   onChange,
   onSelect,
-  placeholder = 'Search...',
-  emptyMessage = 'No results found.',
-  disabled = false,
-  className,
-}: AutocompleteProps) {
+}: {
+  value: string;
+  onChange?: (value: string) => void;
+  onSelect?: (suggestion: AutocompleteSuggestion) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setInputValue(value);
@@ -132,12 +143,38 @@ export function Autocomplete({
     setOpen(false);
   };
 
+  return { open, setOpen, inputValue, handleInputChange, handleSelect };
+}
+
+export function Autocomplete({
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  suggestions,
+  value = '',
+  onChange,
+  onSelect,
+  placeholder = 'Search...',
+  emptyMessage = 'No results found.',
+  disabled = false,
+  className,
+}: AutocompleteProps) {
+  const { open, setOpen, inputValue, handleInputChange, handleSelect } = useAutocompleteState({
+    value,
+    onChange,
+    onSelect,
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Command className={cn('overflow-visible bg-transparent', className)}>
         <PopoverTrigger asChild>
           <CommandInput
             ref={inputRef}
+            id={id}
+            aria-label={ariaLabel}
+            aria-labelledby={ariaLabelledBy}
             value={inputValue}
             onValueChange={handleInputChange}
             onFocus={() => inputValue && setOpen(true)}

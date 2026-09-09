@@ -8,11 +8,11 @@ import { type FormEvent, type ReactElement } from 'react';
 
 import {
   Button,
+  DateInput,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  Input,
   Select,
   type SelectOption,
 } from '@pops/ui';
@@ -108,8 +108,7 @@ function EditFields({ form, setForm, isFromRun, prepStates }: EditFieldsProps): 
   return (
     <>
       <FieldRow label="Expires">
-        <Input
-          type="date"
+        <DateInput
           value={form.expiresAt}
           onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
         />

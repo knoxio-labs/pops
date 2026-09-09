@@ -169,13 +169,78 @@ describe('pillars/food/docs/prds/substitution-model — SubstitutionsTab', () =>
     const fromBox = elementAt(slugBoxes, 0);
     const toBox = elementAt(slugBoxes, 1);
     await userEvent.type(fromBox, 'butter');
-    await userEvent.click(await within(form).findByRole('option', { name: /butter/i }));
+    // `Autocomplete`'s option list renders through a `Popover` portal, outside
+    // `form`'s own DOM subtree, so the option itself has to be found globally.
+    await userEvent.click(await screen.findByRole('option', { name: /butter/i }));
     await userEvent.type(toBox, 'butter');
-    await userEvent.click(await within(form).findByRole('option', { name: /butter/i }));
+    // `Autocomplete`'s option list renders through a `Popover` portal, outside
+    // `form`'s own DOM subtree, so the option itself has to be found globally.
+    await userEvent.click(await screen.findByRole('option', { name: /butter/i }));
 
     await userEvent.click(within(form).getByRole('button', { name: /^add$/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/i);
+  });
+
+  // POPS-3179: the hand-rolled `IngredientSearch` declared `role="listbox"`
+  // with `aria-selected={false}` hardcoded on every option and no keyboard
+  // handling at all — a screen reader was told there was a listbox where no
+  // option was ever selected, and Tab was the only way through it. Kit
+  // `Autocomplete` (cmdk) must actually be operable by keyboard alone: this
+  // fails against the old `IngredientSearch`, which never listened for
+  // ArrowDown/Enter and would leave the field showing a raw text box with no
+  // selection made.
+  it('picks an ingredient search result by keyboard alone — arrow to it, Enter to choose', async () => {
+    seedList([]);
+    slugsSearchMock.mockResolvedValue({
+      data: { items: [{ kind: 'ingredient', name: 'Butter', slug: 'butter', targetId: 100 }] },
+    });
+    renderTab();
+
+    const form = screen.getByRole('form', { name: /add substitution/i });
+    const fromBox = elementAt(within(form).getAllByPlaceholderText(/search slug/i), 0);
+
+    await userEvent.type(fromBox, 'butter');
+    await screen.findByRole('option', { name: /butter/i });
+
+    await userEvent.keyboard('{ArrowDown}{Enter}');
+
+    const selected = await screen.findByTestId('endpoint-picker-selected');
+    expect(selected).toHaveTextContent('#100');
+    expect(within(form).queryByPlaceholderText(/search slug/i)).toBeInTheDocument();
+  });
+
+  it('never declares role="listbox" with a hardcoded aria-selected', async () => {
+    seedList([]);
+    slugsSearchMock.mockResolvedValue({
+      data: {
+        items: [
+          { kind: 'ingredient', name: 'Butter', slug: 'butter', targetId: 100 },
+          { kind: 'ingredient', name: 'Buttermilk', slug: 'buttermilk', targetId: 101 },
+        ],
+      },
+    });
+    renderTab();
+
+    const form = screen.getByRole('form', { name: /add substitution/i });
+    const fromBox = elementAt(within(form).getAllByPlaceholderText(/search slug/i), 0);
+    await userEvent.type(fromBox, 'butter');
+
+    const listbox = await screen.findByRole('listbox');
+    const options = await within(listbox).findAllByRole('option');
+    expect(options).toHaveLength(2);
+    const [butter, buttermilk] = options;
+    // cmdk auto-highlights the first option on open, and `aria-selected`
+    // tracks that live highlight rather than being a constant — proof that
+    // it can move is proof it isn't hardcoded, the defect the old
+    // `IngredientSearch` had.
+    expect(butter).toHaveAttribute('aria-selected', 'true');
+    expect(buttermilk).toHaveAttribute('aria-selected', 'false');
+
+    await userEvent.keyboard('{ArrowDown}');
+
+    expect(butter).toHaveAttribute('aria-selected', 'false');
+    expect(buttermilk).toHaveAttribute('aria-selected', 'true');
   });
 
   it('filter scope=recipe reveals a recipeId filter input and includes it in the list query', async () => {

@@ -107,6 +107,21 @@ describe('CookModal — render', () => {
     expect(screen.getByLabelText(/expires/i)).toBeInTheDocument();
   });
 
+  // POPS-3179: a raw `<input type="date">` opts out of `DateInput`'s pinned
+  // `lang="en-AU"`, so the native picker's day/month order silently follows
+  // the browser locale instead of the app's. Regression guard for that.
+  it('pins the expires date field to en-AU regardless of browser locale', async () => {
+    render(
+      <Wrapper>
+        <CookModal recipeVersionId={1} isOpen onClose={vi.fn()} />
+      </Wrapper>
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText(/expires/i)).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/expires/i)).toHaveAttribute('lang', 'en-AU');
+  });
+
   it('hides yield + location + expires for a yieldless recipe', async () => {
     cookPrepareCookMock.mockResolvedValue({ data: yieldlessPrep });
     render(
