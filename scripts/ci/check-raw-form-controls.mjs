@@ -37,6 +37,15 @@
  * recorded in docs/architecture/adr-051-form-controls-from-the-kit.md, not
  * here. This file only enforces the mechanical shape.
  *
+ * What the baseline is NOT: a target. POPS-3187 shipped this gate with a
+ * baseline of 90 and an aspiration of zero; the epic closed at 54 because
+ * its tickets were scoped by control class, not by "drive the count down."
+ * POPS-3260 audited all 54 and decided the end state is zero per pillar
+ * plus a by-name allowlist — 47 migrate onto kit components that already
+ * exist, 6 are genuine exceptions, 1 needs a kit colour input. Until those
+ * migrations land the number here is work in progress, not the floor. Do
+ * not read a passing run as "this pillar is done."
+ *
  * Known legitimate exception: a native `<input type="file">`. A file picker
  * has no non-native form — `@pops/ui`'s own `FileUpload` (libs/ui) wraps one
  * for the same reason — so a statically-literal `type="file"` is never
