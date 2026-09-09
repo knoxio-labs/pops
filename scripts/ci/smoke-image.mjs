@@ -289,6 +289,34 @@ export function resolveHealthPath(baseImage) {
 }
 
 /**
+ * Read a `LABEL pops.smoke.<key>="<value>"` declaration out of a Dockerfile.
+ *
+ * The defaults below assume an nginx image serves a PAGE — probe `/`, expect
+ * an entry document with a revalidating `Cache-Control`. A pillar UI bundle
+ * (`pillars/purchases/app`, POPS-3217) is an nginx image that serves an ES
+ * module and its chunks and nothing else: `/` is a 404 by design, because a
+ * module host answering an unknown path with a 200 hands the browser
+ * something it cannot parse instead of the 404 it is. Rather than give such
+ * an image a filler `index.html` to satisfy a probe — which would make the
+ * gate pass by making the image worse — the image states its own liveness and
+ * freshness routes and the harness asks for those.
+ *
+ * Only these two keys are read, and only as overrides. An image that declares
+ * neither is probed exactly as before.
+ *
+ * @param {string} dockerfile Dockerfile contents.
+ * @param {string} key `health` or `freshness`.
+ * @returns {string | undefined} The declared value.
+ */
+export function smokeLabel(dockerfile, key) {
+  const pattern = new RegExp(`^\\s*LABEL\\s+pops\\.smoke\\.${key}=("[^"]*"|\\S+)`, 'mu');
+  const match = pattern.exec(dockerfile);
+  if (match?.[1] === undefined) return undefined;
+  const raw = match[1].startsWith('"') ? match[1].slice(1, -1) : match[1];
+  return raw.length > 0 ? raw : undefined;
+}
+
+/**
  * Paths whose response must forbid heuristic caching, by runtime base image.
  *
  * Only the nginx-served frontends (`shell`, `docs`) have the exposure: their
@@ -305,8 +333,14 @@ export function resolveHealthPath(baseImage) {
  * @param {string} baseImage Runtime stage base image.
  * @returns {readonly string[]} Paths to probe; empty for non-nginx images.
  */
-export function freshnessProbePaths(baseImage) {
-  return /^nginx(:|$)/u.test(baseImage) ? ['/', '/deep/link/smoke-probe'] : [];
+export function freshnessProbePaths(baseImage, dockerfile = '') {
+  if (!/^nginx(:|$)/u.test(baseImage)) return [];
+  const declared = smokeLabel(dockerfile, 'freshness');
+  // A declared route replaces BOTH defaults rather than joining them: the
+  // second default exists to catch an SPA fallback that covers one entry route
+  // and not the other, and an image with no fallback has no second route to
+  // disagree with the first.
+  return declared === undefined ? ['/', '/deep/link/smoke-probe'] : [declared];
 }
 
 /**
@@ -366,7 +400,7 @@ export function planSmoke(dockerfile) {
   const baseImage = parseRuntimeBaseImage(dockerfile);
   return {
     port: parseExposedPort(dockerfile),
-    healthPath: resolveHealthPath(baseImage),
+    healthPath: smokeLabel(dockerfile, 'health') ?? resolveHealthPath(baseImage),
     baseImage,
   };
 }
@@ -657,7 +691,7 @@ async function main() {
       // bundle. Asserted against the running image rather than by reading
       // the conf, because what matters is the header nginx actually emits
       // once try_files and the index module have had their say.
-      const probePaths = freshnessProbePaths(baseImage);
+      const probePaths = freshnessProbePaths(baseImage, readFileSync(dockerfilePath, 'utf8'));
       if (probePaths.length > 0) {
         console.log(`Reading the served freshness policy of ${image}:`);
         const origin = `http://127.0.0.1:${await resolveHostPort(containerId, port)}`;

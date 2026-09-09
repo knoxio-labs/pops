@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@pops/ui';
 
 import { App } from './app/App';
 import { fetchBootRegistry, resolveBootRegistry } from './app/boot-snapshot';
+import { preloadRemoteBundles } from './app/preload-remote-bundles';
 
 import type { BootRegistry } from './app/boot-snapshot';
 
@@ -43,6 +44,11 @@ reactRoot.render(<BootSplash />);
  * not depend on `fetchBootRegistry` happening to be total.
  */
 function mount(bootRegistry: BootRegistry): void {
+  // Before the render, not after: the point is to have the fetch in flight
+  // while the shell's own chunks are still arriving, rather than after a
+  // reader has navigated and is waiting on it.
+  preloadRemoteBundles(bootRegistry.remoteBundleUrls);
+
   reactRoot.render(
     <StrictMode>
       <ErrorBoundary>

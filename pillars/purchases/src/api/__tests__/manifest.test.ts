@@ -39,17 +39,37 @@ describe('buildPurchasesManifest', () => {
     expect(order).toBeLessThan(20);
   });
 
-  // A nav item with no page behind it is the dead link this manifest kept
-  // both dimensions empty to avoid. They arrived together and stay matched.
-  it('declares one page descriptor per nav item', () => {
+  // A nav item with no page behind it is the dead link this manifest kept both
+  // dimensions empty to avoid. The converse is not symmetric: `pages` is every
+  // page the loader mounts, and the order-detail page takes an id no rail entry
+  // can supply, so it is a page without a nav item by construction.
+  it('declares every page the pillar mounts, one per nav item plus the order page', () => {
     const manifest = buildPurchasesManifest('0.1.0');
-    expect(manifest.pages).toHaveLength(manifest.nav?.items.length ?? 0);
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'purchases-reconcile' },
       { path: 'merchants', bundleSlot: 'purchases-merchants' },
       { path: 'receipts', bundleSlot: 'purchases-receipts' },
       { path: 'products', bundleSlot: 'purchases-products' },
+      { path: ':purchaseId', bundleSlot: 'purchases-order' },
     ]);
+  });
+
+  // The page the shell would silently lose. Before the pillar moved onto the
+  // runtime loader the shell mounted its whole `routes` array and this
+  // descriptor was unnecessary; now `pages` is the only list the loader reads,
+  // and a purchase id reached from the queue, an upload or a search hit has
+  // nowhere to land without it.
+  it('carries the order page a rail entry cannot reach', () => {
+    const pages = buildPurchasesManifest('0.1.0').pages ?? [];
+    const parameterised = pages.filter((page) => page.path.includes(':'));
+    expect(parameterised).toEqual([{ path: ':purchaseId', bundleSlot: 'purchases-order' }]);
+  });
+
+  // Root-relative, because no absolute origin written here is right on every
+  // name the same deployment answers to.
+  it('advertises where the shell fetches its bundle from', () => {
+    const manifest = buildPurchasesManifest('0.1.0');
+    expect(manifest.assetsBaseUrl).toBe('/purchases-ui/purchases.js');
   });
 
   // The wire nav has drifted from the app before: one entry declared against
@@ -188,7 +208,9 @@ describe('buildPurchasesManifest', () => {
      * appears here — a rail entry has no id to put in a `:purchaseId`.
      */
     function reachablePagePaths(): string[] {
-      return PURCHASES_PAGES.map((page) => ('index' in page && page.index ? '' : `/${page.path}`));
+      return PURCHASES_PAGES.filter((page) => !page.path.includes(':')).map((page) =>
+        'index' in page && page.index ? '' : `/${page.path}`
+      );
     }
 
     it('carries every app nav item across the wire, in rail order', () => {
@@ -214,9 +236,9 @@ describe('buildPurchasesManifest', () => {
 
     it('declares one wire page descriptor per wire nav item, path-for-path', () => {
       const manifest = buildPurchasesManifest('0.1.0');
-      const pagePaths = (manifest.pages ?? []).map((page) =>
-        page.index === true ? '' : `/${page.path}`
-      );
+      const pagePaths = (manifest.pages ?? [])
+        .filter((page) => !page.path.includes(':'))
+        .map((page) => (page.index === true ? '' : `/${page.path}`));
       const navPaths = (manifest.nav?.items ?? []).map((item) => item.path);
       expect(pagePaths).toEqual(navPaths);
     });

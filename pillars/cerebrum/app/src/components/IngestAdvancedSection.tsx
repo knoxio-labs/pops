@@ -5,7 +5,9 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { TagPicker } from './TagPicker';
+import { ChipInput } from '@pops/ui';
+
+import { normalizeChipValue } from '../utils/normalizeChipValue';
 import { TemplateFields } from './TemplateFields';
 import { TypeSelector } from './TypeSelector';
 
@@ -39,12 +41,23 @@ export function IngestAdvancedSection({ model }: IngestAdvancedSectionProps) {
             requiredFields={model.selectedTemplate.required_fields}
           />
         )}
-        <TagPicker
-          value={model.form.tags}
-          suggestions={model.tagSuggestions}
-          loading={model.tagsLoading}
-          onChange={(v) => model.updateField('tags', v)}
-        />
+        <div className="flex flex-col gap-1.5 w-full">
+          <label
+            htmlFor="tag-picker-input"
+            className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1"
+          >
+            Tags
+          </label>
+          <ChipInput
+            id="tag-picker-input"
+            value={model.form.tags}
+            onChange={(v) => model.updateField('tags', v)}
+            suggestions={model.tagSuggestions}
+            normalize={normalizeChipValue}
+            placeholder={model.tagsLoading ? 'Loading tags…' : 'Add tags…'}
+            aria-label="Tag input"
+          />
+        </div>
       </div>
     </details>
   );

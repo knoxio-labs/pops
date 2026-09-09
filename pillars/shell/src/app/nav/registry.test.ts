@@ -11,12 +11,20 @@ describe('nav registry', () => {
     expect(registeredApps.length).toBeGreaterThan(0);
   });
 
-  // Parity gate — the nine in-repo pillars must render in this exact
-  // order; drift here is an observable app-rail regression.
-  it('renders the nine in-repo pillars in their pinned order', () => {
+  // Parity gate — the bundle-mapped pillars must render in this exact order;
+  // drift here is an observable app-rail regression.
+  //
+  // `purchases` is absent, and its absence is the point rather than a
+  // regression: it is the first pillar the shell mounts through its runtime
+  // loader (POPS-3217), so it reaches the rail from the live registry with
+  // `nav.order: 15` — between finance (10) and media (20), where it has always
+  // sat. `registeredApps` is built from the static bundle map alone, which is
+  // also the registry-outage floor, so this list is what renders when the
+  // registry cannot be reached. `src/app/registry-walk.test.ts` asserts the
+  // wire position it takes when it can.
+  it('renders the bundle-mapped pillars in their pinned order', () => {
     expect(registeredApps.map((app) => app.id)).toEqual([
       'finance',
-      'purchases',
       'media',
       'inventory',
       'food',

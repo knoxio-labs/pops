@@ -793,14 +793,32 @@ describe('ManifestPayloadSchema', () => {
       expect(result.success).toBe(true);
     });
 
-    it.each(['/finance', 'finance/bundles', 'not a url', ''])(
-      'rejects a non-URL assetsBaseUrl (%s)',
+    // An in-repo pillar served through the shell's own nginx cannot name an
+    // origin: the same deployment is reached by LAN name, Tailscale name and
+    // localhost, and an absolute URL would be right on one of them.
+    it.each(['/purchases-ui/purchases.js', '/finance', '/a/b/c/bundle.js'])(
+      'accepts a root-relative assetsBaseUrl (%s)',
       (assetsBaseUrl) => {
         const m = { ...validManifest(), assetsBaseUrl };
         const result = ManifestPayloadSchema.safeParse(m);
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
       }
     );
+
+    it.each([
+      'finance/bundles',
+      'not a url',
+      '',
+      // Protocol-relative inherits the page's scheme and the given host, which
+      // is an off-origin fetch wearing the shape of a relative path.
+      '//evil.example.com/bundle.js',
+      'ftp://example.com/bundle.js',
+      'javascript:alert(1)',
+    ])('rejects an assetsBaseUrl that is neither (%s)', (assetsBaseUrl) => {
+      const m = { ...validManifest(), assetsBaseUrl };
+      const result = ManifestPayloadSchema.safeParse(m);
+      expect(result.success).toBe(false);
+    });
   });
 
   describe('captureOverlay dimension (PRD-246 US-01)', () => {

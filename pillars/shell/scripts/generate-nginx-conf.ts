@@ -57,7 +57,16 @@ import { parseCliArgs, type CliOptions } from './nginx-cli-args.js';
 import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.js';
 import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.js';
 import { NGINX_CONF_TAIL } from './nginx-conf-tail.js';
-import { NGINX_CONF_HEAD, NGINX_CONF_REST_INTRO } from './nginx-conf-template.js';
+import {
+  NGINX_CONF_HEAD,
+  NGINX_CONF_REST_INTRO,
+  NGINX_CONF_UI_INTRO,
+} from './nginx-conf-template.js';
+import {
+  renderPillarRestBlockFromUpstream,
+  renderPillarUiBlock,
+  type PillarUpstream,
+} from './nginx-pillar-blocks.js';
 import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.js';
 
 /**
@@ -127,12 +136,7 @@ export const PILLAR_RENDER_ORDER: readonly BuildPillarId[] = [
 ];
 
 export { DEFAULT_REGISTRY_URL };
-
-export interface PillarUpstream {
-  readonly pillarId: PillarId;
-  readonly host: string;
-  readonly port: number;
-}
+export type { PillarUpstream };
 
 export function assertRenderOrderCoversAllPillars(): void {
   const ordered = new Set<string>(PILLAR_RENDER_ORDER);
@@ -152,31 +156,9 @@ export function assertRenderOrderCoversAllPillars(): void {
   }
 }
 
-function nginxVarName(pillarId: PillarId): string {
-  return pillarId.replace(/-/g, '_');
-}
-
 function upstreamForId(id: BuildPillarId): PillarUpstream {
   const upstream = PILLAR_UPSTREAMS[id];
   return { pillarId: id, host: upstream.host, port: upstream.port };
-}
-
-/**
- * REST surface dispatcher (`/<pillar>-api/`) for one pillar. Mirrors the
- * media block byte-for-byte: strip the `/<pillar>-api` prefix down to
- * `/` so the pillar's own router sees its natural paths, then proxy to
- * the variable-form upstream and inherit the shared proxy directives.
- */
-function renderPillarRestBlockFromUpstream(upstream: PillarUpstream): string {
-  const varName = nginxVarName(upstream.pillarId);
-  return [
-    `    location /${upstream.pillarId}-api/ {`,
-    `        set $${varName}_api_upstream http://${upstream.host}:${upstream.port};`,
-    `        rewrite ^/${upstream.pillarId}-api/(.*)$ /$1 break;`,
-    `        proxy_pass $${varName}_api_upstream;`,
-    `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
-    `    }`,
-  ].join('\n');
 }
 
 function renderPillarRestBlock(id: BuildPillarId): string {
@@ -190,7 +172,8 @@ function renderPillarRestBlock(id: BuildPillarId): string {
  */
 export function renderNginxConf(order: readonly BuildPillarId[] = PILLAR_RENDER_ORDER): string {
   const restBlocks = order.map(renderPillarRestBlock).join('\n\n');
-  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
+  const uiBlocks = order.map((id) => renderPillarUiBlock(upstreamForId(id))).join('\n\n');
+  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
 }
 
 /**
@@ -215,7 +198,8 @@ export function renderNginxConfFromUpstreams(upstreams: readonly PillarUpstream[
     return `${NGINX_CONF_HEAD}\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
   }
   const restBlocks = rendered.map(renderPillarRestBlockFromUpstream).join('\n\n');
-  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
+  const uiBlocks = rendered.map(renderPillarUiBlock).join('\n\n');
+  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
 }
 
 /**

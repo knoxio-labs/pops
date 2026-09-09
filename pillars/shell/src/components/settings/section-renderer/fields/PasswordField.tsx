@@ -1,9 +1,9 @@
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, Input } from '@pops/ui';
+import { Button, Input, fieldLabelDescribedBy } from '@pops/ui';
 
-import { EnvLabel, FieldWrapper } from '../FieldWrapper';
+import { EnvLabel, FieldWrapper, settingsFieldId } from '../FieldWrapper';
 import { TestActionIcon } from '../TestActionIcon';
 import { useTestAction } from '../useTestAction';
 
@@ -66,6 +66,10 @@ export function PasswordField({
           disabled={saving}
           aria-invalid={!!validationError || undefined}
           aria-required={field.validation?.required || undefined}
+          aria-describedby={fieldLabelDescribedBy(settingsFieldId(field), {
+            error: validationError,
+            description: field.description,
+          })}
           className="flex-1"
         />
         <Button variant="outline" size="sm" onClick={() => setRevealed((r) => !r)} type="button">

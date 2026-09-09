@@ -25,6 +25,12 @@ export function InlineInput({ defaultValue, onSave, onCancel, placeholder }: Inl
     }
   };
 
+  // Deliberately a raw <input>, not the kit `TextInput` (which has an
+  // `underline` variant for this exact border style): TextInput's container
+  // enforces a fixed min height (h-9 at its smallest) and horizontal padding
+  // meant for standalone form fields, which would grow this row past the
+  // tree's compact line-height and misalign it against the sibling
+  // chevron/folder icons it swaps in for. See POPS-3201.
   return (
     <input
       ref={inputRef}

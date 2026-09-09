@@ -642,6 +642,32 @@ services:
       timeout: 5s
       retries: 3
 
+  # The purchases UI bundle (pillars/purchases/app) — a static nginx image
+  # serving one ES module and its chunks, behind the shell's `/purchases-ui/`
+  # location block.
+  #
+  # The container name is what the shell's generated nginx resolves: its UI
+  # blocks are emitted from the convention `<pillar>-ui:80` rather than from a
+  # list of which pillars have a UI, so the network alias below is the whole
+  # of the wiring.
+  purchases-ui:
+    build:
+      context: ..
+      dockerfile: pillars/purchases/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-purchases-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Design playground (pillars/design) — static nginx image behind the
   # shell's `/design/` location block.
   pops-design:
