@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 interface Props {
   open: boolean;
@@ -43,12 +43,11 @@ export function RecipeArchiveDialog({
         <p className="mt-2 text-sm text-muted-foreground">{t('recipes.detail.archive.body')}</p>
         <label className="mt-4 block text-sm">
           {t('recipes.detail.archive.confirmLabel')}
-          <input
-            type="text"
+          <TextInput
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={t('recipes.detail.archive.confirmPlaceholder')}
-            className="mt-1 block w-full rounded border bg-background px-2 py-1"
+            containerClassName="mt-1"
             aria-label={t('recipes.detail.archive.confirmLabel')}
           />
         </label>

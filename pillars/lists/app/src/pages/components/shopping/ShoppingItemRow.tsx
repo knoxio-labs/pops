@@ -3,6 +3,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@pops/ui';
+
 import { ListItemMenu } from '../../detail/ListItemMenu.js';
 import { ShoppingRowBody } from './ShoppingRowBody.js';
 import { SwipeDeleteAction } from './SwipeDeleteAction.js';
@@ -56,7 +58,7 @@ export function ShoppingItemRow(props: ShoppingItemRowProps): React.ReactElement
       }`}
     >
       <DragHandle sortable={sortable} disabled={props.isDragDisabled} />
-      <Checkbox row={props.row} isChecked={isChecked} onToggleChecked={props.onToggleChecked} />
+      <RowCheckbox row={props.row} isChecked={isChecked} onToggleChecked={props.onToggleChecked} />
       <ShoppingRowBody row={props.row} isChecked={isChecked} edit={edit} onLabelKey={onLabelKey} />
       <RowTrailing
         canMoveUp={props.canMoveUp}
@@ -97,7 +99,7 @@ function DragHandle({
   );
 }
 
-function Checkbox({
+function RowCheckbox({
   row,
   isChecked,
   onToggleChecked,
@@ -108,10 +110,9 @@ function Checkbox({
 }) {
   const { t } = useTranslation('lists');
   return (
-    <input
-      type="checkbox"
+    <Checkbox
       checked={isChecked}
-      onChange={() => onToggleChecked(row.id, isChecked)}
+      onCheckedChange={() => onToggleChecked(row.id, isChecked)}
       className="h-8 w-8 cursor-pointer"
       aria-label={t('shopping.item.checkbox', { label: row.label })}
     />

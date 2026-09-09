@@ -7,7 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 import { gliaActionsDecide, gliaActionsList } from '../cerebrum-api';
 import { unwrap } from '../cerebrum-api-helpers';
@@ -98,12 +98,11 @@ function ProposalCard({ action, note, onNoteChange, onDecide, isPending }: Propo
         <TypeBadge type={action.actionType} />
       </div>
       <div className="text-xs text-muted-foreground">Affects: {action.affectedIds.join(', ')}</div>
-      <input
-        type="text"
+      <TextInput
         placeholder="Optional note..."
+        aria-label="Note for this decision"
         value={note}
         onChange={(e) => onNoteChange(e.target.value)}
-        className="w-full text-sm px-2 py-1 rounded border border-border bg-background"
       />
       <div className="flex gap-2">
         <Button size="sm" onClick={() => onDecide('approve')} disabled={isPending}>
