@@ -298,6 +298,64 @@ describe('SearchResultsPanel', () => {
     expect(second!.className).toContain(' bg-accent');
   });
 
+  describe('listbox ARIA structure', () => {
+    it('owns only group and option roles, not the section header', () => {
+      const sections = [
+        makeSection({
+          domain: 'movies',
+          label: 'Movies',
+          hits: [
+            { uri: 'm/1', score: 1.0, matchField: 'title', matchType: 'exact', data: {} },
+            { uri: 'm/2', score: 0.8, matchField: 'title', matchType: 'prefix', data: {} },
+          ],
+          totalCount: 2,
+        }),
+      ];
+      render(
+        <SearchResultsPanel
+          sections={sections}
+          query="test"
+          onClose={vi.fn()}
+          listboxId="search-listbox"
+        />
+      );
+
+      const listbox = screen.getByRole('listbox');
+      const group = screen.getByRole('group');
+      expect(listbox).toContainElement(group);
+
+      // The section header must not be an option, and must not sit as a
+      // direct listbox child that isn't a group/option — it lives inside
+      // the group instead.
+      const header = screen.getByTestId('section-header-movies');
+      expect(group).toContainElement(header);
+      expect(header).not.toHaveAttribute('role', 'option');
+      expect(group.parentElement).toBe(listbox);
+      expect(header.parentElement).toBe(group);
+
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(2);
+      for (const option of options) {
+        expect(group).toContainElement(option);
+      }
+
+      expect(group).toHaveAttribute('aria-labelledby', header.id);
+      expect(header.id).toBeTruthy();
+    });
+
+    // listboxId only supplies the panel's `id` — the listbox/group/option
+    // roles themselves are unconditional, since every caller now wires up
+    // combobox semantics (see SearchInput and MobileSearchOverlay).
+    it('still assigns listbox/group/option roles when listboxId is omitted', () => {
+      const sections = [makeSection()];
+      render(<SearchResultsPanel sections={sections} query="test" onClose={vi.fn()} />);
+
+      expect(screen.getByRole('listbox')).not.toHaveAttribute('id');
+      expect(screen.getByRole('group')).toBeInTheDocument();
+      expect(screen.getByRole('option')).toBeInTheDocument();
+    });
+  });
+
   it('highlights first result when selectedIndex is 0', () => {
     const sections = [
       makeSection({

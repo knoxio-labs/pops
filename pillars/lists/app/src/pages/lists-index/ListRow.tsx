@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 
 import { Badge, formatRelativeTime } from '@pops/ui';
 
-import { ListKindChip } from './ListKindChip.js';
+import { ListKindChip } from '../components/ListKindChip.js';
 
 import type { ReactElement } from 'react';
 

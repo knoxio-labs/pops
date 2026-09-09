@@ -3,11 +3,13 @@ import { type Account } from '@/fixtures/accounts';
 
 import {
   Button,
+  DateInput,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  FieldLabel,
   Label,
   Textarea,
   TextInput,
@@ -36,7 +38,10 @@ export function AddCheckpointDialog({ account }: { account: Account }) {
             placeholder="0.00"
             defaultValue={(account.balance / 100).toFixed(2)}
           />
-          <TextInput label="As of" type="date" defaultValue={today()} />
+          <div className="flex flex-col gap-1.5 w-full">
+            <FieldLabel htmlFor="checkpoint-as-of" label="As of" />
+            <DateInput id="checkpoint-as-of" defaultValue={today()} />
+          </div>
           <div className="space-y-1.5">
             <Label>Note (optional)</Label>
             <Textarea

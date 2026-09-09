@@ -796,12 +796,9 @@
             "content": {
               "application/octet-stream": {
                 "schema": {
-                  "items": {
-                    "format": "int32",
-                    "minimum": 0,
-                    "type": "integer"
-                  },
-                  "type": "array"
+                  "description": "Raw image bytes on the wire — an opaque binary stream, not a JSON array.",
+                  "format": "binary",
+                  "type": "string"
                 }
               }
             },
@@ -840,12 +837,9 @@
           "content": {
             "application/octet-stream": {
               "schema": {
-                "items": {
-                  "format": "int32",
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "type": "array"
+                "description": "Raw image bytes on the wire — an opaque binary stream, not a JSON array.",
+                "format": "binary",
+                "type": "string"
               }
             }
           },
@@ -991,12 +985,9 @@
             "content": {
               "application/octet-stream": {
                 "schema": {
-                  "items": {
-                    "format": "int32",
-                    "minimum": 0,
-                    "type": "integer"
-                  },
-                  "type": "array"
+                  "description": "Raw image bytes on the wire — an opaque binary stream, not a JSON array.",
+                  "format": "binary",
+                  "type": "string"
                 }
               }
             },
@@ -1035,12 +1026,9 @@
           "content": {
             "application/octet-stream": {
               "schema": {
-                "items": {
-                  "format": "int32",
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "type": "array"
+                "description": "Raw image bytes on the wire — an opaque binary stream, not a JSON array.",
+                "format": "binary",
+                "type": "string"
               }
             }
           },

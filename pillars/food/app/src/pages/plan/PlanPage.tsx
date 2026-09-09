@@ -10,7 +10,7 @@
 import { useCallback, useState, type ReactElement } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { Button } from '@pops/ui';
+import { Button, DateInput } from '@pops/ui';
 
 import { AddPlanEntryModal } from './AddPlanEntryModal.js';
 import { addDays, formatLocalDate, formatWeekLabel, toIsoMonday } from './iso-week.js';
@@ -153,9 +153,8 @@ function Header(props: HeaderProps): ReactElement {
       <Button variant="ghost" size="sm" onClick={props.onNext} aria-label="Next week">
         ›
       </Button>
-      <input
-        type="date"
-        className="border rounded px-2 py-1 text-sm"
+      <DateInput
+        size="sm"
         data-testid="week-date-picker"
         value={props.weekStart}
         onChange={(e) => {

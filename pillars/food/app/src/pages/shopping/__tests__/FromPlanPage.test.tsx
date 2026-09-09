@@ -107,6 +107,15 @@ describe('FromPlanPage', () => {
     expect(screen.getByTestId<HTMLInputElement>('from-plan-end').value).toBe('2026-06-14');
   });
 
+  // POPS-3179: a raw `<input type="date">` opts out of `DateInput`'s pinned
+  // `lang="en-AU"`, so the native picker's day/month order silently follows
+  // the browser locale instead of the app's. Regression guard for that.
+  it('pins both date pickers to en-AU regardless of browser locale', () => {
+    renderPage('/food/shopping/from-plan?start=2026-06-08&end=2026-06-14');
+    expect(screen.getByTestId('from-plan-start')).toHaveAttribute('lang', 'en-AU');
+    expect(screen.getByTestId('from-plan-end')).toHaveAttribute('lang', 'en-AU');
+  });
+
   it('renders sections with their item rows', async () => {
     renderPage('/food/shopping/from-plan?start=2026-06-08&end=2026-06-14');
     const sections = await screen.findAllByTestId('from-plan-section');
