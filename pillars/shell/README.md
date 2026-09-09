@@ -140,13 +140,40 @@ deployment. Build the bundle with
 "could not be loaded" placeholder, which is the same degradation a missing
 bundle produces in production.
 
-### What a loader-mounted pillar gives up
+### The floor when the registry is unreachable
 
-`staticFloorEntries()` derives the registry-outage floor from the bundle map, so
-a pillar that leaves the map also leaves the floor. With the registry
-unreachable the shell still boots and every mapped pillar still mounts;
-purchases is simply absent until the registry answers — the same condition under
-which its API is undiscoverable.
+Boot tries three sources, in order, and reports which one it used as
+`BootRegistry.source`:
+
+1. **`registry`** — the live snapshot. The normal path.
+2. **`cached-snapshot`** — the last snapshot that resolved to a usable shell,
+   kept in `localStorage` (`src/app/snapshot-cache.ts`).
+3. **`static-floor`** — the pillars still in the bundle map.
+
+The cache exists because the third source is disappearing. It used to be the
+whole floor: whatever the build had compiled in was what the shell mounted when
+`registry-api` was unreachable. POPS-3215 empties the bundle map one pillar at
+a time, and at the end of it that floor is nothing — the shell would boot to its
+own chrome, an empty rail and the settings page (POPS-3239).
+
+A registry outage is not a pillar outage. `registry-api` can be down or
+mid-restart while `finance-api` and its UI bundle are both being served
+perfectly well, since the shell's own nginx serves `/finance-ui/` either way.
+Losing every pillar's UI to a pillar-_discovery_ problem is a worse trade than
+mounting the set that answered last time.
+
+What is cached is the **wire snapshot**, not the resolved surface: the surface
+holds React components and would not survive `JSON.stringify`, while the
+snapshot is the JSON the registry sent and re-resolves through the same walk. It
+is re-validated against `ManifestPayloadSchema` on every read, because the value
+outlives deploys and anything on the origin can write it.
+
+**It does not expire.** A stale entry advertises a pillar that may have gone,
+and that failure is already contained — the loader wraps every remote page in an
+error boundary, so a bundle that 404s degrades to a placeholder on that pillar
+alone. An expiry has the opposite failure: a machine left off for longer than
+the window boots to the empty shell this exists to prevent. Every successful
+boot overwrites the entry.
 
 ## Overlay mount contract
 

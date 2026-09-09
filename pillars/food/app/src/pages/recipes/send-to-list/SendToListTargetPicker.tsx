@@ -9,10 +9,10 @@
  * The existing radio is disabled when no shopping lists exist; in that
  * case the modal auto-flips to "new" before mounting this component.
  */
-import { type ChangeEvent, type ReactElement } from 'react';
+import { type ChangeEvent, type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Input, Label } from '@pops/ui';
+import { Input, Label, RadioGroup, RadioGroupItem } from '@pops/ui';
 
 import { ListChoiceRow } from './ListChoiceRow.js';
 
@@ -35,17 +35,26 @@ export function SendToListTargetPicker({
   const { t } = useTranslation('food');
   const hasLists = shoppingLists.length > 0;
   const alreadySentSet = new Set(alreadySentToListIds);
+  const groupId = useId();
   return (
     <fieldset className="space-y-3">
       <legend className="sr-only">{t('recipes.detail.sendToList.picker.legend')}</legend>
-      <ExistingChoice
-        form={form}
-        setForm={setForm}
-        shoppingLists={shoppingLists}
-        alreadySentSet={alreadySentSet}
-        hasLists={hasLists}
-      />
-      <NewChoice form={form} setForm={setForm} />
+      <RadioGroup
+        name={groupId}
+        value={form.kind}
+        onValueChange={(kind) => setForm({ ...form, kind: kind === 'new' ? 'new' : 'existing' })}
+        className="space-y-3"
+      >
+        <ExistingChoice
+          form={form}
+          setForm={setForm}
+          shoppingLists={shoppingLists}
+          alreadySentSet={alreadySentSet}
+          hasLists={hasLists}
+          optionId={`${groupId}-existing`}
+        />
+        <NewChoice form={form} setForm={setForm} optionId={`${groupId}-new`} />
+      </RadioGroup>
     </fieldset>
   );
 }
@@ -56,6 +65,7 @@ interface ExistingProps {
   shoppingLists: readonly ShoppingList[];
   alreadySentSet: ReadonlySet<number>;
   hasLists: boolean;
+  optionId: string;
 }
 
 function ExistingChoice({
@@ -64,21 +74,17 @@ function ExistingChoice({
   shoppingLists,
   alreadySentSet,
   hasLists,
+  optionId,
 }: ExistingProps): ReactElement {
   const { t } = useTranslation('food');
   return (
     <div>
-      <label className="flex items-center gap-2 text-sm font-medium">
-        <input
-          type="radio"
-          name="send-target-kind"
-          value="existing"
-          checked={form.kind === 'existing'}
-          onChange={() => setForm({ ...form, kind: 'existing' })}
-          disabled={!hasLists}
-        />
-        {t('recipes.detail.sendToList.picker.existing')}
-      </label>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <RadioGroupItem value="existing" id={optionId} disabled={!hasLists} />
+        <Label htmlFor={optionId} className="cursor-pointer text-sm font-medium">
+          {t('recipes.detail.sendToList.picker.existing')}
+        </Label>
+      </div>
       {hasLists ? (
         <ul className="ml-6 mt-2 max-h-40 space-y-1 overflow-y-auto">
           {shoppingLists.map((list) => (
@@ -103,23 +109,21 @@ function ExistingChoice({
 function NewChoice({
   form,
   setForm,
+  optionId,
 }: {
   form: FormState;
   setForm: (next: FormState) => void;
+  optionId: string;
 }): ReactElement {
   const { t } = useTranslation('food');
   return (
     <div>
-      <label className="flex items-center gap-2 text-sm font-medium">
-        <input
-          type="radio"
-          name="send-target-kind"
-          value="new"
-          checked={form.kind === 'new'}
-          onChange={() => setForm({ ...form, kind: 'new' })}
-        />
-        {t('recipes.detail.sendToList.picker.new')}
-      </label>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <RadioGroupItem value="new" id={optionId} />
+        <Label htmlFor={optionId} className="cursor-pointer text-sm font-medium">
+          {t('recipes.detail.sendToList.picker.new')}
+        </Label>
+      </div>
       <div className="ml-6 mt-2">
         <Label htmlFor="send-to-list-new-name" className="text-xs text-muted-foreground">
           {t('recipes.detail.sendToList.picker.newName')}

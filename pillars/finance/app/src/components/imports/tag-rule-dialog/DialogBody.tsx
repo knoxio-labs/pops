@@ -1,4 +1,4 @@
-import { Checkbox, Input, Label, Textarea } from '@pops/ui';
+import { Checkbox, Input, Label, Select, Textarea } from '@pops/ui';
 
 import { describeTag } from '../../../lib/tags';
 
@@ -27,16 +27,16 @@ export function FormFields(props: FormFieldsProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="tr-match">Match type</Label>
-        <select
+        <Select
           id="tr-match"
-          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
           value={props.matchType}
           onChange={(e) => props.setMatchType(e.target.value as 'exact' | 'contains' | 'regex')}
-        >
-          <option value="contains">Contains</option>
-          <option value="exact">Exact</option>
-          <option value="regex">Regex</option>
-        </select>
+          options={[
+            { value: 'contains', label: 'Contains' },
+            { value: 'exact', label: 'Exact' },
+            { value: 'regex', label: 'Regex' },
+          ]}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="tr-tags">Tags (comma-separated)</Label>

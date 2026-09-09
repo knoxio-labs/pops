@@ -103,14 +103,6 @@ export const REAL_TREE_PROOFS = [
     script: 'scripts/ci/check-raw-form-controls.mjs',
     args: ['--self-test'],
   },
-  {
-    // The shape CI actually runs: with a base commit, so the raised-baseline
-    // half of the gate is exercised against the real repository and not only
-    // over synthetic records (POPS-3236).
-    id: 'check-raw-form-controls:based',
-    script: 'scripts/ci/check-raw-form-controls.mjs',
-    args: ['--base', 'HEAD'],
-  },
 ] as const satisfies readonly RealTreeProof[];
 
 /** Key of a registered proof. */

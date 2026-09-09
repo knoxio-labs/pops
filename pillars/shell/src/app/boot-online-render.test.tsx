@@ -125,14 +125,33 @@ describe('shell online boot → render (registry-driven branch)', () => {
     expect(rail).toBeInTheDocument();
     expect(screen.getByTestId('rail-media')).toBeInTheDocument();
     expect(screen.getByTestId('rail-weather')).toBeInTheDocument();
-    // Wire nav.order keeps the rail ordered (finance=10 in-repo < weather=35).
+    // Wire nav.order keeps the rail ordered (media=20 in-repo < weather=35).
     const ids = screen.getAllByRole('listitem').map((li) => li.textContent);
     expect(ids.indexOf('media')).toBeLessThan(ids.indexOf('weather'));
   });
 
+  /**
+   * An explicitly empty store, because since POPS-3239 the floor is the last
+   * good snapshot when there is one. Left ambient this would read whatever the
+   * test above cached — a floor nobody chose, and one that happens to contain
+   * the external pillar this asserts is absent.
+   */
+  function noCache() {
+    let value: string | null = null;
+    return {
+      getItem: () => value,
+      setItem: (_k: string, next: string) => {
+        value = next;
+      },
+      removeItem: () => {
+        value = null;
+      },
+    };
+  }
+
   it('renders the static floor (never blank) when the boot fetch fails', async () => {
     const fetchStub = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
-    const bootRegistry = await fetchBootRegistry({ fetch: fetchStub });
+    const bootRegistry = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(bootRegistry.source).toBe('static-floor');
 
     renderRail(bootRegistry);
@@ -141,5 +160,31 @@ describe('shell online boot → render (registry-driven branch)', () => {
     await waitFor(() => expect(screen.getByTestId('rail-media')).toBeInTheDocument());
     expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('rail-weather')).not.toBeInTheDocument();
+  });
+
+  /**
+   * The floor the shell will actually have once POPS-3215 has emptied the
+   * bundle map: the set that answered last time, rendered.
+   *
+   * `weather` is the point. It is an external pillar with no bundle-map entry,
+   * so the static floor can never produce it — its presence on the rail after
+   * a dead fetch is proof the cache drove the boot rather than the map.
+   */
+  it('renders the last good snapshot when the registry has gone away', async () => {
+    const store = noCache();
+    const goodFetch = vi.fn(() =>
+      Promise.resolve(snapshotResponse([wireEntry('media'), EXTERNAL_WIRE]))
+    );
+    const first = await fetchBootRegistry({ fetch: goodFetch, store });
+    expect(first.source).toBe('registry');
+
+    const deadFetch = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
+    const offline = await fetchBootRegistry({ fetch: deadFetch, store });
+    expect(offline.source).toBe('cached-snapshot');
+
+    renderRail(offline);
+
+    await waitFor(() => expect(screen.getByTestId('rail-media')).toBeInTheDocument());
+    expect(screen.getByTestId('rail-weather')).toBeInTheDocument();
   });
 });

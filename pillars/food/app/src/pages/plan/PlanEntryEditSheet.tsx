@@ -12,7 +12,7 @@ import { Check, Trash2 } from 'lucide-react';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 
-import { Button, NumberInput } from '@pops/ui';
+import { Button, NumberInput, Textarea } from '@pops/ui';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { planWeekView } from '../../food-api/index.js';
@@ -91,7 +91,7 @@ interface EditableBodyProps {
 }
 
 function EditableBody({ entry, onSaved, onDeleted }: EditableBodyProps): ReactElement {
-  const [servings, setServings] = useState(entry.plannedServings);
+  const [servings, setServings] = useState<number | ''>(entry.plannedServings);
   const [notes, setNotes] = useState(entry.notes ?? '');
   useEffect(() => {
     setServings(entry.plannedServings);
@@ -114,9 +114,12 @@ function EditableBody({ entry, onSaved, onDeleted }: EditableBodyProps): ReactEl
       <EditButtons
         recipeSlug={entry.recipeSlug}
         entryId={entry.id}
-        onSave={() => edit.save(servings, notes)}
+        onSave={() => {
+          if (servings !== '') edit.save(servings, notes);
+        }}
         onDelete={edit.remove}
         isSaving={edit.isSaving}
+        isSaveDisabled={servings === ''}
         isDeleting={edit.isDeleting}
       />
     </div>
@@ -124,8 +127,8 @@ function EditableBody({ entry, onSaved, onDeleted }: EditableBodyProps): ReactEl
 }
 
 interface EditableFieldsProps {
-  servings: number;
-  setServings: (n: number) => void;
+  servings: number | '';
+  setServings: (n: number | '') => void;
   notes: string;
   setNotes: (s: string) => void;
 }
@@ -142,17 +145,17 @@ function EditableFields(props: EditableFieldsProps): ReactElement {
           data-testid="edit-servings"
           min={1}
           value={props.servings}
-          onChange={(e) => props.setServings(Math.max(1, Number(e.target.value)))}
+          onChange={(e) => props.setServings(e.target.value === '' ? '' : Number(e.target.value))}
         />
       </div>
       <div>
         <label className="block text-sm font-medium mb-1" htmlFor="edit-notes">
           Notes
         </label>
-        <textarea
+        <Textarea
           id="edit-notes"
           data-testid="edit-notes"
-          className="w-full border rounded px-2 py-1 text-sm h-24"
+          className="h-24"
           value={props.notes}
           onChange={(e) => props.setNotes(e.target.value)}
           maxLength={1000}
@@ -168,6 +171,7 @@ interface EditButtonsProps {
   onSave: () => void;
   onDelete: () => void;
   isSaving: boolean;
+  isSaveDisabled: boolean;
   isDeleting: boolean;
 }
 
@@ -177,7 +181,12 @@ function EditButtons(props: EditButtonsProps): ReactElement {
       <Button asChild data-testid="mark-cooked">
         <Link to={`/food/recipes/${props.recipeSlug}?cook=${props.entryId}`}>Mark cooked</Link>
       </Button>
-      <Button onClick={props.onSave} variant="outline" disabled={props.isSaving}>
+      <Button
+        onClick={props.onSave}
+        variant="outline"
+        disabled={props.isSaving || props.isSaveDisabled}
+        data-testid="save-plan-entry"
+      >
         <Check className="h-4 w-4 mr-1.5" /> Save changes
       </Button>
       <Button
