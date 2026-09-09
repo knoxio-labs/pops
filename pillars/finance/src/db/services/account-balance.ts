@@ -1,5 +1,5 @@
 /**
- * What an account holds (POPS-2879, ADR-051).
+ * What an account holds (POPS-2879, finance ADR-002).
  *
  * One function is the truth about a balance and everything else reads it: the
  * accounts grid, the account page, the loan repayment split, the merge

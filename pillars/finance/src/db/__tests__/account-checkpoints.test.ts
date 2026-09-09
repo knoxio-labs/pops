@@ -1,6 +1,6 @@
 /**
  * Invariant tests for the account-checkpoint service against an in-memory
- * SQLite carrying the migrated finance schema (POPS-2878, ADR-051).
+ * SQLite carrying the migrated finance schema (POPS-2878, finance ADR-002).
  *
  * Three things are only true because of SQL, and are checked through it: the
  * `ON DELETE CASCADE` this table alone carries, the PARTIAL unique index that

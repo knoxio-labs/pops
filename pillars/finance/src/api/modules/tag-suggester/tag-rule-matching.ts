@@ -68,7 +68,7 @@ export interface TagRuleMatchable {
  */
 export interface InMemoryTagRule extends TagRuleMatchable {
   tags: string[];
-  /** Audit-only now (ADR-053/POPS-3130): carried for display and the reinforcement step, never matching. */
+  /** Audit-only now (finance ADR-004/POPS-3130): carried for display and the reinforcement step, never matching. */
   confidence: number;
 }
 

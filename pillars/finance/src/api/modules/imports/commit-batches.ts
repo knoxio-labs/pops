@@ -1,6 +1,6 @@
 /**
  * Record what a commit wrote, per account, as `import_batches` rows
- * (POPS-2916, ADR-052).
+ * (POPS-2916, finance ADR-003).
  *
  * Runs inside the commit's SQLite transaction after every row and checkpoint
  * has landed, so a batch counts rows that are actually there and can name the

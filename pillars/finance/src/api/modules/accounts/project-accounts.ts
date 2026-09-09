@@ -1,7 +1,7 @@
 /**
  * Project account rows to their wire shape, resolving the things a row does
  * not carry: the contact display name (live from contacts, POPS-2771), the
- * checkpoint-anchored balance (ADR-051), the import status (POPS-2917), and
+ * checkpoint-anchored balance (finance ADR-002), the import status (POPS-2917), and
  * the transaction count (POPS-2924).
  *
  * All four are resolved for the WHOLE set at once. `balancesFor` costs three

@@ -7,7 +7,7 @@
  *   - `engramIndex` / `engramScopes` / `engramTags` / `engramLinks` —
  *     atomic memory units + their graph edges.
  *   - `gliaActions` / `gliaTrustState` — autonomous-action proposals +
- *     per-type trust graduation state (ADR-021).
+ *     per-type trust graduation state (cerebrum ADR-004).
  *   - `conversations` / `messages` / `conversationContext` —
  *     chat-with-cerebrum sessions, append-only message stream, and the
  *     conversation → engram junction table.

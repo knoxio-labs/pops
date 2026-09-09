@@ -1,5 +1,5 @@
 /**
- * Handlers for the `checkpoints.*` sub-router (POPS-2880, ADR-051).
+ * Handlers for the `checkpoints.*` sub-router (POPS-2880, finance ADR-002).
  *
  * Three refusals live here rather than in the service, because each is about
  * what a PERSON is allowed to assert rather than what the table can hold:

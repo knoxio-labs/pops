@@ -57,6 +57,13 @@ function SlotNameCell(props: {
   onCommit: () => void;
 }): ReactElement {
   if (props.editing) {
+    // Deliberately a raw <input>, not the kit `TextInput`: the row is
+    // `items-center ... px-2 py-1` around a `text-xs` order badge, so it sits
+    // near 28px, while TextInput's smallest container variant is `h-9` inside
+    // a hardcoded `flex flex-col gap-1.5 w-full` wrapper with no class escape
+    // hatch. Adopting it would grow the row and misalign the editing state
+    // against the non-editing one. Allowlisted in ADR-051 via POPS-3260, the
+    // same exception inventory's location-tree rename carries (POPS-3201).
     return (
       <input
         className="flex-1 border rounded px-1 text-sm"

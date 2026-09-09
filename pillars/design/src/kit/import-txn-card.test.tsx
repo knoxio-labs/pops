@@ -39,7 +39,7 @@ describe('ruleMatchedTitle', () => {
     expect(ruleMatchedTitle(undefined)).toBe('Rule matched');
   });
 
-  it('lists the pattern and match type, never a confidence, when provenance is present (ADR-053/POPS-3131)', () => {
+  it('lists the pattern and match type, never a confidence, when provenance is present (finance ADR-004/POPS-3131)', () => {
     const title = ruleMatchedTitle({
       pattern: 'WOOLWORTHS',
       matchType: 'contains',

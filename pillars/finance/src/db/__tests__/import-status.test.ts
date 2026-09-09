@@ -1,5 +1,5 @@
 /**
- * Import status derivation against the migrated schema (POPS-2917, ADR-052):
+ * Import status derivation against the migrated schema (POPS-2917, finance ADR-003):
  * cadence from batch gaps, the span from every transaction rather than the
  * last batch, and which source a status names.
  */

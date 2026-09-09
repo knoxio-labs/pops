@@ -3,7 +3,7 @@
  * matching the batch's `variant_id`. Ordered by `last_cooked_at DESC`
  * (NULLS LAST) then by recipe slug. The variant match is deliberately
  * not prep-aware: prep- and substitution-aware matching is the solver's job
- * (`pillars/food/src/api/modules/substitutions`, ADR-024), and pulling it in
+ * (`pillars/food/src/api/modules/substitutions`, food ADR-003), and pulling it in
  * here would make a fridge listing pay for a graph walk it does not need.
  *
  * `recipeNeedsQty` is summed across matching `recipe_lines` whose
