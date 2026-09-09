@@ -94,8 +94,8 @@ export function resolveCaptureOverlay(
 }
 
 /**
- * The head of the ranked list, resolved against the workspace bundle
- * map. Returns `null` (and logs a structured warning) when no manifest
+ * The head of the ranked list, resolved against the given bundle map.
+ * Returns `null` (and logs a structured warning) when no manifest
  * contributes a `captureOverlay` — the modal renders the empty-state
  * surface in that case.
  *
@@ -144,8 +144,10 @@ export function warnOnDuplicateHotkeys(ranked: readonly RankedCaptureOverlay[]):
  * onto `frontend.captureOverlay`, resolved against the workspace bundle
  * map. The default consumer of the helpers above.
  */
-export function activeCaptureOverlay(): ActiveCaptureOverlay | null {
-  const manifests = installedFrontendManifests();
+export function activeCaptureOverlay(
+  manifests: readonly FrontendManifest[] = installedFrontendManifests(),
+  bundleMap: Readonly<Record<string, BundleEntry>> = WORKSPACE_BUNDLE_MAP
+): ActiveCaptureOverlay | null {
   const ranked = rankCaptureOverlays(manifests);
   warnOnDuplicateHotkeys(ranked);
   const head = ranked[0];
@@ -153,5 +155,5 @@ export function activeCaptureOverlay(): ActiveCaptureOverlay | null {
     console.warn('[capture-registry] no capture overlay registered');
     return null;
   }
-  return resolveCaptureOverlay(head, WORKSPACE_BUNDLE_MAP);
+  return resolveCaptureOverlay(head, bundleMap);
 }

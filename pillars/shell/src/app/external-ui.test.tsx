@@ -446,3 +446,125 @@ describe('external pillar UI — nested pages', () => {
     expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Surfaces beyond pages (POPS-3266).
+ *
+ * A pillar can contribute a capture overlay and settings widgets as well as
+ * routes, and both are resolved by looking a slot up in a `BundleEntry`. The
+ * loader populated neither, so those surfaces vanished the moment their pillar
+ * left the static bundle map — quietly, since the capture modal falls back to
+ * an empty state and a settings group simply renders without its panel.
+ */
+describe('synthesizeExternalBundleEntry — capture overlay and settings widgets', () => {
+  const OVERLAY_DESCRIPTOR = {
+    bundleSlot: 'quick-add',
+    order: 10,
+    labelKey: 'acme.capture.label',
+  } as const;
+
+  function overlayDescriptor(overrides: Partial<RemoteUiDescriptor> = {}): RemoteUiDescriptor {
+    return descriptor({ captureOverlay: OVERLAY_DESCRIPTOR, ...overrides });
+  }
+
+  it('carries no overlay record when the pillar declares none', () => {
+    const entry = synthesizeExternalBundleEntry(descriptor());
+    expect(entry?.captureOverlayBundles).toBeUndefined();
+    expect(entry?.settingsWidgetBundles).toBeUndefined();
+  });
+
+  it('exposes the declared overlay slot on the synthesized entry', () => {
+    const entry = synthesizeExternalBundleEntry(overlayDescriptor());
+    expect(Object.keys(entry?.captureOverlayBundles ?? {})).toEqual(['quick-add']);
+  });
+
+  // The registry reads the descriptor off the manifest, so it has to be there
+  // as well as in the bundle record — one without the other resolves to null.
+  it('puts the descriptor on the manifest the registry ranks', () => {
+    const entry = synthesizeExternalBundleEntry(overlayDescriptor());
+    expect(entry?.manifest.frontend?.captureOverlay).toEqual(OVERLAY_DESCRIPTOR);
+  });
+
+  it('does not import the bundle while synthesizing the overlay', () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(VALID_BUNDLE));
+    synthesizeExternalBundleEntry(overlayDescriptor(), importer);
+    expect(importer).not.toHaveBeenCalled();
+  });
+
+  it('mounts the overlay component from the remote bundle', async () => {
+    const Overlay = () => <div data-testid="overlay-body">overlay</div>;
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({ bundles: { 'quick-add': Overlay } })
+    );
+    const entry = synthesizeExternalBundleEntry(overlayDescriptor(), importer);
+    const Mount = entry?.captureOverlayBundles?.['quick-add']?.Mount;
+    if (Mount === undefined) throw new Error('no Mount for the declared slot');
+
+    render(<Mount onUnsavedChange={() => undefined} />);
+    expect(await screen.findByTestId('overlay-body')).toBeInTheDocument();
+  });
+
+  /**
+   * The claim most likely to break without anyone noticing. A wrapper that
+   * dropped the props would render correctly and only reveal itself when
+   * someone closed the modal mid-edit and lost the draft with no prompt.
+   */
+  it('forwards props to the overlay, so the unsaved signal still reaches the modal', async () => {
+    function Overlay({ onUnsavedChange }: { onUnsavedChange: (next: boolean) => void }) {
+      return (
+        <button type="button" onClick={() => onUnsavedChange(true)}>
+          type something
+        </button>
+      );
+    }
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({ bundles: { 'quick-add': Overlay } })
+    );
+    const entry = synthesizeExternalBundleEntry(overlayDescriptor(), importer);
+    const Mount = entry?.captureOverlayBundles?.['quick-add']?.Mount;
+    if (Mount === undefined) throw new Error('no Mount for the declared slot');
+
+    const onUnsavedChange = vi.fn<(next: boolean) => void>();
+    render(<Mount onUnsavedChange={onUnsavedChange} />);
+    (await screen.findByRole('button', { name: 'type something' })).click();
+    expect(onUnsavedChange).toHaveBeenCalledWith(true);
+  });
+
+  // Same containment as a page: the modal shows the placeholder rather than
+  // taking the shell down with it.
+  it('degrades to the placeholder when the bundle lacks the overlay slot', async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve({ bundles: {} }));
+    const entry = synthesizeExternalBundleEntry(overlayDescriptor(), importer);
+    const Mount = entry?.captureOverlayBundles?.['quick-add']?.Mount;
+    if (Mount === undefined) throw new Error('no Mount for the declared slot');
+
+    render(<Mount onUnsavedChange={() => undefined} />);
+    expect(await screen.findByTestId('external-pillar-load-error')).toBeInTheDocument();
+  });
+
+  it('exposes each declared settings-widget slot', () => {
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({ settingsWidgetSlots: ['plex-connect', 'rotation-tuning'] })
+    );
+    expect(Object.keys(entry?.settingsWidgetBundles ?? {}).toSorted()).toEqual([
+      'plex-connect',
+      'rotation-tuning',
+    ]);
+  });
+
+  it('mounts a settings widget from the remote bundle', async () => {
+    const Widget = () => <div data-testid="widget-body">widget</div>;
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({ bundles: { 'plex-connect': Widget } })
+    );
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({ settingsWidgetSlots: ['plex-connect'] }),
+      importer
+    );
+    const Widget_ = entry?.settingsWidgetBundles?.['plex-connect'];
+    if (Widget_ === undefined) throw new Error('no component for the declared widget slot');
+
+    render(<Widget_ />);
+    expect(await screen.findByTestId('widget-body')).toBeInTheDocument();
+  });
+});

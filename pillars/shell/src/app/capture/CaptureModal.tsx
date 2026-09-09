@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@pops/ui';
 
+import { useBootRegistry } from '../BootRegistryProvider';
 import { activeCaptureOverlay, type ActiveCaptureOverlay } from './capture-registry';
 
 import type { ModuleCaptureOverlayConfig } from '@pops/types';
@@ -67,9 +68,17 @@ function resolveTitle(
 
 export function CaptureModal({ open, onOpenChange, activeOverlayOverride }: CaptureModalProps) {
   const { i18n, t: shellT } = useTranslation('shell');
+  // Both halves come from boot, not from the static bundle map: a pillar
+  // mounted through the runtime loader is absent from that map, and resolving
+  // against it would drop the overlay of every pillar POPS-3215 has moved
+  // (POPS-3266).
+  const { manifests, bundleMap } = useBootRegistry();
   const overlay = useMemo<ActiveCaptureOverlay | null>(
-    () => (activeOverlayOverride !== undefined ? activeOverlayOverride : activeCaptureOverlay()),
-    [activeOverlayOverride]
+    () =>
+      activeOverlayOverride !== undefined
+        ? activeOverlayOverride
+        : activeCaptureOverlay(manifests, bundleMap),
+    [activeOverlayOverride, manifests, bundleMap]
   );
   const [hasUnsaved, setHasUnsaved] = useState(false);
 

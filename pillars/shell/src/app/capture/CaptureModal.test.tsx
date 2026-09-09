@@ -3,14 +3,36 @@ import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
 import i18n from '../../i18n';
+import { BootRegistryProvider } from '../BootRegistryProvider';
 import { CaptureModal } from './CaptureModal';
 
 import type { FC, ReactElement } from 'react';
 
+import type { BootRegistry } from '../boot-snapshot';
 import type { ActiveCaptureOverlay } from './capture-registry';
 
+/**
+ * The modal reads its overlay from boot (POPS-3266), so it needs the provider
+ * even when a test supplies `activeOverlayOverride` — the hook runs either
+ * way. An empty boot registry is right for these: every test here drives the
+ * override, and leaving the registry empty keeps them asserting the modal's
+ * own rendering rather than the resolution behind it, which
+ * `capture-registry.test.ts` covers.
+ */
+const EMPTY_BOOT: BootRegistry = {
+  manifests: [],
+  registeredApps: [],
+  remoteBundleUrls: [],
+  bundleMap: {},
+  source: 'registry',
+};
+
 function withI18n(ui: ReactElement) {
-  return <I18nextProvider i18n={i18n}>{ui}</I18nextProvider>;
+  return (
+    <I18nextProvider i18n={i18n}>
+      <BootRegistryProvider value={EMPTY_BOOT}>{ui}</BootRegistryProvider>
+    </I18nextProvider>
+  );
 }
 
 function syntheticOverlay(props: {
