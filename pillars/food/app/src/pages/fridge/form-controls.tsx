@@ -1,4 +1,4 @@
-import { Label } from '@pops/ui';
+import { Label, Textarea } from '@pops/ui';
 
 /**
  * Small form controls shared by the fridge modals — keeps the modal
@@ -34,6 +34,22 @@ export function FieldRow({
       <span className="text-muted-foreground">{label}</span>
       {children}
     </Label>
+  );
+}
+
+export function NotesField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}): ReactElement {
+  return (
+    <FieldRow label={label}>
+      <Textarea maxLength={500} value={value} onChange={(e) => onChange(e.target.value)} />
+    </FieldRow>
   );
 }
 

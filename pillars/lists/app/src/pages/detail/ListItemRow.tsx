@@ -3,6 +3,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox, TextInput } from '@pops/ui';
+
 import { ListItemMenu } from './ListItemMenu.js';
 
 import type { ListItemRow as ItemRow } from './types.js';
@@ -89,11 +91,10 @@ export function ListItemRow(props: ListItemRowProps): React.ReactElement {
       >
         ⋮⋮
       </button>
-      <input
-        type="checkbox"
+      <Checkbox
         checked={isChecked}
-        onChange={() => props.onToggleChecked(props.row.id, isChecked)}
-        className="mt-1 h-4 w-4 cursor-pointer"
+        onCheckedChange={() => props.onToggleChecked(props.row.id, isChecked)}
+        className="mt-1 cursor-pointer"
         aria-label={t('detail.item.checkbox', { label: props.row.label })}
       />
       <RowBody row={props.row} isChecked={isChecked} edit={edit} />
@@ -133,13 +134,16 @@ function RowBody({
   return (
     <div className="min-w-0 flex-1">
       {edit.editing ? (
-        <input
-          type="text"
+        <TextInput
+          size="sm"
+          // h-8 matches the row's tallest sibling (the 32px menu trigger); the
+          // kit's smallest height, h-9, makes the row grow 4px the moment the
+          // editor opens.
+          containerClassName="h-8"
           value={edit.draft}
           onChange={(e) => edit.setDraft(e.target.value)}
           onBlur={() => void edit.commit()}
           onKeyDown={onLabelKey}
-          className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label={t('detail.item.editLabel')}
           autoFocus
         />
