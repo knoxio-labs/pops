@@ -13,6 +13,7 @@ import {
   DialogTitle,
   Select,
   type SelectOption,
+  Textarea,
 } from '@pops/ui';
 
 import { unwrap } from '../../../food-api-helpers.js';
@@ -144,11 +145,10 @@ function RejectForm({
         <span className="mb-1 block font-medium">
           {t('inbox.inspector.decision.reject.noteLabel')}
         </span>
-        <textarea
+        <Textarea
           value={note}
           onChange={(e) => onNoteChange(e.target.value)}
           rows={3}
-          className="w-full rounded border px-2 py-1"
           data-testid="inspector-reject-note"
         />
       </label>
