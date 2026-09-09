@@ -1,7 +1,11 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Autocomplete, NumberInput, TextInput } from '@pops/ui';
+
 import { SHOPPING_UNIT_SUGGESTIONS } from './unit-suggestions.js';
+
+const UNIT_SUGGESTIONS = SHOPPING_UNIT_SUGGESTIONS.map((value) => ({ label: value, value }));
 
 /**
  * Shopping add form.
@@ -9,8 +13,9 @@ import { SHOPPING_UNIT_SUGGESTIONS } from './unit-suggestions.js';
  * Differences vs the generic `ListItemAddForm`:
  *   - `[qty] [unit] [label]` ordering (qty first — most common
  *     starting point).
- *   - Unit field is backed by a `<datalist>` of common units so the
- *     mobile keyboard surfaces suggestions; free-text entry still works.
+ *   - Unit field is an `Autocomplete` over the common units, so the
+ *     suggestions render the same way on every browser; free-text entry
+ *     still works.
  *   - On submit, focus returns to the qty field for fast multi-item
  *     entry.
  */
@@ -62,8 +67,12 @@ export function ShoppingAddForm(props: ShoppingAddFormProps): React.ReactElement
   };
   const disabled = props.isPending || state.label.trim().length === 0;
   return (
+    // `noValidate`: the kit's NumberInput types `step` as a number, so the qty
+    // field can no longer carry `step="any"`, and a decimal quantity would trip
+    // the browser's step-mismatch check and silently block submission.
     <form
       onSubmit={handleSubmit}
+      noValidate
       className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-3"
     >
       <QtyUnitInputs state={state} setState={setState} qtyRef={qtyRef} t={t} />
@@ -85,31 +94,25 @@ function QtyUnitInputs({
 }) {
   return (
     <>
-      <input
+      <NumberInput
         ref={qtyRef}
-        type="number"
         inputMode="decimal"
-        step="any"
+        showSteppers={false}
+        enableDrag={false}
         value={state.qty}
         onChange={(e) => setState({ ...state, qty: e.target.value })}
         placeholder={t('shopping.add.qty')}
         aria-label={t('shopping.add.qty')}
-        className="w-20 rounded-md border bg-background px-2 py-2 text-sm"
+        containerClassName="w-20"
       />
-      <input
-        type="text"
-        list="shopping-unit-suggestions"
+      <Autocomplete
+        suggestions={UNIT_SUGGESTIONS}
         value={state.unit}
-        onChange={(e) => setState({ ...state, unit: e.target.value })}
+        onChange={(unit) => setState({ ...state, unit })}
         placeholder={t('shopping.add.unit')}
         aria-label={t('shopping.add.unit')}
-        className="w-24 rounded-md border bg-background px-2 py-2 text-sm"
+        className="w-32"
       />
-      <datalist id="shopping-unit-suggestions">
-        {SHOPPING_UNIT_SUGGESTIONS.map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
     </>
   );
 }
@@ -127,14 +130,14 @@ function LabelSubmit({
 }) {
   return (
     <>
-      <input
-        type="text"
-        value={state.label}
-        onChange={(e) => setState({ ...state, label: e.target.value })}
-        placeholder={t('shopping.add.label')}
-        aria-label={t('shopping.add.label')}
-        className="min-w-32 flex-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-      />
+      <div className="min-w-32 flex-1">
+        <TextInput
+          value={state.label}
+          onChange={(e) => setState({ ...state, label: e.target.value })}
+          placeholder={t('shopping.add.label')}
+          aria-label={t('shopping.add.label')}
+        />
+      </div>
       <button
         type="submit"
         disabled={disabled}

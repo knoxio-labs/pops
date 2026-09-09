@@ -245,6 +245,14 @@ describe('pillars/lists/docs/prds/shopping-specialisation — ShoppingDetailCont
     expect(await screen.findByText('From Brownies, Pancakes')).toBeInTheDocument();
   });
 
+  it('keeps the row checkbox at its enlarged 32px tap target', async () => {
+    setListGet({ list: makeList(), items: [makeItem({ label: 'Apples' })] });
+    render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
+    const checkbox = await screen.findByRole('checkbox', { name: /toggle done for apples/i });
+    expect(checkbox.className).toMatch(/(^|\s)h-8(\s|$)/);
+    expect(checkbox.className).toMatch(/(^|\s)w-8(\s|$)/);
+  });
+
   it('submits via ShoppingAddForm with [qty][unit][label] order', async () => {
     setListGet({ list: makeList(), items: [] });
     render(<Wrapper>{mountAt(7, <ListDetailPage />)}</Wrapper>);
