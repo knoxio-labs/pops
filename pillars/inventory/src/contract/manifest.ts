@@ -12,6 +12,9 @@ import type { ModuleManifest } from '@pops/types';
 
 export type { InventoryContract } from './manifest.generated.js';
 
+export { INVENTORY_PAGES } from './pages.js';
+export type { InventoryPageSlot } from './pages.js';
+
 export const inventoryManifest: ModuleManifest = {
   id: 'inventory',
   name: 'Inventory',

@@ -1929,6 +1929,9 @@ importers:
       '@pops/navigation':
         specifier: workspace:*
         version: link:../../../libs/navigation
+      '@pops/pillar-sdk':
+        specifier: workspace:*
+        version: link:../../../libs/sdk
       '@pops/types':
         specifier: workspace:*
         version: link:../../../libs/types
@@ -2008,6 +2011,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.4
         version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.5
+        version: 6.0.5(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.11)(yaml@2.9.0))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
@@ -2017,9 +2023,15 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@1.8.0)
+      tsx:
+        specifier: ^4.23.11
+        version: 4.23.11
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.11)(yaml@2.9.0)
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.11)(yaml@2.9.0))
@@ -2665,9 +2677,6 @@ importers:
       '@pops/app-cerebrum':
         specifier: workspace:*
         version: link:../cerebrum/app
-      '@pops/app-inventory':
-        specifier: workspace:*
-        version: link:../inventory/app
       '@pops/app-lists':
         specifier: workspace:*
         version: link:../lists/app

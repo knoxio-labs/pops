@@ -642,6 +642,26 @@ services:
       timeout: 5s
       retries: 3
 
+  # The inventory UI bundle (pillars/inventory/app) — a static nginx image
+  # behind the shell's `/inventory-ui/` location block.
+  inventory-ui:
+    build:
+      context: ..
+      dockerfile: pillars/inventory/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-inventory-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The food UI bundle (pillars/food/app) — a static nginx image behind the
   # shell's `/food-ui/` location block.
   food-ui:
