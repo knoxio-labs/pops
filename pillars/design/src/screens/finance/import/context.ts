@@ -47,6 +47,12 @@ export const FORMATS: Record<string, ImportFormat> = {
     description: 'Everyday Balance → Export. One row per transaction.',
     extensions: '.csv',
   },
+  'up-live': {
+    id: 'up-live',
+    label: 'Up live feed',
+    description: 'Arrives on its own through the Up webhook. Nothing to upload.',
+    extensions: '—',
+  },
   'generic-csv': {
     id: 'generic-csv',
     label: 'Generic CSV',

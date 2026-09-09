@@ -1,0 +1,8 @@
+name: Pending imports entry point
+question: Does the dashboard list every pending import as its own card, or carry
+  one nudge that opens a pending-imports page?
+status: active
+screen: finance/dashboard
+variants:
+  cards: cards
+  nudge: nudge
