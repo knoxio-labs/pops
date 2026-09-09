@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { ListKindChip } from '../components/ListKindChip.js';
 import { ListDetailMenu } from './ListDetailMenu.js';
-import { ListKindChip } from './ListKindChip.js';
 
 import type { ListRow } from './types.js';
 

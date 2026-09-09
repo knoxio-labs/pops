@@ -5,20 +5,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const entitiesRemoveAvatarMock = vi.hoisted(() => vi.fn());
 const entitiesRerollColourMock = vi.hoisted(() => vi.fn());
-const clientPutMock = vi.hoisted(() => vi.fn());
+const entitiesUploadAvatarMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../contacts-api/index.js', () => ({
   entitiesRemoveAvatar: (...args: unknown[]) => entitiesRemoveAvatarMock(...args),
   entitiesRerollColour: (...args: unknown[]) => entitiesRerollColourMock(...args),
-}));
-
-vi.mock('../../contacts-api/client.gen.js', () => ({
-  client: { put: (...args: unknown[]) => clientPutMock(...args) },
+  entitiesUploadAvatar: (...args: unknown[]) => entitiesUploadAvatarMock(...args),
 }));
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
+
+import { toast } from 'sonner';
 
 import { useEntityAvatarMutations } from './useEntityAvatarMutations';
 
@@ -50,8 +49,15 @@ beforeEach(() => {
 });
 
 describe('useEntityAvatarMutations', () => {
-  it('uploads the raw file bytes via client.put, not the mistyped generated wrapper', async () => {
-    clientPutMock.mockResolvedValue({
+  /**
+   * The body must reach `fetch` as something `BodyInit` accepts. The generated
+   * wrapper passes it through unserialized, so a value the spec once typed as
+   * `Array<number>` would be coerced by `Request` into the string "1,2,3" and
+   * stored as a three-byte "image" (POPS-3091) — hence asserting the File
+   * itself is forwarded, not any array-of-bytes projection of it.
+   */
+  it('hands the File itself to the generated upload wrapper, tagged with its own content type', async () => {
+    entitiesUploadAvatarMock.mockResolvedValue({
       data: { data: apiEntity(), message: 'ok' },
       error: undefined,
     });
@@ -63,24 +69,41 @@ describe('useEntityAvatarMutations', () => {
     const file = new File([new Uint8Array([1, 2, 3])], 'avatar.png', { type: 'image/png' });
     result.current.uploadAvatar('ent-1', file);
 
-    await waitFor(() => expect(clientPutMock).toHaveBeenCalledTimes(1));
-    const call = clientPutMock.mock.calls[0]?.[0];
+    await waitFor(() => expect(entitiesUploadAvatarMock).toHaveBeenCalledTimes(1));
+    const call = entitiesUploadAvatarMock.mock.calls[0]?.[0];
     expect(call).toMatchObject({
-      url: '/entities/{id}/avatar',
       path: { id: 'ent-1' },
-      bodySerializer: null,
       headers: { 'Content-Type': 'image/png' },
     });
-    expect(call.body).toBeInstanceOf(Uint8Array);
-    expect(Array.from(call.body as Uint8Array)).toEqual([1, 2, 3]);
+    expect(call.body).toBe(file);
+    expect(Array.isArray(call.body)).toBe(false);
 
     await waitFor(() =>
       expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ id: 'ent-1' }))
     );
   });
 
+  it('surfaces an upload failure as an error toast rather than a changed entity', async () => {
+    entitiesUploadAvatarMock.mockResolvedValue({
+      data: undefined,
+      error: { message: "Unsupported content type 'image/gif'" },
+      response: { status: 400 } as Response,
+    });
+    const onChanged = vi.fn();
+    const { result } = renderHook(() => useEntityAvatarMutations(onChanged), {
+      wrapper: makeWrapper(),
+    });
+
+    result.current.uploadAvatar('ent-1', new File([], 'a.gif', { type: 'image/gif' }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Unsupported content type 'image/gif'")
+    );
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
   it('normalizes optional contacts fields to null on the entity handed back after upload', async () => {
-    clientPutMock.mockResolvedValue({
+    entitiesUploadAvatarMock.mockResolvedValue({
       data: { data: apiEntity({ abn: undefined, notes: undefined }), message: 'ok' },
       error: undefined,
     });

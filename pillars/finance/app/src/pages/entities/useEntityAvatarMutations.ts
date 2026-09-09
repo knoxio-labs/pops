@@ -3,33 +3,20 @@
  * Split out of `useEntitiesPage`: the dialog needs the freshly-mutated entity
  * back to show the new avatar/colour without closing, a different success
  * shape from the name/type PATCH the list re-fetches for.
- *
- * `entitiesUploadAvatar` (the generated SDK wrapper) is unsafe to call as-is:
- * its `body` type is `Array<number>`, generated from the Rust route's
- * `Vec<u8>` schema, but the wrapper also sets `bodySerializer: null` so
- * whatever `body` value is passed goes straight to `fetch` unmodified — a
- * plain number array is not valid `BodyInit` and gets silently coerced to its
- * comma-joined string form (verified: `new Request(url, { body: [1,2,3] })`
- * sends the bytes of the string "1,2,3", not the three bytes themselves).
- * The fix belongs in the contacts pillar's OpenAPI generation for binary
- * bodies (POPS-3091); until then this calls the underlying `client.put`
- * directly with a real `Uint8Array`, which `RequestOptions.body` types as
- * `unknown` and which `fetch`/`Request` accept correctly.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../contacts-api-helpers.js';
-import { client } from '../../contacts-api/client.gen.js';
-import { entitiesRemoveAvatar, entitiesRerollColour } from '../../contacts-api/index.js';
+import {
+  entitiesRemoveAvatar,
+  entitiesRerollColour,
+  entitiesUploadAvatar,
+} from '../../contacts-api/index.js';
 import { type Entity } from './types';
 
-import type {
-  EntitiesUploadAvatarErrors,
-  EntitiesUploadAvatarResponses,
-  Entity as ContactEntity,
-} from '../../contacts-api/types.gen.js';
+import type { Entity as ContactEntity } from '../../contacts-api/types.gen.js';
 
 const ENTITIES_KEY = ['contacts', 'entities'] as const;
 
@@ -57,14 +44,17 @@ export function toPageEntity(entity: ContactEntity): Omit<Entity, 'transactionCo
   };
 }
 
+/**
+ * The route stores the request's `Content-Type` as the blob's own and rejects
+ * anything outside its image allowlist, so the wrapper's declared
+ * `application/octet-stream` default has to be replaced with the file's real
+ * type — the spec naming a media type the server always refuses is POPS-3244.
+ */
 async function uploadEntityAvatar(entityId: string, file: File) {
-  const body = new Uint8Array(await file.arrayBuffer());
   return unwrap(
-    await client.put<EntitiesUploadAvatarResponses, EntitiesUploadAvatarErrors>({
-      url: '/entities/{id}/avatar',
+    await entitiesUploadAvatar({
       path: { id: entityId },
-      body,
-      bodySerializer: null,
+      body: file,
       headers: { 'Content-Type': file.type },
     })
   );
