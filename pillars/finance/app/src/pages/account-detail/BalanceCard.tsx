@@ -56,7 +56,7 @@ function BalanceTrend({
 /**
  * The account's balance, signed in its own terms: a card that owes reads
  * `-$2,137.55` in red, because nothing negates a balance before showing it
- * (ADR-051).
+ * (finance ADR-002).
  *
  * This is the only thing on the account page that knows checkpoints exist, and
  * it shows their RESULT — an as-of date, a disagreement flag — then links out.

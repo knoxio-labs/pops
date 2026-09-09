@@ -1,4 +1,4 @@
-# ADR-023: Recipe Markdown DSL
+# Food ADR-002: Recipe Markdown DSL
 
 ## Status
 
@@ -12,7 +12,7 @@ Theme 07 (Food) needs a canonical storage format for recipe instructions that:
 2. Encodes structural references — which step uses which ingredient — without ambiguity, so a "cooking mode" UI can highlight ingredients per step and run per-step timers.
 3. Is LLM-friendly for ingest (PRDs 114–117 cover parse → resolve → materialise → cycle-check; Epic 02 PRDs cover the actual LLM extraction calls): a model parsing an Instagram caption or screenshot can emit the format directly, or emit structured JSON that we translate to the format.
 4. Is editable in the pops shell without forcing the user to type complex markup, while still being a flat text file under the hood.
-5. Resolves canonical ingredient references (the chuck → patty → burger model from [ADR-022](./adr-022-unified-recipe-ingredient-model.md)) — a recipe line should bind to a specific `ingredient_id` or `variant_id`, not a free-text string that might mean different things in different recipes.
+5. Resolves canonical ingredient references (the chuck → patty → burger model from [food ADR-001](./adr-001-unified-recipe-ingredient-model.md)) — a recipe line should bind to a specific `ingredient_id` or `variant_id`, not a free-text string that might mean different things in different recipes.
 
 Plain markdown fails (3) and (5): "1 cup of diced onion" is unstructured text. A JSON document fails (1), (2 partially), and (4): humans don't author JSON willingly. A markdown body plus a parallel structured representation doubles the storage and creates sync hazards.
 
@@ -99,7 +99,7 @@ The canonical file extension for serialised DSL content is `.recipe`. The extens
 - Import: a file ending in `.recipe` is dispatched to the DSL parser without further sniffing.
 - Editor hinting: pops-shell's DSL editor (and any external editor with appropriate language support) keys off the extension to load the DSL grammar / autocomplete.
 
-If the storage model is later promoted to "recipes are files on disk" (the Cerebrum-engram pattern per [ADR-019](../../../cerebrum/docs/architecture/adr-019-engram-storage-model.md)), the extension is already in place and the SQLite tables become a regeneratable index. That promotion is a separate ADR; this ADR commits only to the extension convention.
+If the storage model is later promoted to "recipes are files on disk" (the Cerebrum-engram pattern per [cerebrum ADR-002](../../../cerebrum/docs/architecture/adr-002-engram-storage-model.md)), the extension is already in place and the SQLite tables become a regeneratable index. That promotion is a separate ADR; this ADR commits only to the extension convention.
 
 ### Renderer
 
@@ -112,7 +112,7 @@ The renderer is out of scope for this ADR (lives in `recipe-model` + an Epic 01 
 - One canonical storage format; no sync-between-shapes risk.
 - Structural refs (`@N` / `@slug`) unblock per-step timers, ingredient highlighting in cooking mode, and dependency analysis ("which recipes use this ingredient?").
 - LLM ingest path can emit named-arg form (easier to generate correctly); human author path uses compact form. Both compile to the same tuple.
-- Recipe-as-ingredient (ADR-022) works naturally: `@ingredient(3, smash-patty, 4:count)` is one syntax for both raw ingredients and recipe outputs — the resolver figures out which.
+- Recipe-as-ingredient (food ADR-001) works naturally: `@ingredient(3, smash-patty, 4:count)` is one syntax for both raw ingredients and recipe outputs — the resolver figures out which.
 - DSL is a text file. Backups, diffs, version history, git all work the same as for markdown.
 - The grammar is small enough to ship a hand-rolled parser without a parser-generator.
 
@@ -132,7 +132,7 @@ The renderer is out of scope for this ADR (lives in `recipe-model` + an Epic 01 
 
 ## References
 
-- [ADR-022](./adr-022-unified-recipe-ingredient-model.md) — recipes-as-ingredients (the basis for `@ingredient(N, recipe-slug, qty:unit)` syntax)
+- [food ADR-001](./adr-001-unified-recipe-ingredient-model.md) — recipes-as-ingredients (the basis for `@ingredient(N, recipe-slug, qty:unit)` syntax)
 - [`ingredient-model`](../prds/ingredient-model.md) — slug_registry table (amended as part of this ADR)
 - `recipe-model` — Recipe & Version Model (stores `body_dsl`, materializes `recipe_lines` and `recipe_steps`)
 - Future PRD in Epic 01 — DSL-aware editor with autocomplete and chip rendering

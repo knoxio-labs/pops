@@ -1,6 +1,6 @@
 /**
  * Wire schemas for what an account knows about its own imports (POPS-2917,
- * ADR-052): the batches that fed it, the config that says how it is fed, and
+ * finance ADR-003): the batches that fed it, the config that says how it is fed, and
  * the one-line status every accounts response carries.
  */
 import { z } from 'zod';

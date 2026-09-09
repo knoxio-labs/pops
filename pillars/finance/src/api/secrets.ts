@@ -1,5 +1,5 @@
 /**
- * Named secrets for provider tokens (POPS-30, ADR-052).
+ * Named secrets for provider tokens (POPS-30, finance ADR-003).
  *
  * `account_import_config.secret_ref` stores the NAME of a secret, never its
  * value. The value is resolved at use from `<name>_FILE` (a Docker secret

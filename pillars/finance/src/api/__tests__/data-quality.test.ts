@@ -1,5 +1,5 @@
 /**
- * Integration tests for `GET /data-quality/nudges` (POPS-2881, ADR-051).
+ * Integration tests for `GET /data-quality/nudges` (POPS-2881, finance ADR-002).
  *
  * The rule under test lives at the route tier because it composes two
  * services — `listAccounts` and `checkpointDelta` — in a way no single

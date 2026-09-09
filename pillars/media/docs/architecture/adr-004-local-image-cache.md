@@ -1,4 +1,4 @@
-# ADR-011: Local Image Caching for Media
+# Media ADR-004: Local Image Caching for Media
 
 ## Status
 

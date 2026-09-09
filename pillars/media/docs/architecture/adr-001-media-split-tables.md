@@ -1,4 +1,4 @@
-# ADR-008: Split Tables for Media Schema
+# Media ADR-001: Split Tables for Media Schema
 
 ## Status
 

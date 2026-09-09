@@ -7,9 +7,9 @@ import { accounts } from './accounts.js';
 /**
  * A balance that was true for an account on a date, read off something outside
  * the ledger — the banking app, a statement, a count of the wallet (POPS-2750,
- * ADR-051).
+ * finance ADR-002).
  *
- * This table is what makes a balance a balance rather than net flow. ADR-050
+ * This table is what makes a balance a balance rather than net flow. finance ADR-001
  * held that "an account's balance is always the sum of the transactions it
  * carries"; that is only true of an account whose history is complete from
  * inception, which none of ours are. A balance is the nearest checkpoint plus
