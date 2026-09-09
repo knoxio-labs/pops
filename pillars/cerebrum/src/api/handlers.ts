@@ -38,7 +38,7 @@ export interface CerebrumApiDeps {
   /**
    * Absolute path to the glia graduation-threshold TOML (`glia.toml`).
    * Optional — defaults to `resolveGliaConfigPath()` (env-driven, tolerant of
-   * a missing file → hardcoded ADR-021 defaults). Tests pin it to a fixture.
+   * a missing file → hardcoded cerebrum ADR-004 defaults). Tests pin it to a fixture.
    */
   gliaConfigPath?: string;
   /**

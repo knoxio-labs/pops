@@ -1,6 +1,6 @@
 /**
  * Batch import of one Up account into the POPS account mapped to it
- * (POPS-30, ADR-052).
+ * (POPS-30, finance ADR-003).
  *
  * The write half of {@link planUpSync}: run the new rows through the same
  * process → commit pipeline a file import uses, settle the held ones in

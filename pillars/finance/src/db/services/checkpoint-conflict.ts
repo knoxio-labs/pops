@@ -1,6 +1,6 @@
 /**
  * Recognise the `account_checkpoints` machine-source unique violation
- * (POPS-2878, ADR-051), so a caller can treat "this checkpoint is already
+ * (POPS-2878, finance ADR-002), so a caller can treat "this checkpoint is already
  * recorded" as a handled outcome rather than an unhandled exception.
  *
  * That case is the normal one, not an error: re-running the same import over

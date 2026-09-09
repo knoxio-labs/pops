@@ -18,7 +18,7 @@ export const today = todayISODate;
 /**
  * Whether a checkpoint disagreed with what the ledger predicted for it.
  * `deltaCents` is `null` only for the earliest checkpoint (nothing to
- * compare it against, ADR-051) — every other one carries a real delta, which
+ * compare it against, finance ADR-002) — every other one carries a real delta, which
  * is zero for an ordinary agreeing checkpoint, so `null` and `0` both read
  * as "no disagreement" but for different reasons.
  */

@@ -42,7 +42,7 @@ function client() {
     createCerebrumApiApp(
       makeCerebrumApiDeps(
         { cerebrumDb, tmpDir },
-        // Point glia.toml at a non-existent file so the hardcoded ADR-021
+        // Point glia.toml at a non-existent file so the hardcoded cerebrum ADR-004
         // defaults apply deterministically.
         { gliaConfigPath: join(tmpDir, '.config', 'glia.toml') }
       )

@@ -1,6 +1,6 @@
 /**
  * Wire shapes for the dashboard's data-quality nudge feed (POPS-2881,
- * ADR-051). Split from `rest-data-quality.ts` the way the checkpoints domain
+ * finance ADR-002). Split from `rest-data-quality.ts` the way the checkpoints domain
  * splits its schemas — kept out of the route file so a future consumer of the
  * schema alone (POPS-250's panel, the generated client) never has to import
  * route definitions to get it.

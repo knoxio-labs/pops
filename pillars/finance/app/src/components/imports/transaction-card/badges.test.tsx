@@ -58,7 +58,7 @@ describe('HeaderBadges — Auto-matched badge', () => {
     expect(screen.queryByText('Auto-matched')).not.toBeInTheDocument();
   });
 
-  it('never reports a confidence in the rule-matched tooltip, even when the rule has one (ADR-053/POPS-3131)', () => {
+  it('never reports a confidence in the rule-matched tooltip, even when the rule has one (finance ADR-004/POPS-3131)', () => {
     render(
       <HeaderBadges
         transaction={makeTx('learned', {

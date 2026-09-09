@@ -62,7 +62,7 @@ function accountScopeFilter(accountId: string | null): SQL | undefined {
  *
  * Filters out inactive rules before the in-memory pattern test, mirroring the
  * in-tree `findAllMatchingCorrectionFromDB` semantics. No confidence floor
- * (ADR-053): an active, in-scope, pattern-matching rule is a candidate.
+ * (finance ADR-004): an active, in-scope, pattern-matching rule is a candidate.
  */
 export function findAllMatchingTransactionCorrectionsFromDb(
   db: FinanceDb,
@@ -84,7 +84,7 @@ export function findAllMatchingTransactionCorrectionsFromDb(
 }
 
 /**
- * Fetch every active correction, unordered. No confidence floor (ADR-053).
+ * Fetch every active correction, unordered. No confidence floor (finance ADR-004).
  *
  * This is the query {@link findAllMatchingTransactionCorrections} used to run
  * once per description. A caller matching many descriptions in one run (the
@@ -107,7 +107,7 @@ export function listActiveTransactionCorrectionsForMatching(
  * Match `description` against an already-fetched active-correction set, with
  * account-scoped rules first, then grouped by `matchType` in
  * `[exact, contains, regex]` order, each group sorted by
- * `priority ASC, timesApplied DESC, id ASC`. No confidence (ADR-053/
+ * `priority ASC, timesApplied DESC, id ASC`. No confidence (finance ADR-004/
  * POPS-3130): it is audit-only now, never a precedence signal.
  *
  * The account scope is filtered here rather than in SQL, because `rows` is a
@@ -120,7 +120,7 @@ export function listActiveTransactionCorrectionsForMatching(
  * holds rather than a fresh SELECT. `rows` is expected to already be filtered
  * to active (what {@link listActiveTransactionCorrectionsForMatching}
  * returns) — this function does not re-apply that filter. No confidence
- * floor either way (ADR-053).
+ * floor either way (finance ADR-004).
  */
 export function findAllMatchingTransactionCorrectionsFromRows(
   rows: readonly TransactionCorrectionRow[],
@@ -152,7 +152,7 @@ export function findAllMatchingTransactionCorrectionsFromRows(
  * whose account scope admits `accountId`, account-scoped rules first, then
  * grouped by `matchType` in `[exact, contains, regex]` order, each group
  * sorted by `priority ASC, timesApplied DESC, id ASC` — confidence enters
- * nowhere, audit-only now (ADR-053/POPS-3130).
+ * nowhere, audit-only now (finance ADR-004/POPS-3130).
  *
  * Used by callers that need to surface all matches (not just the winning
  * rule) rather than a single classification verdict — today, the

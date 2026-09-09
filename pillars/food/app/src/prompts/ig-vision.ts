@@ -21,7 +21,7 @@ Inputs provided:
 
 Combine all three sources to recover the recipe. Resolve disagreements in favour of the transcript when measurements differ; favour the keyframes when ingredient identity is unclear.
 
-Return a single POPS recipe DSL document using ADR-023 grammar. Rules:
+Return a single POPS recipe DSL document using food ADR-002 grammar. Rules:
 
 - Start with \`@recipe("<slug>", "<title>")\`.
 - Use \`@ingredient(N, "<name>", qty:<num><unit>)\` for every ingredient mentioned.
@@ -42,7 +42,7 @@ Inputs:
 - Caption: {caption}
 - Transcript (faster-whisper): {transcript}
 
-Return a single POPS recipe DSL document per ADR-023. If the inputs do not describe a coherent recipe, return exactly this single line and nothing else:
+Return a single POPS recipe DSL document per food ADR-002. If the inputs do not describe a coherent recipe, return exactly this single line and nothing else:
 
 @recipe("partial-draft", "Partial draft")
 

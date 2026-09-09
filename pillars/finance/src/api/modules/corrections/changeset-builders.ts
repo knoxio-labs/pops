@@ -8,7 +8,7 @@ import { type CorrectionRow } from './types.js';
 import type { ChangeSet } from '../../../contract/rest-corrections.js';
 
 /**
- * Confidence recorded (audit-only, ADR-053) on a rule created/refreshed via a
+ * Confidence recorded (audit-only, finance ADR-004) on a rule created/refreshed via a
  * user-approved AI proposal — the model's own assessment at the moment a
  * human accepted it, not a threshold anything downstream reads.
  */
