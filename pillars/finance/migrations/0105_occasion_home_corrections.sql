@@ -133,7 +133,10 @@ WHERE `description_pattern` LIKE '%PHARMACY%'
   AND EXISTS (SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je WHERE je.value = 'occasion:home');
 --> statement-breakpoint
 
--- 5. Bunnings is hardware, not homewares - rows first, then the rules.
+-- 5. Bunnings is hardware, not homewares - rows first, then both rule tables.
+-- `transaction_corrections` carries a tag set of its own exactly as it does in
+-- section 4, and leaving it out here would keep the reintroduction vector open
+-- for this one merchant.
 UPDATE `transactions`
 SET `tags` = json_insert(`tags`, '$[#]', 'venue:hardware')
 WHERE `description` LIKE 'BUNNINGS%'
@@ -161,3 +164,17 @@ SET `tags` = (
 )
 WHERE `description_pattern` LIKE 'BUNNINGS%'
   AND EXISTS (SELECT 1 FROM json_each(`transaction_tag_rules`.`tags`) je WHERE je.value = 'venue:homewares');
+--> statement-breakpoint
+UPDATE `transaction_corrections`
+SET `tags` = json_insert(`tags`, '$[#]', 'venue:hardware')
+WHERE `description_pattern` LIKE 'BUNNINGS%'
+  AND EXISTS (SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je WHERE je.value = 'venue:homewares')
+  AND NOT EXISTS (SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je WHERE je.value = 'venue:hardware');
+--> statement-breakpoint
+UPDATE `transaction_corrections`
+SET `tags` = (
+	SELECT json_group_array(je.value) FROM json_each(`transaction_corrections`.`tags`) je
+	 WHERE je.value <> 'venue:homewares'
+)
+WHERE `description_pattern` LIKE 'BUNNINGS%'
+  AND EXISTS (SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je WHERE je.value = 'venue:homewares');

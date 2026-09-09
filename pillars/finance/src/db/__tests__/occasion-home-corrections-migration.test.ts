@@ -200,6 +200,51 @@ describe('0105_occasion_home_corrections', () => {
     ]);
   });
 
+  it('corrects a Bunnings correction rule too, not only a tag rule', () => {
+    raw
+      .prepare('INSERT INTO transaction_tag_rules (id, description_pattern, tags) VALUES (?, ?, ?)')
+      .run('r2', 'BUNNINGS', JSON.stringify(['venue:homewares', 'enrich:bunnings']));
+    raw
+      .prepare(
+        'INSERT INTO transaction_corrections (id, description_pattern, tags) VALUES (?, ?, ?)'
+      )
+      .run('c2', 'BUNNINGS', JSON.stringify(['venue:homewares', 'enrich:bunnings']));
+
+    raw.exec(MIGRATION);
+
+    const rule = raw.prepare('SELECT tags FROM transaction_tag_rules WHERE id = ?').get('r2') as {
+      tags: string;
+    };
+    const correction = raw
+      .prepare('SELECT tags FROM transaction_corrections WHERE id = ?')
+      .get('c2') as { tags: string };
+
+    expect((JSON.parse(rule.tags) as string[]).toSorted()).toEqual([
+      'enrich:bunnings',
+      'venue:hardware',
+    ]);
+    expect((JSON.parse(correction.tags) as string[]).toSorted()).toEqual([
+      'enrich:bunnings',
+      'venue:hardware',
+    ]);
+  });
+
+  it('leaves a non-Bunnings homewares correction rule alone', () => {
+    raw
+      .prepare(
+        'INSERT INTO transaction_corrections (id, description_pattern, tags) VALUES (?, ?, ?)'
+      )
+      .run('c3', 'KITCHEN WAREHOUSE', JSON.stringify(['venue:homewares']));
+
+    raw.exec(MIGRATION);
+
+    const correction = raw
+      .prepare('SELECT tags FROM transaction_corrections WHERE id = ?')
+      .get('c3') as { tags: string };
+
+    expect(JSON.parse(correction.tags)).toEqual(['venue:homewares']);
+  });
+
   it('is a no-op on a second run', () => {
     txn('t1', 'PRICELINE PHARMACY', ['venue:pharmacy', 'occasion:home']);
     txn('t4', 'BUNNINGS 370000', ['venue:homewares']);
