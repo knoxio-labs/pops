@@ -33,6 +33,19 @@ use crate::time::now_rfc3339;
 /// viewer's origin, and this monorepo has no SVG sanitiser dependency.
 const ASSET_ALLOWED_CONTENT_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 
+// A marker type rather than a bare `Vec<u8>`, which utoipa maps to
+// `{ type: "array", items: { type: "integer" } }` — hey-api projects that to
+// `Array<number>` on every generated consumer, while the generated upload
+// wrapper hands `body` to `fetch` unserialized. A plain number array is not
+// valid `BodyInit`, so `Request` coerces it via `String(array)` and a caller
+// following the declared type sends the bytes of `"137,80,78,71,…"` rather
+// than the image (POPS-3091). `string`/`binary` is what makes the generated
+// body and response a `Blob | File`.
+/// Raw image bytes on the wire — an opaque binary stream, not a JSON array.
+#[derive(ToSchema)]
+#[schema(value_type = String, format = Binary)]
+pub struct ImageBytes(pub Vec<u8>);
+
 /// Size cap on an avatar/poster upload — a small square mark or a modest
 /// banner image, not a full-resolution photo.
 const ASSET_MAX_BYTES: usize = 2 * 1024 * 1024;
@@ -334,7 +347,7 @@ pub async fn reroll_colour(
     path = "/entities/{id}/avatar",
     operation_id = "entities.upload_avatar",
     params(("id" = String, Path, description = "Entity id")),
-    request_body(content = Vec<u8>, description = "Raw image bytes", content_type = "application/octet-stream"),
+    request_body(content = inline(ImageBytes), description = "Raw image bytes", content_type = "application/octet-stream"),
     responses(
         (status = 200, description = "Updated entity", body = EntityMutation),
         (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
@@ -356,7 +369,7 @@ pub async fn upload_avatar(
     path = "/entities/{id}/poster",
     operation_id = "entities.upload_poster",
     params(("id" = String, Path, description = "Entity id")),
-    request_body(content = Vec<u8>, description = "Raw image bytes", content_type = "application/octet-stream"),
+    request_body(content = inline(ImageBytes), description = "Raw image bytes", content_type = "application/octet-stream"),
     responses(
         (status = 200, description = "Updated entity", body = EntityMutation),
         (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
@@ -488,7 +501,7 @@ async fn remove_asset(
     operation_id = "entities.get_avatar",
     params(("id" = String, Path, description = "Entity id")),
     responses(
-        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = Vec<u8>),
+        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = inline(ImageBytes)),
         (status = 404, description = "No such entity, or no avatar set", body = crate::api::ErrorBody)
     )
 )]
@@ -506,7 +519,7 @@ pub async fn get_avatar(
     operation_id = "entities.get_poster",
     params(("id" = String, Path, description = "Entity id")),
     responses(
-        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = Vec<u8>),
+        (status = 200, description = "Raw image bytes", content_type = "application/octet-stream", body = inline(ImageBytes)),
         (status = 404, description = "No such entity, or no poster set", body = crate::api::ErrorBody)
     )
 )]
