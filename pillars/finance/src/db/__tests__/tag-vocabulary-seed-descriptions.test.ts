@@ -166,6 +166,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
+    expect(EXPECTED).toHaveLength(83);
   });
 
   it('gives every closed-facet value the closed kind', () => {

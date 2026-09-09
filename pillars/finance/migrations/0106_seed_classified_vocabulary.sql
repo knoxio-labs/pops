@@ -1,9 +1,15 @@
 -- POPS-3301: seed the classified vocabulary the live database already holds.
 --
 -- A database built from this migration chain carried 65 values on the five
--- classified facets. The live one carries 82. The 18 below were minted after
--- the seed and existed in exactly one place, which has two consequences and
--- both are defects rather than tolerable drift:
+-- classified facets. The live one carried 82 when this was measured. The 18
+-- below were minted after the seed and existed in exactly one place, which has
+-- two consequences and both are defects rather than tolerable drift.
+--
+-- The two counts do not differ by 18, and the missing one is not an error:
+-- 65 + 18 = 83, and the live database reaches 83 as well, because the 65
+-- already includes `venue:hardware`, which 0105 inserts into both sides and
+-- which the live database did not hold at the time it was counted. After this
+-- migration both hold the same 83 values, which is the point.
 --
 -- **A closed facet that only exists in one database is not closed.** `venue`,
 -- `occasion`, `channel` and `fee` are `closed` in `TAG_FACET_KINDS` — nobody
