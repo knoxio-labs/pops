@@ -183,17 +183,69 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
 }
 
 /**
+ * The UI surface a loader-mounted pillar advertises, by pillar id.
+ *
+ * Most in-repo pillars resolve through the shell's static bundle map, so their
+ * stubbed manifest needs no UI dimension at all. A pillar the shell mounts
+ * through its runtime loader has left that map (POPS-3217), and everything the
+ * rail and the router know about it comes off this wire — so a stub that omits
+ * it produces a shell with no such pillar, which is what a spec clicking its
+ * rail button discovers 30 seconds later.
+ *
+ * Restated rather than imported from `@pops/purchases/manifest`: the point of
+ * the change under test is that `@pops/shell` does not depend on the pillar,
+ * and a devDependency added to write a stub is the same edge wearing a
+ * different label. `pillars/purchases/src/api/__tests__/manifest.test.ts`
+ * pins the real values; this only has to be a manifest the shell accepts and
+ * a URL its dev server serves.
+ */
+const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  purchases: {
+    assetsBaseUrl: '/purchases-ui/purchases.js',
+    nav: {
+      id: 'purchases',
+      label: 'Purchases',
+      labelKey: 'purchases',
+      icon: 'receipt',
+      color: 'rose',
+      basePath: '/purchases',
+      order: 15,
+      items: [
+        { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
+        {
+          path: '/merchants',
+          label: 'Merchants',
+          labelKey: 'purchases.merchants',
+          icon: 'building-2',
+        },
+        { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
+        { path: '/products', label: 'Products', labelKey: 'purchases.products', icon: 'package' },
+      ],
+    },
+    pages: [
+      { path: '', index: true, bundleSlot: 'purchases-reconcile' },
+      { path: 'merchants', bundleSlot: 'purchases-merchants' },
+      { path: 'receipts', bundleSlot: 'purchases-receipts' },
+      { path: 'products', bundleSlot: 'purchases-products' },
+      { path: ':purchaseId', bundleSlot: 'purchases-order' },
+    ],
+  },
+};
+
+/**
  * Answer the boot snapshot fetch with exactly `pillarIds` registered, and the
  * shell manifest with the same set as the operator's selection.
  *
- * Only in-repo pillar ids resolve to mountable UI (boot looks them up in the
- * static bundle map), and an id that resolves to none contributes no rail
- * entry. Pass `[]` to exercise the never-brick fallback: an empty snapshot
- * degrades to the static bundle-map floor rather than an app-less shell.
+ * An in-repo pillar id resolves to mountable UI either through the static
+ * bundle map or, for one that advertises `assetsBaseUrl` + `pages`
+ * (`LOADER_MOUNTED_UI` above), through the runtime loader — and an id that
+ * resolves to neither contributes no rail entry. Pass `[]` to exercise the
+ * never-brick fallback: an empty snapshot degrades to the static bundle-map
+ * floor rather than an app-less shell.
  */
 export async function stubRegistry(page: Page, pillarIds: readonly string[]): Promise<void> {
   const pillars = pillarIds.map((pillarId) => {
-    const manifest = minimalManifest(pillarId);
+    const manifest = { ...minimalManifest(pillarId), ...LOADER_MOUNTED_UI[pillarId] };
     assertMatchesContract(ManifestPayloadSchema, manifest, `manifest (${pillarId})`);
     return {
       pillarId,

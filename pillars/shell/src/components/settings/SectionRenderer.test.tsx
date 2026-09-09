@@ -828,6 +828,130 @@ describe('SectionRenderer', () => {
     });
   });
 
+  /**
+   * `aria-invalid` says a control is wrong; only `aria-describedby` says what
+   * is wrong with it. Every field kind set the first and none set the second,
+   * so a screen reader announced "invalid" and left the message on screen for
+   * a reader who could see it.
+   */
+  describe('the error message is announced with the control', () => {
+    type SettingsGroup = SettingsManifest['groups'][number];
+    type Field = SettingsGroup['fields'][number];
+
+    /** One group, one field — the shape every case below differs only inside. */
+    function manifestWithField(key: string, field: Omit<Field, 'key'>): SettingsManifest {
+      return makeManifest({
+        groups: [{ id: 'g1', title: 'Validation', fields: [{ ...field, key }] }],
+      });
+    }
+
+    it('points a text field at its error', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('name', {
+            label: 'Name',
+            type: 'text',
+            default: '',
+            validation: { pattern: '^ok$', message: 'Must be ok' },
+          })}
+        />
+      );
+
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: 'nope' } });
+
+      const error = screen.getByText('Must be ok');
+      expect(error.id).not.toBe('');
+      expect(input).toHaveAttribute('aria-describedby', error.id);
+    });
+
+    it('points a select at its error', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('mode', {
+            label: 'Mode',
+            type: 'select',
+            default: 'a',
+            options: [
+              { value: 'a', label: 'Option A' },
+              { value: 'b', label: 'Option B' },
+            ],
+            validation: { pattern: '^b$', message: 'Must be Option B' },
+          })}
+        />
+      );
+
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'a' } });
+
+      expect(select).toHaveAttribute('aria-describedby', screen.getByText('Must be Option B').id);
+    });
+
+    it('points a toggle at its error', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('flag', {
+            label: 'Flag',
+            type: 'toggle',
+            default: 'false',
+            validation: { pattern: '^false$', message: 'Must stay off' },
+          })}
+        />
+      );
+
+      const toggle = screen.getByRole('switch');
+      fireEvent.click(toggle);
+
+      expect(toggle).toHaveAttribute('aria-describedby', screen.getByText('Must stay off').id);
+    });
+
+    it('points a json field at its error', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('cfg', {
+            label: 'Config',
+            type: 'json',
+            default: '{}',
+          })}
+        />
+      );
+
+      const textarea = screen.getByRole('textbox');
+      fireEvent.change(textarea, { target: { value: '{' } });
+
+      expect(textarea).toHaveAttribute('aria-describedby', screen.getByText('Invalid JSON').id);
+    });
+
+    // With no error the control describes itself through the hint instead, so
+    // the reference never dangles and never points at a paragraph that is not
+    // there.
+    it('points at the description when there is no error', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('name', {
+            label: 'Name',
+            type: 'text',
+            default: '',
+            description: 'What to call it',
+          })}
+        />
+      );
+
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveAttribute('aria-describedby', screen.getByText('What to call it').id);
+    });
+
+    it('describes nothing when a field has neither', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('name', { label: 'Name', type: 'text', default: '' })}
+        />
+      );
+
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-describedby');
+    });
+  });
+
   describe('required marker', () => {
     it('renders a required marker next to the label when validation.required is set', () => {
       const manifest = makeManifest({

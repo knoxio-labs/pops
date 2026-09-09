@@ -1,8 +1,8 @@
 import { useState } from 'react';
 
-import { Input, Select } from '@pops/ui';
+import { Input, Select, fieldLabelDescribedBy } from '@pops/ui';
 
-import { FieldWrapper } from '../FieldWrapper';
+import { FieldWrapper, settingsFieldId } from '../FieldWrapper';
 import { UNIT_MULTIPLIERS, inferUnit } from '../utils';
 
 import type { SettingsField } from '@pops/types';
@@ -57,6 +57,10 @@ export function DurationField({
           disabled={disabled}
           aria-invalid={!!validationError || undefined}
           aria-required={field.validation?.required || undefined}
+          aria-describedby={fieldLabelDescribedBy(settingsFieldId(field), {
+            error: validationError,
+            description: field.description,
+          })}
           className="w-32"
         />
         <Select
