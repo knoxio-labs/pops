@@ -51,7 +51,7 @@ export const UpdateCorrectionSchema = z.object({
   tags: z.array(z.string()).optional(),
   transactionType: TransactionTypeSchema.nullable().optional(),
   isActive: z.boolean().optional(),
-  // Audit-only (ADR-053/POPS-3130): no floor — an omitted value means "never
+  // Audit-only (finance ADR-004/POPS-3130): no floor — an omitted value means "never
   // assessed" and is stored as `null`, not defaulted to a matching threshold
   // that no longer exists.
   confidence: z.number().min(0).max(1).nullable().optional(),

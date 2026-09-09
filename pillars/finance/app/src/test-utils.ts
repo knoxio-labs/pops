@@ -22,7 +22,7 @@ export function elementAt<T>(items: ArrayLike<T>, index: number): T {
 }
 
 /**
- * The balance every account carries on the wire (ADR-051), for a fixture that
+ * The balance every account carries on the wire (finance ADR-002), for a fixture that
  * only needs the field to exist. `transactions` basis with a zero figure is
  * the honest shape for an account with nothing on it — a test wanting a real
  * balance overrides it rather than starting from a made-up number.

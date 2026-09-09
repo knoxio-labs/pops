@@ -1,4 +1,4 @@
--- POPS-2916 / ADR-052. Imports are recorded per account.
+-- POPS-2916 / finance ADR-003. Imports are recorded per account.
 --
 -- Two tables and one column. Before this migration the only provenance an
 -- import left behind was `import_commits.commit_key`, which names a click,
@@ -10,7 +10,7 @@
 -- `account_import_config` is one row per account saying HOW it is fed: a CSV
 -- dialect, a statement parser, or an API provider with the provider's own
 -- account id and the NAME of the secret holding its token. It is a separate
--- table, not columns on `accounts`, because ADR-050 made `kind` a
+-- table, not columns on `accounts`, because finance ADR-001 made `kind` a
 -- discriminator and nothing more; how transactions reach an account changes
 -- for different reasons than what the account is. The token itself never
 -- lands here — it is read from `<secret_ref>_FILE` or the environment at sync

@@ -1,5 +1,5 @@
 /**
- * How an account gets its transactions (POPS-2751, ADR-052) — the enums the
+ * How an account gets its transactions (POPS-2751, finance ADR-003) — the enums the
  * `account_import_config` and `import_batches` tables share with the REST
  * contract. Declared once, next to {@link CHECKPOINT_SOURCES}
  * (`checkpoint.ts`), for the same reason: what an account carries, spelled in

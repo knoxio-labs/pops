@@ -332,7 +332,7 @@ describe('applying the rest of the journal to a populated finance database', () 
     // 0061 raised the `confidence` default from 0.5 to 0.7 without rewriting
     // any existing row — a rebuild that took the new default for existing
     // rows would have silently activated rules their author had deliberately
-    // left inert. 0100 (ADR-053/POPS-3130) goes further and nulls every row
+    // left inert. 0100 (finance ADR-004/POPS-3130) goes further and nulls every row
     // regardless of value: nothing in this column, at any point in its
     // history, was ever a genuine probability assessment (the AI categorizer
     // never wrote to it), so the whole column becomes "never assessed" by

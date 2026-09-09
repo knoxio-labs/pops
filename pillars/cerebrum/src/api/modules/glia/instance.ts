@@ -9,7 +9,7 @@
  *
  * Config-path resolution for `glia.toml` (graduation thresholds) mirrors the
  * reflex slice's TOML resolution and is tolerant of a missing file (falls back
- * to the hardcoded ADR-021 defaults).
+ * to the hardcoded cerebrum ADR-004 defaults).
  */
 import { join } from 'node:path';
 
@@ -31,7 +31,7 @@ import type { DigestDeliveryChannels } from './digest-channels.js';
  *      whose `.config/glia.toml` is used (parity with the monolith's engram
  *      root layout).
  *   3. A default under the cwd that almost certainly does not exist, yielding
- *      the hardcoded ADR-021 defaults.
+ *      the hardcoded cerebrum ADR-004 defaults.
  */
 export function resolveGliaConfigPath(env: NodeJS.ProcessEnv = process.env): string {
   const explicit = env['CEREBRUM_GLIA_CONFIG'];

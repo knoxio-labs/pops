@@ -1,4 +1,4 @@
-# ADR-021: Glia Trust Graduation for Autonomous Curation
+# Cerebrum ADR-004: Glia Trust Graduation for Autonomous Curation
 
 ## Status
 

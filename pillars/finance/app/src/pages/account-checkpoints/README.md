@@ -28,7 +28,7 @@ and the UI's job is to show them honestly rather than re-decide them:
 ## Ledger sign, negated once, at the edge
 
 `account_checkpoints.balance_cents` is ledger-signed exactly like `transactions.amount_cents`
-(ADR-051): positive is held, negative is owed, for every kind. The add-checkpoint dialog never
+(finance ADR-002): positive is held, negative is owed, for every kind. The add-checkpoint dialog never
 asks for that number directly — a liability kind labels the field "Amount owed" and the user
 types the positive figure the real card app shows. `useAccountCheckpointsActions`'s
 `toCreateBody` is the one place that gets negated, branching on `getAccountKindBehaviour(kind)

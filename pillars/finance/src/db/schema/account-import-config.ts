@@ -5,10 +5,10 @@ import { IMPORT_PROVIDERS, IMPORT_SOURCE_KINDS } from '../../contract/import-sou
 import { accounts } from './accounts.js';
 
 /**
- * How an account expects to be fed (POPS-2916, ADR-052): one row per account,
+ * How an account expects to be fed (POPS-2916, finance ADR-003): one row per account,
  * or none for an account fed by hand.
  *
- * This is its own table rather than columns on `accounts` because ADR-050
+ * This is its own table rather than columns on `accounts` because finance ADR-001
  * made `kind` a discriminator and nothing more — the account row says what it
  * is, this row says how transactions reach it. The two change for different
  * reasons: switching a card from CSV drops to the Up API touches this row and

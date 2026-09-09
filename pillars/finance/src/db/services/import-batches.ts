@@ -1,5 +1,5 @@
 /**
- * Data access for `import_batches` (POPS-2916, ADR-052).
+ * Data access for `import_batches` (POPS-2916, finance ADR-003).
  *
  * Pure persistence: append a batch, list an account's batches, find its
  * newest. No cadence maths lives here — deriving "how often is this account

@@ -132,9 +132,9 @@ export function processRemainingItem(
  *
  * The row stays in `matched` whatever bucket the rule would otherwise route
  * to: a rule is an instruction, not a hypothesis, and there is nothing to ask
- * about a row the user has already settled (ADR-053). Discarding a non-`matched`
+ * about a row the user has already settled (finance ADR-004). Discarding a non-`matched`
  * outcome instead made every rule that resolved to `uncertain` on its own — an
- * entity-less purchase rule, or, before ADR-053, anything under the old
+ * entity-less purchase rule, or, before finance ADR-004, anything under the old
  * confidence bar — a no-op on matched rows: it matched the row, previewed as
  * covering it, and then changed nothing (POPS-3120).
  *

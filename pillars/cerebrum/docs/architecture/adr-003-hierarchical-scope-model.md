@@ -1,4 +1,4 @@
-# ADR-020: Hierarchical Scope Model for Content Isolation
+# Cerebrum ADR-003: Hierarchical Scope Model for Content Isolation
 
 ## Status
 
