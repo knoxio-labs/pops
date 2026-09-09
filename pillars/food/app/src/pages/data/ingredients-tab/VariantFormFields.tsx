@@ -98,7 +98,7 @@ function NumericRow({
         size="sm"
         inputMode={isInteger ? 'numeric' : 'decimal'}
         min={0}
-        step={isInteger ? 1 : 0.1}
+        step={isInteger ? 1 : 'any'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

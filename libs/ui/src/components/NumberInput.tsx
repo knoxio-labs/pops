@@ -17,7 +17,8 @@ export interface NumberInputProps
   suffix?: ReactNode;
   min?: number;
   max?: number;
-  step?: number;
+  /** Native step. `'any'` imposes no precision constraint; steppers and drag then move by 1. */
+  step?: number | 'any';
   showSteppers?: boolean;
   enableDrag?: boolean;
   centered?: boolean;
@@ -129,7 +130,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>((props
     defaultValue,
     min,
     max,
-    step,
+    step: step === 'any' ? 1 : step,
     enableDrag,
     disabled,
     onChange,
