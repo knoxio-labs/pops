@@ -66,8 +66,10 @@ function RecipePicker(props: AddPlanEntryFieldsProps): ReactElement {
         }}
         onSelect={(suggestion) => props.setRecipeId(Number(suggestion.value))}
         placeholder="Search recipes…"
-        emptyMessage="No recipes match."
-        loading={props.isRecipesLoading}
+        // Not the kit's `loading` prop: that only suppresses the empty message,
+        // which would leave an in-flight search showing nothing at all. Swapping
+        // the message keeps an indicator and still never flashes "no matches".
+        emptyMessage={props.isRecipesLoading ? 'Loading…' : 'No recipes match.'}
       />
     </div>
   );
@@ -92,6 +94,13 @@ function ServingsField(props: {
         onChange={(e) =>
           props.setPlannedServings(e.target.value === '' ? Number.NaN : Number(e.target.value))
         }
+        // `NumberInput` clamps its steppers but passes typed text through
+        // unclamped, so `min` is enforced here — on blur rather than per
+        // keystroke, which would fight anyone typing a value that starts "0".
+        onBlur={(e) => {
+          const typed = Number(e.target.value);
+          if (e.target.value !== '' && typed < 1) props.setPlannedServings(1);
+        }}
       />
     </div>
   );

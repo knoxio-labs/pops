@@ -96,6 +96,17 @@ describe('AddPlanEntryFields — recipe picker', () => {
     expect(await screen.findByText('Zucchini Fritters')).toBeInTheDocument();
   });
 
+  it('says it is loading while a search is in flight, instead of showing nothing', async () => {
+    const { user } = renderModal();
+    const field = await screen.findByLabelText('Recipe');
+    recipesListMock.mockImplementation(() => new Promise(() => undefined));
+
+    await user.type(field, 'zucchini');
+
+    expect(await screen.findByText('Loading…')).toBeInTheDocument();
+    expect(screen.queryByText('No recipes match.')).not.toBeInTheDocument();
+  });
+
   it('submits the recipe picked from the suggestions', async () => {
     const { user } = renderModal();
     const field = await screen.findByLabelText('Recipe');
@@ -133,6 +144,35 @@ describe('AddPlanEntryFields — planned servings', () => {
     const { user } = renderModal();
     const servings = await screen.findByTestId('add-plan-servings');
     await user.clear(servings);
+
+    expect(servings).toHaveValue(null);
+  });
+
+  it('clamps a typed 0 up to the minimum once the field is left', async () => {
+    const { user } = renderModal();
+    const servings = await screen.findByTestId('add-plan-servings');
+    await user.clear(servings);
+    await user.type(servings, '0');
+    await user.tab();
+
+    expect(servings).toHaveValue(1);
+  });
+
+  it('clamps a typed negative quantity up to the minimum once the field is left', async () => {
+    const { user } = renderModal();
+    const servings = await screen.findByTestId('add-plan-servings');
+    await user.clear(servings);
+    await user.type(servings, '-5');
+    await user.tab();
+
+    expect(servings).toHaveValue(1);
+  });
+
+  it('leaves a cleared field empty rather than clamping it on the way out', async () => {
+    const { user } = renderModal();
+    const servings = await screen.findByTestId('add-plan-servings');
+    await user.clear(servings);
+    await user.tab();
 
     expect(servings).toHaveValue(null);
   });
