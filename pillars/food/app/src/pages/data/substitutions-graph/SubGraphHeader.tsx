@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
  */
 import { Link } from 'react-router';
 
+import { RadioInput } from '@pops/ui';
+
 import { ContextTagSelect, DebouncedSearchInput } from './SubGraphFilterControls';
 
 import type { SubGraphScope } from './types';
@@ -92,8 +94,7 @@ function FilterRow(props: FilterRowProps): React.ReactElement {
     <div className="flex flex-wrap items-center gap-3">
       <fieldset className="flex items-center gap-2">
         <legend className="sr-only">{t('data.substitutions.graph.scopeLabel')}</legend>
-        <ScopeRadio scope="global" current={props.scope} onChange={props.onScopeChange} />
-        <ScopeRadio scope="recipe" current={props.scope} onChange={props.onScopeChange} />
+        <ScopeRadios scope={props.scope} onChange={props.onScopeChange} />
       </fieldset>
       <ContextTagSelect
         contextTag={props.contextTag}
@@ -105,30 +106,24 @@ function FilterRow(props: FilterRowProps): React.ReactElement {
   );
 }
 
-function ScopeRadio({
+function ScopeRadios({
   scope,
-  current,
   onChange,
 }: {
   scope: SubGraphScope;
-  current: SubGraphScope;
   onChange: (scope: SubGraphScope) => void;
 }): React.ReactElement {
   const { t } = useTranslation('food');
-  const labelKey =
-    scope === 'global'
-      ? 'data.substitutions.graph.scopeGlobal'
-      : 'data.substitutions.graph.scopeRecipe';
   return (
-    <label className="flex items-center gap-1 text-sm">
-      <input
-        type="radio"
-        name="sub-graph-scope"
-        value={scope}
-        checked={current === scope}
-        onChange={() => onChange(scope)}
-      />
-      {t(labelKey)}
-    </label>
+    <RadioInput
+      name="sub-graph-scope"
+      orientation="horizontal"
+      value={scope}
+      options={[
+        { value: 'global', label: t('data.substitutions.graph.scopeGlobal') },
+        { value: 'recipe', label: t('data.substitutions.graph.scopeRecipe') },
+      ]}
+      onValueChange={(next) => onChange(next as SubGraphScope)}
+    />
   );
 }
