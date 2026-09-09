@@ -217,6 +217,86 @@ mod tests {
         );
     }
 
+    /// Collect every `application/octet-stream` schema in the document,
+    /// wherever it sits — request bodies and responses alike — paired with the
+    /// JSON pointer it was found at, so a failure names the offending route.
+    fn octet_stream_schemas(node: &Value, path: String, found: &mut Vec<(String, Value)>) {
+        match node {
+            Value::Object(map) => {
+                for (key, value) in map {
+                    let child = format!("{path}/{key}");
+                    if key == "application/octet-stream" {
+                        if let Some(schema) = value.get("schema") {
+                            found.push((child.clone(), schema.clone()));
+                        }
+                    }
+                    octet_stream_schemas(value, child, found);
+                }
+            }
+            Value::Array(items) => {
+                for (index, item) in items.iter().enumerate() {
+                    octet_stream_schemas(item, format!("{path}/{index}"), found);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// A bare `Vec<u8>` is documented as `{ type: "array", items: { type:
+    /// "integer" } }`, which hey-api projects to `Array<number>`. The
+    /// generated wrappers pass `body` to `fetch` unserialized and a number
+    /// array is not valid `BodyInit`, so `Request` stringifies it and the
+    /// upload stores the bytes of `"137,80,78,71,…"` instead of the image
+    /// (POPS-3091). Every binary payload must be `string`/`binary`.
+    #[test]
+    fn octet_stream_payloads_are_binary_strings_not_integer_arrays() {
+        let value = openapi_30_value();
+        let mut found = Vec::new();
+        octet_stream_schemas(&value, String::new(), &mut found);
+
+        assert!(
+            !found.is_empty(),
+            "expected the document to carry octet-stream payloads (the entity avatar/poster routes)"
+        );
+
+        for (pointer, schema) in found {
+            assert_eq!(
+                schema.get("type"),
+                Some(&Value::String("string".to_string())),
+                "{pointer} must be a binary string, not {schema}"
+            );
+            assert_eq!(
+                schema.get("format"),
+                Some(&Value::String("binary".to_string())),
+                "{pointer} must declare format: binary, not {schema}"
+            );
+            assert!(
+                schema.get("items").is_none(),
+                "{pointer} must not be an array schema — that is the Vec<u8> projection"
+            );
+        }
+    }
+
+    /// The four routes the guard above is protecting. Without this, deleting
+    /// the avatar and poster routes outright would leave the guard passing on
+    /// an empty set — its `!found.is_empty()` only proves *something* binary
+    /// is documented, not that these are.
+    #[test]
+    fn both_asset_routes_document_binary_uploads_and_downloads() {
+        let value = openapi_30_value();
+        for asset in ["avatar", "poster"] {
+            for (method, pointer) in [
+                ("put", format!("/paths/~1entities~1{{id}}~1{asset}/put/requestBody/content/application~1octet-stream/schema")),
+                ("get", format!("/paths/~1entities~1{{id}}~1{asset}/get/responses/200/content/application~1octet-stream/schema")),
+            ] {
+                let schema = value
+                    .pointer(&pointer)
+                    .unwrap_or_else(|| panic!("{method} /entities/{{id}}/{asset} must document an octet-stream payload at {pointer}"));
+                assert_eq!(schema.get("format"), Some(&Value::String("binary".to_string())));
+            }
+        }
+    }
+
     #[test]
     fn nullable_union_is_rewritten_to_30_keyword() {
         let mut node = serde_json::json!({ "type": ["string", "null"] });

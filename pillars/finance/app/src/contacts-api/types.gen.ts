@@ -429,9 +429,9 @@ export type EntitiesGetAvatarError = EntitiesGetAvatarErrors[keyof EntitiesGetAv
 
 export type EntitiesGetAvatarResponses = {
   /**
-   * Raw image bytes
+   * Raw image bytes on the wire — an opaque binary stream, not a JSON array.
    */
-  200: Array<number>;
+  200: Blob | File;
 };
 
 export type EntitiesGetAvatarResponse =
@@ -439,9 +439,9 @@ export type EntitiesGetAvatarResponse =
 
 export type EntitiesUploadAvatarData = {
   /**
-   * Raw image bytes
+   * Raw image bytes on the wire — an opaque binary stream, not a JSON array.
    */
-  body: Array<number>;
+  body: Blob | File;
   path: {
     /**
      * Entity id
@@ -563,9 +563,9 @@ export type EntitiesGetPosterError = EntitiesGetPosterErrors[keyof EntitiesGetPo
 
 export type EntitiesGetPosterResponses = {
   /**
-   * Raw image bytes
+   * Raw image bytes on the wire — an opaque binary stream, not a JSON array.
    */
-  200: Array<number>;
+  200: Blob | File;
 };
 
 export type EntitiesGetPosterResponse =
@@ -573,9 +573,9 @@ export type EntitiesGetPosterResponse =
 
 export type EntitiesUploadPosterData = {
   /**
-   * Raw image bytes
+   * Raw image bytes on the wire — an opaque binary stream, not a JSON array.
    */
-  body: Array<number>;
+  body: Blob | File;
   path: {
     /**
      * Entity id
