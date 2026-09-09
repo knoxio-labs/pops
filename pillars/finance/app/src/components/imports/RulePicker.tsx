@@ -143,6 +143,7 @@ const RulePickerTrigger = forwardRef<HTMLButtonElement, RulePickerTriggerProps>(
         variant="outline"
         role="combobox"
         aria-expanded={open}
+        aria-label="Pick an existing rule"
         disabled={disabled}
         className="w-full justify-between font-normal"
       >

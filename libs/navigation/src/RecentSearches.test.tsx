@@ -38,4 +38,25 @@ describe('RecentSearches', () => {
     render(<RecentSearches queries={['matrix']} onSelect={vi.fn()} onClear={vi.fn()} />);
     expect(screen.getByText('Clear recent')).toBeInTheDocument();
   });
+
+  it('marks each row as an option with the shared id scheme and aria-selected', () => {
+    render(
+      <RecentSearches
+        queries={['matrix', 'inception']}
+        onSelect={vi.fn()}
+        onClear={vi.fn()}
+        selectedIndex={1}
+      />
+    );
+    const options = screen.getAllByRole('option');
+    expect(options[0]).toHaveAttribute('id', 'search-option-0');
+    expect(options[0]).toHaveAttribute('aria-selected', 'false');
+    expect(options[1]).toHaveAttribute('id', 'search-option-1');
+    expect(options[1]).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('defaults to no selection when selectedIndex is omitted', () => {
+    render(<RecentSearches queries={['matrix']} onSelect={vi.fn()} onClear={vi.fn()} />);
+    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'false');
+  });
 });

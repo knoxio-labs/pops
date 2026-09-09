@@ -330,7 +330,11 @@ describe('ItemFormPage — Asset ID generation', () => {
     fireEvent.change(assetInput, { target: { value: 'ELEC01' } });
     fireEvent.blur(assetInput);
 
-    expect(await screen.findByText(/Asset ID already in use by Existing Item/)).toBeInTheDocument();
+    const errorMessage = await screen.findByText(/Asset ID already in use by Existing Item/);
+    expect(errorMessage).toBeInTheDocument();
+    expect(errorMessage).toHaveAttribute('id', 'assetId-error');
+    expect(assetInput).toHaveAttribute('aria-describedby', 'assetId-error');
+    expect(assetInput).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('skips uniqueness error for own asset ID in edit mode', async () => {
@@ -521,7 +525,9 @@ describe('ItemFormPage — Form gaps (#1851)', () => {
 
   it('marks Type as required with asterisk label', () => {
     renderCreate();
-    expect(screen.getByText('Type *')).toBeInTheDocument();
+    const label = document.querySelector('label[for="type"]') as HTMLLabelElement;
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveTextContent('Type *');
   });
 
   it('shows inline error when Type is empty on submit', async () => {
@@ -531,8 +537,17 @@ describe('ItemFormPage — Form gaps (#1851)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /create item/i }));
 
-    expect(await screen.findByText('Type is required')).toBeInTheDocument();
+    const errorMessage = await screen.findByText('Type is required');
+    expect(errorMessage).toBeInTheDocument();
     expect(itemsCreateMock).not.toHaveBeenCalled();
+
+    // FieldLabel wires the error paragraph's id into the control's
+    // aria-describedby, so the association survives beyond the two elements
+    // simply being adjacent in the DOM.
+    const typeSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
+    expect(errorMessage).toHaveAttribute('id', 'type-error');
+    expect(typeSelect).toHaveAttribute('aria-describedby', 'type-error');
+    expect(typeSelect).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('shows notes preview toggle button', () => {

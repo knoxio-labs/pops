@@ -132,6 +132,13 @@ describe('RulePicker — searching the rule set, not a page of it', () => {
     expect(mockCorrectionsList).not.toHaveBeenCalled();
   });
 
+  it('names the trigger for assistive tech — WAI-ARIA gives role="combobox" no name from content', () => {
+    servesTwoPages();
+    renderPicker();
+
+    expect(screen.getByRole('combobox')).toHaveAccessibleName();
+  });
+
   it('still says so when the rule genuinely is not there', async () => {
     const user = userEvent.setup();
     servesTwoPages();

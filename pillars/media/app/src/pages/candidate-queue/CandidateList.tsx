@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 
-import { Skeleton } from '@pops/ui';
+import { Skeleton, TextInput } from '@pops/ui';
 
 import { unwrap } from '../../media-api-helpers.js';
 import { rotationListCandidates } from '../../media-api/index.js';
@@ -20,17 +20,13 @@ interface CandidateListProps {
 
 function SearchInput({ search, onChange }: { search: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative flex-1">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <input
-          className="flex h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="Search by title..."
-          value={search}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </div>
-    </div>
+    <TextInput
+      size="sm"
+      prefix={<Search className="h-4 w-4" />}
+      placeholder="Search by title..."
+      value={search}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
 

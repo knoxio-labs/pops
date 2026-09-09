@@ -11,6 +11,7 @@ export interface LocationTreeNode {
 }
 
 export interface LocationPickerProps {
+  id?: string;
   value?: string | null;
   onChange?: (locationId: string | null) => void;
   locations: LocationTreeNode[];
@@ -46,6 +47,7 @@ function toTreeNodes(nodes: LocationTreeNode[]): TreeNode<LocationTreeNode>[] {
  * the inventory app relies on.
  */
 export function LocationPicker({
+  id,
   value,
   onChange,
   locations,
@@ -63,6 +65,7 @@ export function LocationPicker({
 
   return (
     <TreePicker
+      id={id}
       nodes={treeNodes}
       getLabel={(data) => data.name}
       selectedId={value ?? null}
