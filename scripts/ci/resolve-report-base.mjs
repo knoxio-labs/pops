@@ -50,10 +50,14 @@ import { join } from 'node:path';
  * for the repo being pushed, and this script's self-test fixtures would
  * silently run against that repo instead of their own temp directory.
  *
+ * Exported because `check-raw-form-controls.mjs` shells out to git for the
+ * same reason under the same pre-push hook, and a second copy of this list
+ * is a second copy that can go stale.
+ *
  * @param {Record<string, string | undefined>} [extra]
  * @returns {Record<string, string | undefined>}
  */
-function gitEnv(extra = {}) {
+export function gitEnv(extra = {}) {
   const env = { ...process.env, ...extra };
   for (const name of [
     'GIT_DIR',

@@ -17,7 +17,7 @@ import {
   type SelectOption,
 } from '@pops/ui';
 
-import { FieldRow, FormError } from './form-controls.js';
+import { FieldRow, FormError, NotesField } from './form-controls.js';
 import { type EditState, useEditBatchState } from './useEditBatchState.js';
 
 export interface EditBatchModalProps {
@@ -119,14 +119,11 @@ function EditFields({ form, setForm, isFromRun, prepStates }: EditFieldsProps): 
         isFromRun={isFromRun}
         prepStates={prepStates}
       />
-      <FieldRow label="Notes">
-        <textarea
-          className="min-h-[60px] w-full rounded border bg-background px-2 py-1"
-          maxLength={500}
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        />
-      </FieldRow>
+      <NotesField
+        label="Notes"
+        value={form.notes}
+        onChange={(notes) => setForm({ ...form, notes })}
+      />
     </>
   );
 }
