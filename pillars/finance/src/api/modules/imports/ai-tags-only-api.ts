@@ -1,3 +1,9 @@
+import {
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
 /**
  * The tag-only prompt (POPS-2596): classify rows whose merchant the
  * deterministic ladder already resolved.
@@ -18,12 +24,8 @@ import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
 import {
   buildMatchedTransactionData,
-  closedFacetFields,
-  closedFacetOptions,
-  closedFacetReplyShape,
   PROMPT_VERSION_TAGS_ONLY,
   TAGS_RULES,
-  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags, type RawTagFields } from './ai-tag-validation.js';
 

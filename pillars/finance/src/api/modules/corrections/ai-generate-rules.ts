@@ -13,7 +13,7 @@ import {
   closedFacetFields,
   closedFacetOptions,
   type TagDescriptions,
-} from '../imports/ai-categorizer-prompt.js';
+} from '../vocabulary-prompt.js';
 import {
   formatFewShotExamples,
   loadRecentAcceptedCorrections,

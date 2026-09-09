@@ -7,6 +7,12 @@
  */
 import { extractJsonFromReply } from '../ai-json.js';
 import {
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
+import {
   callRawApi,
   entryFromParsed,
   type ApiCallResponse,
@@ -15,15 +21,11 @@ import {
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
-  closedFacetFields,
-  closedFacetOptions,
-  closedFacetReplyShape,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
   PROMPT_VERSION_CATEGORIZE_BATCH,
   TAGS_RULES,
-  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 
 import type Anthropic from '@anthropic-ai/sdk';

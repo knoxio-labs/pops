@@ -54,7 +54,7 @@ export {
 
 export type { TagsOnlyEntry, TagsOnlyInput } from './ai-tags-only-api.js';
 
-import type { TagDescriptions } from './ai-categorizer-prompt.js';
+import type { TagDescriptions } from '../vocabulary-prompt.js';
 import type {
   AiBatchCallResult,
   AiCallResult,

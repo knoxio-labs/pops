@@ -18,18 +18,20 @@ import { callWithLogging } from '@pops/ai-telemetry';
 import { extractJsonFromReply } from '../ai-json.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
-import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
-  buildTransactionData,
   closedFacetFields,
   closedFacetOptions,
   closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
+import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
+import {
+  buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
   PROMPT_VERSION_CATEGORIZE,
   TAGS_RULES,
-  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags } from './ai-tag-validation.js';
 import { sanitizeEntityName } from './entity-name.js';
