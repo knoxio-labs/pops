@@ -87,9 +87,9 @@ function TagsInput({ filters, onChange }: SolveFiltersProps): ReactElement {
   const { t } = useTranslation('food');
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span id="solve-tags-label">{t('solve.filters.tags')}</span>
+      <span>{t('solve.filters.tags')}</span>
       <ChipInput
-        aria-labelledby="solve-tags-label"
+        aria-label={t('solve.filters.tags')}
         placeholder={t('solve.filters.tagsPlaceholder')}
         value={[...filters.tags]}
         onChange={(tags) => onChange({ ...filters, tags })}
