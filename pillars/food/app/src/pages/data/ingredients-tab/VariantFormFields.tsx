@@ -4,7 +4,7 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { Label } from '@pops/ui';
+import { Label, NumberInput, Textarea } from '@pops/ui';
 
 import { SelectRow, TextFieldRow } from './IngredientFormFields';
 import { UNITS, type Unit, type VariantFormState } from './variant-form-helpers';
@@ -64,12 +64,11 @@ export function VariantFormFields({ mode, form, onChange }: Props) {
       />
       <div className="grid gap-1.5">
         <Label htmlFor="variant-notes">{t('data.ingredients.variants.form.notes')}</Label>
-        <textarea
+        <Textarea
           id="variant-notes"
           value={form.notes}
           onChange={(e) => onChange({ ...form, notes: e.target.value })}
           rows={2}
-          className="border-input bg-background rounded-md border px-3 py-2 text-sm"
         />
       </div>
     </>
@@ -94,15 +93,14 @@ function NumericRow({
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={id}>{t(labelKey)}</Label>
-      <input
+      <NumberInput
         id={id}
-        type="number"
+        size="sm"
         inputMode={isInteger ? 'numeric' : 'decimal'}
         min={0}
-        step={isInteger ? 1 : 'any'}
+        step={isInteger ? 1 : 0.1}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
       />
     </div>
   );
