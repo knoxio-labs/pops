@@ -19,6 +19,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resolveBootRegistry } from './boot-snapshot';
 import {
   hasRoutes,
   walkRegistry,
@@ -27,7 +28,7 @@ import {
 } from './installed-modules';
 import { buildRegisteredAppsFromBundleMap } from './nav/registry';
 
-import type { NavConfigDescriptor, PageDescriptor } from '@pops/pillar-sdk';
+import type { NavConfigDescriptor, PageDescriptor, PillarSnapshot } from '@pops/pillar-sdk';
 
 import type { BundleEntry } from './bundle-map';
 import type { AppNavConfig } from './nav/types';
@@ -56,6 +57,40 @@ function navFor(id: string, label: string): AppNavConfig {
     icon: 'Bot',
     basePath: `/${id}`,
     items: [{ path: '', label: 'Home', labelKey: `${id}.home`, icon: 'LayoutDashboard' }],
+  };
+}
+
+/** A registry snapshot row carrying one entry's wire manifest. */
+function snapshotOf(entry: RegistryEntry): PillarSnapshot {
+  const { pillarId, nav, pages, assetsBaseUrl } = entry;
+  const ui = {
+    ...(assetsBaseUrl === undefined ? {} : { assetsBaseUrl }),
+    ...(nav === undefined ? {} : { nav }),
+    // The wire type is mutable where the entry's is readonly; the snapshot is
+    // a payload, not a view of the entry.
+    ...(pages === undefined ? {} : { pages: [...pages] }),
+  };
+  return {
+    pillarId,
+    baseUrl: `http://${pillarId}-api:3000`,
+    registered: true,
+    lastSeenAt: new Date('2026-09-08T00:00:00.000Z'),
+    manifest: {
+      pillar: pillarId,
+      version: '0.1.0',
+      contract: {
+        package: `@pops/${pillarId}`,
+        version: '0.1.0',
+        tag: `contract-${pillarId}@v0.1.0`,
+      },
+      routes: { queries: [], mutations: [], subscriptions: [] },
+      search: { adapters: [] },
+      ai: { tools: [] },
+      uri: { types: [] },
+      consumedSettings: { keys: [] },
+      healthcheck: { path: '/health' },
+      ...ui,
+    },
   };
 }
 
@@ -309,5 +344,49 @@ describe('a pillar that reaches the shell only over the wire', () => {
     const importer = vi.fn(() => Promise.resolve({ bundles: {} }));
     walkRegistry([entry], {}, importer);
     expect(importer).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The boot resolver has to hand `main.tsx` the bundle URLs it will preload, and
+ * only for pillars that actually mount: preloading a bundle nothing imports is
+ * a request for nothing, and missing one puts its fetch back behind the
+ * reader's navigation.
+ */
+describe('remote bundle URLs the boot resolver reports', () => {
+  const wireEntry = (pillarId: string, assetsBaseUrl: string): RegistryEntry => ({
+    pillarId,
+    assetsBaseUrl,
+    nav: {
+      id: pillarId,
+      label: pillarId,
+      labelKey: pillarId,
+      icon: 'Compass',
+      basePath: `/${pillarId}`,
+      order: 50,
+      items: [{ path: '', label: 'Home', labelKey: `${pillarId}.home`, icon: 'Compass' }],
+    },
+    pages: [{ path: '', index: true, bundleSlot: `${pillarId}-home` }],
+  });
+
+  it('reports the URL of a loader-mounted pillar', () => {
+    const resolved = resolveBootRegistry(
+      [snapshotOf(wireEntry('purchases', '/purchases-ui/purchases.js'))],
+      () => Promise.resolve({ bundles: { 'purchases-home': () => null } })
+    );
+    expect(resolved.remoteBundleUrls).toEqual(['/purchases-ui/purchases.js']);
+  });
+
+  // Advertised a bundle, offered nothing to mount from it. The walk drops the
+  // pillar, so the preload must drop with it.
+  it('reports nothing for a pillar that advertises a URL but no surface', () => {
+    const resolved = resolveBootRegistry([
+      snapshotOf({ pillarId: 'ghost', assetsBaseUrl: '/ghost-ui/ghost.js' }),
+    ]);
+    expect(resolved.remoteBundleUrls).toEqual([]);
+  });
+
+  it('reports nothing on the static floor, where every pillar is bundle-mapped', () => {
+    expect(resolveBootRegistry([]).remoteBundleUrls).toEqual([]);
   });
 });
