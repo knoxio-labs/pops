@@ -101,17 +101,21 @@ describe('IndexRedirect', () => {
     await waitFor(() => expect(mocks.manifest).toHaveBeenCalled());
   });
 
-  it('falls back to /finance when the manifest has not yet loaded', () => {
+  // `/media`, not `/finance`: the fallback is the first app in the STATIC
+  // bundle map, and finance left it when it moved onto the runtime loader
+  // (POPS-3219). The floor shrinks with every swap and empties at the end of
+  // POPS-3215 — what should replace it is POPS-3239.
+  it('falls back to the first mapped app when the manifest has not yet loaded', () => {
     mocks.manifest.mockReturnValue(new Promise(() => undefined));
     renderAt();
-    expect(screen.getByTestId('landed')).toHaveTextContent('/finance');
+    expect(screen.getByTestId('landed')).toHaveTextContent('/media');
   });
 
-  it('falls back to /finance when the registry pillar is unavailable', async () => {
+  it('falls back to the first mapped app when the registry pillar is unavailable', async () => {
     mocks.manifest.mockRejectedValue(new RegistryApiError('down', 503));
     renderAt();
     await waitFor(() => expect(mocks.manifest).toHaveBeenCalled());
-    expect(screen.getByTestId('landed')).toHaveTextContent('/finance');
+    expect(screen.getByTestId('landed')).toHaveTextContent('/media');
   });
 
   it('picks the first installed app by nav.order ascending (finance > media > inventory > food > lists > cerebrum > ai)', () => {

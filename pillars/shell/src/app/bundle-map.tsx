@@ -49,9 +49,9 @@ import { useEffect } from 'react';
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`purchases` is not in this map, and that is not an omission** (POPS-3217).
- * It is the first in-repo pillar to reach the shell the way an out-of-tree one
- * does: its wire manifest advertises `assetsBaseUrl` and `pages`, and the
+ * **`finance` and `purchases` are not in this map, and that is not an
+ * omission** (POPS-3217, POPS-3219).
+ * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
  * this one any more, which is the coupling, rather than the import line being
@@ -69,7 +69,6 @@ import { useEffect } from 'react';
 import { manifest as aiManifest } from '@pops/app-ai';
 import { manifest as bfmManifest } from '@pops/app-bfm';
 import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
-import { manifest as financeManifest } from '@pops/app-finance';
 import { manifest as foodManifest } from '@pops/app-food';
 import { manifest as inventoryManifest } from '@pops/app-inventory';
 import { manifest as listsManifest } from '@pops/app-lists';
@@ -142,7 +141,6 @@ const CEREBRUM_INGEST_FORM_BUNDLE: CaptureOverlayBundle = {
 };
 
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
-  finance: { manifest: financeManifest, navOrder: 10 },
   media: {
     manifest: mediaManifest,
     navOrder: 20,

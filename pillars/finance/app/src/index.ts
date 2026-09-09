@@ -5,6 +5,7 @@
  * to lazily load finance pages under /finance/*.
  */
 export { navConfig, routes } from './routes';
+export { bundles } from './bundles';
 export { manifest } from './manifest';
 
 // Side-effect: register search result components

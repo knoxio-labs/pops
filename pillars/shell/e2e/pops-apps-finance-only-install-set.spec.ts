@@ -8,7 +8,10 @@
  *
  *   - `staticFloorEntries` filters the in-repo bundle map through
  *     `isInstalledModule`, so an operator who excluded a module does not get
- *     it back the moment the registry goes quiet;
+ *     it back the moment the registry goes quiet. Only that direction is
+ *     still testable here: finance is served by the runtime loader since
+ *     POPS-3219, so no install set can put it on the rail with the registry
+ *     down — the floor is the in-repo bundle map, which finance has left;
  *   - `isInstalledModule` in `libs/navigation` drops federated-search
  *     sections for modules this build did not ship, so results cannot link
  *     into a page that was never mounted.
@@ -45,17 +48,19 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
 
-  test('the installed module still mounts and owns the rail', async ({ page }) => {
+  test('an excluded module stays off the rail when the registry is down', async ({ page }) => {
     await failRegistry(page);
     await stubPillarHealth(page, ['finance']);
 
     await page.goto('/finance');
 
-    await expect(page.getByRole('button', { name: 'Finance' })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
+    // Media is IN the bundle map and OUT of this install set, so it is the
+    // one the floor would leak if `staticFloorEntries` stopped filtering.
     await expect(page.getByRole('button', { name: 'Media' })).toHaveCount(0);
+    // And finance, being loader-served, cannot come off the floor at all —
+    // an outage takes it with the registry rather than the install set
+    // holding it up.
+    await expect(page.getByRole('button', { name: 'Finance' })).toHaveCount(0);
   });
 
   test('search drops results owned by an excluded module', async ({ page }) => {

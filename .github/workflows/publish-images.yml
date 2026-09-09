@@ -45,6 +45,7 @@ jobs:
           # matches neither. `scripts/ci/__tests__/compose-images-published.test.ts`
           # asserts this list and compose stay in step.
           - { image: pops-purchases-ui, file: pillars/purchases/app/Dockerfile }
+          - { image: pops-finance-ui, file: pillars/finance/app/Dockerfile }
     steps:
       - uses: actions/checkout@v7
 

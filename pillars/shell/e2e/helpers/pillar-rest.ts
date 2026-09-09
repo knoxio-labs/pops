@@ -200,6 +200,54 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  finance: {
+    assetsBaseUrl: '/finance-ui/finance.js',
+    nav: {
+      id: 'finance',
+      label: 'Finance',
+      labelKey: 'finance',
+      icon: 'dollar-sign',
+      color: 'emerald',
+      basePath: '/finance',
+      order: 10,
+      items: [
+        { path: '', label: 'Dashboard', labelKey: 'finance.dashboard', icon: 'layout-dashboard' },
+        {
+          path: '/transactions',
+          label: 'Transactions',
+          labelKey: 'finance.transactions',
+          icon: 'credit-card',
+        },
+        { path: '/entities', label: 'Entities', labelKey: 'finance.entities', icon: 'building-2' },
+        { path: '/budgets', label: 'Budgets', labelKey: 'finance.budgets', icon: 'piggy-bank' },
+        { path: '/wishlist', label: 'Wish List', labelKey: 'finance.wishList', icon: 'star' },
+        { path: '/import', label: 'Import', labelKey: 'finance.import', icon: 'download' },
+        { path: '/rules', label: 'Rules', labelKey: 'finance.rules', icon: 'book-open' },
+        {
+          path: '/prompts',
+          label: 'Prompt Templates',
+          labelKey: 'finance.promptTemplates',
+          icon: 'file-text',
+        },
+      ],
+    },
+    pages: [
+      { path: '', index: true, bundleSlot: 'finance-dashboard' },
+      { path: 'transactions', bundleSlot: 'finance-transactions' },
+      { path: 'entities', bundleSlot: 'finance-entities' },
+      { path: 'entities/:id', bundleSlot: 'finance-entity-detail' },
+      { path: 'accounts', bundleSlot: 'finance-accounts' },
+      { path: 'accounts/:id', bundleSlot: 'finance-account-detail' },
+      { path: 'accounts/:id/checkpoints', bundleSlot: 'finance-account-checkpoints' },
+      { path: 'budgets', bundleSlot: 'finance-budgets' },
+      { path: 'wishlist', bundleSlot: 'finance-wishlist' },
+      { path: 'import', bundleSlot: 'finance-import' },
+      { path: 'rules', bundleSlot: 'finance-rules' },
+      { path: 'tag-rules', bundleSlot: 'finance-tag-rules' },
+      { path: 'prompts', bundleSlot: 'finance-prompts' },
+      { path: 'settings', bundleSlot: 'finance-settings' },
+    ],
+  },
   purchases: {
     assetsBaseUrl: '/purchases-ui/purchases.js',
     nav: {

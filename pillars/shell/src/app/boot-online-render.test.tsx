@@ -107,7 +107,7 @@ function renderRail(bootRegistry: BootRegistry): void {
 describe('shell online boot → render (registry-driven branch)', () => {
   it('fetches a non-empty snapshot and renders the registry-driven rail (not the floor)', async () => {
     const fetchStub = vi.fn(() =>
-      Promise.resolve(snapshotResponse([wireEntry('finance'), EXTERNAL_WIRE]))
+      Promise.resolve(snapshotResponse([wireEntry('media'), EXTERNAL_WIRE]))
     );
 
     // The exact production await `main.tsx` blocks first render on: fetch +
@@ -123,11 +123,11 @@ describe('shell online boot → render (registry-driven branch)', () => {
     // The rail is non-blank and carries the snapshot's apps — the live mount.
     const rail = await screen.findByRole('list', { name: 'rail' });
     expect(rail).toBeInTheDocument();
-    expect(screen.getByTestId('rail-finance')).toBeInTheDocument();
+    expect(screen.getByTestId('rail-media')).toBeInTheDocument();
     expect(screen.getByTestId('rail-weather')).toBeInTheDocument();
     // Wire nav.order keeps the rail ordered (finance=10 in-repo < weather=35).
     const ids = screen.getAllByRole('listitem').map((li) => li.textContent);
-    expect(ids.indexOf('finance')).toBeLessThan(ids.indexOf('weather'));
+    expect(ids.indexOf('media')).toBeLessThan(ids.indexOf('weather'));
   });
 
   it('renders the static floor (never blank) when the boot fetch fails', async () => {
@@ -137,8 +137,8 @@ describe('shell online boot → render (registry-driven branch)', () => {
 
     renderRail(bootRegistry);
 
-    // Even on a dead registry the rendered rail is the full in-repo floor.
-    await waitFor(() => expect(screen.getByTestId('rail-finance')).toBeInTheDocument());
+    // Even on a dead registry the rendered rail is the full mapped floor.
+    await waitFor(() => expect(screen.getByTestId('rail-media')).toBeInTheDocument());
     expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('rail-weather')).not.toBeInTheDocument();
   });

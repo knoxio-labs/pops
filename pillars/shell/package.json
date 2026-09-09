@@ -27,7 +27,6 @@
     "@pops/app-ai": "workspace:*",
     "@pops/app-bfm": "workspace:*",
     "@pops/app-cerebrum": "workspace:*",
-    "@pops/app-finance": "workspace:*",
     "@pops/app-food": "workspace:*",
     "@pops/app-inventory": "workspace:*",
     "@pops/app-lists": "workspace:*",
