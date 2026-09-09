@@ -54,8 +54,13 @@ test.describe('Shell — boot install set', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Media' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Inventory' })).toBeVisible();
+    // Finance is served by the runtime loader (POPS-3219), so it has no
+    // bundle-map entry to fall back to. The floor is what this build compiled
+    // in and nothing else — the negative half is what proves the two are the
+    // same set rather than the floor quietly carrying a loader-served pillar.
+    await expect(page.getByRole('button', { name: 'Finance' })).toHaveCount(0);
   });
 
   test('an unreachable registry still boots the shell', async ({ page }) => {
@@ -64,12 +69,14 @@ test.describe('Shell — boot install set', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Media' })).toBeVisible();
     // Named, not positional. The shell chrome carries an `<h1>POPS</h1>` on
     // every route, so a positional match proves only that the frame mounted —
     // which is exactly what an outage cannot be allowed to reduce this to.
-    await expect(page).toHaveURL(/\/finance/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    // Media is the lowest `navOrder` left in the floor, so it is where the
+    // index redirect lands.
+    await expect(page).toHaveURL(/\/media/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
   });
 
   test('a registry answering with garbage is treated as no answer', async ({ page }) => {
@@ -80,7 +87,7 @@ test.describe('Shell — boot install set', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Media' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Inventory' })).toBeVisible();
   });
 });
