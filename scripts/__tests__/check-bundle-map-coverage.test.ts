@@ -87,7 +87,10 @@ describe('evaluateCoverage', () => {
       pages: false,
     }));
     expect(result.missing).toEqual(['@pops/app-beta']);
-    expect(result.reasons[0]).toContain('a non-empty pages');
+    // The whole sentence, not the fragment: the fragment was present while the
+    // sentence read "declares no a non-empty pages", so matching it proved
+    // nothing about what a reader sees.
+    expect(result.reasons[0]).toContain('declares no non-empty pages');
   });
 
   it('refuses pages with no bundle URL to load them from', () => {
@@ -97,7 +100,25 @@ describe('evaluateCoverage', () => {
       pages: true,
     }));
     expect(result.missing).toEqual(['@pops/app-beta']);
-    expect(result.reasons[0]).toContain('assetsBaseUrl');
+    expect(result.reasons[0]).toContain('declares no assetsBaseUrl');
+  });
+
+  /**
+   * A pillar off the bundle map whose manifest cannot be found at all is a
+   * different failure from one whose manifest declares nothing, and the guard
+   * conflated them until POPS-3220 — telling the reader to add an
+   * `assetsBaseUrl` to a file that had one, under a name the lookup missed.
+   */
+  it('reports a manifest it could not find as missing, not as undeclared', () => {
+    const apps = [app('@pops/app-beta')];
+    const result = evaluateCoverage(apps, new Set(), () => ({
+      assetsBaseUrl: false,
+      pages: false,
+      found: false,
+    }));
+    expect(result.missing).toEqual(['@pops/app-beta']);
+    expect(result.reasons[0]).toContain('no wire manifest could be found');
+    expect(result.reasons[0]).not.toContain('declares no');
   });
 
   it('counts a mapped app as mapped even when it is also on the wire', () => {

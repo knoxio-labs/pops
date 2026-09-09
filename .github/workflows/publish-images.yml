@@ -47,6 +47,7 @@ jobs:
           - { image: pops-purchases-ui, file: pillars/purchases/app/Dockerfile }
           - { image: pops-finance-ui, file: pillars/finance/app/Dockerfile }
           - { image: pops-bfm-ui, file: pillars/bfm/app/Dockerfile }
+          - { image: pops-ai-ui, file: pillars/ai/app/Dockerfile }
     steps:
       - uses: actions/checkout@v7
 

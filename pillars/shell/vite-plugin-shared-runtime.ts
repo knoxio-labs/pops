@@ -101,6 +101,19 @@ async function namedExportsOf(specifier: string): Promise<readonly string[] | un
 }
 
 /**
+ * Keys Node reports on a CJS package's namespace that are interop bookkeeping
+ * rather than exports.
+ *
+ * The export list is read from Node, and Vite serves the same package to the
+ * browser from its own optimized-deps ESM rewrite. The two agree on the real
+ * exports and disagree on these: re-exporting `__esModule` produces a facade
+ * that fails to link — `does not provide an export named '__esModule'` — which
+ * reaches the reader as the loader's "interface could not be loaded"
+ * placeholder for a pillar whose bundle is perfectly fine.
+ */
+const CJS_INTEROP_KEYS = new Set(['__esModule']);
+
+/**
  * The facade's source: the whole export surface of one specifier, re-exported
  * so an import map can point a remote bundle at it.
  *
@@ -117,10 +130,15 @@ async function facadeSource(specifier: string, hasDefault: boolean): Promise<str
     return `${lines.join('\n')}\n`;
   }
 
-  const named = exported.filter((name) => name !== 'default' && IDENTIFIER.test(name));
+  const named = exported.filter(
+    (name) => name !== 'default' && !CJS_INTEROP_KEYS.has(name) && IDENTIFIER.test(name)
+  );
   const lines: string[] = [];
   if (named.length > 0) lines.push(`export { ${named.join(', ')} } from '${specifier}';`);
-  if (exported.includes('default')) lines.push(`export { default } from '${specifier}';`);
+  // The flag, not the Node namespace: a dual-published package hands Node its
+  // CommonJS build, whose synthesised `default` the browser's ESM build does
+  // not have. Re-exporting it there produces a facade that fails to link.
+  if (hasDefault) lines.push(`export { default } from '${specifier}';`);
   return `${lines.join('\n')}\n`;
 }
 

@@ -33,6 +33,14 @@ import { dirname, isAbsolute, join } from 'node:path';
  * Package names a loader-mounted pillar bundle must import rather than
  * contain. Subpaths are covered — `react/jsx-runtime` and `@pops/ui/theme`
  * both resolve to the same instance as their package root.
+ *
+ * Most of these are here because a second instance is a correctness bug: two
+ * React dispatchers, a second query cache, a second i18n. `recharts` is here
+ * for a different reason that is no less binding — its dependency subtree is
+ * partly CommonJS and `require()`s React at module scope. Bundled beside an
+ * externalised React, the emitted `require` has nothing to resolve against,
+ * and the pillar throws on first mount rather than merely shipping a
+ * duplicate. So a bundle that externalises React cannot contain recharts.
  */
 export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
   'react',
@@ -42,6 +50,7 @@ export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
   'i18next',
   'react-i18next',
   '@pops/ui',
+  'recharts',
 ];
 
 /**
@@ -61,6 +70,14 @@ export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
  * `export { default } from 'react-router'` is a build error rather than a
  * no-op — and `pillars/shell` checks each flag against the real module so the
  * record cannot quietly go stale.
+ *
+ * The binding it describes is the one the BROWSER gets, which is not always
+ * the one Node reports. A dual-published package resolves to its CommonJS
+ * build under Node — where the namespace carries an `__esModule` marker and a
+ * synthesised `default` — and to a real ESM build in the browser, which has
+ * neither. `recharts` is exactly that: flagged `false` because the module the
+ * facade re-exports from has no default, whatever `await import('recharts')`
+ * shows at a Node prompt.
  */
 export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
   readonly specifier: string;
@@ -76,6 +93,7 @@ export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
   { specifier: 'i18next', hasDefault: true },
   { specifier: 'react-i18next', hasDefault: false },
   { specifier: '@pops/ui', hasDefault: false },
+  { specifier: 'recharts', hasDefault: false },
 ];
 
 /**
@@ -88,6 +106,66 @@ export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
  * entry for, and the pillar would fail to load rather than merely ship a
  * duplicate.
  */
+/**
+ * `define` entries every remote bundle needs.
+ *
+ * A remote bundle is loaded by the browser as a plain ES module, with no
+ * bundler-provided `process` shim around it. Vite's own `define` covers the
+ * app's source, but a CJS dependency that reaches the browser through the
+ * bundle carries its `process.env.NODE_ENV` branch with it — the shape
+ * `use-sync-external-store` and much of the React ecosystem still ships — and
+ * that branch is evaluated at module scope. The result is a bundle that
+ * builds cleanly, passes every unit test that imports it in Node (where
+ * `process` exists), and throws `ReferenceError: process is not defined` the
+ * first time a browser mounts it, surfacing as the shell's "interface could
+ * not be loaded" placeholder rather than as anything naming the cause.
+ *
+ * Pinned to `'production'` rather than read from the ambient environment:
+ * these bundles are only ever built to be served, and a bundle whose contents
+ * depended on who ran the build is the defect `scripts/build-remote.ts`
+ * already sets `NODE_ENV` to avoid.
+ */
+export const REMOTE_BUILD_DEFINE: Readonly<Record<string, string>> = {
+  'process.env.NODE_ENV': JSON.stringify('production'),
+};
+
+/**
+ * Emitted chunks that read the `process` global without checking for it.
+ *
+ * {@link REMOTE_BUILD_DEFINE} removes the common case, but it only rewrites
+ * the exact `process.env.NODE_ENV` member expression; a dependency reading
+ * `process.env` wholesale, or `process.platform`, survives it and throws in a
+ * browser exactly the same way. So the build asserts the absence rather than
+ * trusting the `define` to have covered everything.
+ *
+ * **A chunk containing any `typeof process` check is cleared, not scanned.**
+ * Feature-detecting `process` is how a library ships one build for Node and
+ * the browser, and it is extremely common in the dependency trees that reach
+ * these bundles: `pdfjs-dist`, for one, computes `typeof process == "object"
+ * && …` once and guards every later `process.getBuiltinModule` behind it.
+ * Flagging those would make this guard fire on working bundles, and a guard
+ * that cries wolf gets deleted rather than obeyed.
+ *
+ * The cost of that is real and worth stating: a chunk that guards one read
+ * and forgets another is cleared by the first. What remains caught is the
+ * shape that actually broke — an unconditional read at module scope, with no
+ * detection anywhere in the chunk — which is what a CJS dependency's
+ * `process.env.NODE_ENV` branch compiles to.
+ *
+ * `process` matches only as a whole word not preceded by a `.`, so a property
+ * or local named `process` — `queue.process(...)`, `preprocess` — is not
+ * mistaken for the global.
+ */
+export function findProcessGlobalUsage(
+  chunks: readonly { readonly fileName: string; readonly code: string }[]
+): string[] {
+  const globalProcess = /(?<![.\w$])process\s*\./;
+  const featureDetected = /typeof\s+process\b/;
+  return chunks
+    .filter((chunk) => globalProcess.test(chunk.code) && !featureDetected.test(chunk.code))
+    .map((chunk) => chunk.fileName);
+}
+
 export function isSharedRuntimeSpecifier(specifier: string): boolean {
   return SHARED_RUNTIME_SPECIFIERS.some(
     (shared) => specifier === shared || specifier.startsWith(`${shared}/`)
