@@ -17,6 +17,13 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     } as unknown as typeof ResizeObserver;
 }
 
+// jsdom doesn't implement `scrollIntoView`; cmdk (the kit `Autocomplete`'s
+// combobox) calls it on every option-list re-highlight, which throws
+// without a stub.
+if (typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 const i18n = createInstance();
 
 void i18n.use(initReactI18next).init({

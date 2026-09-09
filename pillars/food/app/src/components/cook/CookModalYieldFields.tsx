@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Input, Label } from '@pops/ui';
+import { DateInput, Input, Label } from '@pops/ui';
 
 /**
  * Yield qty + unit + location + expires fields for `CookModal`.
@@ -56,9 +56,8 @@ export function CookModalYieldFields({ form, setForm, onLocationChange }: Props)
       </fieldset>
       <div className="flex flex-col gap-1">
         <Label htmlFor="cook-expires">{t('cook.modal.fields.expires')}</Label>
-        <Input
+        <DateInput
           id="cook-expires"
-          type="date"
           value={form.expiresAt}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setForm((prev) => ({

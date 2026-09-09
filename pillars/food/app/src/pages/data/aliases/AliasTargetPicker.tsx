@@ -13,10 +13,10 @@
  * is the parent's responsibility (e.g. on dialog close).
  */
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Input } from '@pops/ui';
+import { Autocomplete, Button, type AutocompleteSuggestion } from '@pops/ui';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import { ingredientsGet, slugsSearch } from '../../../food-api/index.js';
@@ -44,6 +44,15 @@ export function AliasTargetPicker({ value, onChange, inputId }: AliasTargetPicke
   });
 
   const matches = search.data?.items ?? [];
+  const suggestions = useMemo<AutocompleteSuggestion[]>(
+    () =>
+      matches.map((m) => ({
+        value: `${m.kind}-${m.targetId}`,
+        label: m.name,
+        description: m.slug,
+      })),
+    [matches]
+  );
 
   if (value !== null) {
     return (
@@ -60,38 +69,27 @@ export function AliasTargetPicker({ value, onChange, inputId }: AliasTargetPicke
 
   return (
     <div className="space-y-2">
-      <Input
+      <Autocomplete
         id={inputId}
-        type="search"
+        suggestions={suggestions}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={setQuery}
+        onSelect={(suggestion) => {
+          const item = matches.find((m) => `${m.kind}-${m.targetId}` === suggestion.value);
+          if (item) {
+            onChange({
+              kind: 'ingredient',
+              id: item.targetId,
+              slug: item.slug,
+              name: item.name,
+            });
+          }
+        }}
         placeholder={t('data.aliases.picker.searchPlaceholder')}
         aria-label={t('data.aliases.picker.searchAriaLabel')}
+        emptyMessage={t('data.aliases.picker.noResults')}
+        loading={search.isLoading}
       />
-      {query.length > 0 && matches.length === 0 && !search.isLoading ? (
-        <p className="text-muted-foreground text-sm">{t('data.aliases.picker.noResults')}</p>
-      ) : null}
-      <ul className="border-input divide-y divide-y-border max-h-48 overflow-y-auto rounded-md border">
-        {matches.map((m) => (
-          <li key={`${m.kind}-${m.targetId}`}>
-            <button
-              type="button"
-              className="hover:bg-muted flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm"
-              onClick={() =>
-                onChange({
-                  kind: 'ingredient',
-                  id: m.targetId,
-                  slug: m.slug,
-                  name: m.name,
-                })
-              }
-            >
-              <span>{m.name}</span>
-              <span className="text-muted-foreground font-mono text-xs">{m.slug}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
