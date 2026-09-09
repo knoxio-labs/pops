@@ -82,6 +82,25 @@ describe('ColourInput — sync between text and swatch', () => {
     expect(swatch.value).toBe('#1a2b3c');
   });
 
+  it('lower-cases an uppercase hex before handing it to the native swatch', async () => {
+    const user = userEvent.setup();
+    render(<ControlledHarness initial="#000000" />);
+
+    const text = screen.getByRole('textbox', { name: 'Colour' }) as HTMLInputElement;
+    await user.clear(text);
+    await user.type(text, '#1A2B3C');
+
+    // The text field itself keeps what the user typed...
+    expect(text.value).toBe('#1A2B3C');
+    // ...but the native swatch, which per the HTML spec only accepts a
+    // lowercase "simple colour", must get the lower-cased form. Feeding it
+    // uppercase reproduces the silent-black-swatch bug this component
+    // exists to fix.
+    const swatch = screen.getByLabelText('Colour swatch') as HTMLInputElement;
+    expect(swatch.value).toBe('#1a2b3c');
+    expect(swatch.value).not.toBe('#000000');
+  });
+
   it('updates the text field when the swatch changes', () => {
     const onChange = vi.fn();
     render(<ControlledHarness initial="#000000" onChange={onChange} />);

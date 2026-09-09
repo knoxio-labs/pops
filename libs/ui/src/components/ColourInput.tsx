@@ -85,12 +85,16 @@ export const ColourInput = forwardRef<HTMLInputElement, ColourInputProps>((props
 
   // Derived from `value` on every render (the React-sanctioned "adjust
   // state during render" pattern) rather than an effect, so the swatch
-  // never paints one frame behind a controlled value change.
+  // never paints one frame behind a controlled value change. Lower-cased:
+  // `<input type="color">`'s value attribute must be a "simple colour"
+  // (lowercase ASCII hex) per the HTML spec — feeding it an uppercase hex
+  // string reproduces the exact silent-black-swatch bug this component
+  // exists to fix.
   const [lastValidColour, setLastValidColour] = useState(
-    isValidHexColour(value) ? value : FALLBACK_SWATCH_COLOUR
+    isValidHexColour(value) ? value.toLowerCase() : FALLBACK_SWATCH_COLOUR
   );
-  if (isValidHexColour(value) && value !== lastValidColour) {
-    setLastValidColour(value);
+  if (isValidHexColour(value) && value.toLowerCase() !== lastValidColour) {
+    setLastValidColour(value.toLowerCase());
   }
 
   const generatedId = useId();
