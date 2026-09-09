@@ -205,8 +205,19 @@ export interface BootRegistryOptions extends RegistrySnapshotFetchOptions {
 
 /**
  * Fetch the live registry snapshot and resolve it into the boot install set.
- * The await boundary `main.tsx` blocks first render on. Never throws: the
- * fetch soft-fails to `[]`, which resolves to the static floor.
+ * The await boundary `main.tsx` blocks first render on. Never throws.
+ *
+ * Three tiers, in order, each a fallback for the one before:
+ *
+ *   1. the live snapshot, whenever it resolves to a mountable surface;
+ *   2. when tier 1 gives nothing, boot resolves to the cached snapshot — the
+ *      last one that did, held in `localStorage` and narrowed by the install
+ *      set, since it stands in for the offline floor (POPS-3239);
+ *   3. the static bundle-map floor, which POPS-3215 is emptying, so on a
+ *      first visit with the registry down this is increasingly nothing.
+ *
+ * The fetch soft-fails to `[]`, so an unreachable registry arrives here as
+ * tier 1 resolving to nothing rather than as a throw.
  */
 export async function fetchBootRegistry(options: BootRegistryOptions = {}): Promise<BootRegistry> {
   const { store, ...fetchOptions } = options;
