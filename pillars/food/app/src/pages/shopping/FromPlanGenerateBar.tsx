@@ -4,7 +4,7 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 interface FromPlanGenerateBarProps {
   listName: string;
@@ -32,14 +32,14 @@ export function FromPlanGenerateBar({
         <label className="text-sm font-medium" htmlFor="from-plan-list-name">
           {t('shopping.fromPlan.listNameLabel')}
         </label>
-        <input
-          id="from-plan-list-name"
-          type="text"
-          className="border rounded px-2 py-1 text-sm flex-1 min-w-48"
-          data-testid="from-plan-list-name"
-          value={listName}
-          onChange={(e) => onChangeListName(e.target.value)}
-        />
+        <div className="flex-1 min-w-48">
+          <TextInput
+            id="from-plan-list-name"
+            data-testid="from-plan-list-name"
+            value={listName}
+            onChange={(e) => onChangeListName(e.target.value)}
+          />
+        </div>
       </div>
       {errorMessage === null ? null : (
         <div className="text-sm text-destructive" role="alert" data-testid="generate-error">

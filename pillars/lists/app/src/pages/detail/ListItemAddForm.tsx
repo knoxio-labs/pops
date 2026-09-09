@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { NumberInput, TextInput } from '@pops/ui';
+
 /**
  * Inline add-item form rendered at the bottom of the list. Pressing Enter in
  * the label input fires the mutation and clears for the next item. The
@@ -47,7 +49,14 @@ export function ListItemAddForm(props: ListItemAddFormProps): React.ReactElement
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-dashed p-3">
+    // `noValidate`: the kit's NumberInput types `step` as a number, so the qty
+    // field can no longer carry `step="any"`, and a decimal quantity would trip
+    // the browser's step-mismatch check and silently block submission.
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="space-y-2 rounded-md border border-dashed p-3"
+    >
       <LabelRow
         label={state.label}
         onChange={(label) => setState({ ...state, label })}
@@ -90,14 +99,14 @@ function LabelRow({
 }) {
   return (
     <div className="flex gap-2">
-      <input
-        type="text"
-        value={label}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="flex-1 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-      />
+      <div className="flex-1">
+        <TextInput
+          value={label}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
+        />
+      </div>
       <button
         type="submit"
         disabled={isPending}
@@ -122,24 +131,26 @@ function ExpandedFields({
 }) {
   return (
     <div className="flex gap-2">
-      <input
-        type="number"
+      <NumberInput
         inputMode="decimal"
-        step="any"
+        showSteppers={false}
+        enableDrag={false}
+        size="sm"
         value={state.qty}
         onChange={(e) => setState({ ...state, qty: e.target.value })}
         placeholder={t('detail.add.qty')}
         aria-label={t('detail.add.qty')}
-        className="w-24 rounded-md border bg-background px-2 py-1 text-sm"
+        containerClassName="w-24"
       />
-      <input
-        type="text"
-        value={state.unit}
-        onChange={(e) => setState({ ...state, unit: e.target.value })}
-        placeholder={t('detail.add.unit')}
-        aria-label={t('detail.add.unit')}
-        className="w-28 rounded-md border bg-background px-2 py-1 text-sm"
-      />
+      <div className="w-28">
+        <TextInput
+          size="sm"
+          value={state.unit}
+          onChange={(e) => setState({ ...state, unit: e.target.value })}
+          placeholder={t('detail.add.unit')}
+          aria-label={t('detail.add.unit')}
+        />
+      </div>
       <button
         type="button"
         onClick={onCollapse}
