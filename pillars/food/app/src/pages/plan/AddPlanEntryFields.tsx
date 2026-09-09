@@ -1,4 +1,4 @@
-import { ComboboxSelect, NumberInput } from '@pops/ui';
+import { Autocomplete, NumberInput, Textarea } from '@pops/ui';
 
 /**
  * Form-field block for `AddPlanEntryModal` — split out so the parent
@@ -49,22 +49,25 @@ function RecipePicker(props: AddPlanEntryFieldsProps): ReactElement {
       <label className="block text-sm font-medium mb-1" htmlFor="add-plan-recipe-search">
         Recipe
       </label>
-      <input
+      <Autocomplete
         id="add-plan-recipe-search"
-        data-testid="add-plan-recipe-search"
-        type="text"
-        className="w-full border rounded px-2 py-1 text-sm mb-1"
-        placeholder="Search recipes…"
+        // Radix's `PopoverTrigger asChild` overwrites the `id` the kit puts on
+        // the input, so `htmlFor` above never associates and the field would
+        // otherwise reach a screen reader unnamed (POPS-3282).
+        aria-label="Recipe"
+        suggestions={props.options}
         value={props.search}
-        onChange={(e) => props.setSearch(e.target.value)}
-      />
-      <ComboboxSelect
-        options={props.options}
-        value={props.recipeId === null ? undefined : String(props.recipeId)}
-        onChange={(v) => props.setRecipeId(Array.isArray(v) ? null : Number(v))}
-        placeholder="Pick a recipe"
-        searchPlaceholder="Search…"
-        emptyMessage={props.isRecipesLoading ? 'Loading…' : 'No recipes match.'}
+        // Every keystroke invalidates an earlier pick: the query the field now
+        // shows is no longer the recipe held in state. `Autocomplete` fires this
+        // before `onSelect`, so selecting a suggestion still lands on the new id.
+        onChange={(next) => {
+          props.setSearch(next);
+          props.setRecipeId(null);
+        }}
+        onSelect={(suggestion) => props.setRecipeId(Number(suggestion.value))}
+        placeholder="Search recipes…"
+        emptyMessage="No recipes match."
+        loading={props.isRecipesLoading}
       />
     </div>
   );
@@ -84,7 +87,11 @@ function ServingsField(props: {
         data-testid="add-plan-servings"
         min={1}
         value={props.plannedServings}
-        onChange={(e) => props.setPlannedServings(Math.max(1, Number(e.target.value)))}
+        // `NaN` carries the cleared field: `NumberInput` renders it as empty and
+        // `canSubmit` rejects it, so clearing no longer snaps the value back to 1.
+        onChange={(e) =>
+          props.setPlannedServings(e.target.value === '' ? Number.NaN : Number(e.target.value))
+        }
       />
     </div>
   );
@@ -96,10 +103,10 @@ function NotesField(props: { notes: string; setNotes: (s: string) => void }): Re
       <label className="block text-sm font-medium mb-1" htmlFor="add-plan-notes">
         Notes (optional)
       </label>
-      <textarea
+      <Textarea
         id="add-plan-notes"
         data-testid="add-plan-notes"
-        className="w-full border rounded px-2 py-1 text-sm h-20"
+        className="h-20"
         value={props.notes}
         onChange={(e) => props.setNotes(e.target.value)}
         maxLength={1000}
