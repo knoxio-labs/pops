@@ -1,6 +1,6 @@
-import { Button, Input, cn } from '@pops/ui';
+import { Button, Input, cn, fieldLabelDescribedBy } from '@pops/ui';
 
-import { EnvLabel, FieldWrapper } from '../FieldWrapper';
+import { EnvLabel, FieldWrapper, settingsFieldId } from '../FieldWrapper';
 import { TestActionIcon } from '../TestActionIcon';
 import { useTestAction } from '../useTestAction';
 import { getInputType } from '../utils';
@@ -76,6 +76,10 @@ export function TextLikeField({
           disabled={saving}
           aria-invalid={!!validationError || undefined}
           aria-required={field.validation?.required || undefined}
+          aria-describedby={fieldLabelDescribedBy(settingsFieldId(field), {
+            error: validationError,
+            description: field.description,
+          })}
           className="flex-1"
         />
         <TestActionButton

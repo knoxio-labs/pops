@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createPackageNameResolver,
+  SHARED_RUNTIME_ENTRY_POINTS,
   type ManifestFiles,
   findBundledSharedRuntime,
   isSharedRuntimeSpecifier,
@@ -251,5 +252,34 @@ describe('createPackageNameResolver — walking to the nearest manifest', () => 
     resolve('/repo/libs/ui/src/b.ts');
 
     expect(reads.length).toBe(afterFirst);
+  });
+});
+
+/**
+ * The two lists describe one contract from opposite ends: what a remote bundle
+ * must not contain, and what the host must be able to hand it. A specifier
+ * missing from either side fails only in a browser — as a duplicated package,
+ * or as a bare import nothing resolves.
+ *
+ * The `hasDefault` flags are checked against the real modules by
+ * `pillars/shell`, which depends on all of them; this package depends on none.
+ */
+describe('SHARED_RUNTIME_ENTRY_POINTS', () => {
+  it('names only specifiers the external predicate keeps out of a bundle', () => {
+    for (const { specifier } of SHARED_RUNTIME_ENTRY_POINTS) {
+      expect(isSharedRuntimeSpecifier(specifier), specifier).toBe(true);
+    }
+  });
+
+  it('covers every shared package at its root', () => {
+    const roots = new Set(SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier));
+    for (const shared of SHARED_RUNTIME_SPECIFIERS) {
+      expect(roots.has(shared), shared).toBe(true);
+    }
+  });
+
+  it('lists each specifier once', () => {
+    const specifiers = SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier);
+    expect(new Set(specifiers).size).toBe(specifiers.length);
   });
 });

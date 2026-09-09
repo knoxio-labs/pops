@@ -1,6 +1,6 @@
-import { Textarea } from '@pops/ui';
+import { Textarea, fieldLabelDescribedBy } from '@pops/ui';
 
-import { EnvLabel, FieldWrapper } from '../FieldWrapper';
+import { EnvLabel, FieldWrapper, settingsFieldId } from '../FieldWrapper';
 
 import type { SettingsField } from '@pops/types';
 
@@ -33,6 +33,10 @@ export function JsonField({
         disabled={saveState === 'saving'}
         aria-invalid={!!validationError || undefined}
         aria-required={field.validation?.required || undefined}
+        aria-describedby={fieldLabelDescribedBy(settingsFieldId(field), {
+          error: validationError,
+          description: field.description,
+        })}
       />
       {envFallbackActive && field.envFallback && <EnvLabel envVar={field.envFallback} />}
     </FieldWrapper>

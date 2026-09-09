@@ -23,6 +23,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { render, screen, waitFor } from '@testing-library/react';
+import { lazy } from 'react';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -240,5 +241,41 @@ describe('defaultRemoteModuleImporter — the production import path', () => {
   it('rejects for a URL that does not resolve', async () => {
     const missing = pathToFileURL(path.join(import.meta.dirname, '__fixtures__/absent.mjs')).href;
     await expect(defaultRemoteModuleImporter(missing)).rejects.toThrow();
+  });
+});
+
+/**
+ * A pillar that code-splits its pages puts `React.lazy` components in
+ * `bundles` — the ordinary thing to do, and what every in-repo pillar does.
+ * React refuses a lazy that resolves to another lazy ("Lazy element type must
+ * resolve to a class or function"), so mounting one used to fail with an error
+ * naming double-wrapping rather than the bundle, on every page of the pillar.
+ * Found by loading a real purchases bundle in a browser; no test built on
+ * plain function components could have.
+ */
+describe('a remote bundle whose components are themselves lazy', () => {
+  it('mounts a lazy component from the bundle', async () => {
+    const LazyRemoteHome = lazy(() =>
+      Promise.resolve({ default: () => <div data-testid="lazy-remote-home">lazy home</div> })
+    );
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({ bundles: { home: LazyRemoteHome } })
+    );
+    const entry = synthesizeExternalBundleEntry(descriptor(), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+
+    await waitFor(() => expect(screen.getByTestId('lazy-remote-home')).toBeInTheDocument());
+  });
+
+  it('still mounts a plain function component', async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(VALID_BUNDLE));
+    const entry = synthesizeExternalBundleEntry(descriptor(), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+
+    await waitFor(() => expect(screen.getByTestId('remote-home')).toBeInTheDocument());
   });
 });

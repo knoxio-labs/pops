@@ -58,6 +58,14 @@ export interface BootRegistry {
   readonly manifests: readonly FrontendManifest[];
   readonly registeredApps: readonly AppNavConfig[];
   /**
+   * `assetsBaseUrl` of every mounted pillar the runtime loader will import,
+   * so boot can `modulepreload` them rather than leaving the first request
+   * until the reader navigates (`preload-remote-bundles.ts`). Only pillars
+   * that actually resolved to a mounted surface appear — an operator's
+   * install-set selection is honoured here as everywhere else.
+   */
+  readonly remoteBundleUrls: readonly string[];
+  /**
    * `'registry'` when the live snapshot drove the install set, `'static-floor'`
    * when the registry was unreachable and the in-repo bundle map was used.
    * Exposed for diagnostics / tests; consumers render identically either way.
@@ -120,15 +128,23 @@ function railBundleMap(
 interface ResolvedSurface {
   readonly manifests: readonly FrontendManifest[];
   readonly registeredApps: readonly AppNavConfig[];
+  readonly remoteBundleUrls: readonly string[];
 }
 
 function resolveSurface(
   entries: readonly RegistryEntry[],
   importer?: RemoteModuleImporter
 ): ResolvedSurface {
+  const bundleMap = railBundleMap(entries, importer);
   return {
     manifests: walkRegistry(entries, WORKSPACE_BUNDLE_MAP, importer),
-    registeredApps: buildRegisteredAppsFromBundleMap(railBundleMap(entries, importer)),
+    registeredApps: buildRegisteredAppsFromBundleMap(bundleMap),
+    // Read off the resolved map rather than the raw entries: a pillar that
+    // advertised a URL but no mountable surface is not in the map, and
+    // preloading a bundle nothing will import is a request for nothing.
+    remoteBundleUrls: Object.values(bundleMap)
+      .map((entry) => entry.assetsBaseUrl)
+      .filter((url): url is string => url !== undefined),
   };
 }
 

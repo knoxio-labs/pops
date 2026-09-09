@@ -1104,6 +1104,32 @@ services:
       timeout: 5s
       retries: 3
 
+  # The purchases UI bundle (pillars/purchases/app) — a static nginx image,
+  # like pops-design. Purchases is the first pillar the shell mounts through
+  # its runtime loader instead of its static bundle map (POPS-3217), so its
+  # bundle needs a URL of its own; the `/purchases-ui/` location block in
+  # pops-shell's nginx.conf reverse-proxies browser traffic here, which keeps
+  # it behind the same Cloudflare Access the shell sits behind and same-origin
+  # with the shell's shared-runtime import map.
+  #
+  # The service is named for what the shell resolves: the generated UI blocks
+  # come from the convention `<pillar>-ui:80`, not from a per-pillar list.
+  purchases-ui:
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-purchases-ui:${POPS_IMAGE_TAG:-main}
+    container_name: pops-purchases-ui
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Design playground (pillars/design) — a static nginx image, like
   # pops-docs. The `/design/` location block in pops-shell's nginx.conf
   # reverse-proxies browser traffic here, so it sits behind the same

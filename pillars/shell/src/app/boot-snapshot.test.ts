@@ -185,9 +185,14 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     expect(mountedAppIds.length).toBeGreaterThan(0);
 
     // And the app rail is the full in-repo floor, in nav.order — never blank.
+    // `purchases` is not on it: it reaches the shell through the runtime
+    // loader (POPS-3217), and the floor is the static bundle map. With the
+    // registry unreachable its UI is absent, which is the same condition
+    // under which its API is undiscoverable — the shell still boots, and
+    // every pillar still in the map still mounts, which is what never-brick
+    // asserts.
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'finance',
-      'purchases',
       'media',
       'inventory',
       'food',
@@ -237,7 +242,6 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
     expect(result.registeredApps.length).toBeGreaterThan(0);
     expect(result.registeredApps.map((a) => a.id)).toEqual([
       'finance',
-      'purchases',
       'media',
       'inventory',
       'food',

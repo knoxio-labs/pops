@@ -13,13 +13,17 @@ purchases pillar's REST contract through the generated
 The shell mounts this app twice over, by two different mechanisms, and both
 resolve a page to the same component.
 
-The one in use today is the static bundle map
-(`pillars/shell/src/app/bundle-map.tsx`), which imports `routes` at build time.
-The other is the shell's runtime loader (`external-ui.tsx`), which imports a
-built ESM bundle at a URL and looks each page up by its `bundleSlot` in the
-module's `bundles` export. That second path existed with nothing to load:
-purchases advertised four slots in its wire manifest and no app in the repo
-exported a `bundles` record at all (POPS-2351).
+The one **in use** is the shell's runtime loader (`external-ui.tsx`), which
+imports the built ESM bundle at the URL this pillar's manifest advertises and
+looks each page up by its `bundleSlot` in the module's `bundles` export.
+Purchases is the first in-repo pillar to arrive that way (POPS-3217): it is not
+in `pillars/shell/src/app/bundle-map.tsx`, and `@pops/shell` does not depend on
+this package.
+
+The other is that static bundle map, which imports `routes` at build time and
+is how the remaining eight pillars arrive. Both paths still work here, and
+`routes` is still exported for it — this app is mountable either way, which is
+what makes the swap revertible.
 
 `src/bundles.ts` is that record. It is `PAGE_COMPONENTS` from `src/routes.tsx`
 under the name the wire uses, so the two mount paths cannot name different
@@ -34,6 +38,20 @@ it is a compile error at `PAGE_COMPONENTS`, not a blank screen.
 one ESM entry exporting `bundles`, with a lazily-imported chunk per page, built
 by `vite.remote.config.ts`. The package itself stays source-only; this build
 is alongside it, not instead of it.
+
+`pillars/purchases/app/Dockerfile` serves that output as a static nginx image
+(`purchases-ui`), which the shell's generated `/purchases-ui/` location proxies
+to. It is a second image of this pillar rather than part of
+`pillars/purchases/Dockerfile`, for the reason the design playground ships two:
+that image is a narrow API container with a hand-curated dependency closure, and
+pulling a bundler into it would make every pillar API image carry one.
+
+The entry keeps a stable filename because it is half of the `assetsBaseUrl` the
+registry advertises; the chunks beside it are content-hashed. The nginx conf
+serves the entry `no-cache` and the chunks `immutable`, which is the same split
+`pops-shell` runs for `index.html` against `/assets/`. The image also declares
+`pops.smoke.health` / `pops.smoke.freshness` labels, because it serves a module
+rather than a page and `/` is a 404 by design.
 
 Everything on the shared-runtime list in `@pops/pillar-sdk/remote-build` —
 React, the router, the query client, i18next, `@pops/ui` — is **external**. A
@@ -224,6 +242,14 @@ each was a dead end while nothing rendered one.
 **It carries no rail entry.** Every other route in this app is somewhere a
 reader can go from nothing; an order is only reachable from something that
 already holds its id, so a nav item pointing here could not be built.
+
+**It does carry a page descriptor, and that is newer than it looks.** While the
+shell mounted this app from the bundle map it took the whole `routes` array, so
+`pages` only ever needed the rail-reachable four. The runtime loader builds a
+pillar's routes from `pages` alone — so without `{ path: ':purchaseId',
+bundleSlot: 'purchases-order' }` in `@pops/purchases/manifest`, this page would
+simply not exist, and the queue, the drop zone and every search hit would 404
+into a rail that looked perfectly correct.
 
 **A line-item search hit lands here at `?item=<id>`.** A line has no page of
 its own — the pillar reads one only through its order — so the order is the

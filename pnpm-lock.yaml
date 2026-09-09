@@ -2632,9 +2632,6 @@ importers:
       '@pops/app-media':
         specifier: workspace:*
         version: link:../media/app
-      '@pops/app-purchases':
-        specifier: workspace:*
-        version: link:../purchases/app
       '@pops/locales':
         specifier: workspace:*
         version: link:../../libs/locales

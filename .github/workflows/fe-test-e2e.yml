@@ -75,7 +75,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build pillars and shared packages
-        run: pnpm --filter "./pillars/*" --filter "@pops/shell^..." build
+        # `./pillars/*/app` as well: a pillar the shell mounts through its
+        # runtime loader is served from its app's built bundle, and
+        # `./pillars/*` does not reach one directory deeper. Without it the
+        # dev server has no bundle to serve, the pillar's rail button mounts
+        # nothing, and the spec that clicks it times out (POPS-3217).
+        run: pnpm --filter "./pillars/*" --filter "./pillars/*/app" --filter "@pops/shell^..." build
 
       - name: Let apt wait for the dpkg lock
         run: |

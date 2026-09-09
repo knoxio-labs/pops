@@ -6,6 +6,24 @@ import type { SettingsField } from '@pops/types';
 
 import type { SaveState } from './types';
 
+/**
+ * The id stem a settings field's message paragraphs hang off.
+ *
+ * Every field kind sets `aria-invalid` on its control, which tells a screen
+ * reader that something is wrong and nothing about what. The message lives in
+ * this wrapper, so the id it is announced through has to be derivable from
+ * both sides — the wrapper that renders the paragraph and the field that
+ * renders the control. `field.key` is unique within a settings section, which
+ * is the scope a page renders.
+ *
+ * The `-error` / `-description` suffixes are `@pops/ui`'s
+ * `fieldLabelDescribedBy` convention, reused rather than reinvented so a field
+ * points at the right paragraph without a second id scheme to keep in step.
+ */
+export function settingsFieldId(field: SettingsField): string {
+  return `settings-field-${field.key}`;
+}
+
 interface FieldWrapperProps {
   field: SettingsField;
   children: React.ReactNode;
@@ -41,11 +59,15 @@ export function FieldWrapper({ field, children, saveState, error }: FieldWrapper
       </div>
       {children}
       {error && (
-        <p role="alert" className="text-xs text-destructive">
+        <p id={`${settingsFieldId(field)}-error`} role="alert" className="text-xs text-destructive">
           {error}
         </p>
       )}
-      {field.description && <p className="text-xs text-muted-foreground">{field.description}</p>}
+      {field.description && (
+        <p id={`${settingsFieldId(field)}-description`} className="text-xs text-muted-foreground">
+          {field.description}
+        </p>
+      )}
     </div>
   );
 }

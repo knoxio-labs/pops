@@ -37,6 +37,14 @@ jobs:
           - { image: pops-docs, file: pillars/docs/Dockerfile }
           - { image: pops-design, file: pillars/design/Dockerfile }
           - { image: pops-design-api, file: pillars/design/Dockerfile.api }
+          # A pillar's UI bundle, served as a static ES module from an image
+          # of its own (POPS-3217). It is listed here rather than discovered
+          # below because that discovery reads `pops-<pillar>` out of compose
+          # and resolves `pillars/<pillar>/Dockerfile`; this image is named
+          # `pops-<pillar>-ui` and built from `pillars/<pillar>/app`, so it
+          # matches neither. `scripts/ci/__tests__/compose-images-published.test.ts`
+          # asserts this list and compose stay in step.
+          - { image: pops-purchases-ui, file: pillars/purchases/app/Dockerfile }
     steps:
       - uses: actions/checkout@v7
 

@@ -71,6 +71,83 @@ headers; the outcome shapes are the `RegisterShellOutcome` union in the lib.
 Every outcome exits `0` so a partially-configured deploy still boots — only an
 unexpected throw sets a non-zero exit code.
 
+## How a pillar's UI reaches the shell
+
+Two ways, and `scripts/check-bundle-map-coverage.mjs` asserts every
+`pillars/*/app` uses one of them.
+
+**The static bundle map.** `src/app/bundle-map.tsx` imports the published
+`@pops/app-<pillar>` package and the shell mounts its routes at build time.
+Eight pillars arrive this way.
+
+**The runtime loader.** The pillar's wire manifest advertises `assetsBaseUrl`
+and `pages`; `src/app/external-ui.tsx` `import()`s the bundle at that URL on
+first navigation and resolves each `PageDescriptor.bundleSlot` against the
+module's `bundles` export. `purchases` is the first in-repo pillar to arrive
+this way (POPS-3217), by the same mechanism an out-of-tree pillar would.
+
+### The shared-runtime contract
+
+A loader-mounted pillar is a separate build, so anything it bundles is a second
+copy at runtime — and for a package holding React context or module-global
+state a second copy is a correctness failure no build reports: two React copies
+throw `Invalid hook call` on the pillar's first hook, two `@tanstack/react-query`
+copies read an empty cache through a provider they cannot see, two `i18next`
+copies render raw keys.
+
+So the pillar's build marks those packages external
+(`SHARED_RUNTIME_SPECIFIERS` in `@pops/pillar-sdk/remote-build`, enforced by
+its own build script), and the shell answers the bare specifiers that leaves in
+the bundle. `vite-plugin-shared-runtime.ts` does that: one re-export facade per
+specifier as its own build entry, plus an import map in `index.html` naming the
+emitted files. Three things about it are load-bearing and none is obvious:
+
+- **`preserveEntrySignatures: 'allow-extension'`.** Without it the facade
+  entries are emitted with no exports at all — the bundler sees nothing inside
+  the build importing them and prunes the signature to its side effects. The
+  files still appear and still import the right chunks; they just hand a pillar
+  an empty namespace.
+- **The facades name their exports.** `export * from 'react'` forwards nothing,
+  because React is CommonJS: a bundler wraps it in a factory and resolves named
+  imports as property reads, so there is no static list to forward. The names
+  are read from Node's own module namespace at build time.
+- **No module of a shared package may land in two chunks.** The import map
+  points at one file per specifier, and that is the shell's own instance only
+  while that holds. The build asserts it and fails if it stops being true.
+
+In dev the import map names the dev server's own URL for each facade, so a
+bundle built for production loads unmodified against `pnpm dev`.
+
+### Serving a pillar's bundle
+
+`assetsBaseUrl` is root-relative (`/purchases-ui/purchases.js`). An in-repo
+pillar cannot know the origin the browser reached the shell on — one deployment
+answers to a LAN name, a Tailscale name and `localhost` — and same-origin is
+also what lets the import map govern the bundle with no CORS posture at all.
+
+In production the generated `nginx.conf` carries a `/<pillar>-ui/` location per
+pillar, proxying to `<pillar>-ui:80`. That is a convention rather than a list of
+which pillars have a UI: a list is the central enumeration ADR-039 Invariant 5
+removes, and the variable-form `proxy_pass` makes an absent UI container a 502
+on its own path instead of a boot failure. The bundle itself is a static nginx
+image built from the pillar's app (`pillars/purchases/app/Dockerfile`), the same
+shape the design playground uses.
+
+In dev, `vite-plugin-pillar-ui-dev.ts` serves `pillars/<id>/app/dist/remote` at
+the same path, so the loader path is exercised locally rather than first in a
+deployment. Build the bundle with
+`pnpm --filter @pops/app-<pillar> build`; until you do, the shell renders its
+"could not be loaded" placeholder, which is the same degradation a missing
+bundle produces in production.
+
+### What a loader-mounted pillar gives up
+
+`staticFloorEntries()` derives the registry-outage floor from the bundle map, so
+a pillar that leaves the map also leaves the floor. With the registry
+unreachable the shell still boots and every mapped pillar still mounts;
+purchases is simply absent until the registry answers — the same condition under
+which its API is undiscoverable.
+
 ## Overlay mount contract
 
 The props an overlay receives are `OverlayComponentProps` in

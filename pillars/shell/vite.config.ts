@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 
+import { pillarUiDevPlugin } from './vite-plugin-pillar-ui-dev';
+import { sharedRuntimePlugin } from './vite-plugin-shared-runtime';
+
 /**
  * When `POPS_REGISTRY_SNAPSHOT` is set, alias `@pops/module-registry` to the
  * snapshot file so the shell consumes a build-specific install set. Unset in
@@ -41,7 +44,12 @@ export default defineConfig({
         : 'dev'
     ),
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    sharedRuntimePlugin(),
+    pillarUiDevPlugin(path.resolve(__dirname, '../..')),
+  ],
   test: {
     environment: 'jsdom',
     globals: true,
