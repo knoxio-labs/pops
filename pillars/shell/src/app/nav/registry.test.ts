@@ -30,7 +30,6 @@ describe('nav registry', () => {
       'lists',
       'cerebrum',
       'ai',
-      'bfm',
     ]);
   });
 

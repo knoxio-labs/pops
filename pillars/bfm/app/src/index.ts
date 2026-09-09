@@ -5,5 +5,6 @@
  * shell. Talks to the bfm pillar over its REST contract via the generated
  * client in `./bfm-api`.
  */
+export { bundles } from './bundles';
 export { manifest } from './manifest';
 export { navConfig, routes } from './routes';

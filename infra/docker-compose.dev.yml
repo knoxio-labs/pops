@@ -642,6 +642,26 @@ services:
       timeout: 5s
       retries: 3
 
+  # The bfm UI bundle (pillars/bfm/app) — a static nginx image behind the
+  # shell's `/bfm-ui/` location block.
+  bfm-ui:
+    build:
+      context: ..
+      dockerfile: pillars/bfm/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-bfm-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The finance UI bundle (pillars/finance/app) — a static nginx image serving
   # one ES module and its chunks, behind the shell's `/finance-ui/` location.
   finance-ui:
