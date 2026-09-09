@@ -1,4 +1,4 @@
-# ADR-018: sqlite-vec for Vector Storage
+# Cerebrum ADR-001: sqlite-vec for Vector Storage
 
 ## Status
 

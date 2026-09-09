@@ -1,7 +1,7 @@
 /**
  * DSL editor autocomplete — canonical unit list.
  *
- * The DSL grammar (ADR-023) allows any lowercase identifier after `qty:`;
+ * The DSL grammar (food ADR-002) allows any lowercase identifier after `qty:`;
  * the parser does not constrain unit names. The normaliser only knows
  * `g`, `ml`, `count` natively, plus the alias table. The suggestion list
  * mirrors the built-in units the editor knows about deterministically —

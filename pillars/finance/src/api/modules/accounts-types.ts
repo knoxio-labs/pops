@@ -35,7 +35,7 @@ export interface Account {
   /** The contacts Entity id the three fields above were actually resolved
    * from — see `AccountEntityDisplay.resolvedEntityId`. */
   resolvedEntityId: string | null;
-  /** What the account holds today, checkpoint-anchored (ADR-051). */
+  /** What the account holds today, checkpoint-anchored (finance ADR-002). */
   balance: AccountBalance;
   /** When the account last got data and how it is fed (POPS-2917). */
   importStatus: ImportStatus;

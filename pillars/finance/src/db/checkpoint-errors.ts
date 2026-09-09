@@ -1,5 +1,5 @@
 /**
- * Typed errors raised by the account-checkpoint domain (POPS-2878, ADR-051).
+ * Typed errors raised by the account-checkpoint domain (POPS-2878, finance ADR-002).
  * Split into their own file rather than added to `errors.ts` or
  * `account-errors.ts`, both already at their line cap; re-exported from
  * `errors.ts` so `from '../errors.js'` keeps working.

@@ -47,7 +47,7 @@ export function ruleMatchesDescription(
  * subsequent entries are overridden alternatives. Inactive rules and rules
  * scoped to a different account are filtered out first. No confidence floor:
  * a stored rule is a matching candidate on activity, scope and pattern alone
- * (ADR-053) — confidence is audit data, never a gate.
+ * (finance ADR-004) — confidence is audit data, never a gate.
  *
  * `accountId` is the transaction's `accounts.id`, or `null` for a caller with
  * no account in hand (a description-only probe), which sees every rule. Scope

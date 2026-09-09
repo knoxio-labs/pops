@@ -1,6 +1,6 @@
 import Foundation
 
-/// What a balance is anchored on, mirroring finance's own `basis` (ADR-051).
+/// What a balance is anchored on, mirroring finance's own `basis` (finance ADR-002).
 ///
 /// The distinction is not cosmetic. ``checkpoint`` means the figure is pinned
 /// to a balance somebody read off the account and adjusted by the transactions

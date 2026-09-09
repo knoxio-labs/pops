@@ -23,7 +23,7 @@ If the input describes a complete recipe, transcribe it faithfully — do not in
 
 If the input is a rough idea, sketch, or request, elaborate it into a plausible v1 the operator can refine. Use sensible defaults for unspecified measurements but mark them with a trailing \`-- guess\` comment so the operator can spot them.
 
-Return a single POPS recipe DSL document using ADR-023 grammar. Rules:
+Return a single POPS recipe DSL document using food ADR-002 grammar. Rules:
 
 - Start with \`@recipe("<slug>", "<title>")\`.
 - Use \`@ingredient(N, "<name>", qty:<num><unit>)\` for every ingredient.

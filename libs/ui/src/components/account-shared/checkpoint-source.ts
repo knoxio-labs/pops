@@ -2,7 +2,7 @@ import { FileText, Pencil, Upload } from 'lucide-react';
 
 import type { LucideIcon } from 'lucide-react';
 
-/** Who supplied a checkpoint's number (ADR-051): typed by hand, read off an import, or parsed from a statement. */
+/** Who supplied a checkpoint's number (finance ADR-002): typed by hand, read off an import, or parsed from a statement. */
 export type CheckpointSource = 'manual' | 'import' | 'statement';
 
 /**

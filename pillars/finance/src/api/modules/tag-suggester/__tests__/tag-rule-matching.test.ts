@@ -92,7 +92,7 @@ describe('findMatchingTagRules — priority ordering', () => {
     expect(rows.map((r) => r.id)).toEqual([high.id, low.id]);
   });
 
-  it('breaks a same-priority tie by id, never by confidence (ADR-053/POPS-3130)', () => {
+  it('breaks a same-priority tie by id, never by confidence (finance ADR-004/POPS-3130)', () => {
     const highConfidence = transactionTagRulesService.createTransactionTagRule(db, {
       descriptionPattern: 'UBER',
       matchType: 'contains',

@@ -32,7 +32,7 @@ export interface CreateActionInput {
   payload?: unknown;
 }
 
-/** Configurable graduation thresholds (ADR-021). */
+/** Configurable graduation thresholds (cerebrum ADR-004). */
 export interface GraduationThresholds {
   /** Minimum approved actions to graduate from propose to act_report. */
   proposeToActReportMinApproved: number;

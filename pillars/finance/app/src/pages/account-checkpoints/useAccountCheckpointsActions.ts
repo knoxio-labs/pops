@@ -21,7 +21,7 @@ type CreateBody = NonNullable<CheckpointsCreateData['body']>;
  * The typed balance, negated for a liability kind: the user always types
  * what the real-world statement shows (a positive "amount owed" for a card,
  * the plain balance for an asset), and this is the one place that becomes
- * the ledger-signed figure the wire expects (ADR-051).
+ * the ledger-signed figure the wire expects (finance ADR-002).
  */
 function toCreateBody(values: CheckpointFormValues, account: Account): CreateBody {
   const { signConvention } = getAccountKindBehaviour(account.kind);
