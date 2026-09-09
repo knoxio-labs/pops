@@ -1,7 +1,7 @@
 /**
  * Integration tests for `accounts/:id/imports`, `accounts/:id/import-config`
  * and the `importStatus` every accounts response carries (POPS-2917,
- * ADR-052).
+ * finance ADR-003).
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

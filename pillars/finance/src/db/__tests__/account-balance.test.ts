@@ -1,6 +1,6 @@
 /**
  * The balance module against the migrated finance schema (POPS-2879,
- * ADR-051): forward and backward anchoring, the unanchored fallback, the
+ * finance ADR-002): forward and backward anchoring, the unanchored fallback, the
  * end-of-day boundary, expected-vs-actual, and the month-end trend.
  *
  * Every figure asserted here is ledger-signed. The liability suite is

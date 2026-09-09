@@ -9,7 +9,7 @@ import type { MatchType } from '../types';
  * on a hit, the active toggle, and the priority used for ordering.
  *
  * Confidence is intentionally NOT exposed here — it is audit-only now
- * (ADR-053/POPS-3130), adjustable only through `ConfidenceSlider` in the
+ * (finance ADR-004/POPS-3130), adjustable only through `ConfidenceSlider` in the
  * table. A rule created manually gets `confidence: null` (never assessed)
  * and edits to existing rules leave it untouched.
  */

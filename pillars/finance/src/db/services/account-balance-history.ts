@@ -1,5 +1,5 @@
 /**
- * Month-end balance trends (POPS-2879, ADR-051) — the twelve-month series the
+ * Month-end balance trends (POPS-2879, finance ADR-002) — the twelve-month series the
  * account page's balance card charts.
  *
  * Split from `account-balance.ts` so neither file has to carry both the

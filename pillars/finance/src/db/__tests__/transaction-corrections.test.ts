@@ -76,7 +76,7 @@ function freshDb(): TestHarness {
 /**
  * `confidence` defaults to 0.5 here — a JS-side default for this helper's
  * convenience, not a floor: nothing reads confidence to decide whether a rule
- * matches or how review routes (ADR-053/POPS-3129/POPS-3130). A real create
+ * matches or how review routes (finance ADR-004/POPS-3129/POPS-3130). A real create
  * leaves it `null` (never assessed) unless the caller sets it explicitly.
  */
 function seedCorrection(
@@ -275,7 +275,7 @@ describe('createOrUpdateTransactionCorrection — conflict path', () => {
 
     expect(second.id).toBe(first.id);
     // Reinforcement never mints a number a hand-written rule never had
-    // (ADR-053/POPS-3130): null stays null through the conflict path too.
+    // (finance ADR-004/POPS-3130): null stays null through the conflict path too.
     expect(second.confidence).toBeNull();
     // Re-creating a correction is not a use of it: the usage counters stay put
     // and remain readable as evidence (POPS-2597).
@@ -791,7 +791,7 @@ describe('findAllMatchingTransactionCorrectionsFromDb', () => {
     expect(matches.map((m) => m.id)).toEqual(['rule-a', 'rule-b', 'rule-z']);
   });
 
-  it('matches every active rule regardless of confidence — no floor (ADR-053)', () => {
+  it('matches every active rule regardless of confidence — no floor (finance ADR-004)', () => {
     seedCorrection(harness.raw, {
       descriptionPattern: 'COFFEE',
       matchType: 'exact',
@@ -866,7 +866,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     harness = freshDb();
   });
 
-  /** The matching floor removed by ADR-053/POPS-3129 — kept only as a fixture anchor. */
+  /** The matching floor removed by finance ADR-004/POPS-3129 — kept only as a fixture anchor. */
   const OLD_MATCHING_FLOOR = 0.7;
 
   it('groups results as [exact, contains, regex] in matchType order', () => {
@@ -893,7 +893,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     expect(matches.map((m) => m.id)).toEqual(['exact-rule', 'contains-rule', 'regex-rule']);
   });
 
-  it('sorts within each group by priority ASC then timesApplied DESC — never confidence (ADR-053/POPS-3130)', () => {
+  it('sorts within each group by priority ASC then timesApplied DESC — never confidence (finance ADR-004/POPS-3130)', () => {
     seedCorrection(harness.raw, {
       id: 'low-priority',
       descriptionPattern: 'COFFEE',
@@ -949,7 +949,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     expect(findAllMatchingTransactionCorrections(harness.db, 'coffee', null)).toEqual([]);
   });
 
-  it('includes both an at-the-old-floor and a below-it rule — no confidence floor (ADR-053)', () => {
+  it('includes both an at-the-old-floor and a below-it rule — no confidence floor (finance ADR-004)', () => {
     seedCorrection(harness.raw, {
       id: 'at-floor',
       descriptionPattern: 'COFFEE',
@@ -968,7 +968,7 @@ describe('findAllMatchingTransactionCorrections', () => {
     ).toEqual(['at-floor', 'below-floor']);
   });
 
-  it('surfaces a below-the-old-floor rule too — no confidence floor (ADR-053)', () => {
+  it('surfaces a below-the-old-floor rule too — no confidence floor (finance ADR-004)', () => {
     seedCorrection(harness.raw, {
       id: 'below-floor',
       descriptionPattern: 'COFFEE',

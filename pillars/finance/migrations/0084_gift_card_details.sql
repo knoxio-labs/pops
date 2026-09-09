@@ -16,7 +16,7 @@
 -- `last_four` is plaintext (not secret) so a masked read never needs to
 -- touch `secret_ref`, which holds the AES-256-GCM-encrypted
 -- `{ number, pin }` blob — see `src/db/services/gift-card-crypto.ts` for the
--- exact layout and ADR-050's addendum for why the two fields share one
+-- exact layout and finance ADR-001's addendum for why the two fields share one
 -- ciphertext.
 --
 -- `gift_card_secret_reveals` has no FK-enforced link to who revealed a

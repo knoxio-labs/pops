@@ -253,7 +253,7 @@ describe('the upsert identity', () => {
 
     expect(second.id).toBe(first.id);
     // Reinforcement never mints a number a hand-written rule never had
-    // (ADR-053/POPS-3130): both rows are null-confidence, so re-adding the
+    // (finance ADR-004/POPS-3130): both rows are null-confidence, so re-adding the
     // same pattern leaves it null rather than bumping it from an invented
     // starting point.
     expect(first.confidence).toBeNull();

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-08-01. Supersedes [ADR-025](../../pillars/food/docs/architecture/adr-025-theme-07-food-doc-protocol.md), which recorded a deviation within a doc model that no longer exists.
+Accepted — 2026-08-01. Supersedes [food ADR-004](../../pillars/food/docs/architecture/adr-004-theme-07-food-doc-protocol.md), which recorded a deviation within a doc model that no longer exists.
 
 ## Context
 
@@ -47,3 +47,11 @@ READMEs carry **no coverage quota**. One is warranted only where the code cannot
 - **Accepted trade-off:** there is no longer a single document stating everything a feature must do. Recovering "why was this required" for shipped behaviour means reading git history rather than a spec. This is judged the right trade for a system with one operator, where the cost of maintaining that record exceeded its value.
 - **Accepted trade-off:** the no-quota rule means coverage is a judgment call, and judgment varies. A missing README is preferred to a written-to-satisfy-a-gate one, because the latter is drift surface that reads as authoritative.
 - The enforcement burden moves from authoring to honesty: a behaviour change must update the README beside it in the same commit, or delete the paragraph that is no longer true.
+
+## Amendment — 2026-09-09: pillar ADRs get their own number sequence (POPS-3265)
+
+"Numbering stays frozen and append-only" above was written assuming one sequence. It was not: pillar ADRs had already been carved out of root's numbering in blocks (media 008-011, cerebrum 018-021, food 022-025, finance 050-053) to keep them collision-free with root, which kept counting through the gaps. That held only as long as root never reached a block a pillar had claimed — it stopped holding when root's ADR-050 and ADR-051 (finance logo storage, form controls) landed on numbers finance's own ADR-050 and ADR-051 (accounts as first-class records, checkpoint-anchored balances) already owned, and root's next free number was already spoken for too.
+
+The fix is not to patch the two collisions — that only postpones the next one. `docs/architecture/` and each `pillars/<id>/docs/architecture/` now number independently: root keeps its existing numbers untouched, and every pillar's ADRs restart at `001`, renumbered in place (`git mv`, slugs preserved) so history follows. Media, cerebrum, food and finance's pillar ADRs were renumbered this way; a bare `ADR-NNN` means root everywhere in the repo, and a pillar ADR is always cited pillar-qualified — "finance ADR-002", not "ADR-051" — including a pillar ADR citing a sibling in the same pillar.
+
+This does not relax "frozen and append-only" — it clarifies that the invariant applies per sequence, not to one global counter. A number, once assigned within its sequence (root's, or a given pillar's), still never changes and is never reused.

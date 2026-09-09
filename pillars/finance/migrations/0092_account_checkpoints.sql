@@ -1,12 +1,12 @@
--- POPS-2878 / ADR-051. `account_checkpoints`: a balance that was true for an
+-- POPS-2878 / finance ADR-002. `account_checkpoints`: a balance that was true for an
 -- account on a date, read off something outside the ledger.
 --
--- ADR-050 held that "an account's balance is always the sum of the
+-- finance ADR-001 held that "an account's balance is always the sum of the
 -- transactions it carries, never a stored number that can drift from that
 -- sum". That is only true of an account whose history is complete from
 -- inception. None of ours are: the ANZ credit card's import starts on
 -- 2026-06-01, mid-history, so summing it reads +$780.64 — net flow since an
--- arbitrary Tuesday, not a balance. ADR-051 amends that sentence: the balance
+-- arbitrary Tuesday, not a balance. finance ADR-002 amends that sentence: the balance
 -- is the nearest checkpoint plus the transactions since it, and the EARLIEST
 -- checkpoint is the opening balance. There is still no opening-balance
 -- column, here or on `accounts` — one would be a second, worse spelling of

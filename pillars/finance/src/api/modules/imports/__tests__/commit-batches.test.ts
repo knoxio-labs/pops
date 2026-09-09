@@ -1,5 +1,5 @@
 /**
- * Import-batch recording at commit (POPS-2916, ADR-052): one batch per
+ * Import-batch recording at commit (POPS-2916, finance ADR-003): one batch per
  * account that received a row, stamped onto those rows, linked to the
  * checkpoint the same commit minted, recorded verbatim from the payload's
  * `source` or inferred when a client sent none, and written inside the

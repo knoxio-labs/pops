@@ -5,7 +5,7 @@ import { z } from 'zod';
  * and `matchType` are deliberately absent — those fields define the rule's
  * identity and are immutable post-create (mirrors `UpdateTransactionTagRuleInput`
  * on the backend), so the dialog only edits entity scope, tags, priority, and
- * the active flag. `confidence` is intentionally absent too (ADR-053/
+ * the active flag. `confidence` is intentionally absent too (finance ADR-004/
  * POPS-3131): it decides nothing and editing it here only invited the belief
  * that it did.
  */

@@ -18,7 +18,7 @@ Page text (readability-extracted):
 
 {pageText}
 
-Return a single POPS recipe DSL document using ADR-023 grammar. Rules:
+Return a single POPS recipe DSL document using food ADR-002 grammar. Rules:
 
 - Start with \`@recipe("<slug>", "<title>")\`.
 - Use \`@ingredient(N, "<name>", qty:<num><unit>)\` for every ingredient.
