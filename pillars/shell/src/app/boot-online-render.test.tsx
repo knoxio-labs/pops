@@ -104,10 +104,33 @@ function renderRail(bootRegistry: BootRegistry): void {
   );
 }
 
+/**
+ * The wire UI dimensions an in-repo pillar publishes since POPS-3215.
+ *
+ * They used to be unnecessary here: `media` was in the shell's bundle map, so
+ * a snapshot entry with no UI surface still reached the rail. Every pillar has
+ * left that map, so a fixture without these resolves to nothing.
+ */
+function inRepoUi(pillar: string, order: number): Partial<ManifestPayload> {
+  return {
+    assetsBaseUrl: `/${pillar}-ui/${pillar}.js`,
+    nav: {
+      id: pillar,
+      label: pillar,
+      labelKey: pillar,
+      icon: 'compass',
+      basePath: `/${pillar}`,
+      order,
+      items: [{ path: '', label: pillar, labelKey: `${pillar}.home`, icon: 'compass' }],
+    },
+    pages: [{ path: '', index: true, bundleSlot: `${pillar}-home` }],
+  };
+}
+
 describe('shell online boot → render (registry-driven branch)', () => {
   it('fetches a non-empty snapshot and renders the registry-driven rail (not the floor)', async () => {
     const fetchStub = vi.fn(() =>
-      Promise.resolve(snapshotResponse([wireEntry('media'), EXTERNAL_WIRE]))
+      Promise.resolve(snapshotResponse([wireEntry('media', inRepoUi('media', 20)), EXTERNAL_WIRE]))
     );
 
     // The exact production await `main.tsx` blocks first render on: fetch +
@@ -149,17 +172,29 @@ describe('shell online boot → render (registry-driven branch)', () => {
     };
   }
 
-  it('renders the static floor (never blank) when the boot fetch fails', async () => {
+  /**
+   * This asserted "even on a dead registry the rendered rail is the full
+   * mapped floor". POPS-3215 emptied that map, so the floor has nothing left
+   * to render and the honest assertion is the inverse.
+   *
+   * That is not a regression being written down — it is the trade the epic
+   * makes, and the reason POPS-3239 exists: the fallback is now the last good
+   * snapshot, exercised by the test below. What remains true, and is what this
+   * still guards, is that boot RESOLVES rather than throwing — a dead registry
+   * with no cache yields an empty rail and a shell that still renders its own
+   * chrome, not a crash or a blank document. POPS-3250 covers the reader-facing
+   * half: those routes currently say "Module not installed".
+   */
+  it('resolves to an empty floor, without crashing, when the fetch fails and no cache exists', async () => {
     const fetchStub = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
     const bootRegistry = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
     expect(bootRegistry.source).toBe('static-floor');
 
     renderRail(bootRegistry);
 
-    // Even on a dead registry the rendered rail is the full mapped floor.
-    await waitFor(() => expect(screen.getByTestId('rail-media')).toBeInTheDocument());
-    expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0);
-    expect(screen.queryByTestId('rail-weather')).not.toBeInTheDocument();
+    const rail = await screen.findByRole('list', { name: 'rail' });
+    expect(rail).toBeInTheDocument();
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
   /**
@@ -173,7 +208,7 @@ describe('shell online boot → render (registry-driven branch)', () => {
   it('renders the last good snapshot when the registry has gone away', async () => {
     const store = noCache();
     const goodFetch = vi.fn(() =>
-      Promise.resolve(snapshotResponse([wireEntry('media'), EXTERNAL_WIRE]))
+      Promise.resolve(snapshotResponse([wireEntry('media', inRepoUi('media', 20)), EXTERNAL_WIRE]))
     );
     const first = await fetchBootRegistry({ fetch: goodFetch, store });
     expect(first.source).toBe('registry');

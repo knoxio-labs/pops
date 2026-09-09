@@ -108,17 +108,13 @@ describe('synthetic pillar mounts via registry', () => {
     const apps = buildRegisteredAppsFromBundleMap(bundleMapWithSynthetic());
     const ids = apps.map((app) => app.id);
 
-    expect(ids).toContain(SYNTHETIC_ID);
-
-    // `purchases`, `finance`, `bfm`, `ai` and `food` are absent because this
-    // walks the STATIC bundle map, which all five left when they moved onto
-    // the runtime loader (POPS-3217, POPS-3219 through POPS-3222). They reach the rail
-    // from the live registry instead, at the same `nav.order: 15` — so the
-    // synthetic pillar's position relative to the mapped ones is what this
-    // asserts, and `src/app/registry-walk.test.ts` covers purchases' own.
-    const realOrder = ['media'];
-    expect(ids).toEqual(['media', SYNTHETIC_ID]);
-    expect(realOrder.every((id) => ids.includes(id))).toBe(true);
+    // Every pillar has left the STATIC bundle map (POPS-3215), so a synthetic
+    // entry added to it is now the only thing in it — which is exactly what
+    // this asserts: the walk surfaces whatever the map holds, and its
+    // ordering no longer has real pillars to sit between. Their own rail
+    // positions come from the live registry and are covered by
+    // `src/app/registry-walk.test.ts` and each pillar's `*-via-loader` e2e.
+    expect(ids).toEqual([SYNTHETIC_ID]);
   });
 
   it('registry walk emits the synthetic manifest with its frontend.routes preserved', () => {

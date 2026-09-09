@@ -50,9 +50,13 @@
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`ai`, `bfm`, `cerebrum`, `finance`, `food`, `inventory`, `lists` and
- * `purchases` are not in this map, and that is not an omission** (POPS-3217,
- * POPS-3219 through POPS-3225). `media` is the last one left.
+ * **No pillar is in this map any more, and that is not an omission**
+ * (POPS-3217, POPS-3219 through POPS-3226). Every one of them reaches the
+ * shell the way an out-of-tree pillar does: its wire manifest advertises
+ * `assetsBaseUrl` and `pages`, and the runtime loader imports its built
+ * bundle. Only `ego` remains: it declares `surfaces: ['overlay', 'app']` but
+ * carries no `frontend.routes`, so it is a shell-hosted overlay rather than a
+ * pillar with pages of its own. POPS-3227 removes the map itself.
  * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
@@ -68,7 +72,6 @@
  * registry answers, which is the same condition under which its own API is
  * undiscoverable.
  */
-import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
 import type { ComponentType } from 'react';
@@ -114,14 +117,6 @@ export interface BundleEntry {
 }
 
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
-  media: {
-    manifest: mediaManifest,
-    navOrder: 20,
-    settingsWidgetBundles: {
-      'plex-connect': PlexConnectPanel,
-      'rotation-tuning': RotationTuningPanel,
-    },
-  },
   ego: { manifest: egoManifest, navOrder: Number.POSITIVE_INFINITY },
 };
 

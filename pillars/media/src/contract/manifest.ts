@@ -15,6 +15,9 @@ import type { ModuleManifest } from '@pops/types';
 
 export type { MediaContract } from './manifest.generated.js';
 
+export { MEDIA_PAGES, MEDIA_SETTINGS_WIDGET_SLOTS } from './pages.js';
+export type { MediaPageSlot, MediaSettingsWidgetSlot } from './pages.js';
+
 export const mediaManifest: ModuleManifest = {
   id: 'media',
   name: 'Media',
