@@ -1,3 +1,5 @@
+import { LISTS_PAGES } from '../contract/pages.js';
+
 import type {
   ManifestPayload,
   NavConfigDescriptor,
@@ -31,10 +33,16 @@ const LISTS_NAV: NavConfigDescriptor = {
  * One descriptor per route declared in the app's `routes` array
  * (`pillars/lists/app/src/routes.tsx`) — index and the `:id` detail page.
  */
-const LISTS_PAGES: readonly PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'lists-index' },
-  { path: ':id', bundleSlot: 'lists-detail' },
-];
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const LISTS_WIRE_PAGES = [...LISTS_PAGES] as const satisfies readonly PageDescriptor[];
+
+/**
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ * Root-relative, because the same deployment answers to a LAN name, a
+ * Tailscale name and `localhost`, and no absolute origin is right on all of
+ * them.
+ */
+const LISTS_ASSETS_BASE_URL = '/lists-ui/lists.js';
 
 /**
  * Lists pillar manifest payload.
@@ -54,7 +62,8 @@ export function buildListsManifest(version: string): ManifestPayload {
     uri: { types: [] },
     consumedSettings: { keys: [] },
     nav: LISTS_NAV,
-    pages: [...LISTS_PAGES],
+    pages: [...LISTS_WIRE_PAGES],
+    assetsBaseUrl: LISTS_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }

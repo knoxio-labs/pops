@@ -80,9 +80,28 @@ describe('buildListsManifest', () => {
       }
     });
 
-    it('does NOT declare assetsBaseUrl', () => {
+    /**
+     * Declaring it is what moves the pillar onto the runtime loader: the shell
+     * imports the bundle from this URL instead of compiling `@pops/app-lists`
+     * into its own build (POPS-3224). Root-relative, because one deployment
+     * answers to a LAN name, a Tailscale name and `localhost`, and no absolute
+     * origin is right on all three.
+     */
+    it('declares a root-relative assetsBaseUrl', () => {
       const manifest = buildListsManifest('0.1.0');
-      expect(manifest.assetsBaseUrl).toBeUndefined();
+      expect(manifest.assetsBaseUrl).toBe('/lists-ui/lists.js');
+    });
+
+    /**
+     * The detail page is a deep link with no nav item, so dropping it from the
+     * page list would 404 every link into a list with nothing on the rail
+     * looking wrong. Named rather than left to a count, which two pages and
+     * two routes would satisfy either way.
+     */
+    it('declares the detail page, not only the index', () => {
+      const manifest = buildListsManifest('0.1.0');
+      const slots = manifest.pages?.map((page) => page.bundleSlot) ?? [];
+      expect(slots).toContain('lists-detail');
     });
 
     it('round-trips the nav + pages dimensions through JSON', () => {

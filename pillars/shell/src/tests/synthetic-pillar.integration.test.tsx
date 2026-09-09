@@ -116,8 +116,8 @@ describe('synthetic pillar mounts via registry', () => {
     // from the live registry instead, at the same `nav.order: 15` — so the
     // synthetic pillar's position relative to the mapped ones is what this
     // asserts, and `src/app/registry-walk.test.ts` covers purchases' own.
-    const realOrder = ['media', 'lists', 'cerebrum'];
-    expect(ids).toEqual(['media', SYNTHETIC_ID, 'lists', 'cerebrum']);
+    const realOrder = ['media', 'cerebrum'];
+    expect(ids).toEqual(['media', SYNTHETIC_ID, 'cerebrum']);
     expect(realOrder.every((id) => ids.includes(id))).toBe(true);
   });
 

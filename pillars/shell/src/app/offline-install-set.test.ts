@@ -52,8 +52,8 @@ function snapshotEntry(pillarId: string): PillarSnapshot {
 
 describe('offlineInstallableSnapshot', () => {
   it('drops a module this build knows and the install set excludes', () => {
-    const kept = offlineInstallableSnapshot([snapshotEntry('media'), snapshotEntry('lists')]);
-    expect(kept.map((e) => e.pillarId)).toEqual(['lists']);
+    const kept = offlineInstallableSnapshot([snapshotEntry('media'), snapshotEntry('cerebrum')]);
+    expect(kept.map((e) => e.pillarId)).toEqual(['cerebrum']);
   });
 
   /**
@@ -115,14 +115,14 @@ describe('fetchBootRegistry — the cached floor honours the install set', () =>
    */
   it('drops an excluded module from the cache while keeping the rest', async () => {
     const store = memoryStore();
-    const live = await fetchBootRegistry({ fetch: okFetch(['media', 'lists']), store });
+    const live = await fetchBootRegistry({ fetch: okFetch(['media', 'cerebrum']), store });
     expect(live.source).toBe('registry');
     expect(live.manifests.map((m) => m.id)).toContain('media');
 
     const offline = await fetchBootRegistry({ fetch: deadFetch(), store });
 
     expect(offline.source).toBe('cached-snapshot');
-    expect(offline.manifests.map((m) => m.id)).toEqual(['lists']);
+    expect(offline.manifests.map((m) => m.id)).toEqual(['cerebrum']);
   });
 
   /**

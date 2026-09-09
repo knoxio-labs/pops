@@ -10,3 +10,6 @@ run = ["mise run -C .. build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
+
+[tasks.build]
+run = "pnpm run build:remote"

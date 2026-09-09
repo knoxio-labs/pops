@@ -1104,6 +1104,25 @@ services:
       timeout: 5s
       retries: 3
 
+  # The lists UI bundle (pillars/lists/app) — a static nginx image, like
+  # pops-purchases-ui. The `/lists-ui/` location block in pops-shell's
+  # nginx.conf reverse-proxies browser traffic here.
+  lists-ui:
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-lists-ui:${POPS_IMAGE_TAG:-main}
+    container_name: pops-lists-ui
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The inventory UI bundle (pillars/inventory/app) — a static nginx image,
   # like pops-purchases-ui. The `/inventory-ui/` location block in pops-shell's
   # nginx.conf reverse-proxies browser traffic here.

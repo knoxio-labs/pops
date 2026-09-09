@@ -10,6 +10,8 @@
 import type { ModuleManifest } from '@pops/types';
 
 export type { ListsContract } from './manifest.generated.js';
+export { LISTS_PAGES } from './pages.js';
+export type { ListsPageSlot } from './pages.js';
 
 export const listsManifest: ModuleManifest = {
   id: 'lists',
