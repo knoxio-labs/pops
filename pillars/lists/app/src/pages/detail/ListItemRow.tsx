@@ -136,6 +136,10 @@ function RowBody({
       {edit.editing ? (
         <TextInput
           size="sm"
+          // h-8 matches the row's tallest sibling (the 32px menu trigger); the
+          // kit's smallest height, h-9, makes the row grow 4px the moment the
+          // editor opens.
+          containerClassName="h-8"
           value={edit.draft}
           onChange={(e) => edit.setDraft(e.target.value)}
           onBlur={() => void edit.commit()}

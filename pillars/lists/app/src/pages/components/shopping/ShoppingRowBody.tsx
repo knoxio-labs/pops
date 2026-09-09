@@ -40,6 +40,10 @@ export function ShoppingRowBody(props: ShoppingRowBodyProps): React.ReactElement
           <div className="min-w-0 flex-1">
             <TextInput
               size="sm"
+              // h-8 matches the row's tallest sibling (the 32px checkbox and
+              // drag handle); the kit's smallest height, h-9, makes the row
+              // grow 4px the moment the editor opens.
+              containerClassName="h-8"
               value={edit.draft}
               onChange={(e) => edit.setDraft(e.target.value)}
               onBlur={() => void edit.commit()}
