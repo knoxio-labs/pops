@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Button, Input } from '@pops/ui';
+import { Badge, Button, Input, Select, type SelectOption } from '@pops/ui';
 
 import {
   DEFAULT_FILTERS,
@@ -160,21 +160,18 @@ interface SortPickerProps {
 }
 
 function SortPicker({ value, onChange, t }: SortPickerProps): ReactElement {
+  const options: SelectOption[] = SORT_OPTIONS.map((opt) => ({
+    value: opt,
+    label: t(`recipes.list.sort.${opt}`),
+  }));
   return (
-    <label className="flex items-center gap-2">
-      <span>{t('recipes.list.filters.sort')}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as SortOrder)}
-        className="rounded border bg-background px-2 py-1"
-      >
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt} value={opt}>
-            {t(`recipes.list.sort.${opt}`)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label={t('recipes.list.filters.sort')}
+      value={value}
+      onChange={(e) => onChange(e.target.value as SortOrder)}
+      options={options}
+      className="w-44"
+    />
   );
 }
 

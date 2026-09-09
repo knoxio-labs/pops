@@ -6,6 +6,15 @@
  */
 import { type RefObject, useCallback, useEffect, useState } from 'react';
 
+/**
+ * id assigned to the option/row at a given flat index, shared by every
+ * renderer (result rows, recent-search rows) and by the input's
+ * `aria-activedescendant` so the two always agree on what is highlighted.
+ */
+export function searchOptionId(index: number): string {
+  return `search-option-${index}`;
+}
+
 type KeyAction =
   | { type: 'next'; index: number }
   | { type: 'select'; index: number }

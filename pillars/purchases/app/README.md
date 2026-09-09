@@ -8,6 +8,48 @@ purchases pillar's REST contract through the generated
 `@hey-api/client-fetch` client in `src/purchases-api/`, served at the shell's
 `/purchases-api` proxy path (see `src/purchases-api-runtime-config.ts`).
 
+## Two ways in
+
+The shell mounts this app twice over, by two different mechanisms, and both
+resolve a page to the same component.
+
+The one in use today is the static bundle map
+(`pillars/shell/src/app/bundle-map.tsx`), which imports `routes` at build time.
+The other is the shell's runtime loader (`external-ui.tsx`), which imports a
+built ESM bundle at a URL and looks each page up by its `bundleSlot` in the
+module's `bundles` export. That second path existed with nothing to load:
+purchases advertised four slots in its wire manifest and no app in the repo
+exported a `bundles` record at all (POPS-2351).
+
+`src/bundles.ts` is that record. It is `PAGE_COMPONENTS` from `src/routes.tsx`
+under the name the wire uses, so the two mount paths cannot name different
+components for one page — and the slot⇄path pairing itself lives once, in
+`@pops/purchases/manifest`'s `PURCHASES_PAGES`, which the pillar's wire
+manifest projects and this app derives from. A page with no component behind
+it is a compile error at `PAGE_COMPONENTS`, not a blank screen.
+
+### The remote build
+
+`pnpm --filter @pops/app-purchases build` emits `dist/remote/purchases.js` —
+one ESM entry exporting `bundles`, with a lazily-imported chunk per page, built
+by `vite.remote.config.ts`. The package itself stays source-only; this build
+is alongside it, not instead of it.
+
+Everything on the shared-runtime list in `@pops/pillar-sdk/remote-build` —
+React, the router, the query client, i18next, `@pops/ui` — is **external**. A
+second copy of any of those is not a size problem but a correctness one, and
+none of them fails at build time: two Reacts throw `Invalid hook call` on the
+pillar's first hook, two query clients read an empty cache, two i18next
+instances render raw keys. `scripts/build-remote.ts` reads the build's own
+module graph and fails the build, deleting the output, if any of them ended up
+inside. The shell's half of the contract — an import map resolving those bare
+specifiers to its own chunks — is POPS-3217.
+
+No Tailwind here either: a loader-mounted pillar renders inside the shell's
+document under the stylesheet the shell already emits, whose `@source` globs
+cover this app. Running this app standalone needs its own theme entry, which
+is a different build target.
+
 ## The reconcile queue
 
 `/purchases` is the reconciliation inbox: one row per purchase charge awaiting
@@ -302,9 +344,11 @@ the pass on a schedule; it runs when the button is pressed.
 
 ```
 src/
-  index.ts                         entrypoint — re-exports manifest, navConfig, routes
+  index.ts                         entrypoint — re-exports manifest, navConfig, routes, bundles
   manifest.ts                      ModuleManifest (id='purchases')
-  routes.tsx                       route table + navConfig
+  routes.tsx                       the slot→component table, and the routes derived from it
+  bundles.ts                       that same table under the name the runtime loader asks for
+  remote-entry.ts                  the remote bundle's entry — `bundles` and nothing else
   facts.tsx                        one labelled value, saying what its absence means
   pages/RetryableError.tsx         a read that failed, and the retry it earns
   purchases-api/                   generated Hey API client (do not hand-edit)
@@ -390,12 +434,13 @@ pnpm --filter @pops/app-purchases test                      # vitest run
 pnpm --filter @pops/app-purchases test:watch                # vitest (watch)
 pnpm --filter @pops/app-purchases test:coverage             # vitest run --coverage
 pnpm --filter @pops/app-purchases generate:purchases-client # regen src/purchases-api
+pnpm --filter @pops/app-purchases build                     # dist/remote/purchases.js
 ```
 
 ## Install gate
 
 `@pops/app-purchases` exposes a single `.` export — `manifest`, `navConfig`,
-and `routes`, all browser-safe. `pillars/shell` imports the `manifest` and
+`routes` and `bundles`, all browser-safe. `pillars/shell` imports the `manifest` and
 gates mounting on its `POPS_APPS` selection: adding `purchases` mounts the
 module at `/purchases`, removing it hides those routes. No data lives in this
 package, so uninstalling only removes the UI — purchase data stays in the

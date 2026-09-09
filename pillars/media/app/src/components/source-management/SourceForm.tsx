@@ -1,6 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 
-import { Button, Label, NumberInput, Select, Switch } from '@pops/ui';
+import { Button, Label, NumberInput, Select, Switch, TextInput } from '@pops/ui';
 
 import { SourceConfigFields } from './SourceConfigFields';
 import { sourceTypeLabel, type SourceFormValues } from './types';
@@ -28,8 +28,8 @@ function NameField({ name, setName }: Pick<CommonFieldsProps, 'name' | 'setName'
   return (
     <div className="space-y-1.5">
       <Label className="text-muted-foreground">Name</Label>
-      <input
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      <TextInput
+        size="sm"
         value={name}
         onChange={(e) => {
           setName(e.target.value);

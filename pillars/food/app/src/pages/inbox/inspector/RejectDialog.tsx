@@ -4,7 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@pops/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Select,
+  type SelectOption,
+} from '@pops/ui';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import { inboxReject } from '../../../food-api/index.js';
@@ -121,23 +130,16 @@ function RejectForm({
 }: RejectFormProps): ReactElement {
   return (
     <div className="space-y-3">
-      <label className="block text-sm">
-        <span className="mb-1 block font-medium">
-          {t('inbox.inspector.decision.reject.reasonLabel')}
-        </span>
-        <select
-          value={reason}
-          onChange={(e) => onReasonChange(e.target.value as Reason)}
-          className="w-full rounded border px-2 py-1"
-          data-testid="inspector-reject-reason"
-        >
-          {REASONS.map((r) => (
-            <option key={r} value={r}>
-              {t(`inbox.rejected.reason.${r}`)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Select
+        label={t('inbox.inspector.decision.reject.reasonLabel')}
+        value={reason}
+        onChange={(e) => onReasonChange(e.target.value as Reason)}
+        options={REASONS.map((r): SelectOption => ({
+          value: r,
+          label: t(`inbox.rejected.reason.${r}`),
+        }))}
+        data-testid="inspector-reject-reason"
+      />
       <label className="block text-sm">
         <span className="mb-1 block font-medium">
           {t('inbox.inspector.decision.reject.noteLabel')}

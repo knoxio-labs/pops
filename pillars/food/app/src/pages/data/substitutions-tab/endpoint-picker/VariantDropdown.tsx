@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { Select, type SelectOption } from '@pops/ui';
+
 export interface VariantOption {
   id: number;
   slug: string;
@@ -21,25 +23,20 @@ export function VariantDropdown({
       <p className="text-muted-foreground text-xs">{t('data.substitutions.endpoint.noVariants')}</p>
     );
   }
+  const options: SelectOption[] = [
+    { value: '', label: t('data.substitutions.endpoint.variantPickerPlaceholder'), disabled: true },
+    ...variants.map((v) => ({ value: String(v.id), label: `${v.name} (${v.slug})` })),
+  ];
   return (
-    <select
+    <Select
       id={selectId}
       onChange={(e) => {
         const id = Number(e.target.value);
         if (Number.isFinite(id) && id > 0) onPick(id);
       }}
       defaultValue=""
-      className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+      options={options}
       aria-label={t('data.substitutions.endpoint.variantPickerAria')}
-    >
-      <option value="" disabled>
-        {t('data.substitutions.endpoint.variantPickerPlaceholder')}
-      </option>
-      {variants.map((v) => (
-        <option key={v.id} value={v.id}>
-          {v.name} ({v.slug})
-        </option>
-      ))}
-    </select>
+    />
   );
 }

@@ -10,6 +10,12 @@ interface SearchInputFieldProps {
   onFocus: () => void;
   onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClear: () => void;
+  /** Whether the results/recent-searches popup is currently rendered. */
+  expanded: boolean;
+  /** id of the listbox this combobox owns, for `aria-controls`. */
+  listboxId: string;
+  /** id of the option currently highlighted by keyboard nav, if any. */
+  activeDescendantId?: string;
 }
 
 export function SearchInputField({
@@ -19,6 +25,9 @@ export function SearchInputField({
   onFocus,
   onBlur,
   onClear,
+  expanded,
+  listboxId,
+  activeDescendantId,
 }: SearchInputFieldProps) {
   return (
     <>
@@ -33,6 +42,17 @@ export function SearchInputField({
         onBlur={onBlur}
         className="pl-9 pr-9 h-9 bg-muted/50 border-transparent focus:border-border focus:bg-background transition-colors"
         aria-label="Search POPS"
+        // No explicit role="combobox": the browser's computed ARIA role for
+        // an <input type="text"> is already "textbox", and adding
+        // role="combobox" here replaces that with "combobox", which is a
+        // different accessible role for assistive tech and role-based
+        // queries alike. The listbox/expanded/active-descendant relationship
+        // below still conveys full combobox behavior without it.
+        aria-haspopup="listbox"
+        aria-expanded={expanded}
+        aria-autocomplete="list"
+        aria-controls={expanded ? listboxId : undefined}
+        aria-activedescendant={expanded ? activeDescendantId : undefined}
       />
       {query ? (
         <Button

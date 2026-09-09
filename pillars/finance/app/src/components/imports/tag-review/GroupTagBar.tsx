@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { ButtonPrimitive } from '@pops/ui';
 
@@ -30,21 +30,6 @@ export interface GroupTagBarProps {
   onRemoveCurrentTag: (tag: string) => void;
 }
 
-function useClickOutside(
-  ref: React.RefObject<HTMLElement | null>,
-  enabled: boolean,
-  onOutside: () => void
-) {
-  useEffect(() => {
-    if (!enabled) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onOutside();
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [enabled, ref, onOutside]);
-}
-
 function StagedTagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
   return <TagChip tag={tag} removable onRemove={onRemove} className="border" />;
 }
@@ -74,7 +59,6 @@ export function GroupTagBar({
 }: GroupTagBarProps) {
   const [inputValue, setInputValue] = useState('');
   const [showPicker, setShowPicker] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const ranked = rankTagSuggestions(inputValue, availableTags, stagedTags);
   // Relevance picks the shortlist, then facet grouping fixes its order, so
   // what Tab completes is always what the dropdown shows first.
@@ -82,11 +66,6 @@ export function GroupTagBar({
   const exactMatch = resolveTypedTag(inputValue, availableTags);
   const creation =
     exactMatch === undefined ? planTagCreation(inputValue, facets) : ({ kind: 'none' } as const);
-
-  useClickOutside(containerRef, showPicker, () => {
-    setShowPicker(false);
-    setInputValue('');
-  });
 
   return (
     <div className="px-4 py-2 border-b bg-muted/10 flex flex-wrap items-center gap-2 text-xs">
@@ -96,7 +75,6 @@ export function GroupTagBar({
         <StagedTagPill key={tag} tag={tag} onRemove={() => onRemoveTag(tag)} />
       ))}
       <PickerInput
-        containerRef={containerRef}
         inputValue={inputValue}
         setInputValue={setInputValue}
         showPicker={showPicker}

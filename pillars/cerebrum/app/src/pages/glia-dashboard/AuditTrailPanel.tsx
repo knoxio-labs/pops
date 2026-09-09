@@ -19,6 +19,7 @@ import {
 
 import { gliaActionsList } from '../../cerebrum-api';
 import { unwrap } from '../../cerebrum-api-helpers';
+import { FilterSelect } from '../../components/FilterSelect';
 import {
   GLIA_ACTION_STATUSES,
   GLIA_ACTION_TYPES,
@@ -29,39 +30,6 @@ import {
 import { extractMessage } from '../../utils/errors';
 import { TOUCH_TARGET_MIN_HEIGHT } from '../../utils/touchTarget';
 import { AuditActionRow } from './AuditActionRow';
-
-function FilterSelect<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-  emptyLabel,
-}: {
-  label: string;
-  value: T | null;
-  onChange: (next: T | null) => void;
-  options: readonly T[];
-  emptyLabel: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-      {label}
-      <select
-        aria-label={label}
-        className={`rounded-md border border-border bg-background px-2 text-sm ${TOUCH_TARGET_MIN_HEIGHT}`}
-        value={value ?? ''}
-        onChange={(e) => onChange((e.target.value as T | '') === '' ? null : (e.target.value as T))}
-      >
-        <option value="">{emptyLabel}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 interface AuditBodyProps {
   query: {
