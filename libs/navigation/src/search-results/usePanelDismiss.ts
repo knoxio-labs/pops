@@ -1,33 +1,30 @@
 import { type RefObject, useCallback, useEffect } from 'react';
 
+/**
+ * Dismisses on a mousedown outside `containerRef`. Escape is handled once,
+ * by `useSearchKeyboardNav`'s container-level listener — that hook already
+ * fires on Escape regardless of which sub-view (results or recent searches)
+ * is showing, so it is not duplicated here.
+ */
 export function usePanelDismiss(
-  panelRef: RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLElement | null>,
   onClose: () => void
 ): void {
   const handleOutsideClick = useCallback(
     (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
     },
-    [onClose, panelRef]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose]
+    [onClose, containerRef]
   );
 
   useEffect(() => {
     document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleOutsideClick, handleKeyDown]);
+  }, [handleOutsideClick]);
 }
 
 export function sortSections<T extends { hits: { score: number }[]; isContext: boolean }>(

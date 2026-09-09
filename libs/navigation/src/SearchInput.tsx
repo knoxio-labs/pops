@@ -1,13 +1,17 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 
 import { useRecentSearches } from './recent-searches';
 import { SearchInputDropdown } from './search-input/SearchInputDropdown';
 import { SearchInputField } from './search-input/SearchInputField';
 import { useSearchInputData } from './search-input/useSearchInputData';
+import { useSearchInputFocus } from './search-input/useSearchInputFocus';
 import { useCmdKShortcut, useSearchInputHandlers } from './search-input/useSearchInputHandlers';
-import { useSearchKeyboardNav } from './search-keyboard-nav';
+import { useSearchInputSelection } from './search-input/useSearchInputSelection';
+import { usePanelDismiss } from './search-results/usePanelDismiss';
 import { useSearchStore } from './searchStore';
 import { useFocusTrap } from './useFocusTrap';
+
+const SEARCH_LISTBOX_ID = 'global-search-listbox';
 
 export function SearchInput() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -15,21 +19,22 @@ export function SearchInput() {
   const query = useSearchStore((s) => s.query);
   const isOpen = useSearchStore((s) => s.isOpen);
   const setOpen = useSearchStore((s) => s.setOpen);
-  const [isFocused, setIsFocused] = useState(false);
-  const { queries } = useRecentSearches();
+  const { isFocused, onFocus, onBlur } = useSearchInputFocus({ containerRef, setOpen });
+  const { queries, addQuery, clearAll } = useRecentSearches();
 
   const { sections, orderedHits, handleShowMore } = useSearchInputData({ query, isOpen });
   const { handleResultClick, handleClose, handleChange, handleClear } = useSearchInputHandlers({
     inputRef,
+    addQuery,
   });
 
-  const { selectedIndex } = useSearchKeyboardNav({
+  const { selectedIndex, activeDescendantId, selectRecentQuery } = useSearchInputSelection({
     containerRef,
-    resultCount: orderedHits.length,
-    onSelect: (index) => {
-      const hit = orderedHits[index];
-      if (hit !== undefined) handleResultClick(hit.uri, hit.data);
-    },
+    inputRef,
+    isRecentView: query.length === 0,
+    queries,
+    orderedHits,
+    onSelectHit: handleResultClick,
     onClose: handleClose,
   });
 
@@ -37,6 +42,7 @@ export function SearchInput() {
 
   const showPanel = isOpen && (query.length > 0 || (isFocused && queries.length > 0));
   useFocusTrap({ containerRef, active: showPanel });
+  usePanelDismiss(containerRef, handleClose);
 
   return (
     <div ref={containerRef} className="hidden md:flex relative items-center max-w-sm w-full mx-4">
@@ -45,25 +51,24 @@ export function SearchInput() {
         query={query}
         onChange={handleChange}
         onClear={handleClear}
-        onFocus={() => {
-          setIsFocused(true);
-          setOpen(true);
-        }}
-        onBlur={(e) => {
-          if (!containerRef.current?.contains(e.relatedTarget as Node)) {
-            setIsFocused(false);
-          }
-        }}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        expanded={showPanel}
+        listboxId={SEARCH_LISTBOX_ID}
+        activeDescendantId={activeDescendantId}
       />
       {showPanel && (
         <SearchInputDropdown
-          inputRef={inputRef}
           query={query}
           sections={sections}
           selectedIndex={selectedIndex}
+          listboxId={SEARCH_LISTBOX_ID}
+          queries={queries}
           onClose={handleClose}
           onResultClick={handleResultClick}
           onShowMore={handleShowMore}
+          onSelectRecent={selectRecentQuery}
+          onClearRecent={clearAll}
         />
       )}
     </div>
