@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ManifestPayloadSchema, validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
+import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from '../../contract/pages.js';
 import { cerebrumManifest, egoManifest } from '../../contract/settings/index.js';
 import { buildCerebrumCapabilityReporter, buildCerebrumManifest } from '../manifest.js';
 
@@ -32,10 +33,44 @@ describe('buildCerebrumManifest', () => {
     });
   });
 
-  it('omits nav/pages until the FE rewire (Phase D)', () => {
+  /**
+   * The FE rewire this test was waiting for is POPS-3225. The shell no longer
+   * compiles `@pops/app-cerebrum` in, so the rail entry and every route come
+   * off this wire.
+   */
+  it('declares the nav and every page the app mounts', () => {
     const payload = buildCerebrumManifest('1.2.3');
-    expect(payload.nav).toBeUndefined();
-    expect(payload.pages).toBeUndefined();
+    expect(payload.nav?.id).toBe('cerebrum');
+    expect(payload.pages).toHaveLength(CEREBRUM_PAGES.length);
+    expect(payload.pages?.map((page) => page.bundleSlot)).toEqual(
+      CEREBRUM_PAGES.map((page) => page.bundleSlot)
+    );
+  });
+
+  /**
+   * The overlay is not a page, and nothing routes to it — so if it were left
+   * off the wire the only symptom would be the global capture hotkey opening
+   * an empty modal. It travels here because the shell resolves a
+   * loader-mounted pillar's overlay from the manifest plus the remote bundle
+   * (POPS-3266), not from its compiled bundle map.
+   */
+  it('declares the capture overlay, which no route would reveal', () => {
+    const payload = buildCerebrumManifest('1.2.3');
+    expect(payload.captureOverlay?.bundleSlot).toBe(CEREBRUM_CAPTURE_SLOT);
+    expect(payload.captureOverlay?.hotkey).toBe('cmd+shift+k');
+    expect(payload.pages?.map((page) => page.bundleSlot)).not.toContain(CEREBRUM_CAPTURE_SLOT);
+  });
+
+  /**
+   * Declaring it is what moves the pillar onto the runtime loader: the shell
+   * imports the bundle from this URL instead of compiling the app into its
+   * own build. Root-relative, because one deployment answers to a LAN name, a
+   * Tailscale name and `localhost`, and no absolute origin is right on all
+   * three.
+   */
+  it('declares a root-relative assetsBaseUrl', () => {
+    const payload = buildCerebrumManifest('1.2.3');
+    expect(payload.assetsBaseUrl).toBe('/cerebrum-ui/cerebrum.js');
   });
 
   it('declares cerebrum.vectorSearch as a capability feature (epic 05 / S0)', () => {
