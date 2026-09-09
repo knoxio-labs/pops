@@ -23,6 +23,7 @@ import {
   closedFacetReplyShape,
   PROMPT_VERSION_TAGS_ONLY,
   TAGS_RULES,
+  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags, type RawTagFields } from './ai-tag-validation.js';
 
@@ -56,6 +57,8 @@ export interface TagsOnlyApiCallOptions {
   model: string;
   maxTokens: number;
   knownTags: string[];
+  /** `facet:value` → its definition, for the values the vocabulary describes (POPS-3285). */
+  tagDescriptions?: TagDescriptions;
   /** Opaque import-batch key for telemetry correlation (never the description). */
   contextId?: string;
 }
@@ -66,14 +69,18 @@ export interface TagsOnlyApiCallOptions {
  * not asked and the field is ignored — the entity is not the model's to revise
  * here, and a row's merchant must not change on a tag pass.
  */
-export function buildTagsOnlyPrompt(inputs: TagsOnlyInput[], knownTags: string[]): string {
+export function buildTagsOnlyPrompt(
+  inputs: TagsOnlyInput[],
+  knownTags: string[],
+  tagDescriptions?: TagDescriptions
+): string {
   const lines = inputs
     .map(
       ({ entityName, input }, i) =>
         `${i + 1}. ${buildMatchedTransactionData(entityName, input).replaceAll('\n', ' | ')}`
     )
     .join('\n');
-  const facets = closedFacetOptions(knownTags);
+  const facets = closedFacetOptions(knownTags, tagDescriptions);
 
   return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify EACH one on every tag axis below. The merchant is given — do not revise it.
 
@@ -92,7 +99,7 @@ Return ONLY the JSON array, no markdown, no explanation.`;
 export async function callTagsOnlyApi(opts: TagsOnlyApiCallOptions): Promise<ApiCallResponse> {
   return callRawApi({
     client: opts.client,
-    prompt: buildTagsOnlyPrompt(opts.inputs, opts.knownTags),
+    prompt: buildTagsOnlyPrompt(opts.inputs, opts.knownTags, opts.tagDescriptions),
     sanitizedDescription: `tags:${opts.inputs.length}`,
     model: opts.model,
     maxTokens: opts.maxTokens,
