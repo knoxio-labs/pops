@@ -30,6 +30,13 @@
  * `libs` is not in `ROOTS` at all, so no exemption list is needed to keep it
  * out.
  *
+ * The reasoning behind the invariant this gate enforces — why a local
+ * workaround is ruled out rather than tolerated, the kit extensions this
+ * epic produced as worked examples, and the standing exceptions (shell's
+ * settings renderer, `libs/navigation`'s global search, and others) — is
+ * recorded in docs/architecture/adr-051-form-controls-from-the-kit.md, not
+ * here. This file only enforces the mechanical shape.
+ *
  * Known legitimate exception: a native `<input type="file">`. A file picker
  * has no non-native form — `@pops/ui`'s own `FileUpload` (libs/ui) wraps one
  * for the same reason — so a statically-literal `type="file"` is never
@@ -446,7 +453,9 @@ function runCheck() {
       '  added to pillar UI — use the @pops/ui kit primitive instead. If this pillar\n' +
       '  genuinely changed (a migration ticket paid violations down, or you added one you\n' +
       '  should not have), run `pnpm check:raw-form-controls:baseline` and, for growth,\n' +
-      '  justify it in review — growth should not happen at all outside a scoped exception.'
+      '  justify it in review — growth should not happen at all outside a scoped exception.\n' +
+      '\n  Why this rule exists, what "extend the kit instead" looks like in practice, and the\n' +
+      '  standing exceptions: docs/architecture/adr-051-form-controls-from-the-kit.md'
   );
   process.exit(1);
 }
