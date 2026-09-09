@@ -180,11 +180,15 @@ tightened to catch:
   non-editing one. The wrapper has no escape hatch, so this is not a
   `className` away. Each file says so inline, citing its ticket.
 
-  This exception is about the row, not about inline editing: POPS-3260
-  measured the two superficially similar `lists` row editors
-  (`ShoppingRowBody.tsx`, `ListItemRow.tsx`) and found both rows already
-  taller than `h-9`, driven by their `h-8` checkboxes and two-line content.
-  They migrate; they are not covered here.
+  This exception is about the row, not about inline editing. POPS-3260
+  checked the two superficially similar `lists` row editors and found
+  neither covered: `ShoppingRowBody.tsx`'s row is driven past `h-9` by its
+  `h-8 w-8` checkbox and drag handle, and `ListItemRow.tsx`'s is an
+  `items-start` row whose `p-2` and optional two-line label/subline already
+  accommodate a 36px control. Neither resembles the near-zero `px-0.5 py-0`
+  of the tree row. They migrate under POPS-3273, which carries verifying
+  the rendered height as an acceptance criterion rather than trusting the
+  resemblance either way.
 
 - **`purchases/QueueList`** is an interaction widget, not a form control,
   and falls outside the guard's scope for that reason — it renders no raw
