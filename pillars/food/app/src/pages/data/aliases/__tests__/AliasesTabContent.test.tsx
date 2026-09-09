@@ -203,7 +203,9 @@ describe('AliasesTabContent', () => {
     const dialog = await screen.findByRole('dialog', { name: /^add alias/i });
     await user.type(within(dialog).getByLabelText(/alias text/i), 'novo');
     await user.type(within(dialog).getByLabelText(/search ingredients/i), 'ban');
-    await user.click(await within(dialog).findByRole('button', { name: /banana/i }));
+    // The picker's option list renders through a `Popover` portal, outside
+    // the dialog's own portaled subtree, so it has to be found globally.
+    await user.click(await screen.findByRole('option', { name: /banana/i }));
     await user.click(within(dialog).getByRole('button', { name: /^add$/i }));
     await waitFor(() =>
       expect(state.createCalls.at(-1)).toMatchObject({

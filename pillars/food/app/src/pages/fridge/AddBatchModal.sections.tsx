@@ -1,4 +1,4 @@
-import { Input, Select, type SelectOption } from '@pops/ui';
+import { DateInput, Input, Select, type SelectOption } from '@pops/ui';
 
 import { type AddFormState } from './AddBatchModal.ingredientSection.js';
 import { FieldRow, RadioRow } from './form-controls.js';
@@ -100,15 +100,13 @@ export function DateAndNotesSection({ state }: { state: AddFormState }): ReactEl
     <>
       <div className="grid grid-cols-2 gap-2">
         <FieldRow label="Produced">
-          <Input
-            type="date"
+          <DateInput
             value={state.form.producedAt}
             onChange={(e) => set({ producedAt: e.target.value })}
           />
         </FieldRow>
         <FieldRow label="Expires (optional)">
-          <Input
-            type="date"
+          <DateInput
             value={state.form.expiresAt}
             onChange={(e) => set({ expiresAt: e.target.value })}
           />

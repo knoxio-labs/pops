@@ -46,6 +46,24 @@ else
     echo "          below fails on a module you did not touch, that is why —"
     echo "          run 'pnpm install --frozen-lockfile' and push again."
   fi
+  # A stale lockfile is invisible to every other local gate. `pnpm typecheck`,
+  # `mise run test`, `mise run lint` and `pnpm format:check` all read
+  # `node_modules`, which still holds the resolution from the last install — so
+  # a tree that cannot be installed from scratch passes all of them. CI installs
+  # from scratch and fails in every job that installs: one such lockfile on
+  # POPS-3221 reported as 75 red checks, and the cause named in none of them.
+  #
+  # `--lockfile-only` resolves against the manifests without touching
+  # `node_modules`, so this costs ~0.3s on a clean tree. It catches both
+  # directions — a dependency added to a package.json and never installed, and
+  # one removed while the lockfile still carries it.
+  if ! lockfile_reason=$(without_repo_locating_git_env pnpm install --frozen-lockfile --lockfile-only 2>&1); then
+    echo "pre-push: pnpm-lock.yaml does not match the package.json files in this push." >&2
+    echo "          Run 'pnpm install' and commit the updated lockfile." >&2
+    printf '%s\n' "$lockfile_reason" >&2
+    exit 1
+  fi
+
   without_repo_locating_git_env pnpm typecheck
 
   if [ "$scripts_decision" = run ]; then

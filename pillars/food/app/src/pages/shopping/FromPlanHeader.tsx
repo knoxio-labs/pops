@@ -8,7 +8,7 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, DateInput } from '@pops/ui';
 
 import { isoMondayFor, isoSundayFor, validateRange } from './range-helpers.js';
 
@@ -61,10 +61,9 @@ function Inputs({
       <label className="text-sm font-medium" htmlFor="from-plan-start">
         {t('shopping.fromPlan.startLabel')}
       </label>
-      <input
+      <DateInput
         id="from-plan-start"
-        type="date"
-        className="border rounded px-2 py-1 text-sm"
+        size="sm"
         data-testid="from-plan-start"
         value={startDate}
         onChange={(e) => {
@@ -74,10 +73,9 @@ function Inputs({
       <label className="text-sm font-medium" htmlFor="from-plan-end">
         {t('shopping.fromPlan.endLabel')}
       </label>
-      <input
+      <DateInput
         id="from-plan-end"
-        type="date"
-        className="border rounded px-2 py-1 text-sm"
+        size="sm"
         data-testid="from-plan-end"
         value={endDate}
         onChange={(e) => {

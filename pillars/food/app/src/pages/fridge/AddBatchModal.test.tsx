@@ -99,4 +99,16 @@ describe('AddBatchModal', () => {
     expect(await screen.findByText(/pick an ingredient variant/i)).toBeInTheDocument();
     expect(sdk.batchesCreate).not.toHaveBeenCalled();
   });
+
+  // POPS-3179: a raw `<input type="date">` opts out of `DateInput`'s pinned
+  // `lang="en-AU"`, so the native picker's day/month order silently follows
+  // the browser locale instead of the app's. Regression guard for that.
+  it('pins the produced and expires date fields to en-AU regardless of browser locale', async () => {
+    renderModal();
+
+    await screen.findByRole('option', { name: 'Tomato (tomato)' });
+
+    expect(screen.getByLabelText(/^produced$/i)).toHaveAttribute('lang', 'en-AU');
+    expect(screen.getByLabelText(/expires \(optional\)/i)).toHaveAttribute('lang', 'en-AU');
+  });
 });

@@ -3,7 +3,7 @@ import { formatBalance } from '@/fixtures/currencies';
 import { type LoanRateEntry, loanRateHistoryByAccountId } from '@/fixtures/loan-rate-history';
 import { useState } from 'react';
 
-import { Badge, Button, Label, TextInput } from '@pops/ui';
+import { Badge, Button, DateInput, Label, TextInput } from '@pops/ui';
 
 import type { Account } from '@/fixtures/accounts';
 
@@ -29,8 +29,14 @@ function TermsFields({ loan, currency }: { loan: AccountInsight['loan']; currenc
         label="Monthly repayment"
         defaultValue={loan ? money(loan.monthlyRepayment) : ''}
       />
-      <TextInput label="Started on" type="date" defaultValue={loan?.startedOn ?? ''} />
-      <TextInput label="Terms effective from" type="date" defaultValue={loan?.startedOn ?? ''} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="loan-started-on">Started on</Label>
+        <DateInput id="loan-started-on" defaultValue={loan?.startedOn ?? ''} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="loan-terms-effective-from">Terms effective from</Label>
+        <DateInput id="loan-terms-effective-from" defaultValue={loan?.startedOn ?? ''} />
+      </div>
     </div>
   );
 }
@@ -54,7 +60,10 @@ function RecordRateForm({ onCancel, onSave }: { onCancel: () => void; onSave: ()
     <div className="space-y-3 rounded-md border border-dashed p-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <TextInput label="New rate" placeholder="6.24%" />
-        <TextInput label="Effective from" type="date" />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="rate-effective-from">Effective from</Label>
+          <DateInput id="rate-effective-from" />
+        </div>
       </div>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
