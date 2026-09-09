@@ -1,6 +1,8 @@
 import { type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { TextInput } from '@pops/ui';
+
 import type { ListItemRow as ItemRow } from '../../detail/types.js';
 
 /**
@@ -35,16 +37,21 @@ export function ShoppingRowBody(props: ShoppingRowBodyProps): React.ReactElement
           {formatQtyUnit(row)}
         </span>
         {edit.editing ? (
-          <input
-            type="text"
-            value={edit.draft}
-            onChange={(e) => edit.setDraft(e.target.value)}
-            onBlur={() => void edit.commit()}
-            onKeyDown={onLabelKey}
-            className="flex-1 rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            aria-label={t('shopping.item.editLabel')}
-            autoFocus
-          />
+          <div className="min-w-0 flex-1">
+            <TextInput
+              size="sm"
+              // h-8 matches the row's tallest sibling (the 32px checkbox and
+              // drag handle); the kit's smallest height, h-9, makes the row
+              // grow 4px the moment the editor opens.
+              containerClassName="h-8"
+              value={edit.draft}
+              onChange={(e) => edit.setDraft(e.target.value)}
+              onBlur={() => void edit.commit()}
+              onKeyDown={onLabelKey}
+              aria-label={t('shopping.item.editLabel')}
+              autoFocus
+            />
+          </div>
         ) : (
           <button
             type="button"

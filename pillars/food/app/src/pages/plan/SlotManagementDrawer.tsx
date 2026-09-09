@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react';
  */
 import { useState, type ReactElement } from 'react';
 
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 import { unwrap } from '../../food-api-helpers.js';
 import {
@@ -135,17 +135,17 @@ function AddSlotForm({ onSubmit, isPending }: AddSlotFormProps): ReactElement {
     <section data-testid="add-slot-form">
       <h3 className="text-sm font-medium mb-2">Add a custom slot</h3>
       <div className="space-y-2">
-        <input
+        <TextInput
           data-testid="add-slot-slug"
+          label="Slug"
           placeholder="slug (e.g. late-night)"
-          className="w-full border rounded px-2 py-1 text-sm"
           value={slug}
           onChange={(e) => setSlug(e.target.value.toLowerCase())}
         />
-        <input
+        <TextInput
           data-testid="add-slot-name"
+          label="Display name"
           placeholder="Display name"
-          className="w-full border rounded px-2 py-1 text-sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />

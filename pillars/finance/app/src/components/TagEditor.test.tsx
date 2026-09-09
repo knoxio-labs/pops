@@ -40,6 +40,20 @@ describe('TagEditor', () => {
     expect(screen.getByRole('button', { name: /Remove/i })).toBeInTheDocument();
   });
 
+  it('autofocuses the tag input when the popover opens', () => {
+    render(
+      <TagEditor
+        currentTags={['Groceries']}
+        availableTags={['Groceries', 'Dining']}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+
+    expect(screen.getByPlaceholderText(/Type to add a tag/i)).toHaveFocus();
+  });
+
   it('does not open the popover when disabled', () => {
     render(
       <TagEditor
@@ -86,7 +100,7 @@ describe('TagEditor', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
 
-    const panel = screen.getByPlaceholderText(/Type to add a tag/i).parentElement;
+    const panel = screen.getByPlaceholderText(/Type to add a tag/i).closest('.space-y-3');
     expect(panel).not.toBeNull();
     expect(panel?.textContent).toContain('Contains');
     expect(panel?.textContent).toContain('Venue');
@@ -132,6 +146,22 @@ describe('TagEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(['venue:bar']));
+  });
+
+  it('refocuses the tag input via its forwarded ref after a tag is added', () => {
+    // useTagEditorState.addTag calls inputRef.current?.focus() directly — a
+    // dropped ref forward here would silently no-op that call.
+    render(<TagEditor currentTags={[]} availableTags={['venue:bar']} onSave={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    input.blur();
+    expect(input).not.toHaveFocus();
+
+    fireEvent.change(input, { target: { value: 'Bar' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(input).toHaveFocus();
   });
 
   it('saves a value on the axis the user picks, slugged', async () => {

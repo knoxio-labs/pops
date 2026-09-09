@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import {
   Button,
+  ColourInput,
   CRUDManagementSection,
   Dialog,
   DialogContent,
@@ -10,14 +11,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  isValidHexColour,
   TextInput,
 } from '@pops/ui';
 
 import { InstitutionMark } from './institution-select';
 import { SettingsDeleteDialog } from './settings-delete-dialog';
 import { SettingsRow } from './settings-row';
-
-const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
 
 function InstitutionEditDialog({
   institution,
@@ -30,7 +30,7 @@ function InstitutionEditDialog({
 }) {
   const [name, setName] = useState(institution.name);
   const [colour, setColour] = useState(institution.colour);
-  const valid = name.trim().length > 0 && HEX_COLOUR.test(colour);
+  const valid = name.trim().length > 0 && isValidHexColour(colour);
 
   return (
     <Dialog open onOpenChange={(next) => !next && onCancel()}>
@@ -43,22 +43,7 @@ function InstitutionEditDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <TextInput
-                label="Colour"
-                value={colour}
-                onChange={(e) => setColour(e.target.value)}
-              />
-            </div>
-            <input
-              type="color"
-              value={HEX_COLOUR.test(colour) ? colour : '#000000'}
-              onChange={(e) => setColour(e.target.value)}
-              className="h-11 w-11 shrink-0 cursor-pointer rounded-md border border-input bg-transparent p-1"
-              aria-label="Colour swatch"
-            />
-          </div>
+          <ColourInput label="Colour" value={colour} onChange={setColour} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
