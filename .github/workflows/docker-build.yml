@@ -176,6 +176,15 @@ jobs:
         # to, since one image cannot be both. A variant image is built and
         # smoked exactly like a primary one; nothing else here treats them
         # differently.
+        #
+        # `pillars/*/app/Dockerfile` is searched too, which `-maxdepth 2` did
+        # not reach. A pillar the shell mounts through its runtime loader
+        # serves its UI bundle from an image of its own built out of the app
+        # workspace (POPS-3217), and the first one was invisible here: never
+        # built, never smoked, and a broken Dockerfile would have landed with
+        # nothing failing. The two finds are unioned rather than the depth
+        # being raised, so an unrelated `Dockerfile` three levels down does
+        # not silently join the matrix.
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ] && \
@@ -184,7 +193,8 @@ jobs:
             echo 'dockerfiles=[]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          found=$(find pillars -maxdepth 2 \( -name Dockerfile -o -name 'Dockerfile.*' \) | sort |
+          found=$( { find pillars -maxdepth 2 \( -name Dockerfile -o -name 'Dockerfile.*' \);
+                     find pillars -mindepth 3 -maxdepth 3 -path 'pillars/*/app/Dockerfile*'; } | sort |
             jq -R -s -c 'split("\n") | map(select(length > 0))')
           echo "found ${found}"
           echo "dockerfiles=${found}" >> "$GITHUB_OUTPUT"
