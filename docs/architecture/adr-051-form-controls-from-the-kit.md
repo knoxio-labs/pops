@@ -128,16 +128,34 @@ decision and not just a cleanup:
   around.
 - **A per-pillar count is the wrong shape for the end state.** Counts do not
   say _which_ controls are allowed, so a pillar can pay one violation down
-  and add another and still match its baseline. Once the migrations land,
-  the guard should exempt the allowlisted paths by name and hold every
-  pillar at zero, so that each survivor is individually justified rather
-  than absorbed into a number.
+  and add another and still match its baseline. POPS-3276 replaced the count
+  baseline with the by-name allowlist below: every pillar is held at zero and
+  each survivor is individually justified rather than absorbed into a number.
 
 ### Deliberate exceptions
 
 A handful of cases render native controls, or diverge from a single shared
 implementation, on purpose. None of them is a violation the guard should be
-tightened to catch:
+tightened to catch.
+
+The first group below is enforced: these paths are the complete `ALLOWLIST`
+in `scripts/ci/check-raw-form-controls.mjs`, and the guard holds each to an
+exact count. A path that grows past its count fails; a path that no longer
+holds a raw control fails as **stale**, so an exemption cannot outlive its
+reason. This table and that list must agree — the guard's own test asserts
+every allowlisted path appears in this document.
+
+| path                                                                                        | controls | ticket    |
+| ------------------------------------------------------------------------------------------- | -------- | --------- |
+| `pillars/design/src/comments/Composer.tsx`                                                  | 1        | POPS-3260 |
+| `pillars/design/src/comments/Thread.tsx`                                                    | 2        | POPS-3260 |
+| `pillars/design/src/screens/finance/import-tag-rule-dialog.tsx`                             | 1        | POPS-3260 |
+| `pillars/food/app/src/pages/plan/SlotRow.tsx`                                               | 1        | POPS-3260 |
+| `pillars/inventory/app/src/pages/location-tree-page/sections/location-node/InlineInput.tsx` | 1        | POPS-3201 |
+
+The remaining entries are exceptions in a different sense: they are shapes
+the guard does not and should not count at all, recorded so nobody
+"tightens" the gate onto them later.
 
 - **Shell's dynamic settings renderer**
   (`pillars/shell/src/components/settings/section-renderer/`) is the only
@@ -217,13 +235,12 @@ tightened to catch:
 Two things the epic did not settle, named here so this ADR does not read as
 cleaner than the tree it describes:
 
-- **The guard is not at zero yet, but it now has a target.** The call
-  POPS-3260 was opened to make has been made and is recorded above under
-  "The remaining count". What is not yet true is the end state: the
-  migrations are tickets, not merged code, so a reader running the guard
-  today still sees a number well above the floor. Treat the target as the
-  invariant and the current count as work in progress, not the other way
-  round.
+- **Nothing about the count is outstanding any more.** The migrations
+  POPS-3260 scoped are merged (POPS-3269, POPS-3271 through POPS-3275) and
+  POPS-3276 replaced the count baseline with the allowlist above, so the
+  guard now holds every pillar at zero. A reader running it today sees the
+  five allowlisted paths and nothing else. What follows is the one thing the
+  epic genuinely did not settle.
 - **Error-message placement is not a settled convention.** `FieldLabel`'s
   `error` slot renders above the control it labels; every input that owns
   its own `error` prop (`TextInput` and what's built on it) renders its
@@ -253,11 +270,11 @@ cleaner than the tree it describes:
   reader can go and check — a ticket, a file, a constraint — and stays valid
   only as long as that reference does. A stale citation is the same failure
   as no citation.
-- The end state is zero raw form controls per pillar plus a by-name
-  allowlist, not a per-pillar count — so every surviving control is
+- The enforced state is zero raw form controls per pillar plus the by-name
+  allowlist above, not a per-pillar count — so every surviving control is
   individually justified in this document rather than absorbed into a
-  number. Until the migrations land the guard still reports a count above
-  that floor; the gap is tracked work (POPS-3260's children, POPS-3247),
-  not something this ADR papers over. An ADR asserting a clean invariant
-  the tree visibly contradicts would teach readers to distrust both the ADR
-  and the guard; naming the gap is what keeps the guard worth checking.
+  number. The guard reads that allowlist directly and fails a stale entry,
+  which is what stops this table drifting away from the tree the way
+  `ListKindChip`'s justifying comment did once its source file was deleted.
+  The one gap this ADR still names rather than papers over is error-message
+  placement (POPS-3247).
