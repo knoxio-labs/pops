@@ -250,6 +250,24 @@ describe('0107_occasion_home_sweep — rules and counters', () => {
     }
   });
 
+  it.each([
+    ['a gym direct debit', ['contains:fitness']],
+    ['a cinema rule', ['venue:cinema', 'contains:events']],
+    ['a transport rule', ['venue:transport', 'contains:public-transport']],
+    ['a haircut rule', ['contains:haircut']],
+    ['a fuel rule', ['contains:fuel']],
+  ])('strips it from %s, not just the grocery-shaped rules', (_label, others) => {
+    // The rule list used to be a hand-picked subset of the list statements 1
+    // and 3 apply to transactions. The effect was that these rules had the tag
+    // stripped from their ROWS and left on the RULE, so the next import wrote
+    // it straight back — the migration sweeping a category and re-creating it.
+    rule('r', ['occasion:home', ...others]);
+
+    raw.exec(MIGRATION);
+
+    expect(ruleTags('r')).toEqual(others.toSorted());
+  });
+
   it('corrects a correction rule too', () => {
     raw
       .prepare(
@@ -296,5 +314,39 @@ describe('0107_occasion_home_sweep — rules and counters', () => {
       flag: tagsOf('flag'),
       usage: homeUsage(),
     }).toEqual(after);
+  });
+});
+
+describe('0107_occasion_home_sweep — the two signal lists', () => {
+  /**
+   * The rule strip and the transaction strip must apply the same signals.
+   * Whatever the transaction half treats as consumption, the rule half must
+   * too, or the migration strips a category from the rows and leaves the rule
+   * that put it there — sweeping the category and re-creating it on the next
+   * import. Comparing the SQL is the only way to assert that without
+   * enumerating fifty tags in a fixture and calling the enumeration a test.
+   */
+  it('uses one list, not a subset, for rows and for rules', () => {
+    const lists = [...MIGRATION.matchAll(/je\.value IN \(([^)]*)\)/gu)].map((match) =>
+      [...(match[1] ?? '').matchAll(/'([a-z]+:[a-z0-9-]+)'/gu)].map((m) => m[1]).toSorted()
+    );
+
+    const consumption = lists.filter((list) => list.includes('contains:groceries'));
+
+    expect(consumption.length).toBeGreaterThanOrEqual(4);
+    for (const list of consumption) expect(list).toEqual(consumption[0]);
+  });
+
+  it('shares no value between the consumption list and the dwelling list', () => {
+    const lists = [...MIGRATION.matchAll(/je\.value IN \(([^)]*)\)/gu)].map(
+      (match) => new Set([...(match[1] ?? '').matchAll(/'([a-z]+:[a-z0-9-]+)'/gu)].map((m) => m[1]))
+    );
+    const consumption = lists.find((list) => list.has('contains:groceries'));
+    const dwelling = lists.find((list) => list.has('contains:rent'));
+
+    expect(consumption).toBeDefined();
+    expect(dwelling).toBeDefined();
+    const both = [...(dwelling ?? [])].filter((tag) => consumption?.has(tag));
+    expect(both).toEqual([]);
   });
 });

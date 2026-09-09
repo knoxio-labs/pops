@@ -145,6 +145,14 @@ WHERE EXISTS (SELECT 1 FROM json_each(`transactions`.`tags`) je WHERE je.value =
 -- names, and matching merchant names here would mean maintaining a second list
 -- of them.
 --
+-- The signal list is the SAME one statements 1 and 3 use, repeated verbatim
+-- rather than narrowed to the tags a rule "typically" carries. An earlier draft
+-- did narrow it, and the effect was that a rule asserting `occasion:home` +
+-- `contains:fitness` - a gym direct debit - had the tag stripped from its rows
+-- and left on the rule, so the next import wrote it straight back. Any
+-- divergence between the two lists is a category this migration sweeps and then
+-- immediately re-creates, so they must not diverge.
+--
 -- No rule can be emptied by this, which is why there is no
 -- deactivate-the-empty-rules statement here as there is in 0071: the strip only
 -- touches a rule that carries a consumption signal, and that signal is one of
@@ -159,10 +167,19 @@ WHERE EXISTS (
   )
   AND EXISTS (
 	SELECT 1 FROM json_each(`transaction_tag_rules`.`tags`) je WHERE je.value IN (
-	  'contains:groceries', 'contains:food', 'contains:alcohol', 'contains:subscription',
-	  'contains:streaming', 'contains:software', 'contains:games', 'contains:clothing',
-	  'venue:supermarket', 'venue:bottle-shop', 'venue:convenience-store', 'venue:butcher',
-	  'venue:bakery', 'venue:cafe', 'venue:restaurant', 'venue:takeaway', 'venue:pharmacy'
+	  'contains:groceries', 'contains:food', 'contains:alcohol', 'contains:coffee',
+	  'contains:fast-food', 'contains:ice-cream', 'contains:bubble-tea',
+	  'contains:subscription', 'contains:streaming', 'contains:software',
+	  'contains:games', 'contains:clothing', 'contains:fitness', 'contains:events',
+	  'contains:health', 'contains:haircut', 'contains:gift', 'contains:gift-card',
+	  'contains:party-supplies', 'contains:office-supplies', 'contains:public-transport',
+	  'contains:parking', 'contains:fuel', 'contains:charging', 'contains:rideshare',
+	  'contains:accommodation', 'contains:flight', 'contains:car-rental', 'contains:entry',
+	  'venue:bottle-shop', 'venue:bakery', 'venue:cafe', 'venue:restaurant', 'venue:takeaway',
+	  'venue:convenience-store', 'venue:supermarket', 'venue:butcher', 'venue:clothing',
+	  'venue:sex-shop', 'venue:pub', 'venue:club', 'venue:cinema', 'venue:arcade',
+	  'venue:attraction', 'venue:vending-machine', 'venue:sauna', 'venue:transport',
+	  'venue:parking', 'venue:pharmacy'
 	)
   );
 --> statement-breakpoint
@@ -176,9 +193,18 @@ WHERE EXISTS (
   )
   AND EXISTS (
 	SELECT 1 FROM json_each(`transaction_corrections`.`tags`) je WHERE je.value IN (
-	  'contains:groceries', 'contains:food', 'contains:alcohol', 'contains:subscription',
-	  'contains:streaming', 'contains:software', 'contains:games', 'contains:clothing',
-	  'venue:supermarket', 'venue:bottle-shop', 'venue:convenience-store', 'venue:butcher',
-	  'venue:bakery', 'venue:cafe', 'venue:restaurant', 'venue:takeaway', 'venue:pharmacy'
+	  'contains:groceries', 'contains:food', 'contains:alcohol', 'contains:coffee',
+	  'contains:fast-food', 'contains:ice-cream', 'contains:bubble-tea',
+	  'contains:subscription', 'contains:streaming', 'contains:software',
+	  'contains:games', 'contains:clothing', 'contains:fitness', 'contains:events',
+	  'contains:health', 'contains:haircut', 'contains:gift', 'contains:gift-card',
+	  'contains:party-supplies', 'contains:office-supplies', 'contains:public-transport',
+	  'contains:parking', 'contains:fuel', 'contains:charging', 'contains:rideshare',
+	  'contains:accommodation', 'contains:flight', 'contains:car-rental', 'contains:entry',
+	  'venue:bottle-shop', 'venue:bakery', 'venue:cafe', 'venue:restaurant', 'venue:takeaway',
+	  'venue:convenience-store', 'venue:supermarket', 'venue:butcher', 'venue:clothing',
+	  'venue:sex-shop', 'venue:pub', 'venue:club', 'venue:cinema', 'venue:arcade',
+	  'venue:attraction', 'venue:vending-machine', 'venue:sauna', 'venue:transport',
+	  'venue:parking', 'venue:pharmacy'
 	)
   );
