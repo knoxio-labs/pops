@@ -4,7 +4,16 @@ import { accountSubtitle, AccountSelect } from '@/kit/account-select';
 import { AccountAvatar } from '@/screens/finance/account-chip';
 import { useState } from 'react';
 
-import { Button, ChipInput, type EntityOption, EntitySelect, Label, TextInput } from '@pops/ui';
+import {
+  Button,
+  ChipInput,
+  DateInput,
+  type EntityOption,
+  EntitySelect,
+  FieldLabel,
+  Label,
+  TextInput,
+} from '@pops/ui';
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -81,13 +90,15 @@ export function DateField({
   error?: string;
 }) {
   return (
-    <TextInput
-      label="Date"
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      error={error}
-    />
+    <div className="flex flex-col gap-1.5 w-full">
+      <FieldLabel htmlFor="transaction-date" label="Date" error={error} />
+      <DateInput
+        id="transaction-date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        error={error}
+      />
+    </div>
   );
 }
 
