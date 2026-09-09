@@ -1,4 +1,4 @@
-import { Button, Label } from '@pops/ui';
+import { Button, CheckboxInput } from '@pops/ui';
 
 import type { SeasonInfo } from '../RequestSeriesModal';
 
@@ -87,26 +87,26 @@ export function SeasonMonitoringList({
       </div>
       <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-2">
         {seasons.map((s) => (
-          <Label
+          <CheckboxInput
             key={s.seasonNumber}
-            className="flex items-center gap-2 text-sm cursor-pointer font-normal"
-          >
-            <input
-              type="checkbox"
-              checked={seasonMonitored[s.seasonNumber] ?? false}
-              onChange={(e) => {
-                setSeasonMonitored((prev) => ({
-                  ...prev,
-                  [s.seasonNumber]: e.target.checked,
-                }));
-              }}
-              disabled={disabled}
-            />
-            {s.seasonNumber === 0 ? 'Specials' : `Season ${s.seasonNumber}`}
-            {s.firstAirDate && (
-              <span className="text-muted-foreground">— {s.firstAirDate.slice(0, 4)}</span>
-            )}
-          </Label>
+            className="gap-0"
+            checked={seasonMonitored[s.seasonNumber] ?? false}
+            onCheckedChange={(checked) => {
+              setSeasonMonitored((prev) => ({
+                ...prev,
+                [s.seasonNumber]: checked,
+              }));
+            }}
+            disabled={disabled}
+            label={
+              <span className="flex items-center gap-1 text-sm font-normal">
+                {s.seasonNumber === 0 ? 'Specials' : `Season ${s.seasonNumber}`}
+                {s.firstAirDate && (
+                  <span className="text-muted-foreground">— {s.firstAirDate.slice(0, 4)}</span>
+                )}
+              </span>
+            }
+          />
         ))}
       </div>
     </div>
