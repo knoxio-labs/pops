@@ -22,6 +22,7 @@ import {
   pillarOf,
   readBaselineAt,
 } from '../check-raw-form-controls.mjs';
+import { gitEnv } from '../resolve-report-base.mjs';
 import { passingProofStdout, proofOf } from './real-tree-proofs.js';
 
 describe('a raw form control is reported', () => {
@@ -299,16 +300,12 @@ describe('readBaselineAt', () => {
       execFileSync('git', [...args], {
         cwd: dir,
         stdio: 'pipe',
-        env: {
-          ...process.env,
-          GIT_DIR: undefined,
-          GIT_WORK_TREE: undefined,
-          GIT_INDEX_FILE: undefined,
+        env: gitEnv({
           GIT_AUTHOR_NAME: 'raw-form-control-test',
           GIT_AUTHOR_EMAIL: 'raw-form-control-test@example.invalid',
           GIT_COMMITTER_NAME: 'raw-form-control-test',
           GIT_COMMITTER_EMAIL: 'raw-form-control-test@example.invalid',
-        },
+        }),
       });
     };
     git(['init', '--quiet', '-b', 'main']);
