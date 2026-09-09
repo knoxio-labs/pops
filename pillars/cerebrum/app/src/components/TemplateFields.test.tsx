@@ -35,6 +35,33 @@ vi.mock('@pops/ui', async () => {
         onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
           onChange?.(e.target.value ? e.target.value.split(',') : []),
       }),
+    NumberInput: ({ value, onChange, placeholder, ...rest }: Record<string, unknown>) =>
+      React.createElement('input', {
+        type: 'number',
+        value: value as number | string,
+        onChange: onChange as () => void,
+        placeholder: placeholder as string,
+        'aria-label': rest['aria-label'] as string,
+      }),
+    CheckboxInput: ({
+      label,
+      description,
+      checked,
+      onCheckedChange,
+      className,
+    }: Record<string, unknown>) =>
+      React.createElement(
+        'label',
+        { className: className as string },
+        React.createElement('input', {
+          type: 'checkbox',
+          checked: checked as boolean,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+            (onCheckedChange as (v: boolean) => void)?.(e.target.checked),
+          'aria-label': label as string,
+        }),
+        description ? React.createElement('span', null, description as ReactNode) : null
+      ),
   };
 });
 
@@ -122,6 +149,22 @@ describe('TemplateFields', () => {
     const mockFn = onChange as ReturnType<typeof vi.fn>;
     const lastCall = mockFn.mock.calls.at(-1) as [string, unknown] | undefined;
     expect(lastCall?.[0]).toBe('decision');
+  });
+
+  it('commits no value, not 0, when a numeric field is cleared', async () => {
+    const user = userEvent.setup();
+    render(
+      <TemplateFields
+        fields={{ priority: decisionFields.priority }}
+        values={{ priority: 5 }}
+        onChange={onChange}
+      />
+    );
+    const input = screen.getByLabelText('priority');
+    await user.clear(input);
+
+    expect(onChange).toHaveBeenCalledWith('priority', undefined);
+    expect(onChange).not.toHaveBeenCalledWith('priority', 0);
   });
 
   it('calls onChange when boolean field is toggled', async () => {
