@@ -1,5 +1,5 @@
 /**
- * Storage shapes behind an account checkpoint (POPS-2750, ADR-051) — the enum
+ * Storage shapes behind an account checkpoint (POPS-2750, finance ADR-002) — the enum
  * the `account_checkpoints` table and its REST contract share. Kept next to
  * {@link ACCOUNT_KINDS} (`account-kind.ts`) for the same reason the loan enums
  * are: what an account carries, declared once for the db schema and the wire.

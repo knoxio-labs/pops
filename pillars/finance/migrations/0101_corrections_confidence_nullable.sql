@@ -1,4 +1,4 @@
--- ADR-053/POPS-3130. `transaction_corrections.confidence` stops being a
+-- finance ADR-004/POPS-3130. `transaction_corrections.confidence` stops being a
 -- decision input anywhere (POPS-3127..3129 already removed every read of it
 -- for matching or review routing) and becomes an audit-only field: `null`
 -- means no probability was ever assessed. Every row in this table today was

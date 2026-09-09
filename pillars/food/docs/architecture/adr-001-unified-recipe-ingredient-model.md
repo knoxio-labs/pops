@@ -1,4 +1,4 @@
-# ADR-022: Unified Recipe-as-Ingredient Model
+# Food ADR-001: Unified Recipe-as-Ingredient Model
 
 ## Status
 

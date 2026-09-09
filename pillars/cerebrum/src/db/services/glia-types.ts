@@ -5,11 +5,11 @@
  * re-deriving them from drizzle row shapes.
  */
 
-/** The four Glia action types (ADR-021). */
+/** The four Glia action types (cerebrum ADR-004). */
 export const ACTION_TYPES = ['prune', 'consolidate', 'link', 'audit'] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
 
-/** Trust phases in graduation order (ADR-021). */
+/** Trust phases in graduation order (cerebrum ADR-004). */
 export const TRUST_PHASES = ['propose', 'act_report', 'silent'] as const;
 export type TrustPhase = (typeof TRUST_PHASES)[number];
 

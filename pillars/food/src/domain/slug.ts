@@ -6,7 +6,7 @@ import { InvalidSlugError } from '../db/errors.js';
  * hyphens, double hyphens, uppercase, and any non-ASCII are rejected.
  *
  * The slug is the ingredient's identity across the DSL, the URL and the
- * import path (ADR-022), so the grammar has to be the intersection of what
+ * import path (food ADR-001), so the grammar has to be the intersection of what
  * all three accept — hence ASCII-only and no separator run that could
  * round-trip differently.
  */

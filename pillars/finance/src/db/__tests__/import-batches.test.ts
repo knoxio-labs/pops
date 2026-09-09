@@ -1,6 +1,6 @@
 /**
  * Invariant tests for the import-batch service against the migrated schema
- * (POPS-2916, ADR-052): the transaction stamp, newest-first paging, the
+ * (POPS-2916, finance ADR-003): the transaction stamp, newest-first paging, the
  * checkpoint link's `SET NULL`, and the account cascade.
  */
 import { eq } from 'drizzle-orm';

@@ -1,4 +1,4 @@
-# ADR-053: Rules are instructions; provenance decides review
+# Finance ADR-004: Rules are instructions; provenance decides review
 
 ## Status
 
@@ -107,8 +107,8 @@ it was the closest number lying around.
 - Rule cards stop rendering a confidence percentage next to a rule that, post
   epic, is unconditional (POPS-3131) — the number was actively misleading
   once "confidence: 70%" no longer meant "usually", it meant nothing.
-- `docs/architecture` conventions are per-pillar (see ADR-050 through
-  ADR-052); this ADR extends none of them directly but sits beside them —
+- `docs/architecture` conventions are per-pillar (see finance ADR-001 through
+  finance ADR-003); this ADR extends none of them directly but sits beside them —
   corrections and imports are as central to `finance` as accounts and
   balances.
 - The corrections and imports module READMEs currently describe the 0.9/0.7

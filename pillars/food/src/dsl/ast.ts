@@ -1,5 +1,5 @@
 /**
- * Recipe DSL AST. See ADR-023 for the grammar. Drizzle-independent:
+ * Recipe DSL AST. See food ADR-002 for the grammar. Drizzle-independent:
  * the parser is pure text processing and emits these shapes verbatim.
  * The resolver turns slug references into entity ids; compile materialises
  * into `recipe_lines` / `recipe_steps`.

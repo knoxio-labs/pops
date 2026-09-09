@@ -1,9 +1,9 @@
-# ADR-052: Imports are recorded per account
+# Finance ADR-003: Imports are recorded per account
 
 ## Status
 
-Accepted — 2026-09-06. Extends [ADR-050](./adr-050-accounts-as-first-class-records.md)
-(what an account is) and [ADR-051](./adr-051-balances-are-checkpoint-anchored.md)
+Accepted — 2026-09-06. Extends [finance ADR-001](./adr-001-accounts-as-first-class-records.md)
+(what an account is) and [finance ADR-002](./adr-002-balances-are-checkpoint-anchored.md)
 (what a balance is) with how an account is fed.
 
 ## Context
@@ -23,11 +23,11 @@ reconstructed after the fact.
 
 ## Options considered
 
-| Option                                                                                                         | Pros                                                                                       | Cons                                                                                                                                                                      |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Columns on `accounts` (`import_source`, `last_imported_at`, …)                                                 | No new table                                                                               | Puts operational state on the row ADR-050 kept to identity; `last_imported_at` is a stored number that drifts from the batches it summarises; nothing per import survives |
-| Derive everything from `import_commits` + transactions                                                         | No schema change                                                                           | A commit names no account, and a transaction names no commit; the join does not exist, and adding it forwards is this ADR anyway                                          |
-| `account_import_config` (how an account is fed) + append-only `import_batches` (what each import did) — chosen | Every question above has a row that answers it; nothing is stored that a read could derive | A batch is one more thing the commit writes; history imported before this ADR has no batch and readers must say so                                                        |
+| Option                                                                                                         | Pros                                                                                       | Cons                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Columns on `accounts` (`import_source`, `last_imported_at`, …)                                                 | No new table                                                                               | Puts operational state on the row finance ADR-001 kept to identity; `last_imported_at` is a stored number that drifts from the batches it summarises; nothing per import survives |
+| Derive everything from `import_commits` + transactions                                                         | No schema change                                                                           | A commit names no account, and a transaction names no commit; the join does not exist, and adding it forwards is this ADR anyway                                                  |
+| `account_import_config` (how an account is fed) + append-only `import_batches` (what each import did) — chosen | Every question above has a row that answers it; nothing is stored that a read could derive | A batch is one more thing the commit writes; history imported before this ADR has no batch and readers must say so                                                                |
 
 ## Decision
 
@@ -49,7 +49,7 @@ grain is (account, commit): a commit spans accounts once a row is retargeted in
 review, and a batch that named a commit and not an account could not answer
 "when was this account last fed". A batch carries the source, the row count,
 the inclusive date span, the parser version and the checkpoint its source
-minted (ADR-051, POPS-2882). It is written inside the commit's transaction,
+minted (finance ADR-002, POPS-2882). It is written inside the commit's transaction,
 after every row and checkpoint has landed, so it counts what is actually
 there.
 

@@ -298,7 +298,7 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
   it('applies a below-the-bar rule to a matched row without demoting it', async () => {
     // `seedWeakRule` names an entity (Coles), so its outcome bucket is
     // `matched` regardless of the confidence stored on it — provenance
-    // decides the bucket now, not confidence (ADR-053/POPS-3128), and there
+    // decides the bucket now, not confidence (finance ADR-004/POPS-3128), and there
     // is no confidence floor on matching either (POPS-3129). It used to be
     // otherwise: a rule below the old minConfidence floor (0.7) never
     // matched at all, and one between that floor and the old
@@ -562,7 +562,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
 
   it('does not re-credit a row the rule leaves in the uncertain bucket', async () => {
     // An entity-less purchase rule always leaves the row uncertain (no
-    // merchant resolved yet, ADR-053) across both runs and never reaches the
+    // merchant resolved yet, finance ADR-004) across both runs and never reaches the
     // matched-row path — the gate has to hold on the full ladder too, not
     // only on the re-apply branch.
     seedPurchaseTypeRule('r-purchase-only');
