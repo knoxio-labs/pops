@@ -1,6 +1,8 @@
 import { type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { TextInput } from '@pops/ui';
+
 import type { ListItemRow as ItemRow } from '../../detail/types.js';
 
 /**
@@ -35,16 +37,17 @@ export function ShoppingRowBody(props: ShoppingRowBodyProps): React.ReactElement
           {formatQtyUnit(row)}
         </span>
         {edit.editing ? (
-          <input
-            type="text"
-            value={edit.draft}
-            onChange={(e) => edit.setDraft(e.target.value)}
-            onBlur={() => void edit.commit()}
-            onKeyDown={onLabelKey}
-            className="flex-1 rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            aria-label={t('shopping.item.editLabel')}
-            autoFocus
-          />
+          <div className="min-w-0 flex-1">
+            <TextInput
+              size="sm"
+              value={edit.draft}
+              onChange={(e) => edit.setDraft(e.target.value)}
+              onBlur={() => void edit.commit()}
+              onKeyDown={onLabelKey}
+              aria-label={t('shopping.item.editLabel')}
+              autoFocus
+            />
+          </div>
         ) : (
           <button
             type="button"
