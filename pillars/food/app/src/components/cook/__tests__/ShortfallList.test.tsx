@@ -152,15 +152,15 @@ describe('ShortfallList', () => {
     expect(screen.getByTestId('mark-cooked')).toBeDisabled();
 
     const row1 = screen.getByTestId('shortfall-row-1');
-    await user.click(within(row1).getByLabelText(/mark consumed externally/i));
+    await user.click(within(row1).getByRole('radio', { name: /mark consumed externally/i }));
     expect(screen.getByTestId('mark-cooked')).toBeDisabled();
 
     const row2 = screen.getByTestId('shortfall-row-2');
-    await user.click(within(row2).getByLabelText(/consume what.s available/i));
+    await user.click(within(row2).getByRole('radio', { name: /consume what.s available/i }));
     await user.click(await within(row2).findByTestId('batch-picker-row-42'));
 
     const row3 = screen.getByTestId('shortfall-row-3');
-    await user.click(within(row3).getByLabelText(/pick a batch/i));
+    await user.click(within(row3).getByRole('radio', { name: /pick a batch/i }));
     await user.click(await within(row3).findByTestId('batch-picker-row-42'));
 
     expect(screen.getByTestId('mark-cooked')).not.toBeDisabled();
@@ -180,7 +180,9 @@ describe('ShortfallList', () => {
     renderHost({ initialScale: 1, lineNeeds, shortfalls, onGate: gate });
 
     await user.click(
-      within(screen.getByTestId('shortfall-row-1')).getByLabelText(/mark consumed externally/i)
+      within(screen.getByTestId('shortfall-row-1')).getByRole('radio', {
+        name: /mark consumed externally/i,
+      })
     );
     expect(screen.getByTestId('mark-cooked')).not.toBeDisabled();
 
@@ -203,7 +205,7 @@ describe('ShortfallList', () => {
     renderHost({ initialScale: 1, lineNeeds, shortfalls, onGate: gate });
 
     const row = screen.getByTestId('shortfall-row-1');
-    await user.click(within(row).getByLabelText(/pick a batch/i));
+    await user.click(within(row).getByRole('radio', { name: /pick a batch/i }));
     expect(await within(row).findByTestId('batch-picker-empty')).toBeInTheDocument();
   });
 });

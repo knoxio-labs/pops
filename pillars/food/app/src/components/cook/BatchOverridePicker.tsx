@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, TextInput } from '@pops/ui';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { batchesSearchForConsume } from '../../food-api/index.js';
@@ -92,12 +92,12 @@ export function BatchOverridePicker(props: BatchOverridePickerProps): ReactNode 
           {t('cook.batchPicker.cancel')}
         </Button>
       </header>
-      <input
+      <TextInput
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder={t('cook.batchPicker.search')}
-        className="w-full border rounded px-2 py-1 text-sm"
+        aria-label={t('cook.batchPicker.search')}
         data-testid="batch-picker-search"
       />
       <SameVariantSection

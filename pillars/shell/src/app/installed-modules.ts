@@ -22,7 +22,7 @@
  *
  * The registry-as-source-of-truth stance this walk implements is ADR-027.
  */
-import { isInstalledModule } from '@pops/module-registry';
+import { isInstalledModule, KNOWN_MODULES } from '@pops/module-registry';
 
 import { WORKSPACE_BUNDLE_MAP, type BundleEntry } from './bundle-map';
 import {
@@ -118,6 +118,34 @@ export function staticFloorEntries(): readonly RegistryEntry[] {
   return Object.keys(WORKSPACE_BUNDLE_MAP)
     .filter((pillarId) => isInstalledModule(pillarId))
     .map((pillarId) => ({ pillarId }));
+}
+
+/**
+ * Narrow a snapshot to what this build is allowed to mount offline.
+ *
+ * The LIVE registry is deliberately unfiltered: while it is answering it is
+ * the source of truth, and `POPS_APPS` does not override it. The CACHED
+ * snapshot is different — it stands in for {@link staticFloorEntries} as the
+ * offline floor, and the floor honours the install set. Without this the
+ * shell's offline behaviour would depend on whether a browser happened to
+ * hold a cache: an operator who narrowed `POPS_APPS` and redeployed would
+ * get the excluded module back on a returning machine and not on a fresh
+ * one.
+ *
+ * The test is "known and excluded", not `isInstalledModule` alone. That
+ * function answers false for any id outside the build-time `KNOWN_MODULES`
+ * superset, which includes every genuinely external pillar the runtime
+ * loader exists to mount — filtering on it would drop exactly the pillars
+ * the cache is most valuable for. An id this build has never heard of was
+ * never in an operator's install set to exclude, so it passes through.
+ */
+export function offlineInstallableSnapshot(
+  snapshot: readonly PillarSnapshot[]
+): readonly PillarSnapshot[] {
+  const known: readonly string[] = KNOWN_MODULES;
+  return snapshot.filter(
+    (entry) => !known.includes(entry.pillarId) || isInstalledModule(entry.pillarId)
+  );
 }
 
 /**

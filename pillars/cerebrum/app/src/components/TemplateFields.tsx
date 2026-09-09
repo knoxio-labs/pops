@@ -6,7 +6,7 @@
  * No hardcoded template-specific logic — everything is driven by the
  * template schema.
  */
-import { ChipInput, TextInput } from '@pops/ui';
+import { CheckboxInput, ChipInput, NumberInput, TextInput } from '@pops/ui';
 
 interface TemplateFieldDef {
   type: string;
@@ -57,19 +57,17 @@ function NumberField({
   name: string;
   def: TemplateFieldDef;
   value: unknown;
-  onChange: (v: number) => void;
+  onChange: (v: number | undefined) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5 w-full">
       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest ml-1">
         {name}
       </label>
-      <input
-        type="number"
-        className="border border-border bg-background rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-ring"
+      <NumberInput
         placeholder={def.description}
         value={typeof value === 'number' ? value : ''}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
         aria-label={name}
       />
     </div>
@@ -88,19 +86,13 @@ function BooleanField({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-3 min-h-11 cursor-pointer">
-      <input
-        type="checkbox"
-        className="h-4 w-4 rounded border-border text-primary accent-primary"
-        checked={!!value}
-        onChange={(e) => onChange(e.target.checked)}
-        aria-label={name}
-      />
-      <div className="flex flex-col">
-        <span className="text-sm font-medium">{name}</span>
-        <span className="text-xs text-muted-foreground">{def.description}</span>
-      </div>
-    </label>
+    <CheckboxInput
+      className="min-h-11"
+      label={name}
+      description={def.description}
+      checked={!!value}
+      onCheckedChange={onChange}
+    />
   );
 }
 

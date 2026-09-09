@@ -1,104 +1,138 @@
 #!/usr/bin/env node
 /**
- * Raw-form-control ratchet (POPS-3187, epic POPS-3168 "every form control is
- * a kit component").
+ * Raw-form-control gate (POPS-3187, closed out by POPS-3276; epic POPS-3168
+ * "every form control is a kit component").
  *
  * Nothing enforced the convention that pillar UI composes `@pops/ui` form
  * primitives instead of the raw DOM elements they wrap. Two artifacts already
- * in this repo are the evidence: `lists`' `ShoppingSortDropdown` carries a
+ * in this repo are the evidence: `lists`' `ShoppingSortDropdown` carried a
  * comment justifying a raw `<select>` on a belief about the kit that was
  * never true, and a second `ListKindChip` grew from a policy whose source
- * file has since been deleted. Convention alone did not hold it.
+ * file had since been deleted. Convention alone did not hold it.
  *
  * This gate reads pillar frontend source for a raw `<select>`, `<input>`, or
- * `<textarea>` JSX element and, per pillar, ratchets the count against a
- * committed baseline (`.raw-form-control-baseline.json`) — modelled on the
- * escape-hatch gate (`scripts/check-escape-hatches.mjs`, POPS-3151-adjacent).
+ * `<textarea>` JSX element and holds EVERY PILLAR AT ZERO, except for the
+ * paths named in `ALLOWLIST` below.
  *
- * The baseline is an UPPER BOUND: a pillar that has grown past its entry
- * fails, a pillar that has fallen below it passes. POPS-3187 shipped this
- * held to EQUALITY instead, so that a baseline hand-edited above the real
- * count could not pass unnoticed. Under concurrent work that cost more than
- * it bought: every migration ticket in POPS-3168 lowers some pillar's count,
- * so every one of them had to edit this same one-line JSON file, and each
- * merge invalidated every other open PR — a purely mechanical conflict
- * resolved four times on one branch and twice on another, O(n²) in the
- * number of PRs in flight (POPS-3236).
+ * Why by name rather than by count. POPS-3187 shipped this as a per-pillar
+ * count ratcheted against `.raw-form-control-baseline.json`, which was the
+ * right shape while the number was 90, then 54, and obviously in flux. It is
+ * the wrong shape for an end state, because a number cannot say WHICH
+ * controls are allowed: a pillar sitting exactly on its floor could delete an
+ * allowlisted control and add a brand-new raw one somewhere else and still
+ * match, since the two net to zero. POPS-3260 audited all 54 remaining
+ * controls — 47 migrated onto kit components that already existed, 1 needed a
+ * kit colour input (POPS-3275), and 6 are genuine exceptions — so the count
+ * stopped being a work-in-progress figure and became a resting state. The
+ * hole was tolerable in the first role and not in the second.
  *
- * The inflation hole that opens up is closed from the diff instead, and this
- * is the property that replaces the downward check: NO CHANGE MAY RAISE A
- * PILLAR'S BASELINE ENTRY ABOVE THAT PILLAR'S REAL COUNT. Given `--base
- * <commit>`, the gate reads the baseline as it stood at that commit and
- * fails any pillar whose entry this change raised while the tree sits below
- * the raised number. Inflation is reachable only by editing this file, so
- * comparing the file against its own base is a tighter test than comparing
- * it against the tree: it still catches the hand-edit, and it stops firing
- * on the honest staleness that equality could not tell apart from it.
+ * Three ways to fail, all stated over paths: a raw control at a path nobody
+ * justified, an allowlisted path holding MORE controls than it declares, and
+ * an allowlisted path holding FEWER — a stale exemption, which fails for the
+ * same reason POPS-3187 refused a hand-inflated baseline. An exemption nobody
+ * needs any more is a licence sitting in the tree waiting to be spent.
  *
- * That is deliberately NOT "does the diff touch that pillar's source", the
- * shape POPS-3236 sketched. That rule cannot survive its own success: once
- * one migration lands without a baseline edit, `main` itself sits below its
- * baseline, and the next PR — which touches some other pillar entirely —
- * fails on a decrease it did not cause.
- *
- * Without `--base` (a local run, or a CI checkout with no usable merge base)
- * only the growth half runs, and the gate says so on a line that is not its
- * success line. That is a tolerated degradation, not a silent one: the
- * inflation rule is a statement about a diff, and a run with no base has no
- * diff to judge. `.github/workflows/quality.yml` always supplies one.
+ * This also removes the reason POPS-3236 existed. That ticket made the
+ * baseline an upper bound so that six concurrent migration PRs would stop
+ * conflicting pairwise on the same one-line JSON file, and closed the
+ * resulting inflation hole from the diff via `--base`. With no counts left,
+ * there is no shared file for migrations to conflict on and nothing to
+ * inflate, so `--base`, `--write` and the baseline file are all gone. The CI
+ * job no longer needs `fetch-depth: 0` either.
  *
  * Scope: `pillars/**` only — `libs/ui/src/**` is the kit itself, which
- * legitimately wraps these native elements, and a guard that fires on the
+ * legitimately wraps these native elements, and a guard that fired on the
  * library implementing the invariant would get itself disabled (POPS-3168).
- * `libs` is not in `ROOTS` at all, so no exemption list is needed to keep it
- * out.
+ * `libs` is not in `SCAN_ROOTS` at all, so no exemption entry is needed to
+ * keep it out.
  *
- * The reasoning behind the invariant this gate enforces — why a local
- * workaround is ruled out rather than tolerated, the kit extensions this
- * epic produced as worked examples, and the standing exceptions (shell's
- * settings renderer, `libs/navigation`'s global search, and others) — is
- * recorded in docs/architecture/adr-051-form-controls-from-the-kit.md, not
- * here. This file only enforces the mechanical shape.
+ * The reasoning behind the invariant — why a local workaround is ruled out
+ * rather than tolerated, the kit extensions this epic produced as worked
+ * examples, and the justification for each allowlisted path — is recorded in
+ * docs/architecture/adr-051-form-controls-from-the-kit.md, not here. This
+ * file only enforces the mechanical shape, and its ALLOWLIST must agree with
+ * that ADR's "Deliberate exceptions" table.
  *
- * What the baseline is NOT: a target. POPS-3187 shipped this gate with a
- * baseline of 90 and an aspiration of zero; the epic closed at 54 because
- * its tickets were scoped by control class, not by "drive the count down."
- * POPS-3260 audited all 54 and decided the end state is zero per pillar
- * plus a by-name allowlist — 47 migrate onto kit components that already
- * exist, 6 are genuine exceptions, 1 needs a kit colour input. Until those
- * migrations land the number here is work in progress, not the floor. Do
- * not read a passing run as "this pillar is done."
- *
- * Known legitimate exception: a native `<input type="file">`. A file picker
- * has no non-native form — `@pops/ui`'s own `FileUpload` (libs/ui) wraps one
- * for the same reason — so a statically-literal `type="file"` is never
- * counted, in any pillar. Every other raw control, including a *dynamic*
- * `type` on `<input>` (this guard cannot prove it resolves to `"file"`, and
- * ADR-045 says an unresolved shape is a violation, not a pass), counts.
+ * Known legitimate exception, unrelated to the allowlist: a native
+ * `<input type="file">`. A file picker has no non-native form — `@pops/ui`'s
+ * own `FileUpload` wraps one for the same reason — so a statically-literal
+ * `type="file"` is never counted, in any pillar. Every other raw control,
+ * including a *dynamic* `type` on `<input>` (this guard cannot prove it
+ * resolves to `"file"`, and ADR-045 says an unresolved shape is a violation,
+ * not a pass), counts.
  *
  * Usage:
- *   node scripts/ci/check-raw-form-controls.mjs                  check the real tree
- *   node scripts/ci/check-raw-form-controls.mjs --base <commit>  …and check the baseline
- *                                                                was not raised since <commit>
- *   node scripts/ci/check-raw-form-controls.mjs --write          regenerate the baseline
- *   node scripts/ci/check-raw-form-controls.mjs --self-test      prove the gate reports
+ *   node scripts/ci/check-raw-form-controls.mjs              check the real tree
+ *   node scripts/ci/check-raw-form-controls.mjs --self-test  prove the gate reports
  *
- * Exit 0 = no pillar exceeds its baseline and no entry was raised above the
- * tree. Exit 1 = growth, an inflated entry, or a self-test failure. Exit 2 =
- * usage error, an unreadable baseline, or a `--base` that does not resolve.
+ * Exit 0 = the tree matches the allowlist exactly. Exit 1 = an unexpected,
+ * grown or stale path, or a self-test failure. Exit 2 = usage error.
  */
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { gitEnv } from './resolve-report-base.mjs';
-
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
-const BASELINE_REL = '.raw-form-control-baseline.json';
-const BASELINE_PATH = join(repoRoot, BASELINE_REL);
+
+/**
+ * @typedef {object} Exemption
+ * @property {string} path Repo-relative path, exactly as the scanner reports it.
+ * @property {number} controls How many raw controls this file is allowed to hold.
+ * @property {string} ticket The ticket that argued the case.
+ * @property {string} reason Why the kit component does not fit HERE.
+ */
+
+/**
+ * The complete set of raw form controls allowed to exist in `pillars/**`.
+ * Every pillar is otherwise held at zero; there is no per-pillar arithmetic
+ * anywhere in this gate.
+ *
+ * Each row must agree with a row in ADR-051's "Deliberate exceptions" table.
+ * Adding one is the last resort, after extending the kit has been ruled out
+ * — POPS-3275 added `ColourInput` rather than take a row here.
+ *
+ * @type {readonly Exemption[]}
+ */
+export const ALLOWLIST = [
+  {
+    path: 'pillars/design/src/comments/Composer.tsx',
+    controls: 1,
+    ticket: 'POPS-3260',
+    reason:
+      'Review overlay chrome, not product UI. Kit styling would make the commenting ' +
+      'furniture read as part of the design being reviewed.',
+  },
+  {
+    path: 'pillars/design/src/comments/Thread.tsx',
+    controls: 2,
+    ticket: 'POPS-3260',
+    reason: 'Same overlay as Composer.tsx — a reply field and a status select.',
+  },
+  {
+    path: 'pillars/design/src/screens/finance/import-tag-rule-dialog.tsx',
+    controls: 1,
+    ticket: 'POPS-3260',
+    reason: 'A `disabled` static mockup of a screen, not a working control.',
+  },
+  {
+    path: 'pillars/food/app/src/pages/plan/SlotRow.tsx',
+    controls: 1,
+    ticket: 'POPS-3260',
+    reason:
+      "A ~28px plan slot row. The kit TextInput's smallest container is h-9 (36px) and " +
+      'would grow the row.',
+  },
+  {
+    path: 'pillars/inventory/app/src/pages/location-tree-page/sections/location-node/InlineInput.tsx',
+    controls: 1,
+    ticket: 'POPS-3201',
+    reason:
+      'A compact tree row (px-0.5 py-0, ~20px line height). Same h-9 constraint as ' +
+      'SlotRow, measured rather than assumed.',
+  },
+];
 
 /** Only `pillars/**` — never `libs/**`, so the kit itself is structurally out of scope. */
 const SCAN_ROOTS = ['pillars'];
@@ -360,10 +394,11 @@ function discoverFiles() {
 }
 
 /**
- * Scan the real tree and return per-pillar violation counts (pillars with
- * zero violations are omitted) plus the file count the scan is derived from.
+ * Scan the real tree. Returns every violation and the file count the scan is
+ * derived from — no per-pillar totals, because a total is exactly the shape
+ * POPS-3276 removed: it cannot say WHICH controls are allowed.
  *
- * @returns {{ counts: Record<string, number>, scanned: number, violations: Violation[] }}
+ * @returns {{ scanned: number, violations: Violation[] }}
  */
 export function scanRawFormControls() {
   const files = discoverFiles();
@@ -372,277 +407,130 @@ export function scanRawFormControls() {
   for (const file of files) {
     violations.push(...findViolations(file, readFileSync(join(repoRoot, file), 'utf8')));
   }
-  /** @type {Record<string, number>} */
-  const counts = {};
-  for (const v of violations) {
-    const pillar = pillarOf(v.file);
-    if (pillar === null) continue;
-    counts[pillar] = (counts[pillar] ?? 0) + 1;
-  }
-  return { counts: sortKeys(counts), scanned: files.length, violations };
+  return { scanned: files.length, violations };
 }
 
 /**
- * @param {Record<string, number>} obj
- * @returns {Record<string, number>}
- */
-function sortKeys(obj) {
-  /** @type {Record<string, number>} */
-  const out = {};
-  for (const key of Object.keys(obj).toSorted()) {
-    const value = obj[key];
-    if (value !== undefined) out[key] = value;
-  }
-  return out;
-}
-
-/**
- * Parse a baseline document, rejecting any shape that is not a flat map of
- * pillar id to non-negative integer. `JSON.parse` hands back `any`, and a
- * baseline whose values are strings would otherwise compare with `>` under
- * JavaScript's coercion rules rather than being reported.
- *
- * @param {string} text
- * @param {string} source Where the text came from, for the error message.
- * @returns {Record<string, number>}
- */
-export function parseBaseline(text, source) {
-  /** @type {unknown} */
-  const parsed = JSON.parse(text);
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error(`${source} is not a JSON object of pillar → count`);
-  }
-  /** @type {Record<string, number>} */
-  const counts = {};
-  for (const [pillar, value] of Object.entries(parsed)) {
-    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
-      throw new Error(`${source}: pillar "${pillar}" is not a non-negative integer count`);
-    }
-    counts[pillar] = value;
-  }
-  return counts;
-}
-
-/** @returns {Record<string, number>} */
-function loadBaseline() {
-  if (!existsSync(BASELINE_PATH)) {
-    console.error(
-      `✗ raw-form-control gate: baseline ${relative(repoRoot, BASELINE_PATH)} missing. ` +
-        'Run `pnpm check:raw-form-controls:baseline` to create it.'
-    );
-    process.exit(2);
-  }
-  try {
-    return parseBaseline(readFileSync(BASELINE_PATH, 'utf8'), BASELINE_REL);
-  } catch (e) {
-    console.error(
-      `✗ raw-form-control gate: baseline is not valid (${e instanceof Error ? e.message : String(e)})`
-    );
-    process.exit(2);
-  }
-}
-
-/**
- * The baseline document as it stood at `commit`, or `null` when `commit`
- * itself does not resolve in this checkout (a shallow clone, a ref that was
- * never fetched). A commit that resolves but predates the baseline file
- * yields `{}` — an absent file genuinely means "every entry is new", and
- * collapsing that into `null` would hand a change the un-checked path just
- * for deleting the file first.
- *
- * @param {string} commit
- * @param {string} [cwd]
- * @returns {Record<string, number> | null}
- */
-export function readBaselineAt(commit, cwd = repoRoot) {
-  /** @param {readonly string[]} args @returns {string | null} */
-  const git = (args) => {
-    try {
-      return execFileSync('git', [...args], {
-        cwd,
-        encoding: 'utf8',
-        stdio: 'pipe',
-        env: gitEnv(),
-      });
-    } catch {
-      return null;
-    }
-  };
-  if (git(['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]) === null) return null;
-  const text = git(['show', `${commit}:${BASELINE_REL}`]);
-  if (text === null) return {};
-  return parseBaseline(text, `${BASELINE_REL} at ${commit}`);
-}
-
-/**
- * @typedef {object} Mismatch
- * @property {string} pillar
- * @property {number} was
+ * @typedef {object} Finding
+ * @property {'unexpected' | 'grew' | 'stale'} kind
+ * @property {string} path
+ * @property {number} allowed
  * @property {number} now
- * @property {'grew' | 'inflated'} kind `grew`: the tree now exceeds the
- *   committed baseline — a new raw control. `inflated`: this change raised
- *   the committed entry above the tree, which is the only way a ratchet on
- *   an upper bound can be loosened.
  */
 
 /**
- * Compare current per-pillar counts against the committed baseline, and —
- * when `baselineBefore` is supplied — against the baseline as it stood at
- * the change's base commit.
+ * Compare the scanned violations against ALLOWLIST.
  *
- * The committed baseline is an upper bound: a count below it is a paid-down
- * pillar and passes, so concurrent migration PRs never have to edit this
- * file in lockstep. What replaces the old equality rule is `baselineBefore`:
- * an entry this change RAISED above the real count is reported as
- * `inflated`. Pass `null` when there is no base to compare against — the
- * growth half still runs, and the caller must say that the other half did
- * not (see the file header).
+ * Three ways to fail, and the first is the one a per-pillar count could not
+ * see at all:
  *
- * @param {Record<string, number>} current
- * @param {Record<string, number>} baseline
- * @param {Record<string, number> | null} [baselineBefore]
- * @returns {Mismatch[]}
+ * - `unexpected` — a raw control at a path nobody justified. Under the count
+ *   baseline this was invisible whenever the same pillar had simultaneously
+ *   paid one down: the two netted to zero and the pillar matched its number
+ *   exactly.
+ * - `grew` — an allowlisted file that now holds MORE raw controls than its
+ *   entry claims. The exemption is for the controls that were argued for,
+ *   not for the file forever.
+ * - `stale` — an allowlisted file that holds FEWER (usually zero, because it
+ *   was migrated or deleted). Same reasoning POPS-3187 applied to a
+ *   hand-inflated baseline: an exemption nobody needs any more is a licence
+ *   sitting in the tree waiting to be spent, and it rots exactly the way
+ *   `ListKindChip`'s justifying comment did once its source was deleted.
+ *
+ * @param {Violation[]} violations
+ * @returns {Finding[]}
  */
-export function diffAgainstBaseline(current, baseline, baselineBefore = null) {
-  /** @type {Mismatch[]} */
-  const mismatches = [];
-  const pillars = new Set([...Object.keys(current), ...Object.keys(baseline)]);
-  for (const pillar of pillars) {
-    const now = current[pillar] ?? 0;
-    const was = baseline[pillar] ?? 0;
-    const before = baselineBefore?.[pillar] ?? 0;
-    if (now > was) mismatches.push({ pillar, was, now, kind: 'grew' });
-    else if (now < was && baselineBefore !== null && was > before) {
-      mismatches.push({ pillar, was, now, kind: 'inflated' });
+export function checkAllowlist(violations) {
+  /** @type {Map<string, number>} */
+  const actual = new Map();
+  for (const v of violations) actual.set(v.file, (actual.get(v.file) ?? 0) + 1);
+
+  /** @type {Finding[]} */
+  const findings = [];
+
+  for (const entry of ALLOWLIST) {
+    const now = actual.get(entry.path) ?? 0;
+    if (now > entry.controls) {
+      findings.push({ kind: 'grew', path: entry.path, allowed: entry.controls, now });
+    } else if (now < entry.controls) {
+      findings.push({ kind: 'stale', path: entry.path, allowed: entry.controls, now });
     }
   }
-  return mismatches.toSorted((a, b) => a.pillar.localeCompare(b.pillar));
-}
 
-/**
- * @param {string[]} argv
- * @returns {string | null}
- */
-function baseFlag(argv) {
-  const index = argv.indexOf('--base');
-  if (index === -1) return null;
-  const value = argv[index + 1];
-  if (value === undefined || value.startsWith('--') || value.trim().length === 0) {
-    console.error('usage: check-raw-form-controls.mjs --base <commit>');
-    process.exit(2);
+  const allowed = new Set(ALLOWLIST.map((e) => e.path));
+  for (const [path, now] of actual) {
+    if (!allowed.has(path)) findings.push({ kind: 'unexpected', path, allowed: 0, now });
   }
-  return value;
+
+  return findings.toSorted((a, b) => a.path.localeCompare(b.path));
 }
 
-/**
- * @param {string[]} argv
- */
-function runCheck(argv) {
-  const { counts, scanned } = scanRawFormControls();
+function runCheck() {
+  const { scanned, violations } = scanRawFormControls();
 
-  // A ratchet that reads no files has stopped looking, not been satisfied
-  // (ADR-045) — do NOT let `--write` below erase it.
+  // A gate that reads no files has stopped looking, not been satisfied
+  // (ADR-045). Without this floor an allowlist of six would read as six
+  // stale entries — which fails, but for the wrong reason and with a
+  // message that would send the reader to the wrong place.
   if (scanned < MIN_DISCOVERED_FILES) {
     console.error(
       `✗ raw-form-control gate: the scanner read only ${scanned} file(s), below the floor of ` +
-        `${MIN_DISCOVERED_FILES}. Check SCAN_ROOTS and isScannable — do NOT rebaseline, ` +
-        '`--write` here would erase the ratchet.'
+        `${MIN_DISCOVERED_FILES}. Check SCAN_ROOTS and isScannable — the allowlist is not the ` +
+        'problem.'
     );
     process.exit(1);
   }
 
-  const baseline = loadBaseline();
-  const base = baseFlag(argv);
-  /** @type {Record<string, number> | null} */
-  let baselineBefore = null;
-  if (base === null) {
-    console.log(
-      '· raw-form-control gate: no --base given, so only the growth half ran — nothing checked ' +
-        'whether this change raised a baseline entry above its pillar. CI always passes one.'
-    );
-  } else {
-    try {
-      baselineBefore = readBaselineAt(base);
-    } catch (e) {
-      console.error(
-        `✗ raw-form-control gate: the baseline at ${base} is not valid ` +
-          `(${e instanceof Error ? e.message : String(e)})`
-      );
-      process.exit(2);
-    }
-    if (baselineBefore === null) {
-      console.error(
-        `✗ raw-form-control gate: --base ${base} does not resolve to a commit in this checkout. ` +
-          'Fetch it (the CI job checks out with `fetch-depth: 0`) — running without the base ' +
-          'would silently drop the inflated-baseline half of this gate.'
-      );
-      process.exit(2);
-    }
-  }
+  const findings = checkAllowlist(violations);
 
-  const mismatches = diffAgainstBaseline(counts, baseline, baselineBefore);
-
-  if (mismatches.length === 0) {
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (findings.length === 0) {
     console.log(
-      `✔ raw-form-control gate: ${total} raw form control(s) across ${Object.keys(counts).length} ` +
-        `pillar(s), none above the committed baseline (${scanned} file(s) scanned).`
+      `✔ raw-form-control gate: every pillar at zero raw form controls except the ` +
+        `${ALLOWLIST.length} allowlisted path(s), each holding exactly what it declares ` +
+        `(${scanned} file(s) scanned).`
     );
     return;
   }
 
-  console.error(`✗ raw-form-control gate: ${mismatches.length} pillar(s) out of sync:\n`);
-  for (const m of mismatches) {
-    if (m.kind === 'grew') {
-      console.error(`    ${m.pillar}: baseline ${m.was} → now ${m.now} — NEW raw form control(s)`);
+  console.error(`✗ raw-form-control gate: ${findings.length} problem(s):\n`);
+  for (const f of findings) {
+    if (f.kind === 'unexpected') {
+      console.error(
+        `    ${f.path}: ${f.now} raw form control(s) at a path that is not allowlisted`
+      );
+    } else if (f.kind === 'grew') {
+      console.error(
+        `    ${f.path}: allowlisted for ${f.allowed}, now holds ${f.now} — the exemption covers ` +
+          'the controls that were argued for, not the file'
+      );
     } else {
       console.error(
-        `    ${m.pillar}: this change raised the baseline to ${m.was}, but the tree holds only ` +
-          `${m.now} — a baseline above reality is how this ratchet gets loosened. Run ` +
-          '`pnpm check:raw-form-controls:baseline` instead of editing the number by hand'
+        `    ${f.path}: allowlisted for ${f.allowed}, now holds ${f.now} — the exemption is ` +
+          'STALE. Delete the entry (and its row in ADR-051) in this same change'
       );
     }
   }
   console.error(
-    '\n  No raw <select>, <input> (other than a literal type="file"), or <textarea> may be\n' +
-      '  added to pillar UI — use the @pops/ui kit primitive instead. A pillar whose count\n' +
-      '  has FALLEN below its baseline is fine and needs no edit here: the baseline is an\n' +
-      '  upper bound, so concurrent migrations never have to rewrite it in lockstep\n' +
-      '  (POPS-3236). Growth should not happen at all outside a scoped exception.\n' +
-      '\n  Why this rule exists, what "extend the kit instead" looks like in practice, and the\n' +
-      '  standing exceptions: docs/architecture/adr-051-form-controls-from-the-kit.md'
+    '\n  Every pillar is held at ZERO raw <select>, <input> (other than a literal type="file"),\n' +
+      '  or <textarea>. Use the @pops/ui kit primitive. If a control genuinely cannot come from\n' +
+      '  the kit, the answer is normally to EXTEND the kit — POPS-3275 added ColourInput for\n' +
+      '  exactly that reason. Adding a row to ALLOWLIST is the last resort, and it needs a\n' +
+      "  ticket arguing the case and a matching row in the ADR's Deliberate exceptions table.\n" +
+      '\n  docs/architecture/adr-051-form-controls-from-the-kit.md'
   );
   process.exit(1);
 }
 
-function runWrite() {
-  const { counts, scanned } = scanRawFormControls();
-  if (scanned < MIN_DISCOVERED_FILES) {
-    console.error(
-      `✗ raw-form-control gate: refusing to write a baseline from only ${scanned} scanned ` +
-        `file(s) (floor ${MIN_DISCOVERED_FILES}). Fix discovery first.`
-    );
-    process.exit(1);
-  }
-  writeFileSync(BASELINE_PATH, `${JSON.stringify(counts, null, 2)}\n`);
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  console.log(
-    `✔ wrote ${relative(repoRoot, BASELINE_PATH)}: ${total} raw form control(s) across ` +
-      `${Object.keys(counts).length} pillar(s).`
-  );
-}
-
 /**
- * Prove the gate catches a new violation, a grown pillar count, and a
- * baseline this change raised above the real count — and that it stays quiet
- * on an exempt file, a `type="file"` input, text that merely mentions a tag
- * in a comment, and the paid-down pillar POPS-3236 deliberately stopped
- * failing. Per ADR-045/POPS-2110, this exercises the REPORTING path, not
- * only the passing one: every positive case below asserts the guard actually
- * flags the planted violation, not merely that a clean run exits 0. The
- * cases over `readBaselineAt` are here for the same reason — the inflation
- * half depends on git answering, so a base it cannot read must report, not
- * quietly reduce the gate to its growth half.
+ * Prove the gate reports. Per ADR-045 and POPS-2110 — seven POPS guards were
+ * found holed in one week, every one of them passing its own self-test — the
+ * cases below assert the guard FLAGS a planted problem, not merely that a
+ * clean tree exits 0.
+ *
+ * The first allowlist case is the reason this ticket exists: under the
+ * per-pillar count baseline POPS-3276 replaced, removing an allowlisted
+ * control and adding a raw one elsewhere in the same pillar netted to zero
+ * and passed. It must now fail.
  */
 function runSelfTest() {
   const { scanned } = scanRawFormControls();
@@ -733,91 +621,84 @@ function runSelfTest() {
     'a __tests__ file is exempt': !isScannable('pillars/lists/app/src/__tests__/x.tsx'),
     'a generated client is exempt': !isScannable('pillars/food/app/src/lists-api/types.gen.tsx'),
     'a non-jsx file is not scanned': !isScannable('pillars/food/app/src/pages/X.ts'),
-    // The whole point of ROOTS being ['pillars']: nothing under libs/ is ever
-    // even discovered, so no exemption entry can accidentally be dropped.
+    // The whole point of SCAN_ROOTS being ['pillars']: nothing under libs/ is
+    // ever discovered, so no exemption entry can accidentally be dropped.
     'libs/ui is never a scannable pillar path':
       pillarOf('libs/ui/src/components/Select.tsx') === null,
     "a pillar path resolves to its pillar's id":
       pillarOf('pillars/lists/app/src/X.tsx') === 'lists',
   };
 
-  const ratchetChecks = {
-    'an unrecorded new violation is flagged as grown': diffAgainstBaseline(
-      { demo: 3 },
-      { demo: 2 }
-    ).some((m) => m.pillar === 'demo' && m.kind === 'grew' && m.was === 2 && m.now === 3),
-    'a brand-new pillar with a violation and no baseline entry is flagged': diffAgainstBaseline(
-      { demo: 1 },
-      {}
-    ).some((m) => m.pillar === 'demo' && m.kind === 'grew'),
-    // The property that replaces POPS-3187's downward check (POPS-3236): a
-    // baseline RAISED above the real count by this very change must fail.
-    'a baseline this change raised above the real count is flagged as inflated':
-      diffAgainstBaseline({ demo: 2 }, { demo: 100 }, { demo: 2 }).some(
-        (m) => m.pillar === 'demo' && m.kind === 'inflated' && m.was === 100 && m.now === 2
-      ),
-    'a brand-new baseline entry invented above the real count is flagged as inflated':
-      diffAgainstBaseline({ demo: 2 }, { demo: 9 }, {}).some(
-        (m) => m.pillar === 'demo' && m.kind === 'inflated'
-      ),
-    // The whole point of the change: a migration lowers its pillar and does
-    // NOT have to touch this file, so it cannot conflict with a sibling PR.
-    'a paid-down pillar whose baseline this change left alone passes':
-      diffAgainstBaseline({ demo: 0 }, { demo: 5 }, { demo: 5 }).length === 0,
-    'a pillar already below its baseline on main does not fail an unrelated change':
-      diffAgainstBaseline({ demo: 2, other: 1 }, { demo: 5, other: 1 }, { demo: 5, other: 1 })
+  const only = ALLOWLIST[0];
+  if (only === undefined) {
+    console.error('✗ self-test: ALLOWLIST is empty — nothing to prove the by-name rule against.');
+    process.exit(1);
+  }
+  /** @param {string} file @param {number} n @returns {Violation[]} */
+  const raws = (file, n) =>
+    Array.from({ length: n }, (_, i) => ({ file, line: i + 1, tag: 'input' }));
+
+  const allowlistChecks = {
+    // THE case the per-pillar count baseline could not catch (POPS-3276): an
+    // allowlisted control removed AND a new raw control added elsewhere in
+    // the same pillar. The old rule netted these to zero and passed.
+    'an allowlisted control removed while a new raw one appears elsewhere is flagged twice':
+      (() => {
+        const f = checkAllowlist(raws('pillars/design/src/screens/Other.tsx', 1));
+        return (
+          f.some((x) => x.kind === 'unexpected' && x.path.endsWith('Other.tsx')) &&
+          f.some((x) => x.kind === 'stale' && x.path === only.path)
+        );
+      })(),
+    'a raw control at a non-exempt path is flagged': checkAllowlist([
+      ...ALLOWLIST.flatMap((e) => raws(e.path, e.controls)),
+      ...raws('pillars/food/app/src/pages/New.tsx', 1),
+    ]).some((f) => f.kind === 'unexpected' && f.path.endsWith('New.tsx')),
+    'a raw control at a non-exempt path is flagged in EVERY pillar, not just one': [
+      'pillars/lists/app/src/A.tsx',
+      'pillars/finance/app/src/B.tsx',
+      'pillars/cerebrum/app/src/C.tsx',
+      'pillars/inventory/app/src/D.tsx',
+      'pillars/media/app/src/E.tsx',
+    ].every((p) =>
+      checkAllowlist([...ALLOWLIST.flatMap((e) => raws(e.path, e.controls)), ...raws(p, 1)]).some(
+        (f) => f.kind === 'unexpected' && f.path === p
+      )
+    ),
+    'the exact declared allowlist passes':
+      checkAllowlist(ALLOWLIST.flatMap((e) => raws(e.path, e.controls))).length === 0,
+    'an allowlisted path that grew beyond its declared count is flagged': checkAllowlist([
+      ...ALLOWLIST.flatMap((e) => raws(e.path, e.controls)),
+      ...raws(only.path, 1),
+    ]).some((f) => f.kind === 'grew' && f.path === only.path),
+    'an allowlisted path with no raw control left is flagged as stale': checkAllowlist(
+      ALLOWLIST.filter((e) => e.path !== only.path).flatMap((e) => raws(e.path, e.controls))
+    ).some((f) => f.kind === 'stale' && f.path === only.path && f.now === 0),
+    // The file exemption is unrelated to the allowlist and must survive it.
+    'a type="file" input still passes at a non-allowlisted path':
+      findViolations('pillars/food/app/src/pages/New.tsx', '<input type="file" onChange={f} />')
         .length === 0,
-    'growth is still caught even when the change also lowers the baseline entry':
-      diffAgainstBaseline({ demo: 7 }, { demo: 6 }, { demo: 9 }).some((m) => m.kind === 'grew'),
-    // Without a base there is no diff to judge, so the inflation half cannot
-    // run — runCheck says so on a line that is not its success line.
-    'with no base commit a decrease is not reported at all':
-      diffAgainstBaseline({ demo: 2 }, { demo: 100 }).length === 0,
-    'an exact match across several pillars is clean':
-      diffAgainstBaseline({ alpha: 3, beta: 0 }, { alpha: 3, beta: 0 }, { alpha: 3 }).length === 0,
-    'a pillar absent from both current and baseline is not a phantom mismatch':
-      diffAgainstBaseline({ alpha: 1 }, { alpha: 1, gamma: 0 }, { alpha: 1 }).length === 0,
+    // The allowlist describes reality, not aspiration: every declared path
+    // must exist, or the entry is unfalsifiable.
+    'every allowlisted path exists on disk': ALLOWLIST.every((e) =>
+      existsSync(join(repoRoot, e.path))
+    ),
+    'every allowlist entry carries a justifying ticket': ALLOWLIST.every((e) =>
+      /^POPS-\d+$/.test(e.ticket)
+    ),
+    'the real tree matches the allowlist exactly':
+      checkAllowlist(scanRawFormControls().violations).length === 0,
   };
 
-  const baselineParseChecks = {
-    'a baseline whose counts are strings is rejected, not compared by coercion': (() => {
-      try {
-        parseBaseline('{"demo":"100"}', 'fixture');
-        return false;
-      } catch {
-        return true;
-      }
-    })(),
-    'a baseline that is a JSON array is rejected': (() => {
-      try {
-        parseBaseline('[]', 'fixture');
-        return false;
-      } catch {
-        return true;
-      }
-    })(),
-    'a well-formed baseline parses': parseBaseline('{"demo":3}', 'fixture').demo === 3,
-    // ADR-045: the base half must report that it cannot see, never pass
-    // quietly. A ref that resolves to nothing yields null, and runCheck
-    // turns that into exit 2 rather than skipping the inflation check.
-    'a --base that does not resolve reads as null, not as an empty baseline':
-      readBaselineAt('0000000000000000000000000000000000000000') === null,
-    // Not compared against the working tree's copy: a developer who has run
-    // `--write` but not committed would fail that, and this is a check on
-    // whether `git show` still reaches the file, not on staging state.
-    "the repo's own HEAD carries a readable baseline with at least one pillar":
-      Object.keys(readBaselineAt('HEAD') ?? {}).length > 0,
-  };
-
-  const checks = { ...scanChecks, ...ratchetChecks, ...baselineParseChecks };
+  const checks = { ...scanChecks, ...allowlistChecks };
   const ok = Object.values(checks).every(Boolean);
   if (ok) {
     console.log(
       `✔ self-test: scanner read ${scanned} file(s); reports every raw form-control shape ` +
         `(${dirtyCases.length} cases), stays silent on ${cleanCases.length} legitimate/decoy ` +
-        'shapes, flags growth, lets a paid-down pillar through without a baseline edit, and ' +
-        'flags a baseline this change raised above the tree — including when the base commit ' +
-        'cannot be read at all.'
+        `shapes, and holds ${ALLOWLIST.length} allowlisted path(s) to an exact count — flagging ` +
+        'an unexpected path in every pillar, a grown entry, and a stale one, including the ' +
+        'swap the old per-pillar count could not see.'
     );
   } else {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
@@ -831,19 +712,15 @@ function runSelfTest() {
 function main() {
   const argv = process.argv.slice(2);
   const mode = argv[0];
-  if (mode === '--write') {
-    runWrite();
-    return;
-  }
   if (mode === '--self-test') {
     runSelfTest();
     return;
   }
-  if (mode !== undefined && mode !== '--base') {
-    console.error('usage: check-raw-form-controls.mjs [--write|--self-test|--base <commit>]');
+  if (mode !== undefined) {
+    console.error('usage: check-raw-form-controls.mjs [--self-test]');
     process.exit(2);
   }
-  runCheck(argv);
+  runCheck();
 }
 
 if (import.meta.main) {
