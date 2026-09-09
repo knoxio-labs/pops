@@ -3,7 +3,7 @@ import { CreateRow, InstitutionMark, PickerPopover, usePicker } from '@/kit/inst
 import { Check, Copy, Eye, EyeOff, Upload, X } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
-import { CommandGroup, CommandItem, Label, TextInput } from '@pops/ui';
+import { CommandGroup, CommandItem, DateInput, Label, TextInput } from '@pops/ui';
 
 /**
  * Whoever sits on the other side of an account: the bank that holds it, the
@@ -176,7 +176,10 @@ export function GiftCardSection({ account }: { account?: Account }) {
   return (
     <fieldset className="space-y-4 rounded-md border border-border p-4">
       <legend className="px-1 text-xs font-medium text-muted-foreground">Gift card</legend>
-      <TextInput label="Expires" type="date" defaultValue={account?.expires ?? ''} />
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="account-expires">Expires</Label>
+        <DateInput id="account-expires" defaultValue={account?.expires ?? ''} />
+      </div>
       <SecretField label="Card number" value={account ? '6011 2394 8871 0042' : undefined} />
       <SecretField label="PIN" value={account ? '4417' : undefined} />
     </fieldset>
