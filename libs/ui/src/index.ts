@@ -89,6 +89,7 @@ export * from './components/CheckboxInput';
 export * from './components/CheckpointSourceBadge';
 export * from './components/Chip';
 export * from './components/ChipInput';
+export * from './components/ColourInput';
 export * from './components/ComboboxSelect';
 export * from './components/DataTable';
 export * from './components/DataTableFilters';
