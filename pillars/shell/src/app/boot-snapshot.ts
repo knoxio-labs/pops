@@ -124,6 +124,7 @@ function railBundleMap(
           assetsBaseUrl: entry.assetsBaseUrl,
           nav: entry.nav,
           pages: entry.pages,
+          captureOverlay: entry.captureOverlay,
         },
         importer
       );
