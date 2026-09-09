@@ -13,17 +13,19 @@
  * Same PII allowlist as its siblings: only {@link CategorizerInput} fields plus
  * the resolved entity name are interpolated, each sanitized at the boundary.
  */
+import {
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
 import { callRawApi, type ApiCallResponse } from './ai-categorizer-api.js';
 import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
 import {
   buildMatchedTransactionData,
-  closedFacetFields,
-  closedFacetOptions,
-  closedFacetReplyShape,
   PROMPT_VERSION_TAGS_ONLY,
   TAGS_RULES,
-  type TagDescriptions,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags, type RawTagFields } from './ai-tag-validation.js';
 

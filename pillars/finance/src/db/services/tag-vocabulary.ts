@@ -14,7 +14,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { tagVocabulary } from '../schema.js';
-import { parseTagFacet, tagFacetKind } from '../tag-facets.js';
+import { CLASSIFIED_TAG_FACETS, parseTagFacet, tagFacetKind } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -94,6 +94,25 @@ export function listVocabularyTagsForFacets(db: FinanceDb, facets: readonly stri
     .orderBy(sql`${tagVocabulary.usageCount} desc`, tagVocabulary.tag)
     .all()
     .map((row) => row.tag);
+}
+
+/**
+ * The values on every facet the categorizer classifies into, most-used first —
+ * the closed set any prompt that offers tags must offer.
+ *
+ * The one place the facet list is derived, so a prompt cannot end up offering a
+ * different vocabulary from the one the reply is validated against. That is not
+ * hypothetical: rule generation built its list from the distinct tags on stored
+ * transactions instead, which is the ratchet POPS-2606 removed from the
+ * categorizer and POPS-3287 removed from here — a value the model coined
+ * survived one commit and came back as vocabulary in the next prompt, with the
+ * same standing as a deliberate one.
+ */
+export function listClassifiedVocabulary(db: FinanceDb): string[] {
+  return listVocabularyTagsForFacets(
+    db,
+    CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)
+  );
 }
 
 /**

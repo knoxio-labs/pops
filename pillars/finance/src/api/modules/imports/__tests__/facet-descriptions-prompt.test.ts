@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { closedFacetFields, closedFacetOptions } from '../ai-categorizer-prompt.js';
+import { closedFacetFields, closedFacetOptions } from '../../vocabulary-prompt.js';
 
 const TAGS = ['occasion:home', 'occasion:out', 'channel:online', 'channel:in-person'];
 

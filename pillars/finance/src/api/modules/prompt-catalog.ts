@@ -193,11 +193,12 @@ export function buildPromptCatalog(): PromptCatalogEntry[] {
       title: 'Rule Generation',
       model: CORRECTIONS_DEFAULT_MODEL,
       description:
-        "Proposes reusable tagging rules from a batch of transactions, few-shotted with the user's own recently accepted rules. Rules are stored and applied automatically to future imports.",
+        "Proposes reusable tagging rules from a batch of transactions, few-shotted with the user's own recently accepted rules. Offered the same closed vocabulary as the categorizer, read from tag_vocabulary; every proposed value is validated against it before the rule is stored. Rules are applied automatically to future imports.",
       template: buildGeneratePrompt(
         SAMPLE_GENERATE_TXNS,
         SAMPLE_KNOWN_TAGS,
-        SAMPLE_ACCEPTED_EXAMPLES
+        SAMPLE_ACCEPTED_EXAMPLES,
+        SAMPLE_TAG_DESCRIPTIONS
       ),
     },
     {

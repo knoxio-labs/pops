@@ -14,9 +14,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { EmptyClosedVocabularyError } from '../../vocabulary-prompt.js';
 import { buildPrompt } from '../ai-categorizer-api.js';
 import { buildBatchPrompt } from '../ai-categorizer-batch-api.js';
-import { EmptyClosedVocabularyError, TAGS_RULES } from '../ai-categorizer-prompt.js';
+import { TAGS_RULES } from '../ai-categorizer-prompt.js';
 
 const VOCAB = [
   'contains:groceries',
