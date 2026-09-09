@@ -1104,6 +1104,25 @@ services:
       timeout: 5s
       retries: 3
 
+  # The ai UI bundle (pillars/ai/app) — a static nginx image, like
+  # pops-purchases-ui. The `/ai-ui/` location block in pops-shell's
+  # nginx.conf reverse-proxies browser traffic here.
+  ai-ui:
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-ai-ui:${POPS_IMAGE_TAG:-main}
+    container_name: pops-ai-ui
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The bfm UI bundle (pillars/bfm/app) — a static nginx image, like
   # pops-purchases-ui. The `/bfm-ui/` location block in pops-shell's
   # nginx.conf reverse-proxies browser traffic here.

@@ -200,6 +200,28 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  ai: {
+    assetsBaseUrl: '/ai-ui/ai.js',
+    nav: {
+      id: 'ai',
+      label: 'AI',
+      labelKey: 'ai',
+      icon: 'bot',
+      color: 'violet',
+      basePath: '/ai',
+      order: 70,
+      items: [{ path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'bar-chart-3' }],
+    },
+    // All four, including the three that render nothing but a redirect: a
+    // loader-mounted pillar gets exactly the pages listed here, so omitting
+    // one would make `/ai/rules` a 404 in the e2e and nowhere else.
+    pages: [
+      { path: '', index: true, bundleSlot: 'ai-usage' },
+      { path: 'prompts', bundleSlot: 'ai-prompts' },
+      { path: 'config', bundleSlot: 'ai-config' },
+      { path: 'rules', bundleSlot: 'ai-rules' },
+    ],
+  },
   bfm: {
     assetsBaseUrl: '/bfm-ui/bfm.js',
     nav: {

@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
-    "@pops/app-ai": "workspace:*",
     "@pops/app-cerebrum": "workspace:*",
     "@pops/app-food": "workspace:*",
     "@pops/app-inventory": "workspace:*",
@@ -45,6 +44,7 @@
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",
     "react-router": "^8.3.0",
+    "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwindcss": "4.3.3",
     "zustand": "5.0.14"

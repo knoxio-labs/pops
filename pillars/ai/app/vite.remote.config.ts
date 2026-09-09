@@ -6,14 +6,14 @@ import { defineConfig } from 'vite';
 import { isSharedRuntimeSpecifier, REMOTE_BUILD_DEFINE } from '@pops/pillar-sdk/remote-build';
 
 /**
- * Remote-bundle build for `@pops/app-purchases`.
+ * Remote-bundle build for `@pops/app-ai`.
  *
  * Produces the single ESM entry the shell's runtime loader imports at the URL
  * the pillar advertises as `assetsBaseUrl`, plus one lazy chunk per page (the
  * `React.lazy` boundaries in `src/routes.tsx` survive the build, so a pillar
  * mounted this way still fetches a page's code on first navigation to it).
  *
- * The package itself stays source-only — `@pops/app-purchases` resolves to
+ * The package itself stays source-only — `@pops/app-ai` resolves to
  * `src/index.ts` for the shell's static bundle map and for every in-repo
  * consumer. This build exists alongside that, not instead of it.
  *
@@ -45,7 +45,7 @@ export default defineConfig({
       // from the entry being served `no-cache` while the hashed chunks beside
       // it stay immutable — the split the shell's own nginx config already
       // runs for `index.html` and `/assets/`.
-      fileName: () => 'purchases.js',
+      fileName: () => 'ai.js',
     },
     rollupOptions: {
       external: isSharedRuntimeSpecifier,

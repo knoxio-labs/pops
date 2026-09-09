@@ -197,7 +197,6 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
       'food',
       'lists',
       'cerebrum',
-      'ai',
     ]);
 
     // The result must be byte-identical to the empty-snapshot floor: the
@@ -244,7 +243,6 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
       'food',
       'lists',
       'cerebrum',
-      'ai',
     ]);
   });
 });
