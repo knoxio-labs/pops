@@ -242,12 +242,18 @@ export function evaluateCoverage(apps, referenced, loaderUiOf) {
       );
       continue;
     }
+    // Every fragment reads after a bare `no`, so one cause and two produce the
+    // same sentence shape. The article-carrying form this replaced said
+    // "declares no an assetsBaseUrl" for a single cause — and the form before
+    // THAT said "declares no a non-empty pages", so the pages-only case has
+    // been ungrammatical the whole time and only the assetsBaseUrl-only case
+    // ever read correctly.
     const lacks = [];
-    if (!wire.assetsBaseUrl) lacks.push('an assetsBaseUrl');
-    if (!wire.pages) lacks.push('a non-empty pages');
+    if (!wire.assetsBaseUrl) lacks.push('assetsBaseUrl');
+    if (!wire.pages) lacks.push('non-empty pages');
     reasons.push(
       `${app.pkgName} — absent from the bundle map, and its wire manifest ` +
-        `declares ${lacks.length === 2 ? 'neither ' : 'no '}${lacks.join(' nor ')}`
+        `declares no ${lacks.join(' and no ')}`
     );
   }
 
@@ -387,6 +393,7 @@ function selfTest() {
     assetsBaseUrl: true,
     pages: false,
   }));
+  const bothMissing = evaluateCoverage(apps, referencedAppPackages(gappedMap), noWireUi);
 
   const manifestWithBoth = [
     'export function build() {',
@@ -476,7 +483,11 @@ function selfTest() {
       gappedButOnTheWire.viaLoader.includes('@pops/app-beta'),
     'assetsBaseUrl without pages is not enough': halfDeclared.missing.length === 1,
     'the failure says what the wire lacks':
-      halfDeclared.reasons[0]?.includes('a non-empty pages') === true,
+      halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
+    // The three sentences the message can be, because two of them have been
+    // ungrammatical at some point and nothing asserted the wording.
+    'a single missing field reads as a sentence':
+      bothMissing.reasons[0]?.includes('declares no assetsBaseUrl and no non-empty pages') === true,
     'a missing manifest is reported as missing, not as undeclared':
       noManifestFound.reasons[0]?.includes('no wire manifest could be found') === true &&
       noManifestFound.reasons[0]?.includes('assetsBaseUrl') === false,
