@@ -1,5 +1,5 @@
 /**
- * Per-account import status (POPS-2917, ADR-052): when an account last got
+ * Per-account import status (POPS-2917, finance ADR-003): when an account last got
  * data, what its transactions span, how often it is fed, and by what.
  *
  * Resolved for a whole set of accounts in three grouped queries, like

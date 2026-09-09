@@ -1,6 +1,6 @@
 /**
  * The suggester's correction pass has no confidence floor, mirroring the
- * classification pass (ADR-053, superseding POPS-2601's "a rule the engine
+ * classification pass (finance ADR-004, superseding POPS-2601's "a rule the engine
  * judges too weak to say 'this is Woolworths' must not be trusted to say
  * 'this is Groceries' either" — provenance decides both now, and a stored
  * rule matching by pattern is settled on that alone).
@@ -18,7 +18,7 @@ import type Database from 'better-sqlite3';
 
 const ENTITY_ID = 'entity-2601';
 
-/** The matching floor removed by ADR-053/POPS-3129 — kept only as a fixture anchor. */
+/** The matching floor removed by finance ADR-004/POPS-3129 — kept only as a fixture anchor. */
 const OLD_MATCHING_FLOOR = 0.7;
 
 function seedCorrection(raw: Database.Database, id: string, confidence: number, tag: string): void {
@@ -31,7 +31,7 @@ function seedCorrection(raw: Database.Database, id: string, confidence: number, 
     .run(id, 'WOOLWORTHS', ENTITY_ID, 'Woolworths', JSON.stringify([tag]), confidence);
 }
 
-describe('suggestTags correction pass — no confidence floor (ADR-053)', () => {
+describe('suggestTags correction pass — no confidence floor (finance ADR-004)', () => {
   it('contributes a tag from a below-the-old-floor correction on the entity-matcher path', () => {
     const { db, raw } = freshMigratedFinanceDb();
     try {

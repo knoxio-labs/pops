@@ -40,7 +40,7 @@ function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
 
 export function ruleMatchedTitle(ruleProvenance: ImportTxn['ruleProvenance']): string {
   if (!ruleProvenance) return 'Rule matched';
-  // No confidence line (ADR-053/POPS-3131): a stored rule applies
+  // No confidence line (finance ADR-004/POPS-3131): a stored rule applies
   // unconditionally, so a percentage here would misread as "provisional".
   return [
     'Rule matched',

@@ -15,7 +15,7 @@ export interface Correction {
   transactionType: TransactionType | null;
   isActive: boolean;
   priority: number;
-  /** Audit-only (ADR-053/POPS-3130): `null` means never assessed. */
+  /** Audit-only (finance ADR-004/POPS-3130): `null` means never assessed. */
   confidence: number | null;
   timesApplied: number;
   createdAt: string;

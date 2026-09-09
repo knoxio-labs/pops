@@ -5,7 +5,7 @@
  * reverts) and per-action-type trust state that drives the three-phase
  * graduation model (propose → act_report → silent).
  *
- * See ADR-021 for the full spec.
+ * See cerebrum ADR-004 for the full spec.
  */
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 

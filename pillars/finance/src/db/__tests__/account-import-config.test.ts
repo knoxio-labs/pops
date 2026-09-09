@@ -1,6 +1,6 @@
 /**
  * Invariant tests for the account import-config service (POPS-2916,
- * ADR-052): the per-kind required field, replace-not-patch on upsert, and the
+ * finance ADR-003): the per-kind required field, replace-not-patch on upsert, and the
  * account cascade.
  */
 import { eq } from 'drizzle-orm';

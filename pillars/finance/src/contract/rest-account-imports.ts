@@ -1,6 +1,6 @@
 /**
  * `accounts/:id/imports` and `accounts/:id/import-config` sub-router
- * (POPS-2917, ADR-052).
+ * (POPS-2917, finance ADR-003).
  *
  * The batches list is read-only: a batch is what an import did, appended by
  * the commit and never edited here. The config is a single row per account

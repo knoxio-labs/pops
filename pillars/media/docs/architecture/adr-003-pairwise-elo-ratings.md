@@ -1,4 +1,4 @@
-# ADR-010: Pairwise ELO Comparisons Over Star Ratings
+# Media ADR-003: Pairwise ELO Comparisons Over Star Ratings
 
 ## Status
 

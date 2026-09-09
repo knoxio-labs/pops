@@ -1,5 +1,5 @@
 /**
- * Handler for the `dataQuality.*` sub-router (POPS-2881, ADR-051).
+ * Handler for the `dataQuality.*` sub-router (POPS-2881, finance ADR-002).
  *
  * One nudge per account — never one per historical checkpoint. An account's
  * inconsistency is a statement about its LATEST checkpoint only

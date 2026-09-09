@@ -1,6 +1,6 @@
 /**
  * The primitives a checkpoint-anchored balance is made of (POPS-2879,
- * ADR-051): the shapes it is reported in, the prefix sum it is built from,
+ * finance ADR-002): the shapes it is reported in, the prefix sum it is built from,
  * which checkpoint anchors a given date, and how far a checkpoint is from
  * what the ledger predicted for it.
  *

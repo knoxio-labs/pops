@@ -161,7 +161,7 @@ describe('corrections — update, delete & adjustConfidence', () => {
     });
 
     // A hand-written rule starts at confidence `null` — never assessed
-    // (ADR-053/POPS-3130) — so the first explicit adjustment seeds from a
+    // (finance ADR-004/POPS-3130) — so the first explicit adjustment seeds from a
     // neutral 0.5 base rather than propagating `null` forward: unlike a
     // system default, this one is the user's own assessment.
     const bumped = await client().corrections.adjustConfidence(created.data.id, 0.2);
@@ -188,7 +188,7 @@ describe('corrections — 404s on unknown ids', () => {
 });
 
 describe('corrections — findMatch', () => {
-  it('classifies any pattern match as matched, whatever its stored confidence, and a miss as null (ADR-053)', async () => {
+  it('classifies any pattern match as matched, whatever its stored confidence, and a miss as null (finance ADR-004)', async () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'WOOLWORTHS',
       matchType: 'contains',
@@ -1026,7 +1026,7 @@ describe('corrections — applyExisting (retroactive apply, #3660)', () => {
     expect(row.matchType).toBe('manual');
   });
 
-  it('skips an uncertain entity-less purchase rule, applying nothing (ADR-053: no merchant to resolve)', async () => {
+  it('skips an uncertain entity-less purchase rule, applying nothing (finance ADR-004: no merchant to resolve)', async () => {
     const db = financeDb.db;
     const amexId = seedAmexAccount(db);
     transactionsService.createTransaction(db, {

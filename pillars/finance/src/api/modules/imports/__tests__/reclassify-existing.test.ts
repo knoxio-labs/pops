@@ -3,7 +3,7 @@
  *
  * `reclassifyExistingTransactions` must mirror the live-import classification
  * gate: only review-free matches are written — provenance decides that, not
- * confidence (ADR-053) — and an entity-less rule must never clear a
+ * confidence (finance ADR-004) — and an entity-less rule must never clear a
  * transaction's already-assigned entity. These cases pin the exact failures
  * the finance audit found.
  */
@@ -116,7 +116,7 @@ afterEach(() => {
 });
 
 describe('reclassifyExistingTransactions — classification gate (CF006)', () => {
-  it('applies a sub-threshold (<0.9) entity match too — confidence is not a gate (ADR-053)', () => {
+  it('applies a sub-threshold (<0.9) entity match too — confidence is not a gate (finance ADR-004)', () => {
     const txnId = seedTxn({ description: 'COFFEE SHOP', type: 'purchase', entityId: null });
     seedRule({
       descriptionPattern: 'COFFEE SHOP',

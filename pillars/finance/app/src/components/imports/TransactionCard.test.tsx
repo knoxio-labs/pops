@@ -28,7 +28,7 @@ function makeTx(overrides: Partial<ProcessedTransaction> = {}): ProcessedTransac
 }
 
 describe('TransactionCard rule provenance', () => {
-  it('renders the Rule matched badge and details, never a confidence, when ruleProvenance is present (ADR-053/POPS-3131)', () => {
+  it('renders the Rule matched badge and details, never a confidence, when ruleProvenance is present (finance ADR-004/POPS-3131)', () => {
     render(<TransactionCard transaction={makeTx()} readonly={true} variant="matched" />);
 
     expect(screen.getByText('Rule matched')).toBeInTheDocument();

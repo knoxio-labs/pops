@@ -10,7 +10,7 @@
 -- Glia tracks every autonomous-action proposal (prune, consolidate,
 -- link, audit) plus a per-action-type trust state that drives the
 -- three-phase graduation model (propose → act_report → silent) — see
--- ADR-021 / PRD-086 for the full spec. Action execution and digest
+-- cerebrum ADR-004 / PRD-086 for the full spec. Action execution and digest
 -- generation stay in pops-api; this slice is the persistence layer only.
 
 CREATE TABLE `glia_actions` (

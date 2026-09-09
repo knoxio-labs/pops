@@ -23,7 +23,7 @@ import { isInconsistent, type Checkpoint } from './types';
  * The destructive callout beneath a disagreeing checkpoint's row: what the
  * ledger predicted, the actual figure, and the gap between them. Absent
  * whenever `expectedBalanceCents` is null — the earliest checkpoint anchors
- * the account and has nothing to be measured against (ADR-051).
+ * the account and has nothing to be measured against (finance ADR-002).
  */
 function DisagreementCallout({
   checkpoint,

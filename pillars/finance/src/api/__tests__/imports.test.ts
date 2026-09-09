@@ -369,7 +369,7 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
     expect(row?.entity.matchType).toBe('learned');
   });
 
-  it('matches a low-confidence entity-less transfer rule too — confidence is not a gate (ADR-053)', async () => {
+  it('matches a low-confidence entity-less transfer rule too — confidence is not a gate (finance ADR-004)', async () => {
     const c = client();
     const created = await c.corrections.createOrUpdate({
       descriptionPattern: 'ROUND UP TO SAVER',
