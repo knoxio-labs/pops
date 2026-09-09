@@ -9,3 +9,7 @@ run = "oxlint src && oxfmt --check ."
 
 [tasks.build]
 run = "pnpm run build:remote"
+
+[tasks."dev:standalone"]
+description = "Run the purchases app on its own, with mock data"
+run = "pnpm run dev:standalone"
