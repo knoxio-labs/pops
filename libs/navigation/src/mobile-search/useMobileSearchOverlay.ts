@@ -3,7 +3,8 @@ import { type RefObject, useEffect, useRef } from 'react';
 import { useRecentSearches } from '../recent-searches';
 import { useSearchInputData } from '../search-input/useSearchInputData';
 import { useSearchInputHandlers } from '../search-input/useSearchInputHandlers';
-import { useSearchKeyboardNav } from '../search-keyboard-nav';
+import { useSearchInputSelection } from '../search-input/useSearchInputSelection';
+import { usePanelDismiss } from '../search-results/usePanelDismiss';
 import { useSearchStore } from '../searchStore';
 import { useFocusTrap } from '../useFocusTrap';
 import { useMobileSearchHandlers } from './useMobileSearchHandlers';
@@ -13,8 +14,10 @@ import type { SearchHitData } from '../uri-resolver';
 
 /**
  * id of the listbox `MobileSearchOverlay` currently owns (results or recent
- * searches — only one renders at a time), referenced by the input's
- * `aria-controls`/`aria-activedescendant` and by each option's own id.
+ * searches — only one renders at a time), applied as the listbox root's
+ * `id` and referenced by the input's `aria-controls`. Each option's own id
+ * comes from the shared global `searchOptionId` scheme in
+ * `search-keyboard-nav`, the same one desktop's `SearchInput` uses.
  */
 export const MOBILE_SEARCH_LISTBOX_ID = 'mobile-search-listbox';
 
@@ -54,7 +57,10 @@ function useAutoFocusOnOpen(open: boolean, inputRef: RefObject<HTMLInputElement 
 /**
  * Wires `MobileSearchOverlay` to the same data/selection primitives
  * `SearchInput` uses (`useSearchInputData`, `useSearchInputHandlers`,
- * `useSearchKeyboardNav`), so a query behaves identically on both surfaces.
+ * `useSearchInputSelection`), so a query behaves identically on both
+ * surfaces — including keyboard nav over recent searches, which now shares
+ * the same flat index space as result hits via `useSearchInputSelection`
+ * instead of being reachable by mouse only.
  *
  * Escape closes the whole overlay in one step, not just the results panel
  * beneath it — unlike desktop, the overlay IS the entire search surface on
@@ -70,43 +76,38 @@ export function useMobileSearchOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const query = useSearchStore((s) => s.query);
   const isOpen = useSearchStore((s) => s.isOpen);
-  const setQuery = useSearchStore((s) => s.setQuery);
   const clear = useSearchStore((s) => s.clear);
-  const { queries, clearAll } = useRecentSearches();
+  const { queries, addQuery, clearAll } = useRecentSearches();
 
   const { sections, orderedHits, handleShowMore } = useSearchInputData({ query, isOpen });
   const { handleResultClick, handleClose, handleChange, handleClear } = useSearchInputHandlers({
     inputRef,
+    addQuery,
   });
 
-  const { handleCloseOverlay, handleSelectResult, selectRecentQuery } = useMobileSearchHandlers({
-    open,
+  const { handleCloseOverlay, handleSelectResult } = useMobileSearchHandlers({
     inputRef,
-    setQuery,
     clear,
     handleClose,
     handleResultClick,
     onClose,
   });
 
-  const { selectedIndex } = useSearchKeyboardNav({
+  const { selectedIndex, activeDescendantId, selectRecentQuery } = useSearchInputSelection({
     containerRef,
-    resultCount: orderedHits.length,
-    onSelect: (index) => {
-      const hit = orderedHits[index];
-      if (hit !== undefined) handleSelectResult(hit.uri, hit.data);
-    },
+    inputRef,
+    isRecentView: query.length === 0,
+    queries,
+    orderedHits,
+    onSelectHit: handleSelectResult,
     onClose: handleCloseOverlay,
   });
 
   useAutoFocusOnOpen(open, inputRef);
   useFocusTrap({ containerRef, active: open });
+  usePanelDismiss(containerRef, handleCloseOverlay);
 
   const showPanel = query.length > 0 || queries.length > 0;
-  const activeDescendantId =
-    showPanel && selectedIndex >= 0
-      ? `${MOBILE_SEARCH_LISTBOX_ID}-option-${selectedIndex}`
-      : undefined;
 
   return {
     inputRef,

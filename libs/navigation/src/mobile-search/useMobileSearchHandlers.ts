@@ -1,11 +1,11 @@
-import { type RefObject, useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
+
+import type { RefObject } from 'react';
 
 import type { SearchHitData } from '../uri-resolver';
 
 interface UseMobileSearchHandlersArgs {
-  open: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
-  setQuery: (query: string) => void;
   clear: () => void;
   handleClose: () => void;
   handleResultClick: (uri: string, data?: SearchHitData) => void;
@@ -15,34 +15,22 @@ interface UseMobileSearchHandlersArgs {
 interface UseMobileSearchHandlersResult {
   handleCloseOverlay: () => void;
   handleSelectResult: (uri: string, data: SearchHitData) => void;
-  selectRecentQuery: (recentQuery: string) => void;
 }
 
 /**
- * `SearchResultsPanel` owns its own document-level Escape/outside-click
- * dismissal (`usePanelDismiss`) on top of the container-level Escape
- * `useSearchKeyboardNav` already handles for `MobileSearchOverlay` — the
- * same overlap exists on desktop today. Both listeners fire for one Escape
- * press, so `handleCloseOverlay` guards `onClose` down to a single call per
- * press rather than exposing the overlap to every consumer.
+ * Adds the mobile-only "dismiss the full-screen overlay" step on top of the
+ * shared `useSearchInputHandlers`/`useSearchInputSelection` primitives that
+ * `SearchInput` also uses — desktop's dropdown has no equivalent surface to
+ * close, so `onClose` (the overlay's own open/close prop) only exists here.
  */
 export function useMobileSearchHandlers({
-  open,
   inputRef,
-  setQuery,
   clear,
   handleClose,
   handleResultClick,
   onClose,
 }: UseMobileSearchHandlersArgs): UseMobileSearchHandlersResult {
-  const closingRef = useRef(false);
-  useEffect(() => {
-    if (open) closingRef.current = false;
-  }, [open]);
-
   const handleCloseOverlay = useCallback(() => {
-    if (closingRef.current) return;
-    closingRef.current = true;
     handleClose();
     clear();
     if (inputRef.current) inputRef.current.value = '';
@@ -57,13 +45,5 @@ export function useMobileSearchHandlers({
     [handleResultClick, onClose]
   );
 
-  const selectRecentQuery = useCallback(
-    (recentQuery: string) => {
-      if (inputRef.current) inputRef.current.value = recentQuery;
-      setQuery(recentQuery);
-    },
-    [inputRef, setQuery]
-  );
-
-  return { handleCloseOverlay, handleSelectResult, selectRecentQuery };
+  return { handleCloseOverlay, handleSelectResult };
 }

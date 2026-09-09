@@ -132,7 +132,7 @@ describe('MobileSearchOverlay', () => {
     it('exposes combobox semantics on the input once the results listbox renders', async () => {
       await openWithResults();
 
-      const input = screen.getByRole('combobox', { name: 'Search POPS' });
+      const input = screen.getByRole('textbox', { name: 'Search POPS' });
       expect(input).toHaveAttribute('aria-haspopup', 'listbox');
       expect(input).toHaveAttribute('aria-autocomplete', 'list');
       expect(input).toHaveAttribute('aria-expanded', 'true');
@@ -167,7 +167,7 @@ describe('MobileSearchOverlay', () => {
 
       expect(screen.queryByTestId('recent-searches')).not.toBeInTheDocument();
       expect(screen.queryByTestId('search-results-panel')).not.toBeInTheDocument();
-      const input = screen.getByRole('combobox', { name: 'Search POPS' });
+      const input = screen.getByRole('textbox', { name: 'Search POPS' });
       expect(input).toHaveAttribute('aria-expanded', 'false');
     });
 
@@ -210,21 +210,18 @@ describe('MobileSearchOverlay', () => {
         useSearchStore.getState().setQuery('matrix');
       });
       await screen.findByTestId('search-results-panel');
-      const input = screen.getByRole('combobox', { name: 'Search POPS' });
+      const input = screen.getByRole('textbox', { name: 'Search POPS' });
 
       expect(input).not.toHaveAttribute('aria-activedescendant');
 
       fireEvent.keyDown(input, { key: 'ArrowDown' });
-      expect(input).toHaveAttribute('aria-activedescendant', 'mobile-search-listbox-option-0');
-      const first = document.getElementById('mobile-search-listbox-option-0');
+      expect(input).toHaveAttribute('aria-activedescendant', 'search-option-0');
+      const first = document.getElementById('search-option-0');
       expect(first).toHaveAttribute('aria-selected', 'true');
 
       fireEvent.keyDown(input, { key: 'ArrowDown' });
-      expect(input).toHaveAttribute('aria-activedescendant', 'mobile-search-listbox-option-1');
-      expect(document.getElementById('mobile-search-listbox-option-0')).toHaveAttribute(
-        'aria-selected',
-        'false'
-      );
+      expect(input).toHaveAttribute('aria-activedescendant', 'search-option-1');
+      expect(document.getElementById('search-option-0')).toHaveAttribute('aria-selected', 'false');
     });
 
     it('Enter selects the highlighted result and closes the overlay', async () => {
@@ -235,7 +232,7 @@ describe('MobileSearchOverlay', () => {
         useSearchStore.getState().setQuery('matrix');
       });
       await screen.findByTestId('search-results-panel');
-      const input = screen.getByRole('combobox', { name: 'Search POPS' });
+      const input = screen.getByRole('textbox', { name: 'Search POPS' });
 
       fireEvent.keyDown(input, { key: 'ArrowDown' });
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -245,7 +242,7 @@ describe('MobileSearchOverlay', () => {
 
     it('Escape closes the whole overlay in one step', async () => {
       const { onClose } = await openWithResults();
-      const input = screen.getByRole('combobox', { name: 'Search POPS' });
+      const input = screen.getByRole('textbox', { name: 'Search POPS' });
 
       fireEvent.keyDown(input, { key: 'Escape' });
 
