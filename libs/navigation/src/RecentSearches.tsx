@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 import { searchOptionId } from './search-keyboard-nav';
 
 /**
@@ -9,6 +11,13 @@ import { searchOptionId } from './search-keyboard-nav';
  * so a query is reachable and selectable without a mouse.
  * Click a query to populate the input and trigger search.
  * "Clear recent" button removes all history.
+ *
+ * Rendered inside a `role="listbox"` by its caller (`SearchInputDropdown` on
+ * desktop, `MobileSearchOverlay` on mobile), same as `SearchResultsPanel`'s
+ * sections. Wraps its own header row (label + "Clear recent" button)
+ * alongside the option rows in a `role="group"`, so the listbox's only
+ * direct child is that group — not a bare, non-option button — the same
+ * structural fix `SectionView` already applies to result sections.
  */
 
 interface RecentSearchesProps {
@@ -67,12 +76,20 @@ export function RecentSearches({
   onClear,
   selectedIndex = -1,
 }: RecentSearchesProps) {
+  const headerId = useId();
   if (queries.length === 0) return null;
 
   return (
-    <div className="flex flex-col" data-testid="recent-searches">
+    <div
+      className="flex flex-col"
+      role="group"
+      aria-labelledby={headerId}
+      data-testid="recent-searches"
+    >
       <div className="flex items-center justify-between px-3 py-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Recent searches</span>
+        <span id={headerId} className="text-xs font-medium text-muted-foreground">
+          Recent searches
+        </span>
         <button
           type="button"
           onClick={onClear}

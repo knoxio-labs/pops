@@ -68,6 +68,66 @@ document under the stylesheet the shell already emits, whose `@source` globs
 cover this app. Running this app standalone needs its own theme entry, which
 is a different build target.
 
+## Running it on its own
+
+```sh
+pnpm --filter @pops/app-purchases dev:standalone   # http://localhost:5570
+```
+
+That is the whole setup: no shell, no purchases pillar, no database, no
+container. The pages render against fixtures, and it is the same route table
+and the same components the shell mounts — there is no standalone-only fork of
+anything, which is what makes the harness worth looking at (POPS-3218).
+
+**Mocks are on unless you say otherwise.** `VITE_PURCHASES_API=real` sends the
+generated client's requests through the dev server's `/purchases-api` proxy to
+a pillar you are running yourself (`pnpm --filter @pops/purchases dev`):
+
+```sh
+VITE_PURCHASES_API=real pnpm --filter @pops/app-purchases dev:standalone
+```
+
+Nothing else changes between the two modes. A proxy error in the console while
+mocked means the switch is set to `real` and the pillar is not up.
+
+### What the mock layer is
+
+`src/standalone/mock/` intercepts `fetch`, not the client. The generated Hey
+API client, its serialisers and this app's own error handling all run exactly
+as they do against the pillar, so what you are looking at is the shipping code
+path rather than a parallel one that can drift from it.
+
+Handlers are keyed by the operations the **OpenAPI document** declares —
+`'GET /purchases/{id}'` — rather than by the calls this app happens to make
+today. `mock/handlers.test.ts` compares the two sets and fails in both
+directions, so a new endpoint cannot ship without an answer here, and a handler
+cannot outlive the operation it answered. An operation with no handler returns
+a 501 shaped like the contract's own error, which the page renders through its
+ordinary error path.
+
+### Adding a fixture
+
+Fixtures live in `src/standalone/fixtures/`, typed against the generated
+`*Responses[200]` types, fictional throughout — the convention
+`pillars/design/src/fixtures/` follows. Point a handler at one in
+`src/standalone/mock/handlers.ts`.
+
+Choose data that makes the page's own reasoning visible rather than the
+smallest payload that typechecks. The existing ones are picked that way: the
+queue holds a charge nothing can explain, the merchant roll-up holds an
+unattributed bucket with a residual, the dictionary holds a product that is
+only part-asserted, and the order is short by its shipping. A fixture where
+everything reconciles renders a page that looks right and demonstrates nothing.
+
+### Cross-pillar calls
+
+There are none to degrade. Every request this app issues goes to its own
+contract; the finance transactions, inventory units and documents it shows are
+rendered as the `pops://` references they are and deliberately not resolved
+(see "One order" below). The closest thing to a missing sibling is an operation
+the harness has no handler for, which reaches the page as an unusable response
+the same way — and is covered by `standalone.test.tsx`.
+
 ## The reconcile queue
 
 `/purchases` is the reconciliation inbox: one row per purchase charge awaiting
@@ -370,6 +430,8 @@ the pass on a schedule; it runs when the button is pressed.
 
 ```
 src/
+  standalone/                      the app on its own: entry, providers, mocks, fixtures
+  app-i18n.ts                      the i18n instance for when no shell provides one
   index.ts                         entrypoint — re-exports manifest, navConfig, routes, bundles
   manifest.ts                      ModuleManifest (id='purchases')
   routes.tsx                       the slot→component table, and the routes derived from it
@@ -461,6 +523,8 @@ pnpm --filter @pops/app-purchases test:watch                # vitest (watch)
 pnpm --filter @pops/app-purchases test:coverage             # vitest run --coverage
 pnpm --filter @pops/app-purchases generate:purchases-client # regen src/purchases-api
 pnpm --filter @pops/app-purchases build                     # dist/remote/purchases.js
+pnpm --filter @pops/app-purchases dev:standalone            # the app alone, on mocks
+pnpm --filter @pops/app-purchases build:standalone          # the standalone bundle
 ```
 
 ## Install gate

@@ -59,4 +59,33 @@ describe('RecentSearches', () => {
     render(<RecentSearches queries={['matrix']} onSelect={vi.fn()} onClear={vi.fn()} />);
     expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'false');
   });
+
+  it('wraps its header and options in a group, so a wrapping listbox owns no bare non-option child', () => {
+    render(
+      <div role="listbox" aria-label="Recent searches">
+        <RecentSearches queries={['matrix', 'inception']} onSelect={vi.fn()} onClear={vi.fn()} />
+      </div>
+    );
+
+    const listbox = screen.getByRole('listbox');
+    const group = screen.getByRole('group');
+    expect(listbox).toContainElement(group);
+    // The listbox's only direct child is the group — not the "Clear recent"
+    // button or the header label sitting bare alongside the option rows.
+    expect(group.parentElement).toBe(listbox);
+    expect(listbox.children).toHaveLength(1);
+    expect(listbox.children[0]).toBe(group);
+
+    const clearButton = screen.getByTestId('clear-recent');
+    expect(group).toContainElement(clearButton);
+    expect(clearButton).not.toHaveAttribute('role', 'option');
+
+    const header = screen.getByText('Recent searches');
+    expect(group).toHaveAttribute('aria-labelledby', header.id);
+    expect(header.id).toBeTruthy();
+
+    for (const option of screen.getAllByRole('option')) {
+      expect(group).toContainElement(option);
+    }
+  });
 });

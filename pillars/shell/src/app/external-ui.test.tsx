@@ -69,10 +69,10 @@ function descriptor(overrides: Partial<RemoteUiDescriptor> = {}): RemoteUiDescri
       id: 'acme',
       label: 'Acme',
       labelKey: 'acme',
-      icon: 'Compass',
+      icon: 'compass',
       basePath: '/acme',
       order: 42,
-      items: [{ path: '', label: 'Home', labelKey: 'acme.home', icon: 'Compass' }],
+      items: [{ path: '', label: 'Home', labelKey: 'acme.home', icon: 'compass' }],
     },
     pages: [{ path: '', index: true, bundleSlot: 'home' }],
     ...overrides,
@@ -107,6 +107,56 @@ describe('synthesizeExternalBundleEntry — descriptor → bundle entry', () => 
     expect(navOf('acme', entry)?.id).toBe('acme');
     expect(entry.manifest.surfaces).toContain('app');
     expect(entry.assetsBaseUrl).toBe('https://cdn.example.com/acme/index.js');
+  });
+
+  /**
+   * The wire's icon ids are `KebabIdentifierSchema`, so kebab-case is the only
+   * form a pillar may legally send — and `iconMap` is keyed by PascalCase. The
+   * shared fixture above spelled its icons PascalCase, which the wire rejects,
+   * so nothing exercised the form real pillars use and every one of them
+   * resolved to the fallback.
+   */
+  it('resolves the kebab-case icon id the wire schema requires', () => {
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({
+        nav: {
+          id: 'acme',
+          label: 'Acme',
+          labelKey: 'acme',
+          icon: 'dollar-sign',
+          basePath: '/acme',
+          order: 1,
+          items: [{ path: '', label: 'Usage', labelKey: 'acme.usage', icon: 'bar-chart-3' }],
+        },
+      })
+    );
+    expect(entry).not.toBeNull();
+    if (entry === null) return;
+    const nav = navOf('acme', entry);
+    expect(nav?.icon).toBe('DollarSign');
+    // A trailing digit is its own segment in the Lucide name, so the
+    // conversion has to leave it attached rather than title-casing a number.
+    expect(nav?.items[0]?.icon).toBe('BarChart3');
+  });
+
+  // A descriptor built in-repo may still spell an icon the way `iconMap` does.
+  it('resolves a PascalCase icon id unchanged', () => {
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({
+        nav: {
+          id: 'acme',
+          label: 'Acme',
+          labelKey: 'acme',
+          icon: 'Smartphone',
+          basePath: '/acme',
+          order: 1,
+          items: [{ path: '', label: 'Home', labelKey: 'acme.home', icon: 'Smartphone' }],
+        },
+      })
+    );
+    expect(entry).not.toBeNull();
+    if (entry === null) return;
+    expect(navOf('acme', entry)?.icon).toBe('Smartphone');
   });
 
   it('falls back to a neutral icon when the wire nav icon is unknown', () => {

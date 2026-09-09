@@ -159,6 +159,15 @@ describe('PlanPage', () => {
     expect(screen.getByTestId('cooked-chip-2')).toBeTruthy();
   });
 
+  // POPS-3179: a raw `<input type="date">` opts out of `DateInput`'s pinned
+  // `lang="en-AU"`, so the native picker's day/month order silently follows
+  // the browser locale instead of the app's. Regression guard for that.
+  it('pins the week date picker to en-AU regardless of browser locale', async () => {
+    renderPage();
+    await screen.findByText('Pancakes');
+    expect(screen.getByTestId('week-date-picker')).toHaveAttribute('lang', 'en-AU');
+  });
+
   it('opens the add modal pre-filled with (date, slot) and submits', async () => {
     const user = userEvent.setup();
     renderPage();
