@@ -21,7 +21,7 @@ export interface CorrectionMatchResult {
  *
  * A stored correction rule is a human (or a rule) telling the system what a
  * description means, not a probabilistic guess about it — the confidence
- * column is audit data (ADR-053), never a gate on whether the rule applies.
+ * column is audit data (finance ADR-004), never a gate on whether the rule applies.
  * Every row reaching this function already won its match, so it is always
  * settled: `status` is `matched` unconditionally.
  *
@@ -49,7 +49,7 @@ export function normalizeEntityId(entityId: string | null | undefined): string |
 /**
  * Resolve the status a correction rule yields when applied automatically —
  * shared by live import and retroactive reclassification so both gate on the
- * same routing. Provenance decides, not confidence (ADR-053):
+ * same routing. Provenance decides, not confidence (finance ADR-004):
  *
  * - A rule that carries an entity is a resolved match — `matched`.
  * - An entity-less `purchase` rule is never a finished match: the review step

@@ -1,6 +1,6 @@
 /**
  * `dataQuality.*` sub-router — the dashboard's nudge feed (POPS-2881,
- * ADR-051).
+ * finance ADR-002).
  *
  * An inconsistency is already flagged inline on the account page
  * (`AccountBalance.inconsistent`, POPS-2879); this is the same fact rolled up

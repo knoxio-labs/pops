@@ -1,5 +1,5 @@
 /**
- * Wire shapes for account checkpoints and balances (POPS-2880, ADR-051).
+ * Wire shapes for account checkpoints and balances (POPS-2880, finance ADR-002).
  *
  * Split from `rest-checkpoints.ts` the way the corrections domain splits its
  * schemas: these are read by the accounts sub-router too, and a route file

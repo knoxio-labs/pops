@@ -72,7 +72,7 @@ export interface AccountMergePreview {
   checkpointCount: number;
   /**
    * `source`'s balance plus `target`'s balance, in their shared currency's
-   * minor units — each checkpoint-anchored (ADR-051), so a preview shows what
+   * minor units — each checkpoint-anchored (finance ADR-002), so a preview shows what
    * the merged account will hold rather than the two files' combined net flow.
    */
   resultingBalanceCents: number;

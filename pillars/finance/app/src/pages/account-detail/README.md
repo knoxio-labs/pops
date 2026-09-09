@@ -11,7 +11,7 @@ list cannot answer. There is deliberately no `useAccountBalance`: a second reque
 already in hand would be a round trip that buys nothing.
 
 The number is ledger-signed and shown in the account's own terms. A card that owes reads
-`-$2,137.55` in the destructive tone; nothing negates a balance before showing it (ADR-051). Points
+`-$2,137.55` in the destructive tone; nothing negates a balance before showing it (finance ADR-002). Points
 stay neutral however large, because points are not spendable money — that rule lives in
 `@pops/ui` and the accounts grid reads the same one.
 

@@ -2,7 +2,7 @@
  * Lezer-vs-parser parity test.
  *
  * The hand-rolled parser exported as `@pops/food/dsl` (food pillar's
- * `src/dsl`) is the canonical spec (grammar in ADR-023). The Lezer grammar
+ * `src/dsl`) is the canonical spec (grammar in food ADR-002). The Lezer grammar
  * at `../dsl.grammar` exists only to drive CodeMirror highlighting. If they
  * ever diverge, the editor will colourise content that the runtime parser
  * rejects (or vice versa) and authors will see misleading visual cues.

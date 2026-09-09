@@ -108,7 +108,7 @@ function reinforceExistingCorrection(
     );
   }
   // Reinforcement never mints a number a hand-written rule never had
-  // (ADR-053/POPS-3130): a null `confidence` — never assessed — stays null,
+  // (finance ADR-004/POPS-3130): a null `confidence` — never assessed — stays null,
   // it does not gain a synthetic +0.1 the moment its pattern is re-added.
   const confidence = existing.confidence === null ? null : Math.min(existing.confidence + 0.1, 1.0);
   db.update(transactionCorrections)
@@ -191,7 +191,7 @@ function insertNewCorrection(
  * cannot clear a rule's tags; that remains the job of `updateTransactionCorrection`
  * (the PATCH path), which replaces `tags` outright when the field is present.
  *
- * On miss, a new row is inserted with `confidence: null` (ADR-053/POPS-3130:
+ * On miss, a new row is inserted with `confidence: null` (finance ADR-004/POPS-3130:
  * no probability was ever assessed for a hand-written rule) and `timesApplied`
  * left at 0. Throws `TagsOnlyCorrectionError` on a miss whose input carries no
  * `entityId`, no `transactionType`, and non-empty
@@ -300,7 +300,7 @@ export function incrementTransactionCorrectionUsage(db: FinanceDb, id: string, c
  * pipeline uses this to garbage-collect rules that the user has consistently
  * rejected. Throws `TransactionCorrectionNotFoundError` if `id` is missing.
  *
- * A `null` existing confidence (never assessed, ADR-053/POPS-3130) seeds from
+ * A `null` existing confidence (never assessed, finance ADR-004/POPS-3130) seeds from
  * a neutral 0.5 rather than propagating `null` forward: unlike a system
  * default, this is an explicit human adjustment, so the first one is itself
  * the assessment that gives the rule a real number.

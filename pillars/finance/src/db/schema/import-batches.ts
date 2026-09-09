@@ -6,7 +6,7 @@ import { accountCheckpoints } from './account-checkpoints.js';
 import { accounts } from './accounts.js';
 
 /**
- * One row per account per committed import (POPS-2916, ADR-052): what was
+ * One row per account per committed import (POPS-2916, finance ADR-003): what was
  * read, from where, how many rows landed and the dates they span.
  *
  * Before this table the only provenance an import left was

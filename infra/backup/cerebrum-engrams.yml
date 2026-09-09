@@ -2,7 +2,7 @@
 ##
 ## ADR-039 (pillar isolation) Invariant 2: a non-SQLite store brings its own
 ## backup mechanism, scoped to itself. Engrams are Markdown files on a host
-## directory (ADR-019), not a SQLite database, so Litestream (see
+## directory (cerebrum ADR-002), not a SQLite database, so Litestream (see
 ## infra/litestream/cerebrum.yml, which streams cerebrum.db only) is the
 ## wrong tool. This file is the engrams-only sibling of that config.
 ##
@@ -28,7 +28,7 @@ jobs:
     source: /data/cerebrum/engrams
     exclude:
       # Regenerable from the Markdown source via `pops cerebrum reindex`
-      # (ADR-019) — excluded so the backup only ever carries the source of
+      # (cerebrum ADR-002) — excluded so the backup only ever carries the source of
       # truth, matching how Litestream excludes MEDIA_IMAGES_DIR/FOOD_INGEST_DIR.
       - .index/
     destination:
