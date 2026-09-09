@@ -3,7 +3,7 @@
  * route's path with the bundle slot that names the component rendering it.
  *
  * It lives in the contract because two packages need the same pairing and
- * neither can see the other's source. `src/api/ai-manifest.ts` projects it
+ * neither can see the other's source. `src/api/manifest.ts` projects it
  * onto `ManifestPayload.pages` for the registry; `@pops/app-ai` resolves the
  * slot to the component its route table already mounts.
  *

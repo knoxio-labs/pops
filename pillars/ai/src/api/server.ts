@@ -18,11 +18,11 @@ import {
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openAiDb } from '../db/index.js';
-import { buildAiCapabilityReporter, buildAiManifest } from './ai-manifest.js';
 import { resolveAiSqlitePath } from './ai-sqlite-path.js';
 import { createAiApiApp } from './app.js';
 import { closeAiMaintenanceQueues } from './jobs/queue.js';
 import { startAiSchedulers } from './jobs/runner.js';
+import { buildAiCapabilityReporter, buildAiManifest } from './manifest.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
