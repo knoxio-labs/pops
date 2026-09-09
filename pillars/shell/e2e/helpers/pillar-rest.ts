@@ -200,6 +200,47 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  cerebrum: {
+    assetsBaseUrl: '/cerebrum-ui/cerebrum.js',
+    nav: {
+      id: 'cerebrum',
+      label: 'Cerebrum',
+      labelKey: 'cerebrum',
+      icon: 'book-open',
+      color: 'sky',
+      basePath: '/cerebrum',
+      order: 60,
+      items: [
+        { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'file-text' },
+        { path: '/engrams', label: 'Engrams', labelKey: 'cerebrum.engrams.nav', icon: 'library' },
+        { path: '/query', label: 'Query', labelKey: 'cerebrum.query.nav', icon: 'search' },
+      ],
+    },
+    pages: [
+      { path: '', index: true, bundleSlot: 'cerebrum-ingest' },
+      { path: 'chat', bundleSlot: 'cerebrum-chat' },
+      { path: 'nudges', bundleSlot: 'cerebrum-nudges' },
+      { path: 'proposals', bundleSlot: 'cerebrum-proposals' },
+      { path: 'engrams', bundleSlot: 'cerebrum-engrams' },
+      { path: 'engrams/:id', bundleSlot: 'cerebrum-engram-detail' },
+      { path: 'documents', bundleSlot: 'cerebrum-documents' },
+      { path: 'query', bundleSlot: 'cerebrum-query' },
+      { path: 'reflex', bundleSlot: 'cerebrum-reflex' },
+      { path: 'reflex/:name', bundleSlot: 'cerebrum-reflex-detail' },
+      { path: 'plexus', bundleSlot: 'cerebrum-plexus' },
+      { path: 'plexus/:adapterId', bundleSlot: 'cerebrum-plexus-detail' },
+      { path: 'glia', bundleSlot: 'cerebrum-glia' },
+    ],
+    // Not a page: the shell's capture modal resolves this slot from the same
+    // bundle (POPS-3266). A stub that omits it produces a shell whose capture
+    // hotkey opens an empty modal.
+    captureOverlay: {
+      bundleSlot: 'ingest-form',
+      order: 10,
+      hotkey: 'cmd+shift+k',
+      labelKey: 'cerebrum.captureOverlay.label',
+    },
+  },
   lists: {
     assetsBaseUrl: '/lists-ui/lists.js',
     nav: {

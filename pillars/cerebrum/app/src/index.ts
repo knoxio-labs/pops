@@ -4,6 +4,7 @@
  * Exports route definitions and navigation config for the shell
  * to lazily load cerebrum pages under /cerebrum/*.
  */
+export { bundles } from './bundles';
 export { navConfig, routes } from './routes';
 export { manifest } from './manifest';
 

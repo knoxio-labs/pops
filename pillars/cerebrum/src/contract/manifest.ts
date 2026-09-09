@@ -21,6 +21,9 @@ import type { ModuleManifest } from '@pops/types';
 
 export type { CerebrumContract } from './manifest.generated.js';
 
+export { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from './pages.js';
+export type { CerebrumCaptureSlot, CerebrumPageSlot } from './pages.js';
+
 export const cerebrumManifest: ModuleManifest = {
   id: 'cerebrum',
   name: 'Cerebrum',

@@ -51,6 +51,7 @@ jobs:
           - { image: pops-food-ui, file: pillars/food/app/Dockerfile }
           - { image: pops-inventory-ui, file: pillars/inventory/app/Dockerfile }
           - { image: pops-lists-ui, file: pillars/lists/app/Dockerfile }
+          - { image: pops-cerebrum-ui, file: pillars/cerebrum/app/Dockerfile }
     steps:
       - uses: actions/checkout@v7
 

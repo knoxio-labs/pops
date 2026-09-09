@@ -23,7 +23,7 @@ describe('nav registry', () => {
   // registry cannot be reached. `src/app/registry-walk.test.ts` asserts the
   // wire position it takes when it can.
   it('renders the bundle-mapped pillars in their pinned order', () => {
-    expect(registeredApps.map((app) => app.id)).toEqual(['media', 'cerebrum']);
+    expect(registeredApps.map((app) => app.id)).toEqual(['media']);
   });
 
   it.each(registeredApps.map((app) => [app.id, app] as const))(

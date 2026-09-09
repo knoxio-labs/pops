@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 /**
  * Workspace bundle map — single source enumerating in-repo pillar ids in the
  * shell.
@@ -52,9 +50,9 @@ import { useEffect } from 'react';
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`ai`, `bfm`, `finance`, `food`, `inventory`, `lists` and `purchases` are
- * not in this map, and that is not an omission** (POPS-3217, POPS-3219
- * through POPS-3224).
+ * **`ai`, `bfm`, `cerebrum`, `finance`, `food`, `inventory`, `lists` and
+ * `purchases` are not in this map, and that is not an omission** (POPS-3217,
+ * POPS-3219 through POPS-3225). `media` is the last one left.
  * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
@@ -70,25 +68,12 @@ import { useEffect } from 'react';
  * registry answers, which is the same condition under which its own API is
  * undiscoverable.
  */
-import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
 import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
 import type { ComponentType } from 'react';
 
 import type { ModuleManifest } from '@pops/types';
-
-/**
- * Fires the parent's `onUnsavedChange` callback whenever the bundle's
- * internal unsaved-content state flips. Mount bundles call this from
- * their render bodies so the modal stays informed without coupling the
- * model type up to the shell.
- */
-function useUnsavedSignal(hasUnsaved: boolean, onChange: (next: boolean) => void): void {
-  useEffect(() => {
-    onChange(hasUnsaved);
-  }, [hasUnsaved, onChange]);
-}
 
 /**
  * Props the shell passes to every capture-overlay `Mount` component.
@@ -128,17 +113,6 @@ export interface BundleEntry {
   readonly assetsBaseUrl?: string;
 }
 
-function CerebrumIngestFormMount({ onUnsavedChange }: CaptureOverlayMountProps) {
-  const model = useIngestPageModel();
-  const hasUnsaved = model.form.body.length > 0 && !model.bulkResults && !model.submitResult;
-  useUnsavedSignal(hasUnsaved, onUnsavedChange);
-  return <IngestForm model={model} />;
-}
-
-const CEREBRUM_INGEST_FORM_BUNDLE: CaptureOverlayBundle = {
-  Mount: CerebrumIngestFormMount,
-};
-
 export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
   media: {
     manifest: mediaManifest,
@@ -146,13 +120,6 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
     settingsWidgetBundles: {
       'plex-connect': PlexConnectPanel,
       'rotation-tuning': RotationTuningPanel,
-    },
-  },
-  cerebrum: {
-    manifest: cerebrumManifest,
-    navOrder: 60,
-    captureOverlayBundles: {
-      'ingest-form': CEREBRUM_INGEST_FORM_BUNDLE,
     },
   },
   ego: { manifest: egoManifest, navOrder: Number.POSITIVE_INFINITY },
