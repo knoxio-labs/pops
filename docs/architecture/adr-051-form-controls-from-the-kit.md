@@ -20,8 +20,7 @@ carelessness but reasoning:
   kit had already solved, without checking.
 - `lists`' `ListKindChip` carried a comment arguing app code under `lists`
   should stay free of `@pops/ui`, citing a rule whose source file no longer
-  existed. Eight of the pillar's other files already imported the kit at the
-  time the comment was written.
+  existed.
 - Cerebrum's `TagPicker` was a second copy of `ScopePicker`'s interaction
   model, presented in review as a considered choice rather than duplication.
 
@@ -59,10 +58,16 @@ what "extend the kit" looks like in practice:
 - The primitives layer gained a `CommandBareInput`, an unstyled input driven
   by cmdk's `Command`, for callers building their own combobox chrome
   (POPS-3181).
-- `@pops/date`, a new shared lib, gained a `LocalDate` type and its parsing
-  discipline (POPS-3170) — the same principle applied to date-handling logic
-  rather than to a rendered control: a pillar reaching for its own date
-  parsing was the same failure as a pillar reaching for its own `<select>`.
+- `@pops/date`, a new shared lib, gained finance's local-date module,
+  lifted out and shared rather than left as a single pillar's private
+  helper (POPS-3170). Its discipline is local-anchored versus UTC-anchored
+  day arithmetic: derive "today" from a `Date`'s own local getters, then
+  walk forward or backward by whole days with fixed-width UTC arithmetic —
+  never the reverse. Reading a local `Date` through `toISOString()`'s UTC
+  getters silently returns the wrong calendar day for part of every day in
+  any zone ahead of UTC. The same principle applied to date-handling logic
+  rather than to a rendered control: a pillar re-deriving this locally was
+  the same failure as a pillar reaching for its own `<select>`.
 
 None of these needs was imagined; each came from a screen that had already
 tried to route around the kit and been redirected into it instead.
