@@ -1,9 +1,3 @@
-import {
-  closedFacetFields,
-  closedFacetOptions,
-  closedFacetReplyShape,
-  type TagDescriptions,
-} from '../vocabulary-prompt.js';
 /**
  * The tag-only prompt (POPS-2596): classify rows whose merchant the
  * deterministic ladder already resolved.
@@ -19,6 +13,12 @@ import {
  * Same PII allowlist as its siblings: only {@link CategorizerInput} fields plus
  * the resolved entity name are interpolated, each sanitized at the boundary.
  */
+import {
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
 import { callRawApi, type ApiCallResponse } from './ai-categorizer-api.js';
 import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
