@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Select, type SelectOption, useDebouncedValue } from '@pops/ui';
+import { Select, type SelectOption, TextInput, useDebouncedValue } from '@pops/ui';
 
 export function ContextTagSelect({
   contextTag,
@@ -66,15 +66,17 @@ export function DebouncedSearchInput({
     }
   }, [debounced, value, onChange]);
   return (
-    <input
-      type="search"
-      value={local}
-      onChange={(e) => {
-        userTyping.current = true;
-        setLocal(e.target.value);
-      }}
-      placeholder={t('data.substitutions.graph.searchPlaceholder')}
-      className="border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm"
-    />
+    <div className="flex-1">
+      <TextInput
+        type="search"
+        size="sm"
+        value={local}
+        onChange={(e) => {
+          userTyping.current = true;
+          setLocal(e.target.value);
+        }}
+        placeholder={t('data.substitutions.graph.searchPlaceholder')}
+      />
+    </div>
   );
 }

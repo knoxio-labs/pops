@@ -1,7 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { LIST_KINDS, type ListKind, type ListRow } from './types.js';
+import { TextInput } from '@pops/ui';
+
+import { KindRadioGroup } from '../lists-index/KindRadioGroup.js';
+import { type ListKind, type ListRow } from './types.js';
 
 /**
  * Edit modal: rename + change kind, with an Archive / Restore button at
@@ -79,21 +82,15 @@ function NameField({
 }) {
   const { t } = useTranslation('lists');
   return (
-    <div className="space-y-1">
-      <label htmlFor="list-edit-name" className="block text-sm font-medium">
-        {t('detail.edit.name')}
-      </label>
-      <input
-        id="list-edit-name"
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        maxLength={200}
-        className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        autoFocus
-      />
-      {error !== null ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
+    <TextInput
+      id="list-edit-name"
+      label={t('detail.edit.name')}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      error={error ?? undefined}
+      maxLength={200}
+      autoFocus
+    />
   );
 }
 
@@ -111,23 +108,7 @@ function KindField({
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium">{t('detail.edit.kind')}</legend>
-      <div className="grid grid-cols-2 gap-2">
-        {LIST_KINDS.map((option) => (
-          <label
-            key={option}
-            className="flex items-center gap-2 rounded-md border p-2 text-sm hover:bg-muted"
-          >
-            <input
-              type="radio"
-              name="kind"
-              value={option}
-              checked={value === option}
-              onChange={() => onChange(option)}
-            />
-            {t(`detail.kind.${option}`)}
-          </label>
-        ))}
-      </div>
+      <KindRadioGroup value={value} onChange={onChange} idPrefix="list-edit-kind" />
       {kindChanged ? (
         <p className="text-xs text-muted-foreground" role="status">
           {t('detail.edit.kindWarning')}
