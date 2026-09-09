@@ -2635,9 +2635,6 @@ importers:
       '@pops/app-ai':
         specifier: workspace:*
         version: link:../ai/app
-      '@pops/app-bfm':
-        specifier: workspace:*
-        version: link:../bfm/app
       '@pops/app-cerebrum':
         specifier: workspace:*
         version: link:../cerebrum/app
