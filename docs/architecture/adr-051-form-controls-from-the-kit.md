@@ -145,12 +145,14 @@ cleaner than the tree it describes:
   this change reports 54 raw form controls across 6 pillars, matching the
   committed baseline exactly (down from a starting baseline of 90). That
   remainder is overwhelmingly plain text/number inputs and textareas that no
-  ticket in this epic was ever scoped to close — selects are essentially
-  gone (one remains, in finance's tag-rule dialog). It is not evenly a
-  "deliberately exempt" set: `design`'s five carry a raw `<input
-type="color">` inside `src/kit/` itself (no kit colour-picker exists yet)
-  alongside unmigrated controls in the pillar's comment-thread UI, which is
-  product surface for the reviewer, not a mockup. **POPS-3260** tracks
+  ticket in this epic was ever scoped to close — `<select>` is nearly gone
+  but not quite: three remain, one in finance's own tag-rule dialog and two
+  in `design` (its comment-thread status dropdown, and a mockup of that same
+  finance dialog under `screens/finance/`). It is not evenly a "deliberately
+  exempt" set: `design`'s five carry a raw `<input type="color">` inside
+  `src/kit/` itself (no kit colour-picker exists yet) alongside unmigrated
+  controls in the pillar's comment-thread UI, which is product surface for
+  the reviewer, not a mockup. **POPS-3260** tracks
   deciding what happens to the remaining 54 — whether they get driven to
   zero, whittled to a documented allowlist, or the ratchet is accepted as
   the permanent floor — and is the right place to make and record that call,
