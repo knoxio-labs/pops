@@ -263,17 +263,20 @@ export function evaluateCoverage(apps, referenced, loaderUiOf) {
 /**
  * Find the file that builds a pillar's wire `ManifestPayload`.
  *
- * `src/api/manifest.ts` is the convention and nearly every pillar follows it,
- * but `ai` names its builder `src/api/ai-manifest.ts`. The old lookup hardcoded
- * the conventional path and returned "declares nothing" when it was absent, so
- * a correct manifest under a different name read exactly like a missing
- * `assetsBaseUrl` — and the reader was sent to look for a declaration that was
- * already there (POPS-3220).
+ * `src/api/manifest.ts` is the convention and every pillar follows it today.
+ * The fallbacks are not for a pillar that currently deviates; they are because
+ * the lookup used to hardcode that path and return "declares nothing" when it
+ * was absent, so a correct manifest under a different name read exactly like a
+ * missing `assetsBaseUrl` and the reader was sent to look for a declaration
+ * that was already there. `ai` was that pillar and has since been renamed onto
+ * the convention — what this guards against is the failure mode, not the one
+ * file (POPS-3220).
  *
- * Falls back to scanning `src/api/*.ts` for the payload type rather than
- * enumerating more names, so the next pillar to pick its own filename is found
- * too. Returns `undefined` when there is genuinely nothing, which the caller
- * reports as its own failure.
+ * The last resort scans `src/api/*.ts` for the payload type rather than
+ * enumerating more names, so a pillar that picks its own filename is found
+ * without this list having to grow. Returns `undefined` when there is
+ * genuinely nothing, which the caller reports as its own failure rather than
+ * as a manifest declaring nothing.
  *
  * @typedef {object} ManifestFs
  * @property {(path: string) => boolean} existsSync
@@ -423,9 +426,9 @@ function selfTest() {
   ].join('\n');
 
   // No wire manifest at all is a different failure from one that declares
-  // nothing, and the guard conflated them until POPS-3220: `ai` names its
-  // builder `ai-manifest.ts`, the hardcoded lookup missed it, and the reader
-  // was told to add an `assetsBaseUrl` that was already there.
+  // nothing, and the guard conflated them until POPS-3220, when `ai` still
+  // named its builder `ai-manifest.ts`: the hardcoded lookup missed it, and
+  // the reader was told to add an `assetsBaseUrl` that was already there.
   const noManifestFound = evaluateCoverage(apps, referencedAppPackages(gappedMap), () => ({
     assetsBaseUrl: false,
     pages: false,
@@ -484,9 +487,10 @@ function selfTest() {
     'assetsBaseUrl without pages is not enough': halfDeclared.missing.length === 1,
     'the failure says what the wire lacks':
       halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
-    // The three sentences the message can be, because two of them have been
-    // ungrammatical at some point and nothing asserted the wording.
-    'a single missing field reads as a sentence':
+    // Both shapes the message can take, because each has been ungrammatical at
+    // some point and nothing asserted the wording. `halfDeclared` above drives
+    // the one-field sentence; this drives the two-field one.
+    'both missing fields read as one sentence':
       bothMissing.reasons[0]?.includes('declares no assetsBaseUrl and no non-empty pages') === true,
     'a missing manifest is reported as missing, not as undeclared':
       noManifestFound.reasons[0]?.includes('no wire manifest could be found') === true &&
