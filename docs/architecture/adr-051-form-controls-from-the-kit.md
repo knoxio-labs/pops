@@ -91,6 +91,48 @@ a file, a ticket, or a rule is only as durable as that reference; when the
 thing it points to goes away, the rationale needs re-justifying, not
 inheriting.
 
+### The remaining count
+
+POPS-3187 shipped the ratchet with a starting baseline of 90 and a stated
+goal of reaching zero when the epic completed. It did not: the epic's
+tickets were scoped by control class and enumerated file list — `<select>`,
+`type="date"`, specific hand-rolled pickers — and nothing was ever scoped to
+"every remaining raw `<input>` and `<textarea>`." The count settled at 54.
+
+POPS-3260 audited all 54 individually rather than by class, and the outcome
+is **zero except a named allowlist**:
+
+| outcome                                       | count |
+| --------------------------------------------- | ----- |
+| migrate onto an existing kit component        | 47    |
+| genuine exception, named in this ADR          | 6     |
+| needs a kit component that does not exist yet | 1     |
+
+The 47 need no new kit capability — they are `TextInput`, `Textarea`,
+`NumberInput`, `CheckboxInput`, `RadioInput`, `Select`, `Autocomplete` and
+`ChipInput` sites that no ticket happened to name. The 6 are the inline row
+editors and the `design` cases in "Deliberate exceptions" below. The 1 is a
+raw `<input type="color">` in `design/src/kit/institutions-settings.tsx`,
+sitting beside a kit `TextInput` that holds the same value as hex text;
+closing it means a kit colour input, which is the "extend the kit" path this
+ADR already prescribes, not a further exception.
+
+Two consequences worth stating, because they are the reason this was a
+decision and not just a cleanup:
+
+- **"Drive everything to zero" was rejected on evidence, not cost.**
+  `design/src/comments/` would be actively damaged by migrating: its
+  constraint is that it must _not_ look like the product it overlays. A
+  guard target that forces a control into the kit when the kit is the wrong
+  answer is how a guard earns the reputation of something to be worked
+  around.
+- **A per-pillar count is the wrong shape for the end state.** Counts do not
+  say _which_ controls are allowed, so a pillar can pay one violation down
+  and add another and still match its baseline. Once the migrations land,
+  the guard should exempt the allowlisted paths by name and hold every
+  pillar at zero, so that each survivor is individually justified rather
+  than absorbed into a number.
+
 ### Deliberate exceptions
 
 A handful of cases render native controls, or diverge from a single shared
@@ -127,41 +169,55 @@ tightened to catch:
   exception on record is "not rebuilt on a kit combobox primitive," not "left
   unfixed" — the parts of it a generic gate could have caught (ARIA,
   dismissal, desktop/mobile drift) were fixed within this epic.
-- **`purchases/QueueList` and inventory's location-tree row editing** are
-  interaction widgets, not form controls, and mostly fall outside the
-  guard's scope for that reason — `QueueList` renders no raw `<select>`,
-  `<input>`, or `<textarea>` at all. The one place inventory's location
-  tree does — its inline rename field — is a deliberate, documented
-  exception (POPS-3201): the kit's `TextInput` enforces a minimum height and
-  padding sized for a standalone form field, which would grow a compact
-  tree row past the sibling icons it swaps in for. The file says so inline,
-  citing the ticket, rather than asserting a policy nobody can check.
-- **`pillars/design` outside `src/kit/`** is the playground, not shipped
-  product surface, and screens there compose fixtures and mockups rather
-  than being held to the invariant a pillar's real UI is held to.
+- **Inline rename fields inside a compact row.** Two sites edit a label in
+  place inside a dense list row: inventory's location tree
+  (`pages/location-tree-page/sections/location-node/InlineInput.tsx`,
+  POPS-3201) and food's plan slot list (`pages/plan/SlotRow.tsx`). The kit's
+  `TextInput` renders its input inside a `flex flex-col gap-1.5 w-full`
+  wrapper plus a container whose smallest variant is `h-9`; both rows are
+  shorter than that and size themselves against sibling icons, so adopting
+  it would grow the row and misalign the editing state against the
+  non-editing one. The wrapper has no escape hatch, so this is not a
+  `className` away. Each file says so inline, citing its ticket.
+
+  This exception is about the row, not about inline editing: POPS-3260
+  measured the two superficially similar `lists` row editors
+  (`ShoppingRowBody.tsx`, `ListItemRow.tsx`) and found both rows already
+  taller than `h-9`, driven by their `h-8` checkboxes and two-line content.
+  They migrate; they are not covered here.
+
+- **`purchases/QueueList`** is an interaction widget, not a form control,
+  and falls outside the guard's scope for that reason — it renders no raw
+  `<select>`, `<input>`, or `<textarea>` at all.
+- **`pillars/design`'s comment overlay** (`src/comments/`) is the one place
+  the "playground, therefore exempt" framing was wrong in both directions.
+  It is not a mockup — it is the annotation UI a reviewer actually uses —
+  but that is precisely why its controls stay raw. It renders _over_ a
+  design under review, and anything carrying kit styling there would be
+  read as part of the design underneath it. `Composer.tsx` already states
+  this inline. The constraint is "must not look like the product," which is
+  the exact inverse of what the kit exists to guarantee, so extending the
+  kit is not the fix here.
+- **`pillars/design`'s screen mockups** (`src/screens/`, `src/experiments/`,
+  `src/frames/`) compose fixtures rather than shipped UI, and are not held
+  to the invariant. The remaining raw control there is a `disabled` static
+  `<select>` in a mockup of finance's tag-rule dialog
+  (`src/screens/finance/import-tag-rule-dialog.tsx`). Note this does **not**
+  extend to `src/kit/`, which POPS-3186 held to the rule and which is held
+  to it still.
 
 ### What this decision does not yet claim
 
 Two things the epic did not settle, named here so this ADR does not read as
 cleaner than the tree it describes:
 
-- **The guard is not at zero, and `pillars/design` is not fully exempt in
-  practice.** Running `node scripts/ci/check-raw-form-controls.mjs` against
-  this change reports 54 raw form controls across 6 pillars, matching the
-  committed baseline exactly (down from a starting baseline of 90). That
-  remainder is overwhelmingly plain text/number inputs and textareas that no
-  ticket in this epic was ever scoped to close — `<select>` is nearly gone
-  but not quite: three remain, one in finance's own tag-rule dialog and two
-  in `design` (its comment-thread status dropdown, and a mockup of that same
-  finance dialog under `screens/finance/`). It is not evenly a "deliberately
-  exempt" set: `design`'s five carry a raw `<input type="color">` inside
-  `src/kit/` itself (no kit colour-picker exists yet) alongside unmigrated
-  controls in the pillar's comment-thread UI, which is product surface for
-  the reviewer, not a mockup. **POPS-3260** tracks
-  deciding what happens to the remaining 54 — whether they get driven to
-  zero, whittled to a documented allowlist, or the ratchet is accepted as
-  the permanent floor — and is the right place to make and record that call,
-  not this document.
+- **The guard is not at zero yet, but it now has a target.** The call
+  POPS-3260 was opened to make has been made and is recorded above under
+  "The remaining count". What is not yet true is the end state: the
+  migrations are tickets, not merged code, so a reader running the guard
+  today still sees a number well above the floor. Treat the target as the
+  invariant and the current count as work in progress, not the other way
+  round.
 - **Error-message placement is not a settled convention.** `FieldLabel`'s
   `error` slot renders above the control it labels; every input that owns
   its own `error` prop (`TextInput` and what's built on it) renders its
@@ -191,8 +247,11 @@ cleaner than the tree it describes:
   reader can go and check — a ticket, a file, a constraint — and stays valid
   only as long as that reference does. A stale citation is the same failure
   as no citation.
-- The remaining 54-violation gap and the error-placement inconsistency are
-  open, tracked work (POPS-3260, POPS-3247), not gaps this ADR papers over.
-  An ADR asserting a clean invariant the tree visibly contradicts would
-  teach readers to distrust both the ADR and the guard; naming the gap is
-  what keeps the guard worth checking.
+- The end state is zero raw form controls per pillar plus a by-name
+  allowlist, not a per-pillar count — so every surviving control is
+  individually justified in this document rather than absorbed into a
+  number. Until the migrations land the guard still reports a count above
+  that floor; the gap is tracked work (POPS-3260's children, POPS-3247),
+  not something this ADR papers over. An ADR asserting a clean invariant
+  the tree visibly contradicts would teach readers to distrust both the ADR
+  and the guard; naming the gap is what keeps the guard worth checking.
