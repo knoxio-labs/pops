@@ -25445,36 +25445,6 @@
         "tags": ["transactions"]
       }
     },
-    "/transactions/available-tags": {
-      "get": {
-        "operationId": "transactions.availableTags",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "tags": {
-                      "items": {
-                        "type": "string"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "required": ["tags"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          }
-        },
-        "summary": "Distinct tag values across all transactions (autocomplete)",
-        "tags": ["transactions"]
-      }
-    },
     "/transactions/descriptions-preview": {
       "get": {
         "operationId": "transactions.descriptionsForPreview",

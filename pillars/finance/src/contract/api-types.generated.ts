@@ -1254,23 +1254,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/transactions/available-tags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Distinct tag values across all transactions (autocomplete) */
-    get: operations['transactions.availableTags'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/transactions/descriptions-preview': {
     parameters: {
       query?: never;
@@ -12219,28 +12202,6 @@ export interface operations {
             code?: string;
             message: string;
             messageKey?: string;
-          };
-        };
-      };
-    };
-  };
-  'transactions.availableTags': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            tags: string[];
           };
         };
       };

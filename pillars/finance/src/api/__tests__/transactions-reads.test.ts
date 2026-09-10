@@ -1,8 +1,7 @@
 /**
  * Integration tests for the transactions read-helpers: `suggestTags`
- * (rule-based, via the tag-suggester), `descriptionsForPreview` (paged
- * descriptions + truncation flag), and `availableTags` (distinct sorted tag
- * values).
+ * (rule-based, via the tag-suggester) and `descriptionsForPreview` (paged
+ * descriptions + truncation flag).
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -122,21 +121,6 @@ describe('transactions.suggestTags', () => {
       entityId: 'ent-acme',
     });
     expect(tags).toEqual([]);
-  });
-});
-
-describe('transactions.availableTags', () => {
-  it('returns distinct, sorted tags across transactions and ignores empty arrays', async () => {
-    await client().transactions.create(tx({ description: 'A', tags: ['food', 'coffee'] }));
-    await client().transactions.create(tx({ description: 'B', tags: ['coffee', 'work'] }));
-    await client().transactions.create(tx({ description: 'C', tags: [] }));
-
-    const { tags } = await client().transactions.availableTags();
-    expect(tags).toEqual(['coffee', 'food', 'work']);
-  });
-
-  it('returns an empty array when no transactions exist', async () => {
-    expect((await client().transactions.availableTags()).tags).toEqual([]);
   });
 });
 

@@ -265,7 +265,6 @@ export function restoreTransaction(db: FinanceDb, snapshot: TransactionRow): Tra
 }
 
 export {
-  collectAvailableTags,
   type DescriptionPreviewResult,
   type DescriptionPreviewRow,
   getLastImportInfo,

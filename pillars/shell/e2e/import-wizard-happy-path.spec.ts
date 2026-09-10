@@ -31,7 +31,6 @@
  *   GET  /finance-api/imports/progress             → { status:'completed', result:{matched:[…2…]} }
  *   POST /finance-api/imports/commit               → { data:{ transactionsImported:2 … }, message }
  *   GET  /contacts-api/entities                    → { data:[], pagination }
- *   GET  /finance-api/transactions/available-tags  → { tags:[] }
  *   GET  /finance-api/accounts                     → { data:[…1 account…], pagination }
  *
  * The last one is POPS-2840: the Upload step now opens on a real account
@@ -55,8 +54,7 @@ import type { Page } from '@playwright/test';
 const PROCESS_SESSION_ID = 'e2e-process-session';
 
 /**
- * `/finance-api/imports/*` and `/finance-api/transactions/available-tags`
- * response shapes, hand-mirrored from the finance pillar's own zod schemas
+ * `/finance-api/imports/*` response shapes, hand-mirrored from the finance pillar's own zod schemas
  * (`src/contract/rest-imports-schemas.ts`: `SessionIdSchema`,
  * `ImportProgressSchema`, `CommitResultSchema`) rather than imported.
  * `shell-no-cross-internal` (`.dependency-cruiser.cjs`) lets the shell import
@@ -240,14 +238,6 @@ const CommitResponseSchema = z
   .strict();
 
 /**
- * `GET /finance-api/transactions/available-tags` — the finance router
- * (`rest-transactions.ts`, `availableTags`) validates the same
- * `z.object({ tags: z.array(z.string()) })` inline; not a named export, so
- * hand-defined here rather than pinned to an imported type.
- */
-const AvailableTagsResponseSchema = z.object({ tags: z.array(z.string()) }).strict();
-
-/**
  * `GET /contacts-api/entities` — contacts is a separate (Rust) pillar with no
  * TS contract package; hand-defined from its committed OpenAPI
  * (`pillars/contacts/openapi/contacts.openapi.json`, `Entity` /
@@ -399,10 +389,6 @@ async function setupMocks(page: Page): Promise<void> {
   await page.route(
     '**/contacts-api/entities?**',
     fulfilWith(200, EntitiesListResponseSchema, emptyEntitiesBody, 'contacts.entities')
-  );
-  await page.route(
-    '**/finance-api/transactions/available-tags',
-    fulfilWith(200, AvailableTagsResponseSchema, { tags: [] }, 'transactions.availableTags')
   );
   await page.route(
     '**/finance-api/accounts?**',

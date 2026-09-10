@@ -52,30 +52,6 @@ export function listDescriptionsForPreview(db: FinanceDb, limit: number): Descri
   return { data, total: totalRow?.total ?? 0, truncated };
 }
 
-function addParsedTags(target: Set<string>, raw: string): void {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return;
-  }
-  if (!Array.isArray(parsed)) return;
-  for (const tag of parsed) if (typeof tag === 'string') target.add(tag);
-}
-
-/**
- * Distinct, sorted tag values across all transactions — for tag-editor
- * autocomplete. Reflects the JSON `tags` column; empty arrays are skipped.
- */
-export function collectAvailableTags(db: FinanceDb): string[] {
-  const rows = db.select({ tags: transactions.tags }).from(transactions).all();
-  const tagSet = new Set<string>();
-  for (const row of rows) {
-    if (row.tags && row.tags !== '[]') addParsedTags(tagSet, row.tags);
-  }
-  return [...tagSet].toSorted();
-}
-
 /**
  * Ops signal for import staleness: the most recent `lastEditedTime` across
  * every transaction (set to the wall-clock time on both create and edit, so
