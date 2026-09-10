@@ -9,6 +9,8 @@
     "./design": "./src/design.ts"
   },
   "scripts": {
+    "build": "pnpm run build:remote",
+    "build:remote": "tsx scripts/build-remote.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -21,6 +23,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hey-api/client-fetch": "^0.13.1",
     "@pops/lists": "workspace:*",
+    "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.101.4",
@@ -40,9 +43,12 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^30.0.1",
+    "tsx": "^4.23.11",
     "typescript": "^6.0.3",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10"
   }
 }

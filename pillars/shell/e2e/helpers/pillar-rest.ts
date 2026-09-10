@@ -200,6 +200,25 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  lists: {
+    assetsBaseUrl: '/lists-ui/lists.js',
+    nav: {
+      id: 'lists',
+      label: 'Lists',
+      labelKey: 'lists',
+      icon: 'list-checks',
+      color: 'sky',
+      basePath: '/lists',
+      order: 50,
+      items: [{ path: '', label: 'Home', labelKey: 'lists.home', icon: 'layout-dashboard' }],
+    },
+    // The detail page has no nav item — it is a deep link — so it appears here
+    // and nowhere else a spec would notice it missing.
+    pages: [
+      { path: '', index: true, bundleSlot: 'lists-index' },
+      { path: ':id', bundleSlot: 'lists-detail' },
+    ],
+  },
   inventory: {
     assetsBaseUrl: '/inventory-ui/inventory.js',
     nav: {

@@ -5,5 +5,6 @@
  * shell. Talks to the lists pillar over its REST contract via the generated
  * client in `./lists-api`.
  */
+export { bundles } from './bundles';
 export { manifest } from './manifest';
 export { navConfig, routes } from './routes';

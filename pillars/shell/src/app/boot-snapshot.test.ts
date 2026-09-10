@@ -74,9 +74,9 @@ const IN_REPO_IDS = Object.keys(WORKSPACE_BUNDLE_MAP);
 
 describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   it('derives the install set from the snapshot, not the full bundle map', () => {
-    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('lists')]);
+    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('cerebrum')]);
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['lists', 'media']);
+    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['cerebrum', 'media']);
     // The snapshot narrowed the install set to two of the pillars the bundle
     // map still carries, proving the registry is the source of truth. Stated
     // against `IN_REPO_IDS` rather than a number, because POPS-3215 is
@@ -193,7 +193,7 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     // under which its API is undiscoverable — the shell still boots, and
     // every pillar still in the map still mounts, which is what never-brick
     // asserts.
-    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'lists', 'cerebrum']);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'cerebrum']);
 
     // The result must be byte-identical to the empty-snapshot floor: the
     // zero-UI live snapshot degrades EXACTLY as if the registry were down.
@@ -233,7 +233,7 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
   it('renders the full in-repo app rail (not blank) on the fallback path', () => {
     const result = resolveBootRegistry([]);
     expect(result.registeredApps.length).toBeGreaterThan(0);
-    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'lists', 'cerebrum']);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'cerebrum']);
   });
 });
 
@@ -387,10 +387,10 @@ describe('fetchBootRegistry — the cached-snapshot floor', () => {
     const store = memoryStore();
     await fetchBootRegistry({ fetch: okFetch(['media']), store });
 
-    const live = await fetchBootRegistry({ fetch: okFetch(['lists']), store });
+    const live = await fetchBootRegistry({ fetch: okFetch(['cerebrum']), store });
 
     expect(live.source).toBe('registry');
-    expect(live.manifests.map((m) => m.id)).toEqual(['lists']);
+    expect(live.manifests.map((m) => m.id)).toEqual(['cerebrum']);
   });
 
   // A snapshot that mounted nothing is not a floor. Caching it would replace a

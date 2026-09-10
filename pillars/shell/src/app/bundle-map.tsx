@@ -27,11 +27,14 @@ import { useEffect } from 'react';
  *                               Values follow a sparse scheme (finance=10,
  *                               purchases=15, media=20, inventory=30,
  *                               food=40, lists=50, cerebrum=60, ai=70,
- *                               bfm=80) so the app rail renders the nine
- *                               entries in that order. The gaps are the
- *                               point: purchases took 15 to sit beside
- *                               finance, which it reconciles against,
- *                               without renumbering everything after it.
+ *                               bfm=80) so the app rail renders every pillar
+ *                               in that order, whichever of the two routes
+ *                               it arrives by — a loader-mounted pillar
+ *                               carries the same number on its wire `nav`.
+ *                               The gaps are the point: purchases took 15 to
+ *                               sit beside finance, which it reconciles
+ *                               against, without renumbering everything
+ *                               after it.
  *   - `captureOverlayBundles` — kebab-case bundle slot → component +
  *                               (optional) hook reference. The shell's
  *                               `CaptureModal` resolves
@@ -49,9 +52,9 @@ import { useEffect } from 'react';
  * never appear in this map; they reach the shell via the registry walk and
  * the asset-URL loading path in `external-ui.tsx`.
  *
- * **`ai`, `bfm`, `finance`, `food`, `inventory` and `purchases` are not in
- * this map, and that is not an omission** (POPS-3217, POPS-3219 through
- * POPS-3223).
+ * **`ai`, `bfm`, `finance`, `food`, `inventory`, `lists` and `purchases` are
+ * not in this map, and that is not an omission** (POPS-3217, POPS-3219
+ * through POPS-3224).
  * They reach the shell the way an out-of-tree pillar does: the wire manifest advertises `assetsBaseUrl` and `pages`, and the
  * runtime loader imports its built bundle. The shell's build therefore knows
  * nothing about `@pops/app-purchases` — the package is not a dependency of
@@ -68,7 +71,6 @@ import { useEffect } from 'react';
  * undiscoverable.
  */
 import { IngestForm, manifest as cerebrumManifest, useIngestPageModel } from '@pops/app-cerebrum';
-import { manifest as listsManifest } from '@pops/app-lists';
 import { PlexConnectPanel, RotationTuningPanel, manifest as mediaManifest } from '@pops/app-media';
 import { manifest as egoManifest } from '@pops/overlay-ego';
 
@@ -146,7 +148,6 @@ export const WORKSPACE_BUNDLE_MAP: Readonly<Record<string, BundleEntry>> = {
       'rotation-tuning': RotationTuningPanel,
     },
   },
-  lists: { manifest: listsManifest, navOrder: 50 },
   cerebrum: {
     manifest: cerebrumManifest,
     navOrder: 60,
