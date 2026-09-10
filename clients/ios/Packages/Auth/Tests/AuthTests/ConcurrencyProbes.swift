@@ -1,3 +1,4 @@
+import AppCore
 import Auth
 import Synchronization
 
@@ -231,6 +232,36 @@ internal actor Gate {
     /// ``Countdown/wait(atLeast:)`` for how the wait is signalled.
     internal func waitForArrivals(atLeast target: Int) async throws {
         try await arrivals.wait(atLeast: target)
+    }
+}
+
+/// A ``SessionEventSink`` that parks its first `send` behind a ``Gate``.
+///
+/// `destroyCredentials()`'s only suspension point is the `await` on this sink,
+/// so parking here is the one way to hold a revocation open long enough for a
+/// second caller to provably arrive while the first is still in flight. Only
+/// the FIRST send parks: a test that opened the gate for one and then had the
+/// next park behind a shut gate would deadlock on its own assertions.
+///
+/// Everything is still recorded, in order, so the wrapped recorder stays the
+/// handle a test asserts on.
+internal final class GatedSessionEvents: SessionEventSink {
+    private let recorder: RecordingSessionEvents
+    private let gate: Gate
+    private let parked = Mutex(false)
+
+    internal init(recording recorder: RecordingSessionEvents, parkingFirstSendOn gate: Gate) {
+        self.recorder = recorder
+        self.gate = gate
+    }
+
+    internal func send(_ event: SessionEvent) async {
+        let shouldPark = parked.withLock { alreadyParked in
+            defer { alreadyParked = true }
+            return !alreadyParked
+        }
+        if shouldPark { await gate.wait() }
+        await recorder.send(event)
     }
 }
 

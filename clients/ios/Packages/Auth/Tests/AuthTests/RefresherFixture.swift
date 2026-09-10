@@ -18,11 +18,17 @@ internal struct RefresherFixture {
     internal let keyStore: any DeviceKeyStore
     internal let tokenStore: any TokenStore
 
+    /// - Parameter parkingFirstSessionEventOn: holds the refresher inside its
+    ///   first `sessionEvents.send(...)` until the gate opens. That send is
+    ///   `destroyCredentials()`'s only suspension point, so it is the one place
+    ///   a test can hold a revocation open and have a second caller provably
+    ///   arrive while the first is still in flight.
     internal init(
         exchange: ScriptedRefreshExchange = ScriptedRefreshExchange(),
         tokens: DeviceTokens? = .stub(),
         tokenStore: (any TokenStore)? = nil,
-        withKey: Bool = true
+        withKey: Bool = true,
+        parkingFirstSessionEventOn gate: Gate? = nil
     ) throws {
         let keyStore = InMemoryKeyStore()
         if withKey { try keyStore.createKey() }
@@ -36,7 +42,9 @@ internal struct RefresherFixture {
                 pairedDeviceStore: InMemoryPairedDeviceStore()
             ),
             exchange: { _ in exchange },
-            sessionEvents: session,
+            sessionEvents: gate.map {
+                GatedSessionEvents(recording: session, parkingFirstSendOn: $0)
+            } ?? session,
             now: { Self.refreshedAt }
         )
         self.exchange = exchange

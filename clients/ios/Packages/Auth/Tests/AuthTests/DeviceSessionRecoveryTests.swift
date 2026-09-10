@@ -237,15 +237,93 @@ internal struct DeviceSessionRecoveryTests {
         #expect(fixture.exchange.spends.count == 1)
     }
 
-    @Test("twenty concurrent revocations wipe once and report once")
-    func concurrentRevocationsCollapse() async throws {
+    /// The single-flight collapses callers that arrive while a revocation is in
+    /// flight. It does not make the operation idempotent, and this asserts only
+    /// the weaker property, because the weaker one is all the code promises.
+    ///
+    /// `deviceWasRevoked()` clears its in-flight handle when the first caller
+    /// finishes, so a caller that has not had a scheduling turn by then starts a
+    /// second full revocation. That is deliberate and documented in three
+    /// places: the wipe is best-effort, so a second pass is "a free retry of one
+    /// that may have half-failed" (``DeviceSessionRefresher/rotateTokens(at:)``),
+    /// and ``SessionReducer`` collapses `(.revoked, .revoked)` to the state it
+    /// already had.
+    ///
+    /// This case used to assert `events == [.revoked(.revokedByOperator)]` — one
+    /// RAW event for twenty callers — which is a stronger claim than any of that
+    /// makes, and whether it held depended on whether caller one finished before
+    /// caller twenty was first scheduled. A busy CI runner produces exactly that
+    /// ordering, and it did: a red check on an unrelated PR, twice (POPS-1935).
+    ///
+    /// What is asserted instead is what a screen actually reads — the state the
+    /// reducer arrives at — plus the wipe itself. The collapse of a caller that
+    /// really is concurrent has its own case below, where it is provable.
+    @Test("twenty concurrent revocations leave one revoked session and no credentials")
+    func concurrentRevocationsLeaveOneRevokedSession() async throws {
         let fixture = try RefresherFixture()
 
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<20 { group.addTask { await fixture.refresher.deviceWasRevoked() } }
         }
 
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        let events = fixture.session.events
+        #expect(!events.isEmpty, "twenty revocations reported nothing at all")
+        #expect(
+            events.allSatisfy { $0 == .revoked(.revokedByOperator) },
+            "a revocation reported something other than the operator cutting the device off"
+        )
+        // However many raw events fired, the session lands on one revocation
+        // carrying the first reason — which is the whole of what a screen sees.
+        let paired = SessionState.paired(
+            PairedDevice(id: "device-7", baseURL: RefresherFixture.baseURL)
+        )
+        #expect(
+            events.reduce(paired) { SessionReducer.reduce($0, applying: $1) }
+                == .revoked(.revokedByOperator)
+        )
+        #expect(try fixture.tokenStore.load() == nil)
+        #expect(try fixture.keyStore.publicKey() == nil)
+    }
+
+    /// The property the single-flight does guarantee, made provable.
+    ///
+    /// The twenty-caller case above cannot show this: a collapsed caller does
+    /// nothing observable — it just awaits the in-flight task — so there is no
+    /// external signal that all twenty arrived before the first finished, which
+    /// is precisely why asserting on the count there was load-dependent.
+    ///
+    /// Here the first caller is held inside `destroyCredentials()`'s only
+    /// suspension point, the `await` on the session sink. The second call is
+    /// made only after that arrival has been observed, so it provably meets a
+    /// non-nil in-flight handle and joins it rather than starting a second wipe.
+    @Test("a revocation arriving while one is in flight joins it rather than wiping again")
+    func aConcurrentRevocationJoinsTheOneInFlight() async throws {
+        let gate = Gate()
+        let fixture = try RefresherFixture(parkingFirstSessionEventOn: gate)
+
+        let first = Task { await fixture.refresher.deviceWasRevoked() }
+
+        // Exact rather than polled, and bounded by a deadline: the same reason
+        // ``revocationDuringRotationWins`` above waits this way, and for the
+        // same hazard — a gate opened before the call reached `wait()` races
+        // straight through instead of parking.
+        var parkFailure: (any Error)?
+        do {
+            try await withDeadline { try await gate.waitForArrivals(atLeast: 1) }
+        } catch {
+            parkFailure = error
+        }
+
+        let second = Task { await fixture.refresher.deviceWasRevoked() }
+        await gate.open()
+        await first.value
+        await second.value
+        if let parkFailure { throw parkFailure }
+
+        #expect(
+            fixture.session.events == [.revoked(.revokedByOperator)],
+            "a caller that arrived mid-revocation started a second one"
+        )
         #expect(try fixture.tokenStore.load() == nil)
     }
 
