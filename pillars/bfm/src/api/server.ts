@@ -42,6 +42,7 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
+import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
 import {
   assertRefreshTokenRetentionCoversTtl,
@@ -71,6 +72,14 @@ import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
+
+// Before the port, the database, or anything that resolves a credential.
+// A `*_FILE` variable pointing at a file this process cannot open makes every
+// outbound leg authenticate as though nothing had been configured, and says
+// so only in a per-tick log line nobody reads — finance ran that way for days
+// (POPS-3315). An unset variable is still a supported configuration; a set
+// one naming an unreadable path is not, so this refuses to boot.
+assertSecretFilesReadable();
 
 const port = resolvePort();
 const version = resolveVersion();
