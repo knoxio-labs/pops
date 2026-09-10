@@ -6,7 +6,7 @@ import type { ComponentType } from 'react';
 
 import type { ScreenMeta } from '../contract';
 
-/** `experiments/<id>/experiment.yaml` — the facts the tree cannot express. */
+/** `experiments/<id>/experiment.yaml`: the facts the tree cannot express. */
 export const experimentYamlSchema = z.object({
   name: z.string().min(1),
   question: z.string().optional(),
@@ -28,7 +28,7 @@ export const experimentYamlSchema = z.object({
 });
 
 /**
- * `<folder>/flow.yaml` — the marker that makes a folder a flow of ordered steps
+ * `<folder>/flow.yaml`: the marker that makes a folder a flow of ordered steps
  * rather than a group that nests the sidebar. A folder has no file to carry a
  * title, so the marker carries it.
  */

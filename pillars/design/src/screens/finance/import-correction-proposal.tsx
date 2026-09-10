@@ -23,14 +23,14 @@ import { WorkflowDialog } from '@pops/ui';
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 /**
- * The correction-proposal workflow dialog — opened mid-Review when a user
+ * The correction-proposal workflow dialog, opened mid-Review when a user
  * overrides an entity the matcher chose on its own. A standalone leaf
  * screen rather than a flow step: the dialog can open from several places
  * in the import wizard, it isn't one numbered stage of it. Maps
  * `pillars/finance/app/src/components/imports/correction-proposal/`; a
  * simplified but faithful static render, no interactivity.
  */
-export const meta: ScreenMeta = { title: 'Import — correction proposal', order: 3, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Import: correction proposal', order: 3, frame: 'web' };
 
 function Screen({
   op,

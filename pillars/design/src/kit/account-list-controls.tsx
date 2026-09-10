@@ -24,7 +24,7 @@ const SELECTED_CHIP = 'border-primary bg-primary/15 text-primary hover:bg-primar
 /**
  * The search, kind filter and archived reveal that sit above the accounts
  * list. It lives outside `src/screens` so every shape under the accounts
- * experiment offers the same controls over the same data — the shape is what
+ * experiment offers the same controls over the same data: the shape is what
  * is being compared, not the filtering.
  */
 export interface AccountListFilters {
@@ -70,7 +70,7 @@ function describe(total: number, shown: number, archived: number, narrowed: bool
 /**
  * Owns the query, the selected kinds, the archived reveal and the sort, and
  * applies all four. Sort defaults to `kind-balance` rather than any stored
- * position on the account — manual drag ordering was dropped in favour of
+ * position on the account: manual drag ordering was dropped in favour of
  * this dropdown, so nothing here reads `Account.order` as a display order.
  */
 export function useAccountListFilters(accounts: Account[], initialQuery = ''): AccountListFilters {
@@ -194,7 +194,7 @@ export function AccountListControls({ filters }: { filters: AccountListFilters }
   );
 }
 
-/** There are no accounts at all — the first thing a fresh install has to fix. */
+/** There are no accounts at all: the first thing a fresh install has to fix. */
 export function NoAccountsYet() {
   return (
     <EmptyState

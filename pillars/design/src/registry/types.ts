@@ -4,12 +4,12 @@ import type { FrameKind } from '../frames/kind';
 
 /**
  * A screen is either a file (a leaf with a `component`) or a flow folder (with
- * ordered `steps`) — never both. A flow is one level deep: each step is itself
+ * ordered `steps`), never both. A flow is one level deep: each step is itself
  * a leaf. Exactly one of `component` / `steps` is set.
  *
  * `id` is the screen's path under `screens/`, at any depth: the first segment
  * is the `area` and heads the sidebar, the last is the `slug`, and anything
- * between is `groups` — folders that nest the sidebar and mean nothing else.
+ * between is `groups`, folders that nest the sidebar and mean nothing else.
  * A folder is a group unless it declares itself a flow with a `flow.yaml`.
  */
 export interface ScreenEntry {
@@ -45,7 +45,7 @@ export interface ExperimentEntry {
   name: string;
   question?: string;
   status: ExperimentStatus;
-  /** The screen id this experiment explores — a main screen, or one a variant introduces. */
+  /** The screen id this experiment explores: a main screen, or one a variant introduces. */
   screen: string;
   chosen?: string;
   rationale?: string;

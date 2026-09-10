@@ -1,5 +1,5 @@
 /**
- * Fictional fixtures for the correction-proposal workflow dialog — the
+ * Fictional fixtures for the correction-proposal workflow dialog: the
  * ops list, per-op detail data, impact preview and AI helper transcript.
  * Shaped like what `correction-proposal/types.ts` carries, not copied from
  * it: a design fixture owes nothing to the wire format and must not import
@@ -21,13 +21,13 @@ export interface CorrectionOpFixture {
   kind: CorrectionOpKind;
   dirty: boolean;
   summary: string;
-  /** `add` only — the new rule being proposed. */
+  /** `add` only: the new rule being proposed. */
   descriptionPattern?: string;
   matchType?: 'exact' | 'contains' | 'regex';
   entityName?: string;
   transactionType?: string;
   location?: string;
-  /** `edit` / `disable` only — the rule this op targets. */
+  /** `edit` / `disable` only: the rule this op targets. */
   targetRule?: TargetRuleFixture;
   /** `disable` only. */
   rationale?: string;
@@ -101,7 +101,7 @@ export const transactionTypeOptions = [
 ];
 
 export const filledDisableRationale =
-  'Too broad — this pattern also catches Amazon Prime Video and Amazon Web Services charges, which should stay unclassified until we can split them.';
+  'Too broad: this pattern also catches Amazon Prime Video and Amazon Web Services charges, which should stay unclassified until we can split them.';
 
 export interface ImpactDiffItem {
   description: string;
@@ -185,6 +185,6 @@ export const aiHelperTranscript: AiMessageFixture[] = [
   {
     id: 'm2',
     role: 'assistant',
-    text: 'Moved "Alexandria" out of the description pattern and into the rule\'s location field — the pattern now matches on merchant name alone.',
+    text: 'Moved "Alexandria" out of the description pattern and into the rule\'s location field: the pattern now matches on merchant name alone.',
   },
 ];

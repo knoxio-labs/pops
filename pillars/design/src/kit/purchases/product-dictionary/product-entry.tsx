@@ -26,7 +26,7 @@ const ASSERTION_EXPLAIN: Readonly<Record<ProductAssertion, string>> = {
   asserted:
     'A person asserted every wording here. The proposal pass may not retire, repoint or relabel any of them.',
   partAsserted:
-    "Some wordings here were asserted and some are still the pass's proposals, so this product is unfinished work — anything summarising it reports it as a proposal.",
+    "Some wordings here were asserted and some are still the pass's proposals, so this product is unfinished work: anything summarising it reports it as a proposal.",
   proposed:
     'The proposal pass minted every wording here and nobody has vouched for one. A later pass may retire any of them once no line prints that wording, and a product its last wording leaves is deleted with it. Naming a product holds its wordings back from exactly that, so a name you typed is never lost to a pass.',
 };
@@ -43,7 +43,7 @@ interface ProductEntryProps {
 /**
  * One product: what it is called, who vouched for it, and the wordings that
  * reach it. The badge reads `asserted` only where every wording was
- * asserted — a product still holding one proposal is unfinished work and
+ * asserted: a product still holding one proposal is unfinished work and
  * says so, rather than borrowing the confidence of the wordings beside it.
  */
 export function ProductEntry({

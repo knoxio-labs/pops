@@ -2,7 +2,7 @@ import { cn } from '@pops/ui';
 
 /**
  * A labelled figure inside a dashboard module. `tone` is the sign colour from
- * `ledger-tone` and is passed only for figures that are ledger-signed — a
+ * `ledger-tone` and is passed only for figures that are ledger-signed: a
  * magnitude such as an amount owed or a month's interest is left untoned, so
  * that a green number always means money that can be spent.
  */

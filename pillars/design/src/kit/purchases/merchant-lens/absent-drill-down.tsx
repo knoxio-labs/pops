@@ -4,7 +4,7 @@
  * The merchant lens is specified as total → treemap by tag → line items →
  * per-item buy count, last bought, inventory presence. Only the first
  * exists. Saying so where the panels would have been is the cheap version of
- * the same discipline the residual gets — an empty treemap or a placeholder
+ * the same discipline the residual gets: an empty treemap or a placeholder
  * chart would read as "nothing to show", a claim about the data rather than
  * about the software.
  */

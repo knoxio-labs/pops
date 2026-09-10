@@ -2,8 +2,8 @@
  * The status the Everyday Rewards capture extension reports to its popup,
  * shaped like the frozen `status()` its content script publishes.
  *
- * The popup holds no state of its own — it is a remote control for the
- * content script — so one status object is the whole input to everything the
+ * The popup holds no state of its own: it is a remote control for the
+ * content script, so one status object is the whole input to everything the
  * popup can get wrong.
  */
 export interface CaptureStatus {
@@ -88,5 +88,5 @@ export const captureComplete: CaptureStatus = {
 export const captureFailed: CaptureStatus = {
   ...fetchingReceipts,
   running: null,
-  error: 'Stopped after 137 — the site answered HTTP 401 — reload the page and start again',
+  error: 'Stopped after 137: the site answered HTTP 401. Reload the page and start again',
 };

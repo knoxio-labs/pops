@@ -50,7 +50,7 @@ export function frameSize(
  *
  * The comment overlay lives INSIDE the frame rather than over it. Anchoring
  * is a hit test against the surface's own document, and an overlay in the
- * chrome would have to undo the frame's scale and offset to run one — with
+ * chrome would have to undo the frame's scale and offset to run one, with
  * every scroll and resize a chance to drift. The cost is this pair of
  * messages, which is the smaller thing to keep correct.
  */
@@ -60,13 +60,13 @@ export type FrameToShell =
   | { kind: 'comment-count'; open: number }
   | { kind: 'comments-exit' }
   // A pointer went down on the surface. The canvas is an iframe, so that
-  // press produces no event in the shell's document at all — which is why a
+  // press produces no event in the shell's document at all, which is why a
   // dock popover stayed open when you clicked "outside" it onto the design.
   // Radix cannot see across the boundary; this message is the crossing.
   | { kind: 'pointerdown' }
   // The comment shortcut fired inside the surface's own document. Once a
   // click has moved focus into the iframe, the shell's `keydown` listener
-  // never sees `i` or `Escape` again — this message is that crossing too.
+  // never sees `i` or `Escape` again; this message is that crossing too.
   | { kind: 'comment-shortcut'; action: CommentShortcut };
 
 export type ShellToFrame =

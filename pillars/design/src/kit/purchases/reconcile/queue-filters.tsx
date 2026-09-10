@@ -20,7 +20,7 @@ interface QueueFiltersProps {
 /**
  * The two filters the queue endpoint actually distinguishes.
  *
- * `kind` separates contested charges from unexplained ones — the contract
+ * `kind` separates contested charges from unexplained ones: the contract
  * treats an empty proposal set as a different state, not a weaker match.
  * `includeAuto` is off by default because a grocery source is thousands of
  * line items a year, and a queue that asks about each one gets abandoned

@@ -15,7 +15,7 @@ import type { DesignDb } from '../../db/index.js';
 /**
  * `NODE_ENV=production` plus a configured Access team: the only combination
  * in which the identity middleware demands a real session. Every "an
- * anonymous caller is refused" assertion needs it — under the suite's own
+ * anonymous caller is refused" assertion needs it: under the suite's own
  * `NODE_ENV=test` the dev fallback resolves every request to an operator, so
  * those cases would silently assert nothing.
  */
@@ -26,7 +26,7 @@ export const PRODUCTION_ENV: NodeJS.ProcessEnv = {
 
 /**
  * Production with Access unconfigured. This pillar reads that as "trust the
- * tunnel", the registry's reading rather than bfm's — no hostname bypasses
+ * tunnel", the registry's reading rather than bfm's: no hostname bypasses
  * Access to reach it.
  */
 export const PRODUCTION_ENV_WITHOUT_ACCESS: NodeJS.ProcessEnv = { NODE_ENV: 'production' };

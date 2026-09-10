@@ -37,7 +37,7 @@ export function OpsList({ selectedId }: { selectedId: string }) {
                   {op.dirty && (
                     <span
                       className="h-1.5 w-1.5 rounded-full bg-warning"
-                      title="Unsaved edits — preview stale"
+                      title="Unsaved edits: preview stale"
                     />
                   )}
                 </div>

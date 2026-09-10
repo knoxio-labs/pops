@@ -44,7 +44,7 @@ export interface ProposalOutcome {
  * Fictional Australian retail entries covering what the page's filters and
  * corrections are for: a product asserted across two sources, one with
  * several aliases still half-proposed, an obviously-wrong split worth
- * merging, and two real products a merchant prints identically — the
+ * merging, and two real products a merchant prints identically: the
  * dictionary's stated limitation, since a wording is all it groups on.
  */
 export const dictionaryProducts: DictionaryProduct[] = [

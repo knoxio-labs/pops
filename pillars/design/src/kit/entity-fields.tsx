@@ -5,7 +5,7 @@ import { Badge } from '@pops/ui';
 import type { Entity } from '@/fixtures/entities';
 
 /**
- * The entity's data fields, laid out as definitions rather than a form — this
+ * The entity's data fields, laid out as definitions rather than a form: this
  * is the read view. Every field is optional on the model, so each row falls
  * back to a muted placeholder instead of disappearing: a details page that
  * hides empty fields looks incomplete for reasons the viewer can't see.

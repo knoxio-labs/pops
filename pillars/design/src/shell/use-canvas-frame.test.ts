@@ -74,7 +74,7 @@ describe('useCanvasFrame', () => {
   it('carries a hand-picked frame to a surface that declares nothing', () => {
     // Seeded so the stored fallback is not the frame being picked. Without
     // this the pick is `none`, which is also what a hook that dropped the
-    // choice would answer — and the test would pass on a broken one.
+    // choice would answer, and the test would pass on a broken one.
     localStorage.setItem(CANVAS_FRAME_KEY, 'web');
     const { result, rerender } = renderAt('/s/finance/account-detail');
     act(() => {

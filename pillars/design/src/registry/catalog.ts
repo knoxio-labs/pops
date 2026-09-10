@@ -7,7 +7,7 @@ import type { Catalog } from './types';
 /**
  * The filesystem is the registry. Every glob below names a place a file can
  * sit to be discovered; nothing is registered anywhere. The globs are literal
- * strings on purpose — Vite resolves them at build time, and a variable would
+ * strings on purpose: Vite resolves them at build time, and a variable would
  * defeat that.
  *
  * Screens are matched at any depth: the folders above a screen file group the

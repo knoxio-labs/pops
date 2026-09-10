@@ -2,7 +2,7 @@ import { useId } from 'react';
 
 import type { ReactNode } from 'react';
 
-/** One labelled section of the order-detail page — a heading plus its body. */
+/** One labelled section of the order-detail page: a heading plus its body. */
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   const headingId = useId();
   return (

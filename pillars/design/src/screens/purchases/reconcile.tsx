@@ -42,7 +42,7 @@ interface ReconcileQueuePageProps {
   isPending?: boolean;
 }
 
-/** `/purchases` — the reconciliation queue, ported for design review. */
+/** `/purchases`: the reconciliation queue, ported for design review. */
 export function ReconcileQueuePage({
   allEntries = purchasesQueue,
   isLoading = false,

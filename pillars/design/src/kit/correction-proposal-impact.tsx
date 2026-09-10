@@ -5,7 +5,7 @@ import { Badge, Button, Input, Label, Textarea } from '@pops/ui';
 
 /**
  * The correction-proposal dialog's right column (the impact preview) and
- * the bars docked above and below it — the header context strip, the AI
+ * the bars docked above and below it: the header context strip, the AI
  * helper bar, the reject-feedback panel and the footer. See
  * `correction-proposal-ops` for the left/middle columns.
  */
@@ -92,9 +92,9 @@ export function ImpactPanel({
             {truncated && (
               <span
                 className="text-warning normal-case font-normal"
-                title={`Preview truncated — showing first ${existing.total} of ${existing.dbTotal} existing transactions.`}
+                title={`Preview truncated: showing first ${existing.total} of ${existing.dbTotal} existing transactions.`}
               >
-                (preview truncated — first {existing.total} of {existing.dbTotal})
+                (preview truncated: first {existing.total} of {existing.dbTotal})
               </span>
             )}
           </div>
@@ -162,7 +162,7 @@ export function CorrectionHeader() {
   return (
     <div className="px-6 py-2 border-b bg-muted/20 flex items-center gap-2 text-xs text-muted-foreground">
       Overriding the match on
-      <code className="rounded bg-background px-1.5 py-0.5 text-xs">SQ *THE GROUNDS OF ALEX</code>—
+      <code className="rounded bg-background px-1.5 py-0.5 text-xs">SQ *THE GROUNDS OF ALEX</code>:
       this proposal edits the rule that produced the wrong match.
     </div>
   );

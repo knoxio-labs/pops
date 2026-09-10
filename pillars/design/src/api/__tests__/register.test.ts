@@ -38,7 +38,7 @@ describe('registerDesignPillar', () => {
   });
 
   it('resolves undefined on a malformed advertised origin, without calling the registry', async () => {
-    // resolveSelfBaseUrl throws on this — correctly, since the registry stores
+    // resolveSelfBaseUrl throws on this, correctly, since the registry stores
     // what it is handed. Resolving the origin outside the try would make that
     // throw the same process-killing unhandled rejection by another route.
     vi.stubEnv('DESIGN_SELF_BASE_URL', 'design-api:3015');

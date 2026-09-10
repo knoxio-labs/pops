@@ -1,6 +1,6 @@
 /**
  * The preselected palette an entity's `colour` is assigned from at creation.
- * Unlike `hashToColor` — deterministic per string, unbounded hue — this is a
+ * Unlike `hashToColor` (deterministic per string, unbounded hue), this is a
  * small fixed set: assignment is random-at-creation, not derived, so the
  * same ten swatches have to read well on every entity that gets one.
  */

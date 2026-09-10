@@ -25,7 +25,7 @@ const MAX_AUTHOR_LENGTH = 60;
 function requireIdentity(res: Response): DesignPrincipal | null {
   const principal = readPrincipal(res);
   if (!principal) {
-    fail(res, 403, 'no identity — is this surface behind Cloudflare Access?');
+    fail(res, 403, 'no identity: is this surface behind Cloudflare Access?');
     return null;
   }
   return principal;
@@ -36,7 +36,7 @@ function requireIdentity(res: Response): DesignPrincipal | null {
  *
  * A human session is always its own Access email: a self-declared name on the
  * request would let one operator write as another. A service token has no
- * identity of its own to protect, so it may name itself — that is how a
+ * identity of its own to protect, so it may name itself: that is how a
  * session's reply reads as "Claude" rather than as a token id.
  */
 function authorOf(principal: DesignPrincipal, fields: Record<string, unknown>): string {

@@ -16,7 +16,7 @@ import type { CaptureStatus } from '@/fixtures/purchases-everyday-export';
 export const meta: ScreenMeta = { title: 'Capture popup', order: 6, frame: 'none' };
 
 /**
- * The Everyday Rewards export extension's popup — the only purchases surface
+ * The Everyday Rewards export extension's popup: the only purchases surface
  * that ships outside the shell, and so the only one with no chrome to sit in.
  *
  * Woolworths offers no export, so the receipts are read out of the logged-in

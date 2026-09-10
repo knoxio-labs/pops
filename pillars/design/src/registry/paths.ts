@@ -27,9 +27,7 @@ export function parseYamlFile<T>(
   try {
     data = parseYaml(raw);
   } catch (error) {
-    errors.push(
-      `${path}: invalid YAML — ${error instanceof Error ? error.message : String(error)}`
-    );
+    errors.push(`${path}: invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
   const result = schema.safeParse(data);

@@ -68,7 +68,7 @@ export const TagRulesSection = ({ proposals }: { proposals: RuleProposalFixture[
 );
 
 /**
- * The transaction-count summary, plus — when any were skipped as duplicates —
+ * The transaction-count summary, plus (when any were skipped as duplicates)
  * a note naming the account those duplicates were matched against (POPS-2820):
  * dedup is scoped to the picked account, never the whole ledger.
  */
@@ -85,7 +85,7 @@ export const TransactionsSection = ({
     </p>
     {b.duplicates > 0 && (
       <p className="mt-2 text-xs text-muted-foreground">
-        Skipped as duplicates of a transaction already on {accountName} — matched against this
+        Skipped as duplicates of a transaction already on {accountName}: matched against this
         account only, not the rest of your ledger.
       </p>
     )}

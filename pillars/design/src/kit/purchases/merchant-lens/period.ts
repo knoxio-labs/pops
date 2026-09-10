@@ -9,7 +9,7 @@ export type YearSelection = `${number}`;
 
 /**
  * A union rather than `typeof ALL_TIME | string`, which collapses to `string`
- * and constrains nothing — `selection === ALL_TIME` then narrows the other
+ * and constrains nothing: `selection === ALL_TIME` then narrows the other
  * branch to `string`, so nothing downstream can rely on it being a year.
  */
 export type PeriodSelection = typeof ALL_TIME | YearSelection;
@@ -19,7 +19,7 @@ function isYear(value: string): value is YearSelection {
 }
 
 /**
- * Narrow an arbitrary string — today a `<select>` value — to a selection
+ * Narrow an arbitrary string (today a `<select>` value) to a selection
  * this view can act on. Anything unrecognised falls back to all time, which
  * shows *more* than was asked for rather than less: the opposite default
  * would let a bad value silently scope spend away.

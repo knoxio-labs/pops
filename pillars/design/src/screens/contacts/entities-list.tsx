@@ -24,7 +24,7 @@ export const meta: ScreenMeta = { title: 'Entities', order: 2, frame: 'web' };
 /**
  * Entity-owned fields only: this list is contacts' own CRUD
  * surface, so it renders what a single `entities` row fetch already has. No
- * column here reaches into finance or purchases — a usage count or a "last
+ * column here reaches into finance or purchases: a usage count or a "last
  * transaction" would mean one cross-pillar call per row, and that scales with
  * the list rather than with a page view. That kind of rollup belongs on the
  * details page, where it is one entity's worth of fetching, not a table's.
@@ -55,7 +55,7 @@ const abnColumn: ColumnDef<Entity> = {
   header: 'ABN',
   cell: ({ row }) => (
     <span className="text-sm font-mono">
-      {row.original.abn ?? <span className="text-muted-foreground">—</span>}
+      {row.original.abn ?? <span className="text-muted-foreground">No ABN</span>}
     </span>
   ),
 };
@@ -65,7 +65,8 @@ const aliasesColumn: ColumnDef<Entity> = {
   header: 'Aliases',
   cell: ({ row }) => {
     const aliases = row.original.aliases;
-    if (!aliases || aliases.length === 0) return <span className="text-muted-foreground">—</span>;
+    if (!aliases || aliases.length === 0)
+      return <span className="text-muted-foreground">No aliases</span>;
     return (
       <div className="flex flex-wrap gap-1">
         {aliases.slice(0, 2).map((alias) => (

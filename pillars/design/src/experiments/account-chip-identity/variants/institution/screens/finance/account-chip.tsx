@@ -182,7 +182,7 @@ export const states: ScreenStates = {
     <AccountChipSpecimen
       accounts={active
         .slice(0, 3)
-        .map((a) => ({ ...a, name: `${a.name} — joint offset transaction account` }))}
+        .map((a) => ({ ...a, name: `${a.name} (joint offset transaction account)` }))}
     />
   ),
 };

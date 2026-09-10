@@ -30,9 +30,9 @@ function NavItem({
 /**
  * The active app's page list. Permanent from `lg` up; below that the shell
  * shows it as an overlay on demand, which a static frame has no way to
- * trigger, so here it is simply absent — the same space the content gets.
+ * trigger, so here it is simply absent: the same space the content gets.
  *
- * The first item is every app's home — its dashboard, its landing page — so
+ * The first item is every app's home (its dashboard, its landing page), so
  * it stands apart from the pages under it rather than reading as one more
  * row the same weight as "Tag Rules": its own row, a size up, with a
  * hairline beneath it before the rest of the list starts.

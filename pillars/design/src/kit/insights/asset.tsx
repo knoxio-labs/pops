@@ -166,7 +166,7 @@ export const assetModules: InsightModules = {
               <Stat label="Last counted" value={countedOn} />
               <Stat
                 label="Moved"
-                value={drift === null ? '—' : formatBalance(drift, account.currency)}
+                value={drift === null ? 'Not yet known' : formatBalance(drift, account.currency)}
                 hint={first ? `since ${monthLabel(first.month)}` : undefined}
               />
             </div>

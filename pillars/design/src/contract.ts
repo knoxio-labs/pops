@@ -2,7 +2,7 @@
  * What a screen file exports. This is the whole contract between the design
  * surface (`src/screens`, `src/experiments`) and the playground: a default
  * component, a `meta`, and optionally a `states` map. Nothing is registered
- * anywhere — a file in the right place is discovered (see `registry/`).
+ * anywhere: a file in the right place is discovered (see `registry/`).
  */
 import type { ComponentType } from 'react';
 
@@ -23,7 +23,7 @@ export interface ScreenMeta {
   flowButtons?: boolean;
   /**
    * The product chrome this screen is designed for, applied when you navigate
-   * to it — so an iOS screen opens in the phone rather than in whatever frame
+   * to it, so an iOS screen opens in the phone rather than in whatever frame
    * the last screen left behind. It is a default, not a lock: change the frame
    * afterwards and the choice holds until you navigate somewhere that declares
    * its own. A screen that says nothing keeps the current frame.
@@ -32,7 +32,7 @@ export interface ScreenMeta {
 }
 
 /**
- * Named conditions of a screen — `empty`, `loading`, `error`, `row-selected` —
+ * Named conditions of a screen (`empty`, `loading`, `error`, `row-selected`),
  * each a thunk rendering the component under that condition. The default
  * render is the implicit `default` state and is never listed here.
  */

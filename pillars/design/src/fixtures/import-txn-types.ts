@@ -2,8 +2,8 @@ import type { StatusBadgeTone } from '@pops/ui';
 
 /**
  * Fictional rows for the import wizard's Process/Review steps. Shaped like
- * what those screens show — a matched/uncertain/failed/skipped bucket, entity
- * resolution provenance — not like the finance contract's
+ * what those screens show: a matched/uncertain/failed/skipped bucket, entity
+ * resolution provenance, not like the finance contract's
  * `ProcessedTransaction`. A design fixture owes nothing to the wire format
  * and must not import one.
  */
@@ -55,7 +55,7 @@ export interface ImportTxn {
   transactionType?: TransactionType;
   manuallyEdited?: boolean;
   bucket: ImportBucket;
-  /** Failed/skipped rows only — why the row did not reach `matched`. */
+  /** Failed/skipped rows only: why the row did not reach `matched`. */
   reason?: string;
   rawRow: string;
 }

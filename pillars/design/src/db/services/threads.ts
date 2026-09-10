@@ -114,7 +114,7 @@ export interface CreateThreadInput {
 }
 
 /**
- * Create a thread and its opening message in one transaction — a thread with
+ * Create a thread and its opening message in one transaction: a thread with
  * no message is a row the overlay renders as an empty bubble, so the two
  * inserts are never allowed to land apart.
  */

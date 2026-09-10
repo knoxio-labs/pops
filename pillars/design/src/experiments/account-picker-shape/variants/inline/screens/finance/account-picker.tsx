@@ -63,7 +63,7 @@ function AccountRow({
         <a href="#accounts" className="text-primary underline">
           Create one
         </a>{' '}
-        before importing — every transaction is filed against an account.
+        before importing: every transaction is filed against an account.
       </div>
     );
   }
@@ -128,7 +128,7 @@ function Surfaces({
   );
 }
 
-/** The picker as an inline row of choices — no popover, no search. */
+/** The picker as an inline row of choices: no popover, no search. */
 export function AccountPicker({
   accounts,
   selected,

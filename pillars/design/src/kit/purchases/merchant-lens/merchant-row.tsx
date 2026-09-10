@@ -170,13 +170,13 @@ function Disagreement({
 function disagreementText(agreement: OrderCountAgreement, shown: number, counted: number): string {
   switch (agreement) {
     case 'none':
-      return `The roll-up counted ${orderCountLabel(counted)} here, and the order index returned none. The two reads disagree — do not read either as complete.`;
+      return `The roll-up counted ${orderCountLabel(counted)} here, and the order index returned none. The two reads disagree: do not read either as complete.`;
     case 'capped':
       return `Showing the first ${shown} of the ${counted} orders in this total. The list is at the page limit, so the rest are past it and the list above is not the whole of the figures above it.`;
     case 'short':
-      return `Showing ${shown} orders, and the roll-up counted ${counted}. The list is not at the page limit, so the two reads disagree — do not read either as complete.`;
+      return `Showing ${shown} orders, and the roll-up counted ${counted}. The list is not at the page limit, so the two reads disagree: do not read either as complete.`;
     case 'over':
-      return `Showing ${shown} orders, and the roll-up counted ${counted}. The list holds more orders than the figures above were computed from — do not read either as complete.`;
+      return `Showing ${shown} orders, and the roll-up counted ${counted}. The list holds more orders than the figures above were computed from: do not read either as complete.`;
     case 'agrees':
       return '';
   }

@@ -121,7 +121,7 @@ function CurrencyEditDialog({
 function CurrencySubtitle({ currency }: { currency: Currency }) {
   return (
     <span className="flex items-center gap-1.5">
-      {currency.symbol || '—'} · {currency.decimals} decimals
+      {currency.symbol || 'No symbol'} · {currency.decimals} decimals
       <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px] capitalize">
         {currency.kind}
       </Badge>
@@ -133,7 +133,7 @@ function CurrencySubtitle({ currency }: { currency: Currency }) {
  * Currencies list as a settings section (POPS-2843): the same
  * `CRUDManagementSection` + row treatment as institutions, so the two lists
  * on this page read as one convention. Creation stays out of scope
- * (POPS-2810) — currencies are minted inline from the account form.
+ * (POPS-2810): currencies are minted inline from the account form.
  */
 export function CurrenciesSection({ initial }: { initial?: Currency[] }) {
   const [items, setItems] = useState<Currency[]>(initial ?? seedCurrencies);

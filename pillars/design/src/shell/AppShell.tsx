@@ -32,7 +32,7 @@ function useChromeMode(): [ThemeMode, () => void] {
   return [mode, () => setRaw(mode === 'dark' ? 'light' : 'dark')];
 }
 
-/** Sidebar, canvas and dock. Chrome only — the design surface lives in the frame. */
+/** Sidebar, canvas and dock. Chrome only: the design surface lives in the frame. */
 export function AppShell() {
   const [chromeMode, toggleChromeMode] = useChromeMode();
   const [sidebar, setSidebar] = useStoredString(SIDEBAR_KEY, 'open');

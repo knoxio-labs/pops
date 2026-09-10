@@ -17,7 +17,7 @@ export interface ExplainedSplit {
  * The explained / unexplained split of one accounting roll-up.
  *
  * `residualCents` is taken verbatim from the input and `explainedCents` is
- * its complement, rather than the other way round — the residual is the
+ * its complement, rather than the other way round: the residual is the
  * figure that must never drift, so it is the primary and never re-derived.
  */
 export function explainedSplit(accounting: SpendAccounting): ExplainedSplit {
@@ -38,7 +38,7 @@ export function explainedSplit(accounting: SpendAccounting): ExplainedSplit {
  *
  * Two cases would otherwise produce a confident falsehood. A residual of one
  * cent against a five-figure total rounds to `100%`, which reads as "nothing
- * is unexplained" while something is — so an unexplained bucket clamps the
+ * is unexplained" while something is, so an unexplained bucket clamps the
  * share to 99 however small it is. And a negative total, or a residual so
  * negative that more has been linked than was ever spent, is not a
  * part-of-whole at all; `null` renders as no percentage rather than as a

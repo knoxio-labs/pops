@@ -13,7 +13,7 @@ export const meta: ScreenMeta = { title: 'Dashboard', order: 0, frame: 'web' };
 /**
  * Pending imports sit between the tiles and the recent rows: above the
  * transactions because an unfinished import is why those rows are not
- * there yet, and absent entirely when there is nothing pending — a section
+ * there yet, and absent entirely when there is nothing pending: a section
  * that says "nothing to continue" every day is one nobody reads on the day
  * it says something.
  */

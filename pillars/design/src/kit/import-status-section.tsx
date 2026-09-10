@@ -60,15 +60,19 @@ export function ImportStatusSection({
         />
         <Stat
           label="Newest transaction"
-          value={status.newestTransactionDate ? day(status.newestTransactionDate) : '—'}
+          value={status.newestTransactionDate ? day(status.newestTransactionDate) : 'None yet'}
         />
         <Stat
           label="Covers"
-          value={status.span ? `${day(status.span.from)} – ${day(status.span.to)}` : '—'}
+          value={status.span ? `${day(status.span.from)} – ${day(status.span.to)}` : 'Not recorded'}
         />
         <Stat
           label="Cadence"
-          value={status.cadenceDays === undefined ? '—' : `Every ${status.cadenceDays} days`}
+          value={
+            status.cadenceDays === undefined
+              ? 'Not yet measured'
+              : `Every ${status.cadenceDays} days`
+          }
           hint={
             status.cadenceDays === undefined
               ? 'Measured after three batches'

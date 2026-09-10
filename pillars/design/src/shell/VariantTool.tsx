@@ -13,7 +13,7 @@ function trailingOf(option: DockOption): string | undefined {
 }
 
 /**
- * Dock tool: which design is on the canvas — Main, or a variant of the
+ * Dock tool: which design is on the canvas: Main, or a variant of the
  * experiment attached to this screen. Flipping preserves step and state
  * where the target realises them. Hidden when no experiment applies here.
  */

@@ -74,12 +74,12 @@ function NoAccountsNotice() {
       <a href="#accounts" className="text-primary underline">
         Create one
       </a>{' '}
-      before importing — every transaction is filed against an account.
+      before importing: every transaction is filed against an account.
     </div>
   );
 }
 
-/** The picker as a searchable popover — the `EntitySelect` shape. */
+/** The picker as a searchable popover, the `EntitySelect` shape. */
 export function AccountPicker({
   accounts,
   selectedId,

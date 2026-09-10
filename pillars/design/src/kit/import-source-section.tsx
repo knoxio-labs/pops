@@ -26,7 +26,7 @@ const CONNECTION: Record<
 
 /**
  * An `api` source's connection, said in the terms the operator can act on.
- * The token itself never appears here — it is a docker secret — so the one
+ * The token itself never appears here (it is a docker secret), so the one
  * thing worth showing is the NAME the pillar expects it under, which is what
  * a missing-token state needs the reader to go and set.
  */

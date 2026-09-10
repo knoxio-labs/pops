@@ -12,7 +12,7 @@ export function fail(res: Response, status: number, error: string): void {
  * A non-empty string from an untrusted body field, or `undefined`.
  *
  * Trimmed before the emptiness check so a body of spaces is rejected the same
- * as an absent one — otherwise a comment could be a blank bubble nobody can
+ * as an absent one, otherwise a comment could be a blank bubble nobody can
  * read or act on.
  */
 export function str(value: unknown): string | undefined {

@@ -20,7 +20,7 @@ export function AddAccountHatch() {
       <Button variant="link" className="h-auto p-0 text-xs" prefix={<Plus className="h-3 w-3" />}>
         Add the account
       </Button>{' '}
-      — you come straight back here with it selected, and the file you already have stays chosen.
+      and you come straight back here with it selected, and the file you already have stays chosen.
     </p>
   );
 }

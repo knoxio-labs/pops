@@ -15,7 +15,7 @@ export function isThreadStatus(value: unknown): value is ThreadStatus {
 }
 
 /**
- * Whether a status stamps `resolved_at`. Only `open` clears it — reopening a
+ * Whether a status stamps `resolved_at`. Only `open` clears it: reopening a
  * thread has to leave no trace of the resolution it undid, or a later "when
  * was this closed" reads the wrong timestamp.
  */

@@ -23,7 +23,7 @@ interface ViewportFrameProps {
   comments: CommentMode;
   onRouteChange: (route: string) => void;
   onResize: (w: number, h: number) => void;
-  /** A press landed on the surface — see `FrameToShell`'s `pointerdown`. */
+  /** A press landed on the surface: see `FrameToShell`'s `pointerdown`. */
   onSurfacePointerDown: () => void;
 }
 
@@ -76,7 +76,7 @@ function SizedFrame({
 }
 
 /**
- * Hosts a surface in a same-origin iframe. Always — even at Full — so the
+ * Hosts a surface in a same-origin iframe. Always, even at Full, so the
  * canvas theme is a document of its own and never leaks into the chrome or
  * out of it, and so responsive utilities respond exactly as on the device
  * at a simulated size. The frame is mounted once per document and navigates

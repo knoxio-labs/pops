@@ -15,7 +15,7 @@ export interface LiveCheckpoint {
 /**
  * The one thing a live import commits that a file never did: the balance
  * the provider reported with its newest row. It is recorded as an
- * `import` checkpoint at commit, not on arrival — a checkpoint dated
+ * `import` checkpoint at commit, not on arrival: a checkpoint dated
  * before rows that are not in the ledger yet would flag every day until
  * they were. The checkpoints page is where any disagreement lives after.
  */

@@ -13,7 +13,7 @@ import { Screen } from './shell/Screen';
 const root = document.querySelector('#root');
 if (!root) throw new Error('Root element not found');
 
-/** `/design` in production and dev alike — see `base` in vite.config.ts. */
+/** `/design` in production and dev alike: see `base` in vite.config.ts. */
 const basename = import.meta.env.BASE_URL.replace(/\/$/u, '');
 
 createRoot(root).render(

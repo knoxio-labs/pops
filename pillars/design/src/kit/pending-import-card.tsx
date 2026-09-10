@@ -23,8 +23,8 @@ function accountById(id: string) {
  * One pending import, as every entry point shows it: the dashboard, the
  * wizard's first step and the pending list all compose this card, so the
  * three never describe the same draft in different words. The state decides
- * the one action on offer — a draft resumes, a live import opens, an open
- * one is taken over, an unusable one can only be discarded — and the card
+ * the one action on offer (a draft resumes, a live import opens, an open
+ * one is taken over, an unusable one can only be discarded), and the card
  * says what the wizard will do before it is clicked, because a draft is
  * three weeks of someone's decisions and "Resume" alone does not say so.
  */
@@ -42,7 +42,7 @@ const STALE_OPEN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * An open import whose tab has not checked in for a day is almost always a
- * tab that closed without saying so — a crash, a killed browser. It is
+ * tab that closed without saying so (a crash, a killed browser). It is
  * still "open" on the server, but the card should stop pretending someone
  * is in it.
  */
@@ -71,7 +71,7 @@ function openLine(item: PendingImport, now: string): string {
   const seen = item.lastSeenAt ?? item.savedAt;
   const at = item.step ?? 'the start';
   return openAge(item, now) === 'stale'
-    ? `Last seen ${daysAgo(seen, now)}, at ${at}. The tab probably closed without saying so — taking over loses nothing.`
+    ? `Last seen ${daysAgo(seen, now)}, at ${at}. The tab probably closed without saying so; taking over loses nothing.`
     : `Open in another tab since ${when(seen)}, at ${at}.`;
 }
 

@@ -33,7 +33,7 @@ interface QueueListProps {
   entries: QueueEntry[];
   cursor: QueueCursor;
   onDecide: (entry: QueueEntry, kind: DecisionKind) => void;
-  /** Skip the focus-on-mount effect — the states view wants a fixed selection. */
+  /** Skip the focus-on-mount effect: the states view wants a fixed selection. */
   autoFocus?: boolean;
 }
 

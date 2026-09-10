@@ -5,7 +5,7 @@
  * carries the frame, so a frame decided after mount would load the surface
  * bare and only then tell it to grow a phone around itself.
  *
- * Three rules, in order. What a surface declares wins **on arrival** — and
+ * Three rules, in order. What a surface declares wins **on arrival**, and
  * arriving again, after going anywhere else, is another arrival, so a frame
  * picked by hand does not follow a screen around for the rest of the session.
  * That hand-picked frame wins for as long as you stay put. A surface that
@@ -33,8 +33,8 @@ export function useCanvasFrame(
   const [surfaceAtChoice, setSurfaceAtChoice] = useState<string | null>(null);
   const surface = surfaceKeyOf(address);
 
-  // Adjusting state during render — React re-runs this component before
-  // painting, which is the point: a frame resolved in an effect would already
+  // Adjusting state during render: React re-runs this component before
+  // painting, which is the point. A frame resolved in an effect would already
   // have been handed to the iframe as its `src`.
   if (surfaceAtChoice !== null && surfaceAtChoice !== surface) {
     setSurfaceAtChoice(null);

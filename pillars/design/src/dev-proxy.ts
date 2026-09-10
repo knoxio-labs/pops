@@ -24,7 +24,7 @@ export interface DesignApiProxyConfig {
  * all; an explicitly-set `POPS_DESIGN_FEEDBACK_URL` (a deployed API) always
  * wins over that default. The Cloudflare Access service-token headers are
  * attached whenever both halves are configured, which in practice only
- * happens when pointed at a deployed API — the local API trusts any caller.
+ * happens when pointed at a deployed API: the local API trusts any caller.
  */
 export function resolveDesignApiProxyConfig(env: DesignApiProxyEnv): DesignApiProxyConfig {
   const explicit = env.POPS_DESIGN_FEEDBACK_URL;

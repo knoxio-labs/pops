@@ -103,7 +103,7 @@ function NeedsReviewPanel({ outcome }: { outcome: NeedsReviewOutcome }) {
   return (
     <OutcomeSection tone="attention" title="Read, but it does not add up">
       <p className="text-sm">
-        Nothing was recorded. Below is what the model read — compare it against the receipt you
+        Nothing was recorded. Below is what the model read: compare it against the receipt you
         uploaded and settle which of the two is wrong.
       </p>
 

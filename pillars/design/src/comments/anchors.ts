@@ -3,7 +3,7 @@
  * element.
  *
  * The canvas is an iframe, so every function here takes the document to work
- * in rather than reaching for the global one — the overlay renders in the
+ * in rather than reaching for the global one: the overlay renders in the
  * shell's document and resolves against the frame's.
  */
 import type { Anchor } from './anchors-types';
@@ -98,7 +98,7 @@ export function parseAnchor(thread: { anchorKind: string; anchor: string }): Anc
  * Pick one element for a stored anchor.
  *
  * A repeated component shares one source stamp across every instance, so a
- * bare `querySelector` collapses them onto the first — every comment on a
+ * bare `querySelector` collapses them onto the first: every comment on a
  * list row would stack on row one. When several match, the one whose excerpt
  * matches what was on screen at comment time wins.
  */

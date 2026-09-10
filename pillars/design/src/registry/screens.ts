@@ -16,7 +16,7 @@ function parseStates(
   if (raw === undefined) return undefined;
   const parsed = statesSchema.safeParse(raw);
   if (!parsed.success) {
-    errors.push(`${path}: invalid \`states\` export — must be a map of name → render thunk`);
+    errors.push(`${path}: invalid \`states\` export, must be a map of name → render thunk`);
     return undefined;
   }
   return Object.keys(parsed.data).length > 0 ? parsed.data : undefined;
@@ -94,7 +94,7 @@ function collectFlowMarkers(
     const dir = segments.slice(0, -1);
     const path = srcRelative(globPath);
     if (dir.length < 2) {
-      errors.push(`${path}: a flow lives under an area — <area>/<flow>/flow.yaml`);
+      errors.push(`${path}: a flow lives under an area: <area>/<flow>/flow.yaml`);
       continue;
     }
     const parsed = parseYamlFile(raw, flowYamlSchema, path, errors);
@@ -103,7 +103,7 @@ function collectFlowMarkers(
   return flows;
 }
 
-/** The flow folder a path sits strictly inside, longest first — null when it sits in none. */
+/** The flow folder a path sits strictly inside, longest first: null when it sits in none. */
 function flowAncestorOf(dir: string, flows: Map<string, FlowMarker>): string | null {
   const segments = dir.split('/');
   for (let depth = segments.length - 1; depth >= 2; depth -= 1) {
@@ -136,7 +136,7 @@ function sortModules(
     if (!segments || segments.some((s) => s === '')) continue;
     const path = srcRelative(globPath);
     if (segments.length < 2) {
-      errors.push(`${path}: a screen lives under an area — ${prefix}<area>/<screen>.tsx`);
+      errors.push(`${path}: a screen lives under an area: ${prefix}<area>/<screen>.tsx`);
       continue;
     }
     const dir = segments.slice(0, -1).join('/');
@@ -146,7 +146,7 @@ function sortModules(
       continue;
     }
     if (flowAncestorOf(dir, flows)) {
-      errors.push(`${path}: a flow is one level deep — a step cannot be a folder`);
+      errors.push(`${path}: a flow is one level deep, a step cannot be a folder`);
       continue;
     }
     const leaf = parseScreenModule(mod, segments, path, errors);
@@ -164,12 +164,12 @@ function buildFlows(
   const entries: ScreenEntry[] = [];
   for (const [id, marker] of flows) {
     if (flowAncestorOf(id, flows)) {
-      errors.push(`${prefix}${id}/flow.yaml: a flow is one level deep — a step cannot be a flow`);
+      errors.push(`${prefix}${id}/flow.yaml: a flow is one level deep, a step cannot be a flow`);
       continue;
     }
     const steps = stepsByFlow.get(id);
     if (!steps || steps.length === 0) {
-      errors.push(`${prefix}${id}/flow.yaml: a flow with no steps — add a step, or drop the file`);
+      errors.push(`${prefix}${id}/flow.yaml: a flow with no steps, add a step, or drop the file`);
       continue;
     }
     entries.push({
@@ -185,8 +185,8 @@ function buildFlows(
 }
 
 /**
- * One id names one screen. It may not be claimed twice — a file and a flow
- * folder of the same name — nor be both a screen and a folder others sit in:
+ * One id names one screen. It may not be claimed twice (a file and a flow
+ * folder of the same name), nor be both a screen and a folder others sit in:
  * `finance/accounts` cannot be a file and the group holding
  * `finance/accounts/*` at once.
  */
@@ -195,7 +195,7 @@ function reportPathCollisions(entries: ScreenEntry[], prefix: string, errors: st
   const seen = new Set<string>();
   for (const entry of entries) {
     if (seen.has(entry.id)) {
-      errors.push(`${prefix}${entry.id}: screen id is both a file and a flow folder — choose one`);
+      errors.push(`${prefix}${entry.id}: screen id is both a file and a flow folder, choose one`);
     }
     seen.add(entry.id);
   }
@@ -204,7 +204,7 @@ function reportPathCollisions(entries: ScreenEntry[], prefix: string, errors: st
     for (let depth = 2; depth <= parents.length; depth += 1) {
       const parent = parents.slice(0, depth).join('/');
       if (ids.has(parent)) {
-        errors.push(`${prefix}${parent}: screen id is both a file and a folder — choose one`);
+        errors.push(`${prefix}${parent}: screen id is both a file and a folder, choose one`);
       }
     }
   }
@@ -213,7 +213,7 @@ function reportPathCollisions(entries: ScreenEntry[], prefix: string, errors: st
 export interface CollectScreensArgs {
   /** Every `<prefix><path…>.tsx` module, at any depth. */
   modules: Modules;
-  /** Every `<prefix><path…>/flow.yaml`, raw — the marker that makes a folder a flow. */
+  /** Every `<prefix><path…>/flow.yaml`, raw: the marker that makes a folder a flow. */
   flowMarkers: Record<string, string>;
   /** `src`-relative directory the screens live under, with trailing slash. */
   prefix: string;
@@ -222,7 +222,7 @@ export interface CollectScreensArgs {
 
 /**
  * Discover the screens under `prefix`. A `.tsx` file is a screen at its own
- * path; the folders above it nest the sidebar and nothing else — unless a
+ * path; the folders above it nest the sidebar and nothing else, unless a
  * folder declares itself a flow with a `flow.yaml`, in which case the files in
  * it are that flow's ordered steps. Every violation is collected, never thrown.
  */

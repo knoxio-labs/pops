@@ -51,8 +51,8 @@ export interface CounterpartySelectProps {
 
 /**
  * The account's counterparty, labelled and sourced by the kind that owns it.
- * What a selection means beyond setting the id — a person's name becoming the
- * account's — is the caller's rule, not this picker's.
+ * What a selection means beyond setting the id (a person's name becoming the
+ * account's) is the caller's rule, not this picker's.
  */
 export function CounterpartySelect({
   mode,
@@ -129,7 +129,7 @@ function IconButton({
 }
 
 /**
- * A secret an account holds for the user — a gift card's number, its PIN.
+ * A secret an account holds for the user: a gift card's number, its PIN.
  * Masked until revealed, and copyable, because a lost card is exactly when the
  * stored value has to be readable. The value is encrypted at rest and
  * decrypted only on an explicit reveal; which key does that is a backend

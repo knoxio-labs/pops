@@ -10,7 +10,7 @@ import type { DictionaryEdit, DictionaryFilterState, EditOutcome } from './types
 /**
  * The proposal pass's own lifecycle, separate from the dictionary it acts
  * on: whether one is running, what the last one reported, and whether it
- * failed. `outcome` and `error` are not mutually cleared on a new run — the
+ * failed. `outcome` and `error` are not mutually cleared on a new run: the
  * caller decides what to show while `isPending` is true.
  */
 export interface PassState {
@@ -23,14 +23,14 @@ const IDLE_PASS: PassState = { isPending: false, outcome: null, error: null };
 
 /**
  * Every piece of starting state `products.tsx`'s `states` map can seed, so a
- * design state can render a condition — a pass mid-run, an edit in flight, a
- * status line already showing — with no interaction required to reach it.
+ * design state can render a condition (a pass mid-run, an edit in flight, a
+ * status line already showing) with no interaction required to reach it.
  */
 export interface UseProductDictionaryPageOptions {
   initialFilters?: DictionaryFilterState;
   initialPass?: PassState;
   initialEditOutcome?: EditOutcome | null;
-  /** Seeds every edit control as mid-write — a design state only; nothing in this hook ever flips it on its own. */
+  /** Seeds every edit control as mid-write: a design state only; nothing in this hook ever flips it on its own. */
   initialIsEditPending?: boolean;
 }
 

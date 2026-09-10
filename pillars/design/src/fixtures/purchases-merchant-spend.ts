@@ -3,7 +3,7 @@ import type { PurchaseAccounting } from '@/fixtures/purchases-vocabulary';
 /**
  * Fictional merchant roll-ups for the purchases merchant lens screen. Shaped
  * like the `/analytics/merchant-spend` and `/purchases` responses, not
- * imported from them — a design fixture owes nothing to the wire format.
+ * imported from them: a design fixture owes nothing to the wire format.
  *
  * Two currencies are in play (AUD, USD) so the currency grouping is visible,
  * and one merchant in each is unattributed so the residual is never zero
@@ -104,7 +104,7 @@ export const woolworths: MerchantSpend = {
   accounting: accounting({ totalCents: 45_230, matchedCents: 45_230 }),
 };
 
-/** The row carrying every figure at once — matched, awaiting, refunded and a residual. */
+/** The row carrying every figure at once: matched, awaiting, refunded and a residual. */
 export const bunnings: MerchantSpend = {
   merchant: entity('bunnings', 'Bunnings Warehouse Alexandria'),
   currency: 'AUD',
@@ -157,7 +157,7 @@ export const audUnattributed: MerchantSpend = {
 };
 
 /**
- * An entity the roll-up resolved but that carries no name of its own — the
+ * An entity the roll-up resolved but that carries no name of its own: the
  * case merchantLabel falls back to the entity id for, distinctly from the
  * unattributed group below which has no entity at all.
  */
@@ -172,7 +172,7 @@ export const unnamedEntityMerchant: MerchantSpend = {
  * An entity and a name-grouped merchant that happen to render the same
  * label text. `merchantKey` (below) prefixes each key with its resolution,
  * so these two never collapse into one row even though their labels are
- * indistinguishable on screen — the invariant the original
+ * indistinguishable on screen: the invariant the original
  * `merchantOrdersQuery` enforced by sending `merchantEntityId` for one and
  * `merchantEntityName` for the other, never the same parameter for both.
  */
@@ -183,7 +183,7 @@ export const generalStoreEntity: MerchantSpend = {
   accounting: accounting({ totalCents: 6_000, matchedCents: 6_000 }),
 };
 
-/** The name-grouped counterpart to {@link generalStoreEntity} — same label, different key. */
+/** The name-grouped counterpart to {@link generalStoreEntity}, same label, different key. */
 export const generalStoreName: MerchantSpend = {
   merchant: named('General Store'),
   currency: 'EUR',
@@ -199,7 +199,7 @@ export const amazonUs: MerchantSpend = {
   accounting: accounting({ totalCents: 21_999, matchedCents: 15_000, awaitingImportCents: 4_000 }),
 };
 
-/** The unattributed bucket of the second currency — the key collision to avoid. */
+/** The unattributed bucket of the second currency: the key collision to avoid. */
 export const usdUnattributed: MerchantSpend = {
   merchant: unattributed,
   currency: 'USD',
@@ -208,7 +208,7 @@ export const usdUnattributed: MerchantSpend = {
 };
 
 /**
- * Identifies a merchant grouping within one currency section — used as the
+ * Identifies a merchant grouping within one currency section, used as the
  * React list key and, combined with currency, as the fixture order lookup
  * below. Two unattributed identities in different currencies must not
  * collide, which is why the order lookup keys on the currency as well.
@@ -245,7 +245,7 @@ export const merchantSpendGroups: CurrencyGroup[] = [
   { currency: 'USD', total: usdTotal, merchants: usdMerchants },
 ];
 
-/** Only AUD is in play — the single-currency state. */
+/** Only AUD is in play: the single-currency state. */
 export const merchantSpendGroupsSingleCurrency: CurrencyGroup[] = [
   { currency: 'AUD', total: audTotal, merchants: audMerchants },
 ];
@@ -254,7 +254,7 @@ export const merchantSpendGroupsSingleCurrency: CurrencyGroup[] = [
 export const merchantSpendGroupsEmpty: CurrencyGroup[] = [];
 
 /**
- * A currency the roll-up reported merchants for but no total — the
+ * A currency the roll-up reported merchants for but no total: the
  * `CurrencyGroupSection` branch that shows the merchants anyway rather than
  * dropping a currency the roll-up otherwise has something to say about.
  */
@@ -262,7 +262,7 @@ export const merchantSpendGroupsMissingTotal: CurrencyGroup[] = [
   { currency: 'AUD', total: null, merchants: [woolworths, bunnings] },
 ];
 
-/** An entity with no name of its own — triggers merchantLabel's id fallback. */
+/** An entity with no name of its own: triggers merchantLabel's id fallback. */
 export const merchantSpendGroupsUnnamedEntity: CurrencyGroup[] = [
   {
     currency: 'EUR',

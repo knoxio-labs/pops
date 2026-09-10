@@ -30,7 +30,9 @@ function CheckpointRow({ account, checkpoint }: { account: Account; checkpoint: 
         <TableCell>
           <CheckpointSourceBadge source={checkpoint.source} />
         </TableCell>
-        <TableCell className="text-sm text-muted-foreground">{checkpoint.note ?? '—'}</TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {checkpoint.note ?? 'No note'}
+        </TableCell>
         <TableCell
           className={cn('text-right text-sm font-medium tabular-nums', balanceTone(account))}
         >
@@ -57,8 +59,8 @@ function CheckpointRow({ account, checkpoint }: { account: Account; checkpoint: 
                 . Off by{' '}
                 <span className="font-medium tabular-nums">
                   {formatBalance(Math.abs(checkpoint.balance - expectedBalance), account.currency)}
-                </span>{' '}
-                — a transaction may be missing, duplicated, or misdated.
+                </span>
+                : a transaction may be missing, duplicated, or misdated.
               </span>
             </div>
           </TableCell>
@@ -70,7 +72,7 @@ function CheckpointRow({ account, checkpoint }: { account: Account; checkpoint: 
 
 /**
  * Every checkpoint an account has taken, newest first. Empty renders nothing
- * rather than a placeholder row — an account with no checkpoints yet is the
+ * rather than a placeholder row: an account with no checkpoints yet is the
  * common case for a brand new one, not an error.
  */
 export function CheckpointHistory({ account }: { account: Account }) {

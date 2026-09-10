@@ -3,7 +3,7 @@
  *
  * A screen reviewed on its own answers "does this layout work"; a screen
  * reviewed inside the chrome it will ship in answers "does this layout work
- * *here*" — with a rail eating 64px, a top bar eating 56, and the page nav
+ * *here*", with a rail eating 64px, a top bar eating 56, and the page nav
  * appearing and vanishing at the breakpoints the shell actually uses. Both
  * questions are worth asking, so the frame is an axis rather than a setting.
  *

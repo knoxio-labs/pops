@@ -29,7 +29,7 @@ export function AvatarPreview({
   );
 }
 
-/** A square image field: upload, replace, or remove — used for the avatar. */
+/** A square image field: upload, replace, or remove, used for the avatar. */
 export function ImageField({
   label,
   image,
@@ -115,7 +115,7 @@ function UploadControl({
 }
 
 /**
- * The colour is never picked from a palette by hand — it's assigned at
+ * The colour is never picked from a palette by hand: it's assigned at
  * random when the entity is created, so this field only shows what landed
  * and offers a reroll, rather than a swatch grid.
  */
@@ -147,7 +147,7 @@ export function ColourField({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Assigned automatically from a fixed palette — reroll if it clashes.
+        Assigned automatically from a fixed palette; reroll if it clashes.
       </p>
     </div>
   );

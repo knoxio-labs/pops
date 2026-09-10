@@ -76,7 +76,7 @@ function LinkOffsetAccountForm({
 }
 
 /**
- * Offset-link management for a `loan`-kind account (POPS-2863) — the piece
+ * Offset-link management for a `loan`-kind account (POPS-2863): the piece
  * `LoanTermsSection` deliberately left out of POPS-2846. The picker excludes
  * the loan account itself: a loan cannot be its own offset, enforced again
  * server-side since any other caller of `linkOffsetAccount` could otherwise

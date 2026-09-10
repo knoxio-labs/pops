@@ -3,8 +3,8 @@
  * the frame reports back, and the `i` shortcut that toggles it.
  *
  * The shell owns the boolean rather than the frame because the dock button
- * lives out here, and a frame reload must not silently turn comment mode off
- * — `ViewportFrame` re-sends it on every `ready`.
+ * lives out here, and a frame reload must not silently turn comment mode off:
+ * `ViewportFrame` re-sends it on every `ready`.
  */
 import { useCallback, useEffect, useState } from 'react';
 

@@ -4,8 +4,8 @@ import { entityColorById } from './entity-colors';
  * Fictional `entities` rows for the contacts entity screens: the details
  * page and the entity-owned management list. `avatar`, `poster` and `colour`
  * are the three fields the model is gaining; all three are optional, so the
- * set below deliberately covers every combination — full identity, colour
- * only, and nothing at all — rather than showing only the best-dressed
+ * set below deliberately covers every combination (full identity, colour
+ * only, and nothing at all) rather than showing only the best-dressed
  * entity.
  */
 export type EntityType =
@@ -28,7 +28,7 @@ export interface Entity {
   notes?: string;
   /** A small square mark. Falls back to initials on the entity's colour. */
   avatar?: string;
-  /** A wide banner image. Absent is the common case — most entities never get one. */
+  /** A wide banner image. Absent is the common case: most entities never get one. */
   poster?: string;
   /** An `ENTITY_COLORS` id, assigned at random when the entity is created. */
   colourId?: string;
@@ -119,7 +119,7 @@ export const entities: Entity[] = [
     id: 'e6',
     name: 'Unlabelled Merchant Pty Ltd',
     type: 'company',
-    notes: 'Matched by ABN only — no logo or alias has been added yet.',
+    notes: 'Matched by ABN only: no logo or alias has been added yet.',
   },
   {
     id: 'e7',

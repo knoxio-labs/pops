@@ -25,8 +25,8 @@ function monthlyBurnRate(history: BalancePoint[]): number {
 }
 
 /**
- * Projects the trailing burn rate — the average monthly decline across the
- * 12-month history — forward at a constant pace to estimate whether the
+ * Projects the trailing burn rate (the average monthly decline across the
+ * 12-month history) forward at a constant pace to estimate whether the
  * remaining value clears before the card expires. Null when there is no
  * expiry to compare against.
  */
@@ -77,7 +77,7 @@ function GiftCardBody({ account, insight }: { account: Account; insight: Account
 
 /**
  * The one reading a sign cannot carry on its own: which way the debt runs.
- * The amount is not repeated here — the headline balance above already states
+ * The amount is not repeated here: the headline balance above already states
  * it, signed.
  */
 function personSentence(who: string, owed: number): string {
@@ -119,7 +119,7 @@ function PersonBody({ account, insight }: { account: Account; insight: AccountIn
 
 /**
  * Full points balance × its per-point indicative worth, in minor units of
- * the reference currency. Never sum this with a real balance — it is a
+ * the reference currency. Never sum this with a real balance: it is a
  * separate, softer number that only says roughly what the points could be
  * worth if redeemed today.
  */

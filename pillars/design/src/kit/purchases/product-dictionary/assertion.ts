@@ -19,7 +19,7 @@ export function productIsNamed(product: DictionaryProduct): boolean {
 
 /**
  * True where forgetting this one wording would take a human-named product
- * with it — the last wording reaching a named product holds the name up, and
+ * with it: the last wording reaching a named product holds the name up, and
  * a product left with none is deleted in the same write.
  */
 export function forgettingEndsNamedProduct(

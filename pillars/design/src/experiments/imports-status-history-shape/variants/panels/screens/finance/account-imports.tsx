@@ -16,7 +16,7 @@ export const meta: ScreenMeta = { title: 'Account imports', order: 7, frame: 'we
 
 /**
  * Variant `panels`: the same four sections as main, but Source and Status
- * share a row so the page is two bands — the standing facts (how it is fed,
+ * share a row so the page is two bands: the standing facts (how it is fed,
  * how fresh it is) above the fold, and the history as a full-width ledger
  * below. The bet is that a reader checks the two panels against each other
  * more often than they scroll the history, so the panels should be visible
@@ -39,7 +39,7 @@ function AccountImports({
       <PageHeader
         backHref={`#/accounts/${account.id}`}
         icon={<AccountAvatar account={account} size="md" />}
-        title={`Imports — ${account.name}`}
+        title={`Imports: ${account.name}`}
         description="How this account gets its transactions and when it last did, then every batch that fed it."
         actions={<ImportActions account={account} config={config} activity={activity} />}
       />

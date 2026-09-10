@@ -43,8 +43,7 @@ function FormatSection({ account }: { account?: Account }) {
   if (!account) {
     return (
       <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-        Pick an account first — the formats on offer are the ones that account’s institution
-        exports.
+        Pick an account first: the formats on offer are the ones that account’s institution exports.
       </p>
     );
   }

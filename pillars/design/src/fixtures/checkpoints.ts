@@ -3,7 +3,7 @@
  * checkpoint is a known-good balance at a point in time; the account's balance
  * is otherwise always the sum of its transactions. `expectedBalance` is set
  * only when the checkpoint disagreed with what the ledger predicted for that
- * date — the gap this epic exists to catch — and is absent everywhere else,
+ * date (the gap this epic exists to catch) and is absent everywhere else,
  * which is the common case.
  */
 export type CheckpointSource = 'manual' | 'import' | 'statement';

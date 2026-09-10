@@ -164,7 +164,7 @@ function useFrameMessageHandler(
  * chrome: reload on route, message on the rest.
  *
  * Comment mode is re-sent on every `ready` alongside the theme, because a
- * route change reloads the frame document — without it, navigating with the
+ * route change reloads the frame document: without it, navigating with the
  * overlay open would leave the dock lit and the surface inert.
  */
 export function useFrameSync(

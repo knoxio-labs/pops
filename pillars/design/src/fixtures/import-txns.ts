@@ -105,7 +105,7 @@ export const importTxns: ImportTxn[] = [
     account: 'Amex',
     entity: { name: 'Amazon', matchType: 'ai', confidence: 0.54 },
     bucket: 'uncertain',
-    reason: 'Low-confidence AI guess — marketplace sellers vary too much to trust unreviewed.',
+    reason: 'Low-confidence AI guess: marketplace sellers vary too much to trust unreviewed.',
     rawRow: raw({ Date: '26/08/2026', Description: 'AMAZON AU MARKETPLACE', Amount: '-67.99' }),
   },
   {
@@ -115,7 +115,7 @@ export const importTxns: ImportTxn[] = [
     amount: -45.0,
     account: 'Amex',
     bucket: 'uncertain',
-    reason: 'No entity resolved at all — nothing in the ladder recognized this merchant.',
+    reason: 'No entity resolved at all: nothing in the ladder recognized this merchant.',
     rawRow: raw({ Date: '23/08/2026', Description: 'SP * MYSTERY MERCHANT XY', Amount: '-45.00' }),
   },
   {
@@ -125,7 +125,7 @@ export const importTxns: ImportTxn[] = [
     amount: -15.2,
     account: 'Amex',
     bucket: 'failed',
-    reason: 'Description column was blank after parsing — nothing to match against.',
+    reason: 'Description column was blank after parsing: nothing to match against.',
     rawRow: raw({ Date: '22/08/2026', Description: '', Amount: '-15.20' }),
   },
   {
@@ -147,7 +147,7 @@ export const importTxns: ImportTxn[] = [
     entity: { name: 'Woolworths', matchType: 'exact' },
     transactionType: 'purchase',
     bucket: 'skipped',
-    reason: 'Already on this account — checksum matches a transaction committed 21 Aug 2026.',
+    reason: 'Already on this account: checksum matches a transaction committed 21 Aug 2026.',
     rawRow: raw({ Date: '21/08/2026', Description: 'WOOLWORTHS 1234 NEWTOWN', Amount: '-84.32' }),
   },
   {
@@ -157,7 +157,7 @@ export const importTxns: ImportTxn[] = [
     amount: 22.0,
     account: 'Amex',
     bucket: 'matched',
-    reason: 'A credit with no transaction type set — dropped at commit until typed.',
+    reason: 'A credit with no transaction type set: dropped at commit until typed.',
     rawRow: raw({ Date: '20/08/2026', Description: 'REFUND UNKNOWN SENDER', Amount: '22.00' }),
   },
 ];

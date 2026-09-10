@@ -18,8 +18,8 @@ export interface ReceiptStaging {
 /**
  * The parts of one receipt, as they are gathered on this canvas.
  *
- * The playground stages real chosen files — so the drop zone, the reorder
- * controls and the problem list all behave — but never reads their bytes:
+ * The playground stages real chosen files, so the drop zone, the reorder
+ * controls and the problem list all behave, but never reads their bytes:
  * nothing here is submitted anywhere, so only what {@link StagedPart} renders
  * (name, media type, size) is kept.
  */
@@ -41,7 +41,7 @@ export function useReceiptStaging(initial: Staging = EMPTY_STAGING): ReceiptStag
   }, []);
 
   // The drop zone reports each refused file before it hands over the ones it
-  // accepted, and folding a batch in replaces the problems wholesale — so a
+  // accepted, and folding a batch in replaces the problems wholesale, so a
   // refusal applied on the spot is erased by the accepted file arriving
   // beside it. Buffering to the end of the task puts it back on top of the
   // batch's own problems instead of under them.

@@ -47,12 +47,12 @@ export function FrameShell() {
       if (data.kind === 'comments') setCommentsActive(data.active);
       if (data.kind === 'frame') setFrame(data.frame);
     };
-    // Capture, so it reports the press whatever the surface does with it —
+    // Capture, so it reports the press whatever the surface does with it,
     // including a handler that stops propagation. The shell uses it to
     // dismiss its own popovers, which cannot see a click inside this frame.
     const onPointerDown = () => post({ kind: 'pointerdown' });
-    // The surface is where focus lands the moment the user clicks it — which
-    // is exactly the moment before they want to comment — so `i` and `Escape`
+    // The surface is where focus lands the moment the user clicks it, which
+    // is exactly the moment before they want to comment, so `i` and `Escape`
     // must work from here too. The shell's own listener never fires once
     // focus is inside this document.
     const onKeyDown = (event: KeyboardEvent) => {

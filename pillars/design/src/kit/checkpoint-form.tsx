@@ -18,7 +18,7 @@ import {
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
- * Recording what's true right now, not editing what happened before —
+ * Recording what's true right now, not editing what happened before:
  * checkpoints are append-only, so this dialog has no counterpart that loads
  * an existing one to change it. Source is never a field: anything typed here
  * is a manual checkpoint by definition, the only kind a person can create by

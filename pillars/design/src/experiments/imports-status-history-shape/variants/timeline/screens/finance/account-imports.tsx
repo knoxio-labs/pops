@@ -128,7 +128,7 @@ function AccountImports({
       <PageHeader
         backHref={`#/accounts/${account.id}`}
         icon={<AccountAvatar account={account} size="md" />}
-        title={`Imports — ${account.name}`}
+        title={`Imports: ${account.name}`}
         description="What feeds this account, and everything it has done, newest first."
         actions={<ImportActions account={account} config={config} activity={activity} />}
       />

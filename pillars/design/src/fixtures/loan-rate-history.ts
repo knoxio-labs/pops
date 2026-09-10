@@ -1,7 +1,7 @@
-/** Where a rate change came from — `manual` for one typed in, `imported` for one read off a statement. */
+/** Where a rate change came from: `manual` for one typed in, `imported` for one read off a statement. */
 export type LoanRateSource = 'manual' | 'imported';
 
-/** One rate a loan account has carried — mirrors the wire shape of `loan_rate_history`. */
+/** One rate a loan account has carried, mirrors the wire shape of `loan_rate_history`. */
 export interface LoanRateEntry {
   id: string;
   annualRatePct: number;
@@ -10,7 +10,7 @@ export interface LoanRateEntry {
 }
 
 /**
- * `a11` (Home loan)'s rate history, newest first — matching `listRateHistory`'s
+ * `a11` (Home loan)'s rate history, newest first, matching `listRateHistory`'s
  * ordering (POPS-2829). Two `imported` rows model a statement-carried change;
  * the most recent `manual` row is what someone would have typed after a call
  * with the lender.

@@ -4,7 +4,7 @@ import type { ExperimentEntry, ScreenEntry } from './types';
  * Attach each experiment to the screen it explores and enforce the
  * cross-reference rules. An experiment's `screen` must resolve to a main
  * screen or to one introduced by its own variants; an unresolved one is a
- * contract error. At most one ACTIVE experiment may sit on a given screen —
+ * contract error. At most one ACTIVE experiment may sit on a given screen:
  * two would make "which design am I looking at" ambiguous in the sidebar.
  * Mutates the matching `screens[].experiments` and appends any errors.
  */
@@ -33,7 +33,7 @@ export function linkExperimentsToScreens(
       owner.set(exp.screen, exp.id);
     } else {
       errors.push(
-        `experiments/${exp.id}: screen "${exp.screen}" already hosts active experiment "${prior}" — at most one active experiment per screen`
+        `experiments/${exp.id}: screen "${exp.screen}" already hosts active experiment "${prior}", at most one active experiment per screen`
       );
     }
   }

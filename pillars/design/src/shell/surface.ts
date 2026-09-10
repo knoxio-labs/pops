@@ -35,8 +35,8 @@ export interface Surface {
 
 /**
  * Resolve the active screen and (for a flow) step from URL coordinates.
- * A step is matched by its `slug` — the single path segment the address
- * grammar carries — never by its catalog-wide `id`. Naming no step at all
+ * A step is matched by its `slug` (the single path segment the address
+ * grammar carries), never by its catalog-wide `id`. Naming no step at all
  * defaults to the first one; naming one that does not exist resolves to no
  * step, rather than silently standing in for a different one.
  */

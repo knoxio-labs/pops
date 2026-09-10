@@ -4,8 +4,8 @@ import { type ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, cn } from '@pops/ui';
 
 /**
- * The small mark used wherever an entity is named in passing — the list row,
- * a picker, a badge — rather than given a page. Same fallback rule as the
+ * The small mark used wherever an entity is named in passing (the list row,
+ * a picker, a badge) rather than given a page. Same fallback rule as the
  * headers: the uploaded avatar, or initials on the assigned colour, or plain
  * initials when even that is unset.
  */
@@ -25,7 +25,7 @@ export function EntityAvatar({ entity, size = 'sm' }: { entity: Entity; size?: '
 
 /**
  * The banner-forward header: a poster fills the top of the page and the
- * avatar sits half over it, half over the body — the layout only reads as a
+ * avatar sits half over it, half over the body: the layout only reads as a
  * "profile" while both are present. When there is no poster the banner
  * collapses to a flat tint of the entity's colour (or a neutral one, when
  * even that is unset), so the header still has somewhere to put the avatar
@@ -75,8 +75,8 @@ export function EntityProfileHeader({ entity }: { entity: Entity }) {
 
 /**
  * The compact, accent-led header: one row, no reserved poster space. The
- * colour carries identity on its own here — a ring around the avatar and a
- * left border on the row — since there is nowhere for a banner to go. A
+ * colour carries identity on its own here (a ring around the avatar and a
+ * left border on the row) since there is nowhere for a banner to go. A
  * poster, when the entity has one, demotes to a small thumbnail rather than
  * disappearing: the field is still shown, just not given the page's width.
  */

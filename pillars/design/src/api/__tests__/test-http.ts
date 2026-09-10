@@ -1,7 +1,7 @@
 /**
  * A shared, pre-listened supertest transport for this pillar's API suites.
  *
- * Mirrors `pillars/bfm/src/api/__tests__/test-http.ts` — read its header
+ * Mirrors `pillars/bfm/src/api/__tests__/test-http.ts`: read its header
  * before editing either. supertest's own `request(app)` binds a fresh
  * ephemeral server per call on the `::` wildcard, and that bind/connect/close
  * churn is what macOS's loopback allocator stalls on, surfacing as random

@@ -8,7 +8,7 @@ import type { ReceiptSubmission } from './purchases-receipt-intake';
 
 /**
  * The same disagreement as `NEEDS_REVIEW_SUBMISSION`, but the receipt
- * itself never states a currency — a pasted order confirmation with no
+ * itself never states a currency: a pasted order confirmation with no
  * symbol and no code, say. `deltaCents` still holds, so the panel's `Delta`
  * has to fall back to a bare-cents figure rather than calling `formatCents`
  * with nothing to format it in.
@@ -49,7 +49,7 @@ export const NEEDS_REVIEW_NO_CURRENCY_SUBMISSION: ReceiptSubmission = {
  * The gate's `no-lines` objection: the model made out a total and a
  * merchant, but not a single line underneath it, so there is nothing to sum
  * against that total. This is the one review failure that carries no
- * `deltaCents` of its own — there is no computed side of the arithmetic to
+ * `deltaCents` of its own: there is no computed side of the arithmetic to
  * compare it against.
  */
 export const NEEDS_REVIEW_NO_LINES_SUBMISSION: ReceiptSubmission = {
@@ -81,7 +81,7 @@ export const NEEDS_REVIEW_NO_LINES_SUBMISSION: ReceiptSubmission = {
 };
 
 /**
- * The 413 the transport gives back for a part over the pillar's own limit —
+ * The 413 the transport gives back for a part over the pillar's own limit,
  * modelled as the same `refused` shape as `REFUSED_SUBMISSION` rather than a
  * new state, because to this screen a rejection at the transport and a
  * rejection at the receipt gate read identically: nothing was staged,

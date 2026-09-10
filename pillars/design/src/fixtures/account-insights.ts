@@ -1,6 +1,6 @@
 /**
  * The per-account facts an account's dashboard needs beyond the record
- * itself — history to draw, terms to forecast from, a cycle to count down.
+ * itself: history to draw, terms to forecast from, a cycle to count down.
  *
  * None of this is in the finance contract yet; it is here so the modules can
  * be designed against something concrete rather than an empty state. Each
@@ -48,7 +48,7 @@ export interface PointsPlan {
 export interface AccountInsight {
   /**
    * Twelve months of balances, oldest first, signed the same way the
-   * account's own balance is — a liability's series rises as more is owed.
+   * account's own balance is: a liability's series rises as more is owed.
    * A series that disagrees with its account's sign makes every trend on the
    * page read backwards.
    */

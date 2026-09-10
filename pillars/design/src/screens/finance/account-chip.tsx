@@ -31,7 +31,7 @@ const AVATAR_SIZE = {
 /**
  * The mark that identifies an account: its institution's logo when one has
  * been uploaded, the institution's initials on its brand colour when not, and
- * the kind icon for the accounts that belong to no institution at all — cash
+ * the kind icon for the accounts that belong to no institution at all: cash
  * in a drawer has no bank to show.
  */
 export function AccountAvatar({
@@ -212,7 +212,7 @@ export const states: ScreenStates = {
     <AccountChipSpecimen
       accounts={activeAccounts
         .slice(0, 3)
-        .map((a) => ({ ...a, name: `${a.name} — joint offset transaction account` }))}
+        .map((a) => ({ ...a, name: `${a.name}, joint offset transaction account` }))}
     />
   ),
 };

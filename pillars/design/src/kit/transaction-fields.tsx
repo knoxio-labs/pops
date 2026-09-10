@@ -45,7 +45,7 @@ export function AccountField({
  * An account the modal was opened with. It is drawn as the account itself
  * rather than as a picker showing that account, because a combobox reads as an
  * invitation to choose and this one was decided by where the person came from.
- * Change is still one click away — it is a preset, not a lock.
+ * Change is still one click away: it is a preset, not a lock.
  */
 export function FixedAccountField({
   label,
@@ -128,8 +128,8 @@ const KNOWN_ENTITIES: EntityOption[] = [
   .map((name) => ({ id: `e-${name.toLowerCase()}`, name }));
 
 /**
- * Who the money went to, or came from. A transfer has no entity — the other
- * side of it is an account — so this field is absent there rather than empty.
+ * Who the money went to, or came from. A transfer has no entity (the other
+ * side of it is an account), so this field is absent there rather than empty.
  */
 export function EntityField({ initialName }: { initialName?: string }) {
   const [pool, setPool] = useState(KNOWN_ENTITIES);

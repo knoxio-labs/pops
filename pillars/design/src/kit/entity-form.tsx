@@ -95,7 +95,7 @@ function useEntityFormValues(entity: Entity | null) {
 
 type FormValues = ReturnType<typeof useEntityFormValues>;
 
-/** Avatar, poster and colour — the identity fields the model is gaining. */
+/** Avatar, poster and colour: the identity fields the model is gaining. */
 function IdentityFields({ values }: { values: FormValues }) {
   return (
     <>
@@ -173,7 +173,7 @@ export interface EntityFormDialogProps {
 }
 
 /**
- * One dialog for both create and edit — the fields are identical, only the
+ * One dialog for both create and edit: the fields are identical, only the
  * title and the starting values differ.
  */
 export function EntityFormDialog({ open, onOpenChange, entity, onSave }: EntityFormDialogProps) {

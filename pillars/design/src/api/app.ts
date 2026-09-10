@@ -1,6 +1,6 @@
 /**
  * The design pillar's comment API as an Express app, constructible without a
- * process — every test drives this rather than spawning `server.ts`.
+ * process: every test drives this rather than spawning `server.ts`.
  *
  * Routes sit at the root rather than under an `/api` prefix, because the
  * shell's nginx already supplies one: `/design-api/(.*)` is rewritten to

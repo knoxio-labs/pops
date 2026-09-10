@@ -6,7 +6,7 @@ rationale: >-
   The question presupposed checkpoints live on the account page. Joao decided
   they shouldn't: checkpoints are invisible plumbing that only feeds the
   balance card's provenance line and an inconsistency flag, and the actual
-  history/add/flags UI belongs on its own dedicated page — most of it will
+  history/add/flags UI belongs on its own dedicated page: most of it will
   eventually be automated (statements, receipts) rather than managed by hand.
   Neither variant answers that; a fresh screen does.
 screen: finance/account

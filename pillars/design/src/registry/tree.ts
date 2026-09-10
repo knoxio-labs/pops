@@ -1,7 +1,7 @@
 /**
  * The folder tree a set of screen ids describes.
  *
- * A screen id is a path, so the grouping is already in the data — this turns
+ * A screen id is a path, so the grouping is already in the data: this turns
  * it into something a nav can render at any depth. The first segment is the
  * area and heads the tree; every segment but the last is a group; the last
  * names the screen itself. Groups and screens are siblings in one ordered
@@ -12,7 +12,7 @@
  * no `ScreenEntry` and still needs a home in the tree.
  */
 export interface Placed {
-  /** The screen id — `<area>/<group…>/<slug>`. */
+  /** The screen id: `<area>/<group…>/<slug>`. */
   id: string;
   order: number;
 }
@@ -68,7 +68,7 @@ function finalise<T extends Placed>(building: Building<T>): GroupNode<T> {
 
 /**
  * Group items into their areas and the folders below them. Items whose id has
- * fewer than two segments have no area to sit in and are dropped — discovery
+ * fewer than two segments have no area to sit in and are dropped: discovery
  * has already reported them as contract errors.
  */
 export function buildScreenTree<T extends Placed>(items: readonly T[]): GroupNode<T>[] {

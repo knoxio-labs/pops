@@ -6,7 +6,7 @@ import type { ReactElement } from 'react';
 
 /**
  * A control's two names: the verb a reader sees, and the accessible name
- * that also says what it acts on — a list of many rows must not offer many
+ * that also says what it acts on. A list of many rows must not offer many
  * buttons called the same thing to anyone navigating by control.
  */
 export interface ArmedActionLabel {
@@ -25,7 +25,7 @@ interface ArmedActionProps {
 }
 
 /**
- * An action that asks twice, inline, where it stands — spent only where the
+ * An action that asks twice, inline, where it stands: spent only where the
  * first click would destroy something no pass can rebuild. Every other
  * correction on the dictionary is one click and stays that way: ceremony
  * spread over the recoverable actions is ceremony a reader learns to click
@@ -33,7 +33,7 @@ interface ArmedActionProps {
  *
  * Inline rather than a dialog, so the row stays legible behind the two verbs
  * that replace the one they qualify. The confirming button carries the
- * consequence in its own label rather than in prose beside it — naming what
+ * consequence in its own label rather than in prose beside it: naming what
  * the click takes is the information, not "are you sure?".
  */
 export function ArmedAction({

@@ -1,7 +1,7 @@
 /**
  * Regression for POPS-2806: this project sets no `globals`, so React Testing
  * Library only unmounts what a test rendered if something calls its
- * `afterEach` — which nothing did before `src/test-setup.ts` added one. A
+ * `afterEach`, which nothing did before `src/test-setup.ts` added one. A
  * hook mounted in one test kept handling events (and touching `document`)
  * in every test after it in the same file.
  *

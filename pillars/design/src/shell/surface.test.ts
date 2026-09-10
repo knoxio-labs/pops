@@ -22,7 +22,7 @@ function catalogOf(screens: ReturnType<typeof makeScreen>[]): Catalog {
 }
 
 describe('resolveSurface', () => {
-  it('matches a step by its slug — the single segment the URL carries', () => {
+  it('matches a step by its slug, the single segment the URL carries', () => {
     const catalog = catalogOf([flowScreen()]);
     const { screen, step: found } = resolveSurface(catalog, {
       screenId: 'finance/import',
