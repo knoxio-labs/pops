@@ -14,8 +14,8 @@
  * as a broken package rather than a missing prerequisite, and it has cost a
  * whole agent run and a ticket filed against the wrong subsystem (POPS-3072:
  * 93 `TS2307`s from `pnpm --filter @pops/app-finance typecheck`; the graph was
- * fine, `pillars/finance/dist` moved aside reproduced it and restoring it
- * fixed it).
+ * fine; moving that pillar's own emitted output aside reproduced it, and
+ * restoring it fixed it).
  *
  * ## The remedy this guard demands
  *

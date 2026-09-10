@@ -57,8 +57,8 @@ interface PlantOptions {
 }
 
 /**
- * A whole workspace: `libs/widget` publishing `types`, and `pillars/host`
- * importing it with the given `typecheck` script.
+ * A whole workspace under a temporary directory: one lib publishing `types`,
+ * and one pillar importing it with the given `typecheck` script.
  *
  * A real tree rather than a fake `readUnits`, because everything this guard
  * gets wrong it gets wrong at the filesystem — a `types` entry read from the

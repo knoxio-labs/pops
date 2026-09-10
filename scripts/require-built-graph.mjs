@@ -13,7 +13,8 @@
  * It has cost a whole agent run: POPS-3072 was filed against the build graph
  * and project references after 93 `TS2307`s out of
  * `pnpm --filter @pops/app-finance typecheck`. The graph was fine. Moving
- * `pillars/finance/dist` aside reproduced it exactly; restoring it fixed it.
+ * that pillar's own emitted output aside reproduced it exactly; restoring it
+ * fixed it.
  *
  * So the answer is a legible refusal rather than a build: this prints what is
  * missing and what to run, in one line, before `tsc` gets a chance to blame
