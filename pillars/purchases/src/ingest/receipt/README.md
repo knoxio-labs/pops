@@ -477,8 +477,9 @@ same path, so a re-upload is a 409 from the existing write path rather than
 a twin. It also means a truncated upload cannot quietly overwrite a good
 one: different bytes, different name.
 
-Files live beside the database (`PURCHASES_RECEIPT_DIR`, else
-`<dirname(sqlite)>/receipts`), so one volume holds the whole pillar, and a
+Files live beside the database (`<dirname(sqlite)>/receipts`, derived with
+no override of its own — POPS-2535), so one volume holds the whole pillar,
+and a
 purchase references one as `pops://purchases/receipt/<sha256>`. ADR-042
 says evidence belongs in the `documents` pillar instead; that pillar has no
 write surface at all today, so this is where it lives until POPS-1528 moves

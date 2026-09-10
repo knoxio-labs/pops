@@ -37,23 +37,28 @@ describe('resolveReceiptStoreRoot', () => {
   afterEach(() => {
     delete process.env['PURCHASES_RECEIPT_DIR'];
     delete process.env['PURCHASES_SQLITE_PATH'];
+    delete process.env['SQLITE_PATH'];
   });
 
-  it('honours PURCHASES_RECEIPT_DIR when set', () => {
-    process.env['PURCHASES_RECEIPT_DIR'] = '/custom/receipts';
-    expect(resolveReceiptStoreRoot()).toBe('/custom/receipts');
-  });
-
-  it('falls back to a receipts/ dir beside the sqlite file when unset', () => {
-    delete process.env['PURCHASES_RECEIPT_DIR'];
+  it('puts receipts in a receipts/ dir beside the sqlite file', () => {
     process.env['PURCHASES_SQLITE_PATH'] = '/data/purchases.db';
     expect(resolveReceiptStoreRoot()).toBe(join(dirname(resolvePurchasesSqlitePath()), 'receipts'));
     expect(resolveReceiptStoreRoot()).toBe(join('/data', 'receipts'));
   });
 
-  it('falls back the same way when PURCHASES_RECEIPT_DIR is the empty string', () => {
-    process.env['PURCHASES_RECEIPT_DIR'] = '';
+  it('follows the fleet-wide path when only that is set', () => {
+    process.env['SQLITE_PATH'] = '/mnt/pops/pops.db';
+    expect(resolveReceiptStoreRoot()).toBe(join('/mnt/pops', 'receipts'));
+  });
+
+  it('has no directory override of its own, so the store cannot leave the volume', () => {
+    // A directory named independently of the database's is one the image
+    // does not create, `infra/` does not mount and the smoke job does not
+    // probe: receipts land in the container's writable layer and vanish on
+    // the next roll, writably and silently (POPS-2535).
     process.env['PURCHASES_SQLITE_PATH'] = '/data/purchases.db';
+    process.env['PURCHASES_RECEIPT_DIR'] = '/somewhere/else';
+
     expect(resolveReceiptStoreRoot()).toBe(join('/data', 'receipts'));
   });
 });

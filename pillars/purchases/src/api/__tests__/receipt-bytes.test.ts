@@ -11,7 +11,7 @@
  * is not a picture. Three of them are the ones a client gets wrong if the
  * server folds them together.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -67,6 +67,7 @@ const ABSENT_SHA = 'a'.repeat(64);
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
+let dataDir: string;
 let receiptDir: string;
 let app: Express;
 
@@ -74,8 +75,10 @@ beforeEach(() => {
   const temp = openTempDb();
   opened = temp.opened;
   cleanup = temp.cleanup;
-  receiptDir = mkdtempSync(join(tmpdir(), 'pops-receipt-bytes-'));
-  process.env['PURCHASES_RECEIPT_DIR'] = receiptDir;
+  dataDir = mkdtempSync(join(tmpdir(), 'pops-receipt-bytes-'));
+  process.env['PURCHASES_SQLITE_PATH'] = join(dataDir, 'purchases.db');
+  receiptDir = join(dataDir, 'receipts');
+  mkdirSync(receiptDir, { recursive: true });
   __resetPillarRegistryCache();
   app = createPurchasesApiApp({
     purchasesDb: opened,
@@ -87,8 +90,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  rmSync(receiptDir, { recursive: true, force: true });
-  delete process.env['PURCHASES_RECEIPT_DIR'];
+  rmSync(dataDir, { recursive: true, force: true });
+  delete process.env['PURCHASES_SQLITE_PATH'];
   __resetPillarRegistryCache();
 });
 

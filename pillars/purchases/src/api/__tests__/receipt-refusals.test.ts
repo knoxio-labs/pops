@@ -16,7 +16,7 @@
  * purchase was written. A kind added to the union without a case here
  * leaves that kind unmeasured at the boundary that matters.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -117,6 +117,7 @@ const { requestOn } = createTestTransport();
 
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
+let dataDir: string;
 let receiptDir: string;
 
 function appWith(vision: ReceiptVision): Express {
@@ -138,15 +139,17 @@ beforeEach(() => {
   const temp = openTempDb();
   opened = temp.opened;
   cleanup = temp.cleanup;
-  receiptDir = mkdtempSync(join(tmpdir(), 'purchases-refusal-'));
-  process.env['PURCHASES_RECEIPT_DIR'] = receiptDir;
+  dataDir = mkdtempSync(join(tmpdir(), 'purchases-refusal-'));
+  process.env['PURCHASES_SQLITE_PATH'] = join(dataDir, 'purchases.db');
+  receiptDir = join(dataDir, 'receipts');
+  mkdirSync(receiptDir, { recursive: true });
   __resetPillarRegistryCache();
 });
 
 afterEach(() => {
   cleanup();
-  rmSync(receiptDir, { recursive: true, force: true });
-  delete process.env['PURCHASES_RECEIPT_DIR'];
+  rmSync(dataDir, { recursive: true, force: true });
+  delete process.env['PURCHASES_SQLITE_PATH'];
   __resetPillarRegistryCache();
 });
 
