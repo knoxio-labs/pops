@@ -57,6 +57,67 @@ describe('collectChangedChecksums', () => {
 
     expect(collectChangedChecksums(prev, next)).toEqual([]);
   });
+
+  it('does not flag a row that was rebuilt without being changed', () => {
+    // POPS-3121. This used to compare by reference, so any bulk update that
+    // rebuilt rows it did not semantically touch marked every one of them as
+    // resolved by hand — and a row in that set is pinned for the rest of the
+    // session, unreachable by any rule written afterwards. Rebuilding a row is
+    // how React state is updated; it says nothing about whether anyone changed
+    // it.
+    const tx = makeTx('a', { status: 'matched' });
+    const prev = emptyState({ matched: [tx] });
+    const next = emptyState({ matched: [{ ...tx }] });
+
+    expect(collectChangedChecksums(prev, next)).toEqual([]);
+  });
+
+  it('does not flag one whose nested objects were re-spread either', () => {
+    // A bulk update re-spreads `entity` and `matchedRules` along with the row,
+    // so a shallow comparison would fix the reported shape and leave the same
+    // false positive one level down.
+    const tx = makeTx('a', {
+      status: 'matched',
+      entity: { entityId: 'e1', entityName: 'Woolworths', matchType: 'exact' },
+      matchedRules: [
+        { ruleId: 'r1', pattern: 'WOOL', matchType: 'contains', confidence: 1, priority: 10 },
+      ],
+    });
+    const prev = emptyState({ matched: [tx] });
+    const next = emptyState({
+      matched: [
+        {
+          ...tx,
+          entity: { ...tx.entity },
+          matchedRules: tx.matchedRules?.map((rule) => ({ ...rule })),
+        },
+      ],
+    });
+
+    expect(collectChangedChecksums(prev, next)).toEqual([]);
+  });
+
+  it('still flags a row whose nested entity really did change', () => {
+    // The direction that matters more: the set exists to protect hand work, so
+    // a genuine entity pick must still be recorded.
+    const tx = makeTx('a', { status: 'matched', entity: { matchType: 'none' } });
+    const prev = emptyState({ matched: [tx] });
+    const next = emptyState({
+      matched: [
+        { ...tx, entity: { entityId: 'e1', entityName: 'Woolworths', matchType: 'manual' } },
+      ],
+    });
+
+    expect(collectChangedChecksums(prev, next)).toEqual(['a']);
+  });
+
+  it('flags a row that gained or lost a field, not just one whose values differ', () => {
+    const tx = makeTx('a', { status: 'matched' });
+    const prev = emptyState({ matched: [tx] });
+    const next = emptyState({ matched: [{ ...tx, transactionType: 'purchase' }] });
+
+    expect(collectChangedChecksums(prev, next)).toEqual(['a']);
+  });
 });
 
 describe('mergeReevaluatedResult', () => {

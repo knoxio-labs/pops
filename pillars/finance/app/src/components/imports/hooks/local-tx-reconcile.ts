@@ -65,10 +65,46 @@ export function bucketOfChecksum(state: LocalTxState, checksum: string): TxBucke
 }
 
 /**
- * Checksums whose transaction moved bucket or was replaced by a new object
- * between `prev` and `next`. Used to mark rows the user just resolved by hand
- * (edit, entity pick, bulk accept) so a later server reconciliation never
- * silently reverts them.
+ * Structural equality over two transactions.
+ *
+ * By VALUE, not by reference. {@link collectChangedChecksums} used `!==`, so a
+ * bulk update that rebuilt rows it did not semantically change marked them all
+ * as resolved by hand — and a row in that set is pinned for the rest of the
+ * session, unreachable by any rule the user writes afterwards (POPS-3121).
+ * Rebuilding a row is how React state is updated; it says nothing about
+ * whether anyone changed it.
+ *
+ * Deep rather than shallow because a rebuild routinely re-spreads `entity`,
+ * `ruleProvenance` and `matchedRules` too, so a shallow check would fix the
+ * reported shape and leave the same false positive one level down.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => sameValue(item, b[i]));
+  }
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  if (keys.length !== Object.keys(right).length) return false;
+  return keys.every((key) => key in right && sameValue(left[key], right[key]));
+}
+
+/**
+ * Checksums whose transaction moved bucket or actually changed between `prev`
+ * and `next`. Used to mark rows the user just resolved by hand (edit, entity
+ * pick, bulk accept) so a later server reconciliation never silently reverts
+ * them.
+ *
+ * "Actually changed" is {@link sameValue}'s question, and the distinction is
+ * load-bearing: the set this feeds is permanent for the session, so a row
+ * marked here by mistake is a row no later rule can reach (POPS-3121). What
+ * the ticket leaves open — whether a rule authored AFTER a genuine manual
+ * resolution should win, and whether the pin should be per-field — is a
+ * question about deliberate edits and is untouched here. This only stops rows
+ * nobody edited from being pinned at all.
  */
 export function collectChangedChecksums(prev: LocalTxState, next: LocalTxState): string[] {
   const prevIndex = indexByChecksum(prev);
@@ -76,7 +112,9 @@ export function collectChangedChecksums(prev: LocalTxState, next: LocalTxState):
   for (const bucket of TX_BUCKETS) {
     for (const tx of next[bucket]) {
       const before = prevIndex.get(tx.checksum);
-      if (!before || before.bucket !== bucket || before.tx !== tx) changed.push(tx.checksum);
+      if (!before || before.bucket !== bucket || !sameValue(before.tx, tx)) {
+        changed.push(tx.checksum);
+      }
     }
   }
   return changed;
