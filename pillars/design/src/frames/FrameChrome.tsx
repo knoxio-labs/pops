@@ -6,7 +6,7 @@ import type { FrameKind } from './kind';
 
 /**
  * Wraps the surface in the selected product chrome. `none` is not a special
- * case worth a component — the surface is simply itself.
+ * case worth a component: the surface is simply itself.
  */
 export function FrameChrome({
   kind,

@@ -47,7 +47,7 @@ function KindSpecificFields({ f, account }: { f: FormState; account?: Account })
     <>
       {f.kind === 'cash' && (
         <Hint>
-          Cash can have more than one account per currency — a wallet and a piggy bank both work.
+          Cash can have more than one account per currency: a wallet and a piggy bank both work.
         </Hint>
       )}
       {f.kind === 'gift-card' && <GiftCardSection account={account} />}

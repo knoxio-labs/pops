@@ -37,7 +37,7 @@ export const day = (iso: string) =>
 
 /**
  * The line over the headline number. It names what the account is, not what
- * its sign means — the number carries that itself. The person ledger is the
+ * its sign means: the number carries that itself. The person ledger is the
  * exception: a minus sign cannot say who is owed, so that one keeps a sentence
  * naming the contact.
  */
@@ -55,7 +55,7 @@ export function balanceCaption(account: Account): string {
 /**
  * Every kind can take a checkpoint; what differs is who supplied the number.
  * A bank or a card issuer publishes a balance to check against, a wallet or
- * a person ledger only has what you counted — so the wording follows
+ * a person ledger only has what you counted, so the wording follows
  * `checkpointable`, and the feature does not.
  */
 export function asOfLine(account: Account): string {
@@ -69,7 +69,7 @@ export function asOfLine(account: Account): string {
 /**
  * Where the balance has travelled over the series, said plainly. The sparkline
  * it captions is drawn in the balance's own tone, so a loan climbing toward
- * zero stays red — it is a negative number getting less negative, and it is
+ * zero stays red: it is a negative number getting less negative, and it is
  * still debt.
  */
 export function trendLine(account: Account, history: BalancePoint[]): string {
@@ -177,8 +177,8 @@ export function RecentTransactions({ account }: { account: Account }) {
 }
 
 /**
- * One account as a dashboard: the parts every account has — header, balance,
- * recent transactions — with the cards its kind earns dropped in between. A
+ * One account as a dashboard: the parts every account has (header, balance,
+ * recent transactions) with the cards its kind earns dropped in between. A
  * kind nothing has been designed for shows the shell and no grid, which is
  * the honest outcome rather than an empty placeholder.
  */
@@ -189,8 +189,8 @@ export function AccountDashboard({ account }: { account: Account }) {
       {account.archived && (
         <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           <Archive className="h-4 w-4" />
-          Archived, not deleted — its transactions still reference it, so it stays out of pickers
-          and totals until it is unarchived.
+          Archived, not deleted: its transactions still reference it, so it stays out of pickers and
+          totals until it is unarchived.
         </div>
       )}
       <DashboardHeader account={account} />

@@ -78,7 +78,7 @@ describe('openDesignDb', () => {
     expect(path).toBeTruthy();
   });
 
-  it('is idempotent — a second open applies nothing and keeps the data', () => {
+  it('is idempotent: a second open applies nothing and keeps the data', () => {
     const dir = tempDir();
     const path = join(dir, 'design.db');
     const first = openDesignDb(path);

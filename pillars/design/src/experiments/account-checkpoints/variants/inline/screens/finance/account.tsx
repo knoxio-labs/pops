@@ -77,7 +77,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
             <CheckpointHistory account={account} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              No checkpoints yet — add one when you&apos;ve confirmed this balance against the bank.
+              No checkpoints yet. Add one when you&apos;ve confirmed this balance against the bank.
             </p>
           )}
         </CardContent>
@@ -93,8 +93,8 @@ function AccountDashboard({ account }: { account: Account }) {
       {account.archived && (
         <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           <Archive className="h-4 w-4" />
-          Archived, not deleted — its transactions still reference it, so it stays out of pickers
-          and totals until it is unarchived.
+          Archived, not deleted: its transactions still reference it, so it stays out of pickers and
+          totals until it is unarchived.
         </div>
       )}
       <DashboardHeader account={account} />

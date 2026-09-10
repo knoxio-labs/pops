@@ -79,7 +79,7 @@ interface DockRowProps {
   /** Navigate here on select; omit for an action row. */
   to?: string;
   onSelect?: () => void;
-  /** Rendered at the row's trailing edge — a size, a check, a swatch. */
+  /** Rendered at the row's trailing edge: a size, a check, a swatch. */
   trailing?: ReactNode;
   disabled?: boolean;
   children: ReactNode;

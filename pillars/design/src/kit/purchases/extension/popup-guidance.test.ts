@@ -26,7 +26,7 @@ describe('popupGuidance', () => {
       running: 'history',
       progress: { done: 186, total: 0 },
     });
-    expect(guidance.text).toBe('Loading history — 186 receipts listed so far…');
+    expect(guidance.text).toBe('Loading history: 186 receipts listed so far…');
     expect(guidance.isError).toBe(false);
   });
 

@@ -14,17 +14,17 @@ export type BootstrapFn = typeof bootstrapPillar;
  * Written as a call rather than passing `bootstrapPillar` itself as the
  * default. `scripts/ci/check-pillar-registration.mjs` accepts a call site and
  * refuses a bare mention, which is the distinction that makes it worth
- * having — a pillar that imports the SDK and never calls it does not register.
+ * having: a pillar that imports the SDK and never calls it does not register.
  */
 const callBootstrap: BootstrapFn = (input) => bootstrapPillar(input);
 
 /**
  * Register this pillar and return its handle, or `undefined` if registration
- * failed for any reason — including a malformed advertised origin.
+ * failed for any reason, including a malformed advertised origin.
  *
  * Never rejects. It is called after `listen`, so an escaping rejection would
  * be unhandled and would take down a process that is already answering
- * comment requests — a registry that is slow to come up would become a crash
+ * comment requests: a registry that is slow to come up would become a crash
  * loop of a pillar whose threads were serving fine. The cost of resolving
  * `undefined` instead is a missing `/design-api/` block until the next boot:
  * the state this pillar shipped in, and what the registration guard exists to
@@ -32,7 +32,7 @@ const callBootstrap: BootstrapFn = (input) => bootstrapPillar(input);
  *
  * `bootstrapPillar` is deliberately not handed the Express app. It would
  * mount its own `/health` on top of the one `createDesignApiApp` already
- * serves, and mount it behind the identity middleware — in front of which
+ * serves, and mount it behind the identity middleware, in front of which
  * this pillar keeps `/health` so an unauthenticated container healthcheck can
  * reach it.
  */
@@ -43,8 +43,8 @@ export async function registerDesignPillar(
 ): Promise<PillarBootstrapHandle | undefined> {
   try {
     // Resolved in here, not by the caller. `resolveSelfBaseUrl` throws on a
-    // malformed origin — deliberately, since the registry stores what it is
-    // handed — and a throw outside this try is the same unhandled rejection
+    // malformed origin, deliberately, since the registry stores what it is
+    // handed, and a throw outside this try is the same unhandled rejection
     // by another route: a mistyped DESIGN_SELF_BASE_URL would kill a process
     // that is serving comments perfectly well.
     const baseUrl = resolveSelfBaseUrl(port);

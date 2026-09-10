@@ -142,7 +142,7 @@ export function CurrencySelect({
       <Label htmlFor="currency">Currency</Label>
       <PickerPopover
         ariaLabel="Currency"
-        trigger={selected ? `${selected.code} — ${selected.name}` : 'Choose currency...'}
+        trigger={selected ? `${selected.code}: ${selected.name}` : 'Choose currency...'}
         state={state}
         placeholder="Search currencies..."
         emptyMessage="No currencies found."

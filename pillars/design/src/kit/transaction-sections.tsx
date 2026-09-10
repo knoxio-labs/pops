@@ -88,7 +88,7 @@ const NOTES: Record<TransactionType, string> = {
     'One movement, two entries that sum to zero. Nothing is spent and net worth does not change.',
 };
 
-/** The rows the effect panel shows — the transfer's second side included before it is chosen. */
+/** The rows the effect panel shows, including the transfer's second side before it is chosen. */
 function effectRows(draft: TransactionDraft, minorUnits: number): EffectRow[] {
   const magnitude = Number.isNaN(minorUnits) ? 0 : Math.abs(minorUnits);
   const from = {

@@ -3,8 +3,8 @@
  * the phone instead of inheriting whatever frame the last screen left behind.
  *
  * Most specific wins: the screen actually on the canvas (a variant's override,
- * if the address names one), then the experiment being viewed, then nothing —
- * and nothing means keep the current frame rather than reset it, because a
+ * if the address names one), then the experiment being viewed, then nothing.
+ * Nothing means keep the current frame rather than reset it, because a
  * screen that says nothing about chrome is not the same as a screen that says
  * "no chrome".
  */

@@ -65,7 +65,7 @@ export function discoverExperiments(
 
     const variants = collectVariants(expId, parsed.variants, sources, errors);
     if (variants.length === 0) {
-      errors.push(`experiments/${expId}: no variants — an experiment always has variants/`);
+      errors.push(`experiments/${expId}: no variants, an experiment always has variants/`);
     }
     if (parsed.chosen && !variants.some((v) => v.id === parsed.chosen)) {
       errors.push(`experiments/${expId}: chosen variant "${parsed.chosen}" does not exist`);

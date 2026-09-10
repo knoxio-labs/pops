@@ -35,7 +35,7 @@ function BackToQueue() {
  * `/purchases/:purchaseId`, ported into the playground: the destination
  * every other purchases surface (the reconcile queue, a receipt, a global
  * search hit) sends an order id to. A line-item search hit lands here too,
- * at `?item=<id>` — the `item-highlighted` state stands in for that.
+ * at `?item=<id>`: the `item-highlighted` state stands in for that.
  */
 function LoadedOrder({
   detail,
@@ -88,7 +88,7 @@ function LoadingState() {
 }
 
 /**
- * A 404 is not a failure — the request worked and the order is gone. No
+ * A 404 is not a failure: the request worked and the order is gone. No
  * retry is offered, unlike the `error` state below, because retrying an
  * answer that already arrived invites a question that has already been
  * answered.
@@ -138,7 +138,7 @@ export const states: ScreenStates = {
     </Page>
   ),
   /**
-   * A `?item=` deep link naming a line the order no longer carries — the
+   * A `?item=` deep link naming a line the order no longer carries: the
    * line was removed or the id was stale by the time the link was opened.
    * No line matches, so nothing is highlighted; the page still renders.
    */

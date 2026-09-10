@@ -62,7 +62,7 @@ function InstitutionEditDialog({
  * Institutions list as a settings section (POPS-2843): a `CRUDManagementSection`
  * shell with one row per institution, replacing the plain `DataTable` PR #4372
  * shipped when no design spec existed yet. Creation stays out of scope
- * (POPS-2810) — institutions are minted inline from the account form.
+ * (POPS-2810): institutions are minted inline from the account form.
  */
 export function InstitutionsSection({ initial }: { initial?: Institution[] }) {
   const [items, setItems] = useState<Institution[]>(initial ?? seedInstitutions);

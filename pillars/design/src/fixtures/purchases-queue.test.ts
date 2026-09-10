@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * The delta is the one figure on a queue row a reviewer reads against the two
  * columns beside it. A fixture whose delta disagrees with its own proposals
- * makes the row unreviewable — the reader cannot tell a layout question from
+ * makes the row unreviewable: the reader cannot tell a layout question from
  * arithmetic that never held.
  */
 describe('the reconcile queue fixture', () => {

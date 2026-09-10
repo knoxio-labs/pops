@@ -9,7 +9,7 @@ function isSame(a: Viewport, b: Viewport): boolean {
 }
 
 /**
- * Dock tool: two axes of "where is this seen" — the simulated screen size
+ * Dock tool: two axes of "where is this seen": the simulated screen size
  * (presets, ratios, rotate; drag the frame's corners for a custom size) and
  * the product chrome drawn around the surface. They belong in one tool
  * because they are one question: a phone-width screen inside the POPS web

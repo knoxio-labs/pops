@@ -19,7 +19,7 @@ interface DirectionOption {
 /**
  * Money out first because it is the overwhelming majority of what anyone
  * enters, and its tone is the red the resulting negative delta will be shown
- * in — the control and the consequence agree on colour before anything is
+ * in: the control and the consequence agree on colour before anything is
  * saved.
  */
 const DIRECTIONS: DirectionOption[] = [

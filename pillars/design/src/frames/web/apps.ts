@@ -1,6 +1,6 @@
 /**
  * The rail's contents: every in-repo app's real `navConfig`, in the order the
- * shell ranks them (`navOrder` in the shell's bundle map — finance first,
+ * shell ranks them (`navOrder` in the shell's bundle map: finance first,
  * bfm last).
  *
  * Read from each package's `./design` entry rather than copied, so a nav item
@@ -47,7 +47,7 @@ export function appForArea(area: string | undefined): AppNavConfig | undefined {
  * Which page of the app a screen is a design for, matched on the screen's
  * slug: `finance/import` lands on the `/import` nav item, `finance/import-review`
  * on it too (a screen is often one stage of a page, not a page of its own).
- * No match means no page is marked — better than marking the first and
+ * No match means no page is marked: better than marking the first and
  * quietly asserting something untrue about where the screen belongs.
  */
 export function activeItemPath(app: AppNavConfig, slug: string | undefined): string | undefined {

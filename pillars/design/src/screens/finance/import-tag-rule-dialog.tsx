@@ -15,7 +15,7 @@ import {
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
-export const meta: ScreenMeta = { title: 'Import — save tag rule', order: 4, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Import: save tag rule', order: 4, frame: 'web' };
 
 type MatchType = 'exact' | 'contains' | 'regex';
 type AffectedRow = { id: string; description: string };
@@ -101,7 +101,7 @@ function NewTagsPanel({ newTags }: DialogProps) {
   if (newTags.length === 0) return null;
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium">New vocabulary tags — accept before saving</p>
+      <p className="text-xs font-medium">New vocabulary tags: accept before saving</p>
       {newTags.map((tag) => (
         <label key={tag.name} className="flex items-center gap-2 text-xs">
           <Checkbox checked={tag.accepted} />

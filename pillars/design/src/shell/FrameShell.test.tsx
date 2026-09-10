@@ -44,7 +44,7 @@ describe('FrameShell keyboard forwarding', () => {
 
   // The shell's own `keydown` listener lives on the shell's window, which
   // never sees a keystroke once focus has moved into this same-origin
-  // iframe — exactly what happens the moment someone clicks the surface
+  // iframe, exactly what happens the moment someone clicks the surface
   // they want to comment on. This is the crossing that makes `i` and
   // `Escape` work again from in here.
   it('forwards the toggle key typed in this document up to the shell', () => {

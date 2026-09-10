@@ -10,7 +10,7 @@ import type { ExperimentEntry, GroupNode, ScreenEntry, TreeNode } from '../regis
 const CONCEPTS: [string, string][] = [
   ['Screen', 'one file under src/screens/<area>/; folders below it group the nav'],
   ['Experiment', 'a question about one screen, in experiment.yaml'],
-  ['Variant', 'a competing answer — its screens override main by path'],
+  ['Variant', 'a competing answer: its screens override main by path'],
   ['State', 'a named condition of a screen, exported beside it'],
 ];
 
@@ -73,7 +73,7 @@ function ExperimentRow({ exp }: { exp: ExperimentEntry }) {
       {exp.question ? <p className="text-sm text-muted-foreground">{exp.question}</p> : null}
       <p className="text-xs text-muted-foreground">
         {exp.variants.map((v) => v.name).join(' · ')}
-        {exp.chosen ? ` — chose ${exp.chosen}` : ''}
+        {exp.chosen ? `: chose ${exp.chosen}` : ''}
       </p>
     </li>
   );
@@ -93,7 +93,7 @@ export function Overview() {
         {CONCEPTS.map(([term, definition]) => (
           <div key={term}>
             <dt className="inline font-medium">{term}</dt>
-            <dd className="inline text-muted-foreground"> — {definition}</dd>
+            <dd className="inline text-muted-foreground">: {definition}</dd>
           </div>
         ))}
       </dl>

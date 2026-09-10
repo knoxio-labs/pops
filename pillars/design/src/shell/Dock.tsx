@@ -12,7 +12,7 @@ import type { Viewport } from './viewport';
 
 /**
  * The floating bottom-centre dock over the canvas: theme, design (variant),
- * state, viewport and comments. It is chrome — it never enters the frame, so nothing
+ * state, viewport and comments. It is chrome: it never enters the frame, so nothing
  * on it can be mistaken for part of a design.
  */
 export function Dock({
@@ -31,7 +31,7 @@ export function Dock({
   viewport: Viewport;
   frame: FrameKind;
   comments: { active: boolean; openCount: number; onToggle: () => void };
-  /** Bumped when something outside the dock — including the canvas iframe —
+  /** Bumped when something outside the dock, including the canvas iframe,
    *  should close whatever tool is open. */
   dismissToken: number;
   onThemeSelect: (theme: CanvasTheme) => void;

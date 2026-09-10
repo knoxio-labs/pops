@@ -29,14 +29,14 @@ export const meta: ScreenMeta = { title: 'Receipt drop zone', order: 3, frame: '
 const IDLE_SUBMISSION: ReceiptSubmission = { state: 'idle' };
 
 /**
- * `/purchases/receipts` — the way in.
+ * `/purchases/receipts`: the way in.
  *
  * `POST /receipts` reads a photographed till slip, a PDF tax invoice or a
  * pasted order confirmation, and answers three materially different ways.
  * The three stay three: a reading that disagreed with the receipt's own
  * total wrote nothing, and rendering it as a success would turn a known
  * unknown into a recorded fact. The states below add the two the transport
- * contributes — an upload in flight, and one the pillar refused outright —
+ * contributes (an upload in flight, and one the pillar refused outright)
  * and the 409 that is not an error but an answer.
  */
 export function ReceiptDropZonePage({

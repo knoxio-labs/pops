@@ -4,7 +4,7 @@ import { designThreads } from './threads.js';
 
 /**
  * One message on a thread. The thread's opening comment is a message too, so
- * a thread is never a row with a body of its own — a reply from a session and
+ * a thread is never a row with a body of its own: a reply from a session and
  * the original remark are the same kind of thing.
  */
 export const designMessages = sqliteTable(

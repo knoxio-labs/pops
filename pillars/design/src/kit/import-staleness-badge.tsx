@@ -7,7 +7,7 @@ import { Badge } from '@pops/ui';
  * The staleness nudge (POPS-2890) as a badge. It speaks only when there is
  * something to do: a fresh account says nothing, since a badge on every tile
  * would be the wallpaper the stale one has to be seen against. "Never" is
- * silent too — an account nobody has imported into is not overdue, it is
+ * silent too: an account nobody has imported into is not overdue, it is
  * unstarted, and the imports page says so in its own words.
  */
 export function ImportStalenessBadge({ accountId }: { accountId: string }) {

@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 
 /**
  * Owns the open/target state for one `EntityFormDialog` and a `key` that
- * bumps on every open — passed straight through to the dialog. The dialog
+ * bumps on every open, passed straight through to the dialog. The dialog
  * seeds its fields from `entity` via `useState`, which only runs once per
  * mount; without a fresh key each open, reopening the same entity after an
  * unsaved edit (or opening a different one right after) would show stale

@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
  * How loudly one outcome should read.
  *
  * `attention` exists so a receipt that was read but did not add up cannot be
- * dressed as a recorded one — nothing was written, and a green panel saying
+ * dressed as a recorded one: nothing was written, and a green panel saying
  * otherwise is the failure this whole outcome union is shaped to avoid.
  */
 export type OutcomeTone = 'recorded' | 'attention' | 'refused' | 'neutral';
@@ -49,7 +49,7 @@ export function OutcomeSection({
 
 /**
  * One labelled reading of the model's. Every absence on this panel means the
- * same thing — the model did not read it — so the wording is fixed here
+ * same thing (the model did not read it), so the wording is fixed here
  * rather than asked of each caller.
  */
 export function Field({ label, value }: { label: string; value: string | null }) {

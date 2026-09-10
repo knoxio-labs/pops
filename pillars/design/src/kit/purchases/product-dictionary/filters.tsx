@@ -23,7 +23,7 @@ interface DictionaryFiltersProps {
  * The two axes the dictionary is worth narrowing on: where a wording was
  * printed, and whether anybody has vouched for it.
  *
- * `unasserted` is the triage view — everything the pass proposed and nobody
+ * `unasserted` is the triage view: everything the pass proposed and nobody
  * has confirmed or corrected. Its complement is not "the rest of the list":
  * a product with one asserted wording and one proposal is unfinished, so it
  * answers `unasserted` and stays where the work is.

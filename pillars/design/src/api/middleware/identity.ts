@@ -8,7 +8,7 @@
  *   2. no `CLOUDFLARE_ACCESS_TEAM_NAME` → tunnel user
  *      (`tunnel-authenticated@pops.local`). This pillar is only ever reached
  *      through the shell's Access-protected tunnel, so an unconfigured team
- *      means "trust the tunnel" here, not "refuse" — the bfm divergence does
+ *      means "trust the tunnel" here, not "refuse": the bfm divergence does
  *      not apply, because no hostname bypasses Access to reach this service.
  *   3. `cf-access-jwt-assertion` → a verified principal, which is either a
  *      human session or a SERVICE TOKEN. The service half is the addition:

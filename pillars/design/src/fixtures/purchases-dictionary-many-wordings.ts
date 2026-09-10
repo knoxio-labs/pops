@@ -6,7 +6,7 @@
  */
 import type { DictionaryProduct } from './purchases-dictionary';
 
-/** One product, nine aliases across four sources — three still proposed. */
+/** One product, nine aliases across four sources: three still proposed. */
 export const manyWordingsProduct: DictionaryProduct = {
   id: 'prod_coffee_pods',
   label: 'Coffee Capsules 10pk',

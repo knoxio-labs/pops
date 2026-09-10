@@ -1,7 +1,7 @@
 /**
  * Edit-model types for the product dictionary controls: the filter state the
  * filter row owns, and the corrections a row can send upward. These are the
- * playground's own types, not a mirror of the wire's edit payloads — each
+ * playground's own types, not a mirror of the wire's edit payloads: each
  * `DictionaryEdit` is applied locally by `applyDictionaryEdit` in `edits.ts`.
  */
 
@@ -9,8 +9,8 @@
  * Which side of the assertion boundary to keep.
  *
  * `asserted` and `unasserted` are complements rather than overlapping
- * filters: a half-merged product — one wording asserted, one still a
- * proposal — is unfinished work and answers `unasserted`.
+ * filters: a half-merged product (one wording asserted, one still a
+ * proposal) is unfinished work and answers `unasserted`.
  */
 export type AssertionFilter = 'all' | 'asserted' | 'unasserted';
 
@@ -23,7 +23,7 @@ export interface DictionaryFilterState {
   readonly assertion: AssertionFilter;
 }
 
-/** The filter row's own starting point — everything, from every source. */
+/** The filter row's own starting point: everything, from every source. */
 export const DEFAULT_DICTIONARY_FILTERS: DictionaryFilterState = {
   source: ANY_SOURCE,
   assertion: 'all',
@@ -49,7 +49,7 @@ export type DictionaryEditKind = DictionaryEdit['kind'];
 
 /**
  * What became of one submitted edit, kept just long enough to render the
- * status line beside the filters. `message` is populated only on `error` —
+ * status line beside the filters. `message` is populated only on `error`:
  * an `ok` outcome says which kind of edit landed and nothing more, since the
  * list below it already shows the result.
  */

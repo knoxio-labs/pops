@@ -22,7 +22,7 @@ const API_ERROR: Warning = {
 };
 
 /**
- * The warning banner as the import flow actually shows it — the real
+ * The warning banner as the import flow actually shows it: the real
  * component from `@pops/app-finance`, not a look-alike, so the review is of
  * the shipping thing. Only the warnings are fixtures.
  */

@@ -117,8 +117,7 @@ function AccountTile({ account }: { account: Account }) {
 /**
  * One figure per currency in play, never blended into a single number
  * (POPS-2813): AUD and EUR cannot be added without an exchange rate, and
- * there is no rate source or staleness story yet. Points never appear here —
- * they are not money. A single currency still gets its label, so the reader
+ * there is no rate source or staleness story yet. Points never appear here: they are not money. A single currency still gets its label, so the reader
  * never has to infer what unit the number is in from the accounts below it.
  */
 function Subtotals({ accounts }: { accounts: Account[] }) {
@@ -135,7 +134,7 @@ function Subtotals({ accounts }: { accounts: Account[] }) {
         </span>
       ))}
       <span className="text-xs text-muted-foreground">
-        Held minus owed, per currency — points are not counted, and nothing is converted.
+        Held minus owed, per currency: points are not counted, and nothing is converted.
       </span>
     </div>
   );

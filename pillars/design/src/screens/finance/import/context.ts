@@ -13,7 +13,7 @@ export interface ImportFormat {
   label: string;
   /** Where the file comes from, in the words the bank's own site uses. */
   description: string;
-  extensions: string;
+  extensions?: string;
   /** Rows arrive on their own; there is no file to upload and no format to change. */
   live?: boolean;
 }
@@ -53,7 +53,6 @@ export const FORMATS: Record<string, ImportFormat> = {
     id: 'up-live',
     label: 'Up live feed',
     description: 'Arrives on its own through the Up webhook. Nothing to upload.',
-    extensions: '—',
     live: true,
   },
   'generic-csv': {
@@ -93,11 +92,13 @@ export function radioOptions(formats: ImportFormat[]): RadioOption[] {
   return formats.map((format) => ({
     value: format.id,
     label: format.label,
-    description: `${format.description} (${format.extensions})`,
+    description: format.extensions
+      ? `${format.description} (${format.extensions})`
+      : format.description,
   }));
 }
 
-/** Every account the picker offers — including the ones that import nothing. */
+/** Every account the picker offers, including the ones that import nothing. */
 export const importableAccounts = activeAccounts;
 
 export function accountById(id: string): Account {

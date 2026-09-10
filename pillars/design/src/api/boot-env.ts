@@ -38,7 +38,7 @@ export function shouldSelfRegister(env: NodeJS.ProcessEnv = process.env): boolea
 }
 
 /**
- * The URL the registry should hand callers for this pillar — and, through the
+ * The URL the registry should hand callers for this pillar, and, through the
  * shell's dynamic nginx render, the upstream its `/design-api/` block proxies
  * to when the pillar is not one of the curated ones.
  */
@@ -52,7 +52,7 @@ export function resolveSelfBaseUrl(port: number, env: NodeJS.ProcessEnv = proces
 }
 
 /**
- * Own var first, then the shared base directory hint, then a local default —
+ * Own var first, then the shared base directory hint, then a local default:
  * the same three-step ladder every pillar uses (see `.env.example`).
  */
 export function resolveSqlitePath(env: NodeJS.ProcessEnv = process.env): string {

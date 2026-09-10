@@ -77,7 +77,7 @@ export function DecisionBar({
       </p>
 
       <p className="text-xs text-muted-foreground">
-        Accepting pins the link so no later sweep revises it. Rejecting only removes the link —
+        Accepting pins the link so no later sweep revises it. Rejecting only removes the link:
         nothing records the rejection yet, so the next sweep may propose it again.
       </p>
     </div>

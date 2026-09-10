@@ -4,7 +4,7 @@ import type { LinkType } from '@/fixtures/purchases-vocabulary';
  * Fictional data for the reconcile queue (`/purchases`), shaped like
  * `GET /reconcile/queue`'s 200 response
  * (the generated `ReconcileQueueResponses`). Typed locally
- * rather than imported — the playground reaches no pillar contract — so this
+ * rather than imported: the playground reaches no pillar contract, so this
  * mirrors the wire shape by hand and will drift if the real one changes.
  *
  * The set exists to show the queue working, not just the happy path: a
@@ -200,7 +200,7 @@ export const purchasesQueue: QueueEntry[] = [
 
 /**
  * Every charge here already carries a proposal, so filtering this set down
- * to "Unexplained" finds nothing — the filter-flavored empty state, not a
+ * to "Unexplained" finds nothing: the filter-flavored empty state, not a
  * queue with nothing in it.
  */
 export const allProposedQueue: QueueEntry[] = purchasesQueue.filter(

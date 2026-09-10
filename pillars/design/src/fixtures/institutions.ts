@@ -1,7 +1,7 @@
 /**
  * The institutions accounts belong to. A real account carries a real logo;
  * this is a design fixture, so the marks are generic shapes drawn here rather
- * than anyone's trademark — enough to show what the logo path looks like, and
+ * than anyone's trademark, enough to show what the logo path looks like, and
  * what happens on the accounts that have none.
  */
 export interface Institution {

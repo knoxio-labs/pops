@@ -4,7 +4,7 @@ import { buildCatalog } from './catalog';
 
 /**
  * Runs discovery against whatever is actually checked in under
- * `src/screens` and `src/experiments` and asserts the contract holds — so a
+ * `src/screens` and `src/experiments` and asserts the contract holds, so a
  * hand-edit or a skill that commits a contract-violating file fails here,
  * without this test knowing any screen by name.
  */

@@ -20,7 +20,7 @@ function Page({ items }: { items: PendingImport[] }) {
       <PageHeader
         backHref="#/dashboard"
         title="Pending imports"
-        description="Started and not finished — by you, or by a bank feed while you were away. Nothing here is in the ledger yet."
+        description="Started and not finished, by you, or by a bank feed while you were away. Nothing here is in the ledger yet."
         actions={
           <Button variant="outline" prefix={<Plus className="h-4 w-4" />}>
             New import

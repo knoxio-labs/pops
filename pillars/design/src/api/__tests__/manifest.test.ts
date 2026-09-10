@@ -22,7 +22,7 @@ describe('buildDesignManifest', () => {
     expect(manifest.contract.version).toBe('1.2.3');
   });
 
-  it('declares an empty cross-pillar surface — the playground publishes nothing', () => {
+  it('declares an empty cross-pillar surface: the playground publishes nothing', () => {
     const manifest = buildDesignManifest('1.2.3');
 
     expect(manifest.search.adapters).toEqual([]);

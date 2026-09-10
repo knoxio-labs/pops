@@ -21,7 +21,7 @@ function isAccent(value: string): value is AppAccent {
   return (APP_ACCENTS as readonly string[]).includes(value);
 }
 
-/** `dark`, or `dark+emerald` — the form the frame URL and storage carry. */
+/** `dark`, or `dark+emerald`: the form the frame URL and storage carry. */
 export function encodeTheme(theme: CanvasTheme): string {
   return theme.accent ? `${theme.mode}+${theme.accent}` : theme.mode;
 }

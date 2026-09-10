@@ -26,7 +26,7 @@ function Nested({ children }: { children: ReactNode }) {
 
 /**
  * Steps of one flow. Every step shares the flow's path and differs only in
- * `?step=`, which `NavLink` does not look at — so which one is current is
+ * `?step=`, which `NavLink` does not look at, so which one is current is
  * passed in rather than left to the router, or they would all light up.
  */
 function FlowSteps({

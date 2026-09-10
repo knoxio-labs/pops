@@ -9,7 +9,7 @@ import type { Account } from '@/fixtures/accounts';
 
 /**
  * The account page's header: identity on the left, actions on the right.
- * Archiving lives here rather than behind a menu — it is the one lifecycle
+ * Archiving lives here rather than behind a menu: it is the one lifecycle
  * action every account offers, toggling label with `account.archived`, and
  * deletion is never one of the actions since transactions reference the
  * account for good.

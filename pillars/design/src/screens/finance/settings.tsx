@@ -14,7 +14,7 @@ export const meta: ScreenMeta = { title: 'Settings', order: 8, frame: 'web' };
 /**
  * Institutions and currencies, managed on one page (POPS-2843): both are
  * short reference lists minted inline from the account form (POPS-2810) and
- * only ever edited or retired here, never created — splitting them into tabs
+ * only ever edited or retired here, never created: splitting them into tabs
  * or separate screens would cost a click for no payoff at this size.
  */
 export function SettingsPage({

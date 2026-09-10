@@ -71,7 +71,7 @@ export function ImportReviewTable({
               <TableCell className="tabular-nums">{row.date}</TableCell>
               <TableCell className="max-w-64 truncate">{row.description}</TableCell>
               <TableCell className={cn(!row.entity && 'text-muted-foreground')}>
-                {row.entity ?? '—'}
+                {row.entity ?? 'No entity'}
               </TableCell>
               <TableCell className="text-muted-foreground">{row.tags.join(', ')}</TableCell>
               <TableCell>

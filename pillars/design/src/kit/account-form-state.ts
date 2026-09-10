@@ -26,9 +26,9 @@ function counterpartyFor(kind: AccountKind): { mode: CounterpartyMode; source: C
 }
 
 /**
- * An existing account's counterparty id: `institutionId` when it has one, or —
- * for a person or gift-card account, which only ever stored a free-text
- * `contact` name — whichever fixture counterparty has that exact name. A
+ * An existing account's counterparty id: `institutionId` when it has one, or
+ * (for a person or gift-card account, which only ever stored a free-text
+ * `contact` name) whichever fixture counterparty has that exact name. A
  * contact typed by hand before this picker existed has nothing to resolve to
  * and the field opens unset, same as a brand new account.
  */
@@ -48,7 +48,7 @@ function useLocal<T>(fixture: T[]) {
 
 /**
  * The account's whole editable state, including the one counterparty field
- * that stands in for "Institution", "Contact" or "Issuer" depending on kind —
+ * that stands in for "Institution", "Contact" or "Issuer" depending on kind:
  * one field, one picker, relabelled and resourced by `counterpartyFor` rather
  * than three separate fields for what is the same relationship. Selecting or
  * minting a person contact also fills the account's name, since a person

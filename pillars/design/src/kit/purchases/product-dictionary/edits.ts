@@ -20,7 +20,7 @@ function findAlias(products: readonly DictionaryProduct[], aliasId: string) {
  * Applies one correction to a loaded dictionary the way the pillar's write
  * routes do: a merge or split moves a wording between products and deletes
  * whichever side it leaves empty, forgetting a wording or a product is the
- * same deletion at a different grain, and nothing here ever touches a line —
+ * same deletion at a different grain, and nothing here ever touches a line:
  * every correction is about which wordings are one product.
  *
  * This is the playground's own local simulation of

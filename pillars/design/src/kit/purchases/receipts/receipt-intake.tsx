@@ -36,7 +36,7 @@ export function ReceiptIntake({ intake, disabled, onSubmit }: ReceiptIntakeProps
         </p>
         <p className="text-muted-foreground text-xs">
           A long receipt can be photographed in several frames. Add up to {MAX_RECEIPT_PARTS} of
-          them — they are one purchase, read in the order below.
+          them: they are one purchase, read in the order below.
         </p>
       </div>
 

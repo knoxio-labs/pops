@@ -114,7 +114,7 @@ function KindSection({ kind, accounts }: { kind: AccountKind; accounts: Account[
   );
 }
 
-/** The accounts management list as cards grouped by kind — display order sorts within a group. */
+/** The accounts management list as cards grouped by kind: display order sorts within a group. */
 export function AccountsPage({
   accounts,
   initialQuery,

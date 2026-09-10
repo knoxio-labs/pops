@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Account } from '@/fixtures/accounts';
 
 function spanLabel(batch: ImportBatch): string {
-  if (!batch.from || !batch.to) return '—';
+  if (!batch.from || !batch.to) return 'Not recorded';
   return batch.from === batch.to ? day(batch.from) : `${day(batch.from)} – ${day(batch.to)}`;
 }
 
@@ -16,7 +16,7 @@ function spanLabel(batch: ImportBatch): string {
  * Every batch that fed the account, newest first, append-only: a batch is
  * what an import did, and there is no delete because undoing an import is a
  * transaction-level act that would leave this row true. A zero-row batch is
- * kept in the list on purpose — for a synced account "checked, nothing new"
+ * kept in the list on purpose: for a synced account "checked, nothing new"
  * is the fact the cadence is measured from.
  */
 export function ImportBatchHistory({

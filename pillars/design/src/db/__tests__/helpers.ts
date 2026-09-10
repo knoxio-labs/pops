@@ -1,7 +1,7 @@
 /**
  * A real, migrated database on a temp file per test.
  *
- * Not `:memory:` — the opener sets `journal_mode = WAL`, which an in-memory
+ * Not `:memory:`: the opener sets `journal_mode = WAL`, which an in-memory
  * database rejects, so a memory handle would exercise a configuration no
  * deployment ever runs.
  */

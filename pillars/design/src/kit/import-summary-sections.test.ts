@@ -24,7 +24,7 @@ describe('totalRulesApplied', () => {
     expect(totalRulesApplied(r)).toBe(6);
   });
 
-  it('is non-zero when only tag rules were applied — the case the Rule Breakdown box must still show', () => {
+  it('is non-zero when only tag rules were applied: the case the Rule Breakdown box must still show', () => {
     const r = result({ tagRulesApplied: 2 });
     expect(totalRulesApplied(r)).toBe(2);
   });

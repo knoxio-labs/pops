@@ -7,7 +7,7 @@ import type { Account } from '@/fixtures/accounts';
  * How the accounts list can be ordered. `kind-balance` is the default: kind
  * in vocabulary order, largest balance first within each kind. `recent`
  * approximates recency with transaction count, the only activity signal the
- * fixtures carry — there is no last-transaction date to sort by, which is
+ * fixtures carry: there is no last-transaction date to sort by, which is
  * why it is labelled by what it actually measures.
  */
 export type AccountSort = 'kind-balance' | 'balance' | 'name' | 'recent';

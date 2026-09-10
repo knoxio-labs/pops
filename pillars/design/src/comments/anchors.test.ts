@@ -112,7 +112,7 @@ describe('resolveAnchor', () => {
 
   /**
    * `anchor_kind` is free text in the schema and the API accepts any non-empty
-   * string, so a row can name a kind this build no longer knows — a thread
+   * string, so a row can name a kind this build no longer knows: a thread
    * stored before `token` was removed is the concrete case. It must degrade to
    * unresolved, not throw inside the render pass that resolves it.
    */

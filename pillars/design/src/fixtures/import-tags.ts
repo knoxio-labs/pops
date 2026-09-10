@@ -26,7 +26,7 @@ const SUGGESTIONS: Record<string, TagSuggestion[]> = {
   v4w5x6: [{ tag: 'household', source: 'ai' }],
 };
 
-/** Confirmed transactions — the matched bucket, tags pre-filled, ready for Tag Review. */
+/** Confirmed transactions: the matched bucket, tags pre-filled, ready for Tag Review. */
 export const confirmedTxns: ConfirmedTxn[] = byBucket('matched').map((t) => ({
   ...t,
   tags: [],

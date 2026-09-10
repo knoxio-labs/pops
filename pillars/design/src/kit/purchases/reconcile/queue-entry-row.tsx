@@ -44,7 +44,7 @@ export function QueueEntryRow({ entry, isActive, onSelect }: QueueEntryRowProps)
       <section aria-label="Proposed transactions" className="space-y-2 md:col-span-3">
         {entry.proposed.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nothing proposed — this charge is unexplained.
+            Nothing proposed. This charge is unexplained.
           </p>
         ) : (
           entry.proposed.map((link) => (

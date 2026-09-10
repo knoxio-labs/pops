@@ -25,12 +25,12 @@ interface AliasRowProps {
 }
 
 /**
- * One printed wording, and every way of correcting it — the grain the
+ * One printed wording, and every way of correcting it: the grain the
  * dictionary learns at, so the grain the corrections are offered at. A
  * mapping stated once applies to every line that ever printed it, past or
  * future, and there is nothing per-line to fix.
  *
- * Split is offered only where the wording shares its product with another —
+ * Split is offered only where the wording shares its product with another:
  * a wording alone on a product already is its own product. Forgetting is one
  * click, except where it takes a human-named product with it, where it asks
  * twice like forgetting the product does.
@@ -180,7 +180,7 @@ interface MergeControlProps {
 
 /**
  * The merge: pointing this wording at another product. Two steps rather than
- * one, because the target is the whole decision — the only correction here
+ * one, because the target is the whole decision: the only correction here
  * that reaches across the scope a wording was learned in. The offer
  * disappears when there is nothing to merge into.
  */

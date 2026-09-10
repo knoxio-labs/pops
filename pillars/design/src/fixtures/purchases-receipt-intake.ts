@@ -5,8 +5,8 @@
  * from it.
  *
  * The endpoint's own three answers are `created` (a purchase was written),
- * `needs-review` (read, but it does not add up — nothing written) and
- * `unreadable` (nothing could be read at all — nothing written). Three more
+ * `needs-review` (read, but it does not add up, nothing written) and
+ * `unreadable` (nothing could be read at all, nothing written). Three more
  * shapes reach the panel without being answers of that kind: `uploading`
  * while the model reads, `duplicate` for the 409 that means already on
  * record, and `refused` for an upload the pillar would not take.
@@ -43,7 +43,7 @@ export interface ExtractedLine {
   readonly unitNote?: string;
 }
 
-/** What the model read off a receipt, verbatim — every figure is the model's own text, not a parsed amount. */
+/** What the model read off a receipt, verbatim: every figure is the model's own text, not a parsed amount. */
 export interface ExtractedReceipt {
   readonly merchantName: string | null;
   readonly address: string | null;
@@ -168,7 +168,7 @@ export const CREATED_SUBMISSION: ReceiptSubmission = {
 };
 
 /**
- * Read and recorded, but the bytes were already in the store — a second
+ * Read and recorded, but the bytes were already in the store: a second
  * upload of a frame the pillar had kept. The purchase is the answer either
  * way, and the panel says which so a reader is not left wondering whether
  * they have just filed the same receipt twice.
@@ -196,7 +196,7 @@ export const DUPLICATE_SUBMISSION: ReceiptSubmission = {
 
 /**
  * The twelve lines below sum to 76.04, and with the adjustments (+7.66 tax,
- * -2.00 discount, +0.03 surcharge) to 81.73 — 2.50 short of the 84.23 the
+ * -2.00 discount, +0.03 surcharge) to 81.73, 2.50 short of the 84.23 the
  * receipt prints. The gate reports `computed - stated`, so the delta is
  * -250 cents: this arithmetic has to hold, because the disagreement between
  * the lines and the printed total is the entire reason this state exists.
@@ -261,5 +261,5 @@ export const REFUSED_SUBMISSION: ReceiptSubmission = {
   message: 'The upload service is unavailable. Try again in a moment.',
 };
 
-// More `ReceiptSubmission` fixtures — the review-gate failures and the
-// upload refusal — live in ./purchases-receipt-intake-review.
+// More `ReceiptSubmission` fixtures (the review-gate failures and the
+// upload refusal) live in ./purchases-receipt-intake-review.

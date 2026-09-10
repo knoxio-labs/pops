@@ -7,7 +7,7 @@ import type { BalancePoint } from '@/fixtures/account-insights';
  * glance. Hand-drawn SVG rather than a chart library: there is one series, no
  * axes and no interaction, and a dependency would buy none of that back.
  *
- * The line is `currentColor`, so the caller sets the tone — a liability
+ * The line is `currentColor`, so the caller sets the tone: a liability
  * trending up is not good news and should not be drawn in the same colour as
  * savings that are.
  */
@@ -49,7 +49,7 @@ export function Sparkline({
   );
 }
 
-/** A single proportion — a goal, a credit limit, a card spent down. */
+/** A single proportion: a goal, a credit limit, a card spent down. */
 export function ProgressBar({
   fraction,
   className,

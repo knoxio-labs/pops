@@ -19,7 +19,7 @@ export interface DiscardCopy {
 
 /**
  * What Discard promises, by what is actually at stake. A live import loses
- * nothing but decisions — the bank still has every row and resends them —
+ * nothing but decisions (the bank still has every row and resends them),
  * so the wording must not scare. A file draft loses the decisions AND the
  * way back, because the file is not stored; it has to say which file to
  * upload again. An unusable draft has already lost the decisions, so the

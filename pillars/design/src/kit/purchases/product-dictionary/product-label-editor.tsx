@@ -13,7 +13,7 @@ interface ProductLabelEditorProps {
   product: DictionaryProduct;
   isPending: boolean;
   onEdit: (edit: DictionaryEdit) => void;
-  /** Starts the forget-product control armed — a design state, not app behaviour. */
+  /** Starts the forget-product control armed: a design state, not app behaviour. */
   startArmed?: boolean;
 }
 
@@ -75,7 +75,7 @@ interface RenameFormProps {
 
 /**
  * The rename leaves every wording alone, but typing a name records that a
- * human named the product — which puts it beyond the proposal pass's reach,
+ * human named the product, which puts it beyond the proposal pass's reach,
  * so it cannot be orphaned and swept away with a name nothing could
  * reconstruct. An empty name is refused rather than sent.
  */
@@ -122,7 +122,7 @@ interface ForgetProductButtonsProps {
 /**
  * Forgetting a product asks twice: it takes every wording with it,
  * assertions included, and only re-running the pass afterwards restores the
- * proposals — without the decisions.
+ * proposals, without the decisions.
  */
 function ForgetProductButtons({
   product,

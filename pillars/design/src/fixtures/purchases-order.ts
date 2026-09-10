@@ -1,5 +1,5 @@
 /**
- * One whole fictional order — the fixture behind `screens/purchases/purchase.tsx`.
+ * One whole fictional order: the fixture behind `screens/purchases/purchase.tsx`.
  *
  * The arithmetic holds, because this screen puts the lines, the charges and
  * the accounting split on the same page and a reviewer reads them against
@@ -17,7 +17,7 @@
  */
 import type { PurchaseOrderDetail } from './purchases-order-types';
 
-/** The line a search hit would have landed on — used by the highlighted state. */
+/** The line a search hit would have landed on, used by the highlighted state. */
 export const HIGHLIGHTED_ITEM_ID = 'item_2QK8X1WM9V3NRD5T';
 
 export const purchaseOrder: PurchaseOrderDetail = {

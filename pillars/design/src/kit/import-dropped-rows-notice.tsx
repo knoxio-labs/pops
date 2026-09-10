@@ -16,7 +16,7 @@ function remedies(dropped: ImportTxn[]): string[] {
   }
   if (reasons.has('type')) {
     lines.push(
-      'set a transaction type on the money coming in — a credit is never assumed to be an expense'
+      'set a transaction type on the money coming in: a credit is never assumed to be an expense'
     );
   }
   return lines;

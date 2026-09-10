@@ -47,7 +47,7 @@ export function ProposalPassPanel({
       <p className="text-muted-foreground text-xs">
         Reads every stored line, mints an entry for each printed wording that has none, and retires
         the unasserted entries no line prints any more. A wording somebody asserted is left alone,
-        and so are the wordings reaching a product somebody named. Nothing runs this on a schedule —
+        and so are the wordings reaching a product somebody named. Nothing runs this on a schedule:
         it runs when you press the button.
       </p>
 

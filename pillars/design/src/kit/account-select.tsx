@@ -24,7 +24,7 @@ import {
 
 /**
  * "Credit card · American Express", or just the kind label when an account
- * belongs to no institution — cash and person ledgers, mainly.
+ * belongs to no institution: cash and person ledgers, mainly.
  */
 export function accountSubtitle(account: Account): string {
   const kind = ACCOUNT_KINDS[account.kind].label;
@@ -36,7 +36,7 @@ export function accountSubtitle(account: Account): string {
 
 /**
  * What cmdk matches against. The subtitle is on screen, so someone who reads
- * "Credit card · ANZ" will type "ANZ" and expect all three ANZ accounts —
+ * "Credit card · ANZ" will type "ANZ" and expect all three ANZ accounts;
  * matching the name alone would show them one.
  */
 function searchTerm(account: Account): string {
@@ -133,7 +133,7 @@ export interface AccountSelectProps {
 }
 
 /**
- * A searchable popover for choosing one account — the `EntitySelect` shape,
+ * A searchable popover for choosing one account, the `EntitySelect` shape,
  * carrying its own open/search/selection state so each mounted instance is
  * independent of any other on the same page.
  */

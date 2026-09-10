@@ -7,8 +7,8 @@ import type { ExplainedSplit } from './explained-split';
  *
  * Both halves are always on screen, including the unexplained figure when it
  * is zero. Hiding it when there is nothing to report would mean its absence
- * carried two meanings — "all accounted for" and "this view does not show
- * that" — and a reader cannot tell those apart.
+ * carried two meanings, "all accounted for" and "this view does not show
+ * that", and a reader cannot tell those apart.
  */
 export function ExplainedSplitView({
   split,
@@ -50,7 +50,7 @@ export function ExplainedSplitView({
 
 /**
  * A non-zero residual always paints, because `explainedPercent` never
- * reaches 100 while one exists — a one-cent residual is a visible sliver
+ * reaches 100 while one exists: a one-cent residual is a visible sliver
  * rather than a bar that reads as complete.
  */
 function SplitMeter({ percent }: { percent: number }) {

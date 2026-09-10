@@ -1,5 +1,5 @@
 /**
- * A photographed receipt at each of the three outcomes the pillar returns —
+ * A photographed receipt at each of the three outcomes the pillar returns:
  * a purchase it recorded, a reading it will not record without a person, and
  * an image it could not read at all.
  *
@@ -78,7 +78,7 @@ export const woolworthsReading: ExtractedReceipt = {
 
 /**
  * The twelve lines above come to 76.04, and with the adjustments (+7.66 tax,
- * -2.00 discount, +0.03 surcharge) to 81.73 — 2.50 short of the 84.23 the
+ * -2.00 discount, +0.03 surcharge) to 81.73, 2.50 short of the 84.23 the
  * receipt printed. The arithmetic has to hold: a reviewer looking at the
  * needs-review screen adds the visible column up, and a mismatch this fixture
  * only claims is one the screen cannot be judged on.

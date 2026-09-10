@@ -4,7 +4,7 @@
  * Every call is same-origin against `/design-api/`: in production the shell's
  * nginx proxies that prefix to the API container, and in dev Vite proxies it
  * to a deployed one with an Access service token attached server-side (see
- * `vite.config.ts`). A failed call resolves to `null` rather than throwing —
+ * `vite.config.ts`). A failed call resolves to `null` rather than throwing:
  * the overlay's answer to "the API is not reachable" is to hide itself, not
  * to break the canvas.
  */
@@ -53,7 +53,7 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Who the API thinks is calling, or `null` when it cannot say — which is also
+ * Who the API thinks is calling, or `null` when it cannot say, which is also
  * what an unreachable API looks like, and the signal the overlay hides on.
  */
 export async function fetchIdentity(): Promise<{ email: string | null } | null> {

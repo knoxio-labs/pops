@@ -23,7 +23,7 @@ function Note({ children }: { children: string }) {
 /**
  * The frame-side route element for one surface: resolves the design
  * (main or variant), the screen, the step and the state from the URL, and
- * renders it. Every "not found" is a note, never a crash — a half-written
+ * renders it. Every "not found" is a note, never a crash: a half-written
  * screen must not take the canvas down.
  *
  * The screen path arrives as a splat, because a screen sits as deep as its

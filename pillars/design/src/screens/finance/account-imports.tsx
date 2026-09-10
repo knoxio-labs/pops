@@ -20,7 +20,7 @@ export const meta: ScreenMeta = { title: 'Account imports', order: 7, frame: 'we
  * only the result). Four sections, top to bottom in the order a reader asks
  * them: what feeds this, when did it last, what has it done, what can I do.
  * A synced account and a file-fed one differ in wording (sync vs import)
- * and in one action, not in layout — the sameness is the point, so an Up
+ * and in one action, not in layout: the sameness is the point, so an Up
  * account and an Amex CSV read as the same kind of thing at different speeds.
  */
 function AccountImports({
@@ -40,7 +40,7 @@ function AccountImports({
       <PageHeader
         backHref={`#/accounts/${account.id}`}
         icon={<AccountAvatar account={account} size="md" />}
-        title={`Imports — ${account.name}`}
+        title={`Imports: ${account.name}`}
         description="How this account gets its transactions, when it last did, and every batch that fed it. The balance shown elsewhere is the result; this is the plumbing behind it."
         actions={<ImportActions account={account} config={config} activity={activity} />}
       />

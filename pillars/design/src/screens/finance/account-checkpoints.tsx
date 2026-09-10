@@ -42,8 +42,8 @@ function InconsistencyBanner({ account }: { account: Account }) {
 
 /**
  * Checkpoints, on their own page rather than folded into the account
- * dashboard: the balance card only ever needs the *result* — an as-of date
- * and a flag — and this is where the record behind that result lives. Most
+ * dashboard: the balance card only ever needs the *result* (an as-of date
+ * and a flag), and this is where the record behind that result lives. Most
  * of it won't be typed by hand for long: a parsed statement (POPS-2752) or a
  * scanned receipt is as authoritative as anything entered here, and will
  * file its own checkpoint the same way. What's manual today is the gap
@@ -56,7 +56,7 @@ function AccountCheckpoints({ account }: { account: Account }) {
       <PageHeader
         backHref={`#/accounts/${account.id}`}
         icon={<AccountAvatar account={account} size="md" />}
-        title={`Checkpoints — ${account.name}`}
+        title={`Checkpoints: ${account.name}`}
         description="A checkpoint is a balance confirmed against something outside the ledger. The balance shown elsewhere is always computed forward from the nearest one below."
         actions={
           <Button size="sm">

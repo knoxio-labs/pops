@@ -5,7 +5,7 @@
  * and a detail record that carries the fields only a fetch can supply.
  *
  * The two shapes are separate on purpose. A list row is what a tap already
- * has in hand, and the detail is what arrives afterwards — designing them as
+ * has in hand, and the detail is what arrives afterwards: designing them as
  * one object would hide the seeded state the phone actually opens in.
  */
 export interface Transaction {

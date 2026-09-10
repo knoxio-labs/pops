@@ -40,8 +40,8 @@ function ActivityRow({
 /**
  * Recent transactions and recent purchases: each a call to a different
  * pillar, made once for the one entity this page is showing. Either can come
- * back empty — a brand-new entity, or one that simply never bought anything
- * through purchases — and an empty rollup is still informative, so it gets a
+ * back empty (a brand-new entity, or one that simply never bought anything
+ * through purchases) and an empty rollup is still informative, so it gets a
  * sentence rather than being hidden.
  */
 export function EntityActivity({ entity }: { entity: Entity }) {

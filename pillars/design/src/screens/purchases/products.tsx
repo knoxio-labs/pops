@@ -20,7 +20,7 @@ import type { ReactElement } from 'react';
 export const meta: ScreenMeta = { title: 'Product dictionary', order: 4, frame: 'web' };
 
 const CAVEAT =
-  "Nothing here is written to a line. A product's grouping is resolved fresh on every read, so a correction applies to the orders already stored as well as the ones still to arrive — order counts, cadence and unit-price history for these products are recomputed under the new grouping the next time anything reads them. The one thing a correction does not revisit is a line's item kind: that pass writes its decision onto the line, and a regrouping made afterwards does not re-open it.";
+  "Nothing here is written to a line. A product's grouping is resolved fresh on every read, so a correction applies to the orders already stored as well as the ones still to arrive: order counts, cadence and unit-price history for these products are recomputed under the new grouping the next time anything reads them. The one thing a correction does not revisit is a line's item kind: that pass writes its decision onto the line, and a regrouping made afterwards does not re-open it.";
 
 const INTRO =
   'What this pillar has learned about product identity: one product per thing you recognise, and every printed wording that resolves to it. A correction here applies to every line that ever printed that wording.';
@@ -32,14 +32,14 @@ interface ProductDictionaryPageProps {
   initialFilters?: DictionaryFilterState;
   initialPass?: PassState;
   initialEditOutcome?: EditOutcome | null;
-  /** Renders every edit control mid-write — a design state only. */
+  /** Renders every edit control mid-write, a design state only. */
   initialIsEditPending?: boolean;
-  /** Renders one product's forget control pre-armed — a design state only. */
+  /** Renders one product's forget control pre-armed, a design state only. */
   startArmedProductId?: string;
 }
 
 /**
- * `/purchases/products` — what the pillar has learned about product
+ * `/purchases/products`: what the pillar has learned about product
  * identity, and every way of correcting it, staged here with local fixtures
  * and a local edit simulation (`use-product-dictionary-page.ts`) in place of
  * the real reads and writes.

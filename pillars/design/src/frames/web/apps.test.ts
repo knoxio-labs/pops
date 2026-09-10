@@ -37,7 +37,7 @@ describe('WEB_APPS', () => {
   it('has a translation for every app and item label, in every locale', () => {
     // The rail and page nav render `t(labelKey)` with no fallback to the
     // sibling `label`, so a key absent from a catalogue reaches the user as
-    // the raw key — `finance.accounts` where "Accounts" belongs. Two shipped
+    // the raw key, `finance.accounts` where "Accounts" belongs. Two shipped
     // that way (POPS-2775, POPS-2810) because nothing compared the two
     // sides. `WEB_APPS` holds each pillar's real navConfig, so this covers
     // every app without a second edit when one gains a page.

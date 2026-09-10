@@ -7,7 +7,7 @@ import { currenciesByCode } from '@/fixtures/currencies';
  * Balances and amounts are ledger-signed everywhere in POPS: positive is money
  * you can use and renders green, negative is money you owe and renders red. So
  * `out` writes a negative delta on the account the money leaves, `in` writes a
- * positive one, and `transfer` writes both — a negative on the from account and
+ * positive one, and `transfer` writes both: a negative on the from account and
  * the matching positive on the to account, which sum to zero. A transfer
  * therefore moves two balances and changes net worth by nothing, which is why
  * it must never be counted as spending.
@@ -61,7 +61,7 @@ export function deltaFor(type: TransactionType, side: EntrySide, magnitude: numb
 
 /**
  * The ledger entries a draft would write. One for `out`/`in`, two for a
- * transfer — and the pair is derived from a single magnitude here rather than
+ * transfer, and the pair is derived from a single magnitude here rather than
  * from two fields, so the two sides cannot be made to disagree.
  */
 export function entriesFor(draft: TransactionDraft, minorUnits: number): LedgerEntry[] {
@@ -93,7 +93,7 @@ function amountError(amount: string, minorUnits: number): string | undefined {
   const typed = amount.trim();
   if (!typed) return 'Enter an amount.';
   if (typed.startsWith('-')) {
-    return 'Enter the amount without a sign — the direction above decides it.';
+    return 'Enter the amount without a sign: the direction above decides it.';
   }
   if (Number.isNaN(minorUnits)) return 'That is not an amount.';
   if (minorUnits === 0) return 'Zero has nothing to record.';

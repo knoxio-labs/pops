@@ -8,13 +8,13 @@ describe('aiMatchedTitle', () => {
 
   it('calls out low confidence below the trust threshold', () => {
     expect(aiMatchedTitle(0.54)).toBe(
-      'Entity resolved by AI — low confidence (54%), review before trusting'
+      'Entity resolved by AI: low confidence (54%), review before trusting'
     );
   });
 
   it('reports a plain confidence at or above the threshold', () => {
-    expect(aiMatchedTitle(0.82)).toBe('Entity resolved by AI — confidence 82%');
-    expect(aiMatchedTitle(0.7)).toBe('Entity resolved by AI — confidence 70%');
+    expect(aiMatchedTitle(0.82)).toBe('Entity resolved by AI: confidence 82%');
+    expect(aiMatchedTitle(0.7)).toBe('Entity resolved by AI: confidence 70%');
   });
 });
 

@@ -2,7 +2,7 @@
  * Fictional import plumbing for the per-account imports screen (POPS-2918):
  * how each account is fed, the batches that fed it, and the status the
  * account page and the grid read off those. Three shapes are staged on
- * purpose — a synced account (`a13`, Up), file-fed ones (`a1`/`a2` CSV,
+ * purpose: a synced account (`a13`, Up), file-fed ones (`a1`/`a2` CSV,
  * `a3` PDF statements) and hand-fed ones (`a5` cash, and `a4`, which has a
  * bank but nothing has ever been imported into it).
  *

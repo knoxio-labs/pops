@@ -11,7 +11,7 @@ export function NoDetectionNotice() {
           <p className="text-xs">
             None of this file&apos;s column names look like a date, description or amount, so
             nothing was filled in. An export with no header row is listed as Column 1, Column 2 and
-            so on — check the bank you picked on the previous step, then map each field below.
+            so on: check the bank you picked on the previous step, then map each field below.
           </p>
         </div>
       </div>

@@ -18,7 +18,7 @@ function Swatch({ theme }: { theme: CanvasTheme }) {
   );
 }
 
-/** Dock tool: the canvas theme — light or dark, and which app accent retints it. */
+/** Dock tool: the canvas theme, light or dark, and which app accent retints it. */
 export function ThemeTool({
   theme,
   onSelect,

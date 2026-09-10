@@ -11,7 +11,7 @@ export const ATTRIBUTION_BADGE_LABEL: Record<MerchantResolution, string> = {
 
 const EXPLAIN: Record<MerchantResolution, string> = {
   entity:
-    "Grouped on a contacts entity id, the operative identity. The label shown is the one from the group's newest order, ranked as text — a merchant renamed since then can still be wearing its older name (POPS-1854).",
+    "Grouped on a contacts entity id, the operative identity. The label shown is the one from the group's newest order, ranked as text: a merchant renamed since then can still be wearing its older name (POPS-1854).",
   name: "Grouped on the merchant's label because no entity is attached, so this is a label total, not an entity total. Two merchants sharing a label share this row, and renaming one splits its history. No export adapter resolves a merchant entity today, so every exported order lands here (POPS-1852).",
   unattributed:
     'The order names no merchant. Kept as its own group rather than dropped, so the groups still add up to the spend.',

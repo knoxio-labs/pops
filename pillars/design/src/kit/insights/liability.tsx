@@ -48,7 +48,7 @@ function years(months: number): string {
  * The schedule this loan runs from today at a fixed repayment: each month the
  * balance takes `annualRatePct / 12` in interest and the repayment then lands
  * against the total, so `owed → owed × (1 + r) − repayment` until it reaches
- * zero. Null when a repayment never clears one month's interest — a loan that
+ * zero. Null when a repayment never clears one month's interest: a loan that
  * does not amortise at all, rather than one with a distant payoff.
  *
  * A projection, not a schedule: the rate never moves, no repayment is missed,

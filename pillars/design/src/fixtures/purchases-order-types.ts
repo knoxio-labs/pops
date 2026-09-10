@@ -8,7 +8,7 @@ export type OrderAccounting = PurchaseAccounting;
 /**
  * View types for one order, typed locally for the playground and mirroring
  * the shape `GET /purchases/{id}` answers with.
- * Not imported from the app — the playground fixture is the source of truth
+ * Not imported from the app: the playground fixture is the source of truth
  * here, and a field the server stops sending should not silently vanish from
  * these.
  */
@@ -35,7 +35,7 @@ export type DocumentKind =
   | 'delivery_photo'
   | 'other';
 
-/** The order row itself — identity, money as the merchant stated it, status. */
+/** The order row itself: identity, money as the merchant stated it, status. */
 export interface OrderPurchase {
   id: string;
   merchantEntityName: string | null;

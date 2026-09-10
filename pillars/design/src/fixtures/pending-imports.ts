@@ -9,7 +9,7 @@
  * Four shapes are staged on purpose. A file draft saved mid-review. A live
  * Up import that has been filling itself from the webhook and that nobody has
  * opened. A live one that IS open right now, with a second one behind it
- * collecting what arrived after it was opened — an open import never
+ * collecting what arrived after it was opened: an open import never
  * changes under the person working in it. And a draft a deploy left behind,
  * saved under a shape this build no longer reads.
  *
@@ -27,7 +27,7 @@ export type PendingImportState =
   | 'saved'
   /** Rows arriving on their own; nobody has stepped through them yet. */
   | 'live'
-  /** Open in a wizard right now — this tab or another one. */
+  /** Open in a wizard right now: this tab or another one. */
   | 'open'
   /** Saved by a build this one cannot read. The only way out is discard. */
   | 'unusable';
@@ -44,7 +44,7 @@ export interface PendingImport {
   unresolvedCount?: number;
   /** Live only: the balance the provider reported with the newest row, minor units. */
   balanceReported?: number;
-  /** Rows that arrived after it was last saved — live sources only. */
+  /** Rows that arrived after it was last saved (live sources only). */
   arrivedSinceSave?: number;
   /** When the draft was last written, ISO date-time. */
   savedAt: string;
@@ -124,7 +124,7 @@ export const pendingImports: PendingImport[] = [
     savedAt: '2026-08-30T19:22:00+10:00',
     span: { from: '2026-04-02', to: '2026-08-31' },
     unusableReason:
-      'Saved before the 2 Sep deploy. Its rows are in a shape this version no longer reads, and the file is not stored — upload it again to redo the import.',
+      'Saved before the 2 Sep deploy. Its rows are in a shape this version no longer reads, and the file is not stored: upload it again to redo the import.',
   },
   {
     id: 'p-ing-archived',

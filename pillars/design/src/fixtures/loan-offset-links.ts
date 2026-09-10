@@ -1,4 +1,4 @@
-/** One offset account linked to a loan — mirrors the wire shape of `loan_offset_links`. */
+/** One offset account linked to a loan, mirrors the wire shape of `loan_offset_links`. */
 export interface LoanOffsetLinkEntry {
   id: string;
   offsetAccountId: string;
@@ -7,7 +7,7 @@ export interface LoanOffsetLinkEntry {
 }
 
 /**
- * `a11` (Home loan)'s offset links, oldest `linkedFrom` first — matching
+ * `a11` (Home loan)'s offset links, oldest `linkedFrom` first, matching
  * `listOffsetLinks`'s ordering (POPS-2829). `lo1` is a closed arrangement
  * (an everyday account that was linked and later unlinked); `lo2` is the
  * active one. `a12` (Car loan) carries none, showing the empty state.

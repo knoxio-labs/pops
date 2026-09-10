@@ -6,12 +6,12 @@
  * `/design-api/` to it.
  *
  * When `POPS_REGISTRY_ENABLED=true` it registers with the `registry` pillar,
- * and that is not about discovery — its clients reach it at a fixed path.
+ * and that is not about discovery: its clients reach it at a fixed path.
  * It registers because **the shell renders its production nginx conf from the
  * live registry** and emits one `/<id>-api/` block per registered pillar. The
  * first version of this pillar did not register, so `/design-api/` existed in
  * the committed conf, in the drift test and in the fallback the shell only
- * uses when the registry is unreachable — and nowhere on the running host
+ * uses when the registry is unreachable, and nowhere on the running host
  * (POPS-2793). Registration happens AFTER `listen` and never blocks boot.
  *
  * The database opens BEFORE `listen` because migrations run on the way up,

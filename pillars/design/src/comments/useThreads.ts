@@ -4,7 +4,7 @@
  * `available` is the load-bearing state. The API is absent in a plain local
  * checkout (no service token, so the dev proxy is not mounted), and the
  * overlay's answer to that is to disappear rather than to render a broken
- * affordance — so a failed identity call is a normal outcome here, not an
+ * affordance, so a failed identity call is a normal outcome here, not an
  * error to surface.
  */
 import { useCallback, useEffect, useState } from 'react';

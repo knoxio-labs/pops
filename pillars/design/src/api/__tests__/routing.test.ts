@@ -76,7 +76,7 @@ describe('routing', () => {
 
   /**
    * The shell's nginx strips `/design-api/` before the request arrives, so
-   * the routes must answer at the root — a second `/api` prefix here would
+   * the routes must answer at the root: a second `/api` prefix here would
    * make the public path `/design-api/api/threads`.
    */
   it('serves the thread routes at the root, where the nginx rewrite lands', async () => {

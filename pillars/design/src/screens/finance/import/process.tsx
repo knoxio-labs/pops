@@ -112,11 +112,7 @@ export default function ImportProcessStep() {
 
 export const states: ScreenStates = {
   'live-feed': () => (
-    <Step
-      choice={UP_LIVE}
-      message="Matching 7 of 11 transactions Up sent since 2 Sep. Nothing to parse — the rows came in already read."
-      progress={64}
-    />
+    <Step choice={UP_LIVE} message="Classifying 7 of 11 transactions…" progress={64} />
   ),
   'already-processed': () => (
     <Step

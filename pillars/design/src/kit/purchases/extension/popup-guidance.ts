@@ -23,7 +23,7 @@ export function popupGuidance(status: CaptureStatus): PopupGuidance {
   if (status.error !== null) return { text: status.error, isError: true };
   if (status.running === 'history') {
     return {
-      text: `Loading history — ${status.progress.done} receipts listed so far…`,
+      text: `Loading history: ${status.progress.done} receipts listed so far…`,
       isError: false,
     };
   }
@@ -35,13 +35,13 @@ export function popupGuidance(status: CaptureStatus): PopupGuidance {
   }
   if (!status.hasPageTemplate) {
     return {
-      text: 'Scroll the activity list once — that is where the pagination request comes from.',
+      text: 'Scroll the activity list once. That is where the pagination request comes from.',
       isError: false,
     };
   }
   if (!status.hasDetailsTemplate) {
     return {
-      text: 'Open any one receipt — that teaches the extension the request it replays for the rest.',
+      text: 'Open any one receipt. That teaches the extension the request it replays for the rest.',
       isError: false,
     };
   }

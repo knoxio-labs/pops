@@ -10,7 +10,7 @@ chosen: grid
 decided: 2026-09-03
 rationale: >-
   The grid. The balance is the point of this screen, and only the grid gives it
-  room to be the headline — the table demotes it to one right-aligned column
+  room to be the headline: the table demotes it to one right-aligned column
   among four. A logo, a name and a number read as an account; a table row reads
   as a database record. It also fills the page at the real account count, where
   the table leaves the width empty.

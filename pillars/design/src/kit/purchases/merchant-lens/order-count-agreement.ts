@@ -7,8 +7,8 @@
  * reason the reader can act on, and a list short of both the cap and the
  * count is two reads of the same corpus disagreeing.
  *
- * `over` is the direction the merchant filter is written to prevent — a
- * label group widened to every order wearing that label — so it is reported
+ * `over` is the direction the merchant filter is written to prevent (a
+ * label group widened to every order wearing that label), so it is reported
  * rather than left as a list that quietly holds more than the total above it
  * was computed from.
  */

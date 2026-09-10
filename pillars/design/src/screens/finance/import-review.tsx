@@ -51,7 +51,7 @@ function Row({ row }: { row: ImportRow }) {
   );
 }
 
-/** The review step of the import wizard as a row list — the current shape. */
+/** The review step of the import wizard as a row list, the current shape. */
 export function ImportReview({
   rows,
   choice = AMEX,

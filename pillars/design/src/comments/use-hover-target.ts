@@ -3,7 +3,7 @@
  * anchor to, or null when the pointer is over the overlay's own chrome or
  * over nothing anchorable.
  *
- * It is the same hit test `usePinning` runs on click, deliberately — an
+ * It is the same hit test `usePinning` runs on click, deliberately: an
  * affordance that highlighted something other than what the click pins would
  * be worse than none. The cursor is driven from the same result, so the
  * crosshair appears exactly where a click has an effect.

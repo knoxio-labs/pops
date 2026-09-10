@@ -2,9 +2,9 @@
  * What every account surface says about its imports, derived from the
  * batches rather than stored (POPS-2917's `importStatus`): when it was last
  * fed, what its rows span, how often it is usually fed, and whether it is
- * overdue. The threshold is the account's own rhythm — the median gap
+ * overdue. The threshold is the account's own rhythm: the median gap
  * between its last five batches, or the cadence it was configured with, or
- * 45 days when it has neither — so a daily Up sync two days quiet reads as
+ * 45 days when it has neither, so a daily Up sync two days quiet reads as
  * stale and a monthly card export three weeks quiet does not.
  */
 import { batchesFor, configByAccountId, TODAY } from './import-sources';

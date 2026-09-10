@@ -51,7 +51,7 @@ export interface AccountKindMeta {
 }
 
 /**
- * The kind vocabulary — label, icon, and the three ledger behaviours the
+ * The kind vocabulary: label, icon, and the three ledger behaviours the
  * discriminator drives. Every account surface reads its icon and label from
  * here, so the picker, the chip and the management list cannot disagree.
  */

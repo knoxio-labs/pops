@@ -19,8 +19,8 @@ export function aiMatchedTitle(confidence: number | undefined): string {
   if (confidence === undefined) return 'Entity resolved by AI (no reported confidence)';
   const pct = Math.round(confidence * 100);
   return confidence < LOW_AI_CONFIDENCE_THRESHOLD
-    ? `Entity resolved by AI — low confidence (${pct}%), review before trusting`
-    : `Entity resolved by AI — confidence ${pct}%`;
+    ? `Entity resolved by AI: low confidence (${pct}%), review before trusting`
+    : `Entity resolved by AI: confidence ${pct}%`;
 }
 
 function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
@@ -109,7 +109,7 @@ function OverriddenRulesPopover({ rules }: { rules: OverriddenRule[] }) {
 }
 
 /**
- * Provenance badges for one transaction — untyped/edited/auto-matched/
+ * Provenance badges for one transaction: untyped/edited/auto-matched/
  * AI-matched (with a low-confidence variant)/rule-matched/overridden-rules,
  * ported from `pillars/finance/app/src/components/imports/transaction-card/badges.tsx`.
  */
@@ -153,7 +153,7 @@ function bucketBorder(bucket: ImportTxn['bucket']): string {
 /**
  * One transaction card, ported from
  * `pillars/finance/app/src/components/imports/transaction-card/CardChrome.tsx`
- * with the edit affordance, entity picker and raw-data collapsible left out —
+ * with the edit affordance, entity picker and raw-data collapsible left out:
  * this surface is a static render, not an editor.
  */
 export function TxnCard({ txn }: { txn: ImportTxn }) {

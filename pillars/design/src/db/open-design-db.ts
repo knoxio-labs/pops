@@ -7,12 +7,12 @@
  * change to any of them has to be made in each opener.
  *
  * Pragmas, and why this pillar needs each:
- *   - `journal_mode = WAL` — the overlay polls threads while a session writes
+ *   - `journal_mode = WAL`: the overlay polls threads while a session writes
  *     replies and statuses; a read must not block on that.
- *   - `foreign_keys = ON` — load-bearing. `design_messages` cascades from
+ *   - `foreign_keys = ON`: load-bearing. `design_messages` cascades from
  *     `design_threads`; with the pragma off SQLite ignores the cascade and a
  *     deleted thread leaves its messages behind as unreachable rows.
- *   - `busy_timeout = 5000` — two browsers commenting at once should wait for
+ *   - `busy_timeout = 5000`: two browsers commenting at once should wait for
  *     the writer rather than fail with SQLITE_BUSY.
  */
 import { mkdirSync } from 'node:fs';
@@ -27,14 +27,14 @@ import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
-/** A drizzle handle — either the top-level db or a transaction. */
+/** A drizzle handle: either the top-level db or a transaction. */
 export type DesignDb = BetterSQLite3Database<Record<string, unknown>>;
 
 /**
  * Path to the migrations folder inside this pillar. Resolved from this
  * module's own location rather than `process.cwd()` so it holds through the
  * workspace symlink in dev, from the built `dist` layout, and inside the
- * image — three places with three different working directories.
+ * image: three places with three different working directories.
  */
 function migrationsDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));

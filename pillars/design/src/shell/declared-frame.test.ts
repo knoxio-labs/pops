@@ -43,7 +43,7 @@ describe('declaredFrame', () => {
   it('lets a flow step override the flow it belongs to', () => {
     const step = screen('finance/import-wizard/scan', 'none');
     const catalog = catalogOf([screen('finance/import-wizard', 'web', [step])]);
-    // The step is the surface on the canvas, and it declares `none` — which
+    // The step is the surface on the canvas, and it declares `none`, which
     // is a declaration, not an absence, so it beats the flow's `web`.
     expect(frameAt(catalog, '/s/finance/import-wizard', '?step=scan')).toBe('none');
   });

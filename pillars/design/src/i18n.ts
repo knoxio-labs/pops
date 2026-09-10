@@ -1,7 +1,7 @@
 /**
  * i18next for the playground. Four `@pops/ui` components call
  * `useTranslation('ui')` and render raw keys without a provider, so the
- * playground initialises the same namespaces the shell does for them —
+ * playground initialises the same namespaces the shell does for them:
  * `common` and `ui` only, in the default locale. A screen that needs a
  * pillar namespace adds its resources here.
  */

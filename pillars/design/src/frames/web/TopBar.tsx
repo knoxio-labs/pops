@@ -2,7 +2,7 @@ import { Menu, Search } from 'lucide-react';
 
 /**
  * The shell's top bar, as chrome the reviewed screen sits under: wordmark,
- * search, actions. Nothing here does anything — it is here to take up the
+ * search, actions. Nothing here does anything: it is here to take up the
  * height and attention it takes up in the product, at the same breakpoints.
  */
 export function TopBar() {

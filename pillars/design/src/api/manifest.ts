@@ -1,5 +1,5 @@
 /**
- * The design pillar's manifest payload — what it POSTs to the `registry`
+ * The design pillar's manifest payload: what it POSTs to the `registry`
  * pillar on boot.
  *
  * Registering is not about discovery for this pillar: its only clients reach
@@ -22,8 +22,8 @@ export function buildDesignManifest(version: string): ManifestPayload {
     pillar: DESIGN_PILLAR_ID,
     version,
     // Required by the payload schema, and the honest answer is thin: the
-    // package exists but publishes no contract for another pillar to consume
-    // — no exports map, no generated client, nothing vendored anywhere. It
+    // package exists but publishes no contract for another pillar to consume:
+    // no exports map, no generated client, nothing vendored anywhere. It
     // names where the pillar lives, not a surface to import.
     contract: {
       package: '@pops/design',

@@ -19,7 +19,7 @@ import { ImportContextStrip } from './import/upload';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
-export const meta: ScreenMeta = { title: 'Import — resume prompt', order: 2, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Import: resume prompt', order: 2, frame: 'web' };
 
 const CHOICE = choiceOf('a2', 'amex-csv');
 
@@ -64,7 +64,7 @@ function Screen({
             <Alert>
               <AlertTitle>The server lost track of this import</AlertTitle>
               <AlertDescription>
-                Likely a deploy while it was processing. Nothing was lost — resuming simply re-runs
+                Likely a deploy while it was processing. Nothing was lost: resuming simply re-runs
                 processing from your saved rows.
               </AlertDescription>
             </Alert>
@@ -80,7 +80,7 @@ function Screen({
                   {describeSourceFiles(sourceFiles)}, {parsedCount} transactions parsed, stopped at{' '}
                   {step}.
                   {step === 'Process' &&
-                    ' Resuming restarts processing from scratch — it does not reattach to the run that stopped.'}
+                    ' Resuming restarts processing from scratch; it does not reattach to the run that stopped.'}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

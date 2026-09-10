@@ -8,8 +8,8 @@
  * registry-aware resolution (which screens, steps and states actually exist)
  * lives in `surface.ts`.
  *
- * The screen path has no fixed length — groups nest as deep as the tree does —
- * which is why the step is a query parameter rather than a trailing segment:
+ * The screen path has no fixed length, since groups nest as deep as the tree does.
+ * That is why the step is a query parameter rather than a trailing segment:
  * a trailing segment could not be told from a deeper screen without loading
  * the catalog, and this module deliberately never does.
  */
@@ -54,7 +54,7 @@ export function buildAddress(a: Address): string {
 /**
  * Parse a canonical address from its parts. `search` is the raw
  * `location.search` (`?state=empty`), `hash` the raw `location.hash`
- * (`#submit`). Null for any path that is not a screen address — which
+ * (`#submit`). Null for any path that is not a screen address, which
  * includes a screen path with no area to sit in.
  */
 export function parseAddress(pathname: string, search = '', hash = ''): Address | null {
@@ -75,9 +75,9 @@ export function parseAddress(pathname: string, search = '', hash = ''): Address 
   };
 }
 
-/** What the target screen can honour: its step slugs — the single path
- *  segment the address grammar carries, not the step's catalog-wide id
- *  (empty = leaf) — and the state ids available at a given step (or on the
+/** What the target screen can honour: its step slugs (the single path
+ *  segment the address grammar carries, not the step's catalog-wide id;
+ *  empty = leaf), and the state ids available at a given step (or on the
  *  screen itself). */
 export interface Capabilities {
   steps: string[];
@@ -86,7 +86,7 @@ export interface Capabilities {
 
 /**
  * Best-effort coordinate preservation: keep the step and state when the
- * target surface has them, otherwise drop to the nearest valid parent — a
+ * target surface has them, otherwise drop to the nearest valid parent: a
  * non-flow target drops the step; a surface without the named state drops
  * the state. Design and screen are taken as given.
  */

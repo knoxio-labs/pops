@@ -45,7 +45,7 @@ describe('placePins', () => {
 
   /**
    * The numbering is the panel's, so a dropped pin must not renumber the
-   * ones after it — a reader matching "3." in the panel to a dot on screen
+   * ones after it: a reader matching "3." in the panel to a dot on screen
    * would otherwise land on the wrong thread.
    */
   it('drops an unresolvable thread while keeping the panel’s numbering', () => {

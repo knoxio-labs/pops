@@ -33,7 +33,7 @@ export function OrderIdentity({ purchase }: { purchase: OrderPurchase }) {
       <Fact
         label="Merchant entity"
         value={purchase.merchantEntityId}
-        missingLabel="Label only — no entity resolved"
+        missingLabel="Label only, no entity resolved"
       />
       <Fact
         label="Arrived by"

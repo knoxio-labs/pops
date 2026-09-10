@@ -34,7 +34,7 @@ async function create(app: TestApp['app'], overrides: Record<string, unknown> = 
   return requestOn(app, (r) => r.post('/threads').send({ ...valid, ...overrides }));
 }
 
-describe('POST /api/threads — validation', () => {
+describe('POST /api/threads: validation', () => {
   it.each(['route', 'anchorKind', 'anchor', 'body'])('400s when %s is missing', async (field) => {
     const { app } = open();
 
@@ -68,7 +68,7 @@ describe('POST /api/threads — validation', () => {
   });
 });
 
-describe('POST /api/threads — success', () => {
+describe('POST /api/threads: success', () => {
   it('201s with an id and stores the thread open with its first message', async () => {
     const { app } = open();
 
@@ -170,7 +170,7 @@ describe('author resolution', () => {
   });
 });
 
-describe('GET /api/threads — filters', () => {
+describe('GET /api/threads: filters', () => {
   it('400s an unknown status filter rather than returning everything', async () => {
     const { app } = open();
 

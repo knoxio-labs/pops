@@ -59,7 +59,7 @@ function BalanceCard({ account, insight }: { account: Account; insight?: Account
 
 /**
  * Checkpoints as their own section rather than a fold inside the balance
- * card: the same shape RecentTransactions already uses — a labelled section,
+ * card: the same shape RecentTransactions already uses, a labelled section,
  * an action beside the label, a table beneath. An account with no checkpoints
  * still gets the section, so "add one" is never something you have to know to
  * look for.
@@ -81,7 +81,7 @@ function CheckpointsSection({ account }: { account: Account }) {
           <CheckpointHistory account={account} />
         ) : (
           <p className="text-xs text-muted-foreground">
-            No checkpoints yet — add one when you&apos;ve confirmed this balance against the bank.
+            No checkpoints yet. Add one when you&apos;ve confirmed this balance against the bank.
           </p>
         )}
       </CardContent>
@@ -96,8 +96,8 @@ function AccountDashboard({ account }: { account: Account }) {
       {account.archived && (
         <div className="flex items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
           <Archive className="h-4 w-4" />
-          Archived, not deleted — its transactions still reference it, so it stays out of pickers
-          and totals until it is unarchived.
+          Archived, not deleted: its transactions still reference it, so it stays out of pickers and
+          totals until it is unarchived.
         </div>
       )}
       <DashboardHeader account={account} />

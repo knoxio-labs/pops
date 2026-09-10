@@ -78,7 +78,7 @@ function MerchantsEmptyState() {
 }
 
 /**
- * `/purchases/merchants` — spend per merchant, with the unexplained bucket
+ * `/purchases/merchants`: spend per merchant, with the unexplained bucket
  * always beside it. The roll-up layer and only that: the tag treemap and
  * per-item drill-downs it is specified to lead into have no data behind
  * them here, which is what {@link AbsentDrillDown} says.

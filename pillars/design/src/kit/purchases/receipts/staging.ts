@@ -42,9 +42,9 @@ export function stage(current: Staging, batch: StagedBatch): Staging {
 }
 
 /**
- * Fold files refused before they ever reached {@link stage} — the drop zone
+ * Fold files refused before they ever reached {@link stage} (the drop zone
  * applies the same accept filter itself, so a dragged-in `.heic` is turned
- * away there — into the current problems.
+ * away there) into the current problems.
  *
  * They merge into the batch's own rejection rather than sitting beside it: one
  * gesture that mixes both produces one list of names for the reader, and two

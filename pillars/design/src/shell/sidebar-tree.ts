@@ -1,5 +1,5 @@
 /**
- * Pure tree/clustering data transforms for `SidebarScreens.tsx` — split out
+ * Pure tree/clustering data transforms for `SidebarScreens.tsx`, split out
  * to keep that file's rendering under the repo's line cap.
  */
 import { pathOf } from './address';
@@ -22,7 +22,7 @@ export interface Node extends Placed {
   experiments: ExperimentEntry[];
 }
 
-/** "account-form" → "Account form" — a group folder has no file to carry a title. */
+/** "account-form" → "Account form": a group folder has no file to carry a title. */
 export function prettify(name: string): string {
   const spaced = name.replace(/-/gu, ' ');
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
@@ -41,13 +41,13 @@ function leadingWordKey(title: string): string {
 }
 
 /**
- * Screens whose title shares a leading word — "Import", "Import review",
- * "Import warnings"; "Accounts", "Account form", "Account picker" — belong to
+ * Screens whose title shares a leading word ("Import", "Import review",
+ * "Import warnings"; "Accounts", "Account form", "Account picker") belong to
  * the same corner of the app and read as one long flat list otherwise. The
  * grouping is the title itself, not a taxonomy layered on top of it: nothing
  * is reclassified, a shared first word just keeps its screens visually
  * together and gives them a shared band. A word only one screen uses (an
- * area's odd one out, like "Transaction form" on its own) stays ungrouped —
+ * area's odd one out, like "Transaction form" on its own) stays ungrouped:
  * a cluster of one is not a cluster.
  */
 function clusterNodes(nodes: Node[]): Cluster[] {
@@ -72,7 +72,7 @@ function clusterNodes(nodes: Node[]): Cluster[] {
  * The tree: main screens under their area and whatever groups nest them, each
  * listing its active experiments inline. An experiment whose screen exists
  * only in its own variants becomes a node of its own, in the place its id
- * puts it. Decided and archived experiments render nowhere — they are
+ * puts it. Decided and archived experiments render nowhere: they are
  * history, and the overview lists them.
  */
 export function nodesOf(catalog: Catalog): Node[] {
@@ -100,7 +100,7 @@ export type Segment =
   | { kind: 'group'; group: GroupNode<Node> }
   | { kind: 'cluster'; cluster: Cluster };
 
-/** Groups break a run of clustered items — a group already carries its own
+/** Groups break a run of clustered items: a group already carries its own
  *  label, so it never joins a cluster and never gets clustered against. */
 export function toSegments(nodes: TreeNode<Node>[]): Segment[] {
   const segments: Segment[] = [];
