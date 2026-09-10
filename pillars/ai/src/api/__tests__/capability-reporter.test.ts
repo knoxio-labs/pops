@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildAiCapabilityReporter } from '../ai-manifest.js';
+import { buildAiCapabilityReporter } from '../manifest.js';
 
 describe('buildAiCapabilityReporter', () => {
   it('reports settings: true so the shell routes settings to ai', () => {

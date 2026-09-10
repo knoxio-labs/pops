@@ -110,14 +110,14 @@ describe('synthetic pillar mounts via registry', () => {
 
     expect(ids).toContain(SYNTHETIC_ID);
 
-    // `finance` and `purchases` are absent because this walks the STATIC
-    // bundle map, which both left when they moved onto the runtime loader
-    // (POPS-3217, POPS-3219, POPS-3221 — bfm too). It reaches the
-    // rail from the live registry instead, at the same `nav.order: 15` — so
-    // the synthetic pillar's position relative to the mapped ones is what this
+    // `purchases`, `finance`, `bfm` and `ai` are absent because this walks the
+    // STATIC bundle map, which all four left when they moved onto the runtime
+    // loader (POPS-3217, POPS-3219, POPS-3220, POPS-3221). They reach the rail
+    // from the live registry instead, at the same `nav.order: 15` — so the
+    // synthetic pillar's position relative to the mapped ones is what this
     // asserts, and `src/app/registry-walk.test.ts` covers purchases' own.
-    const realOrder = ['media', 'inventory', 'food', 'lists', 'cerebrum', 'ai'];
-    expect(ids).toEqual(['media', SYNTHETIC_ID, 'inventory', 'food', 'lists', 'cerebrum', 'ai']);
+    const realOrder = ['media', 'inventory', 'food', 'lists', 'cerebrum'];
+    expect(ids).toEqual(['media', SYNTHETIC_ID, 'inventory', 'food', 'lists', 'cerebrum']);
     expect(realOrder.every((id) => ids.includes(id))).toBe(true);
   });
 

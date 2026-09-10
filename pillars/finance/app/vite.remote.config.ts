@@ -3,7 +3,7 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-import { isSharedRuntimeSpecifier } from '@pops/pillar-sdk/remote-build';
+import { isSharedRuntimeSpecifier, REMOTE_BUILD_DEFINE } from '@pops/pillar-sdk/remote-build';
 
 /**
  * Remote-bundle build for `@pops/app-finance`.
@@ -50,5 +50,8 @@ export default defineConfig({
     rollupOptions: {
       external: isSharedRuntimeSpecifier,
     },
+  },
+  define: {
+    ...REMOTE_BUILD_DEFINE,
   },
 });
