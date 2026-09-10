@@ -57,7 +57,7 @@ describe('buildCerebrumManifest', () => {
   it('declares the capture overlay, which no route would reveal', () => {
     const payload = buildCerebrumManifest('1.2.3');
     expect(payload.captureOverlay?.bundleSlot).toBe(CEREBRUM_CAPTURE_SLOT);
-    expect(payload.captureOverlay?.hotkey).toBe('cmd+shift+k');
+    expect(payload.captureOverlay?.hotkey).toBe('mod+shift+k');
     expect(payload.pages?.map((page) => page.bundleSlot)).not.toContain(CEREBRUM_CAPTURE_SLOT);
   });
 
