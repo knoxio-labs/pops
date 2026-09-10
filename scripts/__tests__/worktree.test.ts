@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const repositoryRoot = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const worktreeScript = join(repositoryRoot, 'scripts', 'worktree.mjs');
 const temporaryDirectories: string[] = [];
@@ -50,7 +52,7 @@ afterEach(() => {
   }
 });
 
-describe('worktree helper', () => {
+describe('worktree helper', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('creates and removes a branch worktree without an external helper', () => {
     const fixture = createRepository();
     const branch = 'feature/example';

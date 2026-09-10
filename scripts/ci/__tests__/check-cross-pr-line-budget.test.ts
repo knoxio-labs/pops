@@ -24,6 +24,8 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   annotationsFor,
   cappedFilesFrom,
@@ -275,59 +277,63 @@ describe('cappedFilesFrom, against the real .oxlintrc.json', () => {
   });
 });
 
-describe('deltasFor, end to end against a throwaway repo', () => {
-  it('measures the branch net change against its own merge-base, not the base tip', () => {
-    const dir = throwawayRepo();
-    writeFileSync(join(dir, 'a.ts'), lines(10));
-    git(dir, 'add', '.');
-    git(dir, 'commit', '--quiet', '-m', 'base');
+describe(
+  'deltasFor, end to end against a throwaway repo',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it('measures the branch net change against its own merge-base, not the base tip', () => {
+      const dir = throwawayRepo();
+      writeFileSync(join(dir, 'a.ts'), lines(10));
+      git(dir, 'add', '.');
+      git(dir, 'commit', '--quiet', '-m', 'base');
 
-    git(dir, 'checkout', '--quiet', '-b', 'feature');
-    writeFileSync(join(dir, 'a.ts'), lines(13));
-    git(dir, 'commit', '--quiet', '-am', 'grow by three');
+      git(dir, 'checkout', '--quiet', '-b', 'feature');
+      writeFileSync(join(dir, 'a.ts'), lines(13));
+      git(dir, 'commit', '--quiet', '-am', 'grow by three');
 
-    // main moves on after the branch forked: the delta must NOT absorb this.
-    git(dir, 'checkout', '--quiet', 'main');
-    writeFileSync(join(dir, 'a.ts'), lines(40));
-    git(dir, 'commit', '--quiet', '-am', 'main grows a lot');
+      // main moves on after the branch forked: the delta must NOT absorb this.
+      git(dir, 'checkout', '--quiet', 'main');
+      writeFileSync(join(dir, 'a.ts'), lines(40));
+      git(dir, 'commit', '--quiet', '-am', 'main grows a lot');
 
-    expect(deltasFor('feature', 'main', () => true, dir)).toEqual([{ file: 'a.ts', delta: 3 }]);
-  });
+      expect(deltasFor('feature', 'main', () => true, dir)).toEqual([{ file: 'a.ts', delta: 3 }]);
+    });
 
-  it('omits a file the branch touched without changing its counted line total', () => {
-    const dir = throwawayRepo();
-    writeFileSync(join(dir, 'a.ts'), lines(10));
-    git(dir, 'add', '.');
-    git(dir, 'commit', '--quiet', '-m', 'base');
+    it('omits a file the branch touched without changing its counted line total', () => {
+      const dir = throwawayRepo();
+      writeFileSync(join(dir, 'a.ts'), lines(10));
+      git(dir, 'add', '.');
+      git(dir, 'commit', '--quiet', '-m', 'base');
 
-    git(dir, 'checkout', '--quiet', '-b', 'feature');
-    writeFileSync(join(dir, 'a.ts'), `${lines(10)}\n\n// a comment, and blank lines\n`);
-    git(dir, 'commit', '--quiet', '-am', 'comments only');
+      git(dir, 'checkout', '--quiet', '-b', 'feature');
+      writeFileSync(join(dir, 'a.ts'), `${lines(10)}\n\n// a comment, and blank lines\n`);
+      git(dir, 'commit', '--quiet', '-am', 'comments only');
 
-    expect(deltasFor('feature', 'main', () => true, dir)).toEqual([]);
-  });
+      expect(deltasFor('feature', 'main', () => true, dir)).toEqual([]);
+    });
 
-  it('skips a path the cap does not cover', () => {
-    const dir = throwawayRepo();
-    writeFileSync(join(dir, 'a.ts'), lines(10));
-    git(dir, 'add', '.');
-    git(dir, 'commit', '--quiet', '-m', 'base');
+    it('skips a path the cap does not cover', () => {
+      const dir = throwawayRepo();
+      writeFileSync(join(dir, 'a.ts'), lines(10));
+      git(dir, 'add', '.');
+      git(dir, 'commit', '--quiet', '-m', 'base');
 
-    git(dir, 'checkout', '--quiet', '-b', 'feature');
-    writeFileSync(join(dir, 'a.ts'), lines(13));
-    git(dir, 'commit', '--quiet', '-am', 'grow');
+      git(dir, 'checkout', '--quiet', '-b', 'feature');
+      writeFileSync(join(dir, 'a.ts'), lines(13));
+      git(dir, 'commit', '--quiet', '-am', 'grow');
 
-    expect(deltasFor('feature', 'main', (p) => p !== 'a.ts', dir)).toEqual([]);
-  });
+      expect(deltasFor('feature', 'main', (p) => p !== 'a.ts', dir)).toEqual([]);
+    });
 
-  // "Could not look" must not render as "touched nothing" — the caller turns
-  // undefined into a non-zero exit, and an empty array into a clean pass.
-  it('returns undefined rather than an empty list when there is no merge base', () => {
-    const dir = throwawayRepo();
-    writeFileSync(join(dir, 'a.ts'), lines(10));
-    git(dir, 'add', '.');
-    git(dir, 'commit', '--quiet', '-m', 'base');
+    // "Could not look" must not render as "touched nothing" — the caller turns
+    // undefined into a non-zero exit, and an empty array into a clean pass.
+    it('returns undefined rather than an empty list when there is no merge base', () => {
+      const dir = throwawayRepo();
+      writeFileSync(join(dir, 'a.ts'), lines(10));
+      git(dir, 'add', '.');
+      git(dir, 'commit', '--quiet', '-m', 'base');
 
-    expect(deltasFor('HEAD', 'no-such-ref', () => true, dir)).toBeUndefined();
-  });
-});
+      expect(deltasFor('HEAD', 'no-such-ref', () => true, dir)).toBeUndefined();
+    });
+  }
+);

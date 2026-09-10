@@ -32,6 +32,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { isMapping, parseYaml, scalarText, walkMappings } from '../config-parse.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const workflowsDir = join(repoRoot, '.github', 'workflows');
@@ -169,7 +171,7 @@ describe('guard-job discovery', () => {
   });
 });
 
-describe('the sandbox really has no node_modules', () => {
+describe('the sandbox really has no node_modules', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   // Without this the Tier A suite below passes for the one reason it must never
   // pass: a sandbox that can still resolve `js-yaml` says every guard is fine.
   it('cannot load a guard that imports a parser', () => {
@@ -181,58 +183,68 @@ describe('the sandbox really has no node_modules', () => {
   });
 });
 
-describe('Tier A — an install-free job may not reach a third-party import', () => {
-  it.each(tierA.map((j) => [`${j.workflow} → ${j.job}`, j] as const))('%s', (_label, job) => {
-    for (const script of job.scripts) {
+describe(
+  'Tier A — an install-free job may not reach a third-party import',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it.each(tierA.map((j) => [`${j.workflow} → ${j.job}`, j] as const))('%s', (_label, job) => {
+      for (const script of job.scripts) {
+        expect(
+          loadWithoutNodeModules(script),
+          `${job.workflow} job "${job.job}" runs ${script} with no \`pnpm install\`, but the ` +
+            'script does not load without node_modules. That is a MODULE_NOT_FOUND inside a ' +
+            'required check, and not only on the PR that introduced it. Either drop the ' +
+            'dependency or move the job to Tier B by adding pnpm/action-setup + ' +
+            '`pnpm install --frozen-lockfile` (see ' +
+            'docs/architecture/adr-045-guards-must-prove-they-report.md).'
+        ).toBe('');
+      }
+    });
+  }
+);
+
+describe(
+  'Tier B — a job whose guards need a parser keeps its install',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    // An explicit roster, so DELETING an install fails here rather than quietly
+    // demoting the job. The derived half above cannot see that: a job with no
+    // install and no third-party import is a legitimate Tier A job.
+    const REQUIRED_INSTALLS: ReadonlyArray<readonly [string, string]> = [
+      ['agent-review.yml', 'agent-review'],
+      ['rust-quality.yml', 'quality'],
+      ['docker-build.yml', 'docker-build'],
+      // The two merge-queue scoping jobs. `merge-group-scope.mjs` parses the
+      // workflow it is scoping, so losing the install here would not be a slower
+      // gate — it would be a MODULE_NOT_FOUND in the job that decides whether a
+      // macOS compile happens at all.
+      ['ios-quality.yml', 'scope'],
+      ['docker-build.yml', 'scope'],
+    ];
+
+    it.each(REQUIRED_INSTALLS)('%s → %s installs the workspace', (workflow, job) => {
+      const found = jobs.find((j) => j.workflow === workflow && j.job === job);
+      expect(found, `${workflow} has no job "${job}" running a guard`).toBeDefined();
       expect(
-        loadWithoutNodeModules(script),
-        `${job.workflow} job "${job.job}" runs ${script} with no \`pnpm install\`, but the ` +
-          'script does not load without node_modules. That is a MODULE_NOT_FOUND inside a ' +
-          'required check, and not only on the PR that introduced it. Either drop the ' +
-          'dependency or move the job to Tier B by adding pnpm/action-setup + ' +
-          '`pnpm install --frozen-lockfile` (see ' +
-          'docs/architecture/adr-045-guards-must-prove-they-report.md).'
-      ).toBe('');
-    }
-  });
-});
+        found?.installs,
+        `${workflow} job "${job}" runs a guard that parses YAML or TOML and must keep its ` +
+          '`pnpm install --frozen-lockfile` step.'
+      ).toBe(true);
+    });
 
-describe('Tier B — a job whose guards need a parser keeps its install', () => {
-  // An explicit roster, so DELETING an install fails here rather than quietly
-  // demoting the job. The derived half above cannot see that: a job with no
-  // install and no third-party import is a legitimate Tier A job.
-  const REQUIRED_INSTALLS: ReadonlyArray<readonly [string, string]> = [
-    ['agent-review.yml', 'agent-review'],
-    ['rust-quality.yml', 'quality'],
-    ['docker-build.yml', 'docker-build'],
-    // The two merge-queue scoping jobs. `merge-group-scope.mjs` parses the
-    // workflow it is scoping, so losing the install here would not be a slower
-    // gate — it would be a MODULE_NOT_FOUND in the job that decides whether a
-    // macOS compile happens at all.
-    ['ios-quality.yml', 'scope'],
-    ['docker-build.yml', 'scope'],
-  ];
-
-  it.each(REQUIRED_INSTALLS)('%s → %s installs the workspace', (workflow, job) => {
-    const found = jobs.find((j) => j.workflow === workflow && j.job === job);
-    expect(found, `${workflow} has no job "${job}" running a guard`).toBeDefined();
-    expect(
-      found?.installs,
-      `${workflow} job "${job}" runs a guard that parses YAML or TOML and must keep its ` +
-        '`pnpm install --frozen-lockfile` step.'
-    ).toBe(true);
-  });
-
-  it.each(REQUIRED_INSTALLS)('%s → %s really does reach a parser', (workflow, job) => {
-    const found = jobs.find((j) => j.workflow === workflow && j.job === job);
-    const unresolved = (found?.scripts ?? []).map((s) => loadWithoutNodeModules(s)).filter(Boolean);
-    expect(
-      unresolved,
-      `${workflow} job "${job}" is on the Tier B roster but every one of its guards loads ` +
-        'without node_modules. Either it belongs in Tier A now, or the roster is stale.'
-    ).not.toEqual([]);
-  });
-});
+    it.each(REQUIRED_INSTALLS)('%s → %s really does reach a parser', (workflow, job) => {
+      const found = jobs.find((j) => j.workflow === workflow && j.job === job);
+      const unresolved = (found?.scripts ?? [])
+        .map((s) => loadWithoutNodeModules(s))
+        .filter(Boolean);
+      expect(
+        unresolved,
+        `${workflow} job "${job}" is on the Tier B roster but every one of its guards loads ` +
+          'without node_modules. Either it belongs in Tier A now, or the roster is stale.'
+      ).not.toEqual([]);
+    });
+  }
+);
 
 describe('the shared Tier B modules are libraries, not checks', () => {
   // Running one as a workflow step would report nothing and exit 0, which is

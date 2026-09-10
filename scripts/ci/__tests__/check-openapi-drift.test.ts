@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   classifyOutcome,
   discoverCandidateDirs,
@@ -388,7 +390,7 @@ describe('findExpectedTargetSetViolations', () => {
   });
 });
 
-describe('the guard CLI', () => {
+describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('prints usage and exits 2 on --help', () => {
     expect(() => execFileSync('node', [guardPath, '--help'], { stdio: 'pipe' })).toThrow();
     try {

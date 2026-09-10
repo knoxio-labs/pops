@@ -25,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   deriveExpectedContracts,
   discoverVendoredContracts,
@@ -537,7 +539,7 @@ describe('readOrNull', () => {
   });
 });
 
-describe('the guard CLI', () => {
+describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('passes against the real repo, reporting both mechanisms agree', () => {
     const stdout = execFileSync('node', [guardPath], { encoding: 'utf8' });
     expect(stdout).toContain('OK —');

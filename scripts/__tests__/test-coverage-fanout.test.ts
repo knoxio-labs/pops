@@ -35,6 +35,8 @@ import { describe, expect, it } from 'vitest';
 
 import { extractTaskField } from './mise-task-source.js';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
@@ -135,7 +137,7 @@ function runBodyAgainst(units: Readonly<Record<string, boolean>>): Outcome {
   }
 }
 
-describe('the root test:coverage task', () => {
+describe('the root test:coverage task', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('refuses a fan-out over zero units instead of exiting 0 having done nothing', () => {
     const outcome = runBodyAgainst({ 'pillars/alpha': false, 'libs/beta': false });
 

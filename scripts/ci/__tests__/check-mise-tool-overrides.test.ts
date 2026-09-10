@@ -44,6 +44,11 @@ function envWithoutGitContext(): NodeJS.ProcessEnv {
   return env;
 }
 
+// `checkIgnore` spawns a real `git check-ignore` per path, and these blocks
+// walk a list of them. Cheaper than the `mise` calls below, and bounded
+// separately so the number says which subprocess it is for.
+const GIT_CHECK_IGNORE_TIMEOUT_MS = 30_000;
+
 function checkIgnore(relPath: string): number | null {
   return spawnSync('git', ['check-ignore', '-q', relPath], {
     cwd: repoRoot,
@@ -402,83 +407,98 @@ describe('checkOverrides — a pnpm fork hidden behind each supported filename',
   });
 });
 
-describe('COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES', () => {
-  it('the two lists share no filename', () => {
-    for (const name of COMMITTED_MISE_CONFIG_FILENAMES) {
-      expect(GITIGNORED_MISE_CONFIG_FILENAMES).not.toContain(name);
-    }
-  });
+describe(
+  'COMMITTED_MISE_CONFIG_FILENAMES / GITIGNORED_MISE_CONFIG_FILENAMES',
+  { timeout: GIT_CHECK_IGNORE_TIMEOUT_MS },
+  () => {
+    it('the two lists share no filename', () => {
+      for (const name of COMMITTED_MISE_CONFIG_FILENAMES) {
+        expect(GITIGNORED_MISE_CONFIG_FILENAMES).not.toContain(name);
+      }
+    });
 
-  it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
-    '%s is actually gitignored in this repo, not just named "local"',
-    (relPath) => {
-      // The guard's exclusion reasoning depends on git, not on the filename
-      // containing ".local." — a path this repo had not actually gitignored
-      // would be exactly the invisible-override gap this filename widening
-      // exists to close. `check-ignore` works on the pattern alone, so the
-      // path need not exist.
-      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
-    }
-  );
+    it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
+      '%s is actually gitignored in this repo, not just named "local"',
+      (relPath) => {
+        // The guard's exclusion reasoning depends on git, not on the filename
+        // containing ".local." — a path this repo had not actually gitignored
+        // would be exactly the invisible-override gap this filename widening
+        // exists to close. `check-ignore` works on the pattern alone, so the
+        // path need not exist.
+        expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(
+          0
+        );
+      }
+    );
 
-  it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
-    expect(checkIgnore('mise.toml')).toBe(1);
-  });
+    it('mise.toml itself is not gitignored, as a sanity check on the check above', () => {
+      expect(checkIgnore('mise.toml')).toBe(1);
+    });
 
-  it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
-    '%s is also gitignored inside a nested unit directory, not only at the repo root',
-    (relPath) => {
-      // A pattern with a slash anywhere but the end is anchored to the
-      // .gitignore's own directory under git's pathspec rules, so proving a
-      // pattern gitignored at the repo root (the case above) does not prove
-      // it also matches the same filename nested under pillars/<id>/.
-      const nestedPath = join('pillars', 'finance', relPath);
-      expect(
-        checkIgnore(nestedPath),
-        `expected ${nestedPath} to be gitignored — see .gitignore`
-      ).toBe(0);
-    }
-  );
-});
+    it.each(GITIGNORED_MISE_CONFIG_FILENAMES)(
+      '%s is also gitignored inside a nested unit directory, not only at the repo root',
+      (relPath) => {
+        // A pattern with a slash anywhere but the end is anchored to the
+        // .gitignore's own directory under git's pathspec rules, so proving a
+        // pattern gitignored at the repo root (the case above) does not prove
+        // it also matches the same filename nested under pillars/<id>/.
+        const nestedPath = join('pillars', 'finance', relPath);
+        expect(
+          checkIgnore(nestedPath),
+          `expected ${nestedPath} to be gitignored — see .gitignore`
+        ).toBe(0);
+      }
+    );
+  }
+);
 
-describe('GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES', () => {
-  it('shares no path with COMMITTED_MISE_CONFIG_FILENAMES or GITIGNORED_MISE_CONFIG_FILENAMES', () => {
-    for (const name of [...COMMITTED_MISE_CONFIG_FILENAMES, ...GITIGNORED_MISE_CONFIG_FILENAMES]) {
-      expect(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES).not.toContain(name);
-    }
-  });
+describe(
+  'GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES',
+  { timeout: GIT_CHECK_IGNORE_TIMEOUT_MS },
+  () => {
+    it('shares no path with COMMITTED_MISE_CONFIG_FILENAMES or GITIGNORED_MISE_CONFIG_FILENAMES', () => {
+      for (const name of [
+        ...COMMITTED_MISE_CONFIG_FILENAMES,
+        ...GITIGNORED_MISE_CONFIG_FILENAMES,
+      ]) {
+        expect(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES).not.toContain(name);
+      }
+    });
 
-  it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
-    '%s is actually gitignored in this repo, not just named ".<env>.local."',
-    (relPath) => {
-      // Same reasoning as GITIGNORED_MISE_CONFIG_FILENAMES above, one axis
-      // wider: an env-suffixed local path this repo had not actually
-      // gitignored is exactly the blind spot this list exists to close.
-      expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(0);
-    }
-  );
+    it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
+      '%s is actually gitignored in this repo, not just named ".<env>.local."',
+      (relPath) => {
+        // Same reasoning as GITIGNORED_MISE_CONFIG_FILENAMES above, one axis
+        // wider: an env-suffixed local path this repo had not actually
+        // gitignored is exactly the blind spot this list exists to close.
+        expect(checkIgnore(relPath), `expected ${relPath} to be gitignored — see .gitignore`).toBe(
+          0
+        );
+      }
+    );
 
-  it('mise.ci.toml — the committed env-suffixed spelling — is not gitignored, as a sanity check', () => {
-    // Proves the .gitignore wildcard on the environment segment only ever
-    // matches the *.local.toml shape, not the committed mise.ci.toml this
-    // guard is supposed to keep reading.
-    expect(checkIgnore('mise.ci.toml')).toBe(1);
-  });
+    it('mise.ci.toml — the committed env-suffixed spelling — is not gitignored, as a sanity check', () => {
+      // Proves the .gitignore wildcard on the environment segment only ever
+      // matches the *.local.toml shape, not the committed mise.ci.toml this
+      // guard is supposed to keep reading.
+      expect(checkIgnore('mise.ci.toml')).toBe(1);
+    });
 
-  it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
-    '%s is also gitignored inside a nested unit directory, not only at the repo root',
-    (relPath) => {
-      // Same anchoring gap as GITIGNORED_MISE_CONFIG_FILENAMES above, on the
-      // env-suffixed spellings — they inherit the identical slash-anchoring
-      // behavior from the base six.
-      const nestedPath = join('pillars', 'finance', relPath);
-      expect(
-        checkIgnore(nestedPath),
-        `expected ${nestedPath} to be gitignored — see .gitignore`
-      ).toBe(0);
-    }
-  );
-});
+    it.each(GITIGNORED_ENV_LOCAL_MISE_CONFIG_EXAMPLES)(
+      '%s is also gitignored inside a nested unit directory, not only at the repo root',
+      (relPath) => {
+        // Same anchoring gap as GITIGNORED_MISE_CONFIG_FILENAMES above, on the
+        // env-suffixed spellings — they inherit the identical slash-anchoring
+        // behavior from the base six.
+        const nestedPath = join('pillars', 'finance', relPath);
+        expect(
+          checkIgnore(nestedPath),
+          `expected ${nestedPath} to be gitignored — see .gitignore`
+        ).toBe(0);
+      }
+    );
+  }
+);
 
 function isUnitKindBase(value: string): value is keyof typeof ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE {
   return value in ALLOWED_UNIT_OVERRIDE_TOOLS_BY_BASE;

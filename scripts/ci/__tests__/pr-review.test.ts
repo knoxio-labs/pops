@@ -24,6 +24,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parseState } from '../pr-review-state.mjs';
 import { carriedBlock, fill, PROMPT_TEMPLATE, RUBRIC, SCOPE } from '../pr-review.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const driver = resolve(here, '..', 'pr-review.mjs');
 
@@ -115,272 +117,283 @@ beforeEach(() => {
 
 afterEach(() => rmSync(work, { recursive: true, force: true }));
 
-describe('a pull request reviewed across three pushes', () => {
-  it('reviews fully, then incrementally, then reports the fix', () => {
-    const base = commit('a.ts', 'export const a = 1;\n', 'base');
-    const head1 = commit('a.ts', 'export const a = 1 as unknown as number;\n', 'add a cast');
+describe(
+  'a pull request reviewed across three pushes',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it('reviews fully, then incrementally, then reports the fix', () => {
+      const base = commit('a.ts', 'export const a = 1;\n', 'base');
+      const head1 = commit('a.ts', 'export const a = 1 as unknown as number;\n', 'add a cast');
 
-    const first = plan(base, head1);
-    expect(first.mode).toBe('full');
-    expect(first.prompt).toContain('as unknown as number');
-    expect(first.prompt).toContain(SCOPE.full);
-    expect(first.prompt).toContain('This is the first review');
+      const first = plan(base, head1);
+      expect(first.mode).toBe('full');
+      expect(first.prompt).toContain('as unknown as number');
+      expect(first.prompt).toContain(SCOPE.full);
+      expect(first.prompt).toContain('This is the first review');
 
-    const comment1 = publish(head1, 'full', {
-      findings: [
-        {
-          file: 'a.ts',
-          title: 'unchecked cast',
-          severity: 'high',
-          snippet: 'as unknown as number',
-          body: 'The cast defeats the type system.',
-        },
-      ],
-    });
-    expect(comment1).toContain('1 open finding.');
-    expect(comment1).toContain('HIGH');
+      const comment1 = publish(head1, 'full', {
+        findings: [
+          {
+            file: 'a.ts',
+            title: 'unchecked cast',
+            severity: 'high',
+            snippet: 'as unknown as number',
+            body: 'The cast defeats the type system.',
+          },
+        ],
+      });
+      expect(comment1).toContain('1 open finding.');
+      expect(comment1).toContain('HIGH');
 
-    // Second push: an unrelated change. The diff must cover only the new
-    // commit, and the still-open finding must be handed to the model as
-    // already-reported rather than left to be found and reported twice.
-    const head2 = commit('b.ts', 'export const b = 2;\n', 'add b');
-    const second = plan(base, head2, comment1);
-    expect(second.mode).toBe('incremental');
-    expect(second.prompt).toContain('export const b = 2;');
-    expect(second.prompt).not.toContain('a.ts: unchecked cast\n- ');
-    expect(second.prompt).toContain('- a.ts: unchecked cast');
-    expect(second.prompt).toContain(SCOPE.incremental);
+      // Second push: an unrelated change. The diff must cover only the new
+      // commit, and the still-open finding must be handed to the model as
+      // already-reported rather than left to be found and reported twice.
+      const head2 = commit('b.ts', 'export const b = 2;\n', 'add b');
+      const second = plan(base, head2, comment1);
+      expect(second.mode).toBe('incremental');
+      expect(second.prompt).toContain('export const b = 2;');
+      expect(second.prompt).not.toContain('a.ts: unchecked cast\n- ');
+      expect(second.prompt).toContain('- a.ts: unchecked cast');
+      expect(second.prompt).toContain(SCOPE.incremental);
 
-    const comment2 = publish(head2, 'incremental', { findings: [] }, comment1);
-    expect(comment2).toContain('1 open finding.');
-    // The finding was first reported on an earlier commit, so it is dated.
-    expect(comment2).toContain(`since \`${head1.slice(0, 7)}\``);
+      const comment2 = publish(head2, 'incremental', { findings: [] }, comment1);
+      expect(comment2).toContain('1 open finding.');
+      // The finding was first reported on an earlier commit, so it is dated.
+      expect(comment2).toContain(`since \`${head1.slice(0, 7)}\``);
 
-    // Third push: the cast is gone. Nobody tells the reviewer; it recomputes.
-    const head3 = commit('a.ts', 'export const a = 1;\n', 'drop the cast');
-    const comment3 = publish(head3, 'incremental', { findings: [] }, comment2);
-    expect(comment3).toContain('No open findings.');
-    expect(comment3).toContain('~~unchecked cast~~');
-    expect(parseState(comment3).findings[0]).toMatchObject({
-      status: 'resolved',
-      resolved_in: head3,
-    });
-  });
-
-  it('marks a finding resolved when the fix lands in a different file', () => {
-    // POPS-2705, reproduced end to end. The finding is anchored to the file
-    // that declares the secret — correctly, and that declaration stays — and
-    // the fix is the entry added to the file that must supply it. Before the
-    // remedy, the next pass re-checked only the anchor, found the declaration
-    // still there, and re-posted the finding as open on a branch that had
-    // already fixed it.
-    const base = commit('defaults.yml', 'secrets: {}\n', 'base');
-    writeFileSync(join(repo, 'compose.yml'), 'secrets:\n  finance_api_key:\n    external: true\n');
-    const head1 = commit('defaults.yml', 'secrets: {}\n', 'declare the secret');
-
-    const comment1 = publish(head1, 'full', {
-      findings: [
-        {
-          file: 'compose.yml',
-          title: 'finance_api_key has no source',
-          severity: 'high',
-          snippet: 'finance_api_key:',
-          body: 'Nothing supplies this secret, so `docker compose up` cannot resolve it.',
-          remedy: { file: 'defaults.yml', contains: 'finance_api_key:' },
-        },
-      ],
-    });
-    expect(comment1).toContain('1 open finding.');
-    expect(comment1).toContain('Resolves when `defaults.yml` contains:');
-
-    // The fix: the entry lands in the other file. The anchor is untouched.
-    const head2 = commit(
-      'defaults.yml',
-      'secrets:\n  finance_api_key: "{{ vault_key }}"\n',
-      'supply it'
-    );
-    const comment2 = publish(head2, 'incremental', { findings: [] }, comment1);
-    expect(comment2).toContain('No open findings.');
-    expect(comment2).toContain('~~finance_api_key has no source~~');
-    expect(parseState(comment2).findings[0]).toMatchObject({
-      status: 'resolved',
-      resolved_in: head2,
+      // Third push: the cast is gone. Nobody tells the reviewer; it recomputes.
+      const head3 = commit('a.ts', 'export const a = 1;\n', 'drop the cast');
+      const comment3 = publish(head3, 'incremental', { findings: [] }, comment2);
+      expect(comment3).toContain('No open findings.');
+      expect(comment3).toContain('~~unchecked cast~~');
+      expect(parseState(comment3).findings[0]).toMatchObject({
+        status: 'resolved',
+        resolved_in: head3,
+      });
     });
 
-    // And it is not a one-way latch: revert the supplying file and the finding
-    // comes back, because status is recomputed rather than remembered.
-    const head3 = commit('defaults.yml', 'secrets: {}\n', 'revert it');
-    const comment3 = publish(head3, 'incremental', { findings: [] }, comment2);
-    expect(comment3).toContain('1 open finding.');
-    expect(base).not.toBe(head3);
-  });
+    it('marks a finding resolved when the fix lands in a different file', () => {
+      // POPS-2705, reproduced end to end. The finding is anchored to the file
+      // that declares the secret — correctly, and that declaration stays — and
+      // the fix is the entry added to the file that must supply it. Before the
+      // remedy, the next pass re-checked only the anchor, found the declaration
+      // still there, and re-posted the finding as open on a branch that had
+      // already fixed it.
+      const base = commit('defaults.yml', 'secrets: {}\n', 'base');
+      writeFileSync(
+        join(repo, 'compose.yml'),
+        'secrets:\n  finance_api_key:\n    external: true\n'
+      );
+      const head1 = commit('defaults.yml', 'secrets: {}\n', 'declare the secret');
 
-  it('reports empty when head has not moved since the last review', () => {
-    const base = commit('a.ts', 'a\n', 'base');
-    const head = commit('a.ts', 'b\n', 'change');
-    const comment = publish(head, 'full', { findings: [] });
-    expect(plan(base, head, comment).mode).toBe('empty');
-  });
+      const comment1 = publish(head1, 'full', {
+        findings: [
+          {
+            file: 'compose.yml',
+            title: 'finance_api_key has no source',
+            severity: 'high',
+            snippet: 'finance_api_key:',
+            body: 'Nothing supplies this secret, so `docker compose up` cannot resolve it.',
+            remedy: { file: 'defaults.yml', contains: 'finance_api_key:' },
+          },
+        ],
+      });
+      expect(comment1).toContain('1 open finding.');
+      expect(comment1).toContain('Resolves when `defaults.yml` contains:');
 
-  it('falls back to a full review after a force-push rewrites the reviewed commit', () => {
-    const base = commit('a.ts', 'a\n', 'base');
-    const rewritten = commit('a.ts', 'b\n', 'change');
-    const comment = publish(rewritten, 'full', { findings: [] });
+      // The fix: the entry lands in the other file. The anchor is untouched.
+      const head2 = commit(
+        'defaults.yml',
+        'secrets:\n  finance_api_key: "{{ vault_key }}"\n',
+        'supply it'
+      );
+      const comment2 = publish(head2, 'incremental', { findings: [] }, comment1);
+      expect(comment2).toContain('No open findings.');
+      expect(comment2).toContain('~~finance_api_key has no source~~');
+      expect(parseState(comment2).findings[0]).toMatchObject({
+        status: 'resolved',
+        resolved_in: head2,
+      });
 
-    git('reset', '--hard', base);
-    const head = commit('a.ts', 'c\n', 'different change');
-    expect(head).not.toBe(rewritten);
+      // And it is not a one-way latch: revert the supplying file and the finding
+      // comes back, because status is recomputed rather than remembered.
+      const head3 = commit('defaults.yml', 'secrets: {}\n', 'revert it');
+      const comment3 = publish(head3, 'incremental', { findings: [] }, comment2);
+      expect(comment3).toContain('1 open finding.');
+      expect(base).not.toBe(head3);
+    });
 
-    const after = plan(base, head, comment);
-    expect(after.mode).toBe('full');
-    expect(after.prompt).toContain('+c');
-  });
-});
+    it('reports empty when head has not moved since the last review', () => {
+      const base = commit('a.ts', 'a\n', 'base');
+      const head = commit('a.ts', 'b\n', 'change');
+      const comment = publish(head, 'full', { findings: [] });
+      expect(plan(base, head, comment).mode).toBe('empty');
+    });
 
-describe('a finding whose anchor survives the fix (POPS-2669)', () => {
-  const ANCHOR = 'if (keptTags.length === 0) continue;';
-  const BROKEN = [
-    'export function apply(ops) {',
-    '  const kept = [];',
-    '  for (const op of ops) {',
-    '    const keptTags = op.data.tags.filter(isKept);',
-    `    ${ANCHOR}`,
-    '    kept.push(op);',
-    '  }',
-    '  return kept;',
-    '}',
-    '',
-  ].join('\n');
-  // Fixed in the branch the finding was about; the anchor survives in the
-  // `add` branch, where it is correct and required.
-  const FIXED = [
-    'export function apply(ops) {',
-    '  const kept = [];',
-    '  for (const op of ops) {',
-    "    if (op.op === 'edit' && op.data.tags) {",
-    '      const keptTags = op.data.tags.filter(isKept);',
-    '      if (keptTags.length > 0) { kept.push({ ...op, data: { ...op.data, tags: keptTags } }); continue; }',
-    '      const { tags: _dropped, ...rest } = op.data;',
-    '      if (Object.keys(rest).length === 0) continue;',
-    '      kept.push({ ...op, data: rest });',
-    '      continue;',
-    '    }',
-    '    const keptTags = op.data.tags.filter(isKept);',
-    `    ${ANCHOR}`,
-    '    kept.push(op);',
-    '  }',
-    '  return kept;',
-    '}',
-    '',
-  ].join('\n');
+    it('falls back to a full review after a force-push rewrites the reviewed commit', () => {
+      const base = commit('a.ts', 'a\n', 'base');
+      const rewritten = commit('a.ts', 'b\n', 'change');
+      const comment = publish(rewritten, 'full', { findings: [] });
 
-  const finding = {
-    file: 'change-set.js',
-    title: 'declining every tag drops the op',
-    severity: 'high',
-    snippet: ANCHOR,
-    body: 'the whole op is dropped, not just its tags',
-  };
+      git('reset', '--hard', base);
+      const head = commit('a.ts', 'c\n', 'different change');
+      expect(head).not.toBe(rewritten);
 
-  /** Report the finding on the first push, then push the fix. */
-  function upToTheFix(): { head: string; afterFirst: string } {
-    const base = commit('README.md', 'base\n', 'base');
-    const first = commit('change-set.js', BROKEN, 'add apply');
-    const afterFirst = publish(first, 'full', { findings: [finding] }, undefined);
-    expect(afterFirst).toContain('1 open finding');
-
-    const head = commit('change-set.js', FIXED, 'fix the edit branch');
-    plan(base, head, afterFirst);
-    return { head, afterFirst };
+      const after = plan(base, head, comment);
+      expect(after.mode).toBe('full');
+      expect(after.prompt).toContain('+c');
+    });
   }
+);
 
-  it('offers the finding for re-judgement, because the diff touched its file', () => {
-    const base = commit('README.md', 'base\n', 'base');
-    const first = commit('change-set.js', BROKEN, 'add apply');
-    const afterFirst = publish(first, 'full', { findings: [finding] });
-    const head = commit('change-set.js', FIXED, 'fix the edit branch');
+describe(
+  'a finding whose anchor survives the fix (POPS-2669)',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    const ANCHOR = 'if (keptTags.length === 0) continue;';
+    const BROKEN = [
+      'export function apply(ops) {',
+      '  const kept = [];',
+      '  for (const op of ops) {',
+      '    const keptTags = op.data.tags.filter(isKept);',
+      `    ${ANCHOR}`,
+      '    kept.push(op);',
+      '  }',
+      '  return kept;',
+      '}',
+      '',
+    ].join('\n');
+    // Fixed in the branch the finding was about; the anchor survives in the
+    // `add` branch, where it is correct and required.
+    const FIXED = [
+      'export function apply(ops) {',
+      '  const kept = [];',
+      '  for (const op of ops) {',
+      "    if (op.op === 'edit' && op.data.tags) {",
+      '      const keptTags = op.data.tags.filter(isKept);',
+      '      if (keptTags.length > 0) { kept.push({ ...op, data: { ...op.data, tags: keptTags } }); continue; }',
+      '      const { tags: _dropped, ...rest } = op.data;',
+      '      if (Object.keys(rest).length === 0) continue;',
+      '      kept.push({ ...op, data: rest });',
+      '      continue;',
+      '    }',
+      '    const keptTags = op.data.tags.filter(isKept);',
+      `    ${ANCHOR}`,
+      '    kept.push(op);',
+      '  }',
+      '  return kept;',
+      '}',
+      '',
+    ].join('\n');
 
-    const { prompt } = plan(base, head, afterFirst);
+    const finding = {
+      file: 'change-set.js',
+      title: 'declining every tag drops the op',
+      severity: 'high',
+      snippet: ANCHOR,
+      body: 'the whole op is dropped, not just its tags',
+    };
 
-    expect(prompt).toContain('RE-JUDGE list');
-    expect(prompt).toContain('declining every tag drops the op');
-    expect(prompt).toContain('is a locator, NOT the question');
-  });
+    /** Report the finding on the first push, then push the fix. */
+    function upToTheFix(): { head: string; afterFirst: string } {
+      const base = commit('README.md', 'base\n', 'base');
+      const first = commit('change-set.js', BROKEN, 'add apply');
+      const afterFirst = publish(first, 'full', { findings: [finding] }, undefined);
+      expect(afterFirst).toContain('1 open finding');
 
-  it('resolves it when the reviewer says the defect is gone, though the anchor is still there', () => {
-    const { head, afterFirst } = upToTheFix();
-    const id = findingIdOf(afterFirst);
+      const head = commit('change-set.js', FIXED, 'fix the edit branch');
+      plan(base, head, afterFirst);
+      return { head, afterFirst };
+    }
 
-    const comment = publish(
-      head,
-      'incremental',
-      { findings: [], resolved: [id] },
-      afterFirst,
-      true
-    );
+    it('offers the finding for re-judgement, because the diff touched its file', () => {
+      const base = commit('README.md', 'base\n', 'base');
+      const first = commit('change-set.js', BROKEN, 'add apply');
+      const afterFirst = publish(first, 'full', { findings: [finding] });
+      const head = commit('change-set.js', FIXED, 'fix the edit branch');
 
-    expect(comment).toContain('No open findings');
-    expect(parseState(comment).findings[0]).toMatchObject({ status: 'resolved' });
-  });
+      const { prompt } = plan(base, head, afterFirst);
 
-  it('keeps it open when the reviewer clears nothing — the regression that must never happen', () => {
-    const { head, afterFirst } = upToTheFix();
+      expect(prompt).toContain('RE-JUDGE list');
+      expect(prompt).toContain('declining every tag drops the op');
+      expect(prompt).toContain('is a locator, NOT the question');
+    });
 
-    const comment = publish(head, 'incremental', { findings: [] }, afterFirst, true);
+    it('resolves it when the reviewer says the defect is gone, though the anchor is still there', () => {
+      const { head, afterFirst } = upToTheFix();
+      const id = findingIdOf(afterFirst);
 
-    expect(comment).toContain('1 open finding');
-  });
+      const comment = publish(
+        head,
+        'incremental',
+        { findings: [], resolved: [id] },
+        afterFirst,
+        true
+      );
 
-  it('keeps it open when the id was never offered, however confidently named', () => {
-    const base = commit('README.md', 'base\n', 'base');
-    const first = commit('change-set.js', BROKEN, 'add apply');
-    const afterFirst = publish(first, 'full', { findings: [finding] });
-    const id = findingIdOf(afterFirst);
-    // A commit that does not touch the anchored file: nothing here can have
-    // fixed the finding, so `plan` offers nothing and the id is inert.
-    const head = commit('other.js', 'export const other = 1;\n', 'unrelated');
-    plan(base, head, afterFirst);
+      expect(comment).toContain('No open findings');
+      expect(parseState(comment).findings[0]).toMatchObject({ status: 'resolved' });
+    });
 
-    const comment = publish(
-      head,
-      'incremental',
-      { findings: [], resolved: [id] },
-      afterFirst,
-      true
-    );
+    it('keeps it open when the reviewer clears nothing — the regression that must never happen', () => {
+      const { head, afterFirst } = upToTheFix();
 
-    expect(comment).toContain('1 open finding');
-  });
+      const comment = publish(head, 'incremental', { findings: [] }, afterFirst, true);
 
-  it('keeps it open when the workflow forgets to pass the offered list at all', () => {
-    const { head, afterFirst } = upToTheFix();
-    const id = findingIdOf(afterFirst);
+      expect(comment).toContain('1 open finding');
+    });
 
-    const comment = publish(head, 'incremental', { findings: [], resolved: [id] }, afterFirst);
+    it('keeps it open when the id was never offered, however confidently named', () => {
+      const base = commit('README.md', 'base\n', 'base');
+      const first = commit('change-set.js', BROKEN, 'add apply');
+      const afterFirst = publish(first, 'full', { findings: [finding] });
+      const id = findingIdOf(afterFirst);
+      // A commit that does not touch the anchored file: nothing here can have
+      // fixed the finding, so `plan` offers nothing and the id is inert.
+      const head = commit('other.js', 'export const other = 1;\n', 'unrelated');
+      plan(base, head, afterFirst);
 
-    expect(comment).toContain('1 open finding');
-  });
+      const comment = publish(
+        head,
+        'incremental',
+        { findings: [], resolved: [id] },
+        afterFirst,
+        true
+      );
 
-  it('reopens on a later push that reports it again', () => {
-    const { head, afterFirst } = upToTheFix();
-    const id = findingIdOf(afterFirst);
-    const cleared = publish(
-      head,
-      'incremental',
-      { findings: [], resolved: [id] },
-      afterFirst,
-      true
-    );
+      expect(comment).toContain('1 open finding');
+    });
 
-    const reintroduced = commit('change-set.js', BROKEN, 'undo the fix');
-    plan(head, reintroduced, cleared);
-    const comment = publish(reintroduced, 'incremental', { findings: [finding] }, cleared, true);
+    it('keeps it open when the workflow forgets to pass the offered list at all', () => {
+      const { head, afterFirst } = upToTheFix();
+      const id = findingIdOf(afterFirst);
 
-    expect(comment).toContain('1 open finding');
-  });
-});
+      const comment = publish(head, 'incremental', { findings: [], resolved: [id] }, afterFirst);
 
-describe('the reviewer misbehaving', () => {
+      expect(comment).toContain('1 open finding');
+    });
+
+    it('reopens on a later push that reports it again', () => {
+      const { head, afterFirst } = upToTheFix();
+      const id = findingIdOf(afterFirst);
+      const cleared = publish(
+        head,
+        'incremental',
+        { findings: [], resolved: [id] },
+        afterFirst,
+        true
+      );
+
+      const reintroduced = commit('change-set.js', BROKEN, 'undo the fix');
+      plan(head, reintroduced, cleared);
+      const comment = publish(reintroduced, 'incremental', { findings: [finding] }, cleared, true);
+
+      expect(comment).toContain('1 open finding');
+    });
+  }
+);
+
+describe('the reviewer misbehaving', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('keeps prior state when the findings file is unparseable', () => {
     commit('a.ts', 'export const a = 1;\n', 'base');
     const head = commit('a.ts', 'export const a = 2;\n', 'change');
@@ -447,7 +460,7 @@ describe('the reviewer misbehaving', () => {
   });
 });
 
-describe('the prompt', () => {
+describe('the prompt', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('names every non-negotiable invariant', () => {
     const prompt = fill(PROMPT_TEMPLATE, {
       scope: SCOPE.full,
@@ -483,7 +496,7 @@ describe('the prompt', () => {
   });
 });
 
-describe('usage', () => {
+describe('usage', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('exits 2 on an unknown command', () => {
     expect(() => run(['frobnicate'])).toThrowError(/status 2|Command failed/u);
   });

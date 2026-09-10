@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   buildConsumerIndex,
   deriveRegenerateHint,
@@ -126,7 +128,7 @@ describe('the real tree', () => {
   });
 });
 
-describe('the CLI against the real tree', () => {
+describe('the CLI against the real tree', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('names the finance consumer when the purchases contract changes', () => {
     const dir = sandbox('report-consumers-cli-');
     const list = join(dir, 'changed.txt');
@@ -170,40 +172,47 @@ describe('the CLI against the real tree', () => {
   });
 });
 
-describe('discovery loss is a failure, not a quiet pass', () => {
-  it('fails when the tree holds no vendored contract at all', () => {
-    const root = sandbox('report-consumers-empty-');
-    mkdirSync(join(root, 'pillars', 'purchases', 'openapi'), { recursive: true });
-    writeFileSync(join(root, 'pillars', 'purchases', 'openapi', 'purchases.openapi.json'), '{}\n');
+describe(
+  'discovery loss is a failure, not a quiet pass',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it('fails when the tree holds no vendored contract at all', () => {
+      const root = sandbox('report-consumers-empty-');
+      mkdirSync(join(root, 'pillars', 'purchases', 'openapi'), { recursive: true });
+      writeFileSync(
+        join(root, 'pillars', 'purchases', 'openapi', 'purchases.openapi.json'),
+        '{}\n'
+      );
 
-    expect(buildConsumerIndex(root).size).toBe(0);
+      expect(buildConsumerIndex(root).size).toBe(0);
 
-    // And the CLI's floor turns that into an exit code, which is the half a
-    // unit test on `buildConsumerIndex` alone would never reach.
-    const copied = join(root, 'scripts', 'ci');
-    mkdirSync(copied, { recursive: true });
-    for (const file of [
-      'report-contract-consumers.mjs',
-      'check-vendored-contracts.mjs',
-      'fixture-copies.mjs',
-    ]) {
-      copyFileSync(join(repoRoot, 'scripts', 'ci', file), join(copied, file));
-    }
-    let status = 0;
-    let output = '';
-    try {
-      execFileSync(process.execPath, [join(copied, 'report-contract-consumers.mjs')], {
-        encoding: 'utf8',
-      });
-    } catch (error) {
-      const failure = error as { stderr?: string; status?: number };
-      status = failure.status ?? -1;
-      output = failure.stderr ?? '';
-    }
-    expect(status).toBe(1);
-    expect(output).toContain('discovered zero vendored pillar contracts');
-  });
-});
+      // And the CLI's floor turns that into an exit code, which is the half a
+      // unit test on `buildConsumerIndex` alone would never reach.
+      const copied = join(root, 'scripts', 'ci');
+      mkdirSync(copied, { recursive: true });
+      for (const file of [
+        'report-contract-consumers.mjs',
+        'check-vendored-contracts.mjs',
+        'fixture-copies.mjs',
+      ]) {
+        copyFileSync(join(repoRoot, 'scripts', 'ci', file), join(copied, file));
+      }
+      let status = 0;
+      let output = '';
+      try {
+        execFileSync(process.execPath, [join(copied, 'report-contract-consumers.mjs')], {
+          encoding: 'utf8',
+        });
+      } catch (error) {
+        const failure = error as { stderr?: string; status?: number };
+        status = failure.status ?? -1;
+        output = failure.stderr ?? '';
+      }
+      expect(status).toBe(1);
+      expect(output).toContain('discovered zero vendored pillar contracts');
+    });
+  }
+);
 
 describe('producersInChangeSet', () => {
   it('matches anything under a pillar openapi directory, not just the snapshot', () => {

@@ -209,6 +209,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `check-subprocess-test-timeouts.test.ts` reads the pre-fix version
+          # of the commits that bounded a real-subprocess test by hand and
+          # asserts the guard would have caught each one. A shallow checkout has
+          # none of them, and those fixtures are the only thing standing between
+          # a guard that reports and a guard that passes its own self-test while
+          # seeing nothing (ADR-045, POPS-2110).
+          fetch-depth: 0
       # `run-all-clients-discovery.test.ts` shells out to the real `mise`
       # binary against a disposable fixture tree, and
       # `check-mise-tool-overrides.test.ts` runs `mise current -C <dir>

@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 const scriptsDir = join(repoRoot, 'scripts');
@@ -80,68 +82,72 @@ function symlinkedSandbox(): { storeDir: string; linkDir: string } {
   return { storeDir, linkDir };
 }
 
-describe('the entrypoint gate survives a symlinked ancestor path', () => {
-  it('the sandbox actually reproduces a literal-vs-realpath mismatch', () => {
-    // Sanity check on the fixture: if this ever stopped being true (e.g. a
-    // future Node stopped realpath-resolving import.meta.url), the tests
-    // below would pass vacuously without exercising anything.
-    const { linkDir } = symlinkedSandbox();
-    expect(realpathSync(linkDir)).not.toBe(linkDir);
-  });
-
-  it('a fixed guard runs to completion when invoked through the symlink', () => {
-    const { linkDir } = symlinkedSandbox();
-    const stdout = execFileSync(
-      process.execPath,
-      [join(linkDir, 'huly-partition-plan.mjs'), '--self-test'],
-      { encoding: 'utf8' }
-    );
-
-    // The exact degenerate case this ticket fixed: a regressed entrypoint
-    // gate exits 0 here too (execFileSync only throws on a nonzero exit), so
-    // asserting on stdout content — not merely "did not throw" — is what
-    // actually catches it.
-    expect(stdout).toContain('self-test OK');
-  });
-
-  it('produces the same result through the realpath, showing the symlink is incidental to the pass', () => {
-    const { storeDir } = symlinkedSandbox();
-    const stdout = execFileSync(
-      process.execPath,
-      [join(storeDir, 'huly-partition-plan.mjs'), '--self-test'],
-      { encoding: 'utf8' }
-    );
-    expect(stdout).toContain('self-test OK');
-  });
-
-  it('control: the pre-fix resolve-compare idiom reproduces the silent no-op through the same symlink', () => {
-    // Not a test of shipped code — a control proving the sandbox above would
-    // actually have caught POPS-1801 before the fix. It rebuilds the exact
-    // broken comparison in a throwaway fixture (never in a file under
-    // scripts/) and confirms it fails exactly as the ticket describes: exit
-    // 0, zero stdout, main() never runs.
-    const { linkDir, storeDir } = symlinkedSandbox();
-    writeFileSync(
-      join(storeDir, 'broken-guard.mjs'),
-      [
-        "import { resolve } from 'node:path';",
-        "import { fileURLToPath } from 'node:url';",
-        '',
-        "function main() { console.log('main ran'); }",
-        '',
-        "if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {",
-        '  main();',
-        '}',
-        '',
-      ].join('\n')
-    );
-
-    const stdout = execFileSync(process.execPath, [join(linkDir, 'broken-guard.mjs')], {
-      encoding: 'utf8',
+describe(
+  'the entrypoint gate survives a symlinked ancestor path',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it('the sandbox actually reproduces a literal-vs-realpath mismatch', () => {
+      // Sanity check on the fixture: if this ever stopped being true (e.g. a
+      // future Node stopped realpath-resolving import.meta.url), the tests
+      // below would pass vacuously without exercising anything.
+      const { linkDir } = symlinkedSandbox();
+      expect(realpathSync(linkDir)).not.toBe(linkDir);
     });
-    expect(stdout).toBe('');
-  });
-});
+
+    it('a fixed guard runs to completion when invoked through the symlink', () => {
+      const { linkDir } = symlinkedSandbox();
+      const stdout = execFileSync(
+        process.execPath,
+        [join(linkDir, 'huly-partition-plan.mjs'), '--self-test'],
+        { encoding: 'utf8' }
+      );
+
+      // The exact degenerate case this ticket fixed: a regressed entrypoint
+      // gate exits 0 here too (execFileSync only throws on a nonzero exit), so
+      // asserting on stdout content — not merely "did not throw" — is what
+      // actually catches it.
+      expect(stdout).toContain('self-test OK');
+    });
+
+    it('produces the same result through the realpath, showing the symlink is incidental to the pass', () => {
+      const { storeDir } = symlinkedSandbox();
+      const stdout = execFileSync(
+        process.execPath,
+        [join(storeDir, 'huly-partition-plan.mjs'), '--self-test'],
+        { encoding: 'utf8' }
+      );
+      expect(stdout).toContain('self-test OK');
+    });
+
+    it('control: the pre-fix resolve-compare idiom reproduces the silent no-op through the same symlink', () => {
+      // Not a test of shipped code — a control proving the sandbox above would
+      // actually have caught POPS-1801 before the fix. It rebuilds the exact
+      // broken comparison in a throwaway fixture (never in a file under
+      // scripts/) and confirms it fails exactly as the ticket describes: exit
+      // 0, zero stdout, main() never runs.
+      const { linkDir, storeDir } = symlinkedSandbox();
+      writeFileSync(
+        join(storeDir, 'broken-guard.mjs'),
+        [
+          "import { resolve } from 'node:path';",
+          "import { fileURLToPath } from 'node:url';",
+          '',
+          "function main() { console.log('main ran'); }",
+          '',
+          "if (resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1] ?? '')) {",
+          '  main();',
+          '}',
+          '',
+        ].join('\n')
+      );
+
+      const stdout = execFileSync(process.execPath, [join(linkDir, 'broken-guard.mjs')], {
+        encoding: 'utf8',
+      });
+      expect(stdout).toBe('');
+    });
+  }
+);
 
 describe('no guard under scripts/ still uses the symlink-unsafe entrypoint idiom', () => {
   // A regex on the structure, not `includes()` on one exact literal: the

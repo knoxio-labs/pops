@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { Catalog } from '../src/catalog.ts';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = resolve(HERE, '..');
 const REPO_ROOT = resolve(APP_ROOT, '..', '..');
@@ -34,7 +36,7 @@ const EXPECTED_PILLARS = [
   'registry',
 ] as const;
 
-describe('collect-specs', () => {
+describe('collect-specs', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('discovers every pillar contract snapshot and emits a catalog entry per pillar', () => {
     rmSync(DIST_DIR, { recursive: true, force: true });
 

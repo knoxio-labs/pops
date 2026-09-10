@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { load as parseYaml } from 'js-yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   BUNDLE_ROOT,
   bundleFileName,
@@ -156,7 +158,7 @@ describe('staging', () => {
   });
 });
 
-describe('tarball', () => {
+describe('tarball', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('unpacks to a single moltbot/ directory', () => {
     const outDir = tempDir('moltbot-out-');
     const tarball = packBundle({ version: 'v1.2.3', outDir, sourceDir: moltbotDir });
