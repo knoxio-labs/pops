@@ -225,6 +225,7 @@ const OFFER = {
   itemName: 'Cordless Drill',
   serialNumber: null,
   purchaseDate: '2026-02-02T23:41:21.000Z',
+  purchaseDateOffsetMinutes: null,
   purchasePriceCents: 19900,
   purchasedFromName: 'Bunnings Warehouse',
   purchaseTransactionUri: null,

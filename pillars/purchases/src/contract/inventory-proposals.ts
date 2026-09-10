@@ -22,7 +22,7 @@
 import { z } from 'zod';
 
 import { ErrorBodySchema } from './rest-schemas.js';
-import { IsoTimestampSchema, PopsUriSchema } from './schemas/purchase.js';
+import { IsoTimestampSchema, PopsUriSchema, UtcOffsetMinutesSchema } from './schemas/purchase.js';
 import { popsUri, popsUriPattern } from './schemas/scalars.js';
 
 /**
@@ -56,6 +56,14 @@ export const InventoryProposalSchema = z.object({
   itemName: z.string(),
   serialNumber: z.string().nullable(),
   purchaseDate: IsoTimestampSchema,
+  /**
+   * Minutes `purchaseDate` was ahead of UTC where the order was placed, or
+   * null for an order that stated an instant and no place. A consumer that
+   * shows or stores a calendar day rather than a moment needs it: the
+   * instant is UTC-spelled, and the reader's own zone is a fact about the
+   * reader, not about the order.
+   */
+  purchaseDateOffsetMinutes: UtcOffsetMinutesSchema.nullable(),
   /**
    * This unit's share of the line's landed cost, net of anything refunded
    * on it. A line's shares sum to that figure exactly.

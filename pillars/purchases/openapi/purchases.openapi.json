@@ -4110,6 +4110,12 @@
                             "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
                             "type": "string"
                           },
+                          "purchaseDateOffsetMinutes": {
+                            "maximum": 840,
+                            "minimum": -840,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "purchaseId": {
                             "type": "string"
                           },
@@ -4149,6 +4155,7 @@
                           "itemName",
                           "serialNumber",
                           "purchaseDate",
+                          "purchaseDateOffsetMinutes",
                           "purchasePriceCents",
                           "purchasedFromName",
                           "purchaseTransactionUri",

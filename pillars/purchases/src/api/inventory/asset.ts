@@ -11,7 +11,7 @@
 import { z } from 'zod';
 
 import { FINANCE_TRANSACTION_URI } from '../../contract/schemas/scalars.js';
-import { calendarDateInZone } from '../../ingest/local-time.js';
+import { calendarDateAtOffset, calendarDateInZone } from '../../ingest/local-time.js';
 
 import type { InventoryProposal } from '../../db/index.js';
 
@@ -97,10 +97,8 @@ export function provenanceNote(proposal: InventoryProposal): string {
  *     Inventory's only edit surface binds that column to an
  *     `<input type="date">`, which cannot hold a timestamp: it shows blank
  *     and writes null back on the next save of any field on the row, so an
- *     instant does not merely render oddly, it deletes itself. The day is
- *     derived in the household timezone rather than in UTC, which would
- *     move every purchase made after mid-afternoon in Sydney onto the next
- *     one.
+ *     instant does not merely render oddly, it deletes itself. Which day it
+ *     is, is {@link purchaseCalendarDate}'s question.
  *
  * `inUse` and `deductible` are stated rather than left to inventory's own
  * defaults, because a default in another pillar's contract is a fact about
@@ -112,10 +110,33 @@ export function provenanceNote(proposal: InventoryProposal): string {
  * indistinguishable from one a person marked "Stored". The pillar README's
  * fan-out section carries that caveat and what it costs.
  */
+/**
+ * The calendar day this purchase fell on, where it was made.
+ *
+ * The order's own recorded offset first. `storeTimeZone()` is one configured
+ * household zone for the whole installation, and the day an order fell on is
+ * a fact about that order — the two agree for anything bought at home and
+ * part company for anything bought while travelling, where a receipt
+ * photographed in Tokyo would otherwise be filed under the Sydney calendar.
+ * The field is user-visible on the asset and, for a deductible one, decides
+ * a tax year at a year boundary.
+ *
+ * The household zone stays the fallback rather than being dropped: an order
+ * with no recorded offset stated an instant and no place, and where it was
+ * bought is then genuinely unknown. Deriving the day in UTC instead would
+ * move every purchase made after mid-afternoon in Sydney onto the next one.
+ */
+export function purchaseCalendarDate(proposal: InventoryProposal): string | null {
+  const offset = proposal.purchaseDateOffsetMinutes;
+  return offset === null
+    ? calendarDateInZone(proposal.purchaseDate)
+    : calendarDateAtOffset(proposal.purchaseDate, offset);
+}
+
 export function toInventoryItemCreateBody(proposal: InventoryProposal): InventoryItemCreateBody {
   return {
     itemName: proposal.itemName,
-    purchaseDate: calendarDateInZone(proposal.purchaseDate),
+    purchaseDate: purchaseCalendarDate(proposal),
     purchasePrice: proposal.purchasePriceCents / CENTS_PER_DOLLAR,
     purchasedFromName: proposal.purchasedFromName,
     purchaseTransactionId: financeTransactionId(proposal.purchaseTransactionUri),

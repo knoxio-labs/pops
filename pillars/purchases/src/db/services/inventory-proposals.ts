@@ -106,6 +106,17 @@ export interface InventoryProposal {
   /** The order's `orderedAt` — when the thing was bought, not when the row was written. */
   readonly purchaseDate: string;
   /**
+   * Minutes {@link purchaseDate} was ahead of UTC where the order was placed,
+   * or null for an order that stated an instant and no place.
+   *
+   * Carried because `purchaseDate` is UTC-spelled and a consumer that stores
+   * a calendar day rather than a moment has to derive one. Without this the
+   * only zone available is the installation's, which is a fact about the
+   * household and not about the order — right for the ordinary case and
+   * wrong for anything bought while travelling.
+   */
+  readonly purchaseDateOffsetMinutes: number | null;
+  /**
    * This unit's share of what the line actually cost: its landed cost less
    * whatever came back on it. The shares of a line sum to that figure
    * exactly.
@@ -277,6 +288,7 @@ export function listInventoryProposals(db: PurchasesDb, purchaseId: string): Inv
   const order = db
     .select({
       orderedAt: purchases.orderedAt,
+      orderedAtOffsetMinutes: purchases.orderedAtOffsetMinutes,
       merchantEntityName: purchases.merchantEntityName,
     })
     .from(purchases)
@@ -306,6 +318,7 @@ export function listInventoryProposals(db: PurchasesDb, purchaseId: string): Inv
         itemName: line.name,
         serialNumber: unit?.serialNumber ?? null,
         purchaseDate: order.orderedAt,
+        purchaseDateOffsetMinutes: order.orderedAtOffsetMinutes,
         purchasePriceCents: price,
         purchasedFromName: order.merchantEntityName,
         purchaseTransactionUri: transactionUri,
