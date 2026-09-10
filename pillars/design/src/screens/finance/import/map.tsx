@@ -1,5 +1,4 @@
 import { NoDetectionNotice } from '@/kit/import-no-detection-notice';
-import { LiveMapStep } from '@/kit/live-mapping-notice';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, Button, Label, PageHeader, Select } from '@pops/ui';
@@ -158,7 +157,6 @@ function Step({
   validating?: boolean;
   choice?: ImportChoice;
 }) {
-  if (choice.format.live) return <LiveMapStep choice={choice} />;
   const disabled = validating || !columnMap.date || !columnMap.description || !columnMap.amount;
   const previewRows = RAW_ROWS.slice(0, 10);
   return (
@@ -186,7 +184,6 @@ export default function ImportMapStep() {
 }
 
 export const states: ScreenStates = {
-  'live-feed': () => <Step choice={choiceOf('a13', 'up-live')} />,
   'nothing-detected': () => <Step columnMap={EMPTY} />,
   validating: () => <Step validating />,
   'validation-errors': () => (

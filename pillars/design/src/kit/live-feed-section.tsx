@@ -23,25 +23,23 @@ function Arrived({ item, account }: { item: PendingImport; account: Account }) {
         <Stat label="Arrived" value={`${item.rowCount} transactions`} />
         <Stat
           label="Covering"
-          value={item.span ? `${day(item.span.from)} – ${day(item.span.to)}` : '—'}
+          value={item.span ? `${day(item.span.from)} – ${day(item.span.to)}` : 'Not recorded'}
         />
         <Stat label="Newest" value={when(item.savedAt)} />
         <Stat
           label="Balance reported"
           value={
             item.balanceReported === undefined
-              ? '—'
+              ? 'Not reported'
               : formatCents(item.balanceReported, account.currency)
           }
         />
       </CardContent>
       <CardContent className="flex items-center justify-between gap-3 text-sm">
         <p className="text-muted-foreground">
-          {need === 0
-            ? 'Every row matched on its own. Reviewing is a formality.'
-            : `${need} of them need a decision the matcher could not make.`}
+          {need === 0 ? 'Nothing needs a decision yet.' : `${need} need a decision.`}
         </p>
-        <Button size="sm">Review what arrived</Button>
+        <Button size="sm">Next: process what arrived</Button>
       </CardContent>
     </>
   );
@@ -62,10 +60,9 @@ function NothingYet() {
 }
 
 /**
- * What a live-fed account has waiting, in place of a drop zone. The first
- * step shows it as soon as an Up account is picked, and the Upload step
- * shows it again because a step named for a file has to say why there is
- * none. Both read the same pending import, so the numbers cannot drift.
+ * What a live-fed account has waiting, shown as soon as an Up account is
+ * picked. There is no file, so Upload and Map columns are skipped: Next
+ * goes straight to Process.
  */
 export function LiveFeedSection({ account }: { account: Account }) {
   const item = liveImportFor(account.id);
