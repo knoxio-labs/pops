@@ -83,7 +83,7 @@ module's `bundles` export. Every in-repo pillar arrives this way, by the same
 mechanism an out-of-tree pillar would — there is no in-tree shortcut left to
 diverge from.
 
-Until POPS-3227 there was a second route: `src/app/bundle-map.tsx` statically
+Until POPS-3227 there was a second route: a static bundle map statically
 imported the published `@pops/app-<pillar>` package and the shell mounted its
 routes at build time. That file is gone, and with it the shell's dependency on
 any pillar package.
