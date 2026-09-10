@@ -15,7 +15,7 @@
  * provider failure, and worth its own code so it is not read as one. The row
  * still degrades to uncertain; the import does not fail.
  */
-import { EmptyClosedVocabularyError } from './ai-categorizer-prompt.js';
+import { EmptyClosedVocabularyError } from '../vocabulary-prompt.js';
 
 export class AiCategorizationError extends Error {
   constructor(

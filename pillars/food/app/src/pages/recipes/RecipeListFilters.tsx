@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Button, Input, Select, type SelectOption } from '@pops/ui';
+import { Badge, Button, CheckboxInput, Input, Select, type SelectOption } from '@pops/ui';
 
 import {
   DEFAULT_FILTERS,
@@ -89,22 +89,16 @@ interface ToggleRowProps {
 function ToggleRow({ value, onChange, t }: ToggleRowProps): ReactElement {
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={value.includeArchived}
-          onChange={(e) => onChange({ ...value, includeArchived: e.target.checked })}
-        />
-        {t('recipes.list.filters.showArchived')}
-      </label>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={value.includeDraftOnly}
-          onChange={(e) => onChange({ ...value, includeDraftOnly: e.target.checked })}
-        />
-        {t('recipes.list.filters.showDraftOnly')}
-      </label>
+      <CheckboxInput
+        label={t('recipes.list.filters.showArchived')}
+        checked={value.includeArchived}
+        onCheckedChange={(includeArchived) => onChange({ ...value, includeArchived })}
+      />
+      <CheckboxInput
+        label={t('recipes.list.filters.showDraftOnly')}
+        checked={value.includeDraftOnly}
+        onCheckedChange={(includeDraftOnly) => onChange({ ...value, includeDraftOnly })}
+      />
       <SortPicker value={value.sort} onChange={(sort) => onChange({ ...value, sort })} t={t} />
       {hasActiveFilters(value) && (
         <Button variant="ghost" size="sm" onClick={() => onChange({ ...DEFAULT_FILTERS })}>

@@ -145,18 +145,38 @@ describe('buildGeneratePrompt — few-shot grounding', () => {
     },
   ];
 
+  const VOCAB = ['contains:groceries', 'venue:supermarket', 'occasion:home', 'occasion:out'];
+
   it('renders no few-shot block when there are no examples', () => {
-    expect(buildGeneratePrompt(txns, ['Groceries'])).not.toContain(
-      'Examples of rules already accepted'
-    );
+    expect(buildGeneratePrompt(txns, VOCAB)).not.toContain('Examples of rules already accepted');
   });
 
   it('renders accepted examples as a few-shot block', () => {
     const examples: AcceptedCorrectionExample[] = [
       { pattern: 'NETFLIX.COM', matchType: 'exact', entityName: 'Netflix', tags: [] },
     ];
-    const prompt = buildGeneratePrompt(txns, ['Groceries'], examples);
+    const prompt = buildGeneratePrompt(txns, VOCAB, examples);
     expect(prompt).toContain('pattern: "NETFLIX.COM" (exact) -> entity: Netflix');
+  });
+
+  it('presents the vocabulary per facet with its cardinality, not as a flat list', () => {
+    const prompt = buildGeneratePrompt(txns, VOCAB);
+
+    expect(prompt).toContain('- venue: exactly one of [supermarket]');
+    expect(prompt).toContain('- occasion: exactly one of [home, out]');
+    expect(prompt).toContain('- contains: any of [groceries]');
+    expect(prompt).not.toContain('Available tags:');
+  });
+
+  it('renders a value\u2019s definition when the vocabulary carries one', () => {
+    const prompt = buildGeneratePrompt(
+      txns,
+      VOCAB,
+      [],
+      new Map([['occasion:home', 'Spent on the dwelling itself.']])
+    );
+
+    expect(prompt).toContain('    - home: Spent on the dwelling itself.');
   });
 });
 

@@ -56,6 +56,28 @@ const SAMPLE_KNOWN_TAGS = [
   'fee:surcharge',
 ];
 
+/**
+ * Definitions for a few of the sample values, so the catalog shows the prompt's
+ * two rendering forms rather than only the one it had before POPS-3285: a facet
+ * where something is described renders one value per line, and a facet where
+ * nothing is renders the compact bracketed list it always did. `occasion` is
+ * described here because it is the axis the descriptions were added for, and
+ * `channel` is left bare because its two values need no gloss — which is the
+ * point of the column being nullable.
+ */
+const SAMPLE_TAG_DESCRIPTIONS = new Map<string, string>([
+  [
+    'occasion:home',
+    'Spent on the dwelling itself: rent, mortgage, utilities, furniture, repairs, a tradesperson. NOT goods that merely end up at home - a grocery run is routine provisioning and has no occasion at all.',
+  ],
+  [
+    'occasion:out',
+    'Spent while out: a bar, cafe, restaurant, cinema, club, an outing. The setting is being out, not what was bought.',
+  ],
+  ['venue:supermarket', 'A grocery store.'],
+  ['contains:groceries', 'Food and drink bought to prepare or consume later.'],
+]);
+
 const SAMPLE_KNOWN_ENTITY_NAMES = ['Coles', 'Netflix', 'Transport for NSW', 'Woolworths'];
 
 const SAMPLE_TRANSACTION = {
@@ -151,7 +173,12 @@ export function buildPromptCatalog(): PromptCatalogEntry[] {
       model: CATEGORIZER_DEFAULT_MODEL,
       description:
         'Used when a bank transaction cannot be matched to a known entity. Extracts a merchant name and spending tags from the allowlisted transaction fields (description, amount, date — never the raw CSV row or account/card columns), grounded by a bounded closed-set hint of known entity names.',
-      template: buildPrompt(SAMPLE_TRANSACTION, SAMPLE_KNOWN_TAGS, SAMPLE_KNOWN_ENTITY_NAMES),
+      template: buildPrompt(
+        SAMPLE_TRANSACTION,
+        SAMPLE_KNOWN_TAGS,
+        SAMPLE_KNOWN_ENTITY_NAMES,
+        SAMPLE_TAG_DESCRIPTIONS
+      ),
     },
     {
       id: 'analyze-correction',
@@ -166,11 +193,12 @@ export function buildPromptCatalog(): PromptCatalogEntry[] {
       title: 'Rule Generation',
       model: CORRECTIONS_DEFAULT_MODEL,
       description:
-        "Proposes reusable tagging rules from a batch of transactions, few-shotted with the user's own recently accepted rules. Rules are stored and applied automatically to future imports.",
+        "Proposes reusable tagging rules from a batch of transactions, few-shotted with the user's own recently accepted rules. Offered the same closed vocabulary as the categorizer, read from tag_vocabulary; every proposed value is validated against it before the rule is stored. Rules are applied automatically to future imports.",
       template: buildGeneratePrompt(
         SAMPLE_GENERATE_TXNS,
         SAMPLE_KNOWN_TAGS,
-        SAMPLE_ACCEPTED_EXAMPLES
+        SAMPLE_ACCEPTED_EXAMPLES,
+        SAMPLE_TAG_DESCRIPTIONS
       ),
     },
     {

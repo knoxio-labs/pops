@@ -306,3 +306,37 @@ describe('categorizeWithAi — closed-set validation', () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 });
+
+describe('categorizeWithAi — tag descriptions reach the prompt', () => {
+  /**
+   * The wire POPS-3285 turns on. Everything downstream of it is covered by the
+   * `closedFacetFields` unit tests, and everything upstream by the vocabulary
+   * service's — but if the hint is dropped between them the prompt silently
+   * reverts to the bare list that let `occasion:home` collect every row, and
+   * every other test in this file still passes.
+   */
+  function promptSent(): string {
+    const call = createMock.mock.calls[0]?.[0] as { messages: { content: string }[] };
+    return call.messages[0]?.content ?? '';
+  }
+
+  beforeEach(() => {
+    process.env[FLAG] = 'true';
+    process.env[KEY] = 'sk-test';
+    createMock.mockResolvedValue(textResponse('{"entityName":"Woolworths","confidence":0.9}'));
+  });
+
+  it('renders a described value with its definition', async () => {
+    await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB, {
+      tagDescriptions: new Map([['occasion:home', 'Spent on the dwelling itself.']]),
+    });
+
+    expect(promptSent()).toContain('    - home: Spent on the dwelling itself.');
+  });
+
+  it('falls back to the bare list when the caller supplies no descriptions', async () => {
+    await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB);
+
+    expect(promptSent()).toContain('- occasion: exactly one of [home, out]');
+  });
+});
