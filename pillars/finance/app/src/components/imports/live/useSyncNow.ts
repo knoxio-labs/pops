@@ -43,8 +43,13 @@ export function useSyncNow(accountId: string) {
   const [job, setJob] = useState<UpSyncJob | null>(null);
   const mutation = useMutation({
     mutationFn: async (range?: SyncRange) => {
+      // No range means no body at all, not an empty one: a steady-state sync
+      // must reach the server exactly as it did before the range existed.
       const started = unwrap(
-        await accountImportsTriggerSync({ path: { id: accountId }, body: range ?? {} })
+        await accountImportsTriggerSync({
+          path: { id: accountId },
+          ...(range === undefined ? {} : { body: range }),
+        })
       ).data;
       return pollJob(accountId, started.id);
     },
