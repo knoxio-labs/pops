@@ -254,12 +254,12 @@ describe('claim, heartbeat, release', () => {
     expect(taken.data.state).toBe('open');
   });
 
-  it('claiming a live draft turns it saved so it stops collecting', async () => {
+  it('claiming a live draft turns it saved so it stops collecting, inventing no step', async () => {
     const accountId = await anAccount();
     const live = aLiveDraft(accountId);
 
     const claimed = await client().importDrafts.claim(live.id, { ownerToken: TAB_A });
-    expect(claimed.data).toMatchObject({ state: 'open', step: 1 });
+    expect(claimed.data).toMatchObject({ state: 'open', step: null });
     await client().importDrafts.release(live.id, { ownerToken: TAB_A });
 
     const listed = (await client().importDrafts.list({ account: accountId })).data;
