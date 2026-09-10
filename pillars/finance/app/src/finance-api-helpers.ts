@@ -12,6 +12,7 @@
 
 interface SdkErrorBody {
   message?: unknown;
+  code?: unknown;
 }
 
 /**
@@ -51,10 +52,13 @@ function describeFailure(status: number | undefined): string {
 
 export class FinanceApiError extends Error {
   readonly status: number | undefined;
-  constructor(message: string, status: number | undefined) {
+  /** The server's error `code` (the thrown error's class name), when the body carried one. */
+  readonly code: string | undefined;
+  constructor(message: string, status: number | undefined, code?: string) {
     super(message);
     this.name = 'FinanceApiError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -66,7 +70,11 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response?: Respon
       typeof body.message === 'string' && body.message.length > 0
         ? body.message
         : describeFailure(status);
-    throw new FinanceApiError(message, status);
+    throw new FinanceApiError(
+      message,
+      status,
+      typeof body.code === 'string' ? body.code : undefined
+    );
   }
   if (result.data === undefined) {
     throw new FinanceApiError('finance API returned no data', result.response?.status);

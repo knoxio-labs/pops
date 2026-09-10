@@ -7,7 +7,6 @@
   "accounts": "Accounts",
   "wishlist": "Wish List",
   "import": "Import Transactions",
-
   "dashboard.welcome": "Welcome back! Here's your financial overview.",
   "dashboard.recentTransactions": "Recent Transactions",
   "dashboard.activeBudgets": "Active Budgets",
@@ -19,7 +18,6 @@
   "dashboard.thisMonth": "This calendar month",
   "dashboard.unableToLoad": "Unable to load dashboard",
   "dashboard.apiNotResponding": "The backend API is not responding. Make sure the pops-api server is running.",
-
   "transactions.failedToLoad": "Failed to load transactions",
   "transactions.totalCount": "{{count}} total transactions",
   "transactions.filteredCount": "{{filtered}} of {{total}} transactions",
@@ -74,7 +72,6 @@
   "transactions.purchaseLink.open": "Show what this transaction bought",
   "transactions.purchaseLink.unavailable": "Unavailable",
   "transactions.purchaseLink.unavailableHint": "Purchases could not be answered, so this column may be incomplete — an empty cell here does not mean the transaction has no order.",
-
   "budgets.failedToLoad": "Failed to load budgets",
   "budgets.totalCount": "{{count}} total budgets",
   "budgets.manageTargets": "Manage spending targets",
@@ -85,7 +82,6 @@
   "budgets.deleteConfirmTitle": "Are you absolutely sure?",
   "budgets.deleteConfirmDesc": "This will permanently delete this budget. This action cannot be undone.",
   "budgets.enableTracking": "Enable this budget for tracking",
-
   "entities.failedToLoad": "Failed to load entities",
   "entities.totalCount": "{{count}} total entities",
   "entities.orphanedCount": "{{count}} orphaned entities",
@@ -98,7 +94,6 @@
   "entities.showingOrphanedOnly": "Showing orphaned only",
   "entities.deleteConfirmTitle": "Are you absolutely sure?",
   "entities.deleteConfirmDesc": "This will permanently delete this entity. This action cannot be undone.",
-
   "wishlist.failedToLoad": "Failed to load wish list",
   "wishlist.totalCount": "{{count}} items to save for",
   "wishlist.trackingGoals": "Tracking your goals",
@@ -108,9 +103,15 @@
   "wishlist.newItem": "New Item",
   "wishlist.deleteConfirmTitle": "Are you absolutely sure?",
   "wishlist.deleteConfirmDesc": "This will permanently delete this wish list item. This action cannot be undone.",
-
   "import.title": "Import Transactions",
   "import.description": "Import transactions from your bank CSV files into POPS",
+  "import.draft.unusableTitle": "This import cannot be resumed",
+  "import.draft.discard": "Discard",
+  "import.draft.gone": "That import is no longer pending. Starting a new one.",
+  "import.draft.ownedElsewhereTitle": "This import is open in another tab",
+  "import.draft.ownedElsewhereBody": "Take it over here to continue, or leave it to the other tab.",
+  "import.draft.takeOver": "Take over here",
+  "import.resumeFileNotice": "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting any file starts a fresh import.",
   "import.editTransaction": "Edit Transaction",
   "import.searchRules": "Search rules by pattern, entity, or location...",
   "import.entitiesCreated": "Entities Created",
@@ -140,22 +141,14 @@
   "import.chooseEntity": "Choose entity...",
   "import.selectColumn": "Select column...",
   "import.optional": "Optional",
-  "import.addTag": "+ Add tag\u2026",
-  "import.searchRulesShort": "Search rules\u2026",
+  "import.addTag": "+ Add tag…",
+  "import.searchRulesShort": "Search rules…",
   "import.splitLocationNote": "e.g. split location into its own rule, or exclude transfers",
   "import.removeRuleReason": "Why is this rule being removed?",
   "import.saveTagRule": "Save a reusable tag rule for this group",
   "import.saveTagRuleTx": "Save a reusable tag rule for this transaction",
   "import.uploadCsv": "Upload CSV file",
   "import.removeFile": "Remove file",
-  "import.resumeTitle": "Resume import?",
-  "import.resumeDescription": "You have an unfinished import of {{fileName}} ({{count}} transactions) at step {{step}}. Resume where you left off, or discard it and start fresh.",
-  "import.resumeConfirm": "Resume",
-  "import.resumeDiscard": "Discard",
-  "import.resumeFileSummary": "{{fileName}} and {{extraCount}} more",
-  "import.resumeClearedElsewhere": "This import was completed or discarded in another tab.",
-  "import.resumeFileNotice": "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting any file starts a fresh import.",
-
   "field.date": "Date",
   "field.amount": "Amount",
   "field.description": "Description",
@@ -179,7 +172,6 @@
   "field.location": "Location",
   "field.entity": "Entity",
   "field.tags": "Tags",
-
   "placeholder.category": "e.g. Groceries, Entertainment",
   "placeholder.amount": "0.00",
   "placeholder.additionalDetails": "Additional details...",
@@ -189,7 +181,6 @@
   "placeholder.patternExample": "e.g. WOOLWORTHS",
   "placeholder.tagsExample": "Groceries, Transport",
   "placeholder.filterByTag": "Filter by tag...",
-
   "column.category": "Category",
   "column.period": "Period",
   "column.amount": "Amount",
@@ -211,7 +202,6 @@
   "column.target": "Target",
   "column.saved": "Saved",
   "column.progressWishlist": "Progress",
-
   "filter.allPeriods": "All Periods",
   "filter.monthly": "Monthly",
   "filter.yearly": "Yearly",
@@ -238,20 +228,16 @@
   "filter.soon": "Soon",
   "filter.oneDay": "One Day",
   "filter.dreaming": "Dreaming",
-
   "status.active": "Active",
   "status.inactive": "Inactive",
-
   "search.budgetMonthly": "Monthly",
   "search.budgetYearly": "Yearly",
-
   "tag.suggest": "Suggest",
-  "tag.suggesting": "Suggesting\u2026",
+  "tag.suggesting": "Suggesting…",
   "tag.save": "Save",
-  "tag.saving": "Saving\u2026",
+  "tag.saving": "Saving…",
   "tag.editTags": "Edit tags",
-  "tag.addPlaceholder": "Type to add a tag\u2026",
-
+  "tag.addPlaceholder": "Type to add a tag…",
   "rules.title": "Categorisation Rules",
   "rules.description": "Browse and manage AI categorisation rules",
   "rules.addRule": "Add Rule",
@@ -273,7 +259,6 @@
   "rules.tagsPlaceholder": "Type and press Enter...",
   "rules.active": "Active",
   "rules.inactiveSkipped": "Inactive rules are skipped by the matcher.",
-
   "tagRules.title": "Tag Rules",
   "tagRules.description": "Browse and manage tag-suggestion rules"
 }

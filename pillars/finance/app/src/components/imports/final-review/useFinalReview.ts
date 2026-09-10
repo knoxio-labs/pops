@@ -10,8 +10,8 @@ import {
 import { buildCommitPayload, importSourceFor } from '../../../lib/commit-payload';
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { reconcilePendingTagRule } from '../../../lib/tag-rule-reconcile';
-import { clearPersistedImport } from '../../../store/import-store-lifecycle';
 import { useImportStore } from '../../../store/importStore';
+import { IMPORT_DRAFTS_LIST_KEY } from '../hooks/useDraftWriteThrough';
 import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
 
 import type { PendingTagRuleChangeSet } from '../../../store/importStore';
@@ -32,6 +32,8 @@ function useStoreSlice() {
     prevStep: useImportStore((s) => s.prevStep),
     nextStep: useImportStore((s) => s.nextStep),
     setCommitResult: useImportStore((s) => s.setCommitResult),
+    draftId: useImportStore((s) => s.draftId),
+    setDraftId: useImportStore((s) => s.setDraftId),
   };
 }
 
@@ -101,6 +103,7 @@ function commitBodyFor(slice: ReturnType<typeof useStoreSlice>, commitKey: strin
     ...payload,
     changeSets: payload.changeSets.map(toRestCorrectionChangeSet),
     commitKey,
+    ...(slice.draftId === null ? {} : { draftId: slice.draftId }),
   };
 }
 
@@ -133,10 +136,11 @@ export function useFinalReview() {
       // SummaryStep owns the post-commit UI; auto-advance there instead of
       // showing an inline panel + manual Continue click.
       slice.nextStep();
-      // Broadcast so a second tab still holding this now-committed import is
-      // reset — commit has no server-side checksum dedup, so a resumed copy
-      // could otherwise be imported twice.
-      clearPersistedImport(true);
+      // The commit deleted the draft in its own transaction (finance
+      // ADR-005); forgetting the id here is what stops the write-through
+      // from recreating it out of the Summary step's state.
+      slice.setDraftId(null);
+      void queryClient.invalidateQueries({ queryKey: IMPORT_DRAFTS_LIST_KEY });
       // Commit is the only write path for staged tag rules and their accepted
       // vocabulary tags (POPS-2597), so their caches go stale here, not in the
       // tag-rule dialog. This also covers ['finance', 'tagRules', 'vocabulary'],

@@ -1,31 +1,42 @@
+/**
+ * The import page's draft gate (finance ADR-005): a `?draft=` URL hydrates
+ * the wizard from the server and claims it, an unusable draft offers only
+ * Discard, a fresh wizard creates its draft on the first parsed rows, and a
+ * reload at Final Review after a failed commit lands back on Final Review
+ * with every pending change intact (the POPS-3159 class).
+ */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { processMock, progressMock, accountsListMock } = vi.hoisted(() => ({
-  processMock: vi.fn(),
-  progressMock: vi.fn(),
-  accountsListMock: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  accountsList: vi.fn(),
+  draftsGet: vi.fn(),
+  draftsClaim: vi.fn(),
+  draftsCreate: vi.fn(),
+  draftsWrite: vi.fn(),
+  draftsRelease: vi.fn(),
+  draftsDiscard: vi.fn(),
+  process: vi.fn(),
+  progress: vi.fn(),
 }));
 vi.mock('../finance-api/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../finance-api/index.js')>()),
-  importsProcessImport: (...args: unknown[]) => processMock(...args),
-  importsGetImportProgress: (...args: unknown[]) => progressMock(...args),
-  accountsList: (...args: unknown[]) => accountsListMock(...args),
+  accountsList: (...args: unknown[]) => mocks.accountsList(...args),
+  importDraftsGet: (...args: unknown[]) => mocks.draftsGet(...args),
+  importDraftsClaim: (...args: unknown[]) => mocks.draftsClaim(...args),
+  importDraftsCreate: (...args: unknown[]) => mocks.draftsCreate(...args),
+  importDraftsWrite: (...args: unknown[]) => mocks.draftsWrite(...args),
+  importDraftsRelease: (...args: unknown[]) => mocks.draftsRelease(...args),
+  importDraftsDiscard: (...args: unknown[]) => mocks.draftsDiscard(...args),
+  importsProcessImport: (...args: unknown[]) => mocks.process(...args),
+  importsGetImportProgress: (...args: unknown[]) => mocks.progress(...args),
 }));
 
-import {
-  createMemoryPersistStorage,
-  type MemoryPersistStorage,
-} from '../store/import-persist.test-helpers';
-import { clearPersistedImport } from '../store/import-store-lifecycle';
-import {
-  IMPORT_PERSIST_KEY,
-  IMPORT_PERSIST_VERSION,
-  partializeImportState,
-  type PersistedImportState,
-} from '../store/import-store-persistence';
+import { resetOwnerTokenForTests } from '../store/import-draft-owner';
+import { toDraftPayload } from '../store/import-draft-payload';
+import { initialState } from '../store/import-store-types';
 import { useImportStore } from '../store/importStore';
 import { NO_BALANCE, NO_IMPORT_STATUS, NO_TRANSACTION_COUNT } from '../test-utils.js';
 import { ImportPage } from './ImportPage';
@@ -34,9 +45,9 @@ import type { ParsedTransaction } from '@pops/finance';
 
 import type { Account } from './accounts/types';
 
-const ANZ_EVERYDAY: Account = {
-  id: 'acc-1',
-  name: 'ANZ Everyday',
+const AMEX: Account = {
+  id: 'acc-amex',
+  name: 'Amex',
   kind: 'checking',
   currency: 'AUD',
   archivedAt: null,
@@ -54,8 +65,6 @@ const ANZ_EVERYDAY: Account = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-let storage: MemoryPersistStorage<PersistedImportState>;
-
 function makeParsed(checksum: string): ParsedTransaction {
   return {
     date: '2026-01-15',
@@ -67,35 +76,45 @@ function makeParsed(checksum: string): ParsedTransaction {
   };
 }
 
-function seedSnapshot(overrides: Partial<PersistedImportState>): void {
-  storage.setItem(IMPORT_PERSIST_KEY, {
-    state: {
-      ...partializeImportState(useImportStore.getState()),
-      sourceFileNames: ['jan.csv'],
-      headers: ['Date', 'Amount'],
-      rows: [{ Date: '01/01/2026', Amount: '-10.00' }],
-      ...overrides,
-    },
-    version: IMPORT_PERSIST_VERSION,
-  });
+function ok<T>(data: T) {
+  return { data, error: undefined, response: new Response(null, { status: 200 }) };
 }
 
-function seedResumableAtStepTwo(): void {
-  seedSnapshot({ currentStep: 2 });
+function failure(status: number, code: string, message: string) {
+  return { data: undefined, error: { message, code }, response: new Response(null, { status }) };
 }
 
-// The exact state a refresh during step-3 processing leaves behind: parsed
-// transactions without current processed results, so clampResumeStep demotes
-// the persisted step to 3 (Process) — the step whose mount auto-starts a
-// server-side processing run.
-function seedProcessingInterruptedRun(): void {
-  seedSnapshot({
-    currentStep: 6,
+function draftOn(payloadOverrides: Record<string, unknown>) {
+  const payload = {
+    ...toDraftPayload({ ...useImportStore.getState(), ...initialState }),
+    ...payloadOverrides,
+  };
+  return {
+    id: 'draft-1',
     accountId: 'acc-amex',
-    accountName: 'Amex',
-    parsedTransactions: [makeParsed('a')],
-    parsedTransactionsFingerprint: 'a',
-  });
+    source: { kind: 'file', dialectId: 'Amex', fileNames: ['jan.csv'] },
+    state: 'saved',
+    step: payload.currentStep,
+    rowCount: 1,
+    unresolvedCount: 0,
+    span: null,
+    balanceReportedCents: null,
+    processSessionId: null,
+    savedAt: '2026-09-10T00:00:00.000Z',
+    createdAt: '2026-09-10T00:00:00.000Z',
+    ownerSeenAt: null,
+    unusableCause: null,
+    unusableReason: null,
+    shapeVersion: 1,
+    payload,
+  };
+}
+
+let lastLocation = '';
+function LocationSpy() {
+  const location = useLocation();
+  lastLocation = `${location.pathname}${location.search}`;
+  return null;
 }
 
 function renderImportPage(url = '/finance/import') {
@@ -105,6 +124,7 @@ function renderImportPage(url = '/finance/import') {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[url]}>
+        <LocationSpy />
         <ImportPage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -113,164 +133,220 @@ function renderImportPage(url = '/finance/import') {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  accountsListMock.mockResolvedValue({
-    data: {
-      data: [ANZ_EVERYDAY],
-      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
-    },
-    error: undefined,
-  });
-  useImportStore.getState().reset();
-  storage = createMemoryPersistStorage();
-  useImportStore.persist.setOptions({ storage });
+  resetOwnerTokenForTests();
+  sessionStorage.clear();
+  useImportStore.setState({ ...initialState });
+  mocks.accountsList.mockResolvedValue(
+    ok({ data: [AMEX], pagination: { total: 1, limit: 500, offset: 0, hasMore: false } })
+  );
+  mocks.draftsClaim.mockResolvedValue(ok({ data: { id: 'draft-1', state: 'open' } }));
+  mocks.draftsWrite.mockResolvedValue(ok({ data: { id: 'draft-1', state: 'open' } }));
+  mocks.draftsRelease.mockResolvedValue({ data: undefined, error: undefined });
+  mocks.draftsDiscard.mockResolvedValue({ data: undefined, error: undefined });
+  mocks.draftsCreate.mockResolvedValue(ok({ data: { id: 'draft-new', state: 'open' } }));
+  mocks.process.mockResolvedValue(ok({ sessionId: 'sess-1' }));
+  mocks.progress.mockResolvedValue(
+    ok({
+      sessionId: 'sess-1',
+      status: 'processing',
+      total: 1,
+      processed: 0,
+      warnings: [],
+    })
+  );
 });
 
-describe('ImportPage', () => {
-  it('never mounts the wizard while hydration or the resume prompt is pending', async () => {
-    seedResumableAtStepTwo();
+describe('opening a draft', () => {
+  it('hydrates the store from the draft, claims it, and mounts the wizard on the clamped step', async () => {
+    mocks.draftsGet.mockResolvedValue(
+      ok({
+        data: draftOn({
+          currentStep: 2,
+          accountId: 'acc-amex',
+          accountName: 'Amex',
+          sourceFileNames: ['jan.csv'],
+          headers: ['Date', 'Amount'],
+          rows: [{ Date: '01/01/2026', Amount: '-10.00' }],
+        }),
+      })
+    );
+    renderImportPage('/finance/import?draft=draft-1');
 
-    renderImportPage();
-
-    // Synchronously after mount the async rehydrate has not resolved: the
-    // wizard must be absent — rendering it now would show (or reset to) step 1.
-    expect(screen.queryByText('Upload CSV')).not.toBeInTheDocument();
-
-    expect(await screen.findByText('Resume import?')).toBeInTheDocument();
-    expect(screen.queryByText('Map Columns')).not.toBeInTheDocument();
-    expect(screen.queryByText('Upload CSV')).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.draftsClaim).toHaveBeenCalledOnce());
+    expect(mocks.draftsClaim.mock.calls[0]?.[0]).toMatchObject({
+      path: { id: 'draft-1' },
+      body: { force: false },
+    });
+    await waitFor(() => expect(useImportStore.getState().currentStep).toBe(2));
+    expect(useImportStore.getState()).toMatchObject({
+      draftId: 'draft-1',
+      accountId: 'acc-amex',
+      sourceFileNames: ['jan.csv'],
+    });
+    expect(useImportStore.getState().files).toEqual([]);
   });
 
-  it('resume mounts the wizard at the restored step', async () => {
-    seedResumableAtStepTwo();
-    renderImportPage();
-    await screen.findByText('Resume import?');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-
-    expect(screen.queryByText('Resume import?')).not.toBeInTheDocument();
-    expect(screen.getByText('Map Columns')).toBeInTheDocument();
+  it('does not re-read a draft the store already holds (same-session navigation)', async () => {
+    useImportStore.setState({
+      ...initialState,
+      draftId: 'draft-1',
+      currentStep: 2,
+      rows: [{ a: '1' }],
+      headers: ['a'],
+      accountId: 'acc-amex',
+    });
+    renderImportPage('/finance/import?draft=draft-1');
+    await waitFor(() => expect(screen.getByText('Map')).toBeDefined());
+    expect(mocks.draftsGet).not.toHaveBeenCalled();
     expect(useImportStore.getState().currentStep).toBe(2);
   });
 
-  it('discard starts a fresh wizard at step 1', async () => {
-    seedResumableAtStepTwo();
-    renderImportPage();
-    await screen.findByText('Resume import?');
+  it('puts the draft the store holds back into a URL that lost it', async () => {
+    useImportStore.setState({
+      ...initialState,
+      draftId: 'draft-1',
+      rows: [{ a: '1' }],
+      headers: ['a'],
+      accountId: 'acc-amex',
+    });
+    renderImportPage('/finance/import');
+    await waitFor(() => expect(lastLocation).toBe('/finance/import?draft=draft-1'));
+    expect(mocks.draftsGet).not.toHaveBeenCalled();
+  });
+
+  it('renders an unusable draft as a reason and a Discard button, and mounts no wizard', async () => {
+    mocks.draftsGet.mockResolvedValue(
+      failure(409, 'DraftUnusable', 'Saved before this version was deployed. Upload it again.')
+    );
+    renderImportPage('/finance/import?draft=draft-old');
+
+    await screen.findByText('This import cannot be resumed');
+    expect(screen.getByText(/Saved before this version was deployed/)).toBeDefined();
+    expect(screen.queryByText('Upload')).toBeNull();
+    expect(mocks.draftsClaim).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
-
-    expect(screen.queryByText('Resume import?')).not.toBeInTheDocument();
-    expect(screen.getByText('Upload CSV')).toBeInTheDocument();
-    expect(useImportStore.getState().currentStep).toBe(1);
-    expect(storage.dump()).toBeNull();
+    await waitFor(() => expect(mocks.draftsDiscard).toHaveBeenCalledOnce());
+    await waitFor(() => expect(lastLocation).toBe('/finance/import'));
+    await screen.findByText('Upload');
   });
 
-  it('renders a fresh wizard directly when nothing is persisted', async () => {
-    renderImportPage();
+  it('offers to take over a draft another tab holds, and claims with force when asked', async () => {
+    mocks.draftsGet.mockResolvedValue(ok({ data: draftOn({ currentStep: 1 }) }));
+    mocks.draftsClaim
+      .mockResolvedValueOnce(failure(409, 'DraftOwnedElsewhere', 'open elsewhere'))
+      .mockResolvedValueOnce(ok({ data: { id: 'draft-1', state: 'open' } }));
+    renderImportPage('/finance/import?draft=draft-1');
 
-    expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
-    expect(screen.queryByText('Resume import?')).not.toBeInTheDocument();
+    await screen.findByText('This import is open in another tab');
+    fireEvent.click(screen.getByRole('button', { name: 'Take over here' }));
+    await waitFor(() => expect(mocks.draftsClaim).toHaveBeenCalledTimes(2));
+    expect(mocks.draftsClaim.mock.calls[1]?.[0]).toMatchObject({ body: { force: true } });
+    await screen.findByText('Upload');
   });
 
-  it('a resume clamped to the processing step fires no processing while the prompt is open or on discard', async () => {
-    seedProcessingInterruptedRun();
-    renderImportPage();
+  it('drops a draft that is gone from the URL and starts fresh', async () => {
+    mocks.draftsGet.mockResolvedValue(failure(404, 'NotFoundError', 'not found'));
+    renderImportPage('/finance/import?draft=draft-gone');
+    await waitFor(() => expect(lastLocation).toBe('/finance/import'));
+    await screen.findByText('Upload');
+  });
+});
 
-    await screen.findByText('Resume import?');
-    expect(useImportStore.getState().currentStep).toBe(3);
-    expect(processMock).not.toHaveBeenCalled();
+describe('a fresh wizard', () => {
+  it('mounts at step 1 and creates a draft once the first rows exist, then carries the id in the URL', async () => {
+    renderImportPage('/finance/import');
+    await screen.findByText('Upload');
+    expect(mocks.draftsGet).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+    useImportStore.getState().setAccount('acc-amex', 'Amex');
+    useImportStore.setState({ headers: ['Date'], rows: [{ Date: '01/01/2026' }] });
 
-    expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
-    expect(processMock).not.toHaveBeenCalled();
-    expect(storage.dump()).toBeNull();
+    await waitFor(() => expect(mocks.draftsCreate).toHaveBeenCalledOnce());
+    await waitFor(() => expect(lastLocation).toBe('/finance/import?draft=draft-new'));
+    expect(useImportStore.getState().draftId).toBe('draft-new');
   });
 
-  it('restarts processing only after the user chooses Resume', async () => {
-    seedProcessingInterruptedRun();
-    processMock.mockReturnValue(new Promise(() => {}));
-    renderImportPage();
-    await screen.findByText('Resume import?');
-    expect(processMock).not.toHaveBeenCalled();
+  it('pre-selects the account named by ?account= into a fresh wizard only', async () => {
+    renderImportPage('/finance/import?account=acc-amex');
+    await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-amex'));
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-
-    await waitFor(() => expect(processMock).toHaveBeenCalledTimes(1));
-    expect(processMock).toHaveBeenCalledWith({
-      body: {
-        transactions: [expect.objectContaining({ checksum: 'a' })],
+  it('resets a store left over from a committed run', async () => {
+    useImportStore.setState({
+      ...initialState,
+      currentStep: 8,
+      rows: [{ a: '1' }],
+      commitResult: {
+        entitiesCreated: 0,
+        rulesApplied: { add: 0, edit: 0, disable: 0, remove: 0 },
+        tagRulesApplied: 0,
+        transactionsImported: 1,
+        transactionsFailed: 0,
+        failedDetails: [],
+        retroactiveReclassifications: 0,
       },
     });
+    renderImportPage('/finance/import');
+    await screen.findByText('Upload');
+    expect(useImportStore.getState().currentStep).toBe(1);
+    expect(useImportStore.getState().commitResult).toBeNull();
   });
+});
 
-  describe('?account= pre-scope (POPS-2875)', () => {
-    it('pre-selects the named account in a fresh wizard', async () => {
-      renderImportPage('/finance/import?account=acc-1');
+describe('POPS-3159: a reload at Final Review after a failed commit', () => {
+  it('lands back on Final Review with every pending change intact', async () => {
+    const parsed = makeParsed('a');
+    const confirmed = { ...parsed, transactionType: 'purchase' as const };
+    const pendingEntity = { tempId: 'temp:entity:1', name: 'Woolworths', type: 'company' as const };
+    const pendingChangeSet = {
+      tempId: 'temp:cs:1',
+      changeSet: {
+        ops: [
+          { op: 'add' as const, data: { descriptionPattern: 'WOOL', matchType: 'exact' as const } },
+        ],
+      },
+      appliedAt: '2026-09-10T00:00:00.000Z',
+      source: 'review',
+    };
+    mocks.draftsGet.mockResolvedValue(
+      ok({
+        data: draftOn({
+          currentStep: 7,
+          accountId: 'acc-amex',
+          accountName: 'Amex',
+          sourceFileNames: ['jan.csv'],
+          parsedTransactions: [parsed],
+          parsedTransactionsFingerprint: 'a',
+          processedForFingerprint: 'a',
+          processedTransactions: {
+            matched: [
+              {
+                ...parsed,
+                status: 'matched',
+                entity: { matchType: 'exact', entityId: 'e1', entityName: 'Woolworths' },
+              },
+            ],
+            uncertain: [],
+            failed: [],
+            skipped: [],
+          },
+          confirmedTransactions: [confirmed],
+          pendingEntities: [pendingEntity],
+          pendingChangeSets: [pendingChangeSet],
+          manuallyResolvedChecksums: ['a'],
+        }),
+      })
+    );
+    renderImportPage('/finance/import?draft=draft-1');
 
-      expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
-      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
-      expect(useImportStore.getState().accountName).toBe('ANZ Everyday');
-    });
-
-    it('leaves a resumed run’s own account alone', async () => {
-      seedProcessingInterruptedRun();
-      processMock.mockReturnValue(new Promise(() => {}));
-      renderImportPage('/finance/import?account=acc-1');
-      await screen.findByText('Resume import?');
-
-      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-
-      await waitFor(() => expect(processMock).toHaveBeenCalledTimes(1));
-      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
-      expect(useImportStore.getState().accountId).toBe('acc-amex');
-      expect(useImportStore.getState().accountName).toBe('Amex');
-    });
-
-    it('stays out of a resumed run with no account yet', async () => {
-      seedResumableAtStepTwo();
-      renderImportPage('/finance/import?account=acc-1');
-      await screen.findByText('Resume import?');
-
-      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-
-      expect(screen.getByText('Map Columns')).toBeInTheDocument();
-      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
-      await new Promise((res) => setTimeout(res, 20));
-      expect(useImportStore.getState().accountId).toBeNull();
-    });
-
-    it('applies once another tab clears the resumed run, since what is left is fresh', async () => {
-      seedResumableAtStepTwo();
-      renderImportPage('/finance/import?account=acc-1');
-      await screen.findByText('Resume import?');
-      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
-      expect(useImportStore.getState().accountId).toBeNull();
-
-      clearPersistedImport(true);
-
-      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
-      expect(useImportStore.getState().currentStep).toBe(1);
-    });
-
-    it('applies after a persisted run is discarded, since that starts fresh', async () => {
-      seedProcessingInterruptedRun();
-      renderImportPage('/finance/import?account=acc-1');
-      await screen.findByText('Resume import?');
-
-      fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
-
-      await waitFor(() => expect(useImportStore.getState().accountId).toBe('acc-1'));
-    });
-
-    it('ignores an id the accounts list does not know', async () => {
-      renderImportPage('/finance/import?account=acc-nope');
-
-      expect(await screen.findByText('Upload CSV')).toBeInTheDocument();
-      await waitFor(() => expect(accountsListMock).toHaveBeenCalled());
-      await new Promise((res) => setTimeout(res, 20));
-      expect(useImportStore.getState().accountId).toBeNull();
-    });
+    await waitFor(() => expect(useImportStore.getState().currentStep).toBe(7));
+    const state = useImportStore.getState();
+    expect(state.pendingEntities).toEqual([pendingEntity]);
+    expect(state.pendingChangeSets).toEqual([pendingChangeSet]);
+    expect(state.confirmedTransactions).toEqual([confirmed]);
+    expect(state.manuallyResolvedChecksums).toEqual(['a']);
+    expect(state.commitResult).toBeNull();
+    expect(mocks.draftsDiscard).not.toHaveBeenCalled();
   });
 });

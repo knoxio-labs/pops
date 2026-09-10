@@ -8,18 +8,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockPrevStep = vi.fn();
 const mockNextStep = vi.fn();
 const mockSetCommitResult = vi.fn();
+const mockSetDraftId = vi.fn();
 
 let storeState: Record<string, unknown> = {};
 
 vi.mock('../../store/importStore', () => ({
   useImportStore: (selector?: (s: Record<string, unknown>) => unknown) =>
     selector ? selector(storeState) : storeState,
-}));
-
-const { mockClearPersistedImport } = vi.hoisted(() => ({ mockClearPersistedImport: vi.fn() }));
-
-vi.mock('../../store/import-store-lifecycle', () => ({
-  clearPersistedImport: (...args: unknown[]) => mockClearPersistedImport(...args),
 }));
 
 // --- finance SDK mock ---
@@ -81,6 +76,8 @@ function makeStoreState(overrides: Partial<typeof storeState> = {}) {
     prevStep: mockPrevStep,
     nextStep: mockNextStep,
     setCommitResult: mockSetCommitResult,
+    draftId: 'draft-1',
+    setDraftId: mockSetDraftId,
     ...overrides,
   };
 }
@@ -329,7 +326,7 @@ describe('FinalReviewStep', () => {
       expect(mockSetCommitResult).toHaveBeenCalledWith(resultData);
       expect(mockNextStep).toHaveBeenCalledOnce();
     });
-    expect(mockClearPersistedImport).toHaveBeenCalledExactlyOnceWith(true);
+    expect(mockSetDraftId).toHaveBeenCalledExactlyOnceWith(null);
   });
 
   it('shows error message on commit failure', async () => {
@@ -360,7 +357,7 @@ describe('FinalReviewStep', () => {
       expect(screen.getByText('Commit failed')).toBeDefined();
     });
     expect(mockNextStep).not.toHaveBeenCalled();
-    expect(mockClearPersistedImport).not.toHaveBeenCalled();
+    expect(mockSetDraftId).not.toHaveBeenCalled();
   });
 
   it('disables Back button during commit', async () => {

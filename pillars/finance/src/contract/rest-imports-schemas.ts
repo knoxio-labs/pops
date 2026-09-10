@@ -217,6 +217,12 @@ export const CommitPayloadSchema = z.object({
    */
   commitKey: z.string().uuid().optional(),
   source: ImportSourceSchema.optional(),
+  /**
+   * The pending draft this commit finishes (finance ADR-005). Deleted in the
+   * same transaction that writes the rows, so a commit that fails leaves the
+   * draft to be resumed and one that succeeds leaves no card behind.
+   */
+  draftId: z.string().optional(),
 });
 
 export { RulesAppliedSchema, RuleWriteCountsSchema };

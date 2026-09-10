@@ -32,6 +32,7 @@ import {
   transactionTagRulesService,
   type OpenedFinanceDb,
 } from '../../db/index.js';
+import { createImportDraft, getImportDraft } from '../../db/services/import-drafts.js';
 import { createFinanceApiApp } from '../app.js';
 import { page, stubHandle } from '../contacts/__tests__/stub-handle.js';
 import {
@@ -1649,6 +1650,46 @@ describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
       .prepare('SELECT count(*) as c FROM transactions WHERE checksum = ?')
       .get('race-1') as { c: number };
     expect(txnCount.c).toBe(1);
+  });
+
+  it('a commit carrying draftId deletes the draft with the rows; a rejected one leaves it (finance ADR-005)', async () => {
+    const c = client();
+    const accountId = (
+      await c.accounts.create({ name: 'Draft Owner', kind: 'checking', currency: 'AUD' })
+    ).data.id;
+    const draft = createImportDraft(financeDb.db, {
+      accountId,
+      sourceKind: 'file',
+      state: 'saved',
+      payload: '{}',
+      rowCount: 1,
+      unresolvedCount: 0,
+      dateFrom: null,
+      dateTo: null,
+    });
+
+    await expect(
+      c.imports.commitImport({
+        draftId: draft.id,
+        transactions: [
+          confirmed({ description: 'BAD', checksum: 'draft-bad', date: 'not-a-date' }),
+        ],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    expect(getImportDraft(financeDb.db, draft.id)).toBeDefined();
+
+    await c.imports.commitImport({
+      draftId: draft.id,
+      transactions: [confirmed({ description: 'DRAFT MERCHANT', checksum: 'draft-1' })],
+    });
+    expect(getImportDraft(financeDb.db, draft.id)).toBeUndefined();
+
+    await expect(
+      c.imports.commitImport({
+        draftId: 'already-gone',
+        transactions: [confirmed({ description: 'DRAFT MERCHANT 2', checksum: 'draft-2' })],
+      })
+    ).resolves.toBeDefined();
   });
 
   it('omitting commitKey preserves the old best-effort behaviour (no dedup, documents the opt-in nature)', async () => {

@@ -78,6 +78,8 @@ export interface ProcessedTransaction extends BaseProcessedTransaction {
 }
 
 export interface ImportStore {
+  /** The server draft this run writes through to; null until the first rows exist (finance ADR-005). */
+  draftId: string | null;
   currentStep: number;
   files: File[];
   sourceFileNames: string[];
@@ -123,6 +125,7 @@ export interface ImportStore {
   setProcessedTransactions: (processed: ImportStore['processedTransactions']) => void;
   setConfirmedTransactions: (confirmed: ConfirmedTransaction[]) => void;
   setCommitResult: (result: CommitResult | null) => void;
+  setDraftId: (draftId: string | null) => void;
 
   nextStep: () => void;
   prevStep: () => void;
@@ -152,6 +155,7 @@ export interface ImportStore {
 }
 
 export const initialState = {
+  draftId: null,
   currentStep: 1,
   files: [],
   sourceFileNames: [],

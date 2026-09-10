@@ -7,7 +7,6 @@
   "accounts": "Contas",
   "wishlist": "Lista de Desejos",
   "import": "Importar Transações",
-
   "dashboard.welcome": "Bem-vindo de volta! Aqui está sua visão financeira.",
   "dashboard.recentTransactions": "Transações Recentes",
   "dashboard.activeBudgets": "Orçamentos Ativos",
@@ -19,7 +18,6 @@
   "dashboard.thisMonth": "Neste mês",
   "dashboard.unableToLoad": "Não foi possível carregar o painel",
   "dashboard.apiNotResponding": "A API não está respondendo. Certifique-se de que o servidor pops-api está em execução.",
-
   "transactions.failedToLoad": "Falha ao carregar transações",
   "transactions.totalCount": "{{count}} transações no total",
   "transactions.filteredCount": "{{filtered}} de {{total}} transações",
@@ -74,7 +72,6 @@
   "transactions.purchaseLink.open": "Mostrar o que esta transação comprou",
   "transactions.purchaseLink.unavailable": "Indisponível",
   "transactions.purchaseLink.unavailableHint": "Não foi possível obter resposta de Compras, então esta coluna pode estar incompleta — uma célula vazia aqui não significa que a transação não tem pedido.",
-
   "budgets.failedToLoad": "Falha ao carregar orçamentos",
   "budgets.totalCount": "{{count}} orçamentos no total",
   "budgets.manageTargets": "Gerenciar metas de gastos",
@@ -85,7 +82,6 @@
   "budgets.deleteConfirmTitle": "Tem certeza absoluta?",
   "budgets.deleteConfirmDesc": "Isso excluirá permanentemente este orçamento. Esta ação não pode ser desfeita.",
   "budgets.enableTracking": "Ativar este orçamento para acompanhamento",
-
   "entities.failedToLoad": "Falha ao carregar entidades",
   "entities.totalCount": "{{count}} entidades no total",
   "entities.orphanedCount": "{{count}} entidades órfãs",
@@ -98,7 +94,6 @@
   "entities.showingOrphanedOnly": "Mostrando apenas órfãs",
   "entities.deleteConfirmTitle": "Tem certeza absoluta?",
   "entities.deleteConfirmDesc": "Isso excluirá permanentemente esta entidade. Esta ação não pode ser desfeita.",
-
   "wishlist.failedToLoad": "Falha ao carregar lista de desejos",
   "wishlist.totalCount": "{{count}} itens para economizar",
   "wishlist.trackingGoals": "Acompanhando seus objetivos",
@@ -108,9 +103,15 @@
   "wishlist.newItem": "Novo Item",
   "wishlist.deleteConfirmTitle": "Tem certeza absoluta?",
   "wishlist.deleteConfirmDesc": "Isso excluirá permanentemente este item da lista de desejos. Esta ação não pode ser desfeita.",
-
   "import.title": "Importar Transações",
   "import.description": "Importe transações dos seus arquivos CSV bancários para o POPS",
+  "import.draft.unusableTitle": "Esta importação não pode ser retomada",
+  "import.draft.discard": "Descartar",
+  "import.draft.gone": "Essa importação não está mais pendente. Iniciando uma nova.",
+  "import.draft.ownedElsewhereTitle": "Esta importação está aberta em outra aba",
+  "import.draft.ownedElsewhereBody": "Assuma-a aqui para continuar, ou deixe-a para a outra aba.",
+  "import.draft.takeOver": "Assumir aqui",
+  "import.resumeFileNotice": "Seus arquivos não são reanexados após retomar — as linhas processadas são preservadas. Selecionar qualquer arquivo inicia uma nova importação.",
   "import.editTransaction": "Editar Transação",
   "import.searchRules": "Buscar regras por padrão, entidade ou localização...",
   "import.entitiesCreated": "Entidades Criadas",
@@ -148,14 +149,6 @@
   "import.saveTagRuleTx": "Salvar regra de tag reutilizável para esta transação",
   "import.uploadCsv": "Enviar arquivo CSV",
   "import.removeFile": "Remover arquivo",
-  "import.resumeTitle": "Retomar importação?",
-  "import.resumeDescription": "Você tem uma importação inacabada de {{fileName}} ({{count}} transações) na etapa {{step}}. Retome de onde parou, ou descarte e comece de novo.",
-  "import.resumeConfirm": "Retomar",
-  "import.resumeDiscard": "Descartar",
-  "import.resumeFileSummary": "{{fileName}} e mais {{extraCount}}",
-  "import.resumeClearedElsewhere": "Esta importação foi concluída ou descartada em outra aba.",
-  "import.resumeFileNotice": "Seus arquivos não são reanexados após retomar — as linhas processadas são preservadas. Selecionar qualquer arquivo inicia uma nova importação.",
-
   "field.date": "Data",
   "field.amount": "Valor",
   "field.description": "Descrição",
@@ -179,7 +172,6 @@
   "field.location": "Localização",
   "field.entity": "Entidade",
   "field.tags": "Tags",
-
   "placeholder.category": "ex. Supermercado, Entretenimento",
   "placeholder.amount": "0,00",
   "placeholder.additionalDetails": "Detalhes adicionais...",
@@ -189,7 +181,6 @@
   "placeholder.patternExample": "ex. WOOLWORTHS",
   "placeholder.tagsExample": "Supermercado, Transporte",
   "placeholder.filterByTag": "Filtrar por tag...",
-
   "column.category": "Categoria",
   "column.period": "Período",
   "column.amount": "Valor",
@@ -211,7 +202,6 @@
   "column.target": "Alvo",
   "column.saved": "Economizado",
   "column.progressWishlist": "Progresso",
-
   "filter.allPeriods": "Todos os Períodos",
   "filter.monthly": "Mensal",
   "filter.yearly": "Anual",
@@ -238,20 +228,16 @@
   "filter.soon": "Em breve",
   "filter.oneDay": "Um dia",
   "filter.dreaming": "Sonhando",
-
   "status.active": "Ativo",
   "status.inactive": "Inativo",
-
   "search.budgetMonthly": "Mensal",
   "search.budgetYearly": "Anual",
-
   "tag.suggest": "Sugerir",
   "tag.suggesting": "Sugerindo…",
   "tag.save": "Salvar",
   "tag.saving": "Salvando…",
   "tag.editTags": "Editar tags",
   "tag.addPlaceholder": "Digite para adicionar uma tag…",
-
   "rules.title": "Regras de Categorização",
   "rules.description": "Navegar e gerenciar regras de categorização por IA",
   "rules.addRule": "Adicionar Regra",
@@ -273,7 +259,6 @@
   "rules.tagsPlaceholder": "Digite e pressione Enter...",
   "rules.active": "Ativo",
   "rules.inactiveSkipped": "Regras inativas são ignoradas pelo matcher.",
-
   "tagRules.title": "Regras de Tags",
   "tagRules.description": "Navegar e gerenciar regras de sugestão de tags"
 }

@@ -7781,6 +7781,7 @@ export interface operations {
             [key: string]: unknown;
           };
           processSessionId?: string | null;
+          release?: boolean;
           rowCount: number;
           span: {
             from: string;
@@ -8784,6 +8785,7 @@ export interface operations {
           }[];
           /** Format: uuid */
           commitKey?: string;
+          draftId?: string;
           /** @default [] */
           entities: {
             name: string;

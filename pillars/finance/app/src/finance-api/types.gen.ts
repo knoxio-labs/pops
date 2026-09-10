@@ -5299,6 +5299,7 @@ export type ImportDraftsWriteData = {
       [key: string]: unknown;
     };
     processSessionId?: string | null;
+    release?: boolean;
     rowCount: number;
     span: {
       from: string;
@@ -6090,6 +6091,7 @@ export type ImportsCommitImportData = {
       source?: string;
     }>;
     commitKey?: string;
+    draftId?: string;
     entities: Array<{
       name: string;
       tempId: string;

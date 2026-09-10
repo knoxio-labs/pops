@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 import {
   buildNavigation,
@@ -9,12 +8,6 @@ import {
   buildSetters,
   buildTransactionActions,
 } from './import-store-actions';
-import {
-  createImportPersistStorage,
-  IMPORT_PERSIST_KEY,
-  IMPORT_PERSIST_VERSION,
-  partializeImportState,
-} from './import-store-persistence';
 import { type ImportStore, initialState } from './import-store-types';
 
 export type {
@@ -31,27 +24,18 @@ export type {
   ProcessedTransaction,
 } from './import-store-types';
 
-// No `migrate`: zustand discards the stored state on a version mismatch, which
-// is exactly the wanted behaviour — a discarded resume is just a fresh wizard.
-// `skipHydration` keeps module load side-effect free (no IDB reads in tests);
-// `useImportResume` calls `rehydrate()` explicitly on the import page.
-export const useImportStore = create<ImportStore>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
-      ...buildSetters(set),
-      ...buildNavigation(set),
-      ...buildPendingEntityActions(set, get),
-      ...buildPendingChangeSetActions(set, get),
-      ...buildPendingTagRuleActions(set, get),
-      ...buildTransactionActions(set, get),
-    }),
-    {
-      name: IMPORT_PERSIST_KEY,
-      version: IMPORT_PERSIST_VERSION,
-      storage: createImportPersistStorage(),
-      partialize: partializeImportState,
-      skipHydration: true,
-    }
-  )
-);
+/**
+ * In-memory only. What survives a reload is the server draft (finance
+ * ADR-005): `useDraftWriteThrough` mirrors this store into it and
+ * `useDraftHydration` fills the store from it, so nothing here needs a
+ * browser-side persistence layer and nothing here has one.
+ */
+export const useImportStore = create<ImportStore>()((set, get) => ({
+  ...initialState,
+  ...buildSetters(set),
+  ...buildNavigation(set),
+  ...buildPendingEntityActions(set, get),
+  ...buildPendingChangeSetActions(set, get),
+  ...buildPendingTagRuleActions(set, get),
+  ...buildTransactionActions(set, get),
+}));
