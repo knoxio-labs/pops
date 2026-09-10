@@ -1,12 +1,14 @@
 /**
  * The subprocess-timeout guard, checked against the tree it guards and against
- * the four times this defect was found by hand.
+ * every time this defect was found by hand.
  *
  * `scripts/ci/check-subprocess-test-timeouts.mjs` owns its degenerate cases in
  * `--self-test`, which the first case here runs for real. A self-test cannot
  * find the blind spot that produced it (POPS-2110), so the load-bearing part of
  * this file is the other half: the pre-fix version of every commit that fixed
- * this by hand is read out of git and fed to the guard. If the guard does not
+ * this by hand is fed to the guard — read out of git where `main` still
+ * reaches it, vendored under `__fixtures__/` where the squash ate it. If the
+ * guard does not
  * turn those red, it does not catch what it claims to — and an earlier draft
  * did not. Its string scanner mistook the apostrophe in `` `${file}'s scope
  * job` `` for a quote, blanked the rest of the file, and reported zero
@@ -16,7 +18,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -53,13 +56,8 @@ const HAND_FIXES = [
     file: 'scripts/ci/__tests__/check-openapi-drift.test.ts',
   },
   {
-    ticket: "POPS-2007 — a 120s execFileSync timeout that was not the test's bound",
-    commit: 'a11c78abf',
-    file: 'scripts/ci/__tests__/merge-group-scope.test.ts',
-  },
-  {
     ticket: 'POPS-2053 — the whole-tree mise resolution',
-    commit: '80a9d1ff0',
+    commit: '410cf9004',
     file: 'scripts/ci/__tests__/check-mise-tool-overrides.test.ts',
   },
   {
@@ -67,13 +65,28 @@ const HAND_FIXES = [
     commit: '410cf9004',
     file: 'scripts/__tests__/run-all-clients-discovery.test.ts',
   },
+  {
+    ticket: 'POPS-3003 / #4470 — every release.sh test that spawns git',
+    commit: '759f3a387',
+    file: 'scripts/__tests__/release.test.ts',
+  },
 ] as const;
+
+/**
+ * POPS-2007's pre-fix source, vendored.
+ *
+ * Its commit was squashed away on the way to `main`, so no clone can reach the
+ * content — and it is the case the ticket is named after, the one where a
+ * generous `execFileSync` timeout sits next to an `it(...)` with none. The
+ * fixture's own header records where it came from.
+ */
+const POPS_2007_FIXTURE = join(here, '__fixtures__', 'pops-2007-merge-group-scope.txt');
 
 /**
  * The file's text at a revision.
  *
  * Throws rather than skipping when the history is not there. A shallow
- * checkout is the one way these four fixtures can silently stop proving
+ * checkout is the one way the git-read fixtures can silently stop proving
  * anything, so it has to be loud: `quality.yml`'s `scripts-tests` job carries
  * `fetch-depth: 0` for this, and the message says so.
  */
@@ -88,7 +101,7 @@ function sourceAt(rev: string, path: string): string {
   } catch (cause) {
     throw new Error(
       `cannot read ${path} at ${rev}. This checkout has no history for it — the ` +
-        'four hand-fix fixtures need a full clone (`fetch-depth: 0`), and skipping ' +
+        'hand-fix fixtures need a full clone (`fetch-depth: 0`), and skipping ' +
         'them would leave the guard proving nothing.',
       { cause }
     );
@@ -106,7 +119,7 @@ describe('the guard proves itself', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () 
   });
 });
 
-describe('the four times this was found by hand', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
+describe('the times this was found by hand', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it.each(HAND_FIXES.map((fix) => [fix.ticket, fix] as const))(
     'would have caught %s',
     (_label, fix) => {
@@ -123,6 +136,14 @@ describe('the four times this was found by hand', { timeout: REAL_SUBPROCESS_TIM
       ).toBeLessThan(before.length);
     }
   );
+
+  it("would have caught POPS-2007 — a 120s execFileSync timeout that was not the test's bound", () => {
+    const source = readFileSync(POPS_2007_FIXTURE, 'utf8');
+
+    // The trap, still in the fixture: the bound that looks like the bound.
+    expect(source).toContain('timeout: 120_000');
+    expect(unboundedSpawningTests(source)).toHaveLength(1);
+  });
 });
 
 describe('the tree it guards', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
