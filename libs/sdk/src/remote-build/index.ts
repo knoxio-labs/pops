@@ -35,12 +35,19 @@ import { dirname, isAbsolute, join } from 'node:path';
  * both resolve to the same instance as their package root.
  *
  * Most of these are here because a second instance is a correctness bug: two
- * React dispatchers, a second query cache, a second i18n. `recharts` is here
- * for a different reason that is no less binding — its dependency subtree is
- * partly CommonJS and `require()`s React at module scope. Bundled beside an
- * externalised React, the emitted `require` has nothing to resolve against,
- * and the pillar throws on first mount rather than merely shipping a
- * duplicate. So a bundle that externalises React cannot contain recharts.
+ * React dispatchers, a second query cache, a second i18n, a second toast
+ * queue. `recharts` is here for a different reason that is no less binding —
+ * its dependency subtree is partly CommonJS and `require()`s React at module
+ * scope. Bundled beside an externalised React, the emitted `require` has
+ * nothing to resolve against, and the pillar throws on first mount rather than
+ * merely shipping a duplicate. So a bundle that externalises React cannot
+ * contain recharts.
+ *
+ * `sonner` is the quietest of them and the one that got out (POPS-3320). The
+ * shell renders the single `<Toaster />`, which subscribes to the instance the
+ * SHELL imported; a pillar with its own copy raises toasts into a queue
+ * nothing is watching. No throw, no log, and a call site that reads correctly.
+ * Seven pillars shipped with dead toasts before an e2e happened to assert one.
  */
 export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
   'react',
@@ -51,6 +58,7 @@ export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
   'react-i18next',
   '@pops/ui',
   'recharts',
+  'sonner',
 ];
 
 /**
@@ -94,6 +102,7 @@ export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
   { specifier: 'react-i18next', hasDefault: false },
   { specifier: '@pops/ui', hasDefault: false },
   { specifier: 'recharts', hasDefault: false },
+  { specifier: 'sonner', hasDefault: false },
 ];
 
 /**
