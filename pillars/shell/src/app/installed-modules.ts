@@ -33,7 +33,12 @@ import {
 
 import type { RouteObject } from 'react-router';
 
-import type { NavConfigDescriptor, PageDescriptor, PillarSnapshot } from '@pops/pillar-sdk';
+import type {
+  CaptureOverlayDescriptor,
+  NavConfigDescriptor,
+  PageDescriptor,
+  PillarSnapshot,
+} from '@pops/pillar-sdk';
 import type { ModuleManifest } from '@pops/types';
 
 /**
@@ -96,6 +101,35 @@ export interface RegistryEntry {
   readonly assetsBaseUrl?: string;
   readonly nav?: NavConfigDescriptor;
   readonly pages?: readonly PageDescriptor[];
+  /**
+   * The pillar's capture-overlay contribution. Carried through the walk like
+   * `nav` and `pages`: it is a surface the bundle supplies, and dropping it
+   * here left the overlay resolvable only from the static bundle map
+   * (POPS-3266).
+   */
+  readonly captureOverlay?: CaptureOverlayDescriptor;
+  /**
+   * Bundle slots this pillar's settings groups name for a custom panel.
+   *
+   * Derived from the settings manifests the pillar already publishes rather
+   * than added to the wire: a group that declares `widget.bundleSlot` IS the
+   * declaration, and a second field naming the same slots could disagree with
+   * it.
+   */
+  readonly settingsWidgetSlots?: readonly string[];
+}
+
+/** Every `widget.bundleSlot` the pillar's settings groups name. */
+function settingsWidgetSlotsOf(manifest: PillarSnapshot['manifest']): string[] {
+  const sections = manifest.settings?.manifests ?? [];
+  const slots = new Set<string>();
+  for (const section of sections) {
+    for (const group of section.groups ?? []) {
+      const slot = group.widget?.bundleSlot;
+      if (slot !== undefined) slots.add(slot);
+    }
+  }
+  return [...slots];
 }
 
 /**
@@ -162,12 +196,15 @@ export function bootEntries(snapshot: readonly PillarSnapshot[]): readonly Regis
   const out: RegistryEntry[] = [];
   for (const s of snapshot) {
     if (!s.registered) continue;
-    const { assetsBaseUrl, nav, pages } = s.manifest;
+    const { assetsBaseUrl, nav, pages, captureOverlay } = s.manifest;
+    const widgetSlots = settingsWidgetSlotsOf(s.manifest);
     out.push({
       pillarId: s.pillarId,
       ...(assetsBaseUrl !== undefined ? { assetsBaseUrl } : {}),
       ...(nav !== undefined ? { nav } : {}),
       ...(pages !== undefined ? { pages } : {}),
+      ...(captureOverlay !== undefined ? { captureOverlay } : {}),
+      ...(widgetSlots.length > 0 ? { settingsWidgetSlots: widgetSlots } : {}),
     });
   }
   return out;
@@ -191,6 +228,8 @@ function resolveExternalManifest(
     assetsBaseUrl: entry.assetsBaseUrl,
     nav: entry.nav,
     pages: entry.pages,
+    captureOverlay: entry.captureOverlay,
+    settingsWidgetSlots: entry.settingsWidgetSlots,
   };
   try {
     const synthesized = synthesizeExternalBundleEntry(descriptor, importer);

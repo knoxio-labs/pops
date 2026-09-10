@@ -429,3 +429,97 @@ describe('fetchBootRegistry — the cached-snapshot floor', () => {
     expect(store.read()).toBeNull();
   });
 });
+
+/**
+ * The wire → boot path for the surfaces that are not pages (POPS-3266).
+ *
+ * `synthesizeExternalBundleEntry`'s own tests hand it a descriptor directly,
+ * which is precisely how the first version of this shipped broken: the
+ * synthesizer read `descriptor.captureOverlay`, and nothing between the wire
+ * manifest and the descriptor ever put it there. Everything below starts from
+ * a `PillarSnapshot` — the shape the registry actually returns — so the
+ * carry-through is exercised rather than assumed.
+ */
+describe('resolveBootRegistry — non-page surfaces off the wire', () => {
+  /** The wire UI dimensions a loader-mounted pillar publishes. */
+  function loaderUi(pillarId: string): Partial<ManifestPayload> {
+    return {
+      assetsBaseUrl: `/${pillarId}-ui/${pillarId}.js`,
+      nav: {
+        id: pillarId,
+        label: pillarId,
+        labelKey: pillarId,
+        icon: 'compass',
+        basePath: `/${pillarId}`,
+        order: 50,
+        items: [{ path: '', label: pillarId, labelKey: `${pillarId}.home`, icon: 'compass' }],
+      },
+      pages: [{ path: '', index: true, bundleSlot: `${pillarId}-home` }],
+    };
+  }
+
+  const OVERLAY = {
+    bundleSlot: 'quick-add',
+    order: 10,
+    labelKey: 'acme.capture.label',
+  } as const;
+
+  function overlayPillar(): PillarSnapshot {
+    return snapshotEntry('acme', {
+      manifest: { ...loaderUi('acme'), captureOverlay: OVERLAY },
+    });
+  }
+
+  it('carries the capture overlay from the wire manifest to the bundle map', () => {
+    const result = resolveBootRegistry([overlayPillar()]);
+    expect(Object.keys(result.bundleMap.acme?.captureOverlayBundles ?? {})).toEqual(['quick-add']);
+  });
+
+  it('puts the descriptor on the manifest the capture registry ranks', () => {
+    const result = resolveBootRegistry([overlayPillar()]);
+    const manifest = result.manifests.find((m) => m.id === 'acme');
+    expect(manifest?.frontend?.captureOverlay).toEqual(OVERLAY);
+  });
+
+  it('carries no overlay record for a pillar whose manifest declares none', () => {
+    const plain = snapshotEntry('acme', { manifest: loaderUi('acme') });
+    const result = resolveBootRegistry([plain]);
+    expect(result.bundleMap.acme?.captureOverlayBundles).toBeUndefined();
+  });
+
+  /**
+   * Widget slots are derived from the settings manifests the pillar publishes,
+   * so this starts from those rather than from a slot list — the derivation is
+   * the part that can silently produce nothing.
+   */
+  it('derives settings-widget slots from the published settings groups', () => {
+    const withWidgets = snapshotEntry('acme', {
+      manifest: {
+        ...loaderUi('acme'),
+        settings: {
+          manifests: [
+            {
+              id: 'acme.plex',
+              title: 'Plex',
+              order: 10,
+              groups: [
+                {
+                  id: 'account',
+                  title: 'Account',
+                  widget: { bundleSlot: 'plex-connect' },
+                  fields: [],
+                },
+                { id: 'plain', title: 'Plain', fields: [] },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    const result = resolveBootRegistry([withWidgets]);
+    expect(Object.keys(result.bundleMap.acme?.settingsWidgetBundles ?? {})).toEqual([
+      'plex-connect',
+    ]);
+  });
+});

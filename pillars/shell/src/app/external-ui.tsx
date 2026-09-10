@@ -54,10 +54,14 @@ import { ErrorBoundary } from '@pops/ui';
 
 import type { RouteObject } from 'react-router';
 
-import type { NavConfigDescriptor, PageDescriptor } from '@pops/pillar-sdk';
+import type {
+  CaptureOverlayDescriptor,
+  NavConfigDescriptor,
+  PageDescriptor,
+} from '@pops/pillar-sdk';
 import type { ModuleManifest } from '@pops/types';
 
-import type { BundleEntry } from './bundle-map';
+import type { BundleEntry, CaptureOverlayMountProps } from './bundle-map';
 import type { AppNavConfig, AppNavItem, IconName } from './nav/types';
 
 /**
@@ -86,6 +90,19 @@ export interface RemoteUiDescriptor {
   readonly assetsBaseUrl: string;
   readonly nav?: NavConfigDescriptor;
   readonly pages?: readonly PageDescriptor[];
+  /**
+   * The pillar's capture-overlay contribution, if it has one. Resolved from
+   * the same `bundles` record as its pages — a bundle carries every surface
+   * the pillar contributes, keyed by slot, and the manifest says which slot
+   * plays which role (POPS-3266).
+   */
+  readonly captureOverlay?: CaptureOverlayDescriptor;
+  /**
+   * Settings-widget slots this pillar's bundle supplies, named by the
+   * settings groups its manifest declares. Same resolution as the overlay:
+   * the shell looks each one up in `bundles` when a group asks for it.
+   */
+  readonly settingsWidgetSlots?: readonly string[];
 }
 
 /**
@@ -125,7 +142,7 @@ async function loadRemoteComponent(
   descriptor: RemoteUiDescriptor,
   bundleSlot: string,
   importer: RemoteModuleImporter
-): Promise<{ default: ComponentType }> {
+): Promise<{ default: ComponentType<Record<string, unknown>> }> {
   const imported = await importer(descriptor.assetsBaseUrl);
   const module = assertRemoteUiModule(imported, descriptor.pillarId);
   const component = module.bundles[bundleSlot];
@@ -143,8 +160,14 @@ async function loadRemoteComponent(
   // failed to mount with an error naming double-wrapping rather than the
   // bundle. The wrapper costs one component in the tree and makes the contract
   // "any component" rather than "any component that is not itself lazy".
-  const Component = component;
-  return { default: () => <Component /> };
+  //
+  // It forwards props. Pages take none, so a wrapper that dropped them looked
+  // correct for as long as pages were the only surface a bundle could supply
+  // — and a capture overlay takes `onUnsavedChange`, so dropping them would
+  // have rendered a working-looking overlay that lost the reader's draft with
+  // no prompt when they closed the modal (POPS-3266).
+  const Component = component as ComponentType<Record<string, unknown>>;
+  return { default: (props: Record<string, unknown>) => <Component {...props} /> };
 }
 
 const RemoteLoadFallback = (
@@ -195,6 +218,39 @@ function remotePageElement(
     return { path: page.path, element, children };
   }
   return { path: page.path, element };
+}
+
+/**
+ * A component that renders a remote bundle's slot, forwarding its props.
+ *
+ * Pages are mounted as route elements and take no props; a capture overlay
+ * takes `onUnsavedChange`, and dropping it would look correct until someone
+ * closed the modal mid-edit and lost their work with no prompt. So this is
+ * generic over the prop type and passes them straight through.
+ *
+ * The bundle is fetched on first render, like a page's, and the same boundary
+ * pair contains the failure: a slot the bundle does not carry throws inside
+ * `loadRemoteComponent`, the `ErrorBoundary` catches it, and the caller sees a
+ * component that renders the placeholder rather than one that crashes the
+ * surface hosting it.
+ */
+function remoteSlotComponent<P extends object>(
+  descriptor: RemoteUiDescriptor,
+  bundleSlot: string,
+  importer: RemoteModuleImporter
+): ComponentType<P> {
+  const LazySlot = lazy(() =>
+    loadRemoteComponent(descriptor, bundleSlot, importer)
+  ) as ComponentType<P>;
+  return function RemoteSlot(props: P) {
+    return (
+      <ErrorBoundary fallback={() => RemoteLoadFallback}>
+        <Suspense fallback={RemoteSuspenseFallback}>
+          <LazySlot {...props} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  };
 }
 
 const FALLBACK_NAV_ICON: IconName = 'Compass';
@@ -249,6 +305,42 @@ function navConfigFromDescriptor(nav: NavConfigDescriptor): AppNavConfig {
 }
 
 /**
+ * The pillar's capture-overlay record, or `undefined` when it declares none.
+ *
+ * Built here rather than by the capture registry, so that registry keeps
+ * resolving a slot through a `BundleEntry` and never learns what a remote
+ * pillar is.
+ */
+function overlayBundlesFor(
+  descriptor: RemoteUiDescriptor,
+  importer: RemoteModuleImporter
+): Readonly<Record<string, { Mount: ComponentType<CaptureOverlayMountProps> }>> | undefined {
+  const overlay = descriptor.captureOverlay;
+  if (overlay === undefined) return undefined;
+  return {
+    [overlay.bundleSlot]: {
+      Mount: remoteSlotComponent<CaptureOverlayMountProps>(
+        descriptor,
+        overlay.bundleSlot,
+        importer
+      ),
+    },
+  };
+}
+
+/** The pillar's settings-widget record, or `undefined` when it declares none. */
+function widgetBundlesFor(
+  descriptor: RemoteUiDescriptor,
+  importer: RemoteModuleImporter
+): Readonly<Record<string, ComponentType>> | undefined {
+  const slots = descriptor.settingsWidgetSlots ?? [];
+  if (slots.length === 0) return undefined;
+  return Object.fromEntries(
+    slots.map((slot) => [slot, remoteSlotComponent(descriptor, slot, importer)])
+  );
+}
+
+/**
  * Synthesize the `BundleEntry` an external pillar contributes, mirroring the
  * shape in-repo pillars get from the static bundle map. The resulting entry
  * carries:
@@ -293,9 +385,19 @@ export function synthesizeExternalBundleEntry(
     frontend,
   };
 
-  return {
+  if (descriptor.captureOverlay !== undefined) {
+    frontend.captureOverlay = descriptor.captureOverlay;
+  }
+
+  const entry: BundleEntry = {
     manifest,
     navOrder: descriptor.nav?.order ?? Number.MAX_SAFE_INTEGER,
     assetsBaseUrl: descriptor.assetsBaseUrl,
+  };
+
+  return {
+    ...entry,
+    captureOverlayBundles: overlayBundlesFor(descriptor, importer),
+    settingsWidgetBundles: widgetBundlesFor(descriptor, importer),
   };
 }

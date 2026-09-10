@@ -73,6 +73,15 @@ export interface BootRegistry {
    */
   readonly remoteBundleUrls: readonly string[];
   /**
+   * The resolved bundle map — in-repo entries plus the ones synthesized for
+   * loader-mounted pillars. Exposed because a pillar contributes surfaces
+   * beyond its pages: the capture-overlay and settings-widget registries
+   * resolve a slot through a `BundleEntry`, and resolving it against the
+   * STATIC map would silently lose those surfaces for every pillar that has
+   * left it (POPS-3266).
+   */
+  readonly bundleMap: Readonly<Record<string, BundleEntry>>;
+  /**
    * Where the install set came from: `'registry'` for a live snapshot,
    * `'cached-snapshot'` for the last one that worked, `'static-floor'` for the
    * in-repo bundle map. Exposed for diagnostics / tests; consumers render
@@ -115,6 +124,8 @@ function railBundleMap(
           assetsBaseUrl: entry.assetsBaseUrl,
           nav: entry.nav,
           pages: entry.pages,
+          captureOverlay: entry.captureOverlay,
+          settingsWidgetSlots: entry.settingsWidgetSlots,
         },
         importer
       );
@@ -137,6 +148,7 @@ interface ResolvedSurface {
   readonly manifests: readonly FrontendManifest[];
   readonly registeredApps: readonly AppNavConfig[];
   readonly remoteBundleUrls: readonly string[];
+  readonly bundleMap: Readonly<Record<string, BundleEntry>>;
 }
 
 function resolveSurface(
@@ -145,6 +157,7 @@ function resolveSurface(
 ): ResolvedSurface {
   const bundleMap = railBundleMap(entries, importer);
   return {
+    bundleMap,
     manifests: walkRegistry(entries, WORKSPACE_BUNDLE_MAP, importer),
     registeredApps: buildRegisteredAppsFromBundleMap(bundleMap),
     // Read off the resolved map rather than the raw entries: a pillar that

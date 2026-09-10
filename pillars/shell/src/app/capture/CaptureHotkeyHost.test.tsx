@@ -26,7 +26,29 @@ vi.mock('./CaptureModal', () => ({
   CaptureModal: () => null,
 }));
 
+import { BootRegistryProvider } from '../BootRegistryProvider';
 import { CaptureHotkeyHost } from './CaptureHotkeyHost';
+
+import type { BootRegistry } from '../boot-snapshot';
+
+/**
+ * The host resolves its overlay from boot (POPS-3266), so it needs the
+ * provider even where a test supplies an override — the hook runs either way.
+ * Empty is right here: every case drives the override or asserts the
+ * no-overlay path, and an empty registry keeps these about the hotkey
+ * binding rather than the resolution behind it.
+ */
+const EMPTY_BOOT: BootRegistry = {
+  manifests: [],
+  registeredApps: [],
+  remoteBundleUrls: [],
+  bundleMap: {},
+  source: 'registry',
+};
+
+function withBoot(ui: React.ReactElement) {
+  return <BootRegistryProvider value={EMPTY_BOOT}>{ui}</BootRegistryProvider>;
+}
 
 const FakeMount = () => null;
 
@@ -50,21 +72,21 @@ describe('CaptureHotkeyHost', () => {
   });
 
   it('binds the descriptor hotkey when an overlay is registered', () => {
-    render(<CaptureHotkeyHost activeOverlayOverride={syntheticOverlay('cmd+shift+k')} />);
+    render(withBoot(<CaptureHotkeyHost activeOverlayOverride={syntheticOverlay('cmd+shift+k')} />));
     expect(mocks.useCaptureHotkey).toHaveBeenLastCalledWith(
       expect.objectContaining({ key: 'cmd+shift+k', enabled: true })
     );
   });
 
   it('keeps the hotkey unbound when no overlay is registered', () => {
-    render(<CaptureHotkeyHost activeOverlayOverride={null} />);
+    render(withBoot(<CaptureHotkeyHost activeOverlayOverride={null} />));
     expect(mocks.useCaptureHotkey).toHaveBeenLastCalledWith(
       expect.objectContaining({ key: '', enabled: false })
     );
   });
 
   it('keeps the hotkey unbound when the descriptor declares no hotkey', () => {
-    render(<CaptureHotkeyHost activeOverlayOverride={syntheticOverlay(undefined)} />);
+    render(withBoot(<CaptureHotkeyHost activeOverlayOverride={syntheticOverlay(undefined)} />));
     expect(mocks.useCaptureHotkey).toHaveBeenLastCalledWith(
       expect.objectContaining({ key: '', enabled: false })
     );
@@ -72,7 +94,7 @@ describe('CaptureHotkeyHost', () => {
 
   it('falls back to the live registry walk when no override is supplied', () => {
     mocks.activeCaptureOverlay.mockReturnValue(syntheticOverlay('cmd+shift+k'));
-    render(<CaptureHotkeyHost />);
+    render(withBoot(<CaptureHotkeyHost />));
     expect(mocks.useCaptureHotkey).toHaveBeenLastCalledWith(
       expect.objectContaining({ key: 'cmd+shift+k', enabled: true })
     );
@@ -80,7 +102,7 @@ describe('CaptureHotkeyHost', () => {
 
   it('renders empty when the registry walk reports no overlay', () => {
     mocks.activeCaptureOverlay.mockReturnValue(null);
-    render(<CaptureHotkeyHost />);
+    render(withBoot(<CaptureHotkeyHost />));
     expect(mocks.useCaptureHotkey).toHaveBeenLastCalledWith(
       expect.objectContaining({ key: '', enabled: false })
     );

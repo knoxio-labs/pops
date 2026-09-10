@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Select, Skeleton } from '@pops/ui';
 
-import { resolveSettingsWidgets } from '../settings-widget-registry';
+import { useBootRegistry } from '../BootRegistryProvider';
+import { resolveSettingsWidgetsFrom } from '../settings-widget-registry';
 import { SectionNav } from './settings-page/SectionNav';
 import { SettingsEmpty } from './settings-page/SettingsLoading';
 import { useHashSelectedId } from './settings-page/useHashSelectedId';
@@ -18,9 +19,13 @@ function ManifestPanel({
   section: SettingsSection;
   onTestAction: (procedure: string) => Promise<void>;
 }) {
+  // Boot's bundle map, not the static one: a loader-mounted pillar is absent
+  // from `WORKSPACE_BUNDLE_MAP`, so resolving against it dropped the custom
+  // panel and left the group rendering its plain fields (POPS-3266).
+  const { bundleMap } = useBootRegistry();
   const widgets = useMemo(
-    () => resolveSettingsWidgets(section.manifest, section.ownerPillar),
-    [section.manifest, section.ownerPillar]
+    () => resolveSettingsWidgetsFrom(section.manifest, section.ownerPillar, bundleMap),
+    [section.manifest, section.ownerPillar, bundleMap]
   );
 
   return (

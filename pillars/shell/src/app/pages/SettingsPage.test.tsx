@@ -59,13 +59,32 @@ vi.mock('@/components/settings/SectionRenderer', () => ({
   ),
 }));
 
+import { BootRegistryProvider } from '../BootRegistryProvider';
 import { SettingsPage } from './SettingsPage';
+
+import type { BootRegistry } from '../boot-snapshot';
+
+/**
+ * The page resolves a group's custom panel from boot (POPS-3266), so it needs
+ * the provider. Empty is right for these: they are about hash-based deep
+ * linking and section routing, and an empty bundle map means every group
+ * renders its plain fields — which is what these assert against.
+ */
+const EMPTY_BOOT: BootRegistry = {
+  manifests: [],
+  registeredApps: [],
+  remoteBundleUrls: [],
+  bundleMap: {},
+  source: 'registry',
+};
 
 function renderPage(): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <SettingsPage />
+      <BootRegistryProvider value={EMPTY_BOOT}>
+        <SettingsPage />
+      </BootRegistryProvider>
     </QueryClientProvider>
   );
 }
@@ -168,7 +187,9 @@ describe('SettingsPage hash-based deep linking', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { unmount } = render(
       <QueryClientProvider client={client}>
-        <SettingsPage />
+        <BootRegistryProvider value={EMPTY_BOOT}>
+          <SettingsPage />
+        </BootRegistryProvider>
       </QueryClientProvider>
     );
     await waitFor(() => expect(screen.getAllByTestId('section-renderer')[0]).toBeInTheDocument());

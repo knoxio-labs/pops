@@ -105,6 +105,65 @@ describe('staticFloorEntries', () => {
   });
 });
 
+describe('bootEntries — the non-page surfaces (POPS-3266)', () => {
+  const OVERLAY = { bundleSlot: 'quick-add', order: 10, labelKey: 'acme.capture' } as const;
+
+  /**
+   * `bootEntries` is where a wire manifest becomes a `RegistryEntry`, and it
+   * is the exact step that dropped the overlay: the synthesizer downstream
+   * read `descriptor.captureOverlay` and nothing upstream ever set it. A
+   * pillar could publish a perfectly good overlay and the capture modal would
+   * report "no capture overlay registered".
+   */
+  it('copies captureOverlay off the wire manifest', () => {
+    const [entry] = bootEntries([snapshotEntry('acme', { manifest: { captureOverlay: OVERLAY } })]);
+    expect(entry?.captureOverlay).toEqual(OVERLAY);
+  });
+
+  it('leaves captureOverlay undefined when the manifest declares none', () => {
+    const [entry] = bootEntries([snapshotEntry('acme')]);
+    expect(entry?.captureOverlay).toBeUndefined();
+  });
+
+  /**
+   * Widget slots are derived from the settings groups rather than carried as
+   * their own wire field, so this asserts the derivation: a group with a
+   * `widget.bundleSlot` contributes one, a plain group contributes nothing.
+   */
+  it('derives settings-widget slots from the published settings groups', () => {
+    const [entry] = bootEntries([
+      snapshotEntry('acme', {
+        manifest: {
+          settings: {
+            manifests: [
+              {
+                id: 'acme.plex',
+                title: 'Plex',
+                order: 10,
+                groups: [
+                  {
+                    id: 'account',
+                    title: 'Account',
+                    widget: { bundleSlot: 'plex-connect' },
+                    fields: [],
+                  },
+                  { id: 'plain', title: 'Plain', fields: [] },
+                ],
+              },
+            ],
+          },
+        },
+      }),
+    ]);
+    expect(entry?.settingsWidgetSlots).toEqual(['plex-connect']);
+  });
+
+  it('leaves settings-widget slots undefined when no group names one', () => {
+    const [entry] = bootEntries([snapshotEntry('acme')]);
+    expect(entry?.settingsWidgetSlots).toBeUndefined();
+  });
+});
+
 describe('bootEntries (P7-T03 snapshot → registry entries)', () => {
   it('maps registered snapshot entries onto registry entries', () => {
     const entries = bootEntries([snapshotEntry('finance'), snapshotEntry('media')]);
