@@ -57,15 +57,16 @@ describe('finance bundles record', () => {
     expect(routes).toHaveLength(FINANCE_PAGES.length);
   });
 
-  // The six pages that would have gone missing when finance moved onto the
+  // The seven pages that would have gone missing when finance moved onto the
   // loader: none is reached from the rail, so none would have looked broken
   // from the rail while all of them 404'd. Named individually rather than
-  // counted, because a count passes while the wrong six are present.
+  // counted, because a count passes while the wrong ones are present.
   it.each([
     'finance-entity-detail',
     'finance-accounts',
     'finance-account-detail',
     'finance-account-checkpoints',
+    'finance-account-imports',
     'finance-tag-rules',
     'finance-settings',
   ])('carries %s, which no nav item reaches', (slot) => {
