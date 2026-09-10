@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { compileShortcut } from '../overlays/useOverlayShortcuts';
 import { shouldSuppress } from './capture-hotkey-helpers';
-import { isApplePlatform, matchesEvent, parseHotkey, requiredModifiers } from './useCaptureHotkey';
+import { matchesEvent, parseHotkey } from './useCaptureHotkey';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -67,15 +68,15 @@ describe('shouldSuppress', () => {
 });
 
 /**
- * `mod` resolved against the client, which is the whole of POPS-3319.
+ * `mod` satisfied by either key, which is the whole of POPS-3319.
  *
  * It used to be an alias for `meta`, so a `mod+…` chord was unreachable on
  * Linux and Windows. The failure was silent in the usual way: the listener
  * binds, no keydown ever matches, and the overlay simply never opens.
  *
- * Both platforms are posed explicitly. A test that only ran on the machine it
- * was written on is how this survived — the chord had never been exercised on
- * a non-Apple client until POPS-3225's e2e met the Linux runner.
+ * Both keys are posed explicitly. A test that only pressed the one the author
+ * had is how this survived — the chord had never been exercised on a
+ * non-Apple client until POPS-3225's e2e met the Linux runner.
  */
 describe('the platform-relative modifier', () => {
   const chord = parseHotkey('mod+shift+k');
@@ -90,43 +91,42 @@ describe('the platform-relative modifier', () => {
     expect(chord).toMatchObject({ key: 'k', mod: true, meta: false, ctrl: false, shift: true });
   });
 
-  it('wants Meta on an Apple client and Control on any other', () => {
-    expect(requiredModifiers(chord!, true)).toMatchObject({ meta: true, ctrl: false });
-    expect(requiredModifiers(chord!, false)).toMatchObject({ meta: false, ctrl: true });
+  it('fires on Control and on Meta, which is what makes it reachable everywhere', () => {
+    expect(matchesEvent(chord!, chordEvent({ ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(matchesEvent(chord!, chordEvent({ metaKey: true, shiftKey: true }))).toBe(true);
   });
 
-  it('fires on Control off Apple, and refuses Meta there', () => {
-    expect(matchesEvent(chord!, chordEvent({ ctrlKey: true, shiftKey: true }), false)).toBe(true);
-    expect(matchesEvent(chord!, chordEvent({ metaKey: true, shiftKey: true }), false)).toBe(false);
+  it('still wants one of them, and still wants the rest of the chord', () => {
+    expect(matchesEvent(chord!, chordEvent({ shiftKey: true }))).toBe(false);
+    expect(matchesEvent(chord!, chordEvent({ ctrlKey: true }))).toBe(false);
+    expect(matchesEvent(chord!, chordEvent({ ctrlKey: true, shiftKey: true, altKey: true }))).toBe(
+      false
+    );
   });
 
-  it('fires on Meta on Apple, and refuses Control there', () => {
-    expect(matchesEvent(chord!, chordEvent({ metaKey: true, shiftKey: true }), true)).toBe(true);
-    expect(matchesEvent(chord!, chordEvent({ ctrlKey: true, shiftKey: true }), true)).toBe(false);
-  });
-
-  it('leaves cmd meaning Meta and ctrl meaning Control on every platform', () => {
+  it('leaves cmd meaning Meta and ctrl meaning Control', () => {
     const cmd = parseHotkey('cmd+shift+k');
     const ctrl = parseHotkey('ctrl+shift+k');
 
-    for (const apple of [true, false]) {
-      expect(matchesEvent(cmd!, chordEvent({ metaKey: true, shiftKey: true }), apple)).toBe(true);
-      expect(matchesEvent(cmd!, chordEvent({ ctrlKey: true, shiftKey: true }), apple)).toBe(false);
-      expect(matchesEvent(ctrl!, chordEvent({ ctrlKey: true, shiftKey: true }), apple)).toBe(true);
-      expect(matchesEvent(ctrl!, chordEvent({ metaKey: true, shiftKey: true }), apple)).toBe(false);
+    expect(matchesEvent(cmd!, chordEvent({ metaKey: true, shiftKey: true }))).toBe(true);
+    expect(matchesEvent(cmd!, chordEvent({ ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(matchesEvent(ctrl!, chordEvent({ ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(matchesEvent(ctrl!, chordEvent({ metaKey: true, shiftKey: true }))).toBe(false);
+  });
+
+  it('resolves the same way `useOverlayShortcuts` does, which it copies', () => {
+    // Cross-checked against the sibling rather than asserted twice: two
+    // resolutions of one token that agree only by inspection is how they
+    // drift.
+    const sibling = compileShortcut('mod+shift+k');
+
+    for (const mods of [
+      { ctrlKey: true, shiftKey: true },
+      { metaKey: true, shiftKey: true },
+      { shiftKey: true },
+    ]) {
+      const event = chordEvent(mods);
+      expect(matchesEvent(chord!, event), JSON.stringify(mods)).toBe(sibling(event));
     }
-  });
-});
-
-describe('isApplePlatform', () => {
-  it('reads a Mac from either the platform or the user agent', () => {
-    expect(isApplePlatform({ platform: 'MacIntel', userAgent: '' })).toBe(true);
-    expect(isApplePlatform({ platform: '', userAgent: 'Mozilla/5.0 (Macintosh; …)' })).toBe(true);
-    expect(isApplePlatform({ platform: 'iPhone', userAgent: '' })).toBe(true);
-  });
-
-  it('reads everything else as not Apple', () => {
-    expect(isApplePlatform({ platform: 'Linux x86_64', userAgent: 'X11; Linux' })).toBe(false);
-    expect(isApplePlatform({ platform: 'Win32', userAgent: 'Windows NT 10.0' })).toBe(false);
   });
 });

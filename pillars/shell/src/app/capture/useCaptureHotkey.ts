@@ -36,7 +36,8 @@ interface ParsedHotkey {
    * which key it means is a fact about the client and not about the string.
    * `mod` used to be an alias for `meta`, which made every `mod+…` chord
    * unreachable on Linux and Windows — silently, since the listener binds
-   * fine and simply never matches (POPS-3319).
+   * fine and simply never matches (POPS-3319). Either key satisfies it now;
+   * see {@link matchesEvent}.
    */
   readonly mod: boolean;
 }
@@ -61,23 +62,6 @@ const MODIFIER_ALIASES: Readonly<Record<string, ModifierKind>> = {
   option: 'alt',
   opt: 'alt',
 };
-
-/**
- * Whether this client is an Apple one, for resolving `mod`.
- *
- * Reads `navigator.platform` first. It is deprecated and it is also the only
- * thing every browser still reports honestly for this question; the
- * user-agent string is the fallback for an engine that has removed it. Both
- * are wrong for a reader who has spoofed them, which costs that reader a
- * hotkey and nothing else.
- *
- * @param nav Injected by tests, which need to pose both platforms.
- */
-export function isApplePlatform(
-  nav: Pick<Navigator, 'platform' | 'userAgent'> = navigator
-): boolean {
-  return /mac|iphone|ipad|ipod/iu.test(nav.platform || nav.userAgent);
-}
 
 function splitHotkey(raw: string): readonly string[] {
   return raw
@@ -123,31 +107,34 @@ export function parseHotkey(raw: string): ParsedHotkey | null {
 }
 
 /**
- * The modifiers a chord requires on this client, with `mod` resolved.
+ * Whether an event satisfies a chord.
  *
- * Exported for the two-platform tests: the whole defect was a resolution that
- * only ever produced one answer, so the assertion has to be able to pose both.
+ * `mod` is resolved the way `overlays/useOverlayShortcuts.ts` already
+ * resolves it — either Meta or Control satisfies it, and whichever of the two
+ * was not asked for is tolerated. That needs no platform sniff, which is the
+ * point: a `navigator.platform` regex is wrong for a reader who has spoofed
+ * it or whose compatibility layer misreports it, and being wrong there drops
+ * the hotkey silently, which is the failure this whole change is about.
+ *
+ * The two files stop short of sharing one compiler because they do not
+ * describe the same language: `compileShortcut` fails closed on `cmd`,
+ * `super` and `opt`, which the capture wire format accepts, and has no
+ * single-key form, which it needs. What they share is the resolution, and
+ * that is what is copied.
  */
-export function requiredModifiers(
-  parsed: ParsedHotkey,
-  apple: boolean
-): { meta: boolean; ctrl: boolean; shift: boolean; alt: boolean } {
-  return {
-    meta: parsed.meta || (parsed.mod && apple),
-    ctrl: parsed.ctrl || (parsed.mod && !apple),
-    shift: parsed.shift,
-    alt: parsed.alt,
-  };
+function matchesMetaAndCtrl(parsed: ParsedHotkey, e: KeyboardEvent): boolean {
+  if (!parsed.mod) return e.metaKey === parsed.meta && e.ctrlKey === parsed.ctrl;
+  if (!e.metaKey && !e.ctrlKey) return false;
+  // A chord naming both `mod` and one of the two still wants that one.
+  if (parsed.meta && !e.metaKey) return false;
+  return !parsed.ctrl || e.ctrlKey;
 }
 
-export function matchesEvent(parsed: ParsedHotkey, e: KeyboardEvent, apple: boolean): boolean {
+export function matchesEvent(parsed: ParsedHotkey, e: KeyboardEvent): boolean {
   if (e.key.toLowerCase() !== parsed.key) return false;
-  const required = requiredModifiers(parsed, apple);
-  if (e.metaKey !== required.meta) return false;
-  if (e.ctrlKey !== required.ctrl) return false;
-  if (e.shiftKey !== required.shift) return false;
-  if (e.altKey !== required.alt) return false;
-  return true;
+  if (e.shiftKey !== parsed.shift) return false;
+  if (e.altKey !== parsed.alt) return false;
+  return matchesMetaAndCtrl(parsed, e);
 }
 
 function hasModifier(p: ParsedHotkey): boolean {
@@ -158,9 +145,8 @@ export function useCaptureHotkey({ key, enabled, onTrigger }: UseCaptureHotkeyAr
   useEffect(() => {
     const parsed = parseHotkey(key);
     if (parsed === null || !enabled) return undefined;
-    const apple = isApplePlatform();
     const handler = (e: KeyboardEvent) => {
-      if (!matchesEvent(parsed, e, apple)) return;
+      if (!matchesEvent(parsed, e)) return;
       if (e.defaultPrevented) return;
       if (e.isComposing) return;
       // Chords with a non-shift modifier fire even when focus is inside
