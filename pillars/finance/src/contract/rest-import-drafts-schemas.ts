@@ -116,6 +116,12 @@ export type CreateImportDraftBody = z.infer<typeof CreateImportDraftBodySchema>;
 export const WriteImportDraftBodySchema = DraftCountsSchema.extend({
   payload: ImportDraftPayloadSchema,
   ownerToken: OwnerToken,
+  /**
+   * Give the lease up in the same call. A closing tab has one request left
+   * in it; sending the last write and the release as two would let the
+   * release land first and the write be refused.
+   */
+  release: z.boolean().optional(),
 });
 
 export type WriteImportDraftBody = z.infer<typeof WriteImportDraftBodySchema>;

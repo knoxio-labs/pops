@@ -13,12 +13,6 @@ vi.mock('../../store/importStore', () => ({
     selector ? selector(storeState) : storeState,
 }));
 
-const mockClearPersistedImport = vi.hoisted(() => vi.fn());
-
-vi.mock('../../store/import-store-lifecycle', () => ({
-  clearPersistedImport: (...args: unknown[]) => mockClearPersistedImport(...args),
-}));
-
 vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
 }));
@@ -172,11 +166,10 @@ describe('SummaryStep', () => {
     ).toBeDefined();
   });
 
-  it('resets store, clears the persisted copy, and navigates on New Import click', () => {
+  it('resets the store and navigates on New Import click', () => {
     render(<SummaryStep />);
     fireEvent.click(screen.getByText('New Import'));
     expect(mockReset).toHaveBeenCalledOnce();
-    expect(mockClearPersistedImport).toHaveBeenCalledExactlyOnceWith(true);
     expect(mockNavigate).toHaveBeenCalledWith('/finance/import');
   });
 

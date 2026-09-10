@@ -6090,6 +6090,7 @@ export type ImportsCommitImportData = {
       source?: string;
     }>;
     commitKey?: string;
+    draftId?: string;
     entities: Array<{
       name: string;
       tempId: string;

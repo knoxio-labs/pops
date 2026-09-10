@@ -37,6 +37,7 @@ import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
 import { AccountSchema, stubFinanceAccount } from './helpers/finance-accounts';
+import { stubImportDrafts } from './helpers/finance-import-drafts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 import { statementPdf, type StatementRow } from './helpers/synthetic-pdf';
 
@@ -115,6 +116,7 @@ const MARCH_COFFEE: StatementRow = {
 };
 
 async function setupMocks(page: Page): Promise<void> {
+  await stubImportDrafts(page, account.id);
   await stubFinanceAccount(page, account);
   await page.route(
     `**/finance-api/accounts/${account.id}`,

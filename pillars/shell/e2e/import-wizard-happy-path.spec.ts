@@ -47,6 +47,7 @@ import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
 import { AccountsListResponseSchema } from './helpers/finance-accounts';
+import { DRAFT_ID, type DraftTraffic, stubImportDrafts } from './helpers/finance-import-drafts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
@@ -374,7 +375,10 @@ const accountsBody = {
   pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
 };
 
+let draftTraffic: DraftTraffic;
+
 async function setupMocks(page: Page): Promise<void> {
+  draftTraffic = await stubImportDrafts(page, 'acc-amex');
   await page.route(
     '**/finance-api/imports/process',
     fulfilWith(
@@ -509,6 +513,15 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
 
     // Step 8: Summary — wizard auto-advances on commit success, no Continue click.
     await expect(page.getByRole('heading', { name: 'Import Complete' })).toBeVisible();
+
+    // The run was a server draft from the first parsed rows (finance ADR-005):
+    // created once, carried in the URL, written through at least at every
+    // step change up to Commit, and handed to the commit to delete.
+    expect(draftTraffic.created).toBe(1);
+    expect(page.url()).toContain(`draft=${DRAFT_ID}`);
+    expect(draftTraffic.writes.map((w) => w.step)).toEqual(
+      expect.arrayContaining([2, 3, 4, 5, 6, 7])
+    );
     await expect(page.getByText('Transactions Imported')).toBeVisible();
     // The SummaryCard for imported transactions shows the value "2".
     await expect(page.getByRole('button', { name: /new import/i })).toBeVisible();

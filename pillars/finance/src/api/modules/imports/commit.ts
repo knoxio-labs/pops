@@ -61,6 +61,7 @@ import { CommitResultSchema } from '../../../contract/rest-imports-schemas.js';
 import {
   type FinanceDb,
   importCommitsService,
+  importDraftsService,
   importsService,
   tagVocabularyService,
 } from '../../../db/index.js';
@@ -270,6 +271,7 @@ export async function commitImport(
       };
 
       if (commitKey) importCommitsService.recordCommit(tx, commitKey, result);
+      if (payload.draftId) importDraftsService.discardImportDraft(tx, payload.draftId);
       return result;
     });
   } catch (error) {

@@ -55,6 +55,7 @@ export function buildSetters(set: StoreSet) {
     setConfirmedTransactions: (confirmedTransactions: ImportStore['confirmedTransactions']) =>
       set({ confirmedTransactions }),
     setCommitResult: (commitResult: ImportStore['commitResult']) => set({ commitResult }),
+    setDraftId: (draftId: string | null) => set({ draftId }),
   };
 }
 

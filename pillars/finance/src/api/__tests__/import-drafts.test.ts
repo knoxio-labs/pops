@@ -212,6 +212,23 @@ describe('write', () => {
     expect(after.data).toMatchObject({ step: 4, rowCount: 46, payload: { currentStep: 4 } });
   });
 
+  it('a write with release lands the payload and gives the lease up in one call', async () => {
+    const accountId = await anAccount();
+    const draft = await aFileDraft(accountId);
+
+    const written = await client().importDrafts.write(draft.id, {
+      ownerToken: TAB_A,
+      payload: { currentStep: 6 },
+      step: 6,
+      rowCount: 46,
+      unresolvedCount: 0,
+      span: null,
+      release: true,
+    });
+    expect(written.data).toMatchObject({ state: 'saved', step: 6, ownerSeenAt: null });
+    expect((await client().importDrafts.get(draft.id)).data.payload).toEqual({ currentStep: 6 });
+  });
+
   it('404s a write to a draft that does not exist', async () => {
     await expect(
       client().importDrafts.write('nope', {

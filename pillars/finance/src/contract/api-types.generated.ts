@@ -8784,6 +8784,7 @@ export interface operations {
           }[];
           /** Format: uuid */
           commitKey?: string;
+          draftId?: string;
           /** @default [] */
           entities: {
             name: string;

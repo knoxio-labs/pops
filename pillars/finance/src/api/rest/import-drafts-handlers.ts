@@ -153,6 +153,11 @@ export function makeImportDraftsHandlers(db: FinanceDb, clock: () => Date = () =
             { ownerToken: body.ownerToken, now: clock() }
           )
         );
+        if (body.release === true) {
+          importDraftsService.releaseImportDraft(db, params.id, body.ownerToken);
+          const released = importDraftsService.getImportDraft(db, params.id) ?? written;
+          return { status: 200 as const, body: { data: summary(released, account) } };
+        }
         return { status: 200 as const, body: { data: summary(written, account) } };
       }),
 

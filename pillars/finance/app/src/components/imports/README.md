@@ -33,11 +33,11 @@ A correction that never becomes a rule is worthless past this run, so no fix on 
 
 ## What survives a reload
 
-The store persists to IndexedDB (`pops-finance` / `import-wizard`) with a 7-day TTL, and the wizard offers to resume. `../../store/import-store-persistence.ts` documents the mechanics — the explicit field pick, the version-bump-discards rule, and how the resume step is clamped to what the persisted state can actually support.
+Everything, because the run is a server record: `import_drafts` in the finance pillar (finance ADR-005, `pillars/finance/docs/architecture/adr-005-import-drafts-are-server-records.md`). `hooks/useDraftWriteThrough.ts` mirrors the store's persisted slice (`../../store/import-draft-payload.ts`) into the draft named by `?draft=<id>`: at once on a step change, two seconds after anything else, and on `pagehide` with the lease released in the same request. `hooks/useDraftHydration.ts` does the reverse on open, clamping the resume step to what the payload can support. There is no browser-side copy: a reload on another device, or after clearing site data, lands on the same step with the same decisions.
 
-The consequence worth knowing here, because it spans the store and step 1: **the `File` handles are deliberately not persisted**, since they are not serializable. On resume there is nothing to compare against, so re-selecting even the byte-identical CSVs reads as a new batch and cascades a downstream reset over the work the resume just restored. Only `sourceFileNames` survives, to label the resume prompt.
+The consequence worth knowing here, because it spans the store and step 1: **the `File` handles are not in the draft**, since they are not serialisable and the file is not stored. On resume there is nothing to compare against, so re-selecting even the byte-identical CSVs reads as a new batch and cascades a downstream reset over the work the resume just restored. Only `sourceFileNames` survives, to label the card.
 
-Two more sharp edges in the same area: resuming mid-processing always restarts `POST /imports/process` rather than re-attaching to a server session that may still be alive, and two tabs editing the same import race on the persisted slot with last-writer-wins.
+Two more edges in the same area: resuming mid-processing restarts `POST /imports/process` rather than re-attaching to a server session that may still be alive, and a second tab opening the same draft is refused by the lease rather than racing on it (`code: DraftOwnedElsewhere`); it can take the draft over, after which the first tab's writes are refused.
 
 ## Where things live
 
