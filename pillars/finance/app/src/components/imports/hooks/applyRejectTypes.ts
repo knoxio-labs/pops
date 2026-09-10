@@ -9,7 +9,6 @@ import type { AiMessage } from '../CorrectionProposalDialogPanels';
 
 export interface UseApplyRejectMutationsOptions {
   signal: CorrectionSignal | null;
-  sessionId: string;
   localOps: LocalOp[];
   combinedPreview: PreviewChangeSetOutput | null;
   combinedPreviewError: string | null;

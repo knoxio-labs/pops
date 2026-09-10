@@ -39,7 +39,6 @@ export { serverOpToLocalOp } from './hooks/useLocalOps';
 export interface CorrectionProposalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sessionId: string;
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: PreviewTransactionEntry[];
@@ -68,7 +67,6 @@ export function CorrectionProposalDialog(props: CorrectionProposalDialogProps) {
     <CorrectionProposalWorkflow
       open={props.open}
       onOpenChange={props.onOpenChange}
-      sessionId={props.sessionId}
       signal={props.signal}
       triggeringTransaction={props.triggeringTransaction}
       previewTransactions={props.previewTransactions}

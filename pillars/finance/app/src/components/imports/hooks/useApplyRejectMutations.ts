@@ -13,6 +13,7 @@ import {
   correctionsReviseChangeSet,
 } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
+import { deriveCanApply } from './deriveCanApply';
 import { localOpsToChangeSet, serverOpToLocalOp } from './useLocalOps';
 
 import type {
@@ -158,14 +159,7 @@ function useRejectAndAi(
 export function useApplyRejectMutations(
   options: UseApplyRejectMutationsOptions
 ): UseApplyRejectMutationsReturn {
-  const {
-    localOps,
-    combinedPreviewError,
-    hasDirty,
-    sessionId,
-    isFetching,
-    previewMutationPending,
-  } = options;
+  const { localOps, combinedPreviewError, hasDirty, isFetching, previewMutationPending } = options;
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
   const [aiInstruction, setAiInstruction] = useState('');
@@ -183,8 +177,12 @@ export function useApplyRejectMutations(
 
   const isEditorLocked = isFetching || rejectMutation.isPending || aiBusy;
   const isBusy = isEditorLocked || previewMutationPending;
-  const canApply =
-    !isBusy && localOps.length > 0 && !hasDirty && Boolean(sessionId) && !combinedPreviewError;
+  const canApply = deriveCanApply({
+    isBusy,
+    opsCount: localOps.length,
+    hasDirty,
+    previewError: combinedPreviewError,
+  });
 
   const resetMutationState = useCallback(() => {
     setRejectMode(false);
