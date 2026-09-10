@@ -56,6 +56,8 @@ Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one 
 
 An order is dropped only when its `Order Date` or `Currency` is unreadable. Skipping is correct there — `orderedAt` is what the reconciliation window is measured against, so an order without one could never match a transaction — but it is reported, because a backfill that quietly lands 700 of 748 orders is indistinguishable from one that landed everything.
 
+**A timestamp that names no zone counts as unreadable.** `new Date('2026-02-02T01:41:21')` resolves a naive cell against whichever machine is running the ingest, and `.toISOString()` bakes that reading in — so the same file ingested on a Sydney laptop and in a UTC container would land `ordered_at` values eleven hours apart, with nothing downstream able to tell: the value is plausible, it sorts correctly, and the canonicalising check at the DB boundary is handed an already-`Z` string. A reported drop is the answer the rest of this pillar already gives a timestamp it cannot place (POPS-2533). Every zoned spelling ISO-8601 allows still reads — `Z`, `+10:00`, `+1000`, `+10`.
+
 ## Refunds
 
 `Refund Details.csv` is the one returns file that states money. Sixteen rows, sixteen distinct orders, all sixteen joining to `Order History.csv`, one refund each. Each becomes a single charge with `role='refund'`, a negative `amountCents`, and `chargedAt` set to `Refund Date` — the disbursement instant, which is the only date a bank transaction could ever settle against. `Creation Date` is when Amazon wrote the record, minutes to hours later on every row, and is not a substitute.
