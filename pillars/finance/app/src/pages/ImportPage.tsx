@@ -60,6 +60,10 @@ export function ImportPage() {
   );
 
   useEffect(() => {
+    saveFailedShown.current = false;
+  }, [lease.epoch]);
+
+  useEffect(() => {
     if (gate.status === 'gone') {
       toast.info(t('import.draft.gone'));
       setParams({}, { replace: true });
