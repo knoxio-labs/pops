@@ -2,7 +2,7 @@
  * CaptureModal — global capture surface rendered as a Dialog.
  *
  * Discovers the active capture overlay by walking the registry
- * (`activeCaptureOverlay()` over `installedFrontendManifests()` +
+ * (`activeCaptureOverlay()` over the boot-resolved manifests +
  * `WORKSPACE_BUNDLE_MAP`). The selection rule lives in
  * `./capture-registry.ts`; this file is responsible for:
  *

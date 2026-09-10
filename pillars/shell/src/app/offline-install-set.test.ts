@@ -1,13 +1,12 @@
 /**
  * The install set still applies offline (POPS-3239).
  *
- * `staticFloorEntries` narrows the in-repo bundle map through
- * `isInstalledModule`, so an operator's `POPS_APPS` selection survives a
- * registry outage. The cached snapshot stands in for that floor once
- * POPS-3215 has emptied the bundle map, so it has to be narrowed the same
- * way — otherwise the shell's offline behaviour depends on whether this
- * browser happens to hold a cache, and a module the operator excluded comes
- * back on a returning machine but not a fresh one.
+ * An operator's `POPS_APPS` selection has to survive a registry outage. The
+ * static floor that used to enforce it offline is gone (POPS-3227), so the
+ * cached snapshot is the whole of the offline floor and has to be narrowed
+ * the same way — otherwise the shell's offline behaviour depends on whether
+ * this browser happens to hold a cache, and a module the operator excluded
+ * comes back on a returning machine but not a fresh one.
  *
  * The install set is computed once at module load from the environment, so
  * these swap `isInstalledModule` rather than trying to move `POPS_APPS`

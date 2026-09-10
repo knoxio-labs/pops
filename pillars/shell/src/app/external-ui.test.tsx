@@ -39,7 +39,7 @@ import { buildRegisteredAppsFromBundleMap } from './nav/registry';
 import type { ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
-import type { BundleEntry } from './bundle-map';
+import type { BundleEntry } from './bundle-entry';
 
 /**
  * Pull the synthesized routes out of a bundle entry through the shared

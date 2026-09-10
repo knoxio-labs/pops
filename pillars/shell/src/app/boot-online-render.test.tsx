@@ -185,10 +185,10 @@ describe('shell online boot → render (registry-driven branch)', () => {
    * chrome, not a crash or a blank document. POPS-3250 covers the reader-facing
    * half: those routes currently say "Module not installed".
    */
-  it('resolves to an empty floor, without crashing, when the fetch fails and no cache exists', async () => {
+  it('resolves to an empty surface, without crashing, when the fetch fails and no cache exists', async () => {
     const fetchStub = vi.fn(() => Promise.reject(new Error('ECONNREFUSED')));
     const bootRegistry = await fetchBootRegistry({ fetch: fetchStub, store: noCache() });
-    expect(bootRegistry.source).toBe('static-floor');
+    expect(bootRegistry.source).toBe('empty');
 
     renderRail(bootRegistry);
 
