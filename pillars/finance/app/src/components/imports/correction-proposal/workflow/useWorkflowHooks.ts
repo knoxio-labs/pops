@@ -21,7 +21,6 @@ import type {
 export interface CorrectionProposalWorkflowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sessionId: string;
   signal: CorrectionSignal | null;
   triggeringTransaction: TriggeringTransactionContext | null;
   previewTransactions: PreviewTransactionEntry[];
@@ -84,7 +83,6 @@ export function useWorkflowHooks(props: CorrectionProposalWorkflowProps) {
   const handleCloseRef = useRef<() => void>(() => undefined);
   const mutationsHook = useApplyRejectMutations({
     signal: props.signal,
-    sessionId: props.sessionId,
     localOps: localOpsHook.localOps,
     combinedPreview: previewHook.combinedPreview,
     combinedPreviewError: previewHook.combinedPreviewError,

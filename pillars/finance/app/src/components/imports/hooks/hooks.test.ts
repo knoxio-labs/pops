@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { deriveCanApply } from './deriveCanApply';
 import {
   findLocalOpProblem,
   localOpsToChangeSet,
@@ -236,7 +237,6 @@ describe('useApplyRejectMutations — interface contract', () => {
   it('UseApplyRejectMutationsOptions requires the expected fields', () => {
     const opts: UseApplyRejectMutationsOptions = {
       signal: null,
-      sessionId: 'sess-1',
       localOps: [],
       combinedPreview: null,
       combinedPreviewError: null,
@@ -251,7 +251,7 @@ describe('useApplyRejectMutations — interface contract', () => {
       lastCombinedStructuralSigRef: { current: null },
       selectedOpPreviewKeyRef: { current: null },
     };
-    expect(opts.sessionId).toBe('sess-1');
+    expect(opts.signal).toBeNull();
   });
 
   it('UseApplyRejectMutationsReturn exposes the expected keys', () => {
@@ -278,17 +278,31 @@ describe('useApplyRejectMutations — interface contract', () => {
   });
 });
 
-describe('canApply derivation rules', () => {
-  it.each([
-    { isBusy: true, opsLen: 1, hasDirty: false, sessionId: 's', error: null, expected: false },
-    { isBusy: false, opsLen: 0, hasDirty: false, sessionId: 's', error: null, expected: false },
-    { isBusy: false, opsLen: 1, hasDirty: true, sessionId: 's', error: null, expected: false },
-    { isBusy: false, opsLen: 1, hasDirty: false, sessionId: '', error: null, expected: false },
-    { isBusy: false, opsLen: 1, hasDirty: false, sessionId: 's', error: 'fail', expected: false },
-    { isBusy: false, opsLen: 1, hasDirty: false, sessionId: 's', error: null, expected: true },
-  ])('canApply=%j', ({ isBusy, opsLen, hasDirty, sessionId, error, expected }) => {
-    const result = !isBusy && opsLen > 0 && !hasDirty && Boolean(sessionId) && !error;
-    expect(result).toBe(expected);
+// The POPS-3358 regression is guarded at the hook, in
+// use-apply-reject-can-apply.test.tsx: `CanApplyInput` has no session field,
+// so no input here can express "no process session" and no case here would
+// catch the gate being reintroduced around this function.
+describe('deriveCanApply', () => {
+  const ready = { isBusy: false, opsCount: 1, hasDirty: false, previewError: null };
+
+  it('allows applying when the editor is idle with clean ops and a good preview', () => {
+    expect(deriveCanApply(ready)).toBe(true);
+  });
+
+  it('refuses while the editor is busy', () => {
+    expect(deriveCanApply({ ...ready, isBusy: true })).toBe(false);
+  });
+
+  it('refuses with no operations to apply', () => {
+    expect(deriveCanApply({ ...ready, opsCount: 0 })).toBe(false);
+  });
+
+  it('refuses while an edit has not been previewed', () => {
+    expect(deriveCanApply({ ...ready, hasDirty: true })).toBe(false);
+  });
+
+  it('refuses when the preview failed', () => {
+    expect(deriveCanApply({ ...ready, previewError: 'fail' })).toBe(false);
   });
 });
 
