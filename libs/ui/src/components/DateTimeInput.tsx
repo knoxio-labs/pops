@@ -3,9 +3,10 @@
  * Includes DateInput, TimeInput, and DateTimeInput
  */
 import { cva, type VariantProps } from 'class-variance-authority';
-import { forwardRef, type InputHTMLAttributes, type ReactNode, useState } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode, useId, useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { FieldError } from './FieldError';
 
 const containerVariants = cva(
   'flex items-center gap-2 w-full bg-background text-foreground transition-all outline-0 focus-within:outline-0 ring-0 focus-within:ring-0',
@@ -51,9 +52,16 @@ interface BaseInputProps
   centered?: boolean;
   containerClassName?: string;
   /**
-   * Error message driving `aria-invalid` and the destructive border. Matches
-   * `TextInput`'s `error` convention; this component does not render the
-   * message itself, so pair it with `FieldLabel`'s `error` slot.
+   * Error message. Drives `aria-invalid` and the destructive border, and is
+   * rendered BELOW the control, which is where `TextInput` puts its own and
+   * therefore where the kit puts them.
+   *
+   * It used not to be rendered here at all — callers paired it with
+   * `FieldLabel`'s `error` slot, which sits inside the label block — so a form
+   * with a `TextInput` field beside a `DateInput` field showed one message
+   * under its control and the other over it, in the same row (POPS-3247).
+   * Do not pass the same message to `FieldLabel` as well; it would appear
+   * twice.
    */
   error?: string;
 }
@@ -83,40 +91,46 @@ const NativeDateTimeInput = forwardRef<HTMLInputElement, NativeDateTimeInputProp
     ref
   ) => {
     const [isFocused, setIsFocused] = useState(false);
+    const generatedId = useId();
+    const inputId = props.id ?? generatedId;
 
     return (
-      <div
-        className={cn(
-          containerVariants({ variant, size, shape }),
-          disabled && 'opacity-50 cursor-not-allowed',
-          error && 'border-destructive ring-destructive/20',
-          containerClassName
-        )}
-        style={isFocused && !error ? { borderColor: 'var(--ring)' } : undefined}
-      >
-        {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
-        <input
-          ref={ref}
-          type={type}
-          // Chromium and Firefox pick the native date/time widget's display
-          // order from `lang` before falling back to the OS locale, so this
-          // pins the picker to en-AU rather than leaving it to whatever
-          // locale the browser happens to be set to.
-          lang={lang ?? 'en-AU'}
-          className={cn(inputVariants({ size, className }))}
-          onFocus={(e) => {
-            setIsFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            onBlur?.(e);
-          }}
-          disabled={disabled}
-          aria-invalid={!!error}
-          {...props}
-        />
-        {suffix && <span className="flex-shrink-0 text-muted-foreground">{suffix}</span>}
+      <div className="flex flex-col gap-1.5 w-full">
+        <div
+          className={cn(
+            containerVariants({ variant, size, shape }),
+            disabled && 'opacity-50 cursor-not-allowed',
+            error && 'border-destructive ring-destructive/20',
+            containerClassName
+          )}
+          style={isFocused && !error ? { borderColor: 'var(--ring)' } : undefined}
+        >
+          {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
+          <input
+            ref={ref}
+            type={type}
+            // Chromium and Firefox pick the native date/time widget's display
+            // order from `lang` before falling back to the OS locale, so this
+            // pins the picker to en-AU rather than leaving it to whatever
+            // locale the browser happens to be set to.
+            lang={lang ?? 'en-AU'}
+            className={cn(inputVariants({ size, className }))}
+            onFocus={(e) => {
+              setIsFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setIsFocused(false);
+              onBlur?.(e);
+            }}
+            disabled={disabled}
+            aria-invalid={!!error}
+            {...props}
+            id={inputId}
+          />
+          {suffix && <span className="flex-shrink-0 text-muted-foreground">{suffix}</span>}
+        </div>
+        <FieldError htmlFor={inputId} error={error} />
       </div>
     );
   }

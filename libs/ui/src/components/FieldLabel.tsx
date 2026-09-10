@@ -1,3 +1,5 @@
+import { FieldError, fieldErrorId } from './FieldError';
+
 export interface FieldLabelProps {
   /** `id` of the control this label describes. Also used to derive the
    * `id`s of the error and description paragraphs below, so a consumer can
@@ -8,7 +10,15 @@ export interface FieldLabelProps {
   label?: string;
   /** Whether to show a required marker next to the label. No-op without `label`. */
   required?: boolean;
-  /** Error message. Takes precedence over `description` when both are set. */
+  /**
+   * Error message, rendered inside the label block and therefore ABOVE the
+   * control. For a control with an `error` prop of its own — `TextInput`,
+   * `DateInput`, `TimeInput`, `DateTimeInput` — pass it there instead, which
+   * renders it below the control where every other kit input puts it
+   * (POPS-3247). This slot is for the controls that have no such prop.
+   *
+   * Takes precedence over `description` when both are set.
+   */
   error?: string;
   /** Optional hint/description line, hidden while an `error` is present. */
   description?: string;
@@ -24,7 +34,7 @@ export function fieldLabelDescribedBy(
   slots: { error?: string; description?: string }
 ): string | undefined {
   const ids: string[] = [];
-  if (slots.error) ids.push(`${htmlFor}-error`);
+  if (slots.error) ids.push(fieldErrorId(htmlFor));
   else if (slots.description) ids.push(`${htmlFor}-description`);
   return ids.length > 0 ? ids.join(' ') : undefined;
 }
@@ -59,15 +69,7 @@ export function FieldLabel({ htmlFor, label, required, error, description }: Fie
           {description}
         </p>
       )}
-      {error && (
-        <p
-          id={`${htmlFor}-error`}
-          role="alert"
-          className="text-2xs font-medium text-destructive ml-1"
-        >
-          {error}
-        </p>
-      )}
+      <FieldError htmlFor={htmlFor} error={error} />
     </>
   );
 }

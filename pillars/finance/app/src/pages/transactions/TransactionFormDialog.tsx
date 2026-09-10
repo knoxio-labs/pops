@@ -37,11 +37,7 @@ function PrimaryFields({ form }: { form: UseFormReturn<TransactionFormValues> })
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="flex flex-col gap-1.5 w-full">
-        <FieldLabel
-          htmlFor="transaction-date"
-          label="Date"
-          error={form.formState.errors.date?.message}
-        />
+        <FieldLabel htmlFor="transaction-date" label="Date" />
         <DateInput
           id="transaction-date"
           {...form.register('date')}
