@@ -48,7 +48,7 @@ export function progressLine(
   t: TFunction<'finance'>,
   now = new Date().toISOString()
 ): string {
-  const step = importStepLabel(draft.step) ?? t('import.pending.theStart');
+  const step = importStepLabel(draft.step, t) ?? t('import.pending.theStart');
   const seen = draft.ownerSeenAt ?? draft.savedAt;
   switch (draft.state) {
     case 'unusable':
