@@ -3,11 +3,12 @@ import { toast } from 'sonner';
 
 import { isUnavailableError, unwrap } from '../../../finance-api-helpers.js';
 import {
+  importsReevaluateRowsWithPendingRules,
   importsReevaluateWithPendingRules,
   type ImportsReevaluateWithPendingRulesResponses,
 } from '../../../finance-api/index.js';
 import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
-import { useImportStore } from '../../../store/importStore';
+import { type ImportStore, useImportStore } from '../../../store/importStore';
 import {
   isDeadSessionError,
   pendingImportRecovery,
@@ -29,33 +30,73 @@ const REEVALUATE_FAILED_MESSAGE = 'Failed to re-evaluate transactions against up
  */
 const TRANSIENT_RETRY_DELAY_MS = 1500;
 
+/**
+ * How the import in the store is re-evaluated against pending rules, or
+ * `null` when there is nothing to re-evaluate yet.
+ *
+ * - `'rows'`: a live draft. Its rows arrive pre-mapped and never pass through
+ *   the Process step, so it has no process session; it sends the rows it
+ *   holds instead.
+ * - `'session'`: a file import, which the server re-evaluates from its process
+ *   session.
+ */
+export type ReevaluateVia = 'rows' | 'session' | null;
+
+/** Which {@link ReevaluateVia} the given import state takes. */
+export function reevaluateVia(
+  state: Pick<ImportStore, 'draftSource' | 'processSessionId'>
+): ReevaluateVia {
+  if (state.draftSource?.kind === 'live') return 'rows';
+  return state.processSessionId ? 'session' : null;
+}
+
+/** The feedback a re-evaluation gives once its result has been applied. */
+export function toastRulesApplied(affectedCount: number): void {
+  toast.success(
+    `Rules applied — ${affectedCount} transaction${affectedCount === 1 ? '' : 's'} re-evaluated`
+  );
+}
+
+function restPendingChangeSets() {
+  return useImportStore.getState().pendingChangeSets.map((pcs) => ({
+    changeSet: toRestCorrectionChangeSet(pcs.changeSet),
+  }));
+}
+
 async function requestReevaluate(sessionId: string): Promise<ReevaluateOutcome> {
-  const { pendingChangeSets } = useImportStore.getState();
   return unwrap(
     await importsReevaluateWithPendingRules({
+      body: { sessionId, pendingChangeSets: restPendingChangeSets() },
+    })
+  );
+}
+
+async function requestRowsReevaluate(): Promise<ReevaluateOutcome> {
+  return unwrap(
+    await importsReevaluateRowsWithPendingRules({
       body: {
-        sessionId,
-        pendingChangeSets: pendingChangeSets.map((pcs) => ({
-          changeSet: toRestCorrectionChangeSet(pcs.changeSet),
-        })),
+        result: useImportStore.getState().processedTransactions,
+        pendingChangeSets: restPendingChangeSets(),
       },
     })
   );
 }
 
 /**
- * `requestReevaluate`, retried once after {@link TRANSIENT_RETRY_DELAY_MS}
- * when the first attempt fails with no status or a 5xx. A 4xx (including the
+ * `request`, retried once after {@link TRANSIENT_RETRY_DELAY_MS} when the
+ * first attempt fails with no status or a 5xx. A 4xx (including the
  * dead-session 404/412 the caller handles separately) is never retried here —
  * it is a real answer, not a transient gap.
  */
-async function requestReevaluateWithTransientRetry(sessionId: string): Promise<ReevaluateOutcome> {
+async function withTransientRetry(
+  request: () => Promise<ReevaluateOutcome>
+): Promise<ReevaluateOutcome> {
   try {
-    return await requestReevaluate(sessionId);
+    return await request();
   } catch (error) {
     if (!isUnavailableError(error)) throw error;
     await sleep(TRANSIENT_RETRY_DELAY_MS);
-    return await requestReevaluate(sessionId);
+    return await request();
   }
 }
 
@@ -91,11 +132,21 @@ function toastReevaluateError(): void {
   toast.error(REEVALUATE_FAILED_MESSAGE);
 }
 
+async function executeRowsReevaluate(): Promise<ReevaluateOutcome | null> {
+  try {
+    return await withTransientRetry(requestRowsReevaluate);
+  } catch {
+    toastReevaluateError();
+    return null;
+  }
+}
+
 async function executeReevaluate(): Promise<ReevaluateOutcome | null> {
+  if (reevaluateVia(useImportStore.getState()) === 'rows') return executeRowsReevaluate();
   const sessionId = await currentSessionId();
   if (!sessionId) return null;
   try {
-    return await requestReevaluateWithTransientRetry(sessionId);
+    return await withTransientRetry(() => requestReevaluate(sessionId));
   } catch (error) {
     if (!isDeadSessionError(error)) {
       toastReevaluateError();
@@ -104,7 +155,8 @@ async function executeReevaluate(): Promise<ReevaluateOutcome | null> {
   }
   toast.info('Import session expired — reprocessing transactions…');
   try {
-    return await requestReevaluateWithTransientRetry(await recoverImportSession());
+    const recoveredSessionId = await recoverImportSession();
+    return await withTransientRetry(() => requestReevaluate(recoveredSessionId));
   } catch {
     toastReevaluateError();
     return null;
@@ -118,12 +170,12 @@ let queuedRun: Promise<ReevaluateOutcome | null> | null = null;
  * Run a re-evaluation, collapsing concurrent requests to one in flight plus at
  * most one queued.
  *
- * Each run re-evaluates the session against whatever pending change sets exist
- * *at the time it executes*, so a run issued later subsumes every accept made
- * before it — firing one request per accept is redundant work, not extra
- * coverage. Accepting five or six suggestions in a row therefore costs two
- * requests, not six, and the results cannot be applied out of order because
- * only one is ever outstanding.
+ * Each run re-evaluates against whatever pending change sets (and, for a live
+ * draft, whatever rows) exist *at the time it executes*, so a run issued later
+ * subsumes every accept made before it — firing one request per accept is
+ * redundant work, not extra coverage. Accepting five or six suggestions in a
+ * row therefore costs two requests, not six, and the results cannot be
+ * applied out of order because only one is ever outstanding.
  *
  * Module-scoped, like the recovery it coordinates with, so the collapsing holds
  * across every call site rather than per component instance.
@@ -148,12 +200,16 @@ function scheduleReevaluate(): Promise<ReevaluateOutcome | null> {
 }
 
 /**
- * Runs `POST /imports/reevaluate-pending` for the current session against
- * (DB + pending) rules, transparently recovering a dead server session
- * (404/412) by re-processing from the persisted parsed transactions and
- * retrying exactly once. Resolves `null` when there is no session id or the
- * re-evaluation ultimately failed (an error toast has already been shown);
- * failures are never retried in a loop.
+ * Re-evaluates the import against (DB + pending) rules.
+ *
+ * A file import runs `POST /imports/reevaluate-pending` for its process
+ * session, transparently recovering a dead server session (404/412) by
+ * re-processing from the persisted parsed transactions and retrying exactly
+ * once. A live draft has no session to recover, so it runs
+ * `POST /imports/reevaluate-pending-rows` with the rows the store holds.
+ * Resolves `null` when there is nothing to re-evaluate (see
+ * {@link reevaluateVia}) or the re-evaluation ultimately failed (an error
+ * toast has already been shown); failures are never retried in a loop.
  *
  * `isReevaluating` is true while a run is outstanding, so the review step can
  * say that accepted suggestions are still being applied. Without it the only

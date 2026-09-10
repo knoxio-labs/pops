@@ -189,6 +189,9 @@ import type {
   ImportsProcessImportData,
   ImportsProcessImportErrors,
   ImportsProcessImportResponses,
+  ImportsReevaluateRowsWithPendingRulesData,
+  ImportsReevaluateRowsWithPendingRulesErrors,
+  ImportsReevaluateRowsWithPendingRulesResponses,
   ImportsReevaluateWithPendingRulesData,
   ImportsReevaluateWithPendingRulesErrors,
   ImportsReevaluateWithPendingRulesResponses,
@@ -1521,6 +1524,29 @@ export const importsReevaluateWithPendingRules = <ThrowOnError extends boolean =
     ThrowOnError
   >({
     url: '/imports/reevaluate-pending',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Re-evaluate caller-supplied rows (a live draft, which has no process session) against merged (DB + pending) rules; no DB writes
+ */
+export const importsReevaluateRowsWithPendingRules = <ThrowOnError extends boolean = false>(
+  options?: Options<ImportsReevaluateRowsWithPendingRulesData, ThrowOnError>
+): RequestResult<
+  ImportsReevaluateRowsWithPendingRulesResponses,
+  ImportsReevaluateRowsWithPendingRulesErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    ImportsReevaluateRowsWithPendingRulesResponses,
+    ImportsReevaluateRowsWithPendingRulesErrors,
+    ThrowOnError
+  >({
+    url: '/imports/reevaluate-pending-rows',
     ...options,
     headers: {
       'Content-Type': 'application/json',

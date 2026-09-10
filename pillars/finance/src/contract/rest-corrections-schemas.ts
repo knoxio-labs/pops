@@ -195,9 +195,19 @@ const PreviewChangeSetTransactionSchema = z.object({
   accountId: z.string().min(1).optional(),
 });
 
+/**
+ * The most transactions a caller may put in one request body for the server to
+ * evaluate rules against: a ChangeSet preview's rows, or a live draft's rows
+ * sent for re-evaluation.
+ */
+export const CALLER_SUPPLIED_TRANSACTIONS_MAX = 2000;
+
 export const PreviewChangeSetBody = z.object({
   changeSet: ChangeSetSchema,
-  transactions: z.array(PreviewChangeSetTransactionSchema).min(1).max(2000),
+  transactions: z
+    .array(PreviewChangeSetTransactionSchema)
+    .min(1)
+    .max(CALLER_SUPPLIED_TRANSACTIONS_MAX),
   pendingChangeSets: z.array(PendingChangeSetSchema).max(200).optional(),
 });
 

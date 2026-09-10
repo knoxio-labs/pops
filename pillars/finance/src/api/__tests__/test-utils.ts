@@ -729,6 +729,10 @@ export function makeClient(app: Express) {
         call<{ result: ProcessImportOutput; affectedCount: number }>((r) =>
           r.post('/imports/reevaluate-pending').send(body)
         ),
+      reevaluateRowsWithPendingRules: (body: Record<string, unknown>) =>
+        call<{ result: ProcessImportOutput; affectedCount: number }>((r) =>
+          r.post('/imports/reevaluate-pending-rows').send(body)
+        ),
     },
     dataQuality: {
       nudges: () => call<{ data: Nudge[] }>((r) => r.get('/data-quality/nudges')),

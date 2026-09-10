@@ -143,5 +143,16 @@ export function makeImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
         updateProgress(db, body.sessionId, { result: nextResult });
         return { status: 200 as const, body: { result: nextResult, affectedCount } };
       }),
+
+    reevaluateRowsWithPendingRules: ({ body }: Req['reevaluateRowsWithPendingRules']) =>
+      runHttp(async () => {
+        const { nextResult, affectedCount } = await reevaluateImportSessionWithRules({
+          db,
+          contacts,
+          result: body.result,
+          pendingChangeSets: body.pendingChangeSets,
+        });
+        return { status: 200 as const, body: { result: nextResult, affectedCount } };
+      }),
   };
 }

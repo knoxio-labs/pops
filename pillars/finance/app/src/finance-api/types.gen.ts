@@ -7172,6 +7172,696 @@ export type ImportsReevaluateWithPendingRulesResponses = {
 export type ImportsReevaluateWithPendingRulesResponse =
   ImportsReevaluateWithPendingRulesResponses[keyof ImportsReevaluateWithPendingRulesResponses];
 
+export type ImportsReevaluateRowsWithPendingRulesData = {
+  /**
+   * Body
+   */
+  body?: {
+    pendingChangeSets: Array<{
+      changeSet: {
+        ops: Array<
+          | {
+              data: {
+                accountId?: string | null;
+                confidence?: number | null;
+                descriptionPattern: string;
+                entityId?: string | null;
+                entityName?: string | null;
+                isActive?: boolean;
+                location?: string | null;
+                matchType: 'exact' | 'contains' | 'regex';
+                priority?: number;
+                tags: Array<string>;
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee'
+                  | null;
+              };
+              op: 'add';
+            }
+          | {
+              data: {
+                accountId?: string | null;
+                confidence?: number | null;
+                descriptionPattern?: string;
+                entityId?: string | null;
+                entityName?: string | null;
+                isActive?: boolean;
+                location?: string | null;
+                matchType?: 'exact' | 'contains' | 'regex';
+                priority?: number;
+                tags?: Array<string>;
+                transactionType?:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee'
+                  | null;
+              };
+              id: string;
+              op: 'edit';
+            }
+          | {
+              id: string;
+              op: 'disable';
+            }
+          | {
+              id: string;
+              op: 'remove';
+            }
+        >;
+        reason?: string;
+        source?: string;
+      };
+    }>;
+    result: {
+      aiUsage?: {
+        apiCalls: number;
+        avgCostPerCall: number;
+        cacheHits: number;
+        totalCostUsd: number;
+        totalInputTokens: number;
+        totalOutputTokens: number;
+      };
+      failed: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      matched: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      skipped: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      uncertain: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      warnings?: Array<{
+        affectedCount?: number;
+        details?: string;
+        message: string;
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
+      }>;
+    };
+  };
+  path?: never;
+  query?: never;
+  url: '/imports/reevaluate-pending-rows';
+};
+
+export type ImportsReevaluateRowsWithPendingRulesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportsReevaluateRowsWithPendingRulesError =
+  ImportsReevaluateRowsWithPendingRulesErrors[keyof ImportsReevaluateRowsWithPendingRulesErrors];
+
+export type ImportsReevaluateRowsWithPendingRulesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    affectedCount: number;
+    result: {
+      aiUsage?: {
+        apiCalls: number;
+        avgCostPerCall: number;
+        cacheHits: number;
+        totalCostUsd: number;
+        totalInputTokens: number;
+        totalOutputTokens: number;
+      };
+      failed: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      matched: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      skipped: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      uncertain: Array<{
+        accountId?: string;
+        amount: number;
+        balanceCents?: number;
+        balanceMarker?: 'CR' | 'DR';
+        checksum: string;
+        country?: string;
+        date: string;
+        description: string;
+        dialectAccountLabel: string;
+        entity: {
+          confidence?: number;
+          entityId?: string;
+          entityName?: string;
+          matchType:
+            | 'alias'
+            | 'exact'
+            | 'prefix'
+            | 'contains'
+            | 'ai'
+            | 'learned'
+            | 'manual'
+            | 'none';
+        };
+        error?: string;
+        foreignAmountMinor?: number;
+        foreignCurrency?: string;
+        fxCaptureSource?: 'amex-columns' | 'anz-descriptor' | 'up-api' | 'unavailable';
+        fxFeeCents?: number;
+        location?: string;
+        matchedRules?: Array<{
+          confidence: number | null;
+          entityId?: string | null;
+          entityName?: string | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          priority: number;
+          ruleId: string;
+        }>;
+        pending?: boolean;
+        rawRow: string;
+        ruleProvenance?: {
+          confidence: number | null;
+          matchType: 'exact' | 'contains' | 'regex';
+          pattern: string;
+          ruleId: string;
+          source: 'correction';
+        };
+        skipReason?: string;
+        status: 'matched' | 'uncertain' | 'failed' | 'skipped';
+        suggestedTags?: Array<{
+          isNew?: boolean;
+          pattern?: string;
+          source: 'ai' | 'rule' | 'entity';
+          tag: string;
+        }>;
+        transactionType?:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      }>;
+      warnings?: Array<{
+        affectedCount?: number;
+        details?: string;
+        message: string;
+        type: 'AI_CATEGORIZATION_UNAVAILABLE' | 'AI_API_ERROR' | 'CHECKPOINT_MISMATCH';
+      }>;
+    };
+  };
+};
+
+export type ImportsReevaluateRowsWithPendingRulesResponse =
+  ImportsReevaluateRowsWithPendingRulesResponses[keyof ImportsReevaluateRowsWithPendingRulesResponses];
+
 export type SearchSearchData = {
   /**
    * Body

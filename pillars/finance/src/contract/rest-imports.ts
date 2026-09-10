@@ -25,6 +25,7 @@ import {
   CreateEntityInputSchema,
   CreateEntityOutputSchema,
   ProcessImportInputSchema,
+  ReevaluateRowsWithPendingRulesInputSchema,
   ReevaluateWithPendingRulesInputSchema,
 } from './rest-imports-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_412 } from './rest-schemas.js';
@@ -77,5 +78,13 @@ export const financeImportsContract = c.router({
     body: ReevaluateWithPendingRulesInputSchema,
     responses: { 200: ApplyChangeSetAndReevaluateOutputSchema, ...ERR_RESPONSES_WITH_412 },
     summary: 'Re-evaluate the import session against merged (DB + pending) rules; no DB writes',
+  },
+  reevaluateRowsWithPendingRules: {
+    method: 'POST',
+    path: '/imports/reevaluate-pending-rows',
+    body: ReevaluateRowsWithPendingRulesInputSchema,
+    responses: { 200: ApplyChangeSetAndReevaluateOutputSchema, ...ERR_RESPONSES },
+    summary:
+      'Re-evaluate caller-supplied rows (a live draft, which has no process session) against merged (DB + pending) rules; no DB writes',
   },
 });

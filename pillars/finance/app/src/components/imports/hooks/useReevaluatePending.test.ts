@@ -1,13 +1,15 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { reevaluateMock, processMock, progressMock } = vi.hoisted(() => ({
+const { reevaluateMock, rowsReevaluateMock, processMock, progressMock } = vi.hoisted(() => ({
   reevaluateMock: vi.fn(),
+  rowsReevaluateMock: vi.fn(),
   processMock: vi.fn(),
   progressMock: vi.fn(),
 }));
 vi.mock('../../../finance-api/index.js', () => ({
   importsReevaluateWithPendingRules: (...args: unknown[]) => reevaluateMock(...args),
+  importsReevaluateRowsWithPendingRules: (...args: unknown[]) => rowsReevaluateMock(...args),
   importsProcessImport: (...args: unknown[]) => processMock(...args),
   importsGetImportProgress: (...args: unknown[]) => progressMock(...args),
 }));
@@ -127,6 +129,45 @@ describe('useReevaluatePending', () => {
         pendingChangeSets: restPendingChangeSets,
       },
     });
+  });
+
+  it("sends a live draft's own rows with its pending change sets, and never a session", async () => {
+    useImportStore.getState().setDraftSource({ kind: 'live', provider: 'up' }, null);
+    useImportStore.getState().setProcessedTransactions({
+      matched: [],
+      uncertain: [{ ...makeParsed('live-1'), entity: { matchType: 'none' }, status: 'uncertain' }],
+      failed: [],
+      skipped: [],
+    });
+    useImportStore
+      .getState()
+      .addPendingChangeSet({ changeSet: pendingChangeSet, source: 'correction-proposal' });
+    rowsReevaluateMock.mockResolvedValue(reevaluateSuccess(1));
+
+    const { result } = renderHook(() => useReevaluatePending());
+    const outcome = await result.current.runReevaluate();
+
+    expect(outcome?.affectedCount).toBe(1);
+    expect(rowsReevaluateMock).toHaveBeenCalledExactlyOnceWith({
+      body: {
+        result: useImportStore.getState().processedTransactions,
+        pendingChangeSets: restPendingChangeSets,
+      },
+    });
+    expect(reevaluateMock).not.toHaveBeenCalled();
+  });
+
+  it('never recovers a session for a live draft: a 404 is one error toast and null', async () => {
+    useImportStore.getState().setDraftSource({ kind: 'live', provider: 'up' }, null);
+    rowsReevaluateMock.mockResolvedValue(deadResponse(404));
+
+    const { result } = renderHook(() => useReevaluatePending());
+
+    expect(await result.current.runReevaluate()).toBeNull();
+    expect(rowsReevaluateMock).toHaveBeenCalledTimes(1);
+    expect(processMock).not.toHaveBeenCalled();
+    expect(toastMock.info).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalledExactlyOnceWith(ERROR_TOAST);
   });
 
   it.each([404, 412])(
