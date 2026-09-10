@@ -30,7 +30,7 @@
     "test:coverage": "vitest run --coverage",
     "test:live-seam": "vitest run --config vitest.live-seam.config.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
     "@pops/pillar-sdk": "workspace:*",

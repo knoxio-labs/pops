@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
     "generate:media-client": "openapi-ts && oxfmt --write src/media-api"
   },
   "dependencies": {

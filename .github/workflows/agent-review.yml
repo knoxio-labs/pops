@@ -110,6 +110,7 @@ jobs:
           node scripts/ci/check-tests-typechecked.mjs --self-test
           node scripts/ci/check-mise-setup-single-source.mjs --self-test
           node scripts/ci/check-writable-path-defaults.mjs --self-test
+          node scripts/ci/check-cold-graph-typecheck.mjs --self-test
           # Not a guard over the source tree like the ten above — it is the
           # gate that decides whether the merge queue's macOS compile happens.
           # It self-tests in its own job too, immediately before it answers;
@@ -142,3 +143,5 @@ jobs:
         run: node scripts/ci/check-mise-setup-single-source.mjs
       - name: Writable-path default guard (POPS-2737 — every env-backed relative path default is created, chowned and ENV'd by its own image)
         run: node scripts/ci/check-writable-path-defaults.mjs
+      - name: Cold-graph typecheck guard (POPS-3080 — a unit whose own typecheck needs the compiled graph must refuse legibly without it)
+        run: node scripts/ci/check-cold-graph-typecheck.mjs

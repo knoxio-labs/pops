@@ -41,7 +41,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
     "verify:manifest": "tsx scripts/verify-manifest.ts"
   },
   "dependencies": {
