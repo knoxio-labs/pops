@@ -843,7 +843,7 @@
               }
             }
           },
-          "description": "Raw image bytes",
+          "description": "Raw image bytes; the format is read from them, not from the Content-Type header",
           "required": true
         },
         "responses": {
@@ -865,7 +865,7 @@
                 }
               }
             },
-            "description": "Disallowed content type or oversized upload"
+            "description": "Not a supported image, or oversized"
           },
           "404": {
             "content": {
@@ -1032,7 +1032,7 @@
               }
             }
           },
-          "description": "Raw image bytes",
+          "description": "Raw image bytes; the format is read from them, not from the Content-Type header",
           "required": true
         },
         "responses": {
@@ -1054,7 +1054,7 @@
                 }
               }
             },
-            "description": "Disallowed content type or oversized upload"
+            "description": "Not a supported image, or oversized"
           },
           "404": {
             "content": {

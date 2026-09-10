@@ -76,6 +76,22 @@ fn delete(path: &str) -> Request<Body> {
         .unwrap()
 }
 
+/// A real PNG signature followed by `tail`. The bytes are what decides the
+/// stored content type now, so a fixture that only half-spells a signature is
+/// a fixture the server correctly refuses (POPS-3244).
+fn png(tail: &[u8]) -> Vec<u8> {
+    let mut bytes = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    bytes.extend_from_slice(tail);
+    bytes
+}
+
+/// A real JPEG SOI + APP0 prefix followed by `tail`.
+fn jpeg(tail: &[u8]) -> Vec<u8> {
+    let mut bytes = vec![0xFF, 0xD8, 0xFF, 0xE0];
+    bytes.extend_from_slice(tail);
+    bytes
+}
+
 fn put_bytes(path: &str, content_type: &str, bytes: Vec<u8>) -> Request<Body> {
     Request::builder()
         .method("PUT")
@@ -575,7 +591,7 @@ async fn avatar_upload_then_serve_round_trips_the_bytes() {
     let created = create_contact(&app, json!({ "name": "Avatarable" })).await;
     let id = created["id"].as_str().unwrap();
 
-    let png_bytes = vec![0x89, b'P', b'N', b'G', 1, 2, 3, 4];
+    let png_bytes = png(&[1, 2, 3, 4]);
     let (status, body) = send(
         &app,
         put_bytes(
@@ -607,7 +623,7 @@ async fn poster_upload_then_serve_round_trips_the_bytes() {
     let created = create_contact(&app, json!({ "name": "Posterable" })).await;
     let id = created["id"].as_str().unwrap();
 
-    let jpeg_bytes = vec![0xFF, 0xD8, 0xFF, 9, 9, 9];
+    let jpeg_bytes = jpeg(&[9, 9, 9]);
     let (status, _) = send(
         &app,
         put_bytes(
@@ -634,8 +650,10 @@ async fn serving_an_unset_avatar_is_a_404() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+/// An SVG is a script delivery vehicle, and the header check let one through
+/// whenever the client called it a PNG. The bytes never will (POPS-3244).
 #[tokio::test]
-async fn avatar_upload_rejects_a_disallowed_content_type() {
+async fn avatar_upload_rejects_bytes_that_are_not_an_image() {
     let app = app().await;
     let created = create_contact(&app, json!({ "name": "SvgAttempt" })).await;
     let id = created["id"].as_str().unwrap();
@@ -644,13 +662,14 @@ async fn avatar_upload_rejects_a_disallowed_content_type() {
         &app,
         put_bytes(
             &format!("/entities/{id}/avatar"),
-            "image/svg+xml",
+            // The header a client would have used to get past the old check.
+            "image/png",
             b"<svg onload=alert(1)></svg>".to_vec(),
         ),
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
-    assert!(body["message"].as_str().unwrap().contains("image/svg+xml"));
+    assert!(body["message"].as_str().unwrap().contains("image/png"));
 
     let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
     assert_eq!(
@@ -666,7 +685,7 @@ async fn avatar_upload_rejects_an_oversized_payload() {
     let created = create_contact(&app, json!({ "name": "TooBig" })).await;
     let id = created["id"].as_str().unwrap();
 
-    let oversized = vec![0u8; 2 * 1024 * 1024 + 1];
+    let oversized = png(&vec![0u8; 2 * 1024 * 1024 + 1]);
     let (status, body) = send(
         &app,
         put_bytes(&format!("/entities/{id}/avatar"), "image/png", oversized),
@@ -691,7 +710,7 @@ async fn replacing_an_avatar_deletes_the_old_blob() {
         put_bytes(
             &format!("/entities/{id}/avatar"),
             "image/png",
-            vec![1, 2, 3],
+            png(&[1, 2, 3]),
         ),
     )
     .await;
@@ -703,7 +722,7 @@ async fn replacing_an_avatar_deletes_the_old_blob() {
         put_bytes(
             &format!("/entities/{id}/avatar"),
             "image/png",
-            vec![4, 5, 6],
+            png(&[4, 5, 6]),
         ),
     )
     .await;
@@ -717,7 +736,7 @@ async fn replacing_an_avatar_deletes_the_old_blob() {
     let (status, headers, served) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(headers.get("content-type").unwrap(), "image/png");
-    assert_eq!(served.as_ref(), &[4, 5, 6]);
+    assert_eq!(served.as_ref(), png(&[4, 5, 6]).as_slice());
 
     assert!(
         contacts::blobs::repo::get(&pool, &first_asset_id)
@@ -739,7 +758,7 @@ async fn removing_an_avatar_clears_it_and_deletes_the_old_blob() {
         put_bytes(
             &format!("/entities/{id}/avatar"),
             "image/png",
-            vec![1, 2, 3],
+            png(&[1, 2, 3]),
         ),
     )
     .await;
@@ -799,7 +818,7 @@ async fn patch_ignoring_avatar_asset_id_leaves_it_untouched() {
         put_bytes(
             &format!("/entities/{id}/avatar"),
             "image/png",
-            vec![7, 8, 9],
+            png(&[7, 8, 9]),
         ),
     )
     .await;

@@ -10,7 +10,7 @@
 use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, Path, Query, State};
 use axum::http::header::CONTENT_TYPE;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -31,6 +31,7 @@ use crate::time::now_rfc3339;
 /// excluded (unlike the ticket's illustrative list): an SVG can carry
 /// `<script>`/`onload=`/`foreignObject` payloads that execute in the
 /// viewer's origin, and this monorepo has no SVG sanitiser dependency.
+/// The image formats an asset may be. Decided by the bytes, not by a header.
 const ASSET_ALLOWED_CONTENT_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 
 // A marker type rather than a bare `Vec<u8>`, which utoipa maps to
@@ -347,20 +348,19 @@ pub async fn reroll_colour(
     path = "/entities/{id}/avatar",
     operation_id = "entities.upload_avatar",
     params(("id" = String, Path, description = "Entity id")),
-    request_body(content = inline(ImageBytes), description = "Raw image bytes", content_type = "application/octet-stream"),
+    request_body(content = inline(ImageBytes), description = "Raw image bytes; the format is read from them, not from the Content-Type header", content_type = "application/octet-stream"),
     responses(
         (status = 200, description = "Updated entity", body = EntityMutation),
-        (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
+        (status = 400, description = "Not a supported image, or oversized", body = crate::api::ErrorBody),
         (status = 404, description = "No such entity", body = crate::api::ErrorBody)
     )
 )]
 pub async fn upload_avatar(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<EntityMutation>, ApiError> {
-    upload_asset(state, id, AssetField::Avatar, headers, body).await
+    upload_asset(state, id, AssetField::Avatar, body).await
 }
 
 /// `PUT /entities/{id}/poster` — upload/replace the entity's poster image.
@@ -369,20 +369,19 @@ pub async fn upload_avatar(
     path = "/entities/{id}/poster",
     operation_id = "entities.upload_poster",
     params(("id" = String, Path, description = "Entity id")),
-    request_body(content = inline(ImageBytes), description = "Raw image bytes", content_type = "application/octet-stream"),
+    request_body(content = inline(ImageBytes), description = "Raw image bytes; the format is read from them, not from the Content-Type header", content_type = "application/octet-stream"),
     responses(
         (status = 200, description = "Updated entity", body = EntityMutation),
-        (status = 400, description = "Disallowed content type or oversized upload", body = crate::api::ErrorBody),
+        (status = 400, description = "Not a supported image, or oversized", body = crate::api::ErrorBody),
         (status = 404, description = "No such entity", body = crate::api::ErrorBody)
     )
 )]
 pub async fn upload_poster(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<EntityMutation>, ApiError> {
-    upload_asset(state, id, AssetField::Poster, headers, body).await
+    upload_asset(state, id, AssetField::Poster, body).await
 }
 
 /// Shared upload path for both asset fields: validate, insert the new blob,
@@ -392,15 +391,12 @@ async fn upload_asset(
     state: AppState,
     id: String,
     field: AssetField,
-    headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<EntityMutation>, ApiError> {
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or_default();
-    assert_allowed_content_type(content_type)?;
     assert_within_size_cap(body.len())?;
+    // The size cap first: it is the cheaper refusal, and it is what makes the
+    // sniff below safe to index into.
+    let content_type = resolve_content_type(&body)?;
 
     let before = repo::get(&state.pool, &id)
         .await
@@ -545,15 +541,45 @@ async fn serve_asset(state: AppState, id: String, field: AssetField) -> Result<R
     Ok(([(CONTENT_TYPE, blob.content_type)], blob.data).into_response())
 }
 
-fn assert_allowed_content_type(content_type: &str) -> Result<(), ApiError> {
-    if ASSET_ALLOWED_CONTENT_TYPES.contains(&content_type) {
-        Ok(())
-    } else {
-        Err(ApiError::bad_request(format!(
-            "Unsupported content type '{content_type}'. Allowed: {}",
-            ASSET_ALLOWED_CONTENT_TYPES.join(", ")
-        )))
+/// The image format these bytes actually are, by signature.
+///
+/// A file's first bytes are the one description of it that the sender cannot
+/// get wrong. The `Content-Type` header was what decided this before, and it
+/// was wrong in both directions: the OpenAPI document declared
+/// `application/octet-stream` for the request, which the header check rejected
+/// outright — so the obvious, fully type-checked
+/// `entitiesUploadAvatar({ path, body: file })` always 400'd, and only a
+/// caller who knew to override the generated default got through (POPS-3244).
+/// And the header was stored as the blob's own content type, so a client that
+/// mislabelled a file had that label served back to every reader of it.
+///
+/// Signatures rather than a crate: three formats, each discriminated by its
+/// first bytes, is not a dependency's worth of problem.
+fn sniff_content_type(bytes: &[u8]) -> Option<&'static str> {
+    const PNG: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    if bytes.starts_with(&PNG) {
+        return Some("image/png");
     }
+    // Every JPEG starts SOI + the first marker. The fourth byte varies by
+    // encoder (JFIF, Exif, raw), so three is the whole discriminating prefix.
+    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return Some("image/jpeg");
+    }
+    // RIFF container, with the form type four bytes after the length.
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    None
+}
+
+/// The content type to store, or a 400 naming what would have been accepted.
+fn resolve_content_type(bytes: &[u8]) -> Result<&'static str, ApiError> {
+    sniff_content_type(bytes).ok_or_else(|| {
+        ApiError::bad_request(format!(
+            "Upload is not a supported image. Allowed: {}",
+            ASSET_ALLOWED_CONTENT_TYPES.join(", ")
+        ))
+    })
 }
 
 fn assert_within_size_cap(byte_length: usize) -> Result<(), ApiError> {
@@ -652,11 +678,37 @@ mod tests {
         assert!(validate_type("person").is_ok());
     }
 
+    /// A real signature per format, and the shapes that must not pass.
+    #[test]
+    fn sniffs_each_allowed_format_and_nothing_else() {
+        assert_eq!(
+            sniff_content_type(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2]),
+            Some("image/png")
+        );
+        assert_eq!(
+            sniff_content_type(&[0xFF, 0xD8, 0xFF, 0xE0, 9]),
+            Some("image/jpeg")
+        );
+        assert_eq!(
+            sniff_content_type(b"RIFF\x24\x00\x00\x00WEBPVP8 "),
+            Some("image/webp")
+        );
+
+        // An SVG names itself an image and is a script delivery vehicle. The
+        // header check let it through whenever the client said `image/png`;
+        // the bytes never will.
+        assert_eq!(sniff_content_type(b"<svg onload=alert(1)></svg>"), None);
+        // A truncated signature is not a signature.
+        assert_eq!(sniff_content_type(&[0x89, b'P', b'N', b'G']), None);
+        assert_eq!(sniff_content_type(b"RIFF\x24\x00\x00\x00WAVE"), None);
+        assert_eq!(sniff_content_type(&[]), None);
+    }
+
     #[test]
     fn rejects_disallowed_and_oversized_uploads() {
-        assert!(assert_allowed_content_type("image/png").is_ok());
-        assert!(assert_allowed_content_type("image/svg+xml").is_err());
-        assert!(assert_allowed_content_type("").is_err());
+        assert!(resolve_content_type(&[0xFF, 0xD8, 0xFF]).is_ok());
+        assert!(resolve_content_type(b"<svg/>").is_err());
+        assert!(resolve_content_type(&[]).is_err());
 
         assert!(assert_within_size_cap(1).is_ok());
         assert!(assert_within_size_cap(0).is_err());
