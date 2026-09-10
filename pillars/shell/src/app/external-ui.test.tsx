@@ -36,6 +36,7 @@ import {
 import { hasRoutes } from './installed-modules';
 import { buildRegisteredAppsFromBundleMap } from './nav/registry';
 
+import type { ReactElement } from 'react';
 import type { RouteObject } from 'react-router';
 
 import type { BundleEntry } from './bundle-map';
@@ -327,5 +328,121 @@ describe('a remote bundle whose components are themselves lazy', () => {
     mountSynthesizedRoutes(routesOf(entry), '/acme');
 
     await waitFor(() => expect(screen.getByTestId('remote-home')).toBeInTheDocument());
+  });
+});
+
+/**
+ * Nested pages (POPS-3256).
+ *
+ * `food` and `inventory` nest their routes: a layout whose element renders
+ * tab chrome around an `<Outlet/>`, with the tabs beneath it. A flat wire
+ * could only carry that by flattening it, which would remount the layout on
+ * every tab switch. These assert the tree survives the wire, and — the half
+ * that matters more — that the loader's failure containment is per node, so
+ * one unresolvable tab does not take the layout or its siblings with it.
+ */
+describe('external pillar UI — nested pages', () => {
+  function Layout() {
+    return (
+      <div>
+        <span data-testid="layout-chrome">tabs</span>
+        <Outlet />
+      </div>
+    );
+  }
+  const TabA = () => <div data-testid="tab-a">tab a</div>;
+  const TabB = () => <div data-testid="tab-b">tab b</div>;
+
+  const NESTED_DESCRIPTOR: RemoteUiDescriptor = {
+    pillarId: 'acme',
+    assetsBaseUrl: 'https://cdn.example.com/acme/index.js',
+    nav: {
+      id: 'acme',
+      label: 'Acme',
+      labelKey: 'acme',
+      icon: 'compass',
+      basePath: '/acme',
+      order: 1,
+      items: [{ path: '', label: 'Home', labelKey: 'acme.home', icon: 'compass' }],
+    },
+    pages: [
+      {
+        path: 'data',
+        bundleSlot: 'layout',
+        children: [
+          { path: '', index: true, bundleSlot: 'tab-a' },
+          { path: 'b', bundleSlot: 'tab-b' },
+        ],
+      },
+    ],
+  };
+
+  /** Render synthesized routes, following `children`, at one URL. */
+  function mountNested(routes: readonly RouteObject[], at: string): void {
+    // Index and layout routes are rendered as separate shapes, because
+    // `RouteProps` is the same union `RouteObject` is: an index route takes
+    // no children, and passing both is a type error rather than a runtime one.
+    const toElement = (list: readonly RouteObject[]): ReactElement[] =>
+      list.map((route, i) =>
+        route.index === true ? (
+          <Route key={`__index__${i}`} index element={route.element} />
+        ) : (
+          <Route key={route.path ?? String(i)} path={route.path} element={route.element}>
+            {route.children === undefined ? null : toElement(route.children)}
+          </Route>
+        )
+      );
+    render(
+      <MemoryRouter initialEntries={[at]}>
+        <Routes>
+          <Route path="acme" element={<Outlet />}>
+            {toElement(routes)}
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  function routesOf(bundles: Record<string, unknown>): readonly RouteObject[] {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve({ bundles }));
+    const entry = synthesizeExternalBundleEntry(NESTED_DESCRIPTOR, importer);
+    if (entry === null) throw new Error('descriptor did not synthesize');
+    if (!hasRoutes(entry.manifest)) throw new Error('synthesized entry is missing frontend.routes');
+    return entry.manifest.frontend.routes;
+  }
+
+  it('mounts the layout with its index child beneath it', async () => {
+    mountNested(routesOf({ layout: Layout, 'tab-a': TabA, 'tab-b': TabB }), '/acme/data');
+
+    expect(await screen.findByTestId('layout-chrome')).toBeInTheDocument();
+    expect(await screen.findByTestId('tab-a')).toBeInTheDocument();
+    expect(screen.queryByTestId('tab-b')).not.toBeInTheDocument();
+  });
+
+  it('mounts a named child under the same layout', async () => {
+    mountNested(routesOf({ layout: Layout, 'tab-a': TabA, 'tab-b': TabB }), '/acme/data/b');
+
+    expect(await screen.findByTestId('layout-chrome')).toBeInTheDocument();
+    expect(await screen.findByTestId('tab-b')).toBeInTheDocument();
+  });
+
+  /**
+   * The containment claim. A bundle missing one tab's slot must lose that tab
+   * and nothing else — if the boundary were per pillar rather than per node,
+   * the layout would go too and the reader would lose every sibling tab along
+   * with the broken one.
+   */
+  it('degrades only the child whose slot is missing, keeping the layout', async () => {
+    mountNested(routesOf({ layout: Layout, 'tab-a': TabA }), '/acme/data/b');
+
+    expect(await screen.findByTestId('external-pillar-load-error')).toBeInTheDocument();
+    expect(screen.getByTestId('layout-chrome')).toBeInTheDocument();
+  });
+
+  it('keeps the siblings of a broken child mountable', async () => {
+    mountNested(routesOf({ layout: Layout, 'tab-a': TabA }), '/acme/data');
+
+    expect(await screen.findByTestId('tab-a')).toBeInTheDocument();
+    expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
   });
 });

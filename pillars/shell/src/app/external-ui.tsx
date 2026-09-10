@@ -163,6 +163,13 @@ const RemoteSuspenseFallback = (
  * unvisited external pillar costs nothing); a rejected import is contained
  * by the `<ErrorBoundary>` and never propagates to the shell's router error
  * element.
+ *
+ * Recurses into `children`, so a pillar whose route table nests — a layout
+ * rendering tab chrome around an `<Outlet/>`, with its tabs beneath it —
+ * mounts as that tree rather than as a flattened list (POPS-3256). The
+ * boundary is built per node, not per pillar: a child whose slot the bundle
+ * does not carry degrades to the placeholder inside the layout, leaving its
+ * siblings and the layout itself mounted.
  */
 function remotePageElement(
   descriptor: RemoteUiDescriptor,
@@ -170,17 +177,24 @@ function remotePageElement(
   importer: RemoteModuleImporter
 ): RouteObject {
   const LazyComponent = lazy(() => loadRemoteComponent(descriptor, page.bundleSlot, importer));
-  return {
-    path: page.index === true ? undefined : page.path,
-    index: page.index === true ? true : undefined,
-    element: (
-      <ErrorBoundary fallback={() => RemoteLoadFallback}>
-        <Suspense fallback={RemoteSuspenseFallback}>
-          <LazyComponent />
-        </Suspense>
-      </ErrorBoundary>
-    ),
-  };
+  const element = (
+    <ErrorBoundary fallback={() => RemoteLoadFallback}>
+      <Suspense fallback={RemoteSuspenseFallback}>
+        <LazyComponent />
+      </Suspense>
+    </ErrorBoundary>
+  );
+
+  // `RouteObject` is a union whose index arm has no `children`, so the two
+  // shapes are built separately rather than assembled and cast. The schema
+  // refuses `index` with children for the same reason from the other side.
+  if (page.index === true) return { index: true, element };
+
+  const children = page.children?.map((child) => remotePageElement(descriptor, child, importer));
+  if (children !== undefined && children.length > 0) {
+    return { path: page.path, element, children };
+  }
+  return { path: page.path, element };
 }
 
 const FALLBACK_NAV_ICON: IconName = 'Compass';
