@@ -742,6 +742,41 @@ describe('two findings that hash alike', () => {
     expect(reworded[0]?.id).toBe(first[0]?.id);
   });
 
+  it('keeps all three when two members of a group share a title as well', () => {
+    // The escape hatch: file, snippet and title are every fact this module
+    // records, so two findings alike in all three cannot be told apart by a
+    // content hash. Numbering them is worse than qualifying by title and far
+    // better than the third row silently overwriting the second — which is
+    // the same defect as POPS-2545, one group size along.
+    const merged = merge(
+      [],
+      [snippetless('aaa distinct'), snippetless('zzz same'), snippetless('zzz same')]
+    );
+
+    expect(merged).toHaveLength(3);
+    expect(new Set(merged.map((f) => f.id)).size).toBe(3);
+  });
+
+  it('leaves the base id with the finding already tracked there, not the first title', () => {
+    // The row at the base id carries `first_seen` and a status history. A new
+    // colliding finding whose title happens to sort earlier must not inherit
+    // it — the tracked finding would be pushed into a fresh row and lose its
+    // age, which is the opposite of what the id scheme promises.
+    const tracked = merge([], [snippetless('zzz tracked finding')]);
+    expect(tracked[0]?.id).toBe(snippetless('zzz tracked finding').id);
+
+    const next = merge(tracked, [
+      snippetless('aaa newly reported'),
+      snippetless('zzz tracked finding'),
+    ]);
+
+    expect(next).toHaveLength(2);
+    const stillTracked = next.find((f) => f.title === 'zzz tracked finding');
+    expect(stillTracked?.id).toBe(tracked[0]?.id);
+    expect(stillTracked?.first_seen).toBe(tracked[0]?.first_seen);
+    expect(next.find((f) => f.title === 'aaa newly reported')?.id).not.toBe(tracked[0]?.id);
+  });
+
   it('does the same for two findings sharing one snippet', () => {
     const a = findingFromModel(
       { file: FILE, title: 'unused', snippet: 'const x = 1;' },
