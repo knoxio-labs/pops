@@ -1,4 +1,3 @@
-import { INVENTORY_PAGES } from '../contract/pages.js';
 /**
  * Inventory pillar manifest payload builder.
  *
@@ -11,6 +10,7 @@ import { INVENTORY_PAGES } from '../contract/pages.js';
  * `pillars/inventory/app/src/routes.tsx` verbatim (icons translated to
  * the kebab-case wire form required by `NavConfigDescriptorSchema`).
  */
+import { INVENTORY_PAGES } from '../contract/pages.js';
 import { inventoryManifest } from '../contract/settings/index.js';
 
 import type { CapabilityReporter } from '@pops/pillar-sdk/bootstrap';

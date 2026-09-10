@@ -49,6 +49,7 @@ function makeContext(): ProcessContext {
     entityLookup: new Map(),
     aliases: new Map(),
     knownTags: [],
+    tagDescriptions: new Map<string, string>(),
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
     correctionRules: [],

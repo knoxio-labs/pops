@@ -9,6 +9,17 @@ export const tagVocabulary = sqliteTable(
     tag: text('tag').primaryKey(),
     /** The `facet:value` prefix, or null for an unprefixed legacy tag. */
     facet: text('facet'),
+    /**
+     * What the value means, in one line, or null when the value speaks for
+     * itself (POPS-3285).
+     *
+     * Nullable by design. A `trip:cairns-2026` needs no gloss and forcing one
+     * would produce filler; an `occasion:` value needs one, because without it
+     * the categorizer is choosing between five bare words. The prompt renders
+     * a description when the row has one and the value alone when it does not,
+     * so the column costs nothing where it is empty.
+     */
+    description: text('description'),
     /** Who may mint a value on this facet — see `src/db/tag-facets.ts`. */
     kind: text('kind', { enum: ['closed', 'open', 'marker'] })
       .notNull()

@@ -25,6 +25,38 @@ function baseFilters(overrides: Partial<SolveFilterState> = {}): SolveFilterStat
   };
 }
 
+describe('SolveFilters tags', () => {
+  it('commits a comma-typed tag without blurring the field', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<SolveFilters filters={baseFilters()} onChange={onChange} />);
+
+    const field = screen.getByLabelText(/tags/i);
+    await user.click(field);
+    await user.keyboard('spicy,');
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ tags: ['spicy'] }));
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('takes an externally reset value without replacing the field', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SolveFilters filters={baseFilters({ tags: ['spicy'] })} onChange={onChange} />
+    );
+
+    const field = screen.getByLabelText(/tags/i);
+    await user.click(field);
+    expect(document.activeElement).toBe(field);
+
+    rerender(<SolveFilters filters={baseFilters({ tags: [] })} onChange={onChange} />);
+
+    expect(screen.getByLabelText(/tags/i)).toBe(field);
+    expect(document.activeElement).toBe(field);
+  });
+});
+
 describe('SolveFilters max-time select', () => {
   it('renders the "Any" choice as an enabled, selectable option', () => {
     render(<SolveFilters filters={baseFilters()} onChange={vi.fn()} />);

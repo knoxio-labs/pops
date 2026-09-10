@@ -4,9 +4,8 @@
  * CP025/#3656) — the PII-safe transaction-data renderer (CF008) and the
  * entityName/tags/confidence rule blocks neither prompt shape varies.
  */
-import { CLASSIFIED_TAG_FACETS, parseTagFacet } from '../../../db/tag-facets.js';
+import { sanitizePromptField } from '../vocabulary-prompt.js';
 
-import type { ClassifiedTagFacet } from '../../../db/tag-facets.js';
 import type { CategorizerInput } from './ai-categorizer-types.js';
 
 /**
@@ -14,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v2.0';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.0';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.0';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -25,21 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v2.0';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v1.0';
-
-const PROMPT_FIELD_MAX_CHARS = 200;
-
-/**
- * Normalize an allowlisted string before it crosses into the prompt: collapse
- * every whitespace run (including newlines) to a single space, trim, and cap
- * length. Without this a description carrying newlines could inject extra prompt
- * lines (e.g. a forged `Known tags:` directive) and an unbounded one would bloat
- * token usage/cost. The fields are still allowlisted upstream — this only
- * hardens their rendering.
- */
-function sanitizePromptField(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().slice(0, PROMPT_FIELD_MAX_CHARS);
-}
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.0';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
@@ -80,102 +65,13 @@ export const ENTITY_NAME_RULES = `entityName rules:
 
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.
+- Where a value is followed by a description, that description is its definition. Classify against it, not against what the word suggests on its own.
+- The fields ask three different questions and a transaction often answers only some of them: occasion is the social setting the money was spent in, venue is what kind of place it was spent at, and contains is what was actually bought. Do not restate one field's answer in another.
 - A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
-- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at.`;
+- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at. Omitting is a correct answer rather than a failure: routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
 
 export const CONFIDENCE_RULES = `confidence rules:
 - Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
-
-/**
- * Thrown when the closed vocabulary is empty, which no prompt can be built
- * from. The categorizer's callers already degrade an `AiCategorizationError`
- * row to *uncertain*, so this surfaces loudly without failing the import.
- */
-export class EmptyClosedVocabularyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'EmptyClosedVocabularyError';
-  }
-}
-
-/** One classified facet's values, in the order they were loaded (most-used first). */
-export interface ClosedFacetOptions {
-  facet: ClassifiedTagFacet;
-  single: boolean;
-  values: string[];
-}
-
-/**
- * Bucket the offered vocabulary into its facets, preserving the caller's order
- * within each — `loadKnownTags` ranks by usage, so the values that carry the
- * corpus lead each list.
- *
- * A facet with no values is dropped rather than rendered empty: a field whose
- * only legal answer is null is noise in the prompt. A tag outside the
- * classified facets is ignored here; it should not have reached the prompt path at all,
- * and dropping it silently is safer than showing the model a value it must not
- * emit.
- *
- * Throws {@link EmptyClosedVocabularyError} when nothing at all survives. The
- * migrations seed the closed vocabulary, so an empty one is a broken database,
- * not a cold start — the previous behaviour here was to substitute a
- * hand-written flat list (`Groceries, Transport, Dining, …`), which quietly
- * reintroduced the pre-migration taxonomy, including values that never existed
- * in `tag_vocabulary`.
- */
-export function closedFacetOptions(knownTags: string[]): ClosedFacetOptions[] {
-  const byFacet = new Map<string, string[]>();
-  for (const tag of knownTags) {
-    const { facet, value } = parseTagFacet(tag);
-    if (facet === null) continue;
-    const bucket = byFacet.get(facet);
-    if (bucket) bucket.push(value);
-    else byFacet.set(facet, [value]);
-  }
-
-  const options = CLASSIFIED_TAG_FACETS.map(({ facet, single }) => ({
-    facet,
-    single,
-    values: byFacet.get(facet) ?? [],
-  })).filter((option) => option.values.length > 0);
-
-  if (options.length === 0) {
-    throw new EmptyClosedVocabularyError(
-      'Closed tag vocabulary is empty — tag_vocabulary holds no active value on a classified facet. ' +
-        'A database built from migrations carries them; this one did not.'
-    );
-  }
-  return options;
-}
-
-/**
- * Render the closed vocabulary as one prompt field per facet.
- *
- * This is the shape the whole ticket turns on: the model is given a set of
- * classification fields with enumerated answers, not an open tag list to
- * generate into. `exactly one of` / `any of` states the cardinality inline as
- * well as in the JSON shape, because the two together are what make a second
- * `occasion` read as a violated instruction rather than an oversight.
- */
-export function closedFacetFields(options: ClosedFacetOptions[]): string {
-  return options
-    .map(
-      ({ facet, single, values }) =>
-        `- ${facet}: ${single ? 'exactly one of' : 'any of'} [${values.join(', ')}]`
-    )
-    .join('\n');
-}
-
-/**
- * The JSON value shape for one facet field — a bare string for a single-valued
- * facet, an array for a multi-valued one, so the reply's own structure carries
- * the cardinality rather than relying on the model to count.
- */
-export function closedFacetReplyShape(options: ClosedFacetOptions[]): string {
-  return options
-    .map(({ facet, single }) => `"${facet}": ${single ? '"..." | null' : '["..."]'}`)
-    .join(', ');
-}
 
 export function knownEntitiesSection(knownEntityNames: string[], reuseInstruction: string): string {
   return knownEntityNames.length > 0

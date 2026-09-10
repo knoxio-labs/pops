@@ -67,7 +67,8 @@ CREATE TABLE tag_vocabulary (
   source text DEFAULT 'seed' NOT NULL,
   is_active integer DEFAULT 1 NOT NULL,
   usage_count integer DEFAULT 0 NOT NULL,
-  created_at text DEFAULT (datetime('now')) NOT NULL
+  created_at text DEFAULT (datetime('now')) NOT NULL,
+  description text
 );
 CREATE INDEX idx_tag_vocabulary_active ON tag_vocabulary (is_active);
 CREATE INDEX idx_tag_vocabulary_kind ON tag_vocabulary (kind, usage_count);
