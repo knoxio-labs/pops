@@ -50,9 +50,7 @@ export function PillarStatusProvider({
   // Track the latest fetch so a stale refresh doesn't overwrite a newer one.
   const fetchTokenRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    const token = ++fetchTokenRef.current;
-    setLoading(true);
+  const fetchSnapshot = useCallback(async (token: number) => {
     try {
       const [entries, health] = await Promise.all([fetchPillarRegistry(), fetchPillarHealth()]);
       if (fetchTokenRef.current !== token) return;
@@ -62,10 +60,17 @@ export function PillarStatusProvider({
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    const token = ++fetchTokenRef.current;
+    setLoading(true);
+    await fetchSnapshot(token);
+  }, [fetchSnapshot]);
+
   useEffect(() => {
     if (snapshot !== undefined) return;
-    void refresh();
-  }, [refresh, snapshot]);
+    const token = ++fetchTokenRef.current;
+    void fetchSnapshot(token);
+  }, [fetchSnapshot, snapshot]);
 
   const value = useMemo<PillarStatusContextValue>(
     () => ({ snapshot: state, loading, refresh }),

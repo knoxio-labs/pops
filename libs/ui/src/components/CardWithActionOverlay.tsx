@@ -1,5 +1,5 @@
 import { ImageOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Skeleton } from '../primitives/skeleton';
@@ -50,11 +50,6 @@ function PosterImage({
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
-  useEffect(() => {
-    setErrored(false);
-    setLoaded(false);
-  }, [src]);
-
   if (errored) return <PlaceholderIcon />;
 
   return (
@@ -100,7 +95,7 @@ function CardPosterContent({
   return (
     <>
       {showImage ? (
-        <PosterImage src={src} alt={alt} lazy={lazy} showHoverDim={showHoverDim} />
+        <PosterImage key={src} src={src} alt={alt} lazy={lazy} showHoverDim={showHoverDim} />
       ) : (
         <PlaceholderIcon />
       )}

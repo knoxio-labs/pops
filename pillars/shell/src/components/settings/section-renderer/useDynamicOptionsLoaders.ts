@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { pillar } from '@pops/pillar-sdk/client';
 import { usePillarSdkOptions } from '@pops/pillar-sdk/react';
@@ -41,7 +41,9 @@ function assertOptionsCallOk<T>(
 export function useDynamicOptionsLoaders(manifest: SettingsManifest): Loaders {
   const sdkOptions = usePillarSdkOptions();
   const sdkOptionsRef = useRef(sdkOptions);
-  sdkOptionsRef.current = sdkOptions;
+  useEffect(() => {
+    sdkOptionsRef.current = sdkOptions;
+  });
 
   return useMemo(() => {
     const loaders: Loaders = {};

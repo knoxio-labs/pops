@@ -1,4 +1,4 @@
-import { type MutableRefObject, useEffect, useRef, useState } from 'react';
+import { type MutableRefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 interface UseDragListenersArgs {
   isDragging: boolean;
@@ -22,7 +22,9 @@ function useDragListeners({
   // listeners on each committed drag step. Reading it through a ref keeps the
   // listeners mounted for the whole gesture while still calling the latest one.
   const commitValueRef = useRef(commitValue);
-  commitValueRef.current = commitValue;
+  useLayoutEffect(() => {
+    commitValueRef.current = commitValue;
+  }, [commitValue]);
 
   useEffect(() => {
     if (!isDragging) return;

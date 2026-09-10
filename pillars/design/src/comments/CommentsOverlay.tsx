@@ -133,9 +133,14 @@ export function CommentsOverlay({
   usePinning(enabled, setPending);
   const hover = useHoverTarget(enabled && pending === null);
 
-  useEffect(() => {
+  // Cleared the moment `active` goes false, not via an effect: this component
+  // stays mounted (returning null below) while inactive, so a stale composer
+  // from a previous session would otherwise reappear on the next activation.
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
     if (!active) setPending(null);
-  }, [active]);
+  }
   if (!enabled) return null;
 
   const write = async (action: Promise<unknown>): Promise<void> => {

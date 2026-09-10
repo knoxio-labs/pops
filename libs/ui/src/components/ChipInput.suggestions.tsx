@@ -39,6 +39,7 @@ export function mergeInputRef(forwarded: Ref<HTMLInputElement>, inner: Ref<HTMLI
     if (typeof forwarded === 'function') forwarded(node);
     else if (forwarded) forwarded.current = node;
     if (typeof inner === 'function') inner(node);
+    else if (inner) inner.current = node;
   };
 }
 
@@ -103,9 +104,7 @@ export function ChipInputBody({
         open={chip.open}
         setOpen={chip.setOpen}
         ariaLabel={ariaLabel}
-        inputRef={mergeInputRef(forwardedRef, (node) => {
-          chip.inputRef.current = node;
-        })}
+        inputRef={mergeInputRef(forwardedRef, chip.inputRef)}
         inputClassName={inputClassName}
         inputValue={chip.inputValue}
         onValueChange={chip.handleInputChange}

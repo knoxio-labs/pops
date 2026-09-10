@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -28,9 +28,11 @@ interface HarnessProps {
  */
 function useHarness(props: HarnessProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(props.canvas);
-  canvasRef.current = props.canvas;
   const nodesRef = useRef<Map<string, InternalNode>>(props.nodes);
-  nodesRef.current = props.nodes;
+  useEffect(() => {
+    canvasRef.current = props.canvas;
+    nodesRef.current = props.nodes;
+  }, [props.canvas, props.nodes]);
   const state = usePointerRefs();
   const args: UsePointerArgs = {
     canvasRef,
