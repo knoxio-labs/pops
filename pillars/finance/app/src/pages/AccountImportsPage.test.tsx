@@ -216,6 +216,31 @@ describe('the three account shapes', () => {
   });
 });
 
+describe('when a read fails', () => {
+  it('says the config could not be read rather than offering to set a source up', async () => {
+    mocks.getConfig.mockResolvedValue({
+      data: undefined,
+      error: { message: 'finance API request failed (HTTP 500)' },
+      response: new Response(null, { status: 500 }),
+    });
+    renderPage();
+
+    expect(await screen.findByText('Failed to load how Up Spending is fed')).toBeDefined();
+    expect(screen.queryByText(/Nothing feeds Up Spending on its own/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Set up/ })).toBeNull();
+  });
+
+  it('reaches the no-such-account state instead of loading forever for an unknown id', async () => {
+    mocks.accountsList.mockResolvedValue(
+      ok({ data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } })
+    );
+    renderPage();
+
+    expect(await screen.findByText('No such account')).toBeDefined();
+    expect(mocks.getConfig).not.toHaveBeenCalled();
+  });
+});
+
 describe('status and history', () => {
   it('reports when the account was last fed, the last sync beside it, and what it covers', async () => {
     mocks.accountsList.mockResolvedValue(

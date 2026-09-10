@@ -65,7 +65,10 @@ export function useAccountImportsPage(accountId: string) {
 
   return {
     accounts,
-    isLoading: accounts.isLoading,
+    // The config is part of the page's answer, not a detail of it, so its
+    // load counts as the page loading — but only for an account that
+    // exists: the query is disabled otherwise and would never settle.
+    isLoading: accounts.isLoading || (account !== null && config.isPending),
     account,
     config,
     batches,

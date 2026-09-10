@@ -63,14 +63,22 @@ export function AccountImportsPage() {
       <ErrorAlert title="Failed to load this account" message={state.accounts.error.message} />
     );
   }
-  // The config is part of the page's answer, not a detail of it: rendering
-  // before it lands would say "fed by hand" and refuse the sync for an
-  // account that is neither.
-  if (state.isLoading || state.config.isPending) return <LoadingSkeleton />;
+  if (state.isLoading) return <LoadingSkeleton />;
 
   const { account } = state;
   if (!account) {
     return <EmptyState title="No such account" description="It may have been deleted." />;
+  }
+  // A config that failed to load is not an account fed by hand. Saying so
+  // would offer to set a source up, and saving that would overwrite the
+  // config this page could not read.
+  if (state.config.error) {
+    return (
+      <ErrorAlert
+        title={`Failed to load how ${account.name} is fed`}
+        message={state.config.error.message}
+      />
+    );
   }
   const [option] = toAccountOptions([account]);
   const config = state.config.data ?? null;
