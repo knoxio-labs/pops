@@ -14,6 +14,8 @@ export interface ImportFormat {
   /** Where the file comes from, in the words the bank's own site uses. */
   description: string;
   extensions: string;
+  /** Rows arrive on their own; there is no file to upload and no format to change. */
+  live?: boolean;
 }
 
 export const FORMATS: Record<string, ImportFormat> = {
@@ -46,6 +48,13 @@ export const FORMATS: Record<string, ImportFormat> = {
     label: 'ING transaction CSV',
     description: 'Everyday Balance → Export. One row per transaction.',
     extensions: '.csv',
+  },
+  'up-live': {
+    id: 'up-live',
+    label: 'Up live feed',
+    description: 'Arrives on its own through the Up webhook. Nothing to upload.',
+    extensions: '—',
+    live: true,
   },
   'generic-csv': {
     id: 'generic-csv',

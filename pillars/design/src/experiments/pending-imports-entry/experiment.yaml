@@ -1,0 +1,16 @@
+name: Pending imports entry point
+question: Does the dashboard list every pending import as its own card, or carry
+  one nudge that opens a pending-imports page?
+status: decided
+screen: finance/dashboard
+variants:
+  cards: cards
+  nudge: nudge
+chosen: cards
+decided: 2026-09-10
+rationale: >-
+  Cards. Each pending import carries its own state and its own action
+  (resume, review, take over, discard), and a one-line nudge collapses those
+  into a count that has to be clicked through to act on. The section is
+  absent when nothing is pending, so the dashboard stays about the money on
+  the days that matter.

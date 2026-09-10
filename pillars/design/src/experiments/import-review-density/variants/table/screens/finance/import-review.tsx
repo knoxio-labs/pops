@@ -1,4 +1,6 @@
 import { type ImportRow, importRows, STATUS_TONE } from '@/fixtures/import-review';
+import { ImportReviewContext } from '@/kit/import-review-context';
+import { choiceOf, type ImportChoice } from '@/screens/finance/import/context';
 
 import {
   Badge,
@@ -20,31 +22,49 @@ import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Import review', order: 1 };
 
+const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
+
 function amount(row: ImportRow): string {
   return formatCents(row.type === 'credit' ? row.amountCents : -row.amountCents, 'AUD');
 }
 
+function Columns() {
+  return (
+    <TableHeader>
+      <TableRow>
+        <TableHead>Date</TableHead>
+        <TableHead>Description</TableHead>
+        <TableHead>Entity</TableHead>
+        <TableHead>Tags</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead className="text-right">Amount</TableHead>
+      </TableRow>
+    </TableHeader>
+  );
+}
+
 /** Variant "table": every column visible, one line per transaction, built for scanning. */
-export function ImportReviewTable({ rows }: { rows: ImportRow[] }) {
+export function ImportReviewTable({
+  rows,
+  choice = AMEX,
+  liveArrivals,
+}: {
+  rows: ImportRow[];
+  choice?: ImportChoice;
+  liveArrivals?: number;
+}) {
   const pending = rows.filter((r) => r.status !== 'matched').length;
   return (
     <div className="mx-auto max-w-5xl p-6">
+      <ImportReviewContext choice={choice} liveArrivals={liveArrivals} />
       <PageHeader
         title="Review import"
         description={`${rows.length} transactions · ${pending} pending`}
         actions={<Button disabled={rows.length === 0}>Commit import</Button>}
       />
       <Table className="mt-4 text-xs">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Entity</TableHead>
-            <TableHead>Tags</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
+        <Columns />
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.id}>
@@ -79,6 +99,9 @@ export function ImportReviewTable({ rows }: { rows: ImportRow[] }) {
 }
 
 export const states: ScreenStates = {
+  'live-arrivals-held-back': () => (
+    <ImportReviewTable rows={importRows} choice={UP_LIVE} liveArrivals={4} />
+  ),
   empty: () => <ImportReviewTable rows={[]} />,
 };
 

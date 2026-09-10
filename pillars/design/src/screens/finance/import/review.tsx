@@ -1,71 +1,20 @@
 import { byBucket, droppedRows, importTxns, type ImportTxn } from '@/fixtures/import-transactions';
+import { DroppedRowsNotice } from '@/kit/import-dropped-rows-notice';
+import { ImportReviewContext } from '@/kit/import-review-context';
 import { TxnCardList } from '@/kit/import-txn-card';
 import { SkippedTxnTable } from '@/kit/import-txn-skipped-table';
 import { AlertCircle, AlertTriangle, CheckCircle, Settings2, XCircle } from 'lucide-react';
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@pops/ui';
+import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
-import { choiceOf } from './context';
-import { ImportContextStrip } from './upload';
+import { choiceOf, type ImportChoice } from './context';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Review', order: 5, frame: 'web' };
 
 const AMEX = choiceOf('a2', 'amex-csv');
-
-/** What each dropped row is missing, mirroring `DroppedRowsNotice`'s `remedies`. */
-function dropReason(txn: ImportTxn): 'entity' | 'type' {
-  return txn.amount > 0 ? 'type' : 'entity';
-}
-
-function remedies(dropped: ImportTxn[]): string[] {
-  const reasons = new Set(dropped.map(dropReason));
-  const lines: string[] = [];
-  if (reasons.has('entity')) {
-    lines.push('assign a merchant entity, or change the type to a non-merchant one');
-  }
-  if (reasons.has('type')) {
-    lines.push(
-      'set a transaction type on the money coming in — a credit is never assumed to be an expense'
-    );
-  }
-  return lines;
-}
-
-/**
- * Ported from `pillars/finance/app/src/components/imports/review/DroppedRowsNotice.tsx`:
- * a non-blocking warning that some matched rows won't be imported because they
- * are missing an entity or a transaction type on a credit.
- */
-function DroppedRowsNotice({ dropped }: { dropped: ImportTxn[] }) {
-  const count = dropped.length;
-  if (count <= 0) return null;
-  return (
-    <Alert className="border-warning/25 bg-warning/10 text-warning">
-      <AlertTriangle className="h-4 w-4" aria-hidden />
-      <AlertTitle>
-        {count} matched transaction{count !== 1 ? 's' : ''} won&apos;t be imported
-      </AlertTitle>
-      <AlertDescription>
-        <ul className="list-inside list-disc text-xs">
-          {remedies(dropped).map((line) => (
-            <li key={line}>In the Matched tab, {line}.</li>
-          ))}
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
-}
+const UP_LIVE = choiceOf('a13', 'up-live');
 
 interface ReviewBuckets {
   matched: ImportTxn[];
@@ -163,14 +112,24 @@ function ReviewTabs({ buckets }: { buckets: ReviewBuckets }) {
   );
 }
 
-function Step({ txns, activeTab = 'uncertain' }: { txns: ImportTxn[]; activeTab?: string }) {
+function Step({
+  txns,
+  activeTab = 'uncertain',
+  choice = AMEX,
+  liveArrivals,
+}: {
+  txns: ImportTxn[];
+  activeTab?: string;
+  choice?: ImportChoice;
+  liveArrivals?: number;
+}) {
   const buckets = bucketsOf(txns);
   const unresolvedCount = buckets.uncertain.length + buckets.failed.length;
   const dropped = droppedRows(txns);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <ImportContextStrip choice={AMEX} />
+      <ImportReviewContext choice={choice} liveArrivals={liveArrivals} />
       <ReviewHeader unresolvedCount={unresolvedCount} />
       <DroppedRowsNotice dropped={dropped} />
       <Tabs defaultValue={activeTab} className="w-full">
@@ -199,4 +158,7 @@ export const states: ScreenStates = {
   unresolved: () => <Step txns={importTxns} activeTab="uncertain" />,
   'with-dropped-rows': () => <Step txns={importTxns} activeTab="matched" />,
   empty: () => <Step txns={[]} activeTab="matched" />,
+  'live-arrivals-held-back': () => (
+    <Step txns={importTxns} activeTab="uncertain" choice={UP_LIVE} liveArrivals={4} />
+  ),
 };

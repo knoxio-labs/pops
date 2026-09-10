@@ -1,5 +1,7 @@
 import { type Account } from '@/fixtures/accounts';
+import { type PendingImport, pendingSets } from '@/fixtures/pending-imports';
 import { AccountSelect } from '@/kit/account-select';
+import { ContinuePending, StartNewHeading } from '@/kit/import-continue-pending';
 import { CircleSlash, Plus, Wallet } from 'lucide-react';
 
 import {
@@ -126,16 +128,20 @@ function AccountSection({
   );
 }
 
+const NO_PENDING: PendingImport[] = [];
+
 function Step({
   accounts,
   selectedId,
   pickerOpen = false,
   createOpen = false,
+  pending = NO_PENDING,
 }: {
   accounts: Account[];
   selectedId?: string;
   pickerOpen?: boolean;
   createOpen?: boolean;
+  pending?: PendingImport[];
 }) {
   const selected = selectedId ? accountById(selectedId) : undefined;
   return (
@@ -144,6 +150,8 @@ function Step({
         title="Import transactions"
         description="Two choices, in this order: the account the money moved through, then the shape of the file your bank gave you."
       />
+      <ContinuePending items={pending} />
+      <StartNewHeading hasPending={pending.length > 0} />
       {accounts.length === 0 ? (
         <EmptyState
           icon={Wallet}
@@ -172,4 +180,11 @@ export const states: ScreenStates = {
   'no-format-for-account': () => <Step accounts={importableAccounts} selectedId="a5" />,
   'no-accounts': () => <Step accounts={[]} />,
   'add-account': () => <Step accounts={importableAccounts} createOpen />,
+  'pending-to-continue': () => <Step accounts={importableAccounts} pending={pendingSets.mixed} />,
+  'pending-unusable': () => (
+    <Step accounts={importableAccounts} pending={pendingSets.withUnusable} />
+  ),
+  'pending-open-elsewhere': () => (
+    <Step accounts={importableAccounts} pending={pendingSets.openElsewhere} />
+  ),
 };

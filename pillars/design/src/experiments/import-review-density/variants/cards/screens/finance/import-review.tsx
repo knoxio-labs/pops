@@ -1,4 +1,6 @@
 import { type ImportRow, importRows, STATUS_TONE } from '@/fixtures/import-review';
+import { ImportReviewContext } from '@/kit/import-review-context';
+import { choiceOf, type ImportChoice } from '@/screens/finance/import/context';
 
 import {
   Badge,
@@ -18,6 +20,9 @@ import {
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Import review', order: 1 };
+
+const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
 
 function RowCard({ row }: { row: ImportRow }) {
   const signed = row.type === 'credit' ? row.amountCents : -row.amountCents;
@@ -51,10 +56,19 @@ function RowCard({ row }: { row: ImportRow }) {
 }
 
 /** Variant "cards": one card per transaction, the amount as the headline figure. */
-export function ImportReviewCards({ rows }: { rows: ImportRow[] }) {
+export function ImportReviewCards({
+  rows,
+  choice = AMEX,
+  liveArrivals,
+}: {
+  rows: ImportRow[];
+  choice?: ImportChoice;
+  liveArrivals?: number;
+}) {
   const pending = rows.filter((r) => r.status !== 'matched').length;
   return (
     <div className="mx-auto max-w-4xl p-6">
+      <ImportReviewContext choice={choice} liveArrivals={liveArrivals} />
       <PageHeader
         title="Review import"
         description={`${rows.length} transactions · ${pending} pending`}
@@ -70,6 +84,9 @@ export function ImportReviewCards({ rows }: { rows: ImportRow[] }) {
 }
 
 export const states: ScreenStates = {
+  'live-arrivals-held-back': () => (
+    <ImportReviewCards rows={importRows} choice={UP_LIVE} liveArrivals={4} />
+  ),
   empty: () => <ImportReviewCards rows={[]} />,
 };
 
