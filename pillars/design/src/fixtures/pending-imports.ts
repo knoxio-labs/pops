@@ -48,6 +48,8 @@ export interface PendingImport {
   arrivedSinceSave?: number;
   /** When the draft was last written, ISO date-time. */
   savedAt: string;
+  /** `open` only: when the tab holding it last checked in. A crashed tab never closes. */
+  lastSeenAt?: string;
   /** Inclusive span of the rows it holds. */
   span?: { from: string; to: string };
   /** `unusable` only: what the person is told before discarding. */
@@ -86,6 +88,7 @@ export const pendingImports: PendingImport[] = [
     rowCount: 7,
     unresolvedCount: 1,
     savedAt: `${TODAY}T09:05:00+10:00`,
+    lastSeenAt: `${TODAY}T09:05:00+10:00`,
     span: { from: '2026-08-29', to: '2026-09-01' },
   },
   {
@@ -98,6 +101,18 @@ export const pendingImports: PendingImport[] = [
     balanceReported: 58_790,
     savedAt: `${TODAY}T09:40:00+10:00`,
     span: { from: TODAY, to: TODAY },
+  },
+  {
+    id: 'p-anzcc-open-stale',
+    accountId: 'a3',
+    source: { kind: 'file', format: 'ANZ credit card statement', files: ['statement-2026-08.pdf'] },
+    state: 'open',
+    step: 'Tags',
+    rowCount: 27,
+    unresolvedCount: 0,
+    savedAt: '2026-09-04T22:10:00+10:00',
+    lastSeenAt: '2026-09-04T22:10:00+10:00',
+    span: { from: '2026-07-13', to: '2026-08-12' },
   },
   {
     id: 'p-anz-old',
@@ -148,6 +163,8 @@ export const pendingSets = {
   withUnusable: pick('p-up-live', 'p-amex-aug', 'p-anz-old'),
   /** An open live import and the one collecting behind it. */
   openElsewhere: pick('p-up-next', 'p-up-open', 'p-amex-aug'),
+  /** An import a tab left open days ago and never closed. */
+  openStale: pick('p-anzcc-open-stale', 'p-amex-aug'),
   /** Every way a draft becomes unusable: a shape this build cannot read, an account that is gone. */
   unusableCauses: pick('p-anz-old', 'p-ing-archived', 'p-amex-aug'),
 };

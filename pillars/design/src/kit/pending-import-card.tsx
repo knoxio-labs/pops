@@ -1,4 +1,5 @@
 import { accounts } from '@/fixtures/accounts';
+import { TODAY } from '@/fixtures/import-sources';
 import {
   type PendingImport,
   type PendingImportState,
@@ -37,6 +38,24 @@ const STATE_BADGE: Record<
   unusable: { label: 'Needs discarding', tone: 'destructive' },
 };
 
+const STALE_OPEN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * An open import whose tab has not checked in for a day is almost always a
+ * tab that closed without saying so — a crash, a killed browser. It is
+ * still "open" on the server, but the card should stop pretending someone
+ * is in it.
+ */
+export function openAge(item: PendingImport, now = `${TODAY}T12:00:00+10:00`): 'active' | 'stale' {
+  const seen = item.lastSeenAt ?? item.savedAt;
+  return Date.parse(now) - Date.parse(seen) > STALE_OPEN_MS ? 'stale' : 'active';
+}
+
+function daysAgo(iso: string, now: string): string {
+  const days = Math.round((Date.parse(now) - Date.parse(iso)) / STALE_OPEN_MS);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+
 function stateIcon(item: PendingImport) {
   if (item.state === 'unusable') return <TriangleAlert className="h-4 w-4 text-destructive" />;
   if (item.state === 'open') return <Lock className="h-4 w-4 text-muted-foreground" />;
@@ -48,21 +67,42 @@ function rows(n: number): string {
   return n === 1 ? '1 transaction' : `${n} transactions`;
 }
 
-/** The one line under the title: how far it got, or why it cannot go further. */
-export function progressLine(item: PendingImport): string {
-  if (item.state === 'unusable') return item.unusableReason ?? 'Cannot be resumed.';
-  if (item.state === 'live') {
-    const since = item.arrivedSinceSave;
-    if (since !== undefined) {
-      return `${rows(since)} arrived after the open import was started. They are held here so it stays as you left it.`;
-    }
-    const need = item.unresolvedCount ?? 0;
-    const tail = need === 0 ? 'waiting for review' : `${need} need you`;
-    return `${rows(item.rowCount)} arrived since ${when(item.savedAt)} · ${tail}.`;
+function openLine(item: PendingImport, now: string): string {
+  const seen = item.lastSeenAt ?? item.savedAt;
+  const at = item.step ?? 'the start';
+  return openAge(item, now) === 'stale'
+    ? `Last seen ${daysAgo(seen, now)}, at ${at}. The tab probably closed without saying so — taking over loses nothing.`
+    : `Open in another tab since ${when(seen)}, at ${at}.`;
+}
+
+function liveLine(item: PendingImport): string {
+  const since = item.arrivedSinceSave;
+  if (since !== undefined) {
+    return `${rows(since)} arrived after the open import was started. They are held here so it stays as you left it.`;
   }
+  const need = item.unresolvedCount ?? 0;
+  const tail = need === 0 ? 'waiting for review' : `${need} need you`;
+  return `${rows(item.rowCount)} arrived since ${when(item.savedAt)} · ${tail}.`;
+}
+
+function savedLine(item: PendingImport): string {
   const unresolved = item.unresolvedCount ?? 0;
   const decisions = unresolved === 0 ? 'nothing left to decide' : `${unresolved} still to decide`;
   return `${rows(item.rowCount)}, stopped at ${item.step ?? 'the start'} · ${decisions}.`;
+}
+
+/** The one line under the title: how far it got, or why it cannot go further. */
+export function progressLine(item: PendingImport, now = `${TODAY}T12:00:00+10:00`): string {
+  switch (item.state) {
+    case 'unusable':
+      return item.unusableReason ?? 'Cannot be resumed.';
+    case 'open':
+      return openLine(item, now);
+    case 'live':
+      return liveLine(item);
+    case 'saved':
+      return savedLine(item);
+  }
 }
 
 function action(item: PendingImport) {
@@ -77,8 +117,8 @@ function action(item: PendingImport) {
       return <Button size="sm">Review</Button>;
     case 'open':
       return (
-        <Button size="sm" variant="outline">
-          Take over here
+        <Button size="sm" variant={openAge(item) === 'stale' ? 'default' : 'outline'}>
+          {openAge(item) === 'stale' ? 'Take over' : 'Take over here'}
         </Button>
       );
     case 'unusable':
@@ -98,7 +138,10 @@ export function PendingImportCard({
   compact?: boolean;
 }) {
   const account = accountById(item.accountId);
-  const badge = STATE_BADGE[item.state];
+  const badge =
+    item.state === 'open' && openAge(item) === 'stale'
+      ? { label: 'Left open', tone: 'secondary' as const }
+      : STATE_BADGE[item.state];
   return (
     <Card
       className={cn(compact ? 'p-3' : 'p-4', item.state === 'unusable' && 'border-destructive/40')}

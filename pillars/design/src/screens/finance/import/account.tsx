@@ -156,6 +156,9 @@ export const states: ScreenStates = {
   'pending-open-elsewhere': () => (
     <Step accounts={importableAccounts} pending={pendingSets.openElsewhere} />
   ),
+  'pending-open-stale': () => (
+    <Step accounts={importableAccounts} pending={pendingSets.openStale} />
+  ),
   'pending-unusable-causes': () => (
     <Step accounts={importableAccounts} pending={pendingSets.unusableCauses} />
   ),
