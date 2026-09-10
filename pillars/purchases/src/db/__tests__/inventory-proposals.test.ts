@@ -90,6 +90,22 @@ describe('what makes a proposal', () => {
     });
   });
 
+  it('carries the offset the order was placed at, so the day can be derived where it happened', () => {
+    // `purchaseDate` is UTC-spelled. Without this the fan-out has only the
+    // installation's configured zone to derive a calendar day from, which is
+    // a fact about the household rather than about the order (POPS-2531).
+    const purchaseId = seed({
+      orderedAt: '2026-02-02T14:30:00.000Z',
+      orderedAtOffsetMinutes: 540,
+    });
+
+    expect(listInventoryProposals(opened.db, purchaseId)[0]?.purchaseDateOffsetMinutes).toBe(540);
+  });
+
+  it('carries null for an order that stated an instant and no place', () => {
+    expect(listInventoryProposals(opened.db, seed())[0]?.purchaseDateOffsetMinutes).toBeNull();
+  });
+
   it('offers nothing for a line that is not durable', () => {
     const purchaseId = seed({
       items: [{ ...DURABLE_LINE, kind: 'consumable' }],

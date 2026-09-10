@@ -97,6 +97,28 @@ export function calendarDateInZone(instant: string, timeZone = storeTimeZone()):
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * The calendar day an instant fell on at a KNOWN offset, as `yyyy-mm-dd`, or
+ * null when the string is not an instant or the offset is not one a zone
+ * could have been on.
+ *
+ * The counterpart to {@link calendarDateInZone} for a reading that states the
+ * offset it was taken at rather than the place it was taken. A stored offset
+ * is a fact about that one reading; the configured zone is a fact about the
+ * installation, and the two part company the moment something is bought away
+ * from home.
+ *
+ * No ICU involved, because none is needed: shifting the instant and reading
+ * the UTC date off the result is exact, where resolving a zone is a lookup
+ * that can answer differently on a different runtime.
+ */
+export function calendarDateAtOffset(instant: string, offsetMinutes: number): string | null {
+  if (!isPlausibleUtcOffsetMinutes(offsetMinutes)) return null;
+  const at = new Date(instant);
+  if (Number.isNaN(at.getTime())) return null;
+  return new Date(at.getTime() + offsetMinutes * 60_000).toISOString().slice(0, 10);
+}
+
 export interface LocalParts {
   readonly year: number;
   readonly month: number;

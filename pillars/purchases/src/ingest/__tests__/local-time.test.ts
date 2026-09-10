@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  calendarDateAtOffset,
   calendarDateInZone,
   instantFromLocalParts,
   instantFromLocalPartsAtOffset,
@@ -144,6 +145,47 @@ describe('calendarDateInZone', () => {
   it('answers null rather than guessing at something that is not an instant', () => {
     expect(calendarDateInZone('not-a-date')).toBeNull();
     expect(calendarDateInZone('')).toBeNull();
+  });
+});
+
+describe('calendarDateAtOffset', () => {
+  it('reads the day at the stated offset, not in UTC', () => {
+    expect(calendarDateAtOffset('2026-02-02T14:30:00.000Z', 540)).toBe('2026-02-02');
+    expect(calendarDateAtOffset('2026-02-02T15:30:00.000Z', 540)).toBe('2026-02-03');
+  });
+
+  it('reads it the other way for an offset behind UTC', () => {
+    expect(calendarDateAtOffset('2026-02-02T01:41:21.000Z', -360)).toBe('2026-02-01');
+  });
+
+  it('answers the UTC day for offset zero', () => {
+    expect(calendarDateAtOffset('2026-02-02T23:41:21.000Z', 0)).toBe('2026-02-02');
+  });
+
+  it('ignores the configured zone entirely', () => {
+    // The offset is the whole input. A consumer reading a stated offset must
+    // not have the installation's zone leak into the answer.
+    process.env[ZONE_VAR] = 'America/Chicago';
+    expect(calendarDateAtOffset('2026-02-02T14:30:00.000Z', 540)).toBe('2026-02-02');
+  });
+
+  it('crosses a year boundary the way the offset says, not the way UTC does', () => {
+    // The case with tax-year consequences for a deductible asset.
+    expect(calendarDateAtOffset('2025-12-31T14:00:00.000Z', 660)).toBe('2026-01-01');
+    expect(calendarDateAtOffset('2026-01-01T02:00:00.000Z', -480)).toBe('2025-12-31');
+  });
+
+  it('answers null rather than guessing at something that is not an instant', () => {
+    expect(calendarDateAtOffset('not-a-date', 600)).toBeNull();
+    expect(calendarDateAtOffset('', 600)).toBeNull();
+  });
+
+  it('answers null for an offset no zone has ever been on', () => {
+    // A figure outside ±14:00 is a garbled column, not a place, and applying
+    // it would move the purchase across a day boundary on no evidence.
+    expect(calendarDateAtOffset('2026-02-02T14:30:00.000Z', 900)).toBeNull();
+    expect(calendarDateAtOffset('2026-02-02T14:30:00.000Z', -900)).toBeNull();
+    expect(calendarDateAtOffset('2026-02-02T14:30:00.000Z', 30.5)).toBeNull();
   });
 });
 

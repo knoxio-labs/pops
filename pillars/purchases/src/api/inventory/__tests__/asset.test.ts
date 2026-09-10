@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { inventoryItemUri } from '../../../contract/inventory-proposals.js';
+import { calendarDateInZone } from '../../../ingest/local-time.js';
 import { financeTransactionId, provenanceNote, toInventoryItemCreateBody } from '../asset.js';
 
 import type { InventoryProposal } from '../../../db/index.js';
@@ -23,6 +24,7 @@ function offer(overrides: Partial<InventoryProposal> = {}): InventoryProposal {
     itemName: 'Cordless Drill',
     serialNumber: null,
     purchaseDate: '2026-02-02T23:41:21.000Z',
+    purchaseDateOffsetMinutes: null,
     purchasePriceCents: 19900,
     purchasedFromName: 'Bunnings Warehouse',
     purchaseTransactionUri: null,
@@ -121,6 +123,51 @@ describe('the purchase date crosses as a calendar day', () => {
   it('sends null rather than a guess when the stored value is not an instant', () => {
     expect(
       toInventoryItemCreateBody(offer({ purchaseDate: 'not-a-date' })).purchaseDate
+    ).toBeNull();
+  });
+
+  it('reads the day at the offset the order was placed at, not the household zone', () => {
+    // Bought in Tokyo (+09:00) at 23:30 on the 2nd. Sydney is on +11:00 that
+    // week, where the same instant is already 01:30 on the 3rd — so the
+    // household zone files this asset a day late.
+    const instant = '2026-02-02T14:30:00.000Z';
+
+    expect(calendarDateInZone(instant, 'Australia/Sydney')).toBe('2026-02-03');
+    expect(
+      toInventoryItemCreateBody(offer({ purchaseDate: instant, purchaseDateOffsetMinutes: 540 }))
+        .purchaseDate
+    ).toBe('2026-02-02');
+  });
+
+  it('does the same for an order placed west of home, not only east of it', () => {
+    // Los Angeles (-08:00) at 14:30 on the 2nd; 09:30 on the 3rd in Sydney.
+    const instant = '2026-02-02T22:30:00.000Z';
+
+    expect(calendarDateInZone(instant, 'Australia/Sydney')).toBe('2026-02-03');
+    expect(
+      toInventoryItemCreateBody(offer({ purchaseDate: instant, purchaseDateOffsetMinutes: -480 }))
+        .purchaseDate
+    ).toBe('2026-02-02');
+  });
+
+  it('falls back to the household zone for an order that recorded no offset', () => {
+    // Every Amazon-sourced order is this shape: an instant and no place. The
+    // household zone is still the best answer available, and losing it would
+    // silently re-date all of them in UTC.
+    expect(
+      toInventoryItemCreateBody(
+        offer({ purchaseDate: '2026-02-02T23:41:21.000Z', purchaseDateOffsetMinutes: null })
+      ).purchaseDate
+    ).toBe('2026-02-03');
+  });
+
+  it('sends null rather than the household day when the recorded offset is not one', () => {
+    // A stored figure outside ±14:00 is a garbled column, not a place. The
+    // household zone is not a safe fallback here: the order DID state where
+    // it was placed, and quietly substituting somewhere else would file the
+    // asset on a confident wrong day.
+    expect(
+      toInventoryItemCreateBody(offer({ purchaseDateOffsetMinutes: 900 })).purchaseDate
     ).toBeNull();
   });
 });
