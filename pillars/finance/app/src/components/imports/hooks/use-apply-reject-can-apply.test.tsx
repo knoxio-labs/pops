@@ -2,9 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+// The two the hook imports, by their real names. A factory mock replaces the
+// whole module, so a stub under the wrong name leaves the real export
+// undefined rather than mocked.
 vi.mock('../../../finance-api/index.js', () => ({
+  correctionsRejectChangeSet: vi.fn(),
   correctionsReviseChangeSet: vi.fn(),
-  correctionsRejectProposal: vi.fn(),
 }));
 
 import { useApplyRejectMutations } from './useApplyRejectMutations';
