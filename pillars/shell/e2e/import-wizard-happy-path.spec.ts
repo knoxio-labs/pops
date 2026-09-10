@@ -95,7 +95,7 @@ const ParsedTransactionSchema = z
     date: z.string(),
     description: z.string(),
     amount: z.number(),
-    account: z.string(),
+    dialectAccountLabel: z.string().min(1),
     location: z.string().optional(),
     rawRow: z.string(),
     checksum: z.string(),
@@ -138,7 +138,7 @@ const ProcessedTransactionSchema = ParsedTransactionSchema.extend({
       ruleId: z.string().min(1),
       pattern: z.string().min(1),
       matchType: z.enum(['exact', 'contains', 'regex']),
-      confidence: z.number().min(0).max(1),
+      confidence: z.number().min(0).max(1).nullable(),
     })
     .strict()
     .optional(),
@@ -149,7 +149,7 @@ const ProcessedTransactionSchema = ParsedTransactionSchema.extend({
           ruleId: z.string().min(1),
           pattern: z.string().min(1),
           matchType: z.enum(['exact', 'contains', 'regex']),
-          confidence: z.number().min(0).max(1),
+          confidence: z.number().min(0).max(1).nullable(),
           priority: z.number(),
           entityId: z.string().nullable().optional(),
           entityName: z.string().nullable().optional(),
@@ -278,7 +278,7 @@ const matchedTransactions = [
     date: '2026-02-13',
     description: 'WOOLWORTHS 1234',
     amount: -125.5,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: 'chk-woolworths-001',
     entity: {
@@ -292,7 +292,7 @@ const matchedTransactions = [
     date: '2026-02-14',
     description: 'NETFLIX.COM',
     amount: -19.99,
-    account: 'Amex',
+    dialectAccountLabel: 'Amex',
     rawRow: '{}',
     checksum: 'chk-netflix-001',
     entity: {
