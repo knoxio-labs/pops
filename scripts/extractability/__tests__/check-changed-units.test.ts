@@ -27,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { gitEnv } from '../../ci/resolve-report-base.mjs';
+
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -39,8 +41,10 @@ process.stdout.write('DEPCHECK ' + process.argv.slice(2).join(' ') + '\\n');
 
 let root: string;
 
+// Every git call here is about the sandbox, never about whatever repository a
+// hook has exported into the environment — see `gitEnv`.
 function git(args: string[], cwd = root): void {
-  execFileSync('git', args, { cwd, stdio: 'pipe' });
+  execFileSync('git', args, { cwd, stdio: 'pipe', env: gitEnv() });
 }
 
 function write(relative: string, contents: string, mode?: number): void {
@@ -54,7 +58,7 @@ function run(
   args: string[],
   extraPath?: string
 ): { status: number; stdout: string; stderr: string } {
-  const env = { ...process.env };
+  const env = gitEnv();
   if (extraPath !== undefined) env.PATH = `${extraPath}${delimiter}${env.PATH ?? ''}`;
   const result = spawnSync(
     'bash',
@@ -101,6 +105,40 @@ describe('check-changed-units.sh', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () =
     expect(status).toBe(0);
     expect(stdout).toContain('DEPCHECK libs/types');
     expect(stdout).not.toContain('--all');
+  });
+
+  it('answers for its own sandbox when a hook has exported another repository', () => {
+    // A git hook exports GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE for the
+    // repository being pushed, and every git call that inherits them acts on
+    // that repository instead of the directory it was run in. The leaked
+    // location here is a decoy rather than the real checkout: were the
+    // sandbox's `git add -A && git commit` to follow it, it must not be into
+    // the branch this suite is running on.
+    const decoy = mkdtempSync(join(tmpdir(), 'ex1-decoy-'));
+    const leaked = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE'] as const;
+    const saved = new Map(leaked.map((name) => [name, process.env[name]]));
+    try {
+      execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: decoy, stdio: 'pipe' });
+      process.env.GIT_DIR = join(decoy, '.git');
+      process.env.GIT_WORK_TREE = decoy;
+      process.env.GIT_INDEX_FILE = join(decoy, '.git', 'index');
+
+      write('libs/types/src/index.ts', 'export const a = 2;\n');
+      git(['add', '-A']);
+      git(['commit', '-q', '-m', 'change types']);
+
+      const { status, stdout } = run(['--base', 'base-point']);
+
+      expect(status).toBe(0);
+      expect(stdout).toContain('DEPCHECK libs/types');
+      expect(stdout).not.toContain('--all');
+    } finally {
+      for (const [name, value] of saved) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+      rmSync(decoy, { recursive: true, force: true });
+    }
   });
 
   it('reports nothing to check when the diff is genuinely empty', () => {
