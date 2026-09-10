@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { initialState } from '../../store/import-store-types';
 import { useImportStore } from '../../store/importStore';
-import { firstImportStep, importStepLabel, importStepsFor } from './step-labels';
+import {
+  firstImportStep,
+  IMPORT_STEP_COUNT,
+  IMPORT_STEP_KEYS,
+  importStepLabel,
+  importStepsFor,
+} from './step-labels';
 
 import type { TFunction } from 'i18next';
 
@@ -24,6 +30,37 @@ describe('importStepsFor', () => {
     expect(importStepLabel(4, t)).toBe('Review');
     expect(importStepLabel(null, t)).toBeNull();
     expect(importStepLabel(9, t)).toBeNull();
+  });
+});
+
+/**
+ * One list of keys behind both callers.
+ *
+ * The indicator used to render a parallel array of English literals while the
+ * pending-import card resolved through `t`, so a pt-BR session read the eight
+ * step names untranslated in the middle of a translated page, and the two
+ * surfaces could name one step differently (POPS-3351).
+ */
+describe('the step keys', () => {
+  it('has one key per step component the wizard mounts', () => {
+    expect(IMPORT_STEP_COUNT).toBe(IMPORT_STEP_KEYS.length);
+    expect(IMPORT_STEP_KEYS).toHaveLength(8);
+  });
+
+  it('resolves every step to a translation rather than to its own key', () => {
+    for (const step of importStepsFor(null)) {
+      const label = importStepLabel(step, t);
+      expect(label, `step ${String(step)}`).not.toBeNull();
+      // `t` hands back the key when nothing is registered for it, which is
+      // what an untranslated step looks like rather than a missing one.
+      expect(label, `step ${String(step)}`).not.toMatch(/^import\.pending\.step\./u);
+    }
+  });
+
+  it('names a live draft’s first shown step Process, not Upload', () => {
+    const live = importStepsFor({ kind: 'live', provider: 'up' });
+
+    expect(importStepLabel(live[0] ?? 0, t)).toBe('Process');
   });
 });
 
