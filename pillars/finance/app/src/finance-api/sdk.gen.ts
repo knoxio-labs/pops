@@ -735,7 +735,7 @@ export const accountsPreviewMerge = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way
+ * Start an Up sync for an account fed by the Up API, or report the one already running. An optional from/to pair overrides the derived range; 422 for an account not fed that way, for one date without the other, or for a reversed range
  */
 export const accountImportsTriggerSync = <ThrowOnError extends boolean = false>(
   options: Options<AccountImportsTriggerSyncData, ThrowOnError>

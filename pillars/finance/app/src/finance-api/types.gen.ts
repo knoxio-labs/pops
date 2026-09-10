@@ -2225,7 +2225,8 @@ export type AccountImportsTriggerSyncData = {
    * Body
    */
   body?: {
-    [key: string]: never;
+    from?: string;
+    to?: string;
   };
   path: {
     id: string;

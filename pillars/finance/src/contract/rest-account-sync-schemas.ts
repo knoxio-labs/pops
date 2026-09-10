@@ -58,3 +58,27 @@ export const UpSyncJobSchema = z.object({
 });
 
 export type UpSyncJob = z.infer<typeof UpSyncJobSchema>;
+
+/** `YYYY-MM-DD`, the only date shape the Up range filters accept. */
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Body of `POST /accounts/:id/sync`.
+ *
+ * Absent, or absent of both dates, means the derived steady-state range: from
+ * just before the newest row the account knows about, up to today. An explicit
+ * range overrides that, which is what walking a backfill a month at a time
+ * needs (POPS-3352) — the derived range only ever reaches back ninety days.
+ *
+ * Both dates or neither. `from` alone would have to invent a `to`, and the
+ * range it invented would not be the one the caller meant; the handler answers
+ * 422 rather than guess.
+ */
+export const TriggerSyncBodySchema = z
+  .object({
+    from: z.string().regex(CALENDAR_DATE).optional(),
+    to: z.string().regex(CALENDAR_DATE).optional(),
+  })
+  .optional();
+
+export type TriggerSyncBody = z.infer<typeof TriggerSyncBodySchema>;
