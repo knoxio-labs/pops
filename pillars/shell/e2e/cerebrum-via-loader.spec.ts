@@ -59,7 +59,12 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
     await page.goto('/cerebrum');
     await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
 
-    await page.keyboard.press('ControlOrMeta+Shift+KeyK');
+    // Meta, not `ControlOrMeta`: the manifest declares `cmd+shift+k`, and the
+    // matcher reads `cmd` as the Apple key alone. On Linux `ControlOrMeta`
+    // presses Control, which that chord cannot match — so pressing it here
+    // would assert a shortcut no reader of this pillar on Linux can use.
+    // POPS-3319 covers making the wire token platform-relative.
+    await page.keyboard.press('Meta+Shift+KeyK');
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
