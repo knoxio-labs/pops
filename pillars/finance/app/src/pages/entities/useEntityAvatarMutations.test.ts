@@ -55,8 +55,12 @@ describe('useEntityAvatarMutations', () => {
    * `Array<number>` would be coerced by `Request` into the string "1,2,3" and
    * stored as a three-byte "image" (POPS-3091) — hence asserting the File
    * itself is forwarded, not any array-of-bytes projection of it.
+   *
+   * It also used to carry a `Content-Type` override, because the spec declared
+   * a media type the server refused outright. POPS-3244 made the declaration
+   * true, so the override is gone and its absence is what is asserted.
    */
-  it('hands the File itself to the generated upload wrapper, tagged with its own content type', async () => {
+  it('hands the File itself to the generated upload wrapper, with no header override', async () => {
     entitiesUploadAvatarMock.mockResolvedValue({
       data: { data: apiEntity(), message: 'ok' },
       error: undefined,
@@ -71,10 +75,13 @@ describe('useEntityAvatarMutations', () => {
 
     await waitFor(() => expect(entitiesUploadAvatarMock).toHaveBeenCalledTimes(1));
     const call = entitiesUploadAvatarMock.mock.calls[0]?.[0];
-    expect(call).toMatchObject({
-      path: { id: 'ent-1' },
-      headers: { 'Content-Type': 'image/png' },
-    });
+    expect(call).toMatchObject({ path: { id: 'ent-1' } });
+    // No `Content-Type` override. The route reads the format out of the bytes
+    // now, so the wrapper's declared `application/octet-stream` is the truth
+    // and the obvious call is the working one (POPS-3244). Asserted as absent
+    // rather than left unmentioned: an override coming back would mean the
+    // server had gone back to trusting a client-supplied label.
+    expect(call.headers).toBeUndefined();
     expect(call.body).toBe(file);
     expect(Array.isArray(call.body)).toBe(false);
 

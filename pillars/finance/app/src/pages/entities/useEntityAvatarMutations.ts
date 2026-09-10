@@ -45,19 +45,15 @@ export function toPageEntity(entity: ContactEntity): Omit<Entity, 'transactionCo
 }
 
 /**
- * The route stores the request's `Content-Type` as the blob's own and rejects
- * anything outside its image allowlist, so the wrapper's declared
- * `application/octet-stream` default has to be replaced with the file's real
- * type — the spec naming a media type the server always refuses is POPS-3244.
+ * No `Content-Type` override. The route reads the image format out of the
+ * bytes now rather than out of the header, so the wrapper's declared
+ * `application/octet-stream` is the truth and the obvious call is the working
+ * one (POPS-3244). It used to be neither: the spec named a media type the
+ * server always refused, and the file's own `type` had to be plumbed in by a
+ * caller who happened to know.
  */
 async function uploadEntityAvatar(entityId: string, file: File) {
-  return unwrap(
-    await entitiesUploadAvatar({
-      path: { id: entityId },
-      body: file,
-      headers: { 'Content-Type': file.type },
-    })
-  );
+  return unwrap(await entitiesUploadAvatar({ path: { id: entityId }, body: file }));
 }
 
 /**
