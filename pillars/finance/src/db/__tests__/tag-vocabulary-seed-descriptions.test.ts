@@ -9,7 +9,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { listVocabularyDescriptions } from '../services/tag-vocabulary.js';
+import {
+  listClassifiedVocabulary,
+  listVocabularyDescriptions,
+} from '../services/tag-vocabulary.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 describe('seeded tag descriptions', () => {
@@ -58,5 +61,157 @@ describe('seeded tag descriptions', () => {
 
     expect(descriptions.size).toBeGreaterThan(0);
     expect(descriptions.size).toBeLessThan(active.n);
+  });
+});
+
+/**
+ * The closed set the migration chain produces, pinned.
+ *
+ * Not a restatement of the migrations for its own sake. `venue`, `occasion`,
+ * `channel` and `fee` are `closed` — nobody may mint a value and a value
+ * outside the set is a validation error — and before POPS-3301 the live
+ * database held eighteen classified values this chain did not, so the axis was
+ * closed in the schema and open in practice depending on which copy you
+ * opened. Pinning the list makes adding one an edit somebody has to make on
+ * purpose, in the same change as the migration that seeds it.
+ */
+describe('the seeded classified vocabulary', () => {
+  const EXPECTED = [
+    'channel:in-person',
+    'channel:online',
+    'contains:accommodation',
+    'contains:alcohol',
+    'contains:bubble-tea',
+    'contains:car-rental',
+    'contains:charging',
+    'contains:clothing',
+    'contains:coffee',
+    'contains:donations',
+    'contains:education',
+    'contains:entry',
+    'contains:events',
+    'contains:fast-food',
+    'contains:fitness',
+    'contains:flight',
+    'contains:food',
+    'contains:fuel',
+    'contains:games',
+    'contains:gift',
+    'contains:gift-card',
+    'contains:groceries',
+    'contains:haircut',
+    'contains:health',
+    'contains:household',
+    'contains:ice-cream',
+    'contains:insurance',
+    'contains:internet',
+    'contains:maintenance',
+    'contains:mobile',
+    'contains:mortgage',
+    'contains:office-supplies',
+    'contains:parking',
+    'contains:party-supplies',
+    'contains:public-transport',
+    'contains:rent',
+    'contains:rideshare',
+    'contains:salary',
+    'contains:sale',
+    'contains:software',
+    'contains:streaming',
+    'contains:subscription',
+    'contains:taxes',
+    'contains:tolls',
+    'contains:utilities',
+    'contains:withdrawal',
+    'fee:atm',
+    'fee:conversion',
+    'fee:interest',
+    'fee:late',
+    'fee:membership',
+    'fee:surcharge',
+    'occasion:health',
+    'occasion:home',
+    'occasion:out',
+    'occasion:travel',
+    'occasion:work',
+    'venue:arcade',
+    'venue:attraction',
+    'venue:auto',
+    'venue:bakery',
+    'venue:bottle-shop',
+    'venue:butcher',
+    'venue:cafe',
+    'venue:cinema',
+    'venue:clothing',
+    'venue:club',
+    'venue:convenience-store',
+    'venue:electronics',
+    'venue:gift-shop',
+    'venue:hardware',
+    'venue:homewares',
+    'venue:parking',
+    'venue:pharmacy',
+    'venue:pub',
+    'venue:restaurant',
+    'venue:sauna',
+    'venue:sex-shop',
+    'venue:shopping-centre',
+    'venue:supermarket',
+    'venue:takeaway',
+    'venue:transport',
+    'venue:vending-machine',
+  ];
+
+  it('holds exactly the values the chain is meant to seed', () => {
+    const { db } = freshMigratedFinanceDb();
+
+    expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
+    expect(EXPECTED).toHaveLength(83);
+  });
+
+  it('gives every closed-facet value the closed kind', () => {
+    const { raw } = freshMigratedFinanceDb();
+    const wrong = raw
+      .prepare(
+        "SELECT tag, kind FROM tag_vocabulary WHERE facet IN ('venue','occasion','channel','fee') AND kind <> 'closed'"
+      )
+      .all();
+
+    expect(wrong).toEqual([]);
+  });
+
+  it('pins the unclassified values too, so a personal one cannot be added quietly', () => {
+    const { raw } = freshMigratedFinanceDb();
+    const unclassified = (
+      raw
+        .prepare(
+          "SELECT tag FROM tag_vocabulary WHERE facet NOT IN ('venue','occasion','contains','channel','fee') ORDER BY tag"
+        )
+        .all() as { tag: string }[]
+    ).map((row) => row.tag);
+
+    // 0067/0069 seeded this user's own trip and a person's name into a
+    // checked-in migration. That is POPS-3304's debt, not this ticket's to
+    // widen — pinning the list is what stops the next migration adding to it
+    // without somebody deciding to.
+    expect(unclassified).toEqual([
+      'asset:car',
+      'asset:homelab',
+      'enrich:amazon',
+      'enrich:apple',
+      'enrich:bigw',
+      'enrich:bunnings',
+      'enrich:good-guys',
+      'enrich:ikea',
+      'enrich:kmart',
+      'enrich:paylab',
+      'enrich:paypal',
+      'flag:needs-review',
+      'hobby:brewing',
+      'person:rosane',
+      'tax:deductible',
+      'tax:novated-lease',
+      'trip:hunter-valley-2026',
+    ]);
   });
 });
