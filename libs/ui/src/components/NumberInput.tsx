@@ -3,8 +3,9 @@
  * Extends TextInput with number-specific functionality
  */
 import { type VariantProps } from 'class-variance-authority';
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode, useMemo } from 'react';
 
+import { mergeRefs } from '../lib/input-element';
 import { cn } from '../lib/utils';
 import { useNumberInput } from './NumberInput.hooks';
 import { containerVariants, inputVariants } from './NumberInput.variants';
@@ -72,6 +73,11 @@ function NumberInputBody({
   onFocus,
   onBlur,
 }: NumberInputBodyProps) {
+  // The hook's own handle and the caller's forwarded ref both reach the
+  // element. Memoised on the forwarded ref, or React would detach and
+  // reattach the input on every render.
+  const setRef = useMemo(() => mergeRefs(ni.inputRef, inputRef), [ni.inputRef, inputRef]);
+
   return (
     <>
       {prefix && <span className="flex-shrink-0 text-muted-foreground">{prefix}</span>}
@@ -79,7 +85,7 @@ function NumberInputBody({
         <StepperButton direction="down" onClick={ni.decrement} disabled={ni.decrementDisabled} />
       )}
       <input
-        ref={inputRef}
+        ref={setRef}
         type="number"
         className={cn(inputVariants({ size, centered, className }))}
         value={ni.value}

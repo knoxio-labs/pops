@@ -429,6 +429,42 @@ describe('AccountFormDialog — edit', () => {
   });
 
   /**
+   * POPS-3296. `LoanFields` reads `e.currentTarget.value` to tell an emptied
+   * field from a typed one, which is what the kit's cleared-field event did
+   * not carry — so clearing any of the four threw a `TypeError` instead of
+   * setting the term to null.
+   */
+  it('clears a loan term to empty rather than throwing', async () => {
+    loanGetTerms.mockResolvedValue({
+      data: {
+        data: {
+          accountId: 'loan-1',
+          originalPrincipal: 500_000,
+          annualRatePct: 6.24,
+          termMonths: 360,
+          monthlyRepayment: 3_100,
+          startedOn: '2024-01-01',
+          termsEffectiveFrom: '2026-07-01',
+          source: 'manual',
+          createdAt: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-07-01T00:00:00.000Z',
+        },
+      },
+      error: undefined,
+    });
+    loanListRateHistory.mockResolvedValue({ data: { data: [] }, error: undefined });
+    renderDetailPage([account({ id: 'loan-1', name: 'Home loan', kind: 'loan' })], 'loan-1');
+
+    await screen.findByText('Home loan');
+    const dialog = await openEditDialog();
+    const principal = await dialog.findByLabelText('Original principal');
+
+    await userEvent.clear(principal);
+
+    expect(principal).toHaveValue(null);
+  });
+
+  /**
    * Regression for the review-findings-gate HIGH finding on POPS-2846:
    * `recordLoanRate` (the "Record rate change" action) never touches
    * `loan_terms.terms_effective_from`, so once a rate change has been
