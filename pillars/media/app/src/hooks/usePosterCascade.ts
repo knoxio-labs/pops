@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * usePosterCascade — 3-tier poster image fallback hook.
@@ -19,12 +19,16 @@ export function usePosterCascade(posterUrl?: string | null, fallbackPosterUrl?: 
     posterUrl ?? fallbackPosterUrl ?? null
   );
   const [showPlaceholder, setShowPlaceholder] = useState(!posterUrl && !fallbackPosterUrl);
+  const [trackedPosterUrl, setTrackedPosterUrl] = useState(posterUrl);
+  const [trackedFallbackPosterUrl, setTrackedFallbackPosterUrl] = useState(fallbackPosterUrl);
 
-  useEffect(() => {
+  if (posterUrl !== trackedPosterUrl || fallbackPosterUrl !== trackedFallbackPosterUrl) {
+    setTrackedPosterUrl(posterUrl);
+    setTrackedFallbackPosterUrl(fallbackPosterUrl);
     setCurrentSrc(posterUrl ?? fallbackPosterUrl ?? null);
     setShowPlaceholder(!posterUrl && !fallbackPosterUrl);
     setImageLoaded(false);
-  }, [posterUrl, fallbackPosterUrl]);
+  }
 
   const handleImageError = () => {
     if (currentSrc === posterUrl && fallbackPosterUrl) {

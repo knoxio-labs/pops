@@ -1,7 +1,7 @@
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Folder } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Collapsible, CollapsibleContent } from '@pops/ui';
 
@@ -81,9 +81,13 @@ function ChildrenList(props: LocationNodeProps) {
 function useNodeState(node: LocationTreeNode, depth: number, isAddingChild: boolean) {
   const [open, setOpen] = useState(depth < 1);
   const [renaming, setRenaming] = useState(false);
-  useEffect(() => {
+  const [wasAddingChild, setWasAddingChild] = useState(isAddingChild);
+
+  if (isAddingChild !== wasAddingChild) {
+    setWasAddingChild(isAddingChild);
     if (isAddingChild && !open) setOpen(true);
-  }, [isAddingChild, open]);
+  }
+
   return { open, setOpen, renaming, setRenaming };
 }
 
@@ -94,17 +98,26 @@ export function LocationNode(props: LocationNodeProps) {
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
 
-  const sortable = useSortable({ id: node.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ id: node.id });
   const sortableStyle = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
-    opacity: sortable.isDragging ? 0.4 : 1,
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
   };
   const showDropLine =
-    overId === node.id && activeId !== null && activeId !== node.id && !sortable.isDragging;
+    overId === node.id && activeId !== null && activeId !== node.id && !isDragging;
 
   return (
-    <div ref={sortable.setNodeRef} style={sortableStyle}>
+    <div ref={setNodeRef} style={sortableStyle}>
       {showDropLine && <DropIndicatorLine depth={depth} />}
       <Collapsible open={open} onOpenChange={setOpen}>
         <NodeRow
@@ -113,15 +126,15 @@ export function LocationNode(props: LocationNodeProps) {
           open={open}
           hasChildren={hasChildren}
           isSelected={isSelected}
-          isOver={sortable.isOver}
-          isDragging={sortable.isDragging}
+          isOver={isOver}
+          isDragging={isDragging}
           renaming={renaming}
           setRenaming={setRenaming}
           siblingIndex={props.siblingIndex}
           siblingCount={props.siblingCount}
-          attributes={sortable.attributes}
-          listeners={sortable.listeners}
-          setActivatorNodeRef={sortable.setActivatorNodeRef}
+          attributes={attributes}
+          listeners={listeners}
+          setActivatorNodeRef={setActivatorNodeRef}
           onSelect={props.onSelect}
           onAddChild={props.onAddChild}
           onRename={props.onRename}

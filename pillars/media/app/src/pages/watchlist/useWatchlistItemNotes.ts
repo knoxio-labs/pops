@@ -17,19 +17,25 @@ export function useWatchlistItemNotes({
 }: Args) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(notes ?? '');
-  const savePending = useRef(false);
+  const [savePending, setSavePending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  const [trackedNotes, setTrackedNotes] = useState(notes);
+  const [trackedEditing, setTrackedEditing] = useState(editing);
+  if (notes !== trackedNotes || editing !== trackedEditing) {
+    setTrackedNotes(notes);
+    setTrackedEditing(editing);
     if (!editing) setDraft(notes ?? '');
-  }, [notes, editing]);
+  }
 
-  useEffect(() => {
-    if (savePending.current && !isUpdating) {
-      savePending.current = false;
+  const [trackedIsUpdating, setTrackedIsUpdating] = useState(isUpdating);
+  if (isUpdating !== trackedIsUpdating) {
+    setTrackedIsUpdating(isUpdating);
+    if (savePending && !isUpdating) {
+      setSavePending(false);
       if (!updateError) setEditing(false);
     }
-  }, [isUpdating, updateError]);
+  }
 
   useEffect(() => {
     if (editing && textareaRef.current) {
@@ -40,7 +46,7 @@ export function useWatchlistItemNotes({
 
   const handleSave = () => {
     const trimmed = draft.trim();
-    savePending.current = true;
+    setSavePending(true);
     onUpdateNotes(entryId, trimmed || null);
   };
 

@@ -7,7 +7,7 @@
  * the `emitGenerate` REST call for "save as document".
  */
 import { useMutation } from '@tanstack/react-query';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -133,7 +133,9 @@ export function useAskMutation(bindings: AskBindings): AskMutationHandle {
   const pendingRef = useRef<AskInvocation | null>(bindings.pending);
   // `bindings` is rebuilt every render; keep a ref so the streaming
   // callbacks always see the latest snapshot without re-binding the hook.
-  pendingRef.current = bindings.pending;
+  useEffect(() => {
+    pendingRef.current = bindings.pending;
+  }, [bindings.pending]);
 
   const reportError = useCallback(
     (message: string) => {

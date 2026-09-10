@@ -78,7 +78,8 @@ function workspacePackageDirs(root) {
 }
 
 /**
- * Expand a `a/*` or `a/*​/*` glob against the tree. Only `*` as a whole path
+ * Expand a `a/*` glob, or one with a second wildcard segment, against the
+ * tree. Only `*` as a whole path
  * segment is supported, which is all `pnpm-workspace.yaml` uses here; anything
  * else would silently expand to nothing, so it throws instead.
  *

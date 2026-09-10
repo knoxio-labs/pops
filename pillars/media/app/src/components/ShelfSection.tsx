@@ -54,17 +54,18 @@ function LoadMoreButton({ loadingMore, onClick }: { loadingMore: boolean; onClic
 
 export function ShelfSection(props: ShelfSectionProps) {
   const { shelfId, title, subtitle, initialItems, hasMore: initialHasMore, dismissedSet } = props;
-  const pagination = useShelfPagination({ shelfId, initialItems, initialHasMore });
-  const actions = useShelfActions(props, pagination.patchItem);
+  const { sentinelRef, isVisible, items, hasMore, loadingMore, patchItem, handleShowMore } =
+    useShelfPagination({ shelfId, initialItems, initialHasMore });
+  const actions = useShelfActions(props, patchItem);
 
-  const visibleItems = pagination.items.filter((item) => !dismissedSet.has(item.tmdbId));
+  const visibleItems = items.filter((item) => !dismissedSet.has(item.tmdbId));
 
-  if (!pagination.isVisible) {
-    return <ShelfPlaceholder sentinelRef={pagination.sentinelRef} />;
+  if (!isVisible) {
+    return <ShelfPlaceholder sentinelRef={sentinelRef} />;
   }
 
   return (
-    <div ref={pagination.sentinelRef} className="space-y-3">
+    <div ref={sentinelRef} className="space-y-3">
       <HorizontalScrollRow title={title} subtitle={subtitle}>
         {visibleItems.map((item) => (
           <ShelfItemCard
@@ -84,12 +85,7 @@ export function ShelfSection(props: ShelfSectionProps) {
             onNotInterested={props.onNotInterested}
           />
         ))}
-        {pagination.hasMore && (
-          <LoadMoreButton
-            loadingMore={pagination.loadingMore}
-            onClick={pagination.handleShowMore}
-          />
-        )}
+        {hasMore && <LoadMoreButton loadingMore={loadingMore} onClick={handleShowMore} />}
       </HorizontalScrollRow>
     </div>
   );

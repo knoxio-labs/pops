@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   Dialog,
@@ -76,13 +76,17 @@ function useEntityCreate(props: EntityCreateDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const addPendingEntity = useImportStore((s) => s.addPendingEntity);
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevSuggestedName, setPrevSuggestedName] = useState(suggestedName);
+  if (open !== prevOpen || suggestedName !== prevSuggestedName) {
+    setPrevOpen(open);
+    setPrevSuggestedName(suggestedName);
     if (open) {
       setName(suggestedName);
       setTouched(false);
       setError(null);
     }
-  }, [open, suggestedName]);
+  }
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { WorkflowDialog } from '@pops/ui';
 
 import { useResetOnClose } from './workflow/useResetOnClose';
@@ -31,7 +33,9 @@ export function CorrectionProposalWorkflow(props: CorrectionProposalWorkflowProp
     seededForSignalRef: localOpsHook.seededForSignalRef,
     onOpenChange: props.onOpenChange,
   });
-  handleCloseRef.current = () => handleOpenChange(false);
+  useEffect(() => {
+    handleCloseRef.current = () => handleOpenChange(false);
+  }, [handleCloseRef, handleOpenChange]);
 
   const isProposalGridReady =
     Boolean(signal) &&

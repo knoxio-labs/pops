@@ -3,7 +3,7 @@
  * variant, unit)` is the UNIQUE key and rotating any of those is "delete
  * + re-add" by intent.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
@@ -63,9 +63,13 @@ export function EditWeightDialog({
 }: Props) {
   const { t } = useTranslation('food');
   const [form, setForm] = useState<FormState>({ grams: '', notes: '' });
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevRow, setPrevRow] = useState(row);
+  if (open !== prevOpen || row !== prevRow) {
+    setPrevOpen(open);
+    setPrevRow(row);
     if (open && row !== null) setForm({ grams: String(row.grams), notes: row.notes ?? '' });
-  }, [open, row]);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -5,13 +5,12 @@
  * input rows in `VariantFormFields.tsx`. Errors come pre-mapped from
  * `useVariantActions`.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@pops/ui';
 
 import {
-  BLANK_VARIANT_FORM,
   type VariantFormState,
   type VariantFormValues,
   variantFormFromRow,
@@ -35,11 +34,16 @@ interface Props {
 
 export function VariantFormDialog(props: Props) {
   const { t } = useTranslation('food');
-  const [form, setForm] = useState<VariantFormState>(BLANK_VARIANT_FORM);
+  // The dialog is only mounted while `open` is true (the caller conditionally
+  // renders it), so seeding must happen from the lazy initial state — a
+  // mount-time `open` transition never occurs for this component to react to.
+  const [form, setForm] = useState<VariantFormState>(() => variantFormFromRow(props.initial));
+  const [prevInitial, setPrevInitial] = useState(props.initial);
 
-  useEffect(() => {
-    if (props.open) setForm(variantFormFromRow(props.initial));
-  }, [props.open, props.initial]);
+  if (props.initial !== prevInitial) {
+    setPrevInitial(props.initial);
+    setForm(variantFormFromRow(props.initial));
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

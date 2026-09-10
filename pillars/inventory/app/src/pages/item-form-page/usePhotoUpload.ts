@@ -71,7 +71,9 @@ function useUploadFilesState(): {
 } {
   const [uploadFiles, setUploadFiles] = useState<UploadedFile[]>([]);
   const uploadFilesRef = useRef(uploadFiles);
-  uploadFilesRef.current = uploadFiles;
+  useEffect(() => {
+    uploadFilesRef.current = uploadFiles;
+  });
   useEffect(
     () => () => {
       for (const f of uploadFilesRef.current) {

@@ -22,10 +22,14 @@ export function ConfidenceSlider({ ruleId, initial, onAutoDelete }: ConfidenceSl
   const initialRef = useRef(initial);
   const queryClient = useQueryClient();
 
-  // Keep initialRef in sync when the prop changes (e.g. after query invalidation)
+  // Keep value in sync when the prop changes (e.g. after query invalidation)
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
+    setValue(initial);
+  }
   useEffect(() => {
     initialRef.current = initial;
-    setValue(initial);
   }, [initial]);
 
   const adjustMutation = useMutation({

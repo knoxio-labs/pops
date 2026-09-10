@@ -29,48 +29,49 @@ interface CleanupArgs {
   resetPreviewState: () => void;
 }
 
-function buildSaveHandler(
+function runSaveHandler(
   localOps: LocalOp[],
   addPendingChangeSet: ReturnType<typeof useImportStore.getState>['addPendingChangeSet'],
   handleOpenChange: (v: boolean) => void
 ) {
-  return () => {
-    if (findLocalOpProblem(localOps) !== null) return;
-    if (localOps.length === 0) {
-      handleOpenChange(false);
-      return;
-    }
-    const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
-    if (changeSet) {
-      addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
-      toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
-    }
+  if (findLocalOpProblem(localOps) !== null) return;
+  if (localOps.length === 0) {
     handleOpenChange(false);
-  };
+    return;
+  }
+  const changeSet = localOpsToChangeSet(localOps, { source: 'browse-rule-manager' });
+  if (changeSet) {
+    addPendingChangeSet({ changeSet, source: 'browse-rule-manager' });
+    toast.success(`${localOps.length} rule change${localOps.length === 1 ? '' : 's'} saved`);
+  }
+  handleOpenChange(false);
 }
 
-function buildOpenChangeHandler(
-  onOpenChange: (v: boolean) => void,
-  onBrowseClose: ((hadChanges: boolean) => void) | undefined,
+interface OpenChangeCallbacks {
+  onOpenChange: (v: boolean) => void;
+  onBrowseClose: ((hadChanges: boolean) => void) | undefined;
+}
+
+function runOpenChangeHandler(
+  nextOpen: boolean,
+  { onOpenChange, onBrowseClose }: OpenChangeCallbacks,
   initialPendingCountRef: React.MutableRefObject<number>,
   cleanup: CleanupArgs
 ) {
-  return (nextOpen: boolean) => {
-    if (nextOpen) {
-      onOpenChange(true);
-      return;
-    }
-    const currentCount = useImportStore.getState().pendingChangeSets.length;
-    const hadChanges = currentCount !== initialPendingCountRef.current;
-    cleanup.setBrowseSearch('');
-    cleanup.setBrowseSelectedRuleId(null);
-    cleanup.setLocalOps([]);
-    cleanup.setSelectedClientId(null);
-    cleanup.setPreviewView('selected');
-    cleanup.resetPreviewState();
-    onOpenChange(false);
-    onBrowseClose?.(hadChanges);
-  };
+  if (nextOpen) {
+    onOpenChange(true);
+    return;
+  }
+  const currentCount = useImportStore.getState().pendingChangeSets.length;
+  const hadChanges = currentCount !== initialPendingCountRef.current;
+  cleanup.setBrowseSearch('');
+  cleanup.setBrowseSelectedRuleId(null);
+  cleanup.setLocalOps([]);
+  cleanup.setSelectedClientId(null);
+  cleanup.setPreviewView('selected');
+  cleanup.resetPreviewState();
+  onOpenChange(false);
+  onBrowseClose?.(hadChanges);
 }
 
 export function CorrectionRuleManagerDialog(props: CorrectionRuleManagerDialogProps) {
@@ -81,14 +82,20 @@ export function CorrectionRuleManagerDialog(props: CorrectionRuleManagerDialogPr
   const { localOps, setLocalOps, setSelectedClientId, handleAddNewRuleOp } = localOpsHook;
 
   const handleOpenChange = useCallback(
-    buildOpenChangeHandler(onOpenChange, onBrowseClose, dialogState.browseInitialPendingCountRef, {
-      setBrowseSearch: dialogState.setBrowseSearch,
-      setBrowseSelectedRuleId: selection.setBrowseSelectedRuleId,
-      setLocalOps,
-      setSelectedClientId,
-      setPreviewView: dialogState.setPreviewView,
-      resetPreviewState: previewHook.resetPreviewState,
-    }),
+    (nextOpen: boolean) =>
+      runOpenChangeHandler(
+        nextOpen,
+        { onOpenChange, onBrowseClose },
+        dialogState.browseInitialPendingCountRef,
+        {
+          setBrowseSearch: dialogState.setBrowseSearch,
+          setBrowseSelectedRuleId: selection.setBrowseSelectedRuleId,
+          setLocalOps,
+          setSelectedClientId,
+          setPreviewView: dialogState.setPreviewView,
+          resetPreviewState: previewHook.resetPreviewState,
+        }
+      ),
     [
       onOpenChange,
       onBrowseClose,
@@ -103,7 +110,7 @@ export function CorrectionRuleManagerDialog(props: CorrectionRuleManagerDialogPr
   const problem = findLocalOpProblem(localOps);
 
   const handleBrowseSave = useCallback(
-    buildSaveHandler(localOps, addPendingChangeSet, handleOpenChange),
+    () => runSaveHandler(localOps, addPendingChangeSet, handleOpenChange),
     [addPendingChangeSet, handleOpenChange, localOps]
   );
 

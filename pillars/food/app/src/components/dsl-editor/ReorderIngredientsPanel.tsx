@@ -7,7 +7,7 @@
  * pending order lives here; persistence lives in the controller hook
  * that owns the CodeMirror view (`useReorderController`).
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -32,10 +32,14 @@ export interface ReorderIngredientsPanelProps {
 export function ReorderIngredientsPanel(props: ReorderIngredientsPanelProps) {
   const { t } = useTranslation('food');
   const [order, setOrder] = useState<readonly number[]>(() => identity(props.declarations.length));
+  const [prevOpen, setPrevOpen] = useState(props.open);
+  const [prevDeclarationsLength, setPrevDeclarationsLength] = useState(props.declarations.length);
 
-  useEffect(() => {
+  if (props.open !== prevOpen || props.declarations.length !== prevDeclarationsLength) {
+    setPrevOpen(props.open);
+    setPrevDeclarationsLength(props.declarations.length);
     if (props.open) setOrder(identity(props.declarations.length));
-  }, [props.open, props.declarations.length]);
+  }
 
   const move = (slot: number, delta: number): void => {
     const target = slot + delta;

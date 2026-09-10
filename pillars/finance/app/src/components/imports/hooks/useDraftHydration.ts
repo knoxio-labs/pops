@@ -14,6 +14,8 @@ import { useImportStore } from '../../../store/importStore';
 import { firstImportStep } from '../step-labels';
 import { IMPORT_DRAFTS_LIST_KEY } from './useDraftWriteThrough';
 
+import type { ImportStore } from '../../../store/import-store-types';
+
 export type DraftGate =
   | { status: 'loading' }
   /** The wizard can mount. `draftId` is what the URL should carry, or null for a fresh run. */
@@ -31,6 +33,14 @@ function codeOf(error: unknown): string | undefined {
 
 function statusOf(error: unknown): number | undefined {
   return error instanceof FinanceApiError ? error.status : undefined;
+}
+
+/** Drops a store holding a run with nothing saved to resume it as, so a bare `/import` starts fresh. */
+function resetStoreIfAbandoned(store: ImportStore): void {
+  if (store.draftId !== null) return;
+  const hasUnsavedRun =
+    store.commitResult !== null || store.rows.length > 0 || store.parsedTransactions.length > 0;
+  if (hasUnsavedRun) store.reset();
 }
 
 /** Take the lease as this tab; `force` is the person's "Take over" / "Take it back". */
@@ -89,27 +99,42 @@ export function useDraftHydration(requestedId: string | null): {
   const [attempt, setAttempt] = useState<{ force: boolean; n: number }>({ force: false, n: 0 });
   const queryClient = useQueryClient();
 
+  // The `gate` transition itself is pure React state, safe to derive during
+  // render for both no-fetch-needed cases (no `?draft=`, or the store
+  // already holds the requested draft). The store reset that sometimes goes
+  // with the first case is a mutation of an EXTERNAL system (the zustand
+  // store), which render purity forbids: calling it from the render body
+  // would run it again on any render React discards or repeats (Strict
+  // Mode's dev double-invocation, a concurrent-mode speculative render).
+  // That stays in its own effect below, with no `setState` in it at all, so
+  // it does not need to derive anything — only synchronize.
+  const [resolvedFor, setResolvedFor] = useState<{
+    requestedId: string | null;
+    attempt: typeof attempt;
+  }>();
+  const isUnresolved =
+    resolvedFor === undefined ||
+    resolvedFor.requestedId !== requestedId ||
+    resolvedFor.attempt !== attempt;
+  if (isUnresolved) {
+    const store = useImportStore.getState();
+    setResolvedFor({ requestedId, attempt });
+    setGate(
+      requestedId === null || requestedId === store.draftId
+        ? { status: 'ready' }
+        : { status: 'loading' }
+    );
+  }
+
+  useEffect(() => {
+    if (requestedId !== null) return;
+    resetStoreIfAbandoned(useImportStore.getState());
+  }, [requestedId]);
+
   useEffect(() => {
     let cancelled = false;
     const store = useImportStore.getState();
-    if (requestedId === null) {
-      if (store.draftId === null) {
-        if (
-          store.commitResult !== null ||
-          store.rows.length > 0 ||
-          store.parsedTransactions.length > 0
-        ) {
-          store.reset();
-        }
-      }
-      setGate({ status: 'ready' });
-      return;
-    }
-    if (requestedId === store.draftId) {
-      setGate({ status: 'ready' });
-      return;
-    }
-    setGate({ status: 'loading' });
+    if (requestedId === null || requestedId === store.draftId) return;
     loadInto(requestedId, attempt.force)
       .then((next) => {
         if (!cancelled) setGate(next);

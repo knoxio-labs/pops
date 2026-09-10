@@ -61,17 +61,19 @@ export function useGraphSimulation({
   transformRef,
 }: UseGraphSimulationArgs): void {
   const drawRef = useRef<() => void>(() => {});
-  drawRef.current = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    drawGraph({
-      canvas,
-      nodes: nodesRef.current ?? [],
-      links: linksRef.current ?? [],
-      transform: transformRef.current ?? { x: 0, y: 0, k: 1 },
-      itemId,
-    });
-  };
+  useEffect(() => {
+    drawRef.current = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      drawGraph({
+        canvas,
+        nodes: nodesRef.current ?? [],
+        links: linksRef.current ?? [],
+        transform: transformRef.current ?? { x: 0, y: 0, k: 1 },
+        itemId,
+      });
+    };
+  });
 
   useEffect(() => {
     if (!rawData || !canvasRef.current || !containerRef.current) return;

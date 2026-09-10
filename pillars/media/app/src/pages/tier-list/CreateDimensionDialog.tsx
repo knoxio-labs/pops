@@ -7,7 +7,7 @@
  * not want to flip mid-life). No checkboxes, so the post-#2175 Controller
  * wiring rules do not apply here.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import {
   Button,
@@ -79,13 +79,15 @@ function FormFields({ name, setName, description, setDescription, onEnter }: For
 function useDimensionFormState(open: boolean) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) {
       setName('');
       setDescription('');
     }
-  }, [open]);
+  }
 
   return { name, setName, description, setDescription };
 }

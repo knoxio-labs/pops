@@ -54,9 +54,13 @@ export function DebouncedSearchInput({
   // a pre-clear value back into the URL. React bails on setLocal when
   // the value already matches, so an echo from our own debounce-emit
   // (parent processes onChange → re-emits same prop) is a no-op.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setLocal(value);
+  }
   useEffect(() => {
     userTyping.current = false;
-    setLocal(value);
   }, [value]);
   const debounced = useDebouncedValue(local, SEARCH_DEBOUNCE_MS);
   useEffect(() => {

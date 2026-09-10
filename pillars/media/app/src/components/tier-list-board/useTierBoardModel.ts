@@ -1,5 +1,5 @@
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import {
   DISMISS_ZONES,
@@ -173,14 +173,14 @@ export function useTierBoardModel({
   onNA,
 }: UseTierBoardArgs) {
   // Hydrate placements from tier overrides on initial render.
-  // The ref tracks which movies array was used for hydration so we
+  // hydratedMovies tracks which movies array was used for hydration so we
   // re-hydrate when the movie set changes (e.g. dimension switch).
-  const hydratedRef = useRef<TierMovie[]>([]);
+  const [hydratedMovies, setHydratedMovies] = useState<TierMovie[]>([]);
   const [placements, setPlacements] = useState<TierPlacements>(() => hydrateFromOverrides(movies));
 
   // Re-hydrate when movies array identity changes (dimension switch or refetch).
-  if (movies !== hydratedRef.current && movies.length > 0) {
-    hydratedRef.current = movies;
+  if (movies !== hydratedMovies && movies.length > 0) {
+    setHydratedMovies(movies);
     setPlacements(hydrateFromOverrides(movies));
   }
 

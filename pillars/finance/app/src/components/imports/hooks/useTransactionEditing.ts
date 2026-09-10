@@ -186,12 +186,17 @@ export function useTransactionEditing({
   }, []);
 
   const handleSaveEdit = useCallback(
-    buildSaveEdit({
-      setLocalTransactions,
-      setEditingTransaction,
-      generateProposal,
-      recomputeForEntity,
-    }),
+    (
+      transaction: ProcessedTransaction,
+      editedFields: Partial<ProcessedTransaction>,
+      shouldLearn = false
+    ) =>
+      buildSaveEdit({
+        setLocalTransactions,
+        setEditingTransaction,
+        generateProposal,
+        recomputeForEntity,
+      })(transaction, editedFields, shouldLearn),
     [setLocalTransactions, generateProposal, recomputeForEntity]
   );
 

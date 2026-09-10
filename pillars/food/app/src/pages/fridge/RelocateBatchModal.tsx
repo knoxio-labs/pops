@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * The service recomputes default expiry when the user hasn't overridden
  * it.
  */
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, RadioInput } from '@pops/ui';
 
@@ -66,14 +66,18 @@ export function RelocateBatchModal({
   });
   const [location, setLocation] = useState<BatchLocation>('fridge');
   const [error, setError] = useState<string | null>(null);
+  const [prevDetailData, setPrevDetailData] = useState(detail.data);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-  useEffect(() => {
+  if (detail.data !== prevDetailData || isOpen !== prevIsOpen) {
+    setPrevDetailData(detail.data);
+    setPrevIsOpen(isOpen);
     if (detail.data !== null && detail.data !== undefined) {
       setLocation(detail.data.location);
     } else if (!isOpen) {
       setError(null);
     }
-  }, [detail.data, isOpen]);
+  }
 
   const relocateMutation = useRelocateMutation({ onClose, setError });
 

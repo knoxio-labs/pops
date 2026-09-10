@@ -11,13 +11,13 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { engramsUpdate, ingestEnrichmentStatus, ingestRetryEnrichment } from '../cerebrum-api';
 import { unwrap } from '../cerebrum-api-helpers';
 import {
   appendUnique,
-  hasStoppedPolling,
+  POLL_TIMEOUT_MS,
   refetchInterval,
   replaceScope,
   segmentSetKey,
@@ -83,7 +83,21 @@ export function EnrichmentChips({ engramId }: EnrichmentChipsProps) {
   const { updateMutation, retryMutation } = useEnrichmentMutations();
 
   const status = statusQuery.data;
-  const stoppedPolling = hasStoppedPolling(Date.now() - startedAt, status?.enriched ?? false);
+  const enriched = status?.enriched ?? false;
+  const [stoppedPolling, setStoppedPolling] = useState(false);
+
+  const [prevEnriched, setPrevEnriched] = useState(enriched);
+  if (enriched !== prevEnriched) {
+    setPrevEnriched(enriched);
+    if (enriched) setStoppedPolling(false);
+  }
+
+  useEffect(() => {
+    if (enriched) return;
+    const remaining = POLL_TIMEOUT_MS - (Date.now() - startedAt);
+    const timer = setTimeout(() => setStoppedPolling(true), Math.max(0, remaining));
+    return () => clearTimeout(timer);
+  }, [enriched, startedAt]);
 
   const handlers = useChipHandlers(engramId, status, updateMutation);
 

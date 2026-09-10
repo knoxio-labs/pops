@@ -140,11 +140,10 @@ export function usePreviewEffects(
   });
 
   const handleRerunPreview = useCallback(() => setRerunToken((t) => t + 1), []);
-  const resetPreviewState = useCallback(buildResetState(combined, selected, refs, setRerunToken), [
-    combined,
-    selected,
-    refs,
-  ]);
+  const resetPreviewState = useCallback(
+    () => buildResetState(combined, selected, refs, setRerunToken)(),
+    [combined, selected, refs]
+  );
   const hasDirty = useMemo(() => localOps.some((o) => o.dirty), [localOps]);
 
   return buildReturnValue(combined, selected, refs, {

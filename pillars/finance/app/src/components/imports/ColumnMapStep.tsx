@@ -123,9 +123,11 @@ function useAutoDetectColumnsOnce(
   setLocalColumnMap: (columnMap: ColumnMap) => void
 ) {
   const headersRef = useRef(headers);
-  headersRef.current = headers;
   const columnMapRef = useRef(columnMap);
-  columnMapRef.current = columnMap;
+  useEffect(() => {
+    headersRef.current = headers;
+    columnMapRef.current = columnMap;
+  });
   const hasAutoDetectedRef = useRef(false);
   useEffect(() => {
     if (hasAutoDetectedRef.current) return;

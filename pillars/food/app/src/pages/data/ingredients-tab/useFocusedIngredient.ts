@@ -37,9 +37,12 @@ export function useFocusedIngredient({
   const [notFoundSlug, setNotFoundSlug] = useState<string | null>(null);
   // Keyed by `(slug, location.key)` so re-navigating to the same `?focus=<slug>`
   // re-triggers the resolve + highlight — react-router mints a new key per
-  // navigation even when the URL is unchanged, so this re-fires the effect
-  // without thrashing on intra-page renders.
-  const lastResolvedKey = useRef<string | null>(null);
+  // navigation even when the URL is unchanged, so this re-fires below without
+  // thrashing on intra-page renders.
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
+  // Dedupes the onResolved/onExpandAncestors side effects per resolved key,
+  // independent of the render that first observed the transition.
+  const firedKeyRef = useRef<string | null>(null);
 
   const bySlug = useMemo(() => {
     const map = new Map<string, IngredientRow>();
@@ -52,31 +55,35 @@ export function useFocusedIngredient({
     return map;
   }, [ingredients]);
 
-  useEffect(() => {
-    if (focusSlug === null) {
-      lastResolvedKey.current = null;
+  const key = focusSlug === null ? null : `${location.key}:${focusSlug}`;
+
+  if (focusSlug === null) {
+    if (resolvedKey !== null) {
+      setResolvedKey(null);
       setHighlightedId(null);
       setNotFoundSlug(null);
-      return;
     }
-    if (isListLoading) return;
-    const key = `${location.key}:${focusSlug}`;
-    if (lastResolvedKey.current === key) return;
-
+  } else if (!isListLoading && key !== resolvedKey) {
+    setResolvedKey(key);
     const match = bySlug.get(focusSlug);
     if (match === undefined) {
       setNotFoundSlug(focusSlug);
-      lastResolvedKey.current = key;
-      return;
+    } else {
+      setNotFoundSlug(null);
+      setHighlightedId(match.id);
     }
-    lastResolvedKey.current = key;
-    setNotFoundSlug(null);
+  }
 
+  useEffect(() => {
+    if (resolvedKey === null || firedKeyRef.current === resolvedKey) return;
+    firedKeyRef.current = resolvedKey;
+    if (focusSlug === null) return;
+    const match = bySlug.get(focusSlug);
+    if (match === undefined) return;
     const ancestors = collectAncestors(byId, match.id);
     if (ancestors.length > 0) onExpandAncestors(ancestors);
     onResolved(match.id);
-    setHighlightedId(match.id);
-  }, [focusSlug, location.key, isListLoading, bySlug, byId, onResolved, onExpandAncestors]);
+  }, [resolvedKey, focusSlug, bySlug, byId, onResolved, onExpandAncestors]);
 
   useEffect(() => {
     if (highlightedId === null) return;

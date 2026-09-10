@@ -6,7 +6,7 @@
  * `ingredient_id`, but recipe DSL bodies referencing the old slug will fail
  * on next compile — the description warns the user about that.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@pops/ui';
@@ -25,10 +25,12 @@ interface Props {
 export function RenameIngredientDialog(props: Props) {
   const { t } = useTranslation('food');
   const [newSlug, setNewSlug] = useState('');
+  const [prevOpen, setPrevOpen] = useState(props.open);
 
-  useEffect(() => {
+  if (props.open !== prevOpen) {
+    setPrevOpen(props.open);
     if (props.open) setNewSlug(props.currentSlug);
-  }, [props.open, props.currentSlug]);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
