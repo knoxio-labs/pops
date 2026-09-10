@@ -7,6 +7,8 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express, { type Express } from 'express';
 
+import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
+
 import { inboundAuth } from './auth.js';
 import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
@@ -136,6 +138,12 @@ export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
 // pillar, so a keyless process would bind the port, pass its healthcheck and
 // fail every call.
 if (process.env['NODE_ENV'] !== 'test') {
+  // Before the key is resolved. `requireServiceAccountKey` is fatal when no
+  // source yields a value, but a `*_FILE` variable naming a file this process
+  // cannot open is not that case — the file source falls through to the
+  // environment, and the environment may carry something else entirely
+  // (POPS-3315).
+  assertSecretFilesReadable();
   requireServiceAccountKey();
   const port = resolvePort();
   app.listen(port, '0.0.0.0', () => {
