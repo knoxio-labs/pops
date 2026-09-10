@@ -40,6 +40,8 @@
     "check:touch-targets:baseline": "node scripts/check-touch-targets.mjs --write",
     "check:raw-form-controls": "node scripts/ci/check-raw-form-controls.mjs",
     "check:raw-form-controls:self-test": "node scripts/ci/check-raw-form-controls.mjs --self-test",
+    "check:shared-runtime": "node scripts/ci/check-shared-runtime-completeness.mjs",
+    "check:shared-runtime:self-test": "node scripts/ci/check-shared-runtime-completeness.mjs --self-test",
     "check:title-icon": "node scripts/check-title-icon-consistency.mjs",
     "check:title-icon:self-test": "node scripts/check-title-icon-consistency.mjs --self-test",
     "check:nav-parity": "node scripts/check-nav-parity.mjs",

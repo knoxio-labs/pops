@@ -1099,6 +1099,29 @@ jobs:
       - name: Every pillar at zero raw form controls outside the allowlist
         run: node scripts/ci/check-raw-form-controls.mjs
 
+  shared-runtime-completeness:
+    name: Shared-runtime completeness
+    # POPS-3322: build-remote.ts asserts nothing on SHARED_RUNTIME_SPECIFIERS
+    # is inlined into a remote bundle, but nothing asserted the list holds
+    # every package that belongs on it — which is how `sonner` shipped dead
+    # toasts in seven pillars (POPS-3320). This inverts it into an allowlist:
+    # every package the host (pillars/shell, or libs/ui which it bundles) and
+    # a pillars/<id>/app both depend on must be either externalised or on the
+    # guard's DUPLICATED_DELIBERATELY list with a reason. Tier A: reads
+    # package.json files and one TS source file as text, imports nothing
+    # beyond node:*, skips `pnpm install`. See
+    # scripts/ci/check-shared-runtime-completeness.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard reports unclassified, stale and unservable packages)
+        run: node scripts/ci/check-shared-runtime-completeness.mjs --self-test
+      - name: Every host/pillar shared dependency is externalised or exempted
+        run: node scripts/ci/check-shared-runtime-completeness.mjs
+
   title-icon-consistency:
     name: Title-icon consistency
     # Within one pillar app, top-level (navConfig) pages must either all pass
