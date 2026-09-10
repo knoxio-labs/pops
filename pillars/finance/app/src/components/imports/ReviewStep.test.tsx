@@ -65,12 +65,23 @@ let mockProcessedTransactions: {
 
 let mockPendingEntities: unknown[] = [];
 let mockPendingChangeSets: unknown[] = [];
+/**
+ * The store's `processSessionId`. A file import has one, from the Process
+ * step; a live Up draft has none, because its rows arrive pre-mapped from the
+ * webhook or the sync and skip that step (POPS-3358). Varied per test so the
+ * suite exercises both shapes rather than only the file one it was written
+ * against.
+ */
+let mockProcessSessionId: string | null = null;
+
+/** The session a file import carries out of the Process step. */
+const FILE_IMPORT_SESSION_ID = '11111111-1111-1111-1111-111111111111';
 
 vi.mock('../../store/importStore', () => {
   const buildState = (): Record<string, unknown> => ({
     processedTransactions: mockProcessedTransactions,
     setConfirmedTransactions: mockSetConfirmedTransactions,
-    processSessionId: '11111111-1111-1111-1111-111111111111',
+    processSessionId: mockProcessSessionId,
     setProcessedTransactions: mockSetProcessedTransactions,
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
@@ -91,7 +102,7 @@ vi.mock('../../store/importStore', () => {
     pendingChangeSets: mockPendingChangeSets,
     pendingEntities: mockPendingEntities,
     setProcessedTransactions: mockSetProcessedTransactions,
-    processSessionId: '11111111-1111-1111-1111-111111111111',
+    processSessionId: mockProcessSessionId,
     manuallyResolvedChecksums: [],
     markChecksumsResolved: vi.fn(),
   });
@@ -356,6 +367,7 @@ beforeEach(() => {
   proposalDialogApproveMode = 'success';
   mockPendingEntities = [];
   mockPendingChangeSets = [];
+  mockProcessSessionId = FILE_IMPORT_SESSION_ID;
   mockEntitiesQuery.mockResolvedValue({
     data: {
       entities: [
@@ -589,9 +601,48 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     });
 
     expect(mockReevaluate).toHaveBeenCalledWith({
-      body: expect.objectContaining({ sessionId: '11111111-1111-1111-1111-111111111111' }),
+      body: expect.objectContaining({ sessionId: FILE_IMPORT_SESSION_ID }),
     });
     expect(mockToastSuccess).toHaveBeenCalledWith('Rules saved locally');
+  });
+
+  it('applies a rule in a live draft, which re-evaluates nothing because it has no session', async () => {
+    mockProcessSessionId = null;
+    const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [tx],
+      failed: [],
+      skipped: [],
+    };
+
+    const { rerender } = render(reviewStepTree());
+
+    fireEvent.click(screen.getByTestId('proposal-approve'));
+
+    mockPendingChangeSets = [
+      {
+        tempId: 'temp:changeset:1',
+        changeSet: { ops: [] },
+        appliedAt: new Date().toISOString(),
+        source: 'correction-proposal',
+      },
+    ];
+    rerender(reviewStepTree());
+
+    // The rule is staged locally, exactly as it is for a file import: applying
+    // builds the ChangeSet from local ops and never calls the server.
+    expect(mockToastSuccess).toHaveBeenCalledWith('Rules saved locally');
+
+    // Re-evaluation is the one thing that does need a session, and
+    // `useReevaluatePending` returns early without one rather than sending an
+    // empty `sessionId` the route would reject as a non-uuid.
+    expect(mockReevaluate).not.toHaveBeenCalled();
+
+    // So the buckets are unchanged: nothing re-buckets a live draft's rows in
+    // review (POPS-3363).
+    expect(screen.getByText(/Matched \(0\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Uncertain \(1\)/)).toBeInTheDocument();
   });
 
   it('approval failure shows error toast and local state remains unchanged', async () => {

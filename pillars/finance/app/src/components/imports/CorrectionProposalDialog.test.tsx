@@ -413,7 +413,6 @@ function renderDialog(overrides: Partial<Parameters<typeof CorrectionProposalDia
   const props = {
     open: true,
     onOpenChange: vi.fn(),
-    sessionId: '11111111-1111-1111-1111-111111111111',
     signal: SIGNAL,
     triggeringTransaction: TRIGGERING_TRANSACTION,
     previewTransactions: [
