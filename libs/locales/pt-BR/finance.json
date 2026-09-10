@@ -117,6 +117,7 @@
   "import.takenOver.body": "Outra aba a assumiu às {{at}}. Nada que você alterar aqui será salvo. Retome-a para continuar aqui, ou saia e deixe a outra aba terminar.",
   "import.takenOver.leave": "Sair",
   "import.takenOver.takeBack": "Retomar",
+  "import.takenOver.takeBackFailed": "Não foi possível retomar a importação. Tente novamente.",
   "import.pending.dashboardHint_one": "{{count}} importação aguardando você",
   "import.pending.dashboardHint_other": "{{count}} importações aguardando você",
   "import.pending.continueTitle": "Continue de onde parou",
