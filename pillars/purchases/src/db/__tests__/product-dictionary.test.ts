@@ -179,6 +179,51 @@ describe('what the proposal pass learns', () => {
     expect(listProducts(opened.db)[0]?.product.label).toBe('Chk Brst 1kg');
   });
 
+  /**
+   * Force the ids the same-instant tie-break reads.
+   *
+   * `purchase_items.id` is a `crypto.randomUUID()`, so two lines printing one
+   * wording at one instant are separated by a value that differs on every
+   * run. Whether {@link isNewer}'s tie-break arm was taken was therefore a
+   * coin flip, and the branch moved in and out of coverage between runs of a
+   * byte-identical tree (POPS-3255). The two tests below drive the arm from
+   * each side on purpose, so it is covered whatever the read order.
+   */
+  function forceLineIds(idByName: Readonly<Record<string, string>>): void {
+    for (const [name, id] of Object.entries(idByName)) {
+      opened.raw.prepare(`UPDATE purchase_items SET id = ? WHERE name = ?`).run(id, name);
+    }
+  }
+
+  function twoPrintingsOnOneInstant(): void {
+    createPurchase(
+      opened.db,
+      order({ checksum: 'first', items: [line({ name: 'CHK BRST 1KG' })] })
+    );
+    createPurchase(
+      opened.db,
+      order({ checksum: 'second', items: [line({ name: 'Chk Brst 1kg' })] })
+    );
+  }
+
+  it('hands a same-instant tie to the greater line id', () => {
+    twoPrintingsOnOneInstant();
+    forceLineIds({ 'CHK BRST 1KG': 'aaaa', 'Chk Brst 1kg': 'zzzz' });
+
+    proposeProducts(opened.db);
+
+    expect(listProducts(opened.db)[0]?.product.label).toBe('Chk Brst 1kg');
+  });
+
+  it('keeps the incumbent printing when the same-instant tie goes the other way', () => {
+    twoPrintingsOnOneInstant();
+    forceLineIds({ 'CHK BRST 1KG': 'zzzz', 'Chk Brst 1kg': 'aaaa' });
+
+    proposeProducts(opened.db);
+
+    expect(listProducts(opened.db)[0]?.product.label).toBe('CHK BRST 1KG');
+  });
+
   it('does not let an order whose date it cannot read own the printed name', () => {
     // Migration 0010 left a timestamp SQLite could not read exactly as it
     // was, and the write path refuses one, so this row exists only by being

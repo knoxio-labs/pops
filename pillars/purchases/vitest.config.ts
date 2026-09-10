@@ -173,6 +173,35 @@ export default defineConfig({
        * edge-case work spread one or two branches to a file, which is why
        * this number moves in small deliberate steps and not in sweeps.
        */
+      /**
+       * Why 0.11pp of headroom is enough, having previously been the whole
+       * problem (POPS-3255).
+       *
+       * This gate used to fail intermittently at 89.79% on source no commit
+       * had touched. The cause was one branch: `observeWordings` in
+       * `db/services/product-dictionary-proposals.ts` breaks a same-instant
+       * tie with `isNewer`, whose tie-breaker is the line id — a
+       * `crypto.randomUUID()`. Two fixture lines printing one wording at one
+       * instant therefore took that arm or did not depending on which random
+       * id sorted higher, and the file moved between 12/13 and 13/13 branches
+       * between runs. Nothing about timezone, pool size or load was involved:
+       * measured over six runs across three timezones, that one branch was
+       * the only figure in the whole pillar that moved.
+       *
+       * It is driven from both sides now, by two tests in
+       * `db/__tests__/product-dictionary.test.ts` that force the ids, so the
+       * arm is taken and not taken on every run. Re-measured the same way
+       * afterwards: every per-file figure, on all four metrics, identical
+       * across six runs and three timezones, with the global branch number at
+       * 91.11 each time.
+       *
+       * So the margin is deliberately not widened. A ratchet's whole job is
+       * to fail the PR that dilutes it, and one with room to spare stops
+       * doing that — the number sat at 90 for months for exactly that reason.
+       * 0.11pp was never a tolerance for run-to-run noise; it was a ratchet
+       * being asked to absorb noise it should not have had to. The noise is
+       * gone, and what remains is the ratchet working as intended.
+       */
       thresholds: {
         statements: 95,
         branches: 91,
