@@ -26,6 +26,7 @@ import {
   parseState,
   rejudgeable,
   remedyFromModel,
+  remedyNeedles,
   render,
   STATE_MARKER,
   STATE_VERSION,
@@ -466,6 +467,45 @@ describe('verifyStatus', () => {
     expect(f).toMatchObject({ status: 'open', resolved_in: null });
   });
 
+  it('resolves a remedy naming a hyphenated property key, which source must quote', () => {
+    // POPS-3391, seen on POPS-3298's PR. `aria-label` is not an identifier, so
+    // TypeScript requires the key be quoted — `'aria-label'?: string`. A remedy
+    // asking for the bare `aria-label?:` asks for a string no valid source file
+    // can contain, and `review-findings-gate` is a required check, so the PR
+    // was permanently red with no correct exit.
+    const prior = makeFinding({
+      file: 'libs/ui/src/components/RadioInput.tsx',
+      snippet: null,
+      remedy: { file: 'libs/ui/src/components/RadioInput.tsx', contains: 'aria-label?:' },
+    });
+    const [f] = verifyStatus(
+      [prior],
+      () => "interface Props {\n  'aria-label'?: string;\n}\n",
+      'sha2'
+    );
+    expect(f).toMatchObject({ status: 'resolved', resolved_in: 'sha2' });
+  });
+
+  it('resolves the reverse too — a quoted remedy against an unquoted key', () => {
+    const prior = makeFinding({
+      snippet: null,
+      remedy: { file: 'a.ts', contains: "'title'?:" },
+    });
+    const [f] = verifyStatus([prior], () => 'interface Props { title?: string }', 'sha2');
+    expect(f).toMatchObject({ status: 'resolved' });
+  });
+
+  it('still keeps a hyphenated-key finding open when the key is nowhere in the file', () => {
+    // The quoting allowance must not resolve a finding on a file that never
+    // gained the property, which would be worse than the block it replaces.
+    const prior = makeFinding({
+      snippet: null,
+      remedy: { file: 'a.ts', contains: 'aria-label?:' },
+    });
+    const [f] = verifyStatus([prior], () => 'interface Props { id?: string }', 'sha2');
+    expect(f).toMatchObject({ status: 'open', resolved_in: null });
+  });
+
   it('resolves a snippet-less finding once its remedy lands', () => {
     // "X is missing" is exactly the shape that has no snippet to track, so
     // before the remedy it could never be answered by the tree at all.
@@ -789,5 +829,44 @@ describe('two findings that hash alike', () => {
 
     expect(a.id).toBe(b.id);
     expect(new Set(merge([], [a, b]).map((f) => f.id)).size).toBe(2);
+  });
+});
+
+/**
+ * A remedy string the reviewer can write and no valid source file can hold.
+ *
+ * `review-findings-gate` is a required check, so a finding whose remedy is
+ * unsatisfiable is a merge block with no correct exit — the ADR-045 shape
+ * from the other side: a guard that cannot be satisfied by the thing it is
+ * asking for is not reporting, it is stuck (POPS-3391).
+ */
+describe('remedyNeedles', () => {
+  it('offers a hyphenated property key quoted, which is the only way source can spell it', () => {
+    expect(remedyNeedles('aria-label?:')).toContain("'aria-label'?:");
+    expect(remedyNeedles('aria-label?:')).toContain('"aria-label"?:');
+  });
+
+  it('offers a quoted key bare, so a remedy that quotes it matches source that does not', () => {
+    expect(remedyNeedles("'title'?:")).toContain('title?:');
+  });
+
+  it('keeps the rest of the string untouched, so it cannot match something merely similar', () => {
+    expect(remedyNeedles('aria-label?: string')).toEqual([
+      'aria-label?: string',
+      'aria-label?: string',
+      "'aria-label'?: string",
+      '"aria-label"?: string',
+    ]);
+  });
+
+  it('leaves a needle that is not a property key exactly as it was', () => {
+    for (const needle of ['assertSecretFilesReadable(', 'no-cache', '  ']) {
+      expect(remedyNeedles(needle)).toEqual([needle]);
+    }
+  });
+
+  it('handles a key with no optional marker, and one spread across whitespace', () => {
+    expect(remedyNeedles('data-testid:')).toContain("'data-testid':");
+    expect(remedyNeedles('http-equiv ?:')).toContain("'http-equiv' ?:");
   });
 });
