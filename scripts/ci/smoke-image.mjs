@@ -41,7 +41,8 @@
  *
  * Exit 0 = the image answered its health route, every data mount is
  * writable, and (for the nginx-served frontends) its entry document forces
- * revalidation. Exit 1 = one of those was not true. Exit 2 = usage error.
+ * revalidation and every extension it ships resolves to a media type of its
+ * own. Exit 1 = one of those was not true. Exit 2 = usage error.
  */
 
 import { execFile } from 'node:child_process';
@@ -344,6 +345,107 @@ export function freshnessProbePaths(baseImage, dockerfile = '') {
 }
 
 /**
+ * Where an nginx runtime stage puts the built frontend.
+ *
+ * The `root` every one of these images' conf declares, and the default the
+ * base image ships. Read from the container rather than from the conf on
+ * disk so the enumeration below sees the files that were actually shipped —
+ * a build that emitted nothing is exactly the state a conf-reading check
+ * would call clean.
+ */
+const NGINX_DOC_ROOT = '/usr/share/nginx/html';
+
+/**
+ * Extensions whose unmapped answer is not a defect, with the reason.
+ *
+ * The default `application/octet-stream` only hurts when a browser enforces
+ * a type on the resource — module scripts, workers, stylesheets, fonts. A
+ * source map is fetched by devtools, which ignore the type entirely, and is
+ * emitted only when a build turns sourcemaps on.
+ *
+ * Entries are exemptions from a gate, so each names why rather than merely
+ * appearing in a list.
+ */
+export const UNTYPED_BY_DESIGN = Object.freeze({
+  '.map': 'a source map is fetched by devtools, which do not enforce a type on it',
+});
+
+/** Extensions whose content genuinely is plain text. */
+const PLAIN_TEXT_EXTENSIONS = Object.freeze(['.txt', '.md', '.license']);
+
+/**
+ * One served path per distinct file extension under the document root.
+ *
+ * One representative rather than every file: what is under test is nginx's
+ * mapping, which is a function of the extension alone, and probing a
+ * thousand hashed chunks to learn the same fact eight times would make the
+ * gate slow enough to be worth turning off.
+ *
+ * Extensionless files are skipped — they have no mapping to get wrong, and
+ * nginx serves them as the default type by design.
+ *
+ * @param {readonly string[]} containerPaths Absolute paths inside the image.
+ * @param {string} docRoot The `root` those paths sit under.
+ * @returns {Map<string, string>} extension (lower-case, with the dot) →
+ *   request path.
+ */
+export function representativeByExtension(containerPaths, docRoot = NGINX_DOC_ROOT) {
+  /** @type {Map<string, string>} */
+  const byExtension = new Map();
+  for (const containerPath of containerPaths) {
+    const trimmed = containerPath.trim();
+    if (trimmed === '' || !trimmed.startsWith(`${docRoot}/`)) continue;
+    const name = basename(trimmed);
+    const dot = name.lastIndexOf('.');
+    if (dot <= 0) continue;
+    const extension = name.slice(dot).toLowerCase();
+    if (!byExtension.has(extension)) byExtension.set(extension, trimmed.slice(docRoot.length));
+  }
+  return byExtension;
+}
+
+/**
+ * Whether what nginx served is the "no mapping for this extension" answer.
+ *
+ * The failure this exists for returned 200 — the shell served an emitted
+ * `.mjs` worker as `application/octet-stream` and the browser refused it
+ * (POPS-2501) — so a status check sees nothing. Both default answers count:
+ * `application/octet-stream` is nginx's `default_type`, and a conf that sets
+ * `default_type text/plain` fails the same resources in the same way.
+ *
+ * A missing header is read as unmapped rather than skipped, because a
+ * resource served with no type at all is refused by the same browser rules.
+ *
+ * @param {string} extension Lower-case, with the dot.
+ * @param {string | null} contentType Response header value, or null.
+ * @returns {boolean}
+ */
+export function isUnmappedMediaType(extension, contentType) {
+  if (extension in UNTYPED_BY_DESIGN) return false;
+  if (contentType === null) return true;
+  const essence = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+  if (essence === 'application/octet-stream') return true;
+  return essence === 'text/plain' && !PLAIN_TEXT_EXTENSIONS.includes(extension);
+}
+
+/**
+ * The enumeration reached the build, rather than an empty or wrong root.
+ *
+ * A discovery floor, per
+ * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md):
+ * a gate that iterates nothing must fail rather than report OK. Script is the
+ * floor rather than a count, because every one of these images exists to ship
+ * script — a document host, a module host, a docs bundle — so a set with none
+ * in it is a `find` that did not reach `dist`, not a build without JavaScript.
+ *
+ * @param {ReadonlyMap<string, string>} byExtension
+ * @returns {boolean}
+ */
+export function reachedTheBuild(byExtension) {
+  return byExtension.has('.js') || byExtension.has('.mjs');
+}
+
+/**
  * Whether a `Cache-Control` value forces the browser to check back before
  * reusing the response.
  *
@@ -603,6 +705,51 @@ async function probeFreshness({ origin, paths }) {
   return observed;
 }
 
+/**
+ * Read the media type the container actually serves for each extension.
+ *
+ * A HEAD per extension against the running image, not a read of the conf or
+ * of a vendored copy of the base image's `mime.types`: both of those are
+ * restatements of what nginx will do, and the whole class of bug here is the
+ * two disagreeing. Every observation is returned, passing ones included, so
+ * the run can print what it saw.
+ *
+ * @param {object} args
+ * @param {string} args.origin e.g. `http://127.0.0.1:49154`.
+ * @param {ReadonlyMap<string, string>} args.byExtension
+ * @returns {Promise<{ extension: string, path: string, contentType: string,
+ *   unmapped: boolean }[]>}
+ */
+async function probeMediaTypes({ origin, byExtension }) {
+  /** @type {{ extension: string, path: string, contentType: string, unmapped: boolean }[]} */
+  const observed = [];
+  for (const [extension, path] of byExtension) {
+    const response = await fetch(`${origin}${path}`, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5_000),
+    });
+    const header = response.headers.get('content-type');
+    observed.push({
+      extension,
+      path,
+      contentType: header ?? '<no Content-Type header>',
+      unmapped: isUnmappedMediaType(extension, header),
+    });
+  }
+  return observed;
+}
+
+/**
+ * Every file the image ships under its document root.
+ *
+ * @param {string} containerId
+ * @returns {Promise<string[]>}
+ */
+async function servedFiles(containerId) {
+  const listing = await docker(['exec', containerId, 'find', NGINX_DOC_ROOT, '-type', 'f']);
+  return listing.split('\n').filter((line) => line.trim() !== '');
+}
+
 async function main() {
   const [dockerfilePath, image] = process.argv.slice(2);
   if (dockerfilePath === undefined || image === undefined) {
@@ -705,6 +852,48 @@ async function main() {
             `FAIL — ${image} serves its entry document without forcing revalidation, ` +
               `so a deploy leaves browsers on the previous bundle: ` +
               `${stale.map((o) => o.path).join(', ')}`
+          );
+          await reportFailure(containerId, image, mountPaths);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      // nginx serves what its bundled `mime.types` says, and Vite emits
+      // whatever the dependency graph ships. Nothing made the two agree:
+      // the PDF reader's worker arrived as `.mjs`, nginx 1.31 has no entry
+      // for it, and the shell answered 200 with `application/octet-stream`
+      // — which a browser refuses for a module worker. Every gate was green
+      // (POPS-2538).
+      if (probePaths.length > 0) {
+        const origin = `http://127.0.0.1:${await resolveHostPort(containerId, port)}`;
+        const byExtension = representativeByExtension(await servedFiles(containerId));
+        if (!reachedTheBuild(byExtension)) {
+          console.error(
+            `FAIL — ${image} serves no script under ${NGINX_DOC_ROOT}, so this check ` +
+              `enumerated nothing to judge (found: ${[...byExtension.keys()].join(', ') || 'nothing'})`
+          );
+          await reportFailure(containerId, image, mountPaths);
+          process.exitCode = 1;
+          return;
+        }
+        console.log(`Reading the served media types of ${image}:`);
+        const types = await probeMediaTypes({ origin, byExtension });
+        for (const { extension, contentType } of types) {
+          console.log(`  ${extension} → Content-Type: ${contentType}`);
+        }
+        const unmapped = types.filter((t) => t.unmapped);
+        if (unmapped.length > 0) {
+          console.error(
+            `FAIL — ${image} serves these extensions with no media type of their own, ` +
+              `which a browser refuses for a module, a worker, a stylesheet or a font:`
+          );
+          for (const { extension, path, contentType } of unmapped) {
+            console.error(`  ${extension} (${path}) → ${contentType}`);
+          }
+          console.error(
+            'Add a `location ~ \\.<ext>$` rule with a `default_type` to ' +
+              'pillars/shell/scripts/nginx-conf-template.ts and re-run `pnpm gen:nginx`.'
           );
           await reportFailure(containerId, image, mountPaths);
           process.exitCode = 1;

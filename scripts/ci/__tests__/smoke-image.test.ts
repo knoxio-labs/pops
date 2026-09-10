@@ -10,6 +10,9 @@ import {
   forcesRevalidation,
   freshVolumeName,
   freshnessProbePaths,
+  isUnmappedMediaType,
+  reachedTheBuild,
+  representativeByExtension,
   smokeLabel,
   mountSlug,
   normalizeVolumeEntry,
@@ -19,6 +22,7 @@ import {
   planVolumes,
   resolveHealthPath,
   runtimeStage,
+  UNTYPED_BY_DESIGN,
 } from '../smoke-image.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -1224,5 +1228,139 @@ describe('planSmoke / freshnessProbePaths with declared routes', () => {
       '\n'
     );
     expect(freshnessProbePaths('node:24-slim', node)).toEqual([]);
+  });
+});
+
+/**
+ * The class POPS-2501 was one instance of.
+ *
+ * nginx serves what its bundled `mime.types` says and Vite emits whatever the
+ * dependency graph ships. Nothing made the two agree: the PDF reader's worker
+ * arrived as `.mjs`, nginx 1.31 maps no such extension, and the shell answered
+ * 200 with `application/octet-stream` — which a browser refuses for a module
+ * worker. Every existing gate was green, because none of them looked at a
+ * header (POPS-2538).
+ */
+describe('representativeByExtension', () => {
+  const ROOT = '/usr/share/nginx/html';
+
+  it('takes one path per distinct extension, not one per file', () => {
+    const found = representativeByExtension(
+      [
+        `${ROOT}/assets/index-a1.js`,
+        `${ROOT}/assets/index-b2.js`,
+        `${ROOT}/assets/index-c3.css`,
+        `${ROOT}/index.html`,
+      ],
+      ROOT
+    );
+
+    expect([...found.keys()].toSorted()).toEqual(['.css', '.html', '.js']);
+    expect(found.get('.js')).toBe('/assets/index-a1.js');
+  });
+
+  it('returns request paths, not container paths', () => {
+    const found = representativeByExtension([`${ROOT}/assets/worker-d4.mjs`], ROOT);
+
+    expect(found.get('.mjs')).toBe('/assets/worker-d4.mjs');
+  });
+
+  it('reads an extension case-insensitively, so .WOFF2 is not a second entry', () => {
+    const found = representativeByExtension(
+      [`${ROOT}/f/a.WOFF2`, `${ROOT}/f/b.woff2`, `${ROOT}/f/c.js`],
+      ROOT
+    );
+
+    expect([...found.keys()].toSorted()).toEqual(['.js', '.woff2']);
+  });
+
+  it('skips a file with no extension, which has no mapping to get wrong', () => {
+    const found = representativeByExtension([`${ROOT}/LICENSE`, `${ROOT}/a.js`], ROOT);
+
+    expect([...found.keys()]).toEqual(['.js']);
+  });
+
+  it('skips a dotfile rather than reading its name as an extension', () => {
+    expect([...representativeByExtension([`${ROOT}/.gitkeep`], ROOT).keys()]).toEqual([]);
+  });
+
+  it('ignores anything outside the document root', () => {
+    expect([
+      ...representativeByExtension(['/etc/nginx/nginx.conf', `${ROOT}/a.js`], ROOT).keys(),
+    ]).toEqual(['.js']);
+  });
+
+  it('tolerates the blank lines a `find` listing ends with', () => {
+    expect([...representativeByExtension(['', `${ROOT}/a.js`, '  '], ROOT).keys()]).toEqual([
+      '.js',
+    ]);
+  });
+});
+
+describe('isUnmappedMediaType', () => {
+  it('reports the exact answer that shipped the .mjs worker as unusable', () => {
+    expect(isUnmappedMediaType('.mjs', 'application/octet-stream')).toBe(true);
+  });
+
+  it('reports a resource served with no type at all', () => {
+    expect(isUnmappedMediaType('.woff2', null)).toBe(true);
+  });
+
+  it('reports text/plain on something that is not text, which is the other default', () => {
+    // A conf that sets `default_type text/plain` fails the same resources in
+    // the same way, and 200s just as convincingly.
+    expect(isUnmappedMediaType('.css', 'text/plain')).toBe(true);
+  });
+
+  it('accepts text/plain on something that genuinely is plain text', () => {
+    expect(isUnmappedMediaType('.txt', 'text/plain; charset=utf-8')).toBe(false);
+  });
+
+  it('accepts a real type, charset parameter and all', () => {
+    expect(isUnmappedMediaType('.js', 'application/javascript; charset=utf-8')).toBe(false);
+    expect(isUnmappedMediaType('.woff2', 'font/woff2')).toBe(false);
+  });
+
+  it('reads the type case-insensitively', () => {
+    expect(isUnmappedMediaType('.mjs', 'Application/Octet-Stream')).toBe(true);
+  });
+
+  it('exempts only the extensions declared untyped by design, each with a reason', () => {
+    expect(isUnmappedMediaType('.map', 'application/octet-stream')).toBe(false);
+    for (const reason of Object.values(UNTYPED_BY_DESIGN)) {
+      expect(reason.length).toBeGreaterThan(20);
+    }
+  });
+});
+
+describe('reachedTheBuild', () => {
+  it('refuses an empty enumeration rather than calling it clean', () => {
+    // ADR-045: a gate that iterates nothing must fail. An empty set here is a
+    // `find` that missed the document root, not an image with no assets.
+    expect(reachedTheBuild(new Map())).toBe(false);
+  });
+
+  it('refuses a set with no script in it, whatever else it found', () => {
+    expect(reachedTheBuild(new Map([['.html', '/index.html']]))).toBe(false);
+  });
+
+  it('accepts a set carrying either spelling of script', () => {
+    expect(reachedTheBuild(new Map([['.js', '/a.js']]))).toBe(true);
+    expect(reachedTheBuild(new Map([['.mjs', '/a.mjs']]))).toBe(true);
+  });
+});
+
+describe('the shell conf still types every extension it had to type by hand', () => {
+  it('keeps the .mjs rule the runtime probe would otherwise catch', () => {
+    // Pinned against the real template: the runtime probe only runs in the
+    // Docker job, and this is the one rule whose absence is already known to
+    // break a shipped feature.
+    const template = readFileSync(
+      join(repoRoot, 'pillars', 'shell', 'scripts', 'nginx-conf-template.ts'),
+      'utf8'
+    );
+
+    expect(template).toContain('location ~ \\\\.mjs$');
+    expect(template).toContain('default_type application/javascript');
   });
 });
