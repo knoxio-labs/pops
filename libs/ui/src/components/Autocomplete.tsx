@@ -2,7 +2,7 @@
  * Autocomplete component - Text input with suggestions using shadcn primitives
  * Built on Popover + Command for proper positioning and filtering
  */
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 import { cn } from '../lib/utils';
 import {
@@ -25,7 +25,8 @@ export interface AutocompleteSuggestion {
 export interface AutocompleteProps {
   /**
    * `id` for the underlying input, so a `<label htmlFor>` (or an
-   * `aria-labelledby` elsewhere) can name it.
+   * `aria-labelledby` elsewhere) can name it. It lands on the `<input>`
+   * itself, not on any wrapper.
    */
   id?: string;
   /**
@@ -154,6 +155,55 @@ function useAutocompleteState({
   return { open, setOpen, inputValue, handleInputChange, handleSelect };
 }
 
+/**
+ * Put the caller's `id` and `aria-labelledby` on the input, which is the one
+ * thing that cannot be done by passing them.
+ *
+ * cmdk builds its input as `createElement(input, { ...callerProps, id:
+ * ownId, 'aria-labelledby': ownLabelId, … })` — its own values are spread
+ * LAST, so they win. Two consequences, both of which shipped:
+ *
+ * 1. An `id` passed to `Autocomplete` never reached the DOM, so a
+ *    `<label htmlFor>` a consumer wrote pointed at nothing. `EndpointPicker`
+ *    has rendered exactly that, associating with nothing, since it was
+ *    written.
+ * 2. The input's `aria-labelledby` pointed at cmdk's own visually-hidden
+ *    `<label cmdk-label>`, which is EMPTY because nothing passes cmdk's
+ *    `label` prop. An `aria-labelledby` resolving to the empty string beats
+ *    `aria-label` in the accessible-name computation and leaves the field
+ *    with no name at all — and WAI-ARIA gives `combobox` no
+ *    name-from-content fallback, so there was nothing else for it to fall
+ *    back to. Every `Autocomplete` in the repo was an unnamed combobox
+ *    (POPS-3282).
+ *
+ * Correcting the two attributes on the element is what is left. Passing them
+ * through `asChild` on cmdk's input does work — Radix's Slot merges child
+ * props over cmdk's — but nesting that Slot inside `PopoverTrigger`'s costs
+ * the trigger its focus behaviour: the popover then steals focus from the
+ * field on the keystroke that opens it, and everything typed after the first
+ * character is lost. Measured, not assumed.
+ *
+ * A layout effect with no dependency array, because React reapplies cmdk's
+ * values on every render and this has to undo them again each time. It runs
+ * before paint, so no frame shows the wrong attributes.
+ */
+function useCallerNaming(
+  inputRef: RefObject<HTMLInputElement | null>,
+  id: string | undefined,
+  ariaLabelledBy: string | undefined
+): void {
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (input === null) return;
+    if (id !== undefined) input.id = id;
+    // Removed rather than left alone when the caller names the field some
+    // other way: cmdk's target is empty, so leaving it would shadow both
+    // `aria-label` and a native `<label for>`.
+    if (ariaLabelledBy === undefined) input.removeAttribute('aria-labelledby');
+    else input.setAttribute('aria-labelledby', ariaLabelledBy);
+  });
+}
+
 export function Autocomplete({
   id,
   'aria-label': ariaLabel,
@@ -174,6 +224,7 @@ export function Autocomplete({
     onSelect,
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  useCallerNaming(inputRef, id, ariaLabelledBy);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

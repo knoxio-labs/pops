@@ -31,3 +31,57 @@ describe('Autocomplete — loading suppresses the empty message', () => {
     expect(await screen.findByText('No results found.')).toBeInTheDocument();
   });
 });
+
+/**
+ * The accessible name, asserted through the name computation rather than
+ * through `getByLabelText`.
+ *
+ * That distinction is the whole test. `getByLabelText` matches `aria-label`
+ * directly and passed against the broken component, which is why nothing
+ * caught that every `Autocomplete` in the repo was an unnamed combobox
+ * (POPS-3282). `getByRole(..., { name })` runs the accname algorithm, where
+ * cmdk's empty `aria-labelledby` target beat everything else.
+ */
+describe('Autocomplete — how it is named', () => {
+  it('puts the caller’s id on the input, so a label can point at it', () => {
+    render(<Autocomplete id="recipe-field" suggestions={[]} value="" />);
+
+    expect(screen.getByRole('combobox')).toHaveAttribute('id', 'recipe-field');
+  });
+
+  it('computes its accessible name from aria-label', () => {
+    render(<Autocomplete aria-label="Recipe" suggestions={[]} value="" />);
+
+    expect(screen.getByRole('combobox', { name: 'Recipe' })).toBeInTheDocument();
+  });
+
+  it('computes its accessible name from a <label htmlFor> beside it', () => {
+    render(
+      <>
+        <label htmlFor="recipe-field">Recipe</label>
+        <Autocomplete id="recipe-field" suggestions={[]} value="" />
+      </>
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Recipe' })).toBeInTheDocument();
+  });
+
+  it('computes its accessible name from aria-labelledby', () => {
+    render(
+      <>
+        <span id="recipe-heading">Recipe</span>
+        <Autocomplete aria-labelledby="recipe-heading" suggestions={[]} value="" />
+      </>
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Recipe' })).toBeInTheDocument();
+  });
+
+  it('leaves cmdk to own the parts of the combobox it owns', () => {
+    render(<Autocomplete aria-label="Recipe" suggestions={[]} value="" />);
+    const input = screen.getByRole('combobox');
+
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-controls');
+  });
+});

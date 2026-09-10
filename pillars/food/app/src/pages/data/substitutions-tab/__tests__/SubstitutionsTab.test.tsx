@@ -182,6 +182,22 @@ describe('pillars/food/docs/prds/substitution-model — SubstitutionsTab', () =>
     expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/i);
   });
 
+  // POPS-3282: `EndpointPicker` has always rendered `<Label htmlFor={inputId}>`
+  // and passed the same id to `Autocomplete`, and the association was silently
+  // dead — the id never reached the input, and cmdk's empty hidden label won
+  // the accessible-name computation, so both fields reached a screen reader
+  // unnamed. Asserted through the name computation, not `getByLabelText`,
+  // which matches an `aria-label` neither of these fields has.
+  it('names each endpoint field from its own visible label', () => {
+    seedList([]);
+    renderTab();
+
+    const form = screen.getByRole('form', { name: /add substitution/i });
+
+    expect(within(form).getByRole('combobox', { name: 'From' })).toBeInTheDocument();
+    expect(within(form).getByRole('combobox', { name: 'To' })).toBeInTheDocument();
+  });
+
   // POPS-3179: the hand-rolled `IngredientSearch` declared `role="listbox"`
   // with `aria-selected={false}` hardcoded on every option and no keyboard
   // handling at all — a screen reader was told there was a listbox where no

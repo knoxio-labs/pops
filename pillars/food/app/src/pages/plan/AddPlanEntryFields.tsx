@@ -51,10 +51,6 @@ function RecipePicker(props: AddPlanEntryFieldsProps): ReactElement {
       </label>
       <Autocomplete
         id="add-plan-recipe-search"
-        // Radix's `PopoverTrigger asChild` overwrites the `id` the kit puts on
-        // the input, so `htmlFor` above never associates and the field would
-        // otherwise reach a screen reader unnamed (POPS-3282).
-        aria-label="Recipe"
         suggestions={props.options}
         value={props.search}
         // Every keystroke invalidates an earlier pick: the query the field now
