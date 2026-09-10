@@ -457,4 +457,34 @@ describe('a write that keeps failing (not ownership) toasts once, not per attemp
     await waitFor(() => expect(mocks.draftsWrite).toHaveBeenCalledTimes(2));
     expect(mockToastWarning).toHaveBeenCalledOnce();
   });
+
+  it('warns again after a take-back starts a fresh epoch', async () => {
+    useImportStore.setState({
+      ...initialState,
+      draftId: 'draft-1',
+      currentStep: 2,
+      rows: [{ a: '1' }],
+      headers: ['a'],
+      accountId: 'acc-amex',
+    });
+    renderImportPage('/finance/import?draft=draft-1');
+    await screen.findByText('Map');
+
+    mocks.draftsWrite.mockResolvedValueOnce(failure(500, 'InternalError', 'boom'));
+    useImportStore.getState().nextStep();
+    await waitFor(() => expect(mockToastWarning).toHaveBeenCalledOnce());
+
+    mocks.draftsWrite.mockResolvedValueOnce(failure(409, 'DraftOwnedElsewhere', 'open elsewhere'));
+    useImportStore.getState().prevStep();
+    await screen.findByText('This import is open somewhere else now');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Take it back' }));
+    await waitFor(() =>
+      expect(screen.queryByText('This import is open somewhere else now')).toBeNull()
+    );
+
+    mocks.draftsWrite.mockResolvedValueOnce(failure(500, 'InternalError', 'boom'));
+    useImportStore.getState().nextStep();
+    await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(2));
+  });
 });
