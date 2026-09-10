@@ -7,23 +7,44 @@
  * a failed call is worth retrying, and saying so in the log. `client.ts` keeps
  * the `ContactsClient` factory and the write leg.
  *
- * `ContactsRouter` stays in `client.ts` and is imported back as a type: the
- * cross-pillar-expectations guard resolves a `pillar<T>(...)` call site's
- * operations from `T`'s declaration in the SAME file as the call, so moving it
- * here would take those operations out of the guard's sight (ADR-045). The
- * import is type-only and erased, so nothing imports `client.ts` at runtime
- * and there is no cycle — which is also why `CONTACTS_PILLAR_ID` is declared
- * here and re-exported there rather than the other way round.
+ * Nothing here imports `client.ts`, in either direction — not even as a type.
+ * `ContactsRouter` has to stay declared in the file that calls `pillar<T>()`,
+ * because the cross-pillar-expectations guard resolves that call site's
+ * operations from `T`'s declaration in the SAME file (ADR-045); importing it
+ * back for these signatures is a module cycle `depcruise` refuses, type-only
+ * or not. So the two operations this module calls are restated below as
+ * {@link ContactsReadRouter}, and the compiler holds the two in agreement:
+ * `client.ts` passes its own handle into every function here, so a signature
+ * that drifts from `ContactsRouter` fails to build. `CONTACTS_PILLAR_ID` is
+ * declared here and re-exported there for the same reason.
  */
 import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import { credentialRejectedMessage, UNAUTHORIZED_REASON } from '../pillars/outbound.js';
 
-import type { ContactsRouter } from './client.js';
-import type { ContactEntity } from './types.js';
+import type { ContactEntity, ListResponse } from './types.js';
 
 /** The contacts pillar id, as registered with the registry. */
 export const CONTACTS_PILLAR_ID = 'contacts';
+
+/**
+ * The two operations this module calls, as a router of their own.
+ *
+ * A narrower `ContactsRouter`: `client.ts`'s handle carries `create` and
+ * `update` as well and is assignable to this one, so callers pass theirs
+ * unchanged.
+ */
+export type ContactsReadRouter = {
+  entities: {
+    list: (input: {
+      search?: string;
+      type?: string;
+      limit?: number;
+      offset?: number;
+    }) => Promise<ListResponse>;
+    get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
+  };
+};
 
 /** The non-ok, non-conflict result kinds this classifier sorts. */
 type ContactsFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
@@ -84,7 +105,7 @@ export function warnDegraded(operation: string, result: CallResult<unknown>): vo
  * degraded result), differing only in which field(s) of it they read.
  */
 export async function fetchOneEntity(
-  handle: PillarHandle<ContactsRouter> | null,
+  handle: PillarHandle<ContactsReadRouter> | null,
   entityId: string
 ): Promise<ContactEntity | null> {
   if (handle === null) return null;
@@ -94,7 +115,7 @@ export async function fetchOneEntity(
 }
 
 export async function pageThroughEntities(
-  handle: PillarHandle<ContactsRouter> | null,
+  handle: PillarHandle<ContactsReadRouter> | null,
   query: { search?: string; type?: string },
   maxPages: number
 ): Promise<ContactEntity[]> {
@@ -136,7 +157,7 @@ export async function pageThroughEntities(
  * is the duplicate this leg exists to prevent. A name match still wins.
  */
 export async function fetchByExactName(
-  handle: PillarHandle<ContactsRouter>,
+  handle: PillarHandle<ContactsReadRouter>,
   name: string,
   maxPages: number
 ): Promise<ContactEntity | null> {
