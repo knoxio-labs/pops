@@ -6,10 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   discoverUnitDirs,
+  emitsOutput,
   findStemCollisionTestFiles,
   findUncoveredTestFiles,
+  hidesStories,
   hidesTests,
   offendingExcludes,
+  offendingStoryExcludes,
   readTypecheckInvocations,
   resolveProjectFileSet,
   scanRepo,
@@ -509,5 +512,120 @@ describe('scanRepo — discovery floor (ADR-045)', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * A story exclude on a type-check-only project.
+ *
+ * POPS-1595 removed the story excludes from `libs/ui` and `libs/navigation`,
+ * so their stories are type-checked. Nothing stopped the line being added
+ * back: `hidesTests` is named for tests and correctly passes a story glob
+ * (POPS-3107). A story is the one place a component's props are exercised
+ * from outside its own module, so a story left on a renamed prop set breaks
+ * in Storybook and nowhere else.
+ */
+describe('hidesStories', () => {
+  it.each(['**/*.stories.tsx', 'src/**/*.stories.ts', '**/*.Stories.TSX'])('catches %s', (glob) => {
+    expect(hidesStories(glob)).toBe(true);
+  });
+
+  it.each(['node_modules', 'dist', 'scripts', '**/__tests__/**', '**/*.test.tsx'])(
+    'passes %s',
+    (glob) => {
+      expect(hidesStories(glob)).toBe(false);
+    }
+  );
+
+  it('passes **/*.mdx, which is not TypeScript and was never checked', () => {
+    expect(hidesStories('**/*.mdx')).toBe(false);
+  });
+
+  it('does not read a vendored story under node_modules as the unit hiding its own', () => {
+    expect(hidesStories('node_modules/**/*.stories.tsx')).toBe(false);
+  });
+});
+
+describe('emitsOutput and offendingStoryExcludes', () => {
+  let root: string;
+
+  function write(name: string, config: unknown): string {
+    const dir = join(root, name);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify(config));
+    return dir;
+  }
+
+  beforeAll(() => {
+    root = mkdtempSync(join(tmpdir(), 'story-excludes-'));
+  });
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('reports a story exclude on a project that only type-checks', () => {
+    const dir = write('checked', {
+      compilerOptions: { noEmit: true },
+      exclude: ['node_modules', '**/*.stories.tsx', '**/*.mdx'],
+    });
+
+    expect(emitsOutput(join(dir, 'tsconfig.json'))).toBe(false);
+    expect(offendingStoryExcludes(dir)).toEqual(['**/*.stories.tsx']);
+  });
+
+  it('leaves a project that genuinely emits alone, because stories must not ship', () => {
+    const dir = write('emitting', {
+      compilerOptions: { outDir: 'dist' },
+      exclude: ['node_modules', '**/*.stories.tsx'],
+    });
+
+    expect(emitsOutput(join(dir, 'tsconfig.json'))).toBe(true);
+    expect(offendingStoryExcludes(dir)).toEqual([]);
+  });
+
+  it('reads outDir beside noEmit as type-check-only, which is the shape every app has', () => {
+    // Every `pillars/<id>/app` sets both. `outDir` alone is not evidence of
+    // emit when `noEmit` overrides it, and reading it as such would exempt
+    // exactly the projects this rule is for.
+    const dir = write('both', {
+      compilerOptions: { outDir: 'dist', noEmit: true },
+      exclude: ['**/*.stories.tsx'],
+    });
+
+    expect(emitsOutput(join(dir, 'tsconfig.json'))).toBe(false);
+    expect(offendingStoryExcludes(dir)).toEqual(['**/*.stories.tsx']);
+  });
+
+  it('says nothing about a project that excludes no stories', () => {
+    const dir = write('clean', {
+      compilerOptions: { noEmit: true },
+      exclude: ['node_modules', 'dist', '**/*.mdx'],
+    });
+
+    expect(offendingStoryExcludes(dir)).toEqual([]);
+  });
+
+  it('follows an extends chain for both the exclude and the emit decision', () => {
+    write('base-checked', {
+      compilerOptions: { noEmit: true },
+      exclude: ['**/*.stories.tsx'],
+    });
+    const dir = write('inherits', { extends: '../base-checked/tsconfig.json' });
+
+    expect(emitsOutput(join(dir, 'tsconfig.json'))).toBe(false);
+    expect(offendingStoryExcludes(dir)).toEqual(['**/*.stories.tsx']);
+  });
+
+  it('lets a nearer compilerOptions override an inherited noEmit', () => {
+    write('base-noemit', { compilerOptions: { noEmit: true } });
+    const dir = write('overrides', {
+      extends: '../base-noemit/tsconfig.json',
+      compilerOptions: { noEmit: false, outDir: 'dist' },
+      exclude: ['**/*.stories.tsx'],
+    });
+
+    expect(emitsOutput(join(dir, 'tsconfig.json'))).toBe(true);
+    expect(offendingStoryExcludes(dir)).toEqual([]);
   });
 });

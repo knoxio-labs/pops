@@ -21,7 +21,7 @@ export const manifest: ModuleManifest<unknown, typeof routes, typeof navConfig> 
     captureOverlay: {
       bundleSlot: 'ingest-form',
       order: 10,
-      hotkey: 'cmd+shift+k',
+      hotkey: 'mod+shift+k',
       labelKey: 'cerebrum.captureOverlay.label',
     },
   },

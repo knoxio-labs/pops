@@ -59,12 +59,13 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
     await page.goto('/cerebrum');
     await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
 
-    // Meta, not `ControlOrMeta`: the manifest declares `cmd+shift+k`, and the
-    // matcher reads `cmd` as the Apple key alone. On Linux `ControlOrMeta`
-    // presses Control, which that chord cannot match — so pressing it here
-    // would assert a shortcut no reader of this pillar on Linux can use.
-    // POPS-3319 covers making the wire token platform-relative.
-    await page.keyboard.press('Meta+Shift+KeyK');
+    // `ControlOrMeta`, which Playwright resolves per platform, because the
+    // manifest declares `mod+shift+k` and the matcher resolves `mod` the same
+    // way. This pressed `Meta` for a while: `mod` was an alias for the Apple
+    // key, so the chord was unreachable on the Linux runner and on every
+    // Linux and Windows reader (POPS-3319). Pressing Meta here asserted a
+    // shortcut half the clients could not use.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyK');
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();

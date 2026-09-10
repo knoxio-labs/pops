@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyRejudgement,
   computeDiffRange,
+  disambiguateIds,
   encodeState,
   emptyState,
   findingFromModel,
@@ -25,6 +26,7 @@ import {
   parseState,
   rejudgeable,
   remedyFromModel,
+  remedyNeedles,
   render,
   STATE_MARKER,
   STATE_VERSION,
@@ -465,6 +467,45 @@ describe('verifyStatus', () => {
     expect(f).toMatchObject({ status: 'open', resolved_in: null });
   });
 
+  it('resolves a remedy naming a hyphenated property key, which source must quote', () => {
+    // POPS-3391, seen on POPS-3298's PR. `aria-label` is not an identifier, so
+    // TypeScript requires the key be quoted — `'aria-label'?: string`. A remedy
+    // asking for the bare `aria-label?:` asks for a string no valid source file
+    // can contain, and `review-findings-gate` is a required check, so the PR
+    // was permanently red with no correct exit.
+    const prior = makeFinding({
+      file: 'libs/ui/src/components/RadioInput.tsx',
+      snippet: null,
+      remedy: { file: 'libs/ui/src/components/RadioInput.tsx', contains: 'aria-label?:' },
+    });
+    const [f] = verifyStatus(
+      [prior],
+      () => "interface Props {\n  'aria-label'?: string;\n}\n",
+      'sha2'
+    );
+    expect(f).toMatchObject({ status: 'resolved', resolved_in: 'sha2' });
+  });
+
+  it('resolves the reverse too — a quoted remedy against an unquoted key', () => {
+    const prior = makeFinding({
+      snippet: null,
+      remedy: { file: 'a.ts', contains: "'title'?:" },
+    });
+    const [f] = verifyStatus([prior], () => 'interface Props { title?: string }', 'sha2');
+    expect(f).toMatchObject({ status: 'resolved' });
+  });
+
+  it('still keeps a hyphenated-key finding open when the key is nowhere in the file', () => {
+    // The quoting allowance must not resolve a finding on a file that never
+    // gained the property, which would be worse than the block it replaces.
+    const prior = makeFinding({
+      snippet: null,
+      remedy: { file: 'a.ts', contains: 'aria-label?:' },
+    });
+    const [f] = verifyStatus([prior], () => 'interface Props { id?: string }', 'sha2');
+    expect(f).toMatchObject({ status: 'open', resolved_in: null });
+  });
+
   it('resolves a snippet-less finding once its remedy lands', () => {
     // "X is missing" is exactly the shape that has no snippet to track, so
     // before the remedy it could never be answered by the tree at all.
@@ -675,5 +716,157 @@ describe('normalize', () => {
 
   it('leaves an empty string empty', () => {
     expect(normalize('   \n ')).toBe('');
+  });
+});
+
+/**
+ * Two genuinely different findings in one file that share an anchor.
+ *
+ * `findingId` hashes the file and the snippet and deliberately not the title,
+ * so a reworded finding keeps its id and merges as an update. The cost was
+ * that two findings with no snippet — "X is missing" is the common shape — or
+ * two pointing at the same offending line hashed the same, and `merge`'s
+ * id-keyed map read the second as an update of the first. One real finding
+ * was silently overwritten and never appeared in any comment (POPS-2545).
+ */
+describe('two findings that hash alike', () => {
+  const FILE = 'pillars/shell/src/app/router.tsx';
+
+  function snippetless(title: string): Finding {
+    return {
+      ...findingFromModel({ file: FILE, title }, 'aaaaaaa1'),
+    };
+  }
+
+  it('collide on the base id, which is what made this possible', () => {
+    expect(snippetless('one thing').id).toBe(snippetless('another thing').id);
+  });
+
+  it('both survive a merge, rather than one overwriting the other', () => {
+    const merged = merge([], [snippetless('one thing'), snippetless('another thing')]);
+
+    expect(merged).toHaveLength(2);
+    expect(merged.map((f) => f.title).toSorted()).toEqual(['another thing', 'one thing']);
+    expect(new Set(merged.map((f) => f.id)).size).toBe(2);
+  });
+
+  it('keep the same identities however the model orders them', () => {
+    // An ordinal suffix would swap the two rows' ids here, so a later run
+    // would refresh each finding's prose onto the other one's row.
+    const forward = disambiguateIds([snippetless('one thing'), snippetless('another thing')]);
+    const reverse = disambiguateIds([snippetless('another thing'), snippetless('one thing')]);
+
+    const idOf = (list: Finding[], title: string) => list.find((f) => f.title === title)?.id;
+    expect(idOf(forward, 'one thing')).toBe(idOf(reverse, 'one thing'));
+    expect(idOf(forward, 'another thing')).toBe(idOf(reverse, 'another thing'));
+  });
+
+  it('leaves a lone finding on its base id, so a partial run is not a new row', () => {
+    // The reason the FIRST of a colliding group keeps the base id rather than
+    // every member being qualified: a run reporting only this one must not
+    // change its id, or it arrives beside the row it already had.
+    const alone = snippetless('another thing');
+
+    expect(disambiguateIds([alone])).toEqual([alone]);
+    expect(disambiguateIds([alone])[0]?.id).toBe(alone.id);
+  });
+
+  it('still merges a reworded finding as an update, which is why the title is excluded', () => {
+    const first = merge([], [snippetless('one thing')]);
+    const reworded = merge(first, [
+      { ...snippetless('one thing'), title: 'one thing, said differently' },
+    ]);
+
+    expect(reworded).toHaveLength(1);
+    expect(reworded[0]?.title).toBe('one thing, said differently');
+    expect(reworded[0]?.id).toBe(first[0]?.id);
+  });
+
+  it('keeps all three when two members of a group share a title as well', () => {
+    // The escape hatch: file, snippet and title are every fact this module
+    // records, so two findings alike in all three cannot be told apart by a
+    // content hash. Numbering them is worse than qualifying by title and far
+    // better than the third row silently overwriting the second — which is
+    // the same defect as POPS-2545, one group size along.
+    const merged = merge(
+      [],
+      [snippetless('aaa distinct'), snippetless('zzz same'), snippetless('zzz same')]
+    );
+
+    expect(merged).toHaveLength(3);
+    expect(new Set(merged.map((f) => f.id)).size).toBe(3);
+  });
+
+  it('leaves the base id with the finding already tracked there, not the first title', () => {
+    // The row at the base id carries `first_seen` and a status history. A new
+    // colliding finding whose title happens to sort earlier must not inherit
+    // it — the tracked finding would be pushed into a fresh row and lose its
+    // age, which is the opposite of what the id scheme promises.
+    const tracked = merge([], [snippetless('zzz tracked finding')]);
+    expect(tracked[0]?.id).toBe(snippetless('zzz tracked finding').id);
+
+    const next = merge(tracked, [
+      snippetless('aaa newly reported'),
+      snippetless('zzz tracked finding'),
+    ]);
+
+    expect(next).toHaveLength(2);
+    const stillTracked = next.find((f) => f.title === 'zzz tracked finding');
+    expect(stillTracked?.id).toBe(tracked[0]?.id);
+    expect(stillTracked?.first_seen).toBe(tracked[0]?.first_seen);
+    expect(next.find((f) => f.title === 'aaa newly reported')?.id).not.toBe(tracked[0]?.id);
+  });
+
+  it('does the same for two findings sharing one snippet', () => {
+    const a = findingFromModel(
+      { file: FILE, title: 'unused', snippet: 'const x = 1;' },
+      'aaaaaaa1'
+    );
+    const b = findingFromModel(
+      { file: FILE, title: 'shadowed', snippet: 'const x = 1;' },
+      'aaaaaaa1'
+    );
+
+    expect(a.id).toBe(b.id);
+    expect(new Set(merge([], [a, b]).map((f) => f.id)).size).toBe(2);
+  });
+});
+
+/**
+ * A remedy string the reviewer can write and no valid source file can hold.
+ *
+ * `review-findings-gate` is a required check, so a finding whose remedy is
+ * unsatisfiable is a merge block with no correct exit — the ADR-045 shape
+ * from the other side: a guard that cannot be satisfied by the thing it is
+ * asking for is not reporting, it is stuck (POPS-3391).
+ */
+describe('remedyNeedles', () => {
+  it('offers a hyphenated property key quoted, which is the only way source can spell it', () => {
+    expect(remedyNeedles('aria-label?:')).toContain("'aria-label'?:");
+    expect(remedyNeedles('aria-label?:')).toContain('"aria-label"?:');
+  });
+
+  it('offers a quoted key bare, so a remedy that quotes it matches source that does not', () => {
+    expect(remedyNeedles("'title'?:")).toContain('title?:');
+  });
+
+  it('keeps the rest of the string untouched, so it cannot match something merely similar', () => {
+    expect(remedyNeedles('aria-label?: string')).toEqual([
+      'aria-label?: string',
+      'aria-label?: string',
+      "'aria-label'?: string",
+      '"aria-label"?: string',
+    ]);
+  });
+
+  it('leaves a needle that is not a property key exactly as it was', () => {
+    for (const needle of ['assertSecretFilesReadable(', 'no-cache', '  ']) {
+      expect(remedyNeedles(needle)).toEqual([needle]);
+    }
+  });
+
+  it('handles a key with no optional marker, and one spread across whitespace', () => {
+    expect(remedyNeedles('data-testid:')).toContain("'data-testid':");
+    expect(remedyNeedles('http-equiv ?:')).toContain("'http-equiv' ?:");
   });
 });

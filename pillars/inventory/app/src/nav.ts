@@ -2,11 +2,23 @@
  * This app's navigation declaration: what the rail shows for it and which
  * pages its page nav lists.
  *
+ * Projected from `@pops/inventory`'s contract rather than written out a second
+ * time. The pillar used to declare its nav twice — here in PascalCase and
+ * again as a `NavConfigDescriptor` on the wire in kebab — with a guard making
+ * the two literals agree. `navConfigFromWire` makes the second declaration
+ * unnecessary, and projects at the type level too, so
+ * `satisfies AppNavConfigShape` still checks every icon against `IconName`
+ * and a typo in the contract's kebab spelling now reddens this build as well
+ * (POPS-3359).
+ *
  * Its own module rather than part of `routes.tsx` so that reading the nav
  * does not pull the route table's lazy page imports in with it — the design
  * playground draws the POPS chrome from these configs and has no use for
  * every page of every app.
  */
+import { INVENTORY_NAV } from '@pops/inventory/manifest';
+import { navConfigFromWire } from '@pops/navigation';
+
 import type { IconName } from '@pops/navigation';
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
@@ -20,28 +32,4 @@ interface AppNavConfigShape {
   items: { path: string; label: string; labelKey: string; icon: IconName }[];
 }
 
-export const navConfig = {
-  id: 'inventory',
-  label: 'Inventory',
-  labelKey: 'inventory',
-  icon: 'Package',
-  color: 'amber',
-  basePath: '/inventory',
-  items: [
-    { path: '', label: 'Items', labelKey: 'inventory.items', icon: 'Package' },
-    {
-      path: '/warranties',
-      label: 'Warranties',
-      labelKey: 'inventory.warranties',
-      icon: 'ShieldCheck',
-    },
-    { path: '/locations', label: 'Locations', labelKey: 'inventory.locations', icon: 'MapPin' },
-    { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'BarChart3' },
-    {
-      path: '/connections',
-      label: 'Connections',
-      labelKey: 'inventory.connections',
-      icon: 'Network',
-    },
-  ],
-} satisfies AppNavConfigShape;
+export const navConfig = navConfigFromWire(INVENTORY_NAV) satisfies AppNavConfigShape;

@@ -1,3 +1,4 @@
+import { FOOD_NAV } from '../contract/nav.js';
 import { FOOD_PAGES } from '../contract/pages.js';
 
 import type {
@@ -8,38 +9,8 @@ import type {
 
 export const FOOD_PILLAR_ID = 'food' as const;
 
-/**
- * Wire-format nav contribution for the food pillar.
- *
- * Mirrors the `navConfig` in `pillars/food/app/src/routes.tsx`
- * field-for-field; Lucide icon names are kebab-case identifiers per the
- * wire schema. The shell orders apps by `order`.
- */
-const FOOD_NAV: NavConfigDescriptor = {
-  id: 'food',
-  label: 'Food',
-  labelKey: 'food',
-  icon: 'utensils',
-  color: 'amber',
-  basePath: '/food',
-  order: 40,
-  items: [
-    { path: '', label: 'Home', labelKey: 'food.home', icon: 'layout-dashboard' },
-    { path: '/recipes', label: 'Recipes', labelKey: 'food.recipes', icon: 'book-open' },
-    { path: '/inbox', label: 'Inbox', labelKey: 'food.inbox', icon: 'bell' },
-    { path: '/plan', label: 'Plan', labelKey: 'food.plan', icon: 'clock' },
-    { path: '/fridge', label: 'Fridge', labelKey: 'food.fridge', icon: 'package' },
-    { path: '/solve', label: 'Solve', labelKey: 'food.solve', icon: 'compass' },
-    {
-      path: '/shopping/from-plan',
-      label: 'Shopping',
-      labelKey: 'food.shopping',
-      icon: 'list-checks',
-    },
-    { path: '/data', label: 'Manage data', labelKey: 'food.data', icon: 'database' },
-    { path: '/prompts', label: 'Prompts', labelKey: 'food.prompts', icon: 'file-text' },
-  ],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const FOOD_WIRE_NAV = { ...FOOD_NAV, items: [...FOOD_NAV.items] } satisfies NavConfigDescriptor;
 
 /** Projected from the contract; the `satisfies` is the conformance check. */
 const FOOD_WIRE_PAGES = [...FOOD_PAGES] as const satisfies readonly PageDescriptor[];
@@ -69,7 +40,7 @@ export function buildFoodManifest(version: string): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [] },
     consumedSettings: { keys: [] },
-    nav: FOOD_NAV,
+    nav: FOOD_WIRE_NAV,
     pages: [...FOOD_WIRE_PAGES],
     assetsBaseUrl: FOOD_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },

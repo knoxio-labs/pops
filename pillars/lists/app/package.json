@@ -23,6 +23,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hey-api/client-fetch": "^0.13.1",
     "@pops/lists": "workspace:*",
+    "@pops/navigation": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
     "@pops/ui": "workspace:*",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
     "@pops/locales": "workspace:*",
+    "@storybook/react-vite": "^10.6.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

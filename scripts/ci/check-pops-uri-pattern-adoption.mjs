@@ -30,10 +30,12 @@
  *     generic two-segment class `[a-z0-9-]+` that `PopsUriSchema` itself
  *     uses to match ANY pillar and type — that is the shape the factory
  *     narrows FROM, not a bypass of it.
- *   - A `new RegExp('…pops://…')` or `` new RegExp(`…pops://…`) `` call
- *     whose string/template argument hard-codes a pillar or type segment
- *     rather than interpolating one — the same bypass, spelled as a
- *     constructor call instead of a literal.
+ *   - A `new RegExp(…)` call that hard-codes a pillar or type segment rather
+ *     than interpolating one — the same bypass, spelled as a constructor call
+ *     instead of a literal. The argument may be a string literal, a template,
+ *     or literals joined by `+`; the last of those used to be found by
+ *     nothing, and a body that pinned one segment while interpolating the
+ *     other was skipped whole (POPS-2522).
  *
  * A call to `popsUriPattern(pillar, type)` itself is always fine — that
  * IS the sanctioned path — and is counted as discovered so the guard can
@@ -48,12 +50,18 @@
  * drift apart the way the factory's docstring warns about, and pillar-wide
  * `PopsUriSchema` remains the wire-level check on top of it either way.
  *
- * What this guard cannot see, tracked rather than covered here: a pattern
- * assembled through string CONCATENATION (`'^pops://' + pillar + '/' + …`)
- * rather than a single string/template argument or a regex literal. Closing
- * that generally needs an expression parser, which conflicts with this
- * guard job's install-free constraint; `pops://` string concatenation does
- * not occur anywhere in the pillar today.
+ * A `new RegExp` argument assembled through string CONCATENATION is read
+ * too: the operands of a `+` chain are joined, and any operand that is not
+ * a string or template literal is folded to `${}` — so a concatenation
+ * that splices a variable pillar reads as interpolation (sanctioned) while
+ * one that spells the pillar out reads as the hard-coded bypass it is.
+ *
+ * What this guard still cannot see, tracked rather than covered here: a
+ * pattern assembled ACROSS STATEMENTS (`const head = '^pops://finance';`
+ * then `new RegExp(head + …)`), because only the argument expression
+ * itself is scanned. Following a binding to its definition needs an
+ * expression parser, which conflicts with this guard job's install-free
+ * constraint.
  *
  * Usage:
  *   node scripts/ci/check-pops-uri-pattern-adoption.mjs
@@ -171,21 +179,110 @@ function findRegexLiterals(text, path) {
 }
 
 /**
- * `new RegExp('…pops://…')` / `` new RegExp(`…pops://…`) `` calls whose
- * string argument hard-codes a segment rather than interpolating one. The
+ * The source text of a call's first argument, from just after its `(`.
+ *
+ * A scanner rather than a regex because the argument can hold parentheses,
+ * commas and quotes of its own — `new RegExp('a,b' + f(1), 'u')` has both
+ * inside it. Quote state is tracked so a `,` or `)` in a string does not end
+ * the argument early.
+ *
+ * @param {string} text
+ * @param {number} from Index of the first character after the opening `(`.
+ * @returns {string | null} The argument's source, or null when unbalanced.
+ */
+function firstArgumentSource(text, from) {
+  let depth = 0;
+  /** @type {string | null} */
+  let quote = null;
+  for (let i = from; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote !== null) {
+      if (ch === '\\') {
+        i += 1;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    else if (ch === ')') {
+      if (depth === 0) return text.slice(from, i);
+      depth -= 1;
+    } else if (ch === ']' || ch === '}') depth -= 1;
+    else if (ch === ',' && depth === 0) return text.slice(from, i);
+  }
+  return null;
+}
+
+/**
+ * The string an argument expression builds, with anything dynamic in it left
+ * spelled as `${}`.
+ *
+ * The guard used to require the argument to be a single quoted or backtick
+ * literal, so a pattern assembled by concatenation — a plausible next form of
+ * the same mistake, reached for when a literal will not fit a line — was
+ * found by nothing and reported as nothing (POPS-2522).
+ *
+ * A non-literal operand is not a bail-out. `'^pops://' + pillar + '/'` is the
+ * concatenation spelling of the factory's own `${pillar}` interpolation, and
+ * treating it as unrecognised would report the one shape this guard exists to
+ * encourage. Substituting `${}` for it means the existing check reads a
+ * half-pinned concatenation — `'^pops://finance/' + type` — exactly as it
+ * reads a half-pinned template.
+ *
+ * @param {string} expression
+ * @returns {string | null} null when the expression holds no string at all.
+ */
+function joinStringOperands(expression) {
+  const LITERAL = /(['"`])((?:\\.|(?!\1)[\s\S])*)\1/gu;
+  let joined = '';
+  let cursor = 0;
+  let sawLiteral = false;
+  for (const literal of expression.matchAll(LITERAL)) {
+    const between = expression.slice(cursor, literal.index);
+    // Anything between two literals that is not just `+` and whitespace is a
+    // dynamic operand: a variable, a call, a member access.
+    if (/[^\s+]/u.test(between)) joined += '${}';
+    joined += literal[2] ?? '';
+    cursor = literal.index + literal[0].length;
+    sawLiteral = true;
+  }
+  if (!sawLiteral) return null;
+  if (/[^\s+)]/u.test(expression.slice(cursor))) joined += '${}';
+  return joined;
+}
+
+/**
+ * `new RegExp(…)` calls whose argument hard-codes a segment rather than
+ * interpolating one — a single literal, or literals joined by `+`. The
  * factory's own body is exactly this shape with `${pillar}`/`${type}`
- * interpolation, so a template containing `${` is never a violation here.
+ * interpolation, so an interpolated segment is never a violation — and
+ * {@link joinStringOperands} spells a dynamic concatenation operand as `${}`
+ * so it reads the same way. A body that interpolates one segment and pins the
+ * other is reported for the one it pinned.
  *
  * @param {string} text @param {string} path @returns {Finding[]}
  */
 function findRegExpConstructorCalls(text, path) {
-  const CALL = /new RegExp\(\s*([`'"])((?:(?!\1)[\s\S])*?)\1/gu;
+  const CALL = /new RegExp\(/gu;
   /** @type {Finding[]} */
   const findings = [];
   for (const m of text.matchAll(CALL)) {
-    const body = m[2] ?? '';
+    const expression = firstArgumentSource(text, m.index + m[0].length);
+    if (expression === null) continue;
+    const body = joinStringOperands(expression);
+    if (body === null) continue;
     if (!body.includes('pops://')) continue;
-    if (body.includes('${')) continue; // Interpolated — the factory's own shape.
+    // No blanket skip for `${`. An interpolated segment carries `{`/`}`/`$`,
+    // which `isHandPinnedSegment` already reads as not-pinned — so the
+    // factory's own body still passes, while a body that interpolates ONE
+    // segment and hard-codes the other is reported for the one it pinned.
+    // Skipping on any `${` hid that half, for templates as well as for the
+    // concatenations this change added (POPS-2522).
     const idx = body.indexOf('pops://');
     const afterScheme = body.slice(idx + 'pops://'.length);
     const parts = afterScheme.split('/');
@@ -409,6 +506,54 @@ function selfTest() {
   );
 
   run(
+    'a new RegExp(…) assembled by concatenating literals is reported',
+    {
+      'contract/schemas/scalars.ts': CLEAN_SCALARS,
+      'contract/inventory-proposals.ts': CLEAN_INVENTORY_PROPOSALS,
+      'api/inventory/concat.ts':
+        "export const RECEIPT_URI = new RegExp('^pops://' + 'purchases' + '/receipt/([^/\\\\s]+)$', 'u');",
+    },
+    (report) =>
+      report.violations.some(
+        (v) => v.includes('concat.ts') && v.includes('purchases') && v.includes('receipt')
+      )
+  );
+
+  run(
+    'a concatenation that pins only the pillar is reported for that segment',
+    {
+      'contract/schemas/scalars.ts': CLEAN_SCALARS,
+      'contract/inventory-proposals.ts': CLEAN_INVENTORY_PROPOSALS,
+      'api/inventory/half-concat.ts':
+        "export const URI = new RegExp('^pops://documents/' + kind + '/([^/\\\\s]+)$', 'u');",
+    },
+    (report) =>
+      report.violations.some((v) => v.includes('half-concat.ts') && v.includes('documents'))
+  );
+
+  run(
+    'a concatenation that pins nothing is the factory shape spelled differently, not a violation',
+    {
+      'contract/schemas/scalars.ts': CLEAN_SCALARS,
+      'contract/inventory-proposals.ts': CLEAN_INVENTORY_PROPOSALS,
+      'api/inventory/dynamic-concat.ts':
+        "export const build = (pillar, type) => new RegExp('^pops://' + pillar + '/' + type + '/([^/\\\\s]+)$', 'u');",
+    },
+    (report) => report.violations.length === 0
+  );
+
+  run(
+    'a template that interpolates one segment and pins the other is reported',
+    {
+      'contract/schemas/scalars.ts': CLEAN_SCALARS,
+      'contract/inventory-proposals.ts': CLEAN_INVENTORY_PROPOSALS,
+      'api/inventory/half-template.ts':
+        "export const URI = (type) => new RegExp(`^pops://media/${type}/([^/\\\\s]+)$`, 'u');",
+    },
+    (report) => report.violations.some((v) => v.includes('half-template.ts') && v.includes('media'))
+  );
+
+  run(
     'a fully generic hand-written regex (not the pinned [a-z0-9-]+ shape) is not flagged',
     {
       'contract/schemas/scalars.ts': CLEAN_SCALARS,
@@ -434,9 +579,11 @@ function selfTest() {
     for (const [name, pass] of Object.entries(checks)) console.error(`  ${name}: ${pass}`);
   } else {
     console.log(
-      'self-test OK — factory calls and the generic literal pass, a hand-pinned regex literal, a ' +
-        'half-pinned literal, and a hand-pinned new RegExp(…) are all reported, a fully generic hand-written ' +
-        'regex is not a false positive, an empty tree fails the discovery floor, and the real tree is clean.'
+      'self-test OK — factory calls and the generic literal pass; a hand-pinned regex literal, a ' +
+        'half-pinned literal, a hand-pinned new RegExp(…), a concatenation of literals, a ' +
+        'half-pinned concatenation and a half-pinned template are all reported; a dynamic ' +
+        'concatenation and a fully generic hand-written regex are not false positives; an empty ' +
+        'tree fails the discovery floor, and the real tree is clean.'
     );
   }
   for (const root of roots) rmSync(root, { recursive: true, force: true });

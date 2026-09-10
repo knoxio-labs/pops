@@ -1,3 +1,4 @@
+import { MEDIA_NAV } from '../contract/nav.js';
 import { MEDIA_PAGES } from '../contract/pages.js';
 /**
  * Media pillar manifest payload builder.
@@ -5,10 +6,10 @@ import { MEDIA_PAGES } from '../contract/pages.js';
  * Declares the wire-format manifest the media pillar registers with the
  * central registry on boot (opt-in via `POPS_REGISTRY_ENABLED`). The `nav` +
  * `pages` UI dimensions let the shell derive the media app-rail entry and
- * route surface from the registry walk. Source values match
- * `pillars/media/app/src/nav.ts` (icons in the kebab-case wire form required
- * by `NavConfigDescriptorSchema`), held there by
- * `scripts/check-nav-parity.mjs`.
+ * route surface from the registry walk. The nav is declared once, in the
+ * contract, in the kebab-case wire form `NavConfigDescriptorSchema` requires;
+ * this file and the app both project it, so neither can drift from the other
+ * (POPS-3359).
  */
 import {
   arrManifest,
@@ -37,25 +38,8 @@ export function buildMediaCapabilityReporter(): CapabilityReporter {
   return () => ({ settings: true });
 }
 
-const MEDIA_NAV: NavConfigDescriptor = {
-  id: 'media',
-  label: 'Media',
-  labelKey: 'media',
-  icon: 'film',
-  color: 'indigo',
-  basePath: '/media',
-  order: 20,
-  items: [
-    { path: '', label: 'Library', labelKey: 'media.library', icon: 'library' },
-    { path: '/watchlist', label: 'Watchlist', labelKey: 'media.watchlist', icon: 'bookmark' },
-    { path: '/history', label: 'History', labelKey: 'media.history', icon: 'clock' },
-    { path: '/discover', label: 'Discover', labelKey: 'media.discover', icon: 'compass' },
-    { path: '/rankings', label: 'Rankings', labelKey: 'media.rankings', icon: 'trophy' },
-    { path: '/search', label: 'Search', labelKey: 'media.search', icon: 'search' },
-    { path: '/compare', label: 'Compare', labelKey: 'media.compare', icon: 'arrow-left-right' },
-    { path: '/tier-list', label: 'Tier List', labelKey: 'media.tierList', icon: 'layers' },
-  ],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const MEDIA_WIRE_NAV = { ...MEDIA_NAV, items: [...MEDIA_NAV.items] } satisfies NavConfigDescriptor;
 
 /** Projected from the contract; the `satisfies` is the conformance check. */
 const MEDIA_WIRE_PAGES = [...MEDIA_PAGES] as const satisfies readonly PageDescriptor[];
@@ -85,7 +69,7 @@ export function buildMediaManifest(version: string): ManifestPayload {
     settings: {
       manifests: [plexManifest, arrManifest, rotationManifest, mediaOperationalManifest],
     },
-    nav: MEDIA_NAV,
+    nav: MEDIA_WIRE_NAV,
     pages: [...MEDIA_WIRE_PAGES],
     assetsBaseUrl: MEDIA_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },

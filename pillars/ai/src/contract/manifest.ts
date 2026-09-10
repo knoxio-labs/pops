@@ -10,6 +10,7 @@ import { aiConfigManifest } from './settings/ai-manifest.js';
 
 import type { ModuleManifest } from '@pops/types';
 
+export { AI_NAV } from './nav.js';
 export { AI_PAGES } from './pages.js';
 export type { AiPageSlot } from './pages.js';
 

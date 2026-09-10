@@ -25,7 +25,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  *
  *     • `chromium-all-modules` (port 5567) — boots the shell against the
  *       canonical workspace registry (every known module installed).
- *     • `chromium-finance-only` (port 5569) — boots the shell against a
+ *     • `chromium-finance-only` (port 5571) — boots the shell against a
  *       pre-built registry snapshot generated with `POPS_APPS=finance,core`.
  *       The snapshot lives under `.e2e/registry/finance-only.js`; the
  *       Vite config picks it up via `POPS_REGISTRY_SNAPSHOT` and aliases
@@ -33,7 +33,19 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  */
 const FINANCE_ONLY_SNAPSHOT = path.resolve(HERE, '.e2e/registry/finance-only.js');
 const ALL_MODULES_PORT = 5567;
-const FINANCE_ONLY_PORT = 5569;
+/**
+ * Not 5569, which is `pillars/design`'s Vite port.
+ *
+ * `reuseExistingServer` is on locally, so with a design dev server running —
+ * which is how the playground is worked on — a local `pnpm test:e2e` never
+ * started the shell at all. It attached to the design app and ran the
+ * finance-only specs against it, and the failure read as a broken product
+ * rather than a busy port: `waiting for getByRole('textbox', { name: 'Search
+ * POPS' })`, passing in CI (which sets `CI` and so never reuses) and failing
+ * locally. `scripts/ci/__tests__/dev-server-ports.test.ts` is what stops the
+ * collision coming back (POPS-3249).
+ */
+const FINANCE_ONLY_PORT = 5571;
 
 const SHELL_E2E_ENV = { VITE_E2E: 'true' } as const;
 
@@ -106,7 +118,7 @@ export default defineConfig({
     // ReactQueryDevtools SVG logo renders at r=316.5px and intercepts
     // pointer events, so it must be disabled in E2E via VITE_E2E=true.
     {
-      command: `pnpm dev --port ${ALL_MODULES_PORT}`,
+      command: `pnpm dev --port ${ALL_MODULES_PORT} --strictPort`,
       url: `http://localhost:${ALL_MODULES_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,
@@ -118,7 +130,7 @@ export default defineConfig({
     // snapshot must exist on disk before Vite resolves the alias, so the
     // build step runs synchronously before `pnpm dev` is spawned.
     {
-      command: `pnpm tsx scripts/build-registry-snapshot.ts ${FINANCE_ONLY_SNAPSHOT} && pnpm dev --port ${FINANCE_ONLY_PORT}`,
+      command: `pnpm tsx scripts/build-registry-snapshot.ts ${FINANCE_ONLY_SNAPSHOT} && pnpm dev --port ${FINANCE_ONLY_PORT} --strictPort`,
       url: `http://localhost:${FINANCE_ONLY_PORT}`,
       reuseExistingServer: !process.env.CI,
       timeout: 180000,

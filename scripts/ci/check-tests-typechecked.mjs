@@ -111,6 +111,25 @@ export function hidesTests(glob) {
 }
 
 /**
+ * An exclude glob hides stories when it names a `*.stories.*` file.
+ *
+ * A sibling of {@link hidesTests} rather than a clause inside it: the two
+ * catch different things for different reasons, and folding stories into a
+ * predicate named for tests would make that function lie about what it does.
+ *
+ * `**\/*.mdx` is deliberately not matched. MDX is not TypeScript and was never
+ * type-checked, so excluding it hides nothing.
+ *
+ * @param {string} glob
+ * @returns {boolean}
+ */
+export function hidesStories(glob) {
+  const normalized = glob.replaceAll('\\', '/').toLowerCase();
+  if (normalized.includes('node_modules')) return false;
+  return /\.stories\./.test(normalized);
+}
+
+/**
  * Strip `//` and block comments so a JSONC tsconfig parses. String literals are
  * tracked so a `//` inside one (a URL, a glob) survives.
  *
@@ -241,6 +260,76 @@ export function resolveEffectiveExclude(configPath, seen = new Set()) {
 export function offendingExcludes(unitDir) {
   const exclude = resolveEffectiveExclude(join(unitDir, 'tsconfig.json'));
   return exclude.filter((glob) => typeof glob === 'string' && hidesTests(glob));
+}
+
+/**
+ * Resolve one `compilerOptions` key, following `extends` when the config does
+ * not set it itself.
+ *
+ * Unlike `exclude`, `compilerOptions` ARE merged across an extends chain, key
+ * by key, with the nearest config winning. Reading only the unit's own file
+ * would call a project emit-free because it inherited `noEmit` rather than
+ * declaring it, which is the common shape here.
+ *
+ * @param {string} configPath Absolute path to a tsconfig.json.
+ * @param {string} key
+ * @param {Set<string>} [seen] Visited config paths, guards an extends cycle.
+ * @returns {unknown} The resolved value, or undefined when nothing sets it.
+ */
+export function resolveCompilerOption(configPath, key, seen = new Set()) {
+  if (seen.has(configPath) || !existsSync(configPath)) return undefined;
+  seen.add(configPath);
+  /** @type {{ compilerOptions?: Record<string, unknown>; extends?: unknown }} */
+  const config = JSON.parse(stripJsonComments(readFileSync(configPath, 'utf8')));
+  const own = config.compilerOptions?.[key];
+  if (own !== undefined) return own;
+
+  let bases = /** @type {unknown[]} */ ([]);
+  if (Array.isArray(config.extends)) bases = config.extends;
+  else if (typeof config.extends === 'string') bases = [config.extends];
+
+  for (const base of bases) {
+    if (typeof base !== 'string' || !base.startsWith('.')) continue;
+    const baseFile = EXTENSIONED_PATH.test(base) ? base : `${base}.json`;
+    const inherited = resolveCompilerOption(resolve(dirname(configPath), baseFile), key, seen);
+    if (inherited !== undefined) return inherited;
+  }
+  return undefined;
+}
+
+/**
+ * Whether a project produces output rather than only type-checking.
+ *
+ * A project that emits may exclude stories, because stories must not ship. A
+ * `noEmit` one has no published surface for a story to leak into, so an
+ * exclude there buys nothing and costs the only check those files get.
+ *
+ * @param {string} configPath Absolute path to a tsconfig.json.
+ * @returns {boolean}
+ */
+export function emitsOutput(configPath) {
+  if (resolveCompilerOption(configPath, 'noEmit') === true) return false;
+  return typeof resolveCompilerOption(configPath, 'outDir') === 'string';
+}
+
+/**
+ * Story globs a unit's type-check project excludes, when that project only
+ * type-checks.
+ *
+ * A story is the one place a component's props are exercised from outside its
+ * own module, and AGENTS.md makes one mandatory per exported `@pops/ui`
+ * component. A story left behind on a renamed prop set renders wrong in
+ * Storybook and nowhere else — nothing else would fail.
+ *
+ * @param {string} unitDir
+ * @returns {string[]} Offending globs (empty when the unit is clean).
+ */
+export function offendingStoryExcludes(unitDir) {
+  const configPath = join(unitDir, 'tsconfig.json');
+  if (emitsOutput(configPath)) return [];
+  return resolveEffectiveExclude(configPath).filter(
+    (glob) => typeof glob === 'string' && hidesStories(glob)
+  );
 }
 
 /**
@@ -788,6 +877,52 @@ function checkEmptyDiscoveryIsReported() {
 }
 
 /**
+ * Self-test: a story exclude is judged by whether the project emits.
+ *
+ * Both directions, per ADR-045. A `noEmit` project excluding stories is
+ * reported; the same exclude on a project that emits is not, because stories
+ * must not ship and that is the one project with somewhere for them to leak
+ * into. `**\/*.mdx` is left alone in both.
+ *
+ * @returns {boolean}
+ */
+function checkStoryExcludeDetection() {
+  const root = mkdtempSync(join(tmpdir(), 'tests-typechecked-selftest-stories-'));
+  try {
+    /** @param {string} name @param {object} config */
+    const write = (name, config) => {
+      const dir = join(root, name);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify(config));
+      return dir;
+    };
+
+    const checked = write('checked', {
+      compilerOptions: { noEmit: true },
+      exclude: ['node_modules', '**/*.stories.tsx', '**/*.mdx'],
+    });
+    const emitting = write('emitting', {
+      compilerOptions: { outDir: 'dist' },
+      exclude: ['node_modules', '**/*.stories.tsx'],
+    });
+    const clean = write('clean', {
+      compilerOptions: { noEmit: true },
+      exclude: ['node_modules', 'dist', '**/*.mdx'],
+    });
+    const inherited = write('inherited', { extends: '../checked/tsconfig.json' });
+
+    return (
+      offendingStoryExcludes(checked).join(',') === '**/*.stories.tsx' &&
+      offendingStoryExcludes(emitting).length === 0 &&
+      offendingStoryExcludes(clean).length === 0 &&
+      offendingStoryExcludes(inherited).join(',') === '**/*.stories.tsx'
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
  * Self-test: prove the detector flags each shape of test-hiding glob and
  * passes the globs a type-check project legitimately carries. CI runs this so
  * a regression that neuters the guard is caught without a real tree violation.
@@ -809,6 +944,12 @@ function selfTest() {
   const catchesHidden = hidden.every(hidesTests);
   const passesAllowed = allowed.every((glob) => !hidesTests(glob));
 
+  const stories = ['**/*.stories.tsx', 'src/**/*.stories.ts', '**/*.Stories.TSX'];
+  const notStories = ['node_modules', 'dist', 'scripts', '**/*.mdx', '**/__tests__/**'];
+  const catchesStories = stories.every(hidesStories);
+  const passesNonStories = notStories.every((glob) => !hidesStories(glob));
+  const storyExcludeOk = checkStoryExcludeDetection();
+
   const parsed = stripJsonComments('{\n// a comment\n"a": "http://x//y", /* block */ "b": 1\n}');
   const commentsOk = JSON.parse(parsed).a === 'http://x//y' && JSON.parse(parsed).b === 1;
 
@@ -820,6 +961,9 @@ function selfTest() {
   const ok =
     catchesHidden &&
     passesAllowed &&
+    catchesStories &&
+    passesNonStories &&
+    storyExcludeOk &&
     commentsOk &&
     extendsOk &&
     typecheckScriptOk &&
@@ -828,6 +972,9 @@ function selfTest() {
   if (!ok) {
     console.error('SELF-TEST FAILED — guard did not behave as expected:');
     console.error(`  caught every test-hiding glob:      ${catchesHidden}`);
+    console.error(`  caught every story-hiding glob:     ${catchesStories}`);
+    console.error(`  passed every non-story glob:        ${passesNonStories}`);
+    console.error(`  judged story excludes by emit:      ${storyExcludeOk}`);
     console.error(`  passed legitimate excludes:         ${passesAllowed}`);
     console.error(`  stripped JSONC comments:            ${commentsOk}`);
     console.error(`  resolved extends correctly:         ${extendsOk}`);
@@ -836,9 +983,9 @@ function selfTest() {
     console.error(`  reported an empty discovery:        ${emptyDiscoveryOk}`);
   } else {
     console.log(
-      'self-test OK — guard catches test-hiding excludes, retargeted typecheck scripts, ' +
-        'narrowed includes (incl. same-stem .ts/.tsx collisions), and empty discovery, passes ' +
-        'legitimate shapes.'
+      'self-test OK — guard catches test-hiding excludes, story excludes on a ' +
+        'type-check-only project, retargeted typecheck scripts, narrowed includes (incl. ' +
+        'same-stem .ts/.tsx collisions), and empty discovery, passes legitimate shapes.'
     );
   }
   return ok;
@@ -880,6 +1027,15 @@ export function scanRepo(root) {
       failures.push(`${unitLabel}/tsconfig.json excludes ${offenders.join(', ')}`);
     }
 
+    const storyOffenders = offendingStoryExcludes(dir);
+    if (storyOffenders.length > 0) {
+      failures.push(
+        `${unitLabel}/tsconfig.json excludes ${storyOffenders.join(', ')} from a type-check-only ` +
+          "project, leaving its stories unchecked — a story is the one place a component's " +
+          'props are exercised from outside, so a rename breaks it in Storybook and nowhere else'
+      );
+    }
+
     if (!typecheckScriptCoversOwnConfig(dir)) {
       const { script } = readTypecheckInvocations(dir);
       const described = script === null ? 'has no typecheck script' : `runs "${script}"`;
@@ -906,9 +1062,10 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-tests-typechecked.mjs [--self-test]\n' +
-        "Fails if a unit's tsconfig.json excludes its own test files from tsc, if its " +
-        'include never reaches a real test file on disk, or if its typecheck script ' +
-        'never runs tsc --noEmit against its own tsconfig.json.'
+        "Fails if a unit's tsconfig.json excludes its own test files from tsc, if a " +
+        'type-check-only project excludes its stories, if its include never reaches a real ' +
+        'test file on disk, or if its typecheck script never runs tsc --noEmit against its ' +
+        'own tsconfig.json.'
     );
     process.exit(2);
   }
@@ -922,13 +1079,13 @@ function main() {
       'root-owned scripts/ is not a unit and is not scanned here (see mise typecheck:scripts).'
   );
   if (failures.length === 0) {
-    console.log('OK — every discovered unit type-checks its own tests.');
+    console.log('OK — every discovered unit type-checks its own tests and stories.');
     process.exit(0);
   }
   console.error(
-    'FAIL — these units leave test files unchecked by `tsc --noEmit`, whether by an ' +
-      "exclude, a narrowed include, or a typecheck script that doesn't run against the unit's " +
-      'own tsconfig.json:'
+    'FAIL — these units leave test or story files unchecked by `tsc --noEmit`, whether by ' +
+      "an exclude, a narrowed include, or a typecheck script that doesn't run against the " +
+      "unit's own tsconfig.json:"
   );
   for (const failure of failures) console.error(`  ${failure}`);
   console.error(

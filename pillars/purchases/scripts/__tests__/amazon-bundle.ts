@@ -26,6 +26,23 @@ export function temporaryDirectory(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
+/**
+ * A receipt store rooted in a fresh temp directory, and the path to it.
+ *
+ * The store's root is derived from the database's own path and has no
+ * override of its own (POPS-2535), so redirecting it means naming the
+ * database somewhere temporary. Created on disk rather than left to the
+ * store, so a test asserting that nothing was written reads an empty
+ * directory instead of throwing on a missing one.
+ */
+export function temporaryReceiptStore(prefix: string): string {
+  const dataDir = temporaryDirectory(prefix);
+  const receipts = join(dataDir, 'receipts');
+  mkdirSync(receipts, { recursive: true });
+  vi.stubEnv('PURCHASES_SQLITE_PATH', join(dataDir, 'purchases.db'));
+  return receipts;
+}
+
 /** A bundle root holding an `Order History.csv` and the given invoices. */
 export function bundleWith(invoices: Readonly<Record<string, Buffer>> = {}): string {
   const root = temporaryDirectory('amazon-cli-');

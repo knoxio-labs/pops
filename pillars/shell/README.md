@@ -221,6 +221,13 @@ pnpm --filter @pops/shell test:e2e     # playwright test
 pnpm --filter @pops/shell typecheck    # tsc --noEmit
 ```
 
+`test:e2e` boots two Vite servers of its own, on **5567** (all modules) and
+**5571** (finance only) — not 5568, which `dev` holds, and deliberately not
+5569, which is `pillars/design`. Playwright reuses an existing server outside
+CI, so a collision there means the specs silently run against whatever else
+answers on that port; `scripts/ci/__tests__/dev-server-ports.test.ts` fails
+when two files claim one.
+
 `mise tasks` (from `pillars/shell/mise.toml`) wraps the same set plus `lint`
 (`oxlint src && oxfmt --check .`, which has no `package.json` equivalent):
 `mise run build | dev | typecheck | test | test:e2e | lint`.

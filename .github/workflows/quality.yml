@@ -1141,22 +1141,3 @@ jobs:
       - name: Every app is all-or-none on PageHeader icons, and icons match nav
         run: node scripts/check-title-icon-consistency.mjs
 
-  nav-parity:
-    name: Nav parity
-    # Every pillar declares its nav twice — `app/src/nav.ts` for the design
-    # playground and its own ModuleManifest, `src/api/manifest.ts` for the
-    # wire, and the shell renders the WIRE copy. Nothing held the two in
-    # agreement, and both finance (three missing links) and media (a rail
-    # colour) had drifted. It reads both declarations as source and pulls in no
-    # third-party deps, so it skips `pnpm install`. See
-    # scripts/check-nav-parity.mjs.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Gate self-test (proves the guard catches a missing, extra and altered nav item)
-        run: node scripts/check-nav-parity.mjs --self-test
-      - name: Every pillar's app nav and wire nav agree
-        run: node scripts/check-nav-parity.mjs

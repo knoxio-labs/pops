@@ -279,7 +279,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
     captureOverlay: {
       bundleSlot: 'ingest-form',
       order: 10,
-      hotkey: 'cmd+shift+k',
+      hotkey: 'mod+shift+k',
       labelKey: 'cerebrum.captureOverlay.label',
     },
   },

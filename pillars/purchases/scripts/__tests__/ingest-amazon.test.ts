@@ -27,7 +27,7 @@ import {
   KNOWN_ORDER,
   orderNamed,
   storedFiles,
-  temporaryDirectory,
+  temporaryReceiptStore,
   UNKNOWN_ORDER,
   warnings,
 } from './amazon-bundle.js';
@@ -137,8 +137,7 @@ describe('invoice reporting', () => {
   });
 
   it('writes no evidence to the store on a dry run', async () => {
-    const receipts = temporaryDirectory('amazon-receipts-');
-    vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
+    const receipts = temporaryReceiptStore('amazon-receipts-');
     parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });
 
     await main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) }), '--dry-run']);
@@ -155,8 +154,7 @@ describe('planning what to store', () => {
   it('names each invoice without writing a byte', () => {
     // The URI is a function of the bytes, so it can be minted before anyone
     // knows whether the order it belongs to will be created.
-    const receipts = temporaryDirectory('amazon-receipts-');
-    vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
+    const receipts = temporaryReceiptStore('amazon-receipts-');
 
     const planned = planInvoiceDocuments([matchedInvoice('a.pdf', KNOWN_ORDER)]).get(KNOWN_ORDER);
 
@@ -201,8 +199,7 @@ describe('the write path', () => {
   let receipts: string;
 
   beforeEach(() => {
-    receipts = temporaryDirectory('amazon-receipts-');
-    vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
+    receipts = temporaryReceiptStore('amazon-receipts-');
     vi.stubEnv(INGEST_API_KEY_ENV, 'pops_sa_test.secret');
     parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });
   });

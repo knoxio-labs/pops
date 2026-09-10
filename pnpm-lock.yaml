@@ -1554,6 +1554,9 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../../libs/locales
+      '@storybook/react-vite':
+        specifier: ^10.6.0
+        version: 10.6.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.2.18)(prettier@3.8.1)(react@19.2.8))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.10)
@@ -1735,6 +1738,9 @@ importers:
       '@pops/food':
         specifier: workspace:*
         version: link:..
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../../libs/navigation
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../../libs/sdk
@@ -1799,6 +1805,9 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../../libs/locales
+      '@storybook/react-vite':
+        specifier: ^10.6.0
+        version: 10.6.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.2.18)(prettier@3.8.1)(react@19.2.8))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.10)
@@ -2005,6 +2014,9 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../../libs/locales
+      '@storybook/react-vite':
+        specifier: ^10.6.0
+        version: 10.6.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.2.18)(prettier@3.8.1)(react@19.2.8))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.10)
@@ -2132,6 +2144,9 @@ importers:
       '@pops/lists':
         specifier: workspace:*
         version: link:..
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../../libs/navigation
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../../libs/sdk
@@ -2169,6 +2184,9 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../../libs/locales
+      '@storybook/react-vite':
+        specifier: ^10.6.0
+        version: 10.6.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.2.18)(prettier@3.8.1)(react@19.2.8))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.10)
@@ -2376,6 +2394,9 @@ importers:
       '@pops/locales':
         specifier: workspace:*
         version: link:../../../libs/locales
+      '@storybook/react-vite':
+        specifier: ^10.6.0
+        version: 10.6.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rollup@4.59.0)(storybook@10.6.0(@types/react@19.2.18)(prettier@3.8.1)(react@19.2.8))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.10)

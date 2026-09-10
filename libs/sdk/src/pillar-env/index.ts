@@ -1,3 +1,10 @@
+export {
+  assertSecretFilesReadable,
+  findUnreadableSecretFiles,
+  UnreadableSecretFileError,
+  type SecretFileProbe,
+  type UnreadableSecretFile,
+} from './secret-files.js';
 export { BareOriginParseError, parseBareOrigin } from './bare-origin.js';
 export {
   parsePillarsEnv,

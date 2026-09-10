@@ -454,7 +454,7 @@ export type EntitiesUploadAvatarData = {
 
 export type EntitiesUploadAvatarErrors = {
   /**
-   * Disallowed content type or oversized upload
+   * Not a supported image, or oversized
    */
   400: ErrorBody;
   /**
@@ -588,7 +588,7 @@ export type EntitiesUploadPosterData = {
 
 export type EntitiesUploadPosterErrors = {
   /**
-   * Disallowed content type or oversized upload
+   * Not a supported image, or oversized
    */
   400: ErrorBody;
   /**

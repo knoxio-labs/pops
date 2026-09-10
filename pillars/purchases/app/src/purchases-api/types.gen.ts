@@ -1117,6 +1117,7 @@ export type PurchaseListInventoryProposalsResponses = {
       itemName: string;
       kindConfirmed: boolean;
       purchaseDate: string;
+      purchaseDateOffsetMinutes: number | null;
       purchaseId: string;
       purchasePriceCents: number;
       purchaseTransactionUri: string | null;

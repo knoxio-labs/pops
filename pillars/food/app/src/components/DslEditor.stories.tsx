@@ -12,7 +12,7 @@
  * `initialValue`, only stores it; the editor is the source of truth
  * for its own document while the story is on screen).
  */
-import { useState } from 'react';
+import { type ReactElement, useState } from 'react';
 
 import { DslEditor } from './DslEditor';
 
@@ -71,7 +71,7 @@ function StoryHost({
   initialValue: string;
   readOnly?: boolean;
   issues?: readonly CompileEditorIssue[];
-}): JSX.Element {
+}): ReactElement {
   const [value, setValue] = useState(initialValue);
   return (
     <DslEditor

@@ -21,7 +21,7 @@ import {
   KNOWN_ORDER,
   orderNamed,
   storedFiles,
-  temporaryDirectory,
+  temporaryReceiptStore,
   UNKNOWN_ORDER,
   warnings,
 } from './amazon-bundle.js';
@@ -94,8 +94,7 @@ function attachRequests(): Recorded[] {
 
 beforeEach(() => {
   vi.unstubAllEnvs();
-  receipts = temporaryDirectory('amazon-receipts-');
-  vi.stubEnv('PURCHASES_RECEIPT_DIR', receipts);
+  receipts = temporaryReceiptStore('amazon-receipts-');
   vi.stubEnv(INGEST_API_KEY_ENV, 'pops_sa_test.secret');
   parseMock.mockReset();
   parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });

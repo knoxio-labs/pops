@@ -16,10 +16,16 @@
  *     sections for modules this build did not ship, so results cannot link
  *     into a page that was never mounted.
  *
- * The registry is deliberately taken off the air. The boundary these assert is
- * the one the LIVE registry cannot restore: while it is answering it IS the
- * source of truth and `POPS_APPS` does not override it, so a snapshot
+ * Two of these take the registry off the air deliberately. The boundary they
+ * assert is the one the LIVE registry cannot restore: while it is answering it
+ * IS the source of truth and `POPS_APPS` does not override it, so a snapshot
  * answering normally puts media on the rail on purpose.
+ *
+ * The exclusion tests therefore stub a registry that ANSWERS and omits media.
+ * The first one used to fail the registry instead, and passed because a dead
+ * registry mounted nothing and the router said "not installed" about
+ * everything — asserting the defect POPS-3250 fixed rather than the gating it
+ * was written for.
  */
 import { expect, test } from '@playwright/test';
 
@@ -38,7 +44,10 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
   });
 
   test('an excluded module is not-installed, not a 404', async ({ page }) => {
-    await failRegistry(page);
+    // A registry that ANSWERS and does not carry media. That is what makes
+    // this about the install set: with the registry dead nothing mounts at
+    // all, which is an outage rather than an exclusion and is the case below.
+    await stubRegistry(page, ['finance']);
     await stubPillarHealth(page, ['finance']);
 
     await page.goto('/media');
@@ -47,6 +56,23 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
     // 404 here would mean the router lost the module rather than gated it.
     await expect(page.getByRole('heading', { name: /module not installed/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
+  });
+
+  test('a dead registry with no cache says so, rather than blaming the install set', async ({
+    page,
+  }) => {
+    // Nothing answered and this context has no cached snapshot, so nothing
+    // mounted — including finance, which IS installed and running. Telling the
+    // reader their deploy excludes it is the failure POPS-3250 fixed, and it
+    // is what this spec used to assert.
+    await failRegistry(page);
+    await stubPillarHealth(page, ['finance']);
+
+    await page.goto('/finance');
+
+    await expect(page.getByRole('heading', { name: /reach the registry/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /module not installed/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /try again/i })).toBeVisible();
   });
 
   test('an excluded module stays off the rail when the shell falls back to its cache', async ({

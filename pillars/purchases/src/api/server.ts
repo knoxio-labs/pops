@@ -3,7 +3,7 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
-import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+import { assertSecretFilesReadable, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { DEFAULT_SETTLEMENT_WINDOW_DAYS } from '../contract/constants.js';
 /**
@@ -42,6 +42,14 @@ function resolvePort(): number {
   }
   return parsed;
 }
+
+// Before the port, the database, or anything that resolves a credential.
+// A `*_FILE` variable pointing at a file this process cannot open makes every
+// outbound leg authenticate as though nothing had been configured, and says
+// so only in a per-tick log line nobody reads — finance ran that way for days
+// (POPS-3315). An unset variable is still a supported configuration; a set
+// one naming an unreadable path is not, so this refuses to boot.
+assertSecretFilesReadable();
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';

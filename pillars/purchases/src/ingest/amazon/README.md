@@ -56,6 +56,8 @@ Parsing never aborts. A 943-row backfill that dies on row 700 is worse than one 
 
 An order is dropped only when its `Order Date` or `Currency` is unreadable. Skipping is correct there — `orderedAt` is what the reconciliation window is measured against, so an order without one could never match a transaction — but it is reported, because a backfill that quietly lands 700 of 748 orders is indistinguishable from one that landed everything.
 
+**A timestamp that names no zone counts as unreadable.** `new Date('2026-02-02T01:41:21')` resolves a naive cell against whichever machine is running the ingest, and `.toISOString()` bakes that reading in — so the same file ingested on a Sydney laptop and in a UTC container would land `ordered_at` values eleven hours apart, with nothing downstream able to tell: the value is plausible, it sorts correctly, and the canonicalising check at the DB boundary is handed an already-`Z` string. A reported drop is the answer the rest of this pillar already gives a timestamp it cannot place (POPS-2533). Every zoned spelling ISO-8601 allows still reads — `Z`, `+10:00`, `+1000`, `+10`.
+
 ## Refunds
 
 `Refund Details.csv` is the one returns file that states money. Sixteen rows, sixteen distinct orders, all sixteen joining to `Order History.csv`, one refund each. Each becomes a single charge with `role='refund'`, a negative `amountCents`, and `chargedAt` set to `Refund Date` — the disbursement instant, which is the only date a bank transaction could ever settle against. `Creation Date` is when Amazon wrote the record, minutes to hours later on every row, and is not a substitute.
@@ -123,7 +125,7 @@ A credit note (`Tax Adjustment Note`, 10 in the bundle) is filed as `other`, not
 
 In this pillar's own content-addressed store, under `pops://purchases/receipt/<sha256>` — the same store the receipt drop-zone writes to. ADR-042 wants purchase evidence under `pops://documents/...`, but the `documents` pillar is a read-only bridge over Paperless-ngx with no write route at all, and holding 325 invoices until one exists is the wrong order. POPS-1528 migrates every stored file at once; these travel with the rest, and nothing here has to be undone for that to happen.
 
-**The store is a local directory** — beside this pillar's SQLite file, or `PURCHASES_RECEIPT_DIR`. Running the CLI against a remote `PURCHASES_BASE_URL` from a machine that cannot see the server's volume writes the URIs into the database and the bytes onto the wrong host. Run it where the volume is mounted.
+**The store is a local directory** — beside this pillar's SQLite file, and nowhere else, so `PURCHASES_SQLITE_PATH` is what points it at the volume. Running the CLI against a remote `PURCHASES_BASE_URL` from a machine that cannot see the server's volume writes the URIs into the database and the bytes onto the wrong host. Run it where the volume is mounted.
 
 The bytes go down **before** the request that names them, because a row pointing at a file that is not there cannot be repaired by the create path: `POST /purchases` is create-only, so a re-run is a 409. What that ordering writes for an order no row ends up referencing is removed again at the end of the run, so a run that creates nothing and attaches nothing leaves nothing behind. A 409 from the attach route counts as a reference like a 201 does — it means a row is already pointing at those bytes, and taking them off the volume would break it.
 
