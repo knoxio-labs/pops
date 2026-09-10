@@ -80,6 +80,37 @@ function financeTransactionArguments(): { pillar: string; type: string } {
 }
 
 /**
+ * Decode the escapes a template literal's RAW source carries.
+ *
+ * `captureOne` lifts file text, so `\\s` in the source is two characters
+ * where evaluating the literal would have produced one. Feeding the raw form
+ * to `new RegExp` builds a different pattern — `[^/\\s]` excludes a backslash
+ * and the letter `s` rather than whitespace — which passes on ids that happen
+ * to contain no `s` and fails on `tx-issue-1`, for no reason to do with the
+ * seam.
+ *
+ * Only `\\\\` is decoded. Anything else escaped throws rather than being
+ * guessed at: a silently wrong decoding is the same class of error this suite
+ * exists to catch, one level down.
+ */
+export function decodeTemplate(raw: string): string {
+  let out = '';
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (ch !== '\\') {
+      out += ch;
+      continue;
+    }
+    if (raw[i + 1] !== '\\') {
+      throw new Error(`unhandled escape \\${raw[i + 1] ?? '<end>'} in a lifted template`);
+    }
+    out += '\\';
+    i += 1;
+  }
+  return out;
+}
+
+/**
  * Substitute the named arguments into a template lifted from source.
  *
  * Textual rather than evaluated: the point is to use the repo's own spelling,
@@ -111,7 +142,7 @@ function purchasesPattern(): RegExp {
     "purchases' popsUriPattern body"
   );
   const { pillar, type } = financeTransactionArguments();
-  return new RegExp(fill(template, { pillar, type }), 'u');
+  return new RegExp(decodeTemplate(fill(template, { pillar, type })), 'u');
 }
 
 /** The URI inventory's single builder produces for an id. */
@@ -160,7 +191,11 @@ describe('the finance-transaction URI, as each side of the seam spells it', () =
   });
 
   it('round-trips an id with the characters a real transaction id carries', () => {
-    for (const id of ['a1b2c3d4', 'tx_2026-02-02_001', '01JC8YV5X9ZQ4K7M3N2P6R8T']) {
+    // `tx-issue-1` is in there deliberately. The pattern is lifted as raw
+    // source, where `\\s` is two characters; feeding that to `new RegExp`
+    // without decoding builds `[^/\\s]`, which excludes the letter `s`
+    // rather than whitespace and fails every id containing one.
+    for (const id of ['a1b2c3d4', 'tx_2026-02-02_001', 'tx-issue-1', '01JC8YV5X9ZQ4K7M3N2P6R8T']) {
       expect(purchasesPattern().exec(inventoryUri(id))?.[1], id).toBe(id);
     }
   });
@@ -178,6 +213,21 @@ describe('the finance-transaction URI, as each side of the seam spells it', () =
       expect(built.endsWith(`/${SAMPLE_ID}`)).toBe(true);
       expect(built.split('/').length).toBeGreaterThan(3);
     }
+  });
+
+  it('refuses an id the real pattern refuses, so the decoding did not widen it either', () => {
+    // The other half of the decoding: `\\s` must come out as the whitespace
+    // class it is. A pattern that excluded a literal `s` instead would accept
+    // these, and a URI carrying whitespace or a second path segment is not one
+    // `financeTransactionId` may strip an id out of.
+    for (const id of ['tx 1', 'tx\tab', 'nested/id']) {
+      expect(purchasesPattern().test(`pops://finance/transaction/${id}`), id).toBe(false);
+    }
+  });
+
+  it('decodes a lifted template rather than guessing at an escape it does not know', () => {
+    expect(decodeTemplate(String.raw`[^/\\s]+`)).toBe(String.raw`[^/\s]+`);
+    expect(() => decodeTemplate(String.raw`\n`)).toThrow('unhandled escape');
   });
 
   it('fails loudly when a source it reads no longer holds the shape it scans for', () => {
