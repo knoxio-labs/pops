@@ -17,14 +17,35 @@ const ISO_TIMESTAMP_RE =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
 
 /**
- * Does the calendar date this timestamp names actually exist?
+ * Does this year/month/day name a day that exists?
  *
  * `Date.UTC` normalises rather than rejects: 30 February becomes 2 March,
- * so a value that merely overflows its month parses without error and is
- * silently moved into the next one. The round-trip check is the same one
- * `naiveUtcOf` in `src/ingest/local-time.ts` already makes for receipt
- * readings, for the same reason — refusing the value is the only way to
- * catch it, since nothing downstream will.
+ * 31 April becomes 1 May. A value that merely overflows its month parses
+ * without error and is silently moved into the next one, so the round-trip
+ * is the only way to catch it — nothing downstream will. The same check
+ * `naiveUtcOf` in `src/ingest/local-time.ts` makes for receipt readings.
+ *
+ * Exported because the Amazon ingest needs it a step earlier than this
+ * schema runs: it parses a timestamp cell with `new Date` before anything
+ * reaches the contract boundary, and by then `.toISOString()` has baked the
+ * moved date in (POPS-3389).
+ */
+export function namesARealCalendarDay(year: number, month: number, day: number): boolean {
+  const roundTrip = new Date(Date.UTC(year, month - 1, day));
+  return (
+    roundTrip.getUTCFullYear() === year &&
+    roundTrip.getUTCMonth() === month - 1 &&
+    roundTrip.getUTCDate() === day
+  );
+}
+
+/**
+ * Does the calendar date this timestamp names actually exist, and does its
+ * clock reading?
+ *
+ * The day is {@link namesARealCalendarDay}'s question; the hour, minute and
+ * second are checked here for the same reason and against the same
+ * normalisation (hour 25 becomes tomorrow).
  *
  * Assumes `value` already matched {@link ISO_TIMESTAMP_RE}; called only
  * after the shape check has passed.
@@ -39,11 +60,9 @@ function namesARealCalendarDate(value: string): boolean {
   const h = Number(hour);
   const mi = Number(minute);
   const s = Number(second);
+  if (!namesARealCalendarDay(y, mo, d)) return false;
   const roundTrip = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
   return (
-    roundTrip.getUTCFullYear() === y &&
-    roundTrip.getUTCMonth() === mo - 1 &&
-    roundTrip.getUTCDate() === d &&
     roundTrip.getUTCHours() === h &&
     roundTrip.getUTCMinutes() === mi &&
     roundTrip.getUTCSeconds() === s
