@@ -6,7 +6,7 @@
  */
 import { type ChangeEvent, type ReactElement } from 'react';
 
-import { Badge, Button, Select, type SelectOption } from '@pops/ui';
+import { Badge, Button, CheckboxInput, Select, type SelectOption } from '@pops/ui';
 
 import {
   ALL_BANDS,
@@ -62,17 +62,13 @@ export function DraftsFilters({ value, onChange, onClear, t }: Props): ReactElem
         labelFor={(reason) => t(`inbox.drafts.partialReason.${reason}`)}
       />
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={value.freshOnly}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              onChange({ ...value, freshOnly: e.target.checked })
-            }
-            data-testid="drafts-freshonly"
-          />
-          {t('inbox.drafts.filters.freshOnly')}
-        </label>
+        <CheckboxInput
+          className="flex-row items-center"
+          label={t('inbox.drafts.filters.freshOnly')}
+          checked={value.freshOnly}
+          onCheckedChange={(freshOnly) => onChange({ ...value, freshOnly })}
+          data-testid="drafts-freshonly"
+        />
         <SortDropdown value={value.sort} onChange={(sort) => onChange({ ...value, sort })} t={t} />
         <div className="ml-auto">
           <Button size="sm" variant="ghost" onClick={onClear}>

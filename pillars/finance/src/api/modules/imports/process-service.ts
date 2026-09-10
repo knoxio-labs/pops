@@ -34,7 +34,7 @@ import {
   type ProgressBatchItem,
   yieldToEventLoop,
 } from './processing-helpers.js';
-import { loadKnownTags } from './tag-management.js';
+import { loadKnownTags, loadTagDescriptions } from './tag-management.js';
 import { createAiCounters } from './types.js';
 
 import type { updateProgress } from './progress-store.js';
@@ -221,6 +221,7 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
   const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
   const entityDefaultTags = importsService.buildDefaultTagsByEntity(contactSet);
   const knownTags = loadKnownTags(db);
+  const tagDescriptions = loadTagDescriptions(db);
   const correctionRules = transactionCorrectionsService.listTransactionCorrections(db, {
     limit: 50_000,
     offset: 0,
@@ -234,6 +235,7 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
     entityLookup,
     aliases,
     knownTags,
+    tagDescriptions,
     importBatchId,
     entityDefaultTags,
     correctionRules,
