@@ -40,14 +40,18 @@
 import { readFileSync } from 'node:fs';
 
 import { createContactsClient, type ContactsClient } from '../src/api/contacts/client.js';
+import { unknownDefaultTags } from '../src/api/contacts/default-tags.js';
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import {
   entityVenueDefaultsService,
   isPerTransactionFacet,
   openFinanceDb,
+  tagVocabularyService,
   type EntityVenueDefaultsPlan,
   type LiveEntityDefaults,
 } from '../src/db/index.js';
+
+import type { KnownTagSet } from '../src/db/services/tag-vocabulary.js';
 
 const LOG = '[backfill-venue-defaults]';
 
@@ -98,10 +102,41 @@ function reportPlan(plan: EntityVenueDefaultsPlan): void {
   }
 }
 
-async function applyPlan(contacts: ContactsClient, plan: EntityVenueDefaultsPlan): Promise<number> {
+/**
+ * Refuse the WHOLE plan when any write names a value the vocabulary does not
+ * hold, before writing any of it.
+ *
+ * Checked up front rather than left to the client's own refusal per write: a
+ * plan is applied one contact at a time, so a bad value in the middle of it
+ * would leave the run half-applied — the exact state this script's header
+ * warns about. The override file is where such a value comes from (POPS-3293:
+ * fifteen contacts carried `venue:bar`, which the vocabulary has never held),
+ * and the operator fixing it wants the whole list, not the first one.
+ */
+function assertPlanIsWritable(plan: EntityVenueDefaultsPlan, known: KnownTagSet): void {
+  const offenders = plan.writes
+    .map((write) => ({ write, unknown: unknownDefaultTags(write.after, known) }))
+    .filter(({ unknown }) => unknown.length > 0);
+  if (offenders.length === 0) return;
+  for (const { write, unknown } of offenders) {
+    console.error(`${LOG}  ${write.entityId}: ${unknown.join(', ')} not in the tag vocabulary`);
+  }
+  throw new Error(
+    `${offenders.length} planned write(s) name a value the vocabulary does not hold — ` +
+      'nothing was written. Fix the --venues override file, or add the value to the ' +
+      'vocabulary first if it is one you mean to have'
+  );
+}
+
+async function applyPlan(
+  contacts: ContactsClient,
+  plan: EntityVenueDefaultsPlan,
+  known: KnownTagSet
+): Promise<number> {
+  assertPlanIsWritable(plan, known);
   let applied = 0;
   for (const write of plan.writes) {
-    await contacts.updateDefaultTags(write.entityId, write.after);
+    await contacts.updateDefaultTags(write.entityId, write.after, known);
     applied += 1;
   }
   return applied;
@@ -154,7 +189,11 @@ async function main(): Promise<void> {
       return;
     }
 
-    const applied = await applyPlan(contacts, plan);
+    const applied = await applyPlan(
+      contacts,
+      plan,
+      tagVocabularyService.loadKnownTagSet(opened.db)
+    );
     console.warn(`${LOG} APPLIED — ${applied} contact(s) rewritten`);
     console.warn(
       `${LOG} re-run a fresh import (or POPS-2607's re-evaluation) to see the coverage move; ` +

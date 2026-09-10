@@ -15,6 +15,9 @@ import {
   type ContactsClient,
   type CreateOrFetchResult,
 } from '../contacts/client.js';
+import { assertKnownDefaultTags } from '../contacts/default-tags.js';
+
+import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
 
 export interface SeedContact {
   id?: string;
@@ -128,7 +131,14 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
       entities.push(fresh);
       return { id: fresh.id, name: fresh.name, created: true };
     },
-    async updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity> {
+    async updateDefaultTags(
+      entityId: string,
+      defaultTags: string[],
+      known: KnownTagSet
+    ): Promise<ContactEntity> {
+      // The fake enforces it too. A double that admitted what the real client
+      // refuses would let a caller's test pass on a write production rejects.
+      assertKnownDefaultTags(entityId, defaultTags, known);
       if (unavailable)
         throw new ContactsUnavailableError('unavailable', 'entity defaultTags update');
       const target = entities.find((e) => e.id === entityId);

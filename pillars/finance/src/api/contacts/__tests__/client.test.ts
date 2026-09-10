@@ -15,6 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
  */
 import { type CallResult } from '@pops/pillar-sdk/server';
 
+import { tagVocabularyService } from '../../../db/index.js';
 import {
   ContactsPermanentError,
   ContactsUnavailableError,
@@ -221,14 +222,14 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
     const updated = entity({ id: 'e1', name: 'Stonewall', defaultTags: ['venue:bar'] });
     const { client, update } = updateReturning(ok({ data: updated, message: 'Entity updated' }));
 
-    await expect(client.updateDefaultTags('e1', ['venue:bar'])).resolves.toEqual(updated);
+    await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).resolves.toEqual(updated);
     expect(update).toHaveBeenCalledWith({ id: 'e1', defaultTags: ['venue:bar'] });
   });
 
   it('never degrades silently — a transient failure throws rather than resolving', async () => {
     const { client } = updateReturning({ kind: 'unavailable', pillar: 'contacts' });
 
-    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+    await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).rejects.toThrow(
       ContactsUnavailableError
     );
   });
@@ -236,7 +237,7 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
   it('names the operation in the message so a failed backfill is not read as a pre-create', async () => {
     const { client } = updateReturning({ kind: 'unavailable', pillar: 'contacts' });
 
-    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+    await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).rejects.toThrow(
       'entity defaultTags update'
     );
   });
@@ -244,7 +245,7 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
   it('treats a conflict as PERMANENT — a defaultTags patch cannot race a duplicate name', async () => {
     const { client } = updateReturning(conflict('duplicate name'));
 
-    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+    await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).rejects.toThrow(
       ContactsPermanentError
     );
   });
@@ -257,7 +258,7 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
     async (_label, result) => {
       const { client } = updateReturning(result);
 
-      await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+      await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).rejects.toThrow(
         ContactsPermanentError
       );
     }
@@ -266,11 +267,14 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
   it('throws the TRANSIENT error without calling the handle when no key is held', async () => {
     const client = createContactsClient(() => null);
 
-    await expect(client.updateDefaultTags('e1', ['venue:bar'])).rejects.toThrow(
+    await expect(client.updateDefaultTags('e1', ['venue:bar'], KNOWN)).rejects.toThrow(
       ContactsUnavailableError
     );
   });
 });
+
+/** The vocabulary these cases write against; see `default-tags.ts`. */
+const KNOWN = tagVocabularyService.createKnownTagSet(['venue:bar', 'venue:pub']);
 
 describe('createContactsClient — no service-account key (POPS-2021)', () => {
   it('fetchAllEntities degrades to empty without calling the handle', async () => {
