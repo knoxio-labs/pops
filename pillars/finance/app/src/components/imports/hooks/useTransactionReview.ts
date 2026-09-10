@@ -47,25 +47,47 @@ function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
   );
   const resolvedChecksumsRef = useRef<Set<string>>(seededResolvedChecksums);
 
+  /**
+   * The latest local state, readable outside a render.
+   *
+   * The store write below used to live inside the `useState` updater, which
+   * React invokes during the NEXT render — so every local mutation wrote to
+   * the store while `ReviewStep` was rendering, and React said so: "Cannot
+   * update a component (`ReviewStep`) while rendering a different component
+   * (`ReviewStep`)" (POPS-3367). Not fatal, but it is the class of bug that
+   * produces missed updates and, under concurrent rendering, inconsistent
+   * trees.
+   *
+   * Resolving `prev` from a ref instead keeps the whole sequence in the
+   * caller's own context — an event handler or an effect — and keeps it
+   * SYNCHRONOUS, which deferring the store write to an effect would not: a
+   * caller that reads the store straight after setting would see the previous
+   * value. The ref is re-synced after every commit, so a state change made by
+   * any other path is picked up before the next call reads it.
+   */
+  const latestRef = useRef(localTransactions);
+  useEffect(() => {
+    latestRef.current = localTransactions;
+  }, [localTransactions]);
+
   const setLocalTransactions = useCallback<Dispatch<SetStateAction<LocalTxState>>>((update) => {
-    setLocalTransactionsRaw((prev) => {
-      const next = typeof update === 'function' ? update(prev) : update;
-      const changed = collectChangedChecksums(prev, next);
-      for (const checksum of changed) {
-        resolvedChecksumsRef.current.add(checksum);
-      }
-      if (changed.length > 0) useImportStore.getState().markChecksumsResolved(changed);
-      useImportStore.getState().setProcessedTransactions(next);
-      return next;
-    });
+    const prev = latestRef.current;
+    const next = typeof update === 'function' ? update(prev) : update;
+    latestRef.current = next;
+    const changed = collectChangedChecksums(prev, next);
+    for (const checksum of changed) {
+      resolvedChecksumsRef.current.add(checksum);
+    }
+    if (changed.length > 0) useImportStore.getState().markChecksumsResolved(changed);
+    useImportStore.getState().setProcessedTransactions(next);
+    setLocalTransactionsRaw(next);
   }, []);
 
   const applyReevaluatedResult = useCallback((result: ProcessedTxState) => {
-    setLocalTransactionsRaw((prevLocal) => {
-      const merged = mergeReevaluatedResult(prevLocal, result, resolvedChecksumsRef.current);
-      useImportStore.getState().setProcessedTransactions(merged);
-      return merged;
-    });
+    const merged = mergeReevaluatedResult(latestRef.current, result, resolvedChecksumsRef.current);
+    latestRef.current = merged;
+    useImportStore.getState().setProcessedTransactions(merged);
+    setLocalTransactionsRaw(merged);
   }, []);
 
   return {
