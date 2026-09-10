@@ -66,6 +66,17 @@ export interface ProcessContext {
   entityLookup: EntityMaps['entityLookup'];
   aliases: EntityMaps['aliasMap'];
   knownTags: string[];
+  /**
+   * `facet:value` → the vocabulary's one-line definition of it, for the values
+   * that carry one (POPS-3285).
+   *
+   * Sits beside `knownTags` rather than replacing it because the two answer
+   * different questions: `knownTags` is the closed set every reply is validated
+   * against, and this only says what those values mean. Loaded once per import
+   * run like its neighbour, and sparse by design — a value with no definition
+   * is simply absent.
+   */
+  tagDescriptions: ReadonlyMap<string, string>;
   importBatchId: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
   entityDefaultTags: ReadonlyMap<string, string[]>;

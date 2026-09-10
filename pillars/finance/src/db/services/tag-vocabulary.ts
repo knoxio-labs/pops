@@ -14,7 +14,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { tagVocabulary } from '../schema.js';
-import { parseTagFacet, tagFacetKind } from '../tag-facets.js';
+import { CLASSIFIED_TAG_FACETS, parseTagFacet, tagFacetKind } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -94,6 +94,51 @@ export function listVocabularyTagsForFacets(db: FinanceDb, facets: readonly stri
     .orderBy(sql`${tagVocabulary.usageCount} desc`, tagVocabulary.tag)
     .all()
     .map((row) => row.tag);
+}
+
+/**
+ * The values on every facet the categorizer classifies into, most-used first —
+ * the closed set any prompt that offers tags must offer.
+ *
+ * The one place the facet list is derived, so a prompt cannot end up offering a
+ * different vocabulary from the one the reply is validated against. That is not
+ * hypothetical: rule generation built its list from the distinct tags on stored
+ * transactions instead, which is the ratchet POPS-2606 removed from the
+ * categorizer and POPS-3287 removed from here — a value the model coined
+ * survived one commit and came back as vocabulary in the next prompt, with the
+ * same standing as a deliberate one.
+ */
+export function listClassifiedVocabulary(db: FinanceDb): string[] {
+  return listVocabularyTagsForFacets(
+    db,
+    CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)
+  );
+}
+
+/**
+ * The description of every active vocabulary tag that has one, keyed by tag.
+ *
+ * A tag with no description is absent from the map rather than present with an
+ * empty value: the column is nullable on purpose (POPS-3285) — `trip:cairns-2026`
+ * needs no gloss and requiring one would produce filler — so "has no
+ * description" and "has an empty description" must not be the same state to a
+ * caller deciding whether to render one.
+ *
+ * Unscoped by facet, unlike {@link listVocabularyTagsForFacets}: this is a
+ * lookup, not an offer. The caller already holds the tags it is about to
+ * render and asks this only what they mean, so scoping it would add a way for
+ * the two queries to disagree without adding an answer.
+ */
+export function listVocabularyDescriptions(db: FinanceDb): ReadonlyMap<string, string> {
+  const described = new Map<string, string>();
+  for (const row of db
+    .select({ tag: tagVocabulary.tag, description: tagVocabulary.description })
+    .from(tagVocabulary)
+    .where(eq(tagVocabulary.isActive, true))
+    .all()) {
+    if (row.description !== null && row.description !== '') described.set(row.tag, row.description);
+  }
+  return described;
 }
 
 /**

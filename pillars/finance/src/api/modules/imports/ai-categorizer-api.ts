@@ -18,12 +18,15 @@ import { callWithLogging } from '@pops/ai-telemetry';
 import { extractJsonFromReply } from '../ai-json.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
-import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
-  buildTransactionData,
   closedFacetFields,
   closedFacetOptions,
   closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
+import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
+import {
+  buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
@@ -57,6 +60,8 @@ export interface ApiCallOptions {
   model: string;
   maxTokens: number;
   knownTags: string[];
+  /** `facet:value` → its definition, for the values the vocabulary describes (POPS-3285). */
+  tagDescriptions?: TagDescriptions;
   /** Bounded closed-set hint of existing entity names (CF062/#3661). */
   knownEntityNames?: string[];
   /** Opaque import-batch key for telemetry correlation (never the description). */
@@ -89,9 +94,10 @@ const SINGLE_KNOWN_ENTITY_INSTRUCTION =
 export function buildPrompt(
   input: CategorizerInput,
   knownTags: string[],
-  knownEntityNames: string[] = []
+  knownEntityNames: string[] = [],
+  tagDescriptions?: TagDescriptions
 ): string {
-  const facets = closedFacetOptions(knownTags);
+  const facets = closedFacetOptions(knownTags, tagDescriptions);
   return `Given this bank transaction, identify the merchant/entity name and classify it on each tag axis below.
 
 ${buildTransactionData(input)}
@@ -160,7 +166,7 @@ export async function callRawApi(opts: RawApiCallOptions): Promise<ApiCallRespon
 export async function callApi(opts: ApiCallOptions): Promise<ApiCallResponse> {
   return callRawApi({
     client: opts.client,
-    prompt: buildPrompt(opts.input, opts.knownTags, opts.knownEntityNames),
+    prompt: buildPrompt(opts.input, opts.knownTags, opts.knownEntityNames, opts.tagDescriptions),
     sanitizedDescription: opts.sanitizedDescription,
     model: opts.model,
     maxTokens: opts.maxTokens,

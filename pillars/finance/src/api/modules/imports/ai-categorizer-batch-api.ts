@@ -7,6 +7,12 @@
  */
 import { extractJsonFromReply } from '../ai-json.js';
 import {
+  closedFacetFields,
+  closedFacetOptions,
+  closedFacetReplyShape,
+  type TagDescriptions,
+} from '../vocabulary-prompt.js';
+import {
   callRawApi,
   entryFromParsed,
   type ApiCallResponse,
@@ -15,9 +21,6 @@ import {
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
   buildTransactionData,
-  closedFacetFields,
-  closedFacetOptions,
-  closedFacetReplyShape,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
   knownEntitiesSection,
@@ -37,6 +40,8 @@ export interface BatchApiCallOptions {
   model: string;
   maxTokens: number;
   knownTags: string[];
+  /** `facet:value` → its definition, for the values the vocabulary describes (POPS-3285). */
+  tagDescriptions?: TagDescriptions;
   /** Bounded closed-set hint of existing entity names (CF062/#3661). */
   knownEntityNames?: string[];
   /** Opaque import-batch key for telemetry correlation (never the description). */
@@ -56,12 +61,13 @@ const BATCH_KNOWN_ENTITY_INSTRUCTION =
 export function buildBatchPrompt(
   inputs: CategorizerInput[],
   knownTags: string[],
-  knownEntityNames: string[] = []
+  knownEntityNames: string[] = [],
+  tagDescriptions?: TagDescriptions
 ): string {
   const lines = inputs
     .map((input, i) => `${i + 1}. ${buildTransactionData(input).replaceAll('\n', ' | ')}`)
     .join('\n');
-  const facets = closedFacetOptions(knownTags);
+  const facets = closedFacetOptions(knownTags, tagDescriptions);
 
   return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify EACH one on every tag axis below.
 
@@ -84,7 +90,12 @@ Return ONLY the JSON array, no markdown, no explanation.`;
 export async function callBatchApi(opts: BatchApiCallOptions): Promise<ApiCallResponse> {
   return callRawApi({
     client: opts.client,
-    prompt: buildBatchPrompt(opts.inputs, opts.knownTags, opts.knownEntityNames),
+    prompt: buildBatchPrompt(
+      opts.inputs,
+      opts.knownTags,
+      opts.knownEntityNames,
+      opts.tagDescriptions
+    ),
     sanitizedDescription: `batch:${opts.inputs.length}`,
     model: opts.model,
     maxTokens: opts.maxTokens,
