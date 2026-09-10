@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { Check, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Button, NumberInput, Textarea } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { planWeekView } from '../../food-api/index.js';
-import { useEditableEntryDraft } from './useEditableEntryDraft.js';
+import { PlanEntryEditForm } from './PlanEntryEditForm.js';
 import { useIsMobile } from './useIsMobile.js';
-import { usePlanEntryEdit } from './usePlanEntryEdit.js';
 
 /**
  * Plan entry edit sheet: a right-side drawer on desktop, a bottom-sheet at
@@ -55,7 +53,7 @@ export function PlanEntryEditSheet(props: PlanEntryEditSheetProps): ReactElement
     >
       <Header entry={entry} onClose={onClose} />
       {entry.recipeRunId === null ? (
-        <EditableBody entry={entry} onSaved={onClose} onDeleted={onClose} />
+        <PlanEntryEditForm entry={entry} onSaved={onClose} onDeleted={onClose} />
       ) : (
         <CookedBody entry={entry} />
       )}
@@ -83,118 +81,6 @@ function Header(props: { entry: WirePlanEntryRow; onClose: () => void }): ReactE
         ×
       </Button>
     </header>
-  );
-}
-
-interface EditableBodyProps {
-  entry: WirePlanEntryRow;
-  onSaved: () => void;
-  onDeleted: () => void;
-}
-
-function EditableBody({ entry, onSaved, onDeleted }: EditableBodyProps): ReactElement {
-  const { servings, setServings, notes, setNotes } = useEditableEntryDraft(entry);
-  const edit = usePlanEntryEdit({ entryId: entry.id, onSaved, onDeleted });
-  return (
-    <div className="space-y-4">
-      <EditableFields
-        servings={servings}
-        setServings={setServings}
-        notes={notes}
-        setNotes={setNotes}
-      />
-      {edit.error !== null && (
-        <p className="text-sm text-destructive" role="alert">
-          {edit.error}
-        </p>
-      )}
-      <EditButtons
-        recipeSlug={entry.recipeSlug}
-        entryId={entry.id}
-        onSave={() => {
-          if (servings !== '') edit.save(servings, notes);
-        }}
-        onDelete={edit.remove}
-        isSaving={edit.isSaving}
-        isSaveDisabled={servings === ''}
-        isDeleting={edit.isDeleting}
-      />
-    </div>
-  );
-}
-
-interface EditableFieldsProps {
-  servings: number | '';
-  setServings: (n: number | '') => void;
-  notes: string;
-  setNotes: (s: string) => void;
-}
-
-function EditableFields(props: EditableFieldsProps): ReactElement {
-  return (
-    <>
-      <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="edit-servings">
-          Planned servings
-        </label>
-        <NumberInput
-          id="edit-servings"
-          data-testid="edit-servings"
-          min={1}
-          value={props.servings}
-          onChange={(e) => props.setServings(e.target.value === '' ? '' : Number(e.target.value))}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1" htmlFor="edit-notes">
-          Notes
-        </label>
-        <Textarea
-          id="edit-notes"
-          data-testid="edit-notes"
-          className="h-24"
-          value={props.notes}
-          onChange={(e) => props.setNotes(e.target.value)}
-          maxLength={1000}
-        />
-      </div>
-    </>
-  );
-}
-
-interface EditButtonsProps {
-  recipeSlug: string;
-  entryId: number;
-  onSave: () => void;
-  onDelete: () => void;
-  isSaving: boolean;
-  isSaveDisabled: boolean;
-  isDeleting: boolean;
-}
-
-function EditButtons(props: EditButtonsProps): ReactElement {
-  return (
-    <div className="flex flex-col gap-2 pt-2">
-      <Button asChild data-testid="mark-cooked">
-        <Link to={`/food/recipes/${props.recipeSlug}?cook=${props.entryId}`}>Mark cooked</Link>
-      </Button>
-      <Button
-        onClick={props.onSave}
-        variant="outline"
-        disabled={props.isSaving || props.isSaveDisabled}
-        data-testid="save-plan-entry"
-      >
-        <Check className="h-4 w-4 mr-1.5" /> Save changes
-      </Button>
-      <Button
-        onClick={props.onDelete}
-        variant="destructive"
-        disabled={props.isDeleting}
-        data-testid="delete-plan-entry"
-      >
-        <Trash2 className="h-4 w-4 mr-1.5" /> Delete
-      </Button>
-    </div>
   );
 }
 
