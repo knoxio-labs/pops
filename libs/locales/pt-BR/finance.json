@@ -116,6 +116,7 @@
   "import.takenOver.body": "Outra aba a assumiu às {{at}}. Nada que você alterar aqui será salvo. Retome-a para continuar aqui, ou saia e deixe a outra aba terminar.",
   "import.takenOver.leave": "Sair",
   "import.takenOver.takeBack": "Retomar",
+  "import.takenOver.takeBackFailed": "Não foi possível retomar a importação. Tente novamente.",
   "import.resumeFileNotice": "Seus arquivos não são reanexados após retomar — as linhas processadas são preservadas. Selecionar qualquer arquivo inicia uma nova importação.",
   "import.editTransaction": "Editar Transação",
   "import.searchRules": "Buscar regras por padrão, entidade ou localização...",

@@ -116,6 +116,7 @@
   "import.takenOver.body": "Another tab took it over at {{at}}. Anything you change here will not be saved. Take it back to keep working here, or leave and let the other tab finish.",
   "import.takenOver.leave": "Leave",
   "import.takenOver.takeBack": "Take it back",
+  "import.takenOver.takeBackFailed": "Could not take the import back. Try again.",
   "import.resumeFileNotice": "Your files aren't re-attached after resuming — the parsed rows are preserved. Selecting any file starts a fresh import.",
   "import.editTransaction": "Edit Transaction",
   "import.searchRules": "Search rules by pattern, entity, or location...",
