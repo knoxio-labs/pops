@@ -7,8 +7,13 @@ import { iconMap } from '@pops/navigation';
 import { registeredApps } from './registry';
 
 describe('nav registry', () => {
-  it('registers at least one app', () => {
-    expect(registeredApps.length).toBeGreaterThan(0);
+  /**
+   * Inverted by POPS-3226: the bundle map carries no pillar app any more, so
+   * the rail built from it is empty and every entry comes from the registry
+   * instead. A non-empty result here means something re-entered the map.
+   */
+  it('registers no app, because the map carries none', () => {
+    expect(registeredApps.map((app) => app.id)).toEqual([]);
   });
 
   // Parity gate — the bundle-mapped pillars must render in this exact order;
@@ -23,7 +28,7 @@ describe('nav registry', () => {
   // registry cannot be reached. `src/app/registry-walk.test.ts` asserts the
   // wire position it takes when it can.
   it('renders the bundle-mapped pillars in their pinned order', () => {
-    expect(registeredApps.map((app) => app.id)).toEqual(['media']);
+    expect(registeredApps.map((app) => app.id)).toEqual([]);
   });
 
   it.each(registeredApps.map((app) => [app.id, app] as const))(

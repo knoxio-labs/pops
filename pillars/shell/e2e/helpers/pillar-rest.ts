@@ -200,6 +200,48 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  media: {
+    assetsBaseUrl: '/media-ui/media.js',
+    nav: {
+      id: 'media',
+      label: 'Media',
+      labelKey: 'media',
+      icon: 'film',
+      color: 'indigo',
+      basePath: '/media',
+      order: 20,
+      items: [
+        { path: '', label: 'Library', labelKey: 'media.library', icon: 'film' },
+        { path: '/watchlist', label: 'Watchlist', labelKey: 'media.watchlist', icon: 'bookmark' },
+        { path: '/discover', label: 'Discover', labelKey: 'media.discover', icon: 'compass' },
+      ],
+    },
+    // All twenty. The list this replaces carried eight, which was invisible
+    // while the shell mounted media from its bundle map and a 404 on twelve
+    // URLs the moment it did not.
+    pages: [
+      { path: '', index: true, bundleSlot: 'media-library' },
+      { path: 'movies/:id', bundleSlot: 'media-movie-detail' },
+      { path: 'tv/:id', bundleSlot: 'media-tv-detail' },
+      { path: 'tv/:id/season/:num', bundleSlot: 'media-season-detail' },
+      { path: 'watchlist', bundleSlot: 'media-watchlist' },
+      { path: 'history', bundleSlot: 'media-history' },
+      { path: 'discover', bundleSlot: 'media-discover' },
+      { path: 'rankings', bundleSlot: 'media-rankings' },
+      { path: 'search', bundleSlot: 'media-search' },
+      { path: 'compare', bundleSlot: 'media-compare' },
+      { path: 'compare/history', bundleSlot: 'media-comparison-history' },
+      { path: 'quick-pick', bundleSlot: 'media-quick-pick' },
+      { path: 'rotation/log', bundleSlot: 'media-rotation-log' },
+      { path: 'rotation/candidates', bundleSlot: 'media-candidate-queue' },
+      { path: 'arr/calendar', bundleSlot: 'media-calendar' },
+      { path: 'tier-list', bundleSlot: 'media-tier-list' },
+      { path: 'plex', bundleSlot: 'media-plex-redirect' },
+      { path: 'arr', bundleSlot: 'media-arr-redirect' },
+      { path: 'rotation', bundleSlot: 'media-rotation-redirect' },
+      { path: 'calendar', bundleSlot: 'media-calendar-redirect' },
+    ],
+  },
   cerebrum: {
     assetsBaseUrl: '/cerebrum-ui/cerebrum.js',
     nav: {

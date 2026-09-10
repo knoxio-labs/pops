@@ -32,8 +32,19 @@ describe('frontend module manifests', () => {
     expect(allManifests.length).toBeGreaterThan(0);
   });
 
-  it('the registry walk surfaces at least one page-routed app', () => {
-    expect(pageRoutedApps.length).toBeGreaterThan(0);
+  /**
+   * POPS-3215 moved every pillar app onto the runtime loader, so the static
+   * walk surfaces none of them any more — `ego`, a shell-hosted overlay with
+   * no backend pillar, is what is left. The old assertion said "at least one
+   * page-routed app" and was true only while the shell compiled apps in.
+   *
+   * Inverted rather than deleted: a page-routed app appearing here again
+   * means something re-entered the bundle map, which is the regression this
+   * epic exists to prevent. The apps' own routing is asserted where it now
+   * lives — each pillar's `bundles` test and its `*-via-loader` e2e.
+   */
+  it('surfaces no page-routed app, because every pillar mounts through the loader', () => {
+    expect(pageRoutedApps.map(([id]) => id)).toEqual([]);
   });
 
   it.each(allManifests)('%s manifest is structurally valid', (label, m) => {

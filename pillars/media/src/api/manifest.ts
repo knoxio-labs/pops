@@ -1,3 +1,4 @@
+import { MEDIA_PAGES } from '../contract/pages.js';
 /**
  * Media pillar manifest payload builder.
  *
@@ -55,16 +56,16 @@ const MEDIA_NAV: NavConfigDescriptor = {
   ],
 };
 
-const MEDIA_PAGES: PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'media-library' },
-  { path: 'watchlist', bundleSlot: 'media-watchlist' },
-  { path: 'history', bundleSlot: 'media-history' },
-  { path: 'discover', bundleSlot: 'media-discover' },
-  { path: 'rankings', bundleSlot: 'media-rankings' },
-  { path: 'search', bundleSlot: 'media-search' },
-  { path: 'compare', bundleSlot: 'media-compare' },
-  { path: 'tier-list', bundleSlot: 'media-tier-list' },
-];
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const MEDIA_WIRE_PAGES = [...MEDIA_PAGES] as const satisfies readonly PageDescriptor[];
+
+/**
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ * Root-relative, because the same deployment answers to a LAN name, a
+ * Tailscale name and `localhost`, and no absolute origin is right on all of
+ * them.
+ */
+const MEDIA_ASSETS_BASE_URL = '/media-ui/media.js';
 
 export function buildMediaManifest(version: string): ManifestPayload {
   return {
@@ -84,7 +85,8 @@ export function buildMediaManifest(version: string): ManifestPayload {
       manifests: [plexManifest, arrManifest, rotationManifest, mediaOperationalManifest],
     },
     nav: MEDIA_NAV,
-    pages: MEDIA_PAGES,
+    pages: [...MEDIA_WIRE_PAGES],
+    assetsBaseUrl: MEDIA_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }
