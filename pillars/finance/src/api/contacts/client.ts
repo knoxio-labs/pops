@@ -40,7 +40,7 @@
  * the generic "degraded" warning, because it will not clear on retry the way
  * an outage does.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+import { isOk, pillar, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import {
   credentialled,
@@ -48,6 +48,14 @@ import {
   NO_CREDENTIAL_REASON,
   UNAUTHORIZED_REASON,
 } from '../pillars/outbound.js';
+import {
+  classifyContactsFailureKind,
+  CONTACTS_PILLAR_ID,
+  fetchByExactName,
+  fetchOneEntity,
+  MAX_PAGES,
+  pageThroughEntities,
+} from './entity-fetch.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
 import type {
@@ -68,8 +76,7 @@ export type {
 
 export { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
-/** The contacts pillar id, as registered with the registry. */
-export const CONTACTS_PILLAR_ID = 'contacts';
+export { CONTACTS_PILLAR_ID } from './entity-fetch.js';
 
 /**
  * Typed handle over the subset of the contacts router the finance backend
@@ -101,108 +108,8 @@ export type ContactsRouter = {
   };
 };
 
-/** The non-ok, non-conflict result kinds this classifier sorts. */
-type ContactsFailureKind = Exclude<CallResult<unknown>['kind'], 'ok' | 'conflict'>;
-
-/**
- * TRANSIENT vs PERMANENT for every non-ok/non-conflict write result kind
- * (`entities.create` and `entities.update` share it).
- *
- * A total switch with no default arm, matching `toGatewayFailure` and
- * `upstream-error.ts`'s `classify`: a kind added to {@link CallResult} that
- * is not listed in one of these two arms fails the build here rather than
- * being silently absorbed by a catch-all negation. `rate-limited` (429) is
- * TRANSIENT — the producer is asking for a retry on its own schedule, not
- * refusing the request — so it degrades to the outbox exactly like
- * `unavailable`/`degraded` rather than aborting the commit.
- */
-function classifyContactsFailureKind(kind: ContactsFailureKind): 'transient' | 'permanent' {
-  switch (kind) {
-    case 'unavailable':
-    case 'degraded':
-    case 'rate-limited':
-      return 'transient';
-    case 'not-found':
-    case 'contract-mismatch':
-    case 'bad-request':
-    case 'unauthorized':
-    case 'refused':
-      return 'permanent';
-  }
-}
-
 /** Operation label carried in the error message of a failed defaults write. */
 const UPDATE_OPERATION = 'entity defaultTags update';
-
-/** Per-page size for the bulk list sweep — matches the contacts list `MAX_LIMIT`. */
-const PAGE_SIZE = 200;
-/**
- * Safety cap on the paging sweep: a backstop against a runaway loop on a
- * misbehaving peer, NOT a dataset cap. At `PAGE_SIZE` per page this is 1M
- * contacts — comfortably above any personal dataset. The matcher needs the
- * FULL set, so hitting this cap is treated as a visible truncation (warned),
- * never a silent partial fetch.
- */
-const MAX_PAGES = 5000;
-
-function warnDegraded(operation: string, result: CallResult<unknown>): void {
-  if (isOk(result)) return;
-  if (result.kind === UNAUTHORIZED_REASON) {
-    console.error(credentialRejectedMessage(CONTACTS_PILLAR_ID, operation));
-    return;
-  }
-  console.warn(
-    `[contacts] ${operation} degraded (kind=${result.kind}); substituting empty contact set`
-  );
-}
-
-/**
- * Fetch a single contact by id, shared by `fetchEntityDefaultTags`,
- * `fetchEntityDisplayName` and `fetchEntitySummary` — all three need the same
- * contact and degrade the same way (`null` for no handle, an unknown id, or a
- * degraded result), differing only in which field(s) of it they read.
- */
-async function fetchOneEntity(
-  handle: PillarHandle<ContactsRouter> | null,
-  entityId: string
-): Promise<ContactEntity | null> {
-  if (handle === null) return null;
-  const result = await handle.entities.get({ id: entityId });
-  if (!isOk(result) && result.kind !== 'not-found') warnDegraded('entities.get', result);
-  return isOk(result) ? result.value.data : null;
-}
-
-async function pageThroughEntities(
-  handle: PillarHandle<ContactsRouter> | null,
-  query: { search?: string; type?: string },
-  maxPages: number
-): Promise<ContactEntity[]> {
-  // `credentialled()` already logged the no-key case once for this
-  // process; nothing else to say here beyond substituting the same empty
-  // set a real outage would.
-  if (handle === null) return [];
-  const all: ContactEntity[] = [];
-  for (let page = 0; page < maxPages; page++) {
-    const result = await handle.entities.list({
-      search: query.search,
-      type: query.type,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-    });
-    if (!isOk(result)) {
-      warnDegraded('entities.list', result);
-      return [];
-    }
-    all.push(...result.value.data);
-    if (!result.value.pagination.hasMore) return all;
-  }
-  console.warn(
-    `[contacts] entities.list sweep hit the ${maxPages}-page safety cap with more rows ` +
-      `still available — returning a TRUNCATED set of ${all.length} contacts; matches/usage ` +
-      `for the tail will be missed`
-  );
-  return all;
-}
 
 /** Test-only knobs; production omits these and takes the module defaults. */
 export interface ContactsClientOptions {
@@ -221,7 +128,11 @@ export interface ContactsClientOptions {
  */
 export function createContactsClient(
   handleFactory: () => PillarHandle<ContactsRouter> | null = () =>
-    credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>(CONTACTS_PILLAR_ID)),
+    // The producer is spelled out rather than passed `CONTACTS_PILLAR_ID`:
+    // the cross-pillar-expectations guard resolves a `pillar<T>(...)` call's
+    // producer from a literal or from a `const` bound in the SAME file, and
+    // that binding now lives next door (ADR-045).
+    credentialled(CONTACTS_PILLAR_ID, () => pillar<ContactsRouter>('contacts')),
   options: ContactsClientOptions = {}
 ): ContactsClient {
   const maxPages = options.maxPages ?? MAX_PAGES;
@@ -303,28 +214,4 @@ async function patchDefaultTags(
     throw new ContactsPermanentError(result.kind, UPDATE_OPERATION);
   }
   throw new ContactsUnavailableError(result.kind, UPDATE_OPERATION);
-}
-
-/**
- * Resolve a single contact by exact (case-insensitive) name. The list `search`
- * is a substring filter, so the exact match is re-checked client-side over the
- * matching page. Backs the fetch-first leg of create-or-fetch, returning the
- * existing contact for reuse before any create is attempted.
- *
- * An alias counts as the entity's name: a descriptor that reads "Maccas" names
- * the contact that answers to it, and creating a second entity for the alias
- * is the duplicate this leg exists to prevent. A name match still wins.
- */
-async function fetchByExactName(
-  handle: PillarHandle<ContactsRouter>,
-  name: string,
-  maxPages: number
-): Promise<ContactEntity | null> {
-  const matches = await pageThroughEntities(handle, { search: name }, maxPages);
-  const target = name.toLowerCase();
-  return (
-    matches.find((e) => e.name.toLowerCase() === target) ??
-    matches.find((e) => e.aliases.some((alias) => alias.toLowerCase() === target)) ??
-    null
-  );
 }
