@@ -66,11 +66,21 @@ export function commitLiveDraftPhase(tx: FinanceDb, args: LiveDraftCommitArgs): 
   if (minted.warning) args.warnings.push(minted.warning);
 }
 
-/** The batch source a commit records: the provider's for a live draft, the payload's otherwise. */
+/**
+ * The batch source a commit records, per account.
+ *
+ * The provider's source belongs to the account the draft feeds and to no
+ * other: a row can be moved to a different account during Review, and
+ * stamping that account's batch as Up-fed would make `importStatus` report
+ * it as fed by a provider, which in turn hides the file-upload step from
+ * its next import. Every other account keeps whatever the payload said.
+ */
 export function batchSourceFor(
   liveDraft: LiveDraftContext | undefined,
   payloadSource: ImportSource | undefined
-): ImportSource | undefined {
-  if (liveDraft === undefined) return payloadSource;
-  return { kind: 'api', provider: 'up', parserVersion: UP_MAPPER_VERSION };
+): (accountId: string) => ImportSource | undefined {
+  return (accountId) =>
+    liveDraft !== undefined && accountId === liveDraft.accountId
+      ? { kind: 'api', provider: 'up', parserVersion: UP_MAPPER_VERSION }
+      : payloadSource;
 }

@@ -254,7 +254,7 @@ describe('recordImportBatchesPhase, via commitImport', () => {
       db.transaction((tx) => {
         recordImportBatchesPhase(tx, {
           inserted: [{ id, accountId: card, date: '2026-07-01', carriesBalance: false }],
-          source: { kind: 'csv-dialect', dialectId: 'Amex' },
+          sourceFor: () => ({ kind: 'csv-dialect', dialectId: 'Amex' }),
           checkpoints: [],
           commitKey: undefined,
         });

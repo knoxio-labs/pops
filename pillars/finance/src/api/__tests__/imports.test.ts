@@ -1776,6 +1776,61 @@ describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
     });
   });
 
+  it("stamps only the fed account's batch as Up when a row was moved to another account", async () => {
+    const c = client();
+    const upAccount = (
+      await c.accounts.create({ name: 'Up Moved', kind: 'savings', currency: 'AUD' })
+    ).data.id;
+    const other = (
+      await c.accounts.create({ name: 'Amex Moved', kind: 'checking', currency: 'AUD' })
+    ).data.id;
+    const draft = createImportDraft(financeDb.db, {
+      accountId: upAccount,
+      sourceKind: 'live',
+      state: 'saved',
+      provider: 'up',
+      payload: '{}',
+      rowCount: 2,
+      unresolvedCount: 0,
+      dateFrom: '2026-09-02',
+      dateTo: '2026-09-02',
+      balanceReportedCents: null,
+    });
+
+    const result = await c.imports.commitImport({
+      draftId: draft.id,
+      transactions: [
+        confirmed({
+          description: 'STAYS',
+          checksum: 'moved-1',
+          accountId: upAccount,
+          amount: -12,
+          date: '2026-09-02',
+        }),
+        confirmed({
+          description: 'MOVED',
+          checksum: 'moved-2',
+          accountId: other,
+          amount: -8,
+          date: '2026-09-02',
+        }),
+      ],
+    });
+
+    const bySource = Object.fromEntries(
+      financeDb.raw
+        .prepare('SELECT account_id AS accountId, source_kind AS sourceKind FROM import_batches')
+        .all()
+        .map((row) => [
+          (row as { accountId: string }).accountId,
+          (row as { sourceKind: string }).sourceKind,
+        ])
+    );
+    expect(bySource[upAccount]).toBe('api');
+    expect(bySource[other]).not.toBe('api');
+    expect(result.data.batches).toHaveLength(2);
+  });
+
   it('a live commit that is rejected leaves rows, checkpoint and draft untouched', async () => {
     const c = client();
     const accountId = (

@@ -85,7 +85,8 @@ export function recordImportBatchesPhase(
   tx: FinanceDb,
   args: {
     inserted: readonly InsertedTransaction[];
-    source: ImportSource | undefined;
+    /** The source to record for one account's batch; undefined lets the rows themselves say. */
+    sourceFor: (accountId: string) => ImportSource | undefined;
     checkpoints: readonly CommitCheckpoint[];
     commitKey: string | undefined;
   }
@@ -94,7 +95,7 @@ export function recordImportBatchesPhase(
   const batches: CommitBatch[] = [];
 
   for (const [accountId, rows] of groupByAccount(args.inserted)) {
-    const source = args.source ?? inferredSource(rows);
+    const source = args.sourceFor(accountId) ?? inferredSource(rows);
     const checkpointId = checkpointByAccount.get(accountId) ?? null;
     const row = importBatchesService.insertBatch(
       tx,

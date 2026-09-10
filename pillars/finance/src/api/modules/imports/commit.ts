@@ -215,7 +215,7 @@ function recordOutcomePhases(
 
   const batches = recordImportBatchesPhase(tx, {
     inserted: writeResult.inserted,
-    source: batchSourceFor(liveDraft, payload.source),
+    sourceFor: batchSourceFor(liveDraft, payload.source),
     checkpoints,
     commitKey: payload.commitKey,
   });
