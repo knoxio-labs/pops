@@ -700,6 +700,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/import-drafts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Every pending import, most recently saved first, with the state a card shows (open, left-open and unusable are derived on read) */
+    get: operations['importDrafts.list'];
+    put?: never;
+    /** Create a file draft; the creating tab holds the lease */
+    post: operations['importDrafts.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/import-drafts/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One draft with its payload; 409 DraftUnusable when this build cannot resume it */
+    get: operations['importDrafts.get'];
+    /** Write the wizard state through; 409 DraftOwnedElsewhere from a tab that is not the owner */
+    put: operations['importDrafts.write'];
+    post?: never;
+    /** Discard a draft. A live draft loses only its decisions; the bank resends the rows */
+    delete: operations['importDrafts.discard'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/import-drafts/{id}/claim': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Take the lease; 409 DraftOwnedElsewhere while another tab was seen inside the stale window unless forced */
+    post: operations['importDrafts.claim'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/import-drafts/{id}/heartbeat': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Prove the tab is still in it; 409 DraftOwnedElsewhere once the lease has moved */
+    post: operations['importDrafts.heartbeat'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/import-drafts/{id}/release': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Give the lease up; a token that no longer holds it changes nothing */
+    post: operations['importDrafts.release'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/imports/apply-changeset-reevaluate': {
     parameters: {
       query?: never;
@@ -7321,6 +7409,764 @@ export interface operations {
             };
           };
         };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.list': {
+    parameters: {
+      query?: {
+        account?: string;
+        state?: 'saved' | 'live';
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          accountId: string;
+          dialectId: string | null;
+          fileNames: string[];
+          ownerToken: string;
+          payload: {
+            [key: string]: unknown;
+          };
+          processSessionId?: string | null;
+          rowCount: number;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+          step: number | null;
+          unresolvedCount: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              payload: {
+                [key: string]: unknown;
+              };
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              shapeVersion: number;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.write': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          ownerToken: string;
+          payload: {
+            [key: string]: unknown;
+          };
+          processSessionId?: string | null;
+          rowCount: number;
+          span: {
+            from: string;
+            to: string;
+          } | null;
+          step: number | null;
+          unresolvedCount: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.discard': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 204 */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.claim': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          force?: boolean;
+          ownerToken: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.heartbeat': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          ownerToken: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              balanceReportedCents: number | null;
+              createdAt: string;
+              id: string;
+              ownerSeenAt: string | null;
+              processSessionId: string | null;
+              rowCount: number;
+              savedAt: string;
+              source:
+                | {
+                    dialectId: string | null;
+                    fileNames: string[];
+                    /** @enum {string} */
+                    kind: 'file';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'live';
+                    /** @enum {string} */
+                    provider: 'up';
+                  };
+              span: {
+                from: string;
+                to: string;
+              } | null;
+              /** @enum {string} */
+              state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+              step: number | null;
+              unresolvedCount: number;
+              /** @enum {string|null} */
+              unusableCause: 'shape' | 'account-archived' | null;
+              unusableReason: string | null;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'importDrafts.release': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          ownerToken: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 204 */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description 400 */
       400: {

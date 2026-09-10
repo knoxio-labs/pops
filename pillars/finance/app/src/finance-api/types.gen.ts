@@ -4987,6 +4987,623 @@ export type EntityUsageListResponses = {
 
 export type EntityUsageListResponse = EntityUsageListResponses[keyof EntityUsageListResponses];
 
+export type ImportDraftsListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    account?: string;
+    state?: 'saved' | 'live';
+  };
+  url: '/import-drafts';
+};
+
+export type ImportDraftsListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsListError = ImportDraftsListErrors[keyof ImportDraftsListErrors];
+
+export type ImportDraftsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    }>;
+  };
+};
+
+export type ImportDraftsListResponse = ImportDraftsListResponses[keyof ImportDraftsListResponses];
+
+export type ImportDraftsCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId: string;
+    dialectId: string | null;
+    fileNames: Array<string>;
+    ownerToken: string;
+    payload: {
+      [key: string]: unknown;
+    };
+    processSessionId?: string | null;
+    rowCount: number;
+    span: {
+      from: string;
+      to: string;
+    } | null;
+    step: number | null;
+    unresolvedCount: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/import-drafts';
+};
+
+export type ImportDraftsCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsCreateError = ImportDraftsCreateErrors[keyof ImportDraftsCreateErrors];
+
+export type ImportDraftsCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    };
+  };
+};
+
+export type ImportDraftsCreateResponse =
+  ImportDraftsCreateResponses[keyof ImportDraftsCreateResponses];
+
+export type ImportDraftsDiscardData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}';
+};
+
+export type ImportDraftsDiscardErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsDiscardError = ImportDraftsDiscardErrors[keyof ImportDraftsDiscardErrors];
+
+export type ImportDraftsDiscardResponses = {
+  /**
+   * 204
+   */
+  204: void;
+};
+
+export type ImportDraftsDiscardResponse =
+  ImportDraftsDiscardResponses[keyof ImportDraftsDiscardResponses];
+
+export type ImportDraftsGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}';
+};
+
+export type ImportDraftsGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsGetError = ImportDraftsGetErrors[keyof ImportDraftsGetErrors];
+
+export type ImportDraftsGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      payload: {
+        [key: string]: unknown;
+      };
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      shapeVersion: number;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    };
+  };
+};
+
+export type ImportDraftsGetResponse = ImportDraftsGetResponses[keyof ImportDraftsGetResponses];
+
+export type ImportDraftsWriteData = {
+  /**
+   * Body
+   */
+  body?: {
+    ownerToken: string;
+    payload: {
+      [key: string]: unknown;
+    };
+    processSessionId?: string | null;
+    rowCount: number;
+    span: {
+      from: string;
+      to: string;
+    } | null;
+    step: number | null;
+    unresolvedCount: number;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}';
+};
+
+export type ImportDraftsWriteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsWriteError = ImportDraftsWriteErrors[keyof ImportDraftsWriteErrors];
+
+export type ImportDraftsWriteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    };
+  };
+};
+
+export type ImportDraftsWriteResponse =
+  ImportDraftsWriteResponses[keyof ImportDraftsWriteResponses];
+
+export type ImportDraftsClaimData = {
+  /**
+   * Body
+   */
+  body?: {
+    force?: boolean;
+    ownerToken: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}/claim';
+};
+
+export type ImportDraftsClaimErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsClaimError = ImportDraftsClaimErrors[keyof ImportDraftsClaimErrors];
+
+export type ImportDraftsClaimResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    };
+  };
+};
+
+export type ImportDraftsClaimResponse =
+  ImportDraftsClaimResponses[keyof ImportDraftsClaimResponses];
+
+export type ImportDraftsHeartbeatData = {
+  /**
+   * Body
+   */
+  body?: {
+    ownerToken: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}/heartbeat';
+};
+
+export type ImportDraftsHeartbeatErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsHeartbeatError =
+  ImportDraftsHeartbeatErrors[keyof ImportDraftsHeartbeatErrors];
+
+export type ImportDraftsHeartbeatResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      balanceReportedCents: number | null;
+      createdAt: string;
+      id: string;
+      ownerSeenAt: string | null;
+      processSessionId: string | null;
+      rowCount: number;
+      savedAt: string;
+      source:
+        | {
+            dialectId: string | null;
+            fileNames: Array<string>;
+            kind: 'file';
+          }
+        | {
+            kind: 'live';
+            provider: 'up';
+          };
+      span: {
+        from: string;
+        to: string;
+      } | null;
+      state: 'saved' | 'live' | 'open' | 'left-open' | 'unusable';
+      step: number | null;
+      unresolvedCount: number;
+      unusableCause: 'shape' | 'account-archived' | null;
+      unusableReason: string | null;
+    };
+  };
+};
+
+export type ImportDraftsHeartbeatResponse =
+  ImportDraftsHeartbeatResponses[keyof ImportDraftsHeartbeatResponses];
+
+export type ImportDraftsReleaseData = {
+  /**
+   * Body
+   */
+  body?: {
+    ownerToken: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/import-drafts/{id}/release';
+};
+
+export type ImportDraftsReleaseErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ImportDraftsReleaseError = ImportDraftsReleaseErrors[keyof ImportDraftsReleaseErrors];
+
+export type ImportDraftsReleaseResponses = {
+  /**
+   * 204
+   */
+  204: void;
+};
+
+export type ImportDraftsReleaseResponse =
+  ImportDraftsReleaseResponses[keyof ImportDraftsReleaseResponses];
+
 export type ImportsApplyChangeSetAndReevaluateData = {
   /**
    * Body

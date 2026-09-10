@@ -60,6 +60,7 @@ import type {
   GiftCardDetails,
   RevealedGiftCardSecretResponse,
 } from '../modules/gift-card-details-types.js';
+import type { ImportDraft, ImportDraftSummary } from '../modules/import-drafts-types.js';
 import type { ImportProgress } from '../modules/imports/index.js';
 import type {
   CommitResult,
@@ -508,6 +509,24 @@ export function makeClient(app: Express) {
         call<{ data: UpSyncJob }>((r) => r.post(`/accounts/${accountId}/sync`).send({})),
       getSyncJob: (accountId: string, jobId: string) =>
         call<{ data: UpSyncJob }>((r) => r.get(`/accounts/${accountId}/sync/${jobId}`)),
+    },
+    importDrafts: {
+      list: (query: { account?: string; state?: string } = {}) =>
+        call<{ data: ImportDraftSummary[] }>((r) => r.get('/import-drafts').query(query)),
+      get: (id: string) => call<{ data: ImportDraft }>((r) => r.get(`/import-drafts/${id}`)),
+      create: (body: Record<string, unknown>) =>
+        call<{ data: ImportDraftSummary }>((r) => r.post('/import-drafts').send(body)),
+      write: (id: string, body: Record<string, unknown>) =>
+        call<{ data: ImportDraftSummary }>((r) => r.put(`/import-drafts/${id}`).send(body)),
+      claim: (id: string, body: Record<string, unknown>) =>
+        call<{ data: ImportDraftSummary }>((r) => r.post(`/import-drafts/${id}/claim`).send(body)),
+      heartbeat: (id: string, body: Record<string, unknown>) =>
+        call<{ data: ImportDraftSummary }>((r) =>
+          r.post(`/import-drafts/${id}/heartbeat`).send(body)
+        ),
+      release: (id: string, body: Record<string, unknown>) =>
+        call<undefined>((r) => r.post(`/import-drafts/${id}/release`).send(body)),
+      discard: (id: string) => call<undefined>((r) => r.delete(`/import-drafts/${id}`)),
     },
     giftCardDetails: {
       get: (accountId: string) =>

@@ -54,6 +54,31 @@ Each carries a file-header comment explaining its own mechanics. Read the header
 - **Processing mutates rule telemetry.** Because `process` bumps usage counters, re-running it over the same batch — which the wizard does on resume, and on any dead-session recovery — inflates `timesApplied` for every rule that fires. Preview paths pass `isPreview` precisely to avoid this.
 - **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup.
 
+## Pending drafts
+
+An import that has been started and not committed is a row in `import_drafts`
+(finance ADR-005, `pillars/finance/docs/architecture/adr-005-import-drafts-are-server-records.md`),
+served by the `importDrafts` sub-router (`src/contract/rest-import-drafts.ts`,
+`src/api/rest/import-drafts-handlers.ts`). The row is the only copy: the
+wizard writes it through on every change and hydrates from it on open, so
+there is no browser-side persistence to fall out of step with it.
+
+Three things about the wire that no single file states:
+
+- **The state a card shows is a verdict, not a column.** The row stores
+  `saved` or `live`; `open`, `left-open` and `unusable` are decided in
+  `src/api/modules/import-drafts-types.ts` from the lease columns, the shape
+  version and the account, in that order of precedence. The list keeps
+  serving an unusable draft so the card can offer Discard; `GET /import-drafts/:id`
+  refuses it with 409 `DraftUnusable` so no wizard mounts on it.
+- **Every write names its tab.** `ownerToken` in the body is the lease; a
+  write, heartbeat or unforced claim from another token is 409
+  `DraftOwnedElsewhere`, with `details.ownerSeenAt` so the caller can tell a
+  tab that is in it now from one that left without releasing.
+- **A live draft belongs to the bank until a person claims it.** Claiming
+  turns it `saved`, so the Up path never writes into a draft someone has open;
+  what arrives afterwards collects in a new live draft for the account.
+
 ## Absent
 
 The bank/dialect selector is not an account identity — it only picks a CSV parser (`app/src/components/imports/bank-dialect.ts`). The wizard's account-step (POPS-2840) resolves the real `accountId` transactions commit against; the free-text account-name mirror this table once carried was dropped in POPS-2770.

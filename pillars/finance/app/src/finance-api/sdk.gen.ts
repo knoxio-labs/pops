@@ -150,6 +150,30 @@ import type {
   GiftCardDetailsWriteData,
   GiftCardDetailsWriteErrors,
   GiftCardDetailsWriteResponses,
+  ImportDraftsClaimData,
+  ImportDraftsClaimErrors,
+  ImportDraftsClaimResponses,
+  ImportDraftsCreateData,
+  ImportDraftsCreateErrors,
+  ImportDraftsCreateResponses,
+  ImportDraftsDiscardData,
+  ImportDraftsDiscardErrors,
+  ImportDraftsDiscardResponses,
+  ImportDraftsGetData,
+  ImportDraftsGetErrors,
+  ImportDraftsGetResponses,
+  ImportDraftsHeartbeatData,
+  ImportDraftsHeartbeatErrors,
+  ImportDraftsHeartbeatResponses,
+  ImportDraftsListData,
+  ImportDraftsListErrors,
+  ImportDraftsListResponses,
+  ImportDraftsReleaseData,
+  ImportDraftsReleaseErrors,
+  ImportDraftsReleaseResponses,
+  ImportDraftsWriteData,
+  ImportDraftsWriteErrors,
+  ImportDraftsWriteResponses,
   ImportsApplyChangeSetAndReevaluateData,
   ImportsApplyChangeSetAndReevaluateErrors,
   ImportsApplyChangeSetAndReevaluateResponses,
@@ -1262,6 +1286,133 @@ export const entityUsageList = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<EntityUsageListResponses, EntityUsageListErrors, ThrowOnError>({
     url: '/entity-usage',
     ...options,
+  });
+
+/**
+ * Every pending import, most recently saved first, with the state a card shows (open, left-open and unusable are derived on read)
+ */
+export const importDraftsList = <ThrowOnError extends boolean = false>(
+  options?: Options<ImportDraftsListData, ThrowOnError>
+): RequestResult<ImportDraftsListResponses, ImportDraftsListErrors, ThrowOnError> =>
+  (options?.client ?? client).get<ImportDraftsListResponses, ImportDraftsListErrors, ThrowOnError>({
+    url: '/import-drafts',
+    ...options,
+  });
+
+/**
+ * Create a file draft; the creating tab holds the lease
+ */
+export const importDraftsCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<ImportDraftsCreateData, ThrowOnError>
+): RequestResult<ImportDraftsCreateResponses, ImportDraftsCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    ImportDraftsCreateResponses,
+    ImportDraftsCreateErrors,
+    ThrowOnError
+  >({
+    url: '/import-drafts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Discard a draft. A live draft loses only its decisions; the bank resends the rows
+ */
+export const importDraftsDiscard = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsDiscardData, ThrowOnError>
+): RequestResult<ImportDraftsDiscardResponses, ImportDraftsDiscardErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    ImportDraftsDiscardResponses,
+    ImportDraftsDiscardErrors,
+    ThrowOnError
+  >({ url: '/import-drafts/{id}', ...options });
+
+/**
+ * One draft with its payload; 409 DraftUnusable when this build cannot resume it
+ */
+export const importDraftsGet = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsGetData, ThrowOnError>
+): RequestResult<ImportDraftsGetResponses, ImportDraftsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<ImportDraftsGetResponses, ImportDraftsGetErrors, ThrowOnError>({
+    url: '/import-drafts/{id}',
+    ...options,
+  });
+
+/**
+ * Write the wizard state through; 409 DraftOwnedElsewhere from a tab that is not the owner
+ */
+export const importDraftsWrite = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsWriteData, ThrowOnError>
+): RequestResult<ImportDraftsWriteResponses, ImportDraftsWriteErrors, ThrowOnError> =>
+  (options.client ?? client).put<ImportDraftsWriteResponses, ImportDraftsWriteErrors, ThrowOnError>(
+    {
+      url: '/import-drafts/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    }
+  );
+
+/**
+ * Take the lease; 409 DraftOwnedElsewhere while another tab was seen inside the stale window unless forced
+ */
+export const importDraftsClaim = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsClaimData, ThrowOnError>
+): RequestResult<ImportDraftsClaimResponses, ImportDraftsClaimErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ImportDraftsClaimResponses,
+    ImportDraftsClaimErrors,
+    ThrowOnError
+  >({
+    url: '/import-drafts/{id}/claim',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Prove the tab is still in it; 409 DraftOwnedElsewhere once the lease has moved
+ */
+export const importDraftsHeartbeat = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsHeartbeatData, ThrowOnError>
+): RequestResult<ImportDraftsHeartbeatResponses, ImportDraftsHeartbeatErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ImportDraftsHeartbeatResponses,
+    ImportDraftsHeartbeatErrors,
+    ThrowOnError
+  >({
+    url: '/import-drafts/{id}/heartbeat',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Give the lease up; a token that no longer holds it changes nothing
+ */
+export const importDraftsRelease = <ThrowOnError extends boolean = false>(
+  options: Options<ImportDraftsReleaseData, ThrowOnError>
+): RequestResult<ImportDraftsReleaseResponses, ImportDraftsReleaseErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ImportDraftsReleaseResponses,
+    ImportDraftsReleaseErrors,
+    ThrowOnError
+  >({
+    url: '/import-drafts/{id}/release',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
