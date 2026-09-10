@@ -14650,6 +14650,9 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "release": {
+                    "type": "boolean"
+                  },
                   "rowCount": {
                     "maximum": 9007199254740991,
                     "minimum": 0,

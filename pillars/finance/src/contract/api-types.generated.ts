@@ -7781,6 +7781,7 @@ export interface operations {
             [key: string]: unknown;
           };
           processSessionId?: string | null;
+          release?: boolean;
           rowCount: number;
           span: {
             from: string;
