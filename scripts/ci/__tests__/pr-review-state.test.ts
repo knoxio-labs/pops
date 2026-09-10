@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyRejudgement,
   computeDiffRange,
+  disambiguateIds,
   encodeState,
   emptyState,
   findingFromModel,
@@ -675,5 +676,83 @@ describe('normalize', () => {
 
   it('leaves an empty string empty', () => {
     expect(normalize('   \n ')).toBe('');
+  });
+});
+
+/**
+ * Two genuinely different findings in one file that share an anchor.
+ *
+ * `findingId` hashes the file and the snippet and deliberately not the title,
+ * so a reworded finding keeps its id and merges as an update. The cost was
+ * that two findings with no snippet — "X is missing" is the common shape — or
+ * two pointing at the same offending line hashed the same, and `merge`'s
+ * id-keyed map read the second as an update of the first. One real finding
+ * was silently overwritten and never appeared in any comment (POPS-2545).
+ */
+describe('two findings that hash alike', () => {
+  const FILE = 'pillars/shell/src/app/router.tsx';
+
+  function snippetless(title: string): Finding {
+    return {
+      ...findingFromModel({ file: FILE, title }, 'aaaaaaa1'),
+    };
+  }
+
+  it('collide on the base id, which is what made this possible', () => {
+    expect(snippetless('one thing').id).toBe(snippetless('another thing').id);
+  });
+
+  it('both survive a merge, rather than one overwriting the other', () => {
+    const merged = merge([], [snippetless('one thing'), snippetless('another thing')]);
+
+    expect(merged).toHaveLength(2);
+    expect(merged.map((f) => f.title).toSorted()).toEqual(['another thing', 'one thing']);
+    expect(new Set(merged.map((f) => f.id)).size).toBe(2);
+  });
+
+  it('keep the same identities however the model orders them', () => {
+    // An ordinal suffix would swap the two rows' ids here, so a later run
+    // would refresh each finding's prose onto the other one's row.
+    const forward = disambiguateIds([snippetless('one thing'), snippetless('another thing')]);
+    const reverse = disambiguateIds([snippetless('another thing'), snippetless('one thing')]);
+
+    const idOf = (list: Finding[], title: string) => list.find((f) => f.title === title)?.id;
+    expect(idOf(forward, 'one thing')).toBe(idOf(reverse, 'one thing'));
+    expect(idOf(forward, 'another thing')).toBe(idOf(reverse, 'another thing'));
+  });
+
+  it('leaves a lone finding on its base id, so a partial run is not a new row', () => {
+    // The reason the FIRST of a colliding group keeps the base id rather than
+    // every member being qualified: a run reporting only this one must not
+    // change its id, or it arrives beside the row it already had.
+    const alone = snippetless('another thing');
+
+    expect(disambiguateIds([alone])).toEqual([alone]);
+    expect(disambiguateIds([alone])[0]?.id).toBe(alone.id);
+  });
+
+  it('still merges a reworded finding as an update, which is why the title is excluded', () => {
+    const first = merge([], [snippetless('one thing')]);
+    const reworded = merge(first, [
+      { ...snippetless('one thing'), title: 'one thing, said differently' },
+    ]);
+
+    expect(reworded).toHaveLength(1);
+    expect(reworded[0]?.title).toBe('one thing, said differently');
+    expect(reworded[0]?.id).toBe(first[0]?.id);
+  });
+
+  it('does the same for two findings sharing one snippet', () => {
+    const a = findingFromModel(
+      { file: FILE, title: 'unused', snippet: 'const x = 1;' },
+      'aaaaaaa1'
+    );
+    const b = findingFromModel(
+      { file: FILE, title: 'shadowed', snippet: 'const x = 1;' },
+      'aaaaaaa1'
+    );
+
+    expect(a.id).toBe(b.id);
+    expect(new Set(merge([], [a, b]).map((f) => f.id)).size).toBe(2);
   });
 });

@@ -103,6 +103,76 @@ export function findingId(file, snippet) {
 }
 
 /**
+ * A second id for a finding whose content-addressed one is already taken.
+ *
+ * Derived from the base id and the title, so it is stable across runs however
+ * the model happens to order its output — an ordinal suffix would swap two
+ * findings' identities the moment the model reported them the other way
+ * round.
+ *
+ * The title is admitted here and nowhere else on purpose. {@link findingId}
+ * excludes it so a reworded finding keeps its id and merges as an update
+ * ("its prose is refreshed from the newer run"); that property only has to
+ * hold between findings that are otherwise identical, and two findings
+ * sharing a file and a snippet are exactly the case where nothing else can
+ * tell them apart.
+ *
+ * @param {string} baseId
+ * @param {string} title
+ * @returns {string}
+ */
+function qualifiedFindingId(baseId, title) {
+  return createHash('sha256')
+    .update(`${baseId}\n${normalize(title)}`)
+    .digest('hex')
+    .slice(0, 12);
+}
+
+/**
+ * Give every finding in one run an id no other finding in it shares.
+ *
+ * `findingId` hashes the file and the snippet, so two genuinely different
+ * findings in one file that both have no snippet — "X is missing" is the
+ * common shape — or that point at the same offending line hash to the same
+ * id. {@link merge}'s id-keyed map then read the second as an update of the
+ * first: one real finding was silently overwritten and never appeared in any
+ * comment, with no warning and a review that looked clean (POPS-2545).
+ *
+ * Within a colliding group the first by title keeps the base id and the rest
+ * are qualified, rather than all of them being qualified. A run that reports
+ * only one of the group must not change that one's id, or it would arrive as
+ * a new finding beside the row it already had.
+ *
+ * @param {Finding[]} findings
+ * @returns {Finding[]} Same order, ids made unique.
+ */
+export function disambiguateIds(findings) {
+  /** @type {Map<string, Finding[]>} */
+  const groups = new Map();
+  for (const finding of findings) {
+    const group = groups.get(finding.id);
+    if (group === undefined) groups.set(finding.id, [finding]);
+    else group.push(finding);
+  }
+
+  /** @type {Map<Finding, string>} */
+  const rewritten = new Map();
+  for (const [baseId, group] of groups) {
+    if (group.length === 1) continue;
+    const byTitle = group.toSorted((a, b) => a.title.localeCompare(b.title));
+    for (const finding of byTitle.slice(1)) {
+      rewritten.set(finding, qualifiedFindingId(baseId, finding.title));
+    }
+  }
+
+  if (rewritten.size === 0) return findings;
+  return findings.map((finding) => {
+    const id = rewritten.get(finding);
+    return id === undefined ? finding : { ...finding, id };
+  });
+}
+
+/**
  * The state of a PR nothing has reviewed yet.
  *
  * @returns {ReviewState}
@@ -419,7 +489,7 @@ export function merge(prior, incoming) {
   /** @type {Map<string, Finding>} */
   const byId = new Map(prior.map((f) => [f.id, { ...f }]));
   const order = prior.map((f) => f.id);
-  for (const finding of incoming) {
+  for (const finding of disambiguateIds(incoming)) {
     const existing = byId.get(finding.id);
     if (existing === undefined) {
       byId.set(finding.id, { ...finding });
