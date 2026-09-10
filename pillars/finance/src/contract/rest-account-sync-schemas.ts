@@ -14,8 +14,26 @@ export const UP_SYNC_JOB_STATUSES = ['running', 'completed', 'failed'] as const;
 export type UpSyncJobStatus = (typeof UP_SYNC_JOB_STATUSES)[number];
 
 export const UpSyncJobResultSchema = z.object({
-  /** Rows Up returned for the fetched range, before dedup. */
+  /**
+   * Rows Up returned for the fetched range, before dedup.
+   *
+   * Every other count here partitions it, so they sum to `fetched`
+   * (POPS-3355). `settleRefused` and `outsideRange` are optional only so a
+   * job result serialised before they existed still parses; treat a missing
+   * one as zero, and expect the identity to hold on anything this version
+   * wrote.
+   */
   fetched: z.number().int().nonnegative(),
+  /**
+   * Rows Up returned that fall outside the requested calendar range.
+   *
+   * The fetch deliberately asks a day either side, because Up filters on
+   * instants and the rows carry a local calendar date. Those rows are
+   * correctly excluded from staging; they were also excluded from every
+   * bucket, so a backfill month read as `22 fetched, 18 staged` and there was
+   * no way to tell four skipped rows from four lost ones.
+   */
+  outsideRange: z.number().int().nonnegative().optional(),
   /** Rows this pass added to the account's pending draft (finance ADR-005); nothing reaches the ledger until it is committed. */
   staged: z.number().int().nonnegative(),
   /** Rows the pending draft already held. */

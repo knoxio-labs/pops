@@ -74,6 +74,7 @@ function result(accountId: string): UpSyncResult {
   return {
     accountId,
     fetched: 4,
+    outsideRange: 0,
     staged: 3,
     alreadyStaged: 0,
     alreadyInLedger: 0,

@@ -62,9 +62,28 @@ export interface SettleableRow {
 export interface UpSyncPlan {
   account: { id: string; name: string; currency: string; kind: AccountKind };
   upAccount: UpAccount;
+  /** Everything Up returned for the widened fetch, before any filtering. */
   fetched: number;
+  /**
+   * Rows Up returned that fall outside the requested calendar range.
+   *
+   * {@link fetchRange} asks for a day either side, so this is normally
+   * non-zero and normally uninteresting — but it is the difference between
+   * `fetched` and everything else, and leaving it unnamed made a backfill
+   * month read as `22 fetched, 18 staged` with four rows in no bucket at all
+   * (POPS-3355). Someone walking a backfill cannot tell that from four rows
+   * lost without going to the Up API by hand.
+   */
+  outsideRange: number;
   newRows: MappedUpTransaction[];
   settleable: SettleableRow[];
+  /**
+   * Rows the ledger already holds in the state Up reports them in, so this
+   * pass has nothing to do with them. The other unnamed case: a settled row
+   * re-fetched by an overlapping range matched none of the three branches
+   * below and fell out of the accounting entirely.
+   */
+  alreadyInLedger: number;
   alreadyHeld: number;
 }
 
@@ -133,6 +152,7 @@ export async function planUpSync(db: FinanceDb, args: UpSyncArgs): Promise<UpSyn
   const newRows: MappedUpTransaction[] = [];
   const settleable: SettleableRow[] = [];
   let alreadyHeld = 0;
+  let alreadyInLedger = 0;
   for (const row of mapped) {
     const existing = stored.get(row.parsed.checksum);
     if (existing === undefined) {
@@ -141,6 +161,8 @@ export async function planUpSync(db: FinanceDb, args: UpSyncArgs): Promise<UpSyn
       settleable.push({ transactionId: existing.id, mapped: row });
     } else if (row.parsed.pending) {
       alreadyHeld++;
+    } else {
+      alreadyInLedger++;
     }
   }
 
@@ -148,8 +170,10 @@ export async function planUpSync(db: FinanceDb, args: UpSyncArgs): Promise<UpSyn
     account: { id: account.id, name: account.name, currency: account.currency, kind: account.kind },
     upAccount,
     fetched: raw.length,
+    outsideRange: raw.length - mapped.length,
     newRows,
     settleable,
+    alreadyInLedger,
     alreadyHeld,
   };
 }

@@ -4157,6 +4157,7 @@ export interface operations {
                 alreadyStaged: number;
                 draftId: string | null;
                 fetched: number;
+                outsideRange?: number;
                 settleRefused?: number;
                 settled: number;
                 staged: number;
@@ -4257,6 +4258,7 @@ export interface operations {
                 alreadyStaged: number;
                 draftId: string | null;
                 fetched: number;
+                outsideRange?: number;
                 settleRefused?: number;
                 settled: number;
                 staged: number;
