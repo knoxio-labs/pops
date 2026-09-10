@@ -304,7 +304,9 @@ internal struct DeviceSessionRecoveryTests {
         let first = Task { await fixture.refresher.deviceWasRevoked() }
 
         // Exact rather than polled, and bounded by a deadline: the same reason
-        // `rotationParksBehindTheGate` above waits this way.
+        // ``revocationDuringRotationWins`` above waits this way, and for the
+        // same hazard — a gate opened before the call reached `wait()` races
+        // straight through instead of parking.
         var parkFailure: (any Error)?
         do {
             try await withDeadline { try await gate.waitForArrivals(atLeast: 1) }
