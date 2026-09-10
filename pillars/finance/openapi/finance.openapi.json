@@ -13734,6 +13734,1811 @@
         "tags": ["entityUsage"]
       }
     },
+    "/import-drafts": {
+      "get": {
+        "operationId": "importDrafts.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": ["saved", "live"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "balanceReportedCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "ownerSeenAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "processSessionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "rowCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "savedAt": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "dialectId": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "fileNames": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "kind": {
+                                    "enum": ["file"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "dialectId", "fileNames"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["live"],
+                                    "type": "string"
+                                  },
+                                  "provider": {
+                                    "enum": ["up"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "provider"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "span": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["from", "to"],
+                            "type": "object"
+                          },
+                          "state": {
+                            "enum": ["saved", "live", "open", "left-open", "unusable"],
+                            "type": "string"
+                          },
+                          "step": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "unresolvedCount": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "unusableCause": {
+                            "enum": ["shape", "account-archived", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "unusableReason": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "accountId",
+                          "source",
+                          "state",
+                          "step",
+                          "rowCount",
+                          "unresolvedCount",
+                          "span",
+                          "balanceReportedCents",
+                          "processSessionId",
+                          "savedAt",
+                          "createdAt",
+                          "ownerSeenAt",
+                          "unusableCause",
+                          "unusableReason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Every pending import, most recently saved first, with the state a card shows (open, left-open and unusable are derived on read)",
+        "tags": ["importDrafts"]
+      },
+      "post": {
+        "operationId": "importDrafts.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "dialectId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "fileNames": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "ownerToken": {
+                    "maxLength": 128,
+                    "minLength": 8,
+                    "type": "string"
+                  },
+                  "payload": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "processSessionId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "rowCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "span": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["from", "to"],
+                    "type": "object"
+                  },
+                  "step": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "unresolvedCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "step",
+                  "rowCount",
+                  "unresolvedCount",
+                  "span",
+                  "accountId",
+                  "dialectId",
+                  "fileNames",
+                  "payload",
+                  "ownerToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "balanceReportedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ownerSeenAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "processSessionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rowCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "savedAt": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dialectId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileNames": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "kind": {
+                                  "enum": ["file"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "dialectId", "fileNames"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["live"],
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "provider"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "span": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["from", "to"],
+                          "type": "object"
+                        },
+                        "state": {
+                          "enum": ["saved", "live", "open", "left-open", "unusable"],
+                          "type": "string"
+                        },
+                        "step": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unresolvedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unusableCause": {
+                          "enum": ["shape", "account-archived", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "unusableReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "source",
+                        "state",
+                        "step",
+                        "rowCount",
+                        "unresolvedCount",
+                        "span",
+                        "balanceReportedCents",
+                        "processSessionId",
+                        "savedAt",
+                        "createdAt",
+                        "ownerSeenAt",
+                        "unusableCause",
+                        "unusableReason"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Create a file draft; the creating tab holds the lease",
+        "tags": ["importDrafts"]
+      }
+    },
+    "/import-drafts/{id}": {
+      "delete": {
+        "operationId": "importDrafts.discard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Discard a draft. A live draft loses only its decisions; the bank resends the rows",
+        "tags": ["importDrafts"]
+      },
+      "get": {
+        "operationId": "importDrafts.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "balanceReportedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ownerSeenAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "payload": {
+                          "additionalProperties": {},
+                          "type": "object"
+                        },
+                        "processSessionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rowCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "savedAt": {
+                          "type": "string"
+                        },
+                        "shapeVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "source": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dialectId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileNames": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "kind": {
+                                  "enum": ["file"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "dialectId", "fileNames"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["live"],
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "provider"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "span": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["from", "to"],
+                          "type": "object"
+                        },
+                        "state": {
+                          "enum": ["saved", "live", "open", "left-open", "unusable"],
+                          "type": "string"
+                        },
+                        "step": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unresolvedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unusableCause": {
+                          "enum": ["shape", "account-archived", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "unusableReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "source",
+                        "state",
+                        "step",
+                        "rowCount",
+                        "unresolvedCount",
+                        "span",
+                        "balanceReportedCents",
+                        "processSessionId",
+                        "savedAt",
+                        "createdAt",
+                        "ownerSeenAt",
+                        "unusableCause",
+                        "unusableReason",
+                        "shapeVersion",
+                        "payload"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "One draft with its payload; 409 DraftUnusable when this build cannot resume it",
+        "tags": ["importDrafts"]
+      },
+      "put": {
+        "operationId": "importDrafts.write",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ownerToken": {
+                    "maxLength": 128,
+                    "minLength": 8,
+                    "type": "string"
+                  },
+                  "payload": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "processSessionId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "rowCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "span": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["from", "to"],
+                    "type": "object"
+                  },
+                  "step": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "unresolvedCount": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "step",
+                  "rowCount",
+                  "unresolvedCount",
+                  "span",
+                  "payload",
+                  "ownerToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "balanceReportedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ownerSeenAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "processSessionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rowCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "savedAt": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dialectId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileNames": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "kind": {
+                                  "enum": ["file"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "dialectId", "fileNames"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["live"],
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "provider"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "span": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["from", "to"],
+                          "type": "object"
+                        },
+                        "state": {
+                          "enum": ["saved", "live", "open", "left-open", "unusable"],
+                          "type": "string"
+                        },
+                        "step": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unresolvedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unusableCause": {
+                          "enum": ["shape", "account-archived", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "unusableReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "source",
+                        "state",
+                        "step",
+                        "rowCount",
+                        "unresolvedCount",
+                        "span",
+                        "balanceReportedCents",
+                        "processSessionId",
+                        "savedAt",
+                        "createdAt",
+                        "ownerSeenAt",
+                        "unusableCause",
+                        "unusableReason"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Write the wizard state through; 409 DraftOwnedElsewhere from a tab that is not the owner",
+        "tags": ["importDrafts"]
+      }
+    },
+    "/import-drafts/{id}/claim": {
+      "post": {
+        "operationId": "importDrafts.claim",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "force": {
+                    "type": "boolean"
+                  },
+                  "ownerToken": {
+                    "maxLength": 128,
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": ["ownerToken"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "balanceReportedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ownerSeenAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "processSessionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rowCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "savedAt": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dialectId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileNames": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "kind": {
+                                  "enum": ["file"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "dialectId", "fileNames"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["live"],
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "provider"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "span": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["from", "to"],
+                          "type": "object"
+                        },
+                        "state": {
+                          "enum": ["saved", "live", "open", "left-open", "unusable"],
+                          "type": "string"
+                        },
+                        "step": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unresolvedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unusableCause": {
+                          "enum": ["shape", "account-archived", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "unusableReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "source",
+                        "state",
+                        "step",
+                        "rowCount",
+                        "unresolvedCount",
+                        "span",
+                        "balanceReportedCents",
+                        "processSessionId",
+                        "savedAt",
+                        "createdAt",
+                        "ownerSeenAt",
+                        "unusableCause",
+                        "unusableReason"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Take the lease; 409 DraftOwnedElsewhere while another tab was seen inside the stale window unless forced",
+        "tags": ["importDrafts"]
+      }
+    },
+    "/import-drafts/{id}/heartbeat": {
+      "post": {
+        "operationId": "importDrafts.heartbeat",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ownerToken": {
+                    "maxLength": 128,
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": ["ownerToken"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accountId": {
+                          "type": "string"
+                        },
+                        "balanceReportedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "ownerSeenAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "processSessionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "rowCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "savedAt": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dialectId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileNames": {
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "kind": {
+                                  "enum": ["file"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "dialectId", "fileNames"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["live"],
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "enum": ["up"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "provider"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "span": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["from", "to"],
+                          "type": "object"
+                        },
+                        "state": {
+                          "enum": ["saved", "live", "open", "left-open", "unusable"],
+                          "type": "string"
+                        },
+                        "step": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unresolvedCount": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "unusableCause": {
+                          "enum": ["shape", "account-archived", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "unusableReason": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "source",
+                        "state",
+                        "step",
+                        "rowCount",
+                        "unresolvedCount",
+                        "span",
+                        "balanceReportedCents",
+                        "processSessionId",
+                        "savedAt",
+                        "createdAt",
+                        "ownerSeenAt",
+                        "unusableCause",
+                        "unusableReason"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Prove the tab is still in it; 409 DraftOwnedElsewhere once the lease has moved",
+        "tags": ["importDrafts"]
+      }
+    },
+    "/import-drafts/{id}/release": {
+      "post": {
+        "operationId": "importDrafts.release",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ownerToken": {
+                    "maxLength": 128,
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": ["ownerToken"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Give the lease up; a token that no longer holds it changes nothing",
+        "tags": ["importDrafts"]
+      }
+    },
     "/imports/apply-changeset-reevaluate": {
       "post": {
         "operationId": "imports.applyChangeSetAndReevaluate",

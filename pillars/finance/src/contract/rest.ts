@@ -22,6 +22,7 @@ import { financeCurrenciesContract } from './rest-currencies.js';
 import { financeDataQualityContract } from './rest-data-quality.js';
 import { financeEntityUsageContract } from './rest-entity-usage.js';
 import { financeGiftCardDetailsContract } from './rest-gift-card-details.js';
+import { financeImportDraftsContract } from './rest-import-drafts.js';
 import { financeImportsContract } from './rest-imports.js';
 import { financeLoanContract } from './rest-loan.js';
 import { financeSearchContract } from './rest-search.js';
@@ -47,6 +48,7 @@ export const financeContract = c.router(
     corrections: financeCorrectionsContract,
     entityUsage: financeEntityUsageContract,
     imports: financeImportsContract,
+    importDrafts: financeImportDraftsContract,
     search: financeSearchContract,
     settings: financeSettingsContract,
     dataQuality: financeDataQualityContract,
