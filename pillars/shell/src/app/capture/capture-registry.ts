@@ -8,7 +8,7 @@ import type { BundleEntry, CaptureOverlayBundle } from '../bundle-entry';
  * `frontend.captureOverlay` dimension, applies the selection rule (sort
  * ascending by `order`, ties broken alphabetically by pillar id, pick
  * head), and resolves the descriptor's `bundleSlot` through the
- * workspace bundle map to obtain the React component the shell's
+ * resolved bundle map to obtain the React component the shell's
  * `CaptureModal` will mount.
  *
  * Failure modes mirror the `pages` resolution edge cases:
@@ -16,7 +16,7 @@ import type { BundleEntry, CaptureOverlayBundle } from '../bundle-entry';
  *   - No manifest contributes a `captureOverlay` → returns `null`; the
  *     modal renders an empty state (`captureModal.empty`).
  *   - The descriptor's `bundleSlot` cannot be resolved against the
- *     workspace bundle map → logs a structured warning and returns
+ *     resolved bundle map → logs a structured warning and returns
  *     `null`, falling back to the empty-state path.
  *
  * The selection rule + resolver are exported so the unit tests can
@@ -73,7 +73,7 @@ export function rankCaptureOverlays(
 }
 
 /**
- * Resolve a ranked descriptor against the workspace bundle map. Logs a
+ * Resolve a ranked descriptor against the resolved bundle map. Logs a
  * structured warning and returns `null` when the descriptor names a
  * `bundleSlot` no entry maps. Exported for unit tests.
  */

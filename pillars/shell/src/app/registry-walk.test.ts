@@ -252,9 +252,9 @@ describe('walkRegistry', () => {
  *
  * The pillar left `WORKSPACE_BUNDLE_MAP` and `@pops/shell` stopped depending
  * on `@pops/app-purchases`, so what reaches the shell is a wire snapshot and
- * a URL. This walks that snapshot against a bundle map that has never heard
- * of purchases — which is the real map's state — and asserts the whole
- * surface survives the crossing.
+ * a URL. This walks that snapshot straight through `walkRegistry`, which has
+ * no bundle map to consult at all — POPS-3227 removed it — and asserts the
+ * whole surface survives the crossing.
  *
  * The descriptor mirrors `pillars/purchases/src/api/manifest.ts`. It is
  * restated rather than imported because the shell has no dependency on the

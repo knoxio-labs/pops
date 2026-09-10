@@ -71,12 +71,12 @@ export interface BootRegistry {
    */
   readonly remoteBundleUrls: readonly string[];
   /**
-   * The resolved bundle map — in-repo entries plus the ones synthesized for
-   * loader-mounted pillars. Exposed because a pillar contributes surfaces
-   * beyond its pages: the capture-overlay and settings-widget registries
-   * resolve a slot through a `BundleEntry`, and resolving it against the
-   * STATIC map would silently lose those surfaces for every pillar that has
-   * left it (POPS-3266).
+   * The resolved bundle map — every entry synthesized for its loader-mounted
+   * pillar. Exposed because a pillar contributes surfaces beyond its pages:
+   * the capture-overlay and settings-widget registries resolve a slot through
+   * a `BundleEntry`, and resolving it against the old STATIC map would
+   * silently lose those surfaces for every pillar that had left it
+   * (POPS-3266).
    */
   readonly bundleMap: Readonly<Record<string, BundleEntry>>;
   /**
@@ -90,13 +90,11 @@ export interface BootRegistry {
 }
 
 /**
- * Resolve the entry list to the bundle map the app rail walks. In-repo
- * pillars pick up their static bundle entry (carrying the real `navOrder`);
- * external pillars synthesise one from the wire descriptor via
- * `synthesizeExternalBundleEntry` — the same call the router-side walk uses —
- * so the rail orders both kinds through the single
- * `buildRegisteredAppsFromBundleMap` projection. Entries with no resolvable
- * UI surface contribute no rail entry.
+ * Resolve the entry list to the bundle map the app rail walks. Every entry is
+ * synthesised from its wire descriptor via `synthesizeExternalBundleEntry` —
+ * the same call the router-side walk uses — so `buildRegisteredAppsFromBundleMap`
+ * projects a single, uniform record. Entries with no resolvable UI surface
+ * contribute no rail entry.
  *
  * Synthesis is wrapped in the same `try/catch` the router-side
  * `resolveExternalManifest` uses (`installed-modules.ts`): a structurally
@@ -247,19 +245,19 @@ export async function fetchBootRegistry(options: BootRegistryOptions = {}): Prom
 
   // The live snapshot gave nothing mountable — unreachable registry, an empty
   // list, or only backend-only pillars mid-bring-up. The set that answered
-  // last time is a better floor than whatever this build happens to have
-  // compiled in, and it shrinks to nothing as POPS-3215 empties the bundle map
+  // last time is the offline floor: POPS-3215 shrank the build's compiled-in
+  // floor to nothing pillar by pillar, and POPS-3227 removed it outright
   // (POPS-3239).
   // Narrowed by the install set, because this is the offline floor and the
   // floor honours `POPS_APPS` — see `offlineInstallableSnapshot`.
   const cached = offlineInstallableSnapshot(readCachedRegistrySnapshot(store));
   if (cached.length > 0) {
     const fromCache = resolveBootRegistry(cached);
-    // `source === 'registry'` is the test, not a non-empty surface.
-    // `resolveBootRegistry` falls back to the static floor internally when a
-    // snapshot resolves to nothing, so a cache of backend-only pillars comes
-    // back non-empty — as the floor — and labelling that `cached-snapshot`
-    // would report a floor the cache did not supply.
+    // `source === 'registry'` is the test, not `cached.length > 0`: a
+    // non-empty cached snapshot can still resolve to zero mountable UI (e.g.
+    // only backend-only pillars), which `resolveBootRegistry` reports as
+    // `'empty'` — labelling that `cached-snapshot` would claim a floor the
+    // cache did not actually supply.
     if (fromCache.source === 'registry') {
       return { ...fromCache, source: 'cached-snapshot' };
     }

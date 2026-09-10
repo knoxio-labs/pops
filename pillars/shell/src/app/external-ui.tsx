@@ -342,9 +342,10 @@ function widgetBundlesFor(
 }
 
 /**
- * Synthesize the `BundleEntry` an external pillar contributes, mirroring the
- * shape in-repo pillars get from the static bundle map. The resulting entry
- * carries:
+ * Synthesize the `BundleEntry` an external pillar contributes — the same
+ * `BundleEntry` shape every pillar resolves to now that POPS-3227 removed the
+ * static bundle map that used to produce it directly for in-repo pillars. The
+ * resulting entry carries:
  *
  *   - `manifest.frontend.navConfig` derived from the wire `nav` descriptor
  *     (so the app rail renders synchronously, no remote fetch needed),

@@ -185,12 +185,12 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
 /**
  * The UI surface a loader-mounted pillar advertises, by pillar id.
  *
- * Most in-repo pillars resolve through the shell's static bundle map, so their
- * stubbed manifest needs no UI dimension at all. A pillar the shell mounts
- * through its runtime loader has left that map (POPS-3217), and everything the
- * rail and the router know about it comes off this wire — so a stub that omits
- * it produces a shell with no such pillar, which is what a spec clicking its
- * rail button discovers 30 seconds later.
+ * Every in-repo pillar now mounts through the shell's runtime loader (the
+ * static bundle map POPS-3227 removed used to make this unnecessary for most
+ * of them), and everything the rail and the router know about a pillar comes
+ * off this wire — so a stub that omits it produces a shell with no such
+ * pillar, which is what a spec clicking its rail button discovers 30 seconds
+ * later.
  *
  * Restated rather than imported from `@pops/purchases/manifest`: the point of
  * the change under test is that `@pops/shell` does not depend on the pillar,

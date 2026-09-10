@@ -30,8 +30,9 @@ vi.mock('@pops/module-registry', async (importOriginal) => {
  *
  * Every pillar advertises `nav` / `pages` / `assetsBaseUrl` since POPS-3215.
  * Before it, a payload with none of them still reached the rail through the
- * static bundle map; that map now carries no app, so a fixture without a UI
- * surface resolves to nothing and these tests would pass vacuously.
+ * static bundle map; POPS-3227 removed that map outright, so a fixture
+ * without a UI surface resolves to nothing and these tests would pass
+ * vacuously.
  */
 function manifestPayload(pillar: string): ManifestPayload {
   return {

@@ -3,8 +3,9 @@
  *
  * The safety-critical guarantee under test: the shell mounts the live
  * registry snapshot's pillars when the registry is reachable, and NEVER
- * bricks when it is not — it falls back to the static in-repo bundle-map
- * floor. Both branches are exercised with injected fixtures (no live fetch).
+ * bricks when it is not — it falls back to the cached snapshot, and to an
+ * empty surface when there is no cache either. Both branches are exercised
+ * with injected fixtures (no live fetch).
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -157,10 +158,10 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   // M2(a): the registry-driven branch is THIS PR's whole purpose, yet no
   // rendered/e2e test exercises it (every e2e silently falls through to the
   // floor — see the PR body). This focused unit pins the live-mount path
-  // non-blank: a non-empty snapshot with 1 in-repo pillar (bundle-map hit) and
-  // 1 external pillar (assetsBaseUrl) must yield source='registry' with BOTH a
-  // non-empty router manifest set (including the synthesized external route)
-  // and a non-empty app rail. A regression that breaks only the live mount —
+  // non-blank: a non-empty snapshot with 2 pillars, each advertising an
+  // `assetsBaseUrl`, must yield source='registry' with BOTH a non-empty
+  // router manifest set (including the synthesized external route) and a
+  // non-empty app rail. A regression that breaks only the live mount —
   // invisible to the floor-only e2e — fails here.
   it('drives the live registry branch to a non-blank surface (in-repo + external)', () => {
     const result = resolveBootRegistry([uiEntry('media'), externalSnapshotEntry()], inertImporter);
@@ -188,14 +189,15 @@ describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
 
 describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () => {
   // M1 (never-brick hole): a NON-EMPTY snapshot whose pillars are all
-  // backend-only — no bundle-map hit, no assetsBaseUrl — is the live state
-  // mid-deploy on a host restart, before the app pillars have re-registered
-  // (only `registry` / `orchestrator` are up). `snapshot.length > 0` is true,
-  // but the snapshot resolves to zero mountable UI. Treating that as
-  // "registry is the source of truth" would mount an app-less shell (manifests
-  // = [], registeredApps = []) — exactly the brick the resilience contract
-  // forbids, reachable on a real capivara restart. The resolver must fall back
-  // to the static floor instead.
+  // backend-only — no `assetsBaseUrl`, so no UI surface at all — is the live
+  // state mid-deploy on a host restart, before the app pillars have
+  // re-registered (only `registry` / `orchestrator` are up). `snapshot.length
+  // > 0` is true, but the snapshot resolves to zero mountable UI. Treating
+  // that as "registry is the source of truth" would mount an app-less shell
+  // (manifests = [], registeredApps = []) — exactly the brick the resilience
+  // contract forbids, reachable on a real capivara restart. The resolver must
+  // report `'empty'` instead, so `fetchBootRegistry` can fall back to the
+  // cached snapshot.
   const BACKEND_ONLY_SNAPSHOT = [snapshotEntry('registry'), snapshotEntry('orchestrator')];
 
   it('resolves to nothing when a live snapshot yields zero mountable UI', () => {
@@ -447,7 +449,7 @@ describe('fetchBootRegistry — the cached-snapshot floor', () => {
     expect(store.read()).not.toContain('"pillarId":"registry"');
   });
 
-  it('falls through to the static floor when there is no cache', async () => {
+  it('falls through to an empty surface when there is no cache', async () => {
     const result = await fetchBootRegistry({ fetch: deadFetch(), store: memoryStore() });
     expect(result.source).toBe('empty');
   });
