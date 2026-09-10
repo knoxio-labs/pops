@@ -42,7 +42,7 @@ export const Empty: Story = {
 
 export const SinglePhoto: Story = {
   args: {
-    photos: [SAMPLE_PHOTOS[0]],
+    photos: SAMPLE_PHOTOS.slice(0, 1),
     baseUrl: 'https://placehold.co/300x300/1a1a1a/white?text=',
   },
 };
