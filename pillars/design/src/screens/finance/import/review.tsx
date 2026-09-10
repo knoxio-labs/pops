@@ -1,14 +1,13 @@
 import { byBucket, droppedRows, importTxns, type ImportTxn } from '@/fixtures/import-transactions';
 import { DroppedRowsNotice } from '@/kit/import-dropped-rows-notice';
+import { ImportReviewContext } from '@/kit/import-review-context';
 import { TxnCardList } from '@/kit/import-txn-card';
 import { SkippedTxnTable } from '@/kit/import-txn-skipped-table';
-import { LiveArrivals } from '@/kit/live-arrivals-banner';
 import { AlertCircle, AlertTriangle, CheckCircle, Settings2, XCircle } from 'lucide-react';
 
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
 import { choiceOf, type ImportChoice } from './context';
-import { ImportContextStrip } from './upload';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
@@ -130,8 +129,7 @@ function Step({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <ImportContextStrip choice={choice} />
-      {liveArrivals !== undefined && <LiveArrivals count={liveArrivals} />}
+      <ImportReviewContext choice={choice} liveArrivals={liveArrivals} />
       <ReviewHeader unresolvedCount={unresolvedCount} />
       <DroppedRowsNotice dropped={dropped} />
       <Tabs defaultValue={activeTab} className="w-full">

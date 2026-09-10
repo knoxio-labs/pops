@@ -1,4 +1,6 @@
 import { type ImportRow, importRows, STATUS_TONE } from '@/fixtures/import-review';
+import { ImportReviewContext } from '@/kit/import-review-context';
+import { choiceOf, type ImportChoice } from '@/screens/finance/import/context';
 import { Inbox } from 'lucide-react';
 
 import {
@@ -15,6 +17,9 @@ import {
 import type { ScreenMeta, ScreenStates } from '@/contract';
 
 export const meta: ScreenMeta = { title: 'Import review', order: 1 };
+
+const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
 
 function Row({ row }: { row: ImportRow }) {
   const signed = row.type === 'credit' ? row.amountCents : -row.amountCents;
@@ -47,10 +52,19 @@ function Row({ row }: { row: ImportRow }) {
 }
 
 /** The review step of the import wizard as a row list — the current shape. */
-export function ImportReview({ rows }: { rows: ImportRow[] }) {
+export function ImportReview({
+  rows,
+  choice = AMEX,
+  liveArrivals,
+}: {
+  rows: ImportRow[];
+  choice?: ImportChoice;
+  liveArrivals?: number;
+}) {
   const pending = rows.filter((r) => r.status !== 'matched').length;
   return (
     <div className="mx-auto max-w-3xl p-6">
+      <ImportReviewContext choice={choice} liveArrivals={liveArrivals} />
       <PageHeader
         title="Review import"
         description={`${rows.length} transactions parsed · ${pending} need a decision`}
@@ -74,6 +88,9 @@ export function ImportReview({ rows }: { rows: ImportRow[] }) {
 }
 
 export const states: ScreenStates = {
+  'live-arrivals-held-back': () => (
+    <ImportReview rows={importRows} choice={UP_LIVE} liveArrivals={4} />
+  ),
   empty: () => <ImportReview rows={[]} />,
   'needs-decision': () => (
     <ImportReview rows={importRows.filter((row) => row.status !== 'matched')} />
