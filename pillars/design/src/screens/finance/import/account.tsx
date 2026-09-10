@@ -2,6 +2,7 @@ import { type Account } from '@/fixtures/accounts';
 import { type PendingImport, pendingSets } from '@/fixtures/pending-imports';
 import { AccountSelect } from '@/kit/account-select';
 import { ContinuePending, StartNewHeading } from '@/kit/import-continue-pending';
+import { LiveFeedSection } from '@/kit/live-feed-section';
 import { CircleSlash, Plus, Wallet } from 'lucide-react';
 
 import {
@@ -55,14 +56,22 @@ function FormatSection({ account }: { account?: Account }) {
   }
   const formats = formatsForAccount(account);
   if (formats.length === 0) return <NoFormats account={account} />;
+  const live = formats[0]?.live === true;
   return (
-    <RadioInput
-      label="File format"
-      description={`What ${account.name} gives you when you export.`}
-      options={radioOptions(formats)}
-      defaultValue={formats[0]?.id}
-      name="import-format"
-    />
+    <>
+      <RadioInput
+        label={live ? 'Source' : 'File format'}
+        description={
+          live
+            ? `${account.name} is fed by its bank. A file is only for history the feed never saw.`
+            : `What ${account.name} gives you when you export.`
+        }
+        options={radioOptions(formats)}
+        defaultValue={formats[0]?.id}
+        name="import-format"
+      />
+      {live && <LiveFeedSection account={account} />}
+    </>
   );
 }
 
@@ -180,6 +189,7 @@ export const states: ScreenStates = {
   'no-format-for-account': () => <Step accounts={importableAccounts} selectedId="a5" />,
   'no-accounts': () => <Step accounts={[]} />,
   'add-account': () => <Step accounts={importableAccounts} createOpen />,
+  'live-feed-account': () => <Step accounts={importableAccounts} selectedId="a13" />,
   'pending-to-continue': () => <Step accounts={importableAccounts} pending={pendingSets.mixed} />,
   'pending-unusable': () => (
     <Step accounts={importableAccounts} pending={pendingSets.withUnusable} />

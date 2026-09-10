@@ -40,8 +40,10 @@ export interface PendingImport {
   /** The wizard step it stopped at; absent when never opened. */
   step?: string;
   rowCount: number;
-  /** Rows the review step still wants a decision on. */
+  /** Rows the review step still wants a decision on; on a live import, what the matcher could not settle on its own. */
   unresolvedCount?: number;
+  /** Live only: the balance the provider reported with the newest row, minor units. */
+  balanceReported?: number;
   /** Rows that arrived after it was last saved — live sources only. */
   arrivedSinceSave?: number;
   /** When the draft was last written, ISO date-time. */
@@ -70,6 +72,8 @@ export const pendingImports: PendingImport[] = [
     source: { kind: 'live', provider: 'Up' },
     state: 'live',
     rowCount: 11,
+    unresolvedCount: 2,
+    balanceReported: 61_215,
     savedAt: `${TODAY}T08:41:00+10:00`,
     span: { from: '2026-09-02', to: TODAY },
   },
@@ -91,6 +95,7 @@ export const pendingImports: PendingImport[] = [
     state: 'live',
     rowCount: 4,
     arrivedSinceSave: 4,
+    balanceReported: 58_790,
     savedAt: `${TODAY}T09:40:00+10:00`,
     span: { from: TODAY, to: TODAY },
   },
@@ -132,6 +137,11 @@ export const pendingSets = {
   /** An open live import and the one collecting behind it. */
   openElsewhere: pick('p-up-next', 'p-up-open', 'p-amex-aug'),
 };
+
+/** The live import collecting for an account, when one is. */
+export function liveImportFor(accountId: string): PendingImport | undefined {
+  return pendingImports.find((p) => p.accountId === accountId && p.state === 'live');
+}
 
 export function sourceLabel(source: PendingImportSource): string {
   if (source.kind === 'live') return `${source.provider} live feed`;

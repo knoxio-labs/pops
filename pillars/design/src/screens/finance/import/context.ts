@@ -68,6 +68,7 @@ const BY_INSTITUTION: Record<string, string[]> = {
   anz: ['anz-csv', 'anz-ofx'],
   amex: ['amex-csv', 'amex-ofx'],
   ing: ['ing-csv'],
+  up: ['up-live'],
 };
 
 /**

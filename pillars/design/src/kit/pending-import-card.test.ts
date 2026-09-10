@@ -60,7 +60,10 @@ describe('progressLine', () => {
 
   it('says a live import is waiting, or that it holds arrivals for an open one', () => {
     expect(progressLine(pendingImportById('p-up-live'))).toMatch(
-      /^11 transactions arrived since .*, waiting for review\.$/
+      /^11 transactions arrived since .* · 2 need you\.$/
+    );
+    expect(progressLine({ ...pendingImportById('p-up-live'), unresolvedCount: 0 })).toMatch(
+      /· waiting for review\.$/
     );
     expect(progressLine(pendingImportById('p-up-next'))).toBe(
       '4 transactions arrived after the open import was started. They are held here so it stays as you left it.'

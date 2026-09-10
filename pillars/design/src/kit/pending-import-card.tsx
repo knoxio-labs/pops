@@ -53,9 +53,12 @@ export function progressLine(item: PendingImport): string {
   if (item.state === 'unusable') return item.unusableReason ?? 'Cannot be resumed.';
   if (item.state === 'live') {
     const since = item.arrivedSinceSave;
-    return since === undefined
-      ? `${rows(item.rowCount)} arrived since ${when(item.savedAt)}, waiting for review.`
-      : `${rows(since)} arrived after the open import was started. They are held here so it stays as you left it.`;
+    if (since !== undefined) {
+      return `${rows(since)} arrived after the open import was started. They are held here so it stays as you left it.`;
+    }
+    const need = item.unresolvedCount ?? 0;
+    const tail = need === 0 ? 'waiting for review' : `${need} need you`;
+    return `${rows(item.rowCount)} arrived since ${when(item.savedAt)} · ${tail}.`;
   }
   const unresolved = item.unresolvedCount ?? 0;
   const decisions = unresolved === 0 ? 'nothing left to decide' : `${unresolved} still to decide`;

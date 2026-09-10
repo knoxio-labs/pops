@@ -1,4 +1,5 @@
 import { commitResult, type CommitResultFixture } from '@/fixtures/import-transactions';
+import { CheckpointResultLine, type LiveCheckpoint } from '@/kit/import-checkpoint-section';
 import {
   FailedDetailsList,
   RetroactiveSection,
@@ -32,7 +33,15 @@ function FooterActions() {
   );
 }
 
-function Step({ choice, result }: { choice: ImportChoice; result: CommitResultFixture }) {
+function Step({
+  choice,
+  result,
+  checkpoint,
+}: {
+  choice: ImportChoice;
+  result: CommitResultFixture;
+  checkpoint?: LiveCheckpoint;
+}) {
   const totalRules = totalRulesApplied(result);
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -45,6 +54,7 @@ function Step({ choice, result }: { choice: ImportChoice; result: CommitResultFi
         </p>
       </div>
       <SummaryCards result={result} totalRules={totalRules} />
+      {checkpoint && <CheckpointResultLine checkpoint={checkpoint} />}
       {result.failedDetails && <FailedDetailsList details={result.failedDetails} />}
       <RuleBreakdown
         rulesApplied={result.rulesApplied}
@@ -58,12 +68,37 @@ function Step({ choice, result }: { choice: ImportChoice; result: CommitResultFi
 }
 
 const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
 
 export default function ImportSummaryStep() {
   return <Step choice={AMEX} result={commitResult} />;
 }
 
 export const states: ScreenStates = {
+  'live-feed': () => (
+    <Step
+      choice={UP_LIVE}
+      result={{ ...commitResult, transactionsFailed: 0, failedDetails: undefined }}
+      checkpoint={{
+        balanceMinor: 61_215,
+        currency: 'AUD',
+        asOf: '2026-09-06',
+        ledgerMinor: 61_215,
+      }}
+    />
+  ),
+  'live-feed-ledger-disagrees': () => (
+    <Step
+      choice={UP_LIVE}
+      result={commitResult}
+      checkpoint={{
+        balanceMinor: 61_215,
+        currency: 'AUD',
+        asOf: '2026-09-06',
+        ledgerMinor: 58_790,
+      }}
+    />
+  ),
   'no-failures': () => (
     <Step
       choice={AMEX}
