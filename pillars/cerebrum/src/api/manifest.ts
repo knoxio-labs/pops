@@ -69,7 +69,11 @@ const CEREBRUM_WIRE_PAGES = [...CEREBRUM_PAGES] as const satisfies readonly Page
 const CEREBRUM_CAPTURE_OVERLAY: CaptureOverlayDescriptor = {
   bundleSlot: CEREBRUM_CAPTURE_SLOT,
   order: 10,
-  hotkey: 'cmd+shift+k',
+  // `mod`, not `cmd`: Meta on Apple and Control everywhere else. The
+  // shell is a browser app on the LAN and nothing restricts it to macOS
+  // clients, so a `cmd+` chord was unreachable on Linux and Windows —
+  // silently, since the listener binds and simply never matches (POPS-3319).
+  hotkey: 'mod+shift+k',
   labelKey: 'cerebrum.captureOverlay.label',
 };
 
