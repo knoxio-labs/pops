@@ -102,3 +102,24 @@ describe('ShoppingAddForm — a fractional quantity is valid', () => {
     expect(screen.getByLabelText('Qty').closest('form')).not.toHaveAttribute('novalidate');
   });
 });
+
+/**
+ * The unit field is an `Autocomplete` sitting between two `TextInput`s. It
+ * used to wear `CommandInput`'s search chrome — a magnifier and a
+ * bottom-rule-only box — and to offer "No results found." under a unit that
+ * is simply not one of the suggestions, which is normal use here rather than
+ * a failed search (POPS-3294).
+ */
+describe('ShoppingAddForm — the unit field looks like the fields beside it', () => {
+  it('wears the same container the item field does, and no magnifier', () => {
+    renderForm();
+
+    const unit = screen.getByLabelText('Unit').closest('div');
+    const item = screen.getByLabelText('Item').closest('div');
+
+    expect(unit).not.toBeNull();
+    expect(item).not.toBeNull();
+    expect((unit as HTMLElement).className).toBe((item as HTMLElement).className);
+    expect(document.querySelector('[data-slot="command-input-wrapper"]')).toBeNull();
+  });
+});

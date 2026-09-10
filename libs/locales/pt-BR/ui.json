@@ -1,4 +1,6 @@
 {
+  "autocomplete.empty": "Nenhum resultado encontrado.",
+
   "dataTable.columns": "Colunas",
   "dataTable.rowsPerPage": "Linhas por página",
   "dataTable.page": "Página {{current}} de {{total}}",

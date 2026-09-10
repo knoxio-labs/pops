@@ -1,4 +1,6 @@
 {
+  "autocomplete.empty": "No results found.",
+
   "dataTable.columns": "Columns",
   "dataTable.rowsPerPage": "Rows per page",
   "dataTable.page": "Page {{current}} of {{total}}",
