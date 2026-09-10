@@ -35,6 +35,12 @@ describe('pendingSets', () => {
     expect(next[0]?.accountId).toBe(open[0]?.accountId);
   });
 
+  it('stages both unusable causes together, and nothing else unusable elsewhere', () => {
+    const causes = pendingSets.unusableCauses.filter((p) => p.state === 'unusable');
+    expect(causes.map((p) => p.id)).toEqual(['p-anz-old', 'p-ing-archived']);
+    expect(causes.every((p) => p.unusableReason !== undefined)).toBe(true);
+  });
+
   it('stages one unusable draft, and only in the set that shows it', () => {
     expect(pendingSets.withUnusable.filter((p) => p.state === 'unusable')).toHaveLength(1);
     expect(pendingSets.mixed.some((p) => p.state === 'unusable')).toBe(false);

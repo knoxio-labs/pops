@@ -111,6 +111,18 @@ export const pendingImports: PendingImport[] = [
     unusableReason:
       'Saved before the 2 Sep deploy. Its rows are in a shape this version no longer reads, and the file is not stored — upload it again to redo the import.',
   },
+  {
+    id: 'p-ing-archived',
+    accountId: 'a10',
+    source: { kind: 'file', format: 'ING transaction CSV', files: ['Orange-2026-07.csv'] },
+    state: 'unusable',
+    step: 'Review',
+    rowCount: 58,
+    savedAt: '2026-08-18T20:05:00+10:00',
+    span: { from: '2026-07-01', to: '2026-07-31' },
+    unusableReason:
+      'Old ING Orange was archived on 20 Aug, so nothing can be filed against it. Restore the account to resume this, or discard it.',
+  },
 ];
 
 const byId = new Map(pendingImports.map((p) => [p.id, p]));
@@ -136,6 +148,8 @@ export const pendingSets = {
   withUnusable: pick('p-up-live', 'p-amex-aug', 'p-anz-old'),
   /** An open live import and the one collecting behind it. */
   openElsewhere: pick('p-up-next', 'p-up-open', 'p-amex-aug'),
+  /** Every way a draft becomes unusable: a shape this build cannot read, an account that is gone. */
+  unusableCauses: pick('p-anz-old', 'p-ing-archived', 'p-amex-aug'),
 };
 
 /** The live import collecting for an account, when one is. */
