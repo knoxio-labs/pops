@@ -72,3 +72,55 @@ describe('KindRadioGroup', () => {
     expect(onChange).toHaveBeenCalledWith('packing');
   });
 });
+
+/**
+ * The card's own look, which was dead styling that read as working
+ * (POPS-3295). Asserted on the class list rather than on computed style,
+ * because jsdom evaluates neither `:has()` nor Tailwind — and on `classList`
+ * rather than on the string, because the class the old code carried was
+ * `has-[input:disabled]:opacity-50`, which a substring match would have found
+ * and called a pass.
+ */
+describe('KindRadioGroup — the selected card', () => {
+  function cardFor(label: string): HTMLElement {
+    const card = screen.getByText(label).closest('label');
+    if (card === null) throw new Error(`no card around '${label}'`);
+    return card;
+  }
+
+  it('marks only the selected kind as selected', () => {
+    render(
+      <Wrapper>
+        <Harness />
+      </Wrapper>
+    );
+
+    expect(cardFor('Shopping').classList.contains('border-primary')).toBe(true);
+    expect(cardFor('Packing').classList.contains('border-primary')).toBe(false);
+  });
+
+  it('moves the highlight when a different kind is chosen', async () => {
+    render(
+      <Wrapper>
+        <Harness />
+      </Wrapper>
+    );
+
+    await userEvent.click(screen.getByRole('radio', { name: /packing/i }));
+
+    expect(cardFor('Packing').classList.contains('border-primary')).toBe(true);
+    expect(cardFor('Shopping').classList.contains('border-primary')).toBe(false);
+  });
+
+  it('dims every card while the group is disabled', () => {
+    render(
+      <Wrapper>
+        <KindRadioGroup value="shopping" onChange={() => {}} disabled />
+      </Wrapper>
+    );
+
+    for (const label of ['Shopping', 'Packing', 'Todo', 'Generic']) {
+      expect(cardFor(label).classList.contains('opacity-50')).toBe(true);
+    }
+  });
+});
