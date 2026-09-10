@@ -76,6 +76,7 @@ function makeContext(contacts: ContactEntity[]): ProcessContext {
     entityLookup: maps.entityLookup,
     aliases: maps.aliasMap,
     knownTags: [],
+    tagDescriptions: new Map<string, string>(),
     importBatchId: 'batch-1',
     entityDefaultTags: importsService.buildDefaultTagsByEntity(contacts),
     correctionRules: [],

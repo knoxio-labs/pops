@@ -17,11 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  RadioInput,
 } from '@pops/ui';
 
 import { AliasTargetPicker } from './AliasTargetPicker';
 
 import type { AliasSource, AliasTarget } from './types';
+
+const ALIAS_SOURCES = ['user', 'llm', 'ingest'] as const satisfies readonly AliasSource[];
 
 export interface AddAliasDialogProps {
   readonly open: boolean;
@@ -104,20 +107,13 @@ function SourceRadios({
   return (
     <fieldset className="space-y-1 text-sm">
       <legend className="font-medium">{t('data.aliases.add.sourceLabel')}</legend>
-      <div className="flex gap-3">
-        {(['user', 'llm', 'ingest'] as const).map((s) => (
-          <label key={s} className="flex items-center gap-1">
-            <input
-              type="radio"
-              name="alias-source"
-              value={s}
-              checked={value === s}
-              onChange={() => onChange(s)}
-            />
-            <span>{t(`data.aliases.source.${s}`)}</span>
-          </label>
-        ))}
-      </div>
+      <RadioInput
+        name="alias-source"
+        orientation="horizontal"
+        value={value}
+        options={ALIAS_SOURCES.map((s) => ({ value: s, label: t(`data.aliases.source.${s}`) }))}
+        onValueChange={(next) => onChange(next as AliasSource)}
+      />
     </fieldset>
   );
 }

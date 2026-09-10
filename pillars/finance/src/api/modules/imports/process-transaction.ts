@@ -144,7 +144,10 @@ async function tryAiCategorization(
       toCategorizerInput(transaction),
       context.importBatchId,
       context.knownTags,
-      buildKnownEntityHint(context.entityLookup)
+      {
+        knownEntityNames: buildKnownEntityHint(context.entityLookup),
+        tagDescriptions: context.tagDescriptions,
+      }
     );
   } catch (err) {
     if (err instanceof AiCategorizationError) {

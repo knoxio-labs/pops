@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@pops/ui';
+import { Button, NumberInput, RadioInput, type RadioOption } from '@pops/ui';
 
 import { formatQty } from './cook-format.js';
 
@@ -14,29 +14,6 @@ import type { LineResolution, LineShortfall } from './cook-resolution-types.js';
 
 type Kind = LineResolution['kind'];
 
-interface RadioOptionProps {
-  name: string;
-  value: string;
-  label: string;
-  checked: boolean;
-  onSelect: () => void;
-}
-
-export function RadioOption(props: RadioOptionProps): ReactNode {
-  return (
-    <label className="flex items-center gap-2">
-      <input
-        type="radio"
-        name={props.name}
-        value={props.value}
-        checked={props.checked}
-        onChange={() => props.onSelect()}
-      />
-      <span>{props.label}</span>
-    </label>
-  );
-}
-
 interface ResolutionRadiosProps {
   shortfall: LineShortfall;
   currentKind: Kind | undefined;
@@ -46,33 +23,21 @@ interface ResolutionRadiosProps {
 export function ResolutionRadios(props: ResolutionRadiosProps): ReactNode {
   const { shortfall, currentKind, onSelect } = props;
   const { t } = useTranslation('food');
-  const name = `shortfall-${shortfall.lineIndex}`;
+  const options: RadioOption[] = [
+    { value: 'batch-override', label: t('cook.shortfalls.option.batchOverride') },
+    { value: 'external', label: t('cook.shortfalls.option.external') },
+  ];
+  if (shortfall.available > 0) {
+    options.push({ value: 'partial', label: t('cook.shortfalls.option.partial') });
+  }
   return (
-    <fieldset className="space-y-1 text-sm">
-      <RadioOption
-        name={name}
-        value="batch-override"
-        label={t('cook.shortfalls.option.batchOverride')}
-        checked={currentKind === 'batch-override'}
-        onSelect={() => onSelect('batch-override')}
-      />
-      <RadioOption
-        name={name}
-        value="external"
-        label={t('cook.shortfalls.option.external')}
-        checked={currentKind === 'external'}
-        onSelect={() => onSelect('external')}
-      />
-      {shortfall.available > 0 ? (
-        <RadioOption
-          name={name}
-          value="partial"
-          label={t('cook.shortfalls.option.partial')}
-          checked={currentKind === 'partial'}
-          onSelect={() => onSelect('partial')}
-        />
-      ) : null}
-    </fieldset>
+    <RadioInput
+      name={`shortfall-${shortfall.lineIndex}`}
+      className="gap-1 text-sm"
+      value={currentKind ?? ''}
+      options={options}
+      onValueChange={(next) => onSelect(next as Kind)}
+    />
   );
 }
 
@@ -144,13 +109,22 @@ function PartialField(props: PartialFieldProps): ReactNode {
   return (
     <label className="flex flex-col">
       <span className="text-xs text-muted-foreground">{props.label}</span>
-      <input
-        type="number"
+      <NumberInput
         min={0}
-        step="any"
+        step={0.01}
+        size="sm"
+        showSteppers={false}
+        centered={false}
         value={props.value}
-        onChange={(e) => props.onChange(Number(e.target.value))}
-        className="border rounded px-2 py-1 w-24"
+        // An emptied field has no quantity to commit. Coercing it would send
+        // `Number('') === 0` and silently zero the partial, so the last
+        // committed quantity stands until a real number is typed.
+        onChange={(e) => {
+          if (e.target.value === '') return;
+          const next = Number(e.target.value);
+          if (!Number.isNaN(next)) props.onChange(next);
+        }}
+        containerClassName="w-24"
         data-testid={props.testId}
       />
     </label>
