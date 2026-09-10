@@ -34,7 +34,7 @@ function AsOfField({ form }: { form: UseFormReturn<CheckpointFormValues> }) {
   const error = form.formState.errors.asOf?.message;
   return (
     <div className="flex flex-col gap-1.5 w-full">
-      <FieldLabel htmlFor="checkpoint-as-of" label="As of" error={error} />
+      <FieldLabel htmlFor="checkpoint-as-of" label="As of" />
       <DateInput id="checkpoint-as-of" max={today()} {...form.register('asOf')} error={error} />
     </div>
   );

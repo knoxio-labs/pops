@@ -14,6 +14,7 @@ import {
 
 import { mergeRefs, setInputValueAndNotify } from '../lib/input-element';
 import { cn } from '../lib/utils';
+import { FieldError } from './FieldError';
 import { FieldLabel } from './FieldLabel';
 import { useTextInput } from './TextInput.hooks';
 import { TrailingSlot } from './TextInput.trailing';
@@ -191,7 +192,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>((props, re
           inputProps={{ id: inputId, ...inputAttrs }}
         />
       </div>
-      {error && <p className="text-2xs font-medium text-destructive ml-1">{error}</p>}
+      <FieldError htmlFor={inputId} error={error} />
     </div>
   );
 });

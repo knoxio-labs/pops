@@ -98,7 +98,6 @@ export function DateField({
         onChange={(e) => onChange(e.target.value)}
         error={error}
       />
-      <FieldError message={error} />
     </div>
   );
 }
