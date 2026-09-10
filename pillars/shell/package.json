@@ -25,7 +25,6 @@
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
     "@pops/app-cerebrum": "workspace:*",
-    "@pops/app-food": "workspace:*",
     "@pops/app-inventory": "workspace:*",
     "@pops/app-lists": "workspace:*",
     "@pops/app-media": "workspace:*",

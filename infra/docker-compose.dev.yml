@@ -642,6 +642,26 @@ services:
       timeout: 5s
       retries: 3
 
+  # The food UI bundle (pillars/food/app) — a static nginx image behind the
+  # shell's `/food-ui/` location block.
+  food-ui:
+    build:
+      context: ..
+      dockerfile: pillars/food/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-food-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The ai UI bundle (pillars/ai/app) — a static nginx image behind the
   # shell's `/ai-ui/` location block.
   ai-ui:

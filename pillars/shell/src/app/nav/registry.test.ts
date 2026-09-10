@@ -26,7 +26,6 @@ describe('nav registry', () => {
     expect(registeredApps.map((app) => app.id)).toEqual([
       'media',
       'inventory',
-      'food',
       'lists',
       'cerebrum',
     ]);
