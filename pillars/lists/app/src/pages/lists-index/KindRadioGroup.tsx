@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { RadioGroup, RadioGroupItem } from '@pops/ui';
+import { cn, RadioGroup, RadioGroupItem } from '@pops/ui';
 
 import { LIST_KINDS, type ListKind } from './list-index-types.js';
 
@@ -15,7 +15,19 @@ interface Props {
   disabled?: boolean;
 }
 
-/** Kind picker for the New / Edit modals. */
+/**
+ * Kind picker for the New / Edit modals.
+ *
+ * The card's selected and disabled looks are derived from this component's own
+ * props rather than from the DOM. They used to be `has-[input:checked]` and
+ * `has-[input:disabled]`, which matched nothing: the kit's `RadioGroupItem` is
+ * Radix's `Item`, a `<button role="radio" data-state="checked">` and not an
+ * `<input>`, so the card never changed border or background and a disabled
+ * group never dimmed (POPS-3295). Rewriting the selector against
+ * `[data-state=checked]` would work in a browser and remain untestable — jsdom
+ * does not evaluate `:has()`, and the class list is identical on every card
+ * either way — so the state the component already holds is used directly.
+ */
 export function KindRadioGroup({
   value,
   onChange,
@@ -36,7 +48,11 @@ export function KindRadioGroup({
           <label
             key={kind}
             htmlFor={id}
-            className="flex items-center gap-2 rounded-md border p-3 text-sm font-medium hover:bg-accent/40 has-[input:checked]:border-primary has-[input:checked]:bg-accent/60 has-[input:disabled]:opacity-50"
+            className={cn(
+              'flex items-center gap-2 rounded-md border p-3 text-sm font-medium hover:bg-accent/40',
+              kind === value && 'border-primary bg-accent/60',
+              disabled && 'opacity-50'
+            )}
           >
             <RadioGroupItem id={id} value={kind} disabled={disabled} />
             <span>{t(`index.kinds.${kind}`)}</span>
