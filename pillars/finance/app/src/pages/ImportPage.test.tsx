@@ -36,6 +36,17 @@ vi.mock('../finance-api/index.js', async (importOriginal) => ({
   importsGetImportProgress: (...args: unknown[]) => mocks.progress(...args),
 }));
 
+const mockToastWarning = vi.fn();
+const mockToastError = vi.fn();
+const mockToastInfo = vi.fn();
+vi.mock('sonner', () => ({
+  toast: {
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+  },
+}));
+
 import { resetOwnerTokenForTests } from '../store/import-draft-owner';
 import { toDraftPayload } from '../store/import-draft-payload';
 import { initialState } from '../store/import-store-types';
@@ -407,5 +418,43 @@ describe('losing the lease mid-run (POPS-3331)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
     await waitFor(() => expect(lastLocation).toBe('/finance'));
     expect(mocks.draftsClaim).not.toHaveBeenCalled();
+  });
+
+  it('Take it back surfaces an error and leaves the notice up when the claim itself fails', async () => {
+    openDraftOnStepTwo();
+    await screen.findByText('Map');
+    mocks.draftsWrite.mockResolvedValueOnce(failure(409, 'DraftOwnedElsewhere', 'open elsewhere'));
+    useImportStore.getState().nextStep();
+    await screen.findByText('This import is open somewhere else now');
+
+    mocks.draftsClaim.mockResolvedValueOnce(failure(500, 'InternalError', 'boom'));
+    fireEvent.click(screen.getByRole('button', { name: 'Take it back' }));
+    await waitFor(() => expect(mocks.draftsClaim).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledOnce());
+    expect(screen.getByText('This import is open somewhere else now')).toBeDefined();
+  });
+});
+
+describe('a write that keeps failing (not ownership) toasts once, not per attempt', () => {
+  it('warns on the first failed write and stays quiet on the next', async () => {
+    useImportStore.setState({
+      ...initialState,
+      draftId: 'draft-1',
+      currentStep: 2,
+      rows: [{ a: '1' }],
+      headers: ['a'],
+      accountId: 'acc-amex',
+    });
+    renderImportPage('/finance/import?draft=draft-1');
+    await screen.findByText('Map');
+
+    mocks.draftsWrite.mockResolvedValueOnce(failure(500, 'InternalError', 'boom'));
+    useImportStore.getState().nextStep();
+    await waitFor(() => expect(mockToastWarning).toHaveBeenCalledOnce());
+
+    mocks.draftsWrite.mockResolvedValueOnce(failure(500, 'InternalError', 'boom'));
+    useImportStore.getState().prevStep();
+    await waitFor(() => expect(mocks.draftsWrite).toHaveBeenCalledTimes(2));
+    expect(mockToastWarning).toHaveBeenCalledOnce();
   });
 });

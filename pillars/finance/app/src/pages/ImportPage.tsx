@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ import { useImportStore } from '../store/importStore';
  * take-back, `takenOverAt` is set the moment a write or heartbeat learns
  * another tab holds the draft.
  */
-function useLeaseLoss() {
+function useLeaseLoss(onTakeBackFailed: () => void) {
   const [takenOverAt, setTakenOverAt] = useState<string | null>(null);
   const [epoch, setEpoch] = useState(0);
   const draftId = useImportStore((state) => state.draftId);
@@ -26,11 +26,14 @@ function useLeaseLoss() {
   const onOwnedElsewhere = useCallback(() => setTakenOverAt(new Date().toISOString()), []);
   const takeBack = useCallback(() => {
     if (draftId === null) return;
-    void claimDraft(draftId, true).then(() => {
-      setTakenOverAt(null);
-      setEpoch((n) => n + 1);
-    });
-  }, [draftId]);
+    void claimDraft(draftId, true).then(
+      () => {
+        setTakenOverAt(null);
+        setEpoch((n) => n + 1);
+      },
+      () => onTakeBackFailed()
+    );
+  }, [draftId, onTakeBackFailed]);
 
   return { takenOverAt, epoch, onOwnedElsewhere, takeBack };
 }
@@ -51,7 +54,10 @@ export function ImportPage() {
   const { gate, takeOver, discard } = useDraftHydration(requested);
   const draftId = useImportStore((state) => state.draftId);
   const ready = gate.status === 'ready';
-  const lease = useLeaseLoss();
+  const saveFailedShown = useRef(false);
+  const lease = useLeaseLoss(
+    useCallback(() => toast.error(t('import.takenOver.takeBackFailed')), [t])
+  );
 
   useEffect(() => {
     if (gate.status === 'gone') {
@@ -68,7 +74,11 @@ export function ImportPage() {
     enabled: ready && lease.takenOverAt === null,
     epoch: lease.epoch,
     onOwnedElsewhere: lease.onOwnedElsewhere,
-    onSaveFailed: useCallback(() => toast.warning(t('import.draft.saveFailed')), [t]),
+    onSaveFailed: useCallback(() => {
+      if (saveFailedShown.current) return;
+      saveFailedShown.current = true;
+      toast.warning(t('import.draft.saveFailed'));
+    }, [t]),
   });
   useImportPrescope(ready && requested === null);
 
