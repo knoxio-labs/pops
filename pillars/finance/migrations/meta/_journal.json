@@ -400,6 +400,20 @@
       "when": 1788800000004,
       "tag": "0105_occasion_home_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1788800000005,
+      "tag": "0106_seed_classified_vocabulary",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1788800000006,
+      "tag": "0107_occasion_home_sweep",
+      "breakpoints": true
     }
   ]
 }
