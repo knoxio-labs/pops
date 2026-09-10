@@ -11,6 +11,8 @@
  * SAME file — moving either out of `client.ts` would make the call site
  * unresolvable.
  */
+import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
+
 /** A full contact, mirroring the contacts `Entity` wire shape (no notion/owner columns). */
 export interface ContactEntity {
   id: string;
@@ -100,6 +102,16 @@ export interface ContactsClient {
    * the ONE write finance makes to a contact's attributes, so it never degrades
    * silently: a failure throws the same TRANSIENT/PERMANENT split
    * `createOrFetchByName` uses and the caller decides whether to stop.
+   *
+   * `known` is required rather than optional, and that is the point: a
+   * `defaultTags` value the vocabulary does not hold is re-proposed on every
+   * future import and stripped by hand every time (POPS-3293), so a caller must
+   * have the vocabulary in hand to write one at all. Every caller has a
+   * database open already. See `./default-tags.ts`.
    */
-  updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity>;
+  updateDefaultTags(
+    entityId: string,
+    defaultTags: string[],
+    known: KnownTagSet
+  ): Promise<ContactEntity>;
 }

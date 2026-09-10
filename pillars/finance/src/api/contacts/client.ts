@@ -48,6 +48,7 @@ import {
   NO_CREDENTIAL_REASON,
   UNAUTHORIZED_REASON,
 } from '../pillars/outbound.js';
+import { assertKnownDefaultTags } from './default-tags.js';
 import {
   classifyContactsFailureKind,
   CONTACTS_PILLAR_ID,
@@ -58,6 +59,7 @@ import {
 } from './entity-fetch.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
 
+import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
 import type {
   ContactEntity,
   ContactEntitySummary,
@@ -181,8 +183,12 @@ export function createContactsClient(
       throw new ContactsUnavailableError(created.kind);
     },
 
-    updateDefaultTags(entityId: string, defaultTags: string[]): Promise<ContactEntity> {
-      return patchDefaultTags(handleFactory(), entityId, defaultTags);
+    updateDefaultTags(
+      entityId: string,
+      defaultTags: string[],
+      known: KnownTagSet
+    ): Promise<ContactEntity> {
+      return patchDefaultTags(handleFactory(), entityId, defaultTags, known);
     },
   };
 }
@@ -191,13 +197,21 @@ export function createContactsClient(
  * The `updateDefaultTags` body, lifted out of the client factory so the
  * factory stays a thin table of methods. Never degrades to a silent no-op:
  * every non-ok result throws, split TRANSIENT/PERMANENT the same way
- * `createOrFetchByName` splits a failed create.
+ * `createOrFetchByName` splits a failed create — and it refuses outright
+ * before the wire when a value is not in the vocabulary, which is neither
+ * transient nor the peer's fault. See `./default-tags.ts`.
  */
 async function patchDefaultTags(
   handle: PillarHandle<ContactsRouter> | null,
   entityId: string,
-  defaultTags: string[]
+  defaultTags: string[],
+  known: KnownTagSet
 ): Promise<ContactEntity> {
+  // Ahead of the credential check, deliberately: a value the vocabulary does
+  // not hold is wrong whether or not this process could have sent it, and
+  // finding that out only on a machine that happens to hold a key is how the
+  // fifteen `venue:bar` defaults survived (POPS-3293).
+  assertKnownDefaultTags(entityId, defaultTags, known);
   if (handle === null) {
     throw new ContactsUnavailableError(NO_CREDENTIAL_REASON, UPDATE_OPERATION);
   }
