@@ -96,15 +96,22 @@ export function tagsAddedIn(sql: string): string[] {
   return [...new Set(found)].filter((tag) => tag !== '');
 }
 
-/** Whether a migration's SQL writes to any table a tag can sit on. */
+/**
+ * Whether a migration's SQL writes to any table a tag can sit on.
+ *
+ * The conflict clause is part of the verb, not noise: `INSERT OR IGNORE INTO`
+ * and `UPDATE OR IGNORE` are the idempotent idiom this chain already uses
+ * (0105 writes its vocabulary row that way), so a check anchored on a bare
+ * `insert into` would skip exactly the migrations most likely to be appending
+ * a tag defensively.
+ */
 export function touchesTagBearingTable(sql: string): boolean {
   const normalized = sql.toLowerCase();
-  return TAG_BEARING_TABLES.some(
-    (table) =>
-      normalized.includes(`update \`${table}\``) ||
-      normalized.includes(`update ${table}`) ||
-      normalized.includes(`insert into \`${table}\``) ||
-      normalized.includes(`insert into ${table}`)
+  return TAG_BEARING_TABLES.some((table) =>
+    new RegExp(
+      `\\b(?:(?:insert|replace)(?:\\s+or\\s+[a-z]+)?\\s+into|update(?:\\s+or\\s+[a-z]+)?)\\s+\`?${table}\`?\\b`,
+      'u'
+    ).test(normalized)
   );
 }
 
@@ -242,8 +249,19 @@ describe('touchesTagBearingTable', () => {
     'update transactions set tags = x',
     'INSERT INTO `transaction_tag_rules` (tags) VALUES (x)',
     'INSERT INTO transaction_corrections (tags) VALUES (x)',
+    'INSERT OR IGNORE INTO transaction_corrections (tags) VALUES (x)',
+    'insert or replace into `transactions` (tags) values (x)',
+    'insert or ignore into transactions (tags) values (x)',
+    'UPDATE OR IGNORE `transactions` SET tags = x',
+    'REPLACE INTO transaction_tag_rules (tags) VALUES (x)',
   ])('recognises %s', (sql) => {
     expect(touchesTagBearingTable(sql)).toBe(true);
+  });
+
+  it('does not mistake a longer table name for one of these', () => {
+    expect(touchesTagBearingTable('INSERT INTO transactions_archive (tags) VALUES (x)')).toBe(
+      false
+    );
   });
 
   it('says no to a migration that only touches the vocabulary itself', () => {
