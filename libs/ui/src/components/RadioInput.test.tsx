@@ -135,3 +135,22 @@ describe('RadioInput — an option that owns a body', () => {
     expect(container.querySelectorAll('div.mt-2')).toHaveLength(0);
   });
 });
+
+describe('RadioInput — naming the group', () => {
+  it('carries an aria-label through to the radiogroup', () => {
+    render(<RadioInput aria-label="Endpoint kind" options={options} />);
+
+    expect(screen.getByRole('radiogroup', { name: 'Endpoint kind' })).toBeInTheDocument();
+  });
+
+  it('carries an aria-labelledby too', () => {
+    render(
+      <>
+        <span id="kind-heading">Endpoint kind</span>
+        <RadioInput aria-labelledby="kind-heading" options={options} />
+      </>
+    );
+
+    expect(screen.getByRole('radiogroup', { name: 'Endpoint kind' })).toBeInTheDocument();
+  });
+});

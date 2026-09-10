@@ -97,6 +97,18 @@ export interface RadioInputProps {
    */
   size?: RadioInputSize;
   /**
+   * Accessible name for the group, when no `label` names it visibly.
+   *
+   * Declared rather than left to the rest-spread that carries it. It does
+   * reach the underlying `RadioGroup` either way — an inline toggle with a
+   * visible label elsewhere depends on that — but a props type that does not
+   * say so is one a consumer cannot read, and one a later refactor of the
+   * spread would break silently.
+   */
+  'aria-label'?: string;
+  /** Accessible name sourced from another element's text. Same reasoning. */
+  'aria-labelledby'?: string;
+  /**
    * Container className
    */
   className?: string;
