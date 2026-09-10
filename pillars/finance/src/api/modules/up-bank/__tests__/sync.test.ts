@@ -19,7 +19,7 @@ import { makeContactsFake } from '../../../__tests__/contacts-fake.js';
 import { readLiveDraftPayload } from '../../import-drafts/live-draft.js';
 import { upChecksum } from '../map-transaction.js';
 import { planUpSync, UpSyncCurrencyMismatchError, UpSyncNotConfiguredError } from '../sync-plan.js';
-import { syncUpAccount } from '../sync.js';
+import { syncUpAccount, type UpSyncResult } from '../sync.js';
 import { upAccount, upTransaction } from './fixtures.js';
 
 import type { FinanceDb } from '../../../../db/services/internal.js';
@@ -92,6 +92,44 @@ function heldInLedger(upId: string, description: string, amountCents: number, da
     pending: true,
     checksum: upChecksum(accountId, upId),
   }).id;
+}
+
+/** A settled Up row already in the ledger — what an earlier pass over the same range left. */
+function settledInLedger(upId: string, description: string, amountCents: number, date: string) {
+  return insertImportTransaction(db, {
+    description,
+    dialectAccountLabel: 'Up Everyday',
+    accountId,
+    amountCents,
+    date,
+    type: 'purchase',
+    tags: [],
+    entityId: null,
+    entityName: null,
+    location: null,
+    pending: false,
+    checksum: upChecksum(accountId, upId),
+  }).id;
+}
+
+/**
+ * What `fetched` claims, minus what every bucket accounts for.
+ *
+ * Zero is the contract. It was not: a real backfill month reported
+ * `22 fetched, 18 staged` with four rows in no bucket at all, and telling
+ * that from four rows lost meant querying Up by hand (POPS-3355).
+ */
+function unbucketed(result: UpSyncResult): number {
+  return (
+    result.fetched -
+    (result.outsideRange +
+      result.staged +
+      result.alreadyStaged +
+      result.alreadyInLedger +
+      result.settled +
+      result.settleRefused +
+      result.alreadyHeld)
+  );
 }
 
 beforeEach(() => {
@@ -340,8 +378,51 @@ describe('syncUpAccount', () => {
 
     const result = await syncUpAccount(db, makeContactsFake(), { accountId, client, ...RANGE });
 
-    expect(result).toMatchObject({ fetched: 3, staged: 1 });
+    expect(result).toMatchObject({ fetched: 3, outsideRange: 2, staged: 1 });
+    expect(unbucketed(result)).toBe(0);
     expect(stagedRows().map((r) => r.date)).toEqual(['2026-09-05']);
+  });
+
+  /**
+   * Every case at once, so the identity is asserted where it can actually
+   * break rather than on a fixture with one bucket in it. A test that checked
+   * `staged` alone passes straight through the defect this covers.
+   */
+  it('accounts for every fetched row, across every outcome a pass can have', async () => {
+    configure();
+    heldInLedger('settling', 'Fuel', -10_000, '2026-09-01');
+    heldInLedger('holding', 'Cafe', -800, '2026-09-02');
+    settledInLedger('known', 'Coles', -1_200, '2026-09-01');
+    const { client } = fakeUp([
+      upTransaction({ id: 'before', createdAt: '2026-08-31T23:00:00+10:00' }),
+      upTransaction({ id: 'after', createdAt: '2026-09-06T00:30:00+10:00' }),
+      upTransaction({ id: 'fresh', cents: -3_400, createdAt: '2026-09-03T09:00:00+10:00' }),
+      upTransaction({
+        id: 'settling',
+        cents: -10_250,
+        createdAt: '2026-09-01T18:00:00+10:00',
+        settledAt: '2026-09-03T03:00:00+10:00',
+      }),
+      upTransaction({
+        id: 'holding',
+        status: 'HELD',
+        cents: -800,
+        createdAt: '2026-09-02T12:00:00+10:00',
+      }),
+      upTransaction({ id: 'known', cents: -1_200, createdAt: '2026-09-01T09:30:00+10:00' }),
+    ]);
+
+    const result = await syncUpAccount(db, makeContactsFake(), { accountId, client, ...RANGE });
+
+    expect(result).toMatchObject({
+      fetched: 6,
+      outsideRange: 2,
+      staged: 1,
+      settled: 1,
+      alreadyHeld: 1,
+      alreadyInLedger: 1,
+    });
+    expect(unbucketed(result)).toBe(0);
   });
 
   it("asserts the mapper's transfer type over the ladder's guess on the staged row", async () => {

@@ -2290,6 +2290,7 @@ export type AccountImportsTriggerSyncResponses = {
         alreadyStaged: number;
         draftId: string | null;
         fetched: number;
+        outsideRange?: number;
         settleRefused?: number;
         settled: number;
         staged: number;
@@ -2363,6 +2364,7 @@ export type AccountImportsGetSyncJobResponses = {
         alreadyStaged: number;
         draftId: string | null;
         fetched: number;
+        outsideRange?: number;
         settleRefused?: number;
         settled: number;
         staged: number;

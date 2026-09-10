@@ -23,7 +23,16 @@ import type { ContactsClient } from '../../contacts/client.js';
 
 export interface UpSyncResult {
   accountId: string;
+  /**
+   * Everything Up returned for the widened fetch.
+   *
+   * Every other count below partitions it: `fetched` equals their sum, which
+   * is what lets a person walking a backfill see at a glance that nothing was
+   * dropped (POPS-3355).
+   */
   fetched: number;
+  /** Rows outside the requested calendar range — the fetch asks a day either side. */
+  outsideRange: number;
   /** Rows this pass added to the account's pending draft (finance ADR-005). */
   staged: number;
   /** Rows the pending draft already held. */
@@ -70,9 +79,13 @@ export async function syncUpAccount(
   return {
     accountId: plan.account.id,
     fetched: plan.fetched,
+    outsideRange: plan.outsideRange,
     staged: staged.staged,
     alreadyStaged: staged.alreadyStaged,
-    alreadyInLedger: staged.alreadyInLedger,
+    // Two ways a row is already in the ledger: the dedup ladder skipped it
+    // while staging, or the plan matched it to a stored row in the same
+    // state. The second went uncounted before POPS-3355.
+    alreadyInLedger: staged.alreadyInLedger + plan.alreadyInLedger,
     settled: settled.length,
     settleRefused: refused.length,
     alreadyHeld: plan.alreadyHeld,

@@ -102,6 +102,7 @@ function armExpiry(jobId: string): void {
 function toJobResult(result: UpSyncResult): UpSyncJobResult {
   return {
     fetched: result.fetched,
+    outsideRange: result.outsideRange,
     staged: result.staged,
     alreadyStaged: result.alreadyStaged,
     alreadyInLedger: result.alreadyInLedger,

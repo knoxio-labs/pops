@@ -54,6 +54,7 @@ function fakeResult(overrides: Partial<UpSyncResult> = {}): UpSyncResult {
   return {
     accountId,
     fetched: 3,
+    outsideRange: 0,
     staged: 2,
     alreadyStaged: 0,
     alreadyInLedger: 0,
@@ -178,6 +179,7 @@ describe('startUpSyncJob', () => {
     expect(done.finishedAt).not.toBeNull();
     expect(done.result).toEqual({
       fetched: 3,
+      outsideRange: 0,
       staged: 2,
       alreadyStaged: 0,
       alreadyInLedger: 0,

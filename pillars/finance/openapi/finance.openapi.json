@@ -6248,6 +6248,11 @@
                               "minimum": 0,
                               "type": "integer"
                             },
+                            "outsideRange": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
                             "settleRefused": {
                               "maximum": 9007199254740991,
                               "minimum": 0,
@@ -6488,6 +6493,11 @@
                               "type": "string"
                             },
                             "fetched": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "outsideRange": {
                               "maximum": 9007199254740991,
                               "minimum": 0,
                               "type": "integer"
