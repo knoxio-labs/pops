@@ -1,0 +1,75 @@
+name: Cross-PR Line Budget
+
+# ADVISORY, AND HOUSED HERE SO THAT IS TRUE RATHER THAN CLAIMED. This one job
+# lived in `quality.yml` and called itself "(advisory)" in its own name, while
+# `ci-gate.yml` aggregates that workflow's WORKFLOW-LEVEL conclusion — so every
+# job in it, named in the branch ruleset or not, blocks a merge. On 2026-09-11
+# it did: a sibling PR head the guard could not fetch (#4431, a long-open
+# draft) made it exit non-zero on runs 34493402530 and 34495371249, two
+# unrelated PRs twenty minutes apart, neither touching this guard or the line
+# budget (POPS-3362). The label described an intent the wiring did not
+# implement. A workflow of its own is the only way to implement it: a job
+# inside a gated workflow cannot opt out with `continue-on-error` — that erases
+# it from the conclusion entirely, which `scripts/ci/check-ci-gate-wiring.mjs`
+# rejects for the same reason `quality.yml`'s header gives.
+#
+# SO: this workflow is NOT in `ci-gate.yml`'s `gated` array and NOT in the
+# branch ruleset, and must stay out of both. `quality.yml`'s header says every
+# job in that file is load-bearing; this one is the counterpart statement — a
+# red run here annotates the PR and blocks nothing. `live-seam.yml` is the
+# other workflow in this posture.
+#
+# WHAT IT ANSWERS. `check-line-budget-headroom.mjs` (still in `quality.yml`,
+# still blocking, correctly) answers "does THIS branch cross a file's
+# `max-lines` cap once it lands". That is not "can this branch and the one
+# merging beside it cross it together", and the difference ejected three merge
+# groups on 2026-09-05 on a file two branches each grew by a few lines. At
+# `pull_request` time the merge group does not exist yet, so the reachable
+# approximation is the heads of the other open PRs on the same base. This
+# projects the pair and warns.
+#
+# WHY IT WARNS RATHER THAN FAILS on a collision, and why the exit code is
+# nonetheless non-zero when it cannot look, is argued in
+# `scripts/ci/check-cross-pr-line-budget.mjs`'s own header. Both halves stay:
+# two PRs touching a near-cap file frequently never share a merge group, so
+# failing on a maybe would make this the noisiest check in the repo — but a
+# guard that could not see must never render the same as a guard that saw
+# nothing (POPS-2110). Softening the unreadable-head case to a warning is the
+# wrong fix for what POPS-3362 reported; being non-required is the right one.
+#
+# `pull_request` only. `merge_group`'s checkout already IS the projected head,
+# so the sibling guard in `quality.yml` is exact there and this would be
+# redundant — and an advisory workflow has no reason to report on the queue's
+# ref, since it can neither block nor evict a queue entry.
+#
+# NO `paths:` FILTER, deliberately: the collision this looks for is between
+# THIS PR's diff and other open branches, so any diff at all can produce one,
+# and there is no path set that selects the interesting cases. Nothing is
+# waiting on this context, so an unfiltered trigger costs a cheap install-free
+# job and blocks nobody.
+
+on:
+  pull_request:
+
+jobs:
+  cross-pr-line-budget:
+    name: Cross-PR line budget (advisory)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need a merge base against each PR head
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Project this PR against the other open PRs on the same base
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/ci/check-cross-pr-line-budget.mjs \
+            --repo "${{ github.repository }}" \
+            --pr "${{ github.event.pull_request.number }}" \
+            --base "${{ github.base_ref }}"

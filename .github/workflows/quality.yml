@@ -58,7 +58,10 @@ name: Quality
 # make a job here advisory is `continue-on-error: true`, which hides it from the
 # workflow conclusion entirely. Nothing in this file is advisory, and
 # scripts/ci/check-ci-gate-wiring.mjs asserts that no job reintroduces
-# `continue-on-error`. See .github/workflows/README.md.
+# `continue-on-error` — nor names itself advisory, which is how one job spent
+# months blocking merges it was documented not to block (POPS-3362). A job that
+# wants to be advisory leaves this file: `cross-pr-line-budget.yml` is the one
+# that did. See .github/workflows/README.md.
 #
 # GUARD JOBS COME IN TWO TIERS, and the difference is deliberate. A guard job
 # that reads only JSON, plain text or source code runs straight after
@@ -775,7 +778,10 @@ jobs:
     # and margin named. Needs full history for a merge base, so it is its own
     # job rather than a step riding along with a shallow-checkout gate; Tier A
     # all the same — node builtins and `.oxlintrc.json` only, no
-    # `pnpm install`. See scripts/ci/check-line-budget-headroom.mjs.
+    # `pnpm install`. See scripts/ci/check-line-budget-headroom.mjs. Its
+    # cross-PR counterpart — the same projection against the OTHER open PRs on
+    # this base — is advisory and lives in `cross-pr-line-budget.yml`, outside
+    # this gated workflow.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -791,47 +797,6 @@ jobs:
           # Same three-event resolution as `contract-consumers` above.
           BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: node scripts/ci/check-line-budget-headroom.mjs --base "$BASE_REF"
-
-  cross-pr-line-budget:
-    name: Cross-PR line budget (advisory)
-    # The job above answers "does THIS branch cross the cap once it lands".
-    # That is not "can this branch and the one merging beside it cross it
-    # together", and the difference ejected three merge groups on 2026-09-05
-    # on a file two branches each grew by a few lines. Neither crossed it
-    # alone; the first thing to say so was oxlint, inside the merge group.
-    #
-    # At `pull_request` time the merge group does not exist yet, so the
-    # reachable approximation is the heads of the other open PRs on the same
-    # base. This projects the pair and warns. ADVISORY BY DESIGN: two PRs that
-    # both touch a near-cap file frequently never share a merge group, and
-    # failing the build on a maybe would make this the noisiest check in the
-    # repo. It annotates, and the exit code stays zero — but it DOES exit
-    # non-zero when it cannot answer, so "no collision" and "could not look"
-    # never render the same. Do not make this a required check without first
-    # measuring how often it fires.
-    #
-    # `pull_request` only: `merge_group`'s checkout already IS the projected
-    # head, so the sibling guard is exact there and this would be redundant.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # need a merge base against each PR head
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-      - name: Project this PR against the other open PRs on the same base
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          node scripts/ci/check-cross-pr-line-budget.mjs \
-            --repo "${{ github.repository }}" \
-            --pr "${{ github.event.pull_request.number }}" \
-            --base "${{ github.base_ref }}"
 
   device-signature-fixture:
     name: Device signature encoding (iOS ↔ BFM)
