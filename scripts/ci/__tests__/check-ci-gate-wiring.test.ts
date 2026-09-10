@@ -10,6 +10,7 @@ import {
   checkCiGateWiring,
   embeddedScript,
   findContinueOnErrorJobs,
+  findSelfDeclaredAdvisoryJobs,
   grantsChecksWrite,
   hasPullRequestPathFilter,
   parseGatedArray,
@@ -59,6 +60,7 @@ describe('reading a workflow that does not parse (ADR-045)', () => {
     ['parseWorkflowName', () => parseWorkflowName(BROKEN)],
     ['hasPullRequestPathFilter', () => hasPullRequestPathFilter(BROKEN)],
     ['findContinueOnErrorJobs', () => findContinueOnErrorJobs(BROKEN)],
+    ['findSelfDeclaredAdvisoryJobs', () => findSelfDeclaredAdvisoryJobs(BROKEN)],
     ['grantsChecksWrite', () => grantsChecksWrite(BROKEN)],
   ] as const)('%s raises rather than reporting the wiring clean', (_name, read) => {
     expect(read).toThrow(/could not be parsed/u);
@@ -432,6 +434,41 @@ describe('findContinueOnErrorJobs', () => {
   });
 });
 
+describe('findSelfDeclaredAdvisoryJobs', () => {
+  it('names a job whose display name carries the claim', () => {
+    expect(
+      findSelfDeclaredAdvisoryJobs('jobs:\n  budget:\n    name: Cross-PR budget (advisory)\n')
+    ).toEqual(['budget']);
+  });
+
+  it('matches regardless of case', () => {
+    expect(findSelfDeclaredAdvisoryJobs('jobs:\n  budget:\n    name: ADVISORY only\n')).toEqual([
+      'budget',
+    ]);
+  });
+
+  it('ignores a job with no display name', () => {
+    expect(findSelfDeclaredAdvisoryJobs('jobs:\n  budget:\n    runs-on: ubuntu-latest\n')).toEqual(
+      []
+    );
+  });
+
+  it('does not read a job whose SUBJECT is advisories as an advisory job', () => {
+    expect(
+      findSelfDeclaredAdvisoryJobs('jobs:\n  deny:\n    name: cargo deny (advisories, licences)\n')
+    ).toEqual([]);
+  });
+
+  it('reads the claim past a trailing comment, and through a flow mapping', () => {
+    expect(
+      findSelfDeclaredAdvisoryJobs('jobs:\n  budget:\n    name: Budget (advisory) # historical\n')
+    ).toEqual(['budget']);
+    expect(findSelfDeclaredAdvisoryJobs('jobs: { budget: { name: "x (advisory)" } }\n')).toEqual([
+      'budget',
+    ]);
+  });
+});
+
 describe('the live repo', () => {
   it('has intact CI Gate wiring', () => {
     expect(checkCiGateWiring(repoRoot)).toEqual([]);
@@ -529,6 +566,30 @@ describe('the guard catches each way the wiring goes inert', () => {
     expect(checkCiGateWiring(root).join('\n')).toContain(
       'job "extractability-baseline" sets `continue-on-error: true`'
     );
+  });
+
+  it('flags a gated job that calls itself advisory in its name (POPS-3362)', () => {
+    const root = cloneWorkflows();
+    patch(root, 'quality.yml', (s) =>
+      s.replace(/^ {4}name: Line-budget headroom$/mu, '    name: Line-budget headroom (advisory)')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain(
+      'job "line-budget-headroom" calls itself advisory in its `name:`'
+    );
+  });
+
+  it('flags the claim in a gated workflow other than the always-running one', () => {
+    const root = cloneWorkflows();
+    patch(root, 'rust-quality.yml', (s) =>
+      s.replace(/^ {4}name: (.+)$/mu, '    name: $1 (advisory)')
+    );
+    expect(checkCiGateWiring(root).join('\n')).toContain('calls itself advisory in its `name:`');
+  });
+
+  it('leaves the same claim alone in a workflow no gate aggregates', () => {
+    const root = cloneWorkflows();
+    patch(root, 'live-seam.yml', (s) => s.replace(/^ {4}name: (.+)$/mu, '    name: $1 (advisory)'));
+    expect(checkCiGateWiring(root)).toEqual([]);
   });
 
   it('flags a path filter added to the always-running gated workflow', () => {

@@ -291,6 +291,34 @@ export function findContinueOnErrorJobs(source) {
 }
 
 /**
+ * Job names in a workflow whose DISPLAY NAME calls the job advisory.
+ *
+ * A job inside a gated workflow cannot be advisory: `CI Gate` aggregates the
+ * workflow-level conclusion, so the job blocks a merge whether or not its name
+ * is in the branch ruleset. `cross-pr-line-budget` carried "(advisory)" in its
+ * name inside `quality.yml` for months, and the first thing to say otherwise
+ * was an unreadable sibling PR head blocking two unrelated merges (POPS-3362).
+ * A label that contradicts the wiring is worse than no label: it is what a
+ * reader consults before deciding whether a red run matters.
+ *
+ * @param {string} source
+ * @returns {string[]}
+ * @throws {import('./config-parse.mjs').ConfigParseError}
+ */
+export function findSelfDeclaredAdvisoryJobs(source) {
+  const doc = workflowDoc(source);
+  if (!isMapping(doc) || !isMapping(doc.jobs)) return [];
+  /** @type {string[]} */
+  const found = [];
+  for (const [key, job] of Object.entries(doc.jobs)) {
+    if (!isMapping(job)) continue;
+    const label = scalarText(job.name);
+    if (label !== undefined && /advisory/iu.test(label)) found.push(key);
+  }
+  return found;
+}
+
+/**
  * True when the workflow grants `permissions: checks: write`.
  *
  * @param {string} source
@@ -544,6 +572,35 @@ export function checkCiGateWiring(root) {
     );
   }
 
+  // Every gated workflow, not just the always-running one: a job's name is what
+  // a reader consults to decide whether a red run matters, and inside a gated
+  // workflow "advisory" is never true of any of them.
+  for (const name of gated) {
+    const gatedFile = known.get(name);
+    if (gatedFile === undefined) continue; // already reported as unknown above
+    /** @type {string[]} */
+    let advisoryJobs;
+    try {
+      advisoryJobs = findSelfDeclaredAdvisoryJobs(
+        readFileSync(join(workflowsDir, gatedFile), 'utf8')
+      );
+    } catch (error) {
+      violations.push(
+        `${gatedFile} could not be read as YAML, so its job names could not be checked: ` +
+          (error instanceof Error ? error.message : String(error))
+      );
+      continue;
+    }
+    for (const job of advisoryJobs) {
+      violations.push(
+        `${gatedFile} job "${job}" calls itself advisory in its \`name:\`, but "${name}" is ` +
+          'gated — `CI Gate` aggregates its workflow-level conclusion, so the job blocks a ' +
+          'merge regardless of the ruleset. Move it to a workflow outside the `gated` array ' +
+          '(see cross-pr-line-budget.yml), or drop the claim.'
+      );
+    }
+  }
+
   return violations;
 }
 
@@ -602,6 +659,15 @@ function selfTest() {
     "jobs:\n  lint:\n    continue-on-error: ${{ github.event_name == 'push' }}\n"
   );
   const notAdvisory = findContinueOnErrorJobs('jobs:\n  lint:\n    continue-on-error: false\n');
+  const namedAdvisory = findSelfDeclaredAdvisoryJobs(
+    'jobs:\n  budget:\n    name: Cross-PR line budget (advisory) # historical\n'
+  );
+  const namedAdvisoryCased = findSelfDeclaredAdvisoryJobs(
+    'jobs:\n  budget:\n    name: ADVISORY projection\n'
+  );
+  const notNamedAdvisory = findSelfDeclaredAdvisoryJobs(
+    'jobs:\n  deny:\n    name: cargo deny (licence / advisories are its subject)\n  bare:\n    runs-on: x\n'
+  );
   const filtered = hasPullRequestPathFilter(
     'on:\n  pull_request: # every PR\n    paths: ["**"] # inline\n'
   );
@@ -635,6 +701,10 @@ function selfTest() {
     'names an advisory job declared with comments': advisory.join() === 'lint',
     'reports an advisory job it cannot evaluate': advisoryExpression.join() === 'lint',
     'does not treat continue-on-error: false as an opt-out': notAdvisory.length === 0,
+    'names a job that calls itself advisory in its name': namedAdvisory.join() === 'budget',
+    'matches the advisory claim regardless of case': namedAdvisoryCased.join() === 'budget',
+    'does not flag a job with no name, nor one whose subject is advisories':
+      notNamedAdvisory.length === 0,
     'sees an inline path filter on pull_request': filtered,
     'does not read a sibling trigger filter as one on pull_request': !unfiltered,
     'reads the workflow name past a trailing comment': named === 'Quality',

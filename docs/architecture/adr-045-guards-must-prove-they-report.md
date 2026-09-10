@@ -97,7 +97,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/ci/check-receipt-max-parts-drift.mjs`      | `quality.yml` → `receipt-max-parts-drift`                                       | `bfm`/`purchases` TS source, `clients/ios` Swift source          |
 | `scripts/ci/check-supertest-transport-adoption.mjs` | `quality.yml` → `supertest-transport-adoption`                                  | the nine gated pillars' TS/JS source, and their `package.json`   |
 | `scripts/ci/check-line-budget-headroom.mjs`         | `quality.yml` → `line-budget-headroom`                                          | `.oxlintrc.json`, `git diff`/`git show` of touched files         |
-| `scripts/ci/check-cross-pr-line-budget.mjs`         | `quality.yml` → `cross-pr-line-budget`                                          | `.oxlintrc.json`, `git show` of two branches, open PRs via REST  |
+| `scripts/ci/check-cross-pr-line-budget.mjs`         | `cross-pr-line-budget.yml` → `cross-pr-line-budget`                             | `.oxlintrc.json`, `git show` of two branches, open PRs via REST  |
 | `scripts/ci/check-pops-uri-pattern-adoption.mjs`    | `quality.yml` → `pops-uri-pattern-adoption`                                     | `pillars/purchases/src/**` TS source                             |
 | `scripts/ci/check-raw-form-controls.mjs`            | `quality.yml` → `raw-form-controls`                                             | `pillars/**` TSX/JSX source, against the guard's own `ALLOWLIST` |
 | `scripts/ci/pr-review.mjs`                          | `pr-review.yml` → `review`                                                      | `git diff`/`git show`, the sticky comment's state block          |
