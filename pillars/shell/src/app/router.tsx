@@ -15,12 +15,14 @@ import { createBrowserRouter, Link, Navigate, Outlet, useLocation } from 'react-
 
 import { KNOWN_MODULES } from '@pops/module-registry';
 
+import { useBootRegistry } from './BootRegistryProvider';
 import { IndexRedirect } from './IndexRedirect';
 import { filterAppManifests, type FrontendManifest } from './installed-modules';
 import { RootLayout } from './layout/RootLayout';
 import { FeaturesPage } from './pages/features-page/FeaturesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { NotInstalledPage } from './pages/NotInstalledPage';
+import { RegistryUnreachablePage } from './pages/RegistryUnreachablePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PillarGuard, pillarIdForModule } from './pillars';
 
@@ -31,6 +33,11 @@ import type { RouteObject } from 'react-router';
  * codebase could ship (`KNOWN_MODULES`) that isn't installed in this build,
  * render `NotInstalledPage`. Otherwise fall through to `NotFoundPage`.
  *
+ * Exported so its three-way decision can be driven directly. Reaching it
+ * through `buildRouter` would mean a real `createBrowserRouter` and a real
+ * history, which tells the three cases apart no better and a good deal more
+ * slowly.
+ *
  * `KNOWN_MODULES` is `@pops/module-registry`'s disk-discovered superset of
  * every in-repo pillar manifest — the right "could-ship" set, broader than
  * the per-deploy install set (`POPS_APPS`-gated) so the "not installed"
@@ -38,12 +45,18 @@ import type { RouteObject } from 'react-router';
  * paths still get a proper 404. Sourcing it off this runtime set (not a
  * frozen SDK tuple) means adding a pillar needs no SDK type edit.
  */
-function UnmatchedRoute() {
+export function UnmatchedRoute() {
   const { pathname } = useLocation();
+  const { source } = useBootRegistry();
   const first = pathname.split('/').find((s) => s.length > 0) ?? '';
   const knownModules: readonly string[] = KNOWN_MODULES;
   if (first.length > 0 && knownModules.includes(first)) {
-    return <NotInstalledPage />;
+    // `'empty'` is the one resolution that mounted nothing because nothing
+    // answered: neither the registry nor a cached snapshot. Everything the
+    // reader could do about an install set is irrelevant then, and telling
+    // them their deploy excludes a pillar that is running is worse than
+    // saying nothing (POPS-3250).
+    return source === 'empty' ? <RegistryUnreachablePage /> : <NotInstalledPage />;
   }
   return <NotFoundPage />;
 }
