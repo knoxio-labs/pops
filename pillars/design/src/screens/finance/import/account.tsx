@@ -1,7 +1,7 @@
 import { type Account } from '@/fixtures/accounts';
 import { type PendingImport, pendingSets } from '@/fixtures/pending-imports';
 import { AccountSelect } from '@/kit/account-select';
-import { PendingImportList } from '@/kit/pending-import-card';
+import { ContinuePending, StartNewHeading } from '@/kit/import-continue-pending';
 import { CircleSlash, Plus, Wallet } from 'lucide-react';
 
 import {
@@ -130,26 +130,6 @@ function AccountSection({
 
 const NO_PENDING: PendingImport[] = [];
 
-/**
- * What was started and not finished, ahead of starting another. It is a
- * section and not a modal because the modal only ever knew about the one
- * draft in this browser; with drafts on the server and a bank feeding some
- * of them, there can be several, and a person picking an account below
- * should see that one of them already has that account's rows waiting.
- */
-function ContinuePending({ items }: { items: PendingImport[] }) {
-  if (items.length === 0) return null;
-  return (
-    <section className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <p className="text-sm font-medium">Continue where you left off</p>
-        <p className="text-xs text-muted-foreground">or start a new import below</p>
-      </div>
-      <PendingImportList items={items} compact />
-    </section>
-  );
-}
-
 function Step({
   accounts,
   selectedId,
@@ -171,6 +151,7 @@ function Step({
         description="Two choices, in this order: the account the money moved through, then the shape of the file your bank gave you."
       />
       <ContinuePending items={pending} />
+      <StartNewHeading hasPending={pending.length > 0} />
       {accounts.length === 0 ? (
         <EmptyState
           icon={Wallet}

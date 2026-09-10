@@ -27,10 +27,12 @@ export function ImportContextStrip({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{choice.account.name}</span>
         <span className="block truncate text-xs text-muted-foreground">
-          Read as {choice.format.label}
+          {choice.format.live
+            ? `Fed by the ${choice.format.label}`
+            : `Read as ${choice.format.label}`}
         </span>
       </span>
-      {editable && (
+      {editable && !choice.format.live && (
         <Button variant="outline" size="sm">
           Change account or format
         </Button>
