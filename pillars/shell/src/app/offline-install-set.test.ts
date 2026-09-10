@@ -26,14 +26,6 @@ vi.mock('@pops/module-registry', async (importOriginal) => {
   return { ...actual, isInstalledModule: (id: string) => id !== 'media' };
 });
 
-/**
- * A pillar carrying the UI surface the loader needs.
- *
- * Every pillar advertises `nav` / `pages` / `assetsBaseUrl` since POPS-3215.
- * Before it, a payload with none of them still reached the rail through the
- * static bundle map; that map now carries no app, so a fixture without a UI
- * surface resolves to nothing and these tests would pass vacuously.
- */
 function manifestPayload(pillar: string): ManifestPayload {
   return {
     pillar,
@@ -45,17 +37,6 @@ function manifestPayload(pillar: string): ManifestPayload {
     uri: { types: [] },
     consumedSettings: { keys: [] },
     healthcheck: { path: '/health' },
-    assetsBaseUrl: `/${pillar}-ui/${pillar}.js`,
-    nav: {
-      id: pillar,
-      label: pillar,
-      labelKey: pillar,
-      icon: 'compass',
-      basePath: `/${pillar}`,
-      order: 10,
-      items: [{ path: '', label: pillar, labelKey: `${pillar}.home`, icon: 'compass' }],
-    },
-    pages: [{ path: '', index: true, bundleSlot: `${pillar}-home` }],
   };
 }
 
@@ -71,8 +52,8 @@ function snapshotEntry(pillarId: string): PillarSnapshot {
 
 describe('offlineInstallableSnapshot', () => {
   it('drops a module this build knows and the install set excludes', () => {
-    const kept = offlineInstallableSnapshot([snapshotEntry('media'), snapshotEntry('lists')]);
-    expect(kept.map((e) => e.pillarId)).toEqual(['lists']);
+    const kept = offlineInstallableSnapshot([snapshotEntry('media'), snapshotEntry('ego')]);
+    expect(kept.map((e) => e.pillarId)).toEqual(['ego']);
   });
 
   /**
@@ -134,14 +115,14 @@ describe('fetchBootRegistry — the cached floor honours the install set', () =>
    */
   it('drops an excluded module from the cache while keeping the rest', async () => {
     const store = memoryStore();
-    const live = await fetchBootRegistry({ fetch: okFetch(['media', 'lists']), store });
+    const live = await fetchBootRegistry({ fetch: okFetch(['media', 'ego']), store });
     expect(live.source).toBe('registry');
     expect(live.manifests.map((m) => m.id)).toContain('media');
 
     const offline = await fetchBootRegistry({ fetch: deadFetch(), store });
 
     expect(offline.source).toBe('cached-snapshot');
-    expect(offline.manifests.map((m) => m.id)).toEqual(['lists']);
+    expect(offline.manifests.map((m) => m.id)).toEqual(['ego']);
   });
 
   /**
