@@ -36,10 +36,21 @@ const EXTENSIONS: Readonly<Record<ReceiptMediaType, string>> = {
   'text/plain': 'txt',
 };
 
-/** Evidence lives beside the database, so one volume holds the whole pillar. */
+/**
+ * Where the evidence lives: beside the database, so one volume holds the
+ * whole pillar.
+ *
+ * Derived, with no override of its own, and that is the point. The image
+ * creates and chowns one data directory and `infra/` mounts one volume per
+ * pillar, so a directory named independently of the database's is a
+ * directory nothing creates, nothing mounts and nothing probes — receipts
+ * would land in the container's writable layer and vanish on the next roll,
+ * writably and silently (POPS-2535). Point `PURCHASES_SQLITE_PATH` (or the
+ * fleet-wide `SQLITE_PATH`) somewhere else and the receipts follow, which is
+ * the only relocation that keeps them on the volume they are replicated and
+ * backed up with.
+ */
 export function resolveReceiptStoreRoot(): string {
-  const override = process.env['PURCHASES_RECEIPT_DIR'];
-  if (override !== undefined && override !== '') return override;
   return join(dirname(resolvePurchasesSqlitePath()), 'receipts');
 }
 

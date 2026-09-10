@@ -18,7 +18,7 @@
  * an order with nothing hanging off it at all — because those are where a
  * nullable/optional mismatch hides.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -67,6 +67,7 @@ const { requestOn } = createTestTransport();
 let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let app: Express;
+let dataDir: string;
 let receiptDir: string;
 
 beforeEach(() => {
@@ -74,8 +75,10 @@ beforeEach(() => {
   seedAmazonSource(opened);
   __resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
-  receiptDir = mkdtempSync(join(tmpdir(), 'pops-contract-conformance-'));
-  process.env['PURCHASES_RECEIPT_DIR'] = receiptDir;
+  dataDir = mkdtempSync(join(tmpdir(), 'pops-contract-conformance-'));
+  process.env['PURCHASES_SQLITE_PATH'] = join(dataDir, 'purchases.db');
+  receiptDir = join(dataDir, 'receipts');
+  mkdirSync(receiptDir, { recursive: true });
   app = createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
@@ -94,8 +97,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  rmSync(receiptDir, { recursive: true, force: true });
-  delete process.env['PURCHASES_RECEIPT_DIR'];
+  rmSync(dataDir, { recursive: true, force: true });
+  delete process.env['PURCHASES_SQLITE_PATH'];
   __resetPillarRegistryCache();
 });
 
