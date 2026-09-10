@@ -70,3 +70,35 @@ describe('ShoppingAddForm', () => {
     );
   });
 });
+
+/**
+ * A quantity is 0.5 kg as readily as 2, and any numeric `step` makes the
+ * fractional one `stepMismatch`-invalid — which blocks submit with no message
+ * a user sees. This form carried `noValidate` for that reason, switching off
+ * constraint validation for every field rather than the one, until the kit
+ * widened `step` to accept `'any'` (POPS-3299).
+ *
+ * jsdom implements `stepMismatch`, so this is asserted on the control rather
+ * than through a submit round-trip. A test that only types an integer passes
+ * against `step={1}` and proves nothing.
+ */
+describe('ShoppingAddForm — a fractional quantity is valid', () => {
+  it('lets the quantity field take any step', async () => {
+    renderForm();
+    expect(screen.getByLabelText('Qty')).toHaveAttribute('step', 'any');
+  });
+
+  it('does not report a step mismatch on 0.5', async () => {
+    renderForm();
+    const qty = screen.getByLabelText('Qty');
+
+    await userEvent.type(qty, '0.5');
+
+    expect((qty as HTMLInputElement).validity.stepMismatch).toBe(false);
+  });
+
+  it('leaves the rest of the form answering to native validation', async () => {
+    renderForm();
+    expect(screen.getByLabelText('Qty').closest('form')).not.toHaveAttribute('novalidate');
+  });
+});

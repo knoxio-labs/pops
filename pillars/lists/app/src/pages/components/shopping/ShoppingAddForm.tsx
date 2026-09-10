@@ -67,12 +67,8 @@ export function ShoppingAddForm(props: ShoppingAddFormProps): React.ReactElement
   };
   const disabled = props.isPending || state.label.trim().length === 0;
   return (
-    // `noValidate`: the kit's NumberInput types `step` as a number, so the qty
-    // field can no longer carry `step="any"`, and a decimal quantity would trip
-    // the browser's step-mismatch check and silently block submission.
     <form
       onSubmit={handleSubmit}
-      noValidate
       className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-3"
     >
       <QtyUnitInputs state={state} setState={setState} qtyRef={qtyRef} t={t} />
@@ -97,6 +93,7 @@ function QtyUnitInputs({
       <NumberInput
         ref={qtyRef}
         inputMode="decimal"
+        step="any"
         showSteppers={false}
         enableDrag={false}
         value={state.qty}
