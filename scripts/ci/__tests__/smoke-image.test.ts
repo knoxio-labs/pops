@@ -1340,8 +1340,18 @@ describe('reachedTheBuild', () => {
     expect(reachedTheBuild(new Map())).toBe(false);
   });
 
-  it('refuses a set with no script in it, whatever else it found', () => {
-    expect(reachedTheBuild(new Map([['.html', '/index.html']]))).toBe(false);
+  it('accepts a build that ships no script, because one of ours does not', () => {
+    // The docs image is a spec browser: one document, one stylesheet and
+    // thirteen JSON specs. A floor that demanded script would fail it.
+    expect(
+      reachedTheBuild(
+        new Map([
+          ['.html', '/index.html'],
+          ['.css', '/style.css'],
+          ['.json', '/openapi/finance.json'],
+        ])
+      )
+    ).toBe(true);
   });
 
   it('accepts a set carrying either spelling of script', () => {

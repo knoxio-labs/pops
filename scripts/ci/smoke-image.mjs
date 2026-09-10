@@ -433,16 +433,20 @@ export function isUnmappedMediaType(extension, contentType) {
  *
  * A discovery floor, per
  * [ADR-045](../../docs/architecture/adr-045-guards-must-prove-they-report.md):
- * a gate that iterates nothing must fail rather than report OK. Script is the
- * floor rather than a count, because every one of these images exists to ship
- * script — a document host, a module host, a docs bundle — so a set with none
- * in it is a `find` that did not reach `dist`, not a build without JavaScript.
+ * a gate that iterates nothing must fail rather than report OK.
+ *
+ * The floor is any file at all, not a file of a particular kind. Requiring
+ * script looks stronger and is wrong: the docs image is a spec browser whose
+ * whole build is one document, one stylesheet and thirteen JSON specs, and a
+ * floor that reads that as a broken enumeration fails a healthy image. A
+ * document root that does not exist is already caught before this — `find`
+ * exits non-zero and the run ends there.
  *
  * @param {ReadonlyMap<string, string>} byExtension
  * @returns {boolean}
  */
 export function reachedTheBuild(byExtension) {
-  return byExtension.has('.js') || byExtension.has('.mjs');
+  return byExtension.size > 0;
 }
 
 /**
@@ -870,8 +874,8 @@ async function main() {
         const byExtension = representativeByExtension(await servedFiles(containerId));
         if (!reachedTheBuild(byExtension)) {
           console.error(
-            `FAIL — ${image} serves no script under ${NGINX_DOC_ROOT}, so this check ` +
-              `enumerated nothing to judge (found: ${[...byExtension.keys()].join(', ') || 'nothing'})`
+            `FAIL — ${image} serves no file with an extension under ${NGINX_DOC_ROOT}, ` +
+              `so this check enumerated nothing to judge`
           );
           await reportFailure(containerId, image, mountPaths);
           process.exitCode = 1;
