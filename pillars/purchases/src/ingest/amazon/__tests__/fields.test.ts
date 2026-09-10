@@ -180,6 +180,47 @@ describe('readTimestamp', () => {
       expect(result.concatenated).toBe(true);
     });
   });
+
+  describe('a timestamp naming a day that does not exist', () => {
+    it('is dropped rather than rolled into the next month', () => {
+      // `new Date('2026-02-30T01:41:21Z')` is 2 March, and `.toISOString()`
+      // bakes it in. Nothing downstream notices: it is a real instant, it
+      // sorts correctly, and the contract's own calendar check at the DB
+      // boundary is handed the already-moved string it agrees with.
+      expect(new Date('2026-02-30T01:41:21Z').toISOString()).toBe('2026-03-02T01:41:21.000Z');
+      expect(readTimestamp('2026-02-30T01:41:21Z')).toBeNull();
+    });
+
+    it('is dropped for every month that overflows, not only February', () => {
+      expect(readTimestamp('2026-04-31T00:00:00Z')).toBeNull();
+      expect(readTimestamp('2026-06-31T00:00:00+10:00')).toBeNull();
+    });
+
+    it('drops 29 February in a common year and keeps it in a leap year', () => {
+      expect(readTimestamp('2026-02-29T00:00:00Z')).toBeNull();
+      expect(readTimestamp('2024-02-29T00:00:00Z')).toBe('2024-02-29T00:00:00.000Z');
+    });
+
+    it('drops a zero day or a zero month, which roll backwards rather than forwards', () => {
+      expect(readTimestamp('2026-02-00T00:00:00Z')).toBeNull();
+      expect(readTimestamp('2026-00-15T00:00:00Z')).toBeNull();
+    });
+
+    it('still reports a concatenated cell whose first value names no such day', () => {
+      const result = readTimestampWithAnomaly('2026-02-30T01:41:21Z and 2026-03-04T01:41:21Z');
+
+      expect(result.value).toBeNull();
+      expect(result.concatenated).toBe(true);
+    });
+
+    it('keeps the last day of every month it really has', () => {
+      // The refusal must not cost a real date. A check that rejected day 31
+      // wholesale would drop every month-end order.
+      expect(readTimestamp('2026-01-31T00:00:00Z')).toBe('2026-01-31T00:00:00.000Z');
+      expect(readTimestamp('2026-04-30T00:00:00Z')).toBe('2026-04-30T00:00:00.000Z');
+      expect(readTimestamp('2026-12-31T23:59:59Z')).toBe('2026-12-31T23:59:59.000Z');
+    });
+  });
 });
 
 describe('readQuantity', () => {

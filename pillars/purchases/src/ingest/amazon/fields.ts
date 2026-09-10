@@ -7,6 +7,7 @@
  * directly against the values that produced them.
  */
 import { isWellFormedSku } from '../../contract/constants.js';
+import { namesARealCalendarDay } from '../../contract/schemas/scalars.js';
 
 import type { CreateItemInput } from '../../db/services/purchase-input.js';
 
@@ -104,6 +105,36 @@ export function readTimestamp(raw: string | undefined): string | null {
 const STATES_A_ZONE = /(?:[Zz]|[+-]\d{2}:?\d{2})$/u;
 
 /**
+ * The `YYYY-MM-DD` every spelling of a timestamp starts with.
+ *
+ * A prefix rather than a whole-value shape on purpose. Which zoned
+ * spellings a real Amazon export uses is not settled, so pinning the entire
+ * value would drop rows that work today; the leading day is the one part
+ * every candidate spelling shares.
+ */
+const CALENDAR_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/u;
+
+/**
+ * Refuse a timestamp naming a day that does not exist.
+ *
+ * `new Date` normalises rather than rejects, so `2026-02-30T01:41:21Z`
+ * becomes 2 March and `.toISOString()` bakes it in. Nothing downstream
+ * notices: the value is a real instant, it sorts correctly, and
+ * `IsoTimestampSchema`'s own calendar check at the DB boundary is handed
+ * the already-moved string it now agrees with. The order lands in the wrong
+ * month with nothing recording that it was moved (POPS-3389).
+ *
+ * A cell with no `YYYY-MM-DD` prefix is left to `new Date`, which is what
+ * decided it before — this adds a refusal, it does not narrow what is
+ * accepted.
+ */
+function namesARealDay(value: string): boolean {
+  const match = CALENDAR_DATE_PREFIX.exec(value);
+  if (match === null) return true;
+  return namesARealCalendarDay(Number(match[1]), Number(match[2]), Number(match[3]));
+}
+
+/**
  * Refuse a timestamp that names no zone, rather than resolving it against
  * whichever machine is running the ingest.
  *
@@ -140,6 +171,7 @@ export function readTimestampWithAnomaly(raw: string | undefined): {
   const first = text.split(CONCATENATED_VALUE_SEPARATOR)[0]?.trim() ?? text;
 
   if (!STATES_A_ZONE.test(first)) return { value: null, concatenated };
+  if (!namesARealDay(first)) return { value: null, concatenated };
 
   const parsed = new Date(first);
   if (Number.isNaN(parsed.getTime())) return { value: null, concatenated };
