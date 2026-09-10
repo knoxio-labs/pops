@@ -88,8 +88,65 @@ function jsxOpeningTag(source, tagIndex) {
  * @param {string} source
  * @returns {NavItem[]}
  */
+/**
+ * The source holding this app's nav items.
+ *
+ * `app/src/nav.ts` when it still writes them out; the pillar's
+ * `src/contract/nav.ts` when it projects them instead, which is where they
+ * live once a pillar declares its nav once (POPS-3359). Falls back to the
+ * route table only when neither exists, which is how a pillar with no nav
+ * module was always handled.
+ *
+ * @param {string} appSrcDir  The app's `src` directory.
+ * @param {string} routesSource  Fallback when no nav module is found.
+ * @returns {string}
+ */
+export function readNavSource(appSrcDir, routesSource) {
+  const appNav = join(appSrcDir, 'nav.ts');
+  const appSource = existsSync(appNav) ? readFileSync(appNav, 'utf8') : undefined;
+  if (appSource !== undefined && !appSource.includes('navConfigFromWire(')) return appSource;
+  // `<pillar>/app/src` → `<pillar>/src/contract/nav.ts`.
+  const contractNav = join(appSrcDir, '..', '..', 'src', 'contract', 'nav.ts');
+  if (existsSync(contractNav)) return readFileSync(contractNav, 'utf8');
+  return appSource ?? routesSource;
+}
+
+/**
+ * `'bar-chart-3'` → `'BarChart3'`, and `'package'` → `'Package'`. A name
+ * already in PascalCase survives unchanged, since capitalising a capital is a
+ * no-op — which is what lets this run over either spelling.
+ *
+ * A pillar declares its nav once, in the contract, in the wire's kebab
+ * spelling, and `@pops/navigation`'s `navConfigFromWire` projects it for the
+ * app (POPS-3359). The icons this guard compares against come out of page
+ * source in PascalCase, so the projection has to happen here too. Duplicated
+ * rather than imported because this is a Tier A guard: it runs with no
+ * `node_modules`, so it cannot reach `@pops/navigation` (ADR-045).
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export function toPascalIcon(name) {
+  return name
+    .split('-')
+    .map((part) => (part === '' ? part : `${part.charAt(0).toUpperCase()}${part.slice(1)}`))
+    .join('');
+}
+
+/**
+ * Parse the nav items out of a nav declaration — an app's `navConfig` or a
+ * contract's `<PILLAR>_NAV`. Icons come back in the PascalCase form page
+ * source spells them in, whichever spelling the declaration used.
+ *
+ * @param {string} source
+ * @returns {NavItem[]}
+ */
 export function parseNavConfigItems(source) {
-  const navStart = source.indexOf('navConfig');
+  // `navConfig` for an app that still writes its nav out; `_NAV` for the
+  // contract declaration a projected app reads instead (POPS-3359). Both are
+  // one object with an `items` array; only the icon spelling differs, and
+  // {@link toPascalIcon} settles that.
+  const navStart = source.search(/\bnavConfig\b|\b[A-Z][A-Z0-9_]*_NAV\b/u);
   if (navStart === -1) return [];
   const navSpan = balancedSpan(source, navStart, '{', '}');
   if (navSpan === undefined) return [];
@@ -106,7 +163,7 @@ export function parseNavConfigItems(source) {
     const path = pathMatch?.[1];
     const icon = iconMatch?.[1];
     if (path === undefined || icon === undefined) continue;
-    items.push({ path: path.replace(/^\//, ''), icon });
+    items.push({ path: path.replace(/^\//, ''), icon: toPascalIcon(icon) });
   }
   return items;
 }
@@ -332,8 +389,7 @@ export function analyzeApp(appId, routesSource, readPage, navSource = routesSour
 function reportAppFile(appId, routesFile) {
   const routesSource = readFileSync(routesFile, 'utf8');
   const appSrcDir = dirname(routesFile);
-  const navFile = join(appSrcDir, 'nav.ts');
-  const navSource = existsSync(navFile) ? readFileSync(navFile, 'utf8') : routesSource;
+  const navSource = readNavSource(appSrcDir, routesSource);
   return reportApp(
     appId,
     routesSource,

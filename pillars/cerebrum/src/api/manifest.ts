@@ -1,3 +1,4 @@
+import { CEREBRUM_NAV } from '../contract/nav.js';
 import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from '../contract/pages.js';
 /**
  * Cerebrum pillar manifest payload builder.
@@ -16,45 +17,11 @@ import type {
   PageDescriptor,
 } from '@pops/pillar-sdk/manifest-schema';
 
-/**
- * Wire-format nav contribution, mirroring `pillars/cerebrum/app/src/nav.ts` —
- * same labels, labelKeys and items, with the icons in the kebab-case the wire
- * schema requires rather than the PascalCase the app spells them in.
- *
- * `order: 60` is the value the shell's bundle map carried for this pillar
- * while it was mounted statically; it moves here unchanged so the rail does
- * not reorder when the pillar does.
- */
-const CEREBRUM_NAV: NavConfigDescriptor = {
-  id: 'cerebrum',
-  label: 'Cerebrum',
-  labelKey: 'cerebrum',
-  icon: 'book-open',
-  color: 'sky',
-  basePath: '/cerebrum',
-  order: 60,
-  items: [
-    { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'file-text' },
-    { path: '/engrams', label: 'Engrams', labelKey: 'cerebrum.engrams.nav', icon: 'library' },
-    { path: '/query', label: 'Query', labelKey: 'cerebrum.query.nav', icon: 'search' },
-    {
-      path: '/documents',
-      label: 'Documents',
-      labelKey: 'cerebrum.documents.nav',
-      icon: 'file-text',
-    },
-    { path: '/nudges', label: 'Nudges', labelKey: 'cerebrum.nudges', icon: 'bell' },
-    {
-      path: '/proposals',
-      label: 'Proposals',
-      labelKey: 'cerebrum.proposals',
-      icon: 'git-pull-request',
-    },
-    { path: '/glia', label: 'Glia', labelKey: 'cerebrum.glia.nav', icon: 'activity' },
-    { path: '/reflex', label: 'Reflex', labelKey: 'cerebrum.reflex.nav', icon: 'zap' },
-    { path: '/plexus', label: 'Plexus', labelKey: 'cerebrum.plexus.nav', icon: 'plug' },
-  ],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const CEREBRUM_WIRE_NAV = {
+  ...CEREBRUM_NAV,
+  items: [...CEREBRUM_NAV.items],
+} satisfies NavConfigDescriptor;
 
 /** Projected from the contract; the `satisfies` is the conformance check. */
 const CEREBRUM_WIRE_PAGES = [...CEREBRUM_PAGES] as const satisfies readonly PageDescriptor[];
@@ -119,7 +86,7 @@ export function buildCerebrumManifest(version: string): ManifestPayload {
       },
     ],
     healthcheck: { path: '/health' },
-    nav: CEREBRUM_NAV,
+    nav: CEREBRUM_WIRE_NAV,
     pages: [...CEREBRUM_WIRE_PAGES],
     captureOverlay: CEREBRUM_CAPTURE_OVERLAY,
     assetsBaseUrl: CEREBRUM_ASSETS_BASE_URL,

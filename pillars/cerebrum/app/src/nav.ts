@@ -2,11 +2,23 @@
  * This app's navigation declaration: what the rail shows for it and which
  * pages its page nav lists.
  *
+ * Projected from `@pops/cerebrum`'s contract rather than written out a second
+ * time. The pillar used to declare its nav twice — here in PascalCase and
+ * again as a `NavConfigDescriptor` on the wire in kebab — with a guard making
+ * the two literals agree. `navConfigFromWire` makes the second declaration
+ * unnecessary, and projects at the type level too, so
+ * `satisfies AppNavConfigShape` still checks every icon against `IconName`
+ * and a typo in the contract's kebab spelling now reddens this build as well
+ * (POPS-3359).
+ *
  * Its own module rather than part of `routes.tsx` so that reading the nav
  * does not pull the route table's lazy page imports in with it — the design
  * playground draws the POPS chrome from these configs and has no use for
  * every page of every app.
  */
+import { CEREBRUM_NAV } from '@pops/cerebrum/manifest';
+import { navConfigFromWire } from '@pops/navigation';
+
 import type { IconName } from '@pops/navigation';
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
@@ -20,32 +32,4 @@ interface AppNavConfigShape {
   items: { path: string; label: string; labelKey: string; icon: IconName }[];
 }
 
-export const navConfig = {
-  id: 'cerebrum',
-  label: 'Cerebrum',
-  labelKey: 'cerebrum',
-  icon: 'BookOpen',
-  color: 'sky',
-  basePath: '/cerebrum',
-  items: [
-    { path: '', label: 'Ingest', labelKey: 'cerebrum.ingest', icon: 'FileText' },
-    { path: '/engrams', label: 'Engrams', labelKey: 'cerebrum.engrams.nav', icon: 'Library' },
-    { path: '/query', label: 'Query', labelKey: 'cerebrum.query.nav', icon: 'Search' },
-    {
-      path: '/documents',
-      label: 'Documents',
-      labelKey: 'cerebrum.documents.nav',
-      icon: 'FileText',
-    },
-    { path: '/nudges', label: 'Nudges', labelKey: 'cerebrum.nudges', icon: 'Bell' },
-    {
-      path: '/proposals',
-      label: 'Proposals',
-      labelKey: 'cerebrum.proposals',
-      icon: 'GitPullRequest',
-    },
-    { path: '/glia', label: 'Glia', labelKey: 'cerebrum.glia.nav', icon: 'Activity' },
-    { path: '/reflex', label: 'Reflex', labelKey: 'cerebrum.reflex.nav', icon: 'Zap' },
-    { path: '/plexus', label: 'Plexus', labelKey: 'cerebrum.plexus.nav', icon: 'Plug' },
-  ],
-} satisfies AppNavConfigShape;
+export const navConfig = navConfigFromWire(CEREBRUM_NAV) satisfies AppNavConfigShape;

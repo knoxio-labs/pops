@@ -31,6 +31,14 @@ export type {
 } from './SearchResultsPanel';
 export { SearchResultsPanel } from './SearchResultsPanel';
 export { iconMap } from './icon-map';
+export { navConfigFromWire, pascalCase } from './nav-from-wire';
+export type {
+  PascalCase,
+  ProjectedNavConfig,
+  ProjectedNavItem,
+  WireNavConfig,
+  WireNavItem,
+} from './nav-from-wire';
 export type {
   AppContext,
   AppContextEntity,

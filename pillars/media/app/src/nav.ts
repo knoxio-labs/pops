@@ -2,11 +2,23 @@
  * This app's navigation declaration: what the rail shows for it and which
  * pages its page nav lists.
  *
+ * Projected from `@pops/media`'s contract rather than written out a second
+ * time. The pillar used to declare its nav twice — here in PascalCase and
+ * again as a `NavConfigDescriptor` on the wire in kebab — with a guard making
+ * the two literals agree. `navConfigFromWire` makes the second declaration
+ * unnecessary, and projects at the type level too, so
+ * `satisfies AppNavConfigShape` still checks every icon against `IconName`
+ * and a typo in the contract's kebab spelling now reddens this build as well
+ * (POPS-3359).
+ *
  * Its own module rather than part of `routes.tsx` so that reading the nav
  * does not pull the route table's lazy page imports in with it — the design
  * playground draws the POPS chrome from these configs and has no use for
  * every page of every app.
  */
+import { MEDIA_NAV } from '@pops/media/manifest';
+import { navConfigFromWire } from '@pops/navigation';
+
 import type { IconName } from '@pops/navigation';
 
 /** Local type mirror for compile-time safety (shell owns the canonical types). */
@@ -20,21 +32,4 @@ interface AppNavConfigShape {
   items: { path: string; label: string; labelKey: string; icon: IconName }[];
 }
 
-export const navConfig = {
-  id: 'media',
-  label: 'Media',
-  labelKey: 'media',
-  icon: 'Film',
-  color: 'indigo',
-  basePath: '/media',
-  items: [
-    { path: '', label: 'Library', labelKey: 'media.library', icon: 'Library' },
-    { path: '/watchlist', label: 'Watchlist', labelKey: 'media.watchlist', icon: 'Bookmark' },
-    { path: '/history', label: 'History', labelKey: 'media.history', icon: 'Clock' },
-    { path: '/discover', label: 'Discover', labelKey: 'media.discover', icon: 'Compass' },
-    { path: '/rankings', label: 'Rankings', labelKey: 'media.rankings', icon: 'Trophy' },
-    { path: '/search', label: 'Search', labelKey: 'media.search', icon: 'Search' },
-    { path: '/compare', label: 'Compare', labelKey: 'media.compare', icon: 'ArrowLeftRight' },
-    { path: '/tier-list', label: 'Tier List', labelKey: 'media.tierList', icon: 'Layers' },
-  ],
-} satisfies AppNavConfigShape;
+export const navConfig = navConfigFromWire(MEDIA_NAV) satisfies AppNavConfigShape;

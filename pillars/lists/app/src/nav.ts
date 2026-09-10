@@ -2,25 +2,26 @@
  * This app's navigation declaration: what the rail shows for it and which
  * pages its page nav lists.
  *
+ * Projected from `@pops/lists`'s contract rather than written out a second
+ * time. The pillar used to declare its nav twice — here in PascalCase and
+ * again as a `NavConfigDescriptor` on the wire in kebab — with a guard making
+ * the two literals agree. `navConfigFromWire` makes the second declaration
+ * unnecessary, and projects at the type level too, so
+ * `satisfies AppNavConfigShape` still checks every icon against `IconName`
+ * and a typo in the contract's kebab spelling now reddens this build as well
+ * (POPS-3359).
+ *
  * Its own module rather than part of `routes.tsx` so that reading the nav
  * does not pull the route table's lazy page imports in with it — the design
  * playground draws the POPS chrome from these configs and has no use for
  * every page of every app.
  */
+import { LISTS_NAV } from '@pops/lists/manifest';
+import { navConfigFromWire } from '@pops/navigation';
 
-/**
- * Local type mirror for compile-time safety (shell owns the canonical types).
- *
- * `IconName` here is the narrow set of icons app-lists actually references,
- * NOT the `@pops/navigation` union: a static dep on `@pops/navigation` would
- * close a `tsc -b` project-reference cycle (`app-food-db` → `app-lists` → `navigation` →
- * `api-client` → `api` → `app-food-db`). Each literal here must also exist
- * in the navigation `IconName` union and the shell `iconMap` — assignability
- * (literal → wider union) catches drift at the shell's `AppNavConfig[]`
- * boundary.
- */
-type IconName = 'ListChecks' | 'LayoutDashboard';
+import type { IconName } from '@pops/navigation';
 
+/** Local type mirror for compile-time safety (shell owns the canonical types). */
 interface AppNavConfigShape {
   id: string;
   label: string;
@@ -31,15 +32,4 @@ interface AppNavConfigShape {
   items: { path: string; label: string; labelKey: string; icon: IconName }[];
 }
 
-export const navConfig = {
-  id: 'lists',
-  label: 'Lists',
-  labelKey: 'lists',
-  icon: 'ListChecks',
-  color: 'sky',
-  basePath: '/lists',
-  items: [
-    { path: '', label: 'Home', labelKey: 'lists.home', icon: 'LayoutDashboard' },
-    // Detail pages (`/lists/:id`) are deep links, not sidebar entries.
-  ],
-} satisfies AppNavConfigShape;
+export const navConfig = navConfigFromWire(LISTS_NAV) satisfies AppNavConfigShape;

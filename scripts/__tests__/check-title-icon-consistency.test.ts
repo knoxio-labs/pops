@@ -9,8 +9,10 @@ import {
   parseLazyImports,
   parseNavConfigItems,
   parseRouteComponents,
+  readNavSource,
   reportApp,
   resolvePageHeaderIconUsage,
+  toPascalIcon,
 } from '../check-title-icon-consistency.mjs';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -122,10 +124,10 @@ describe('parseRouteComponents', () => {
     // The gate silently checked nothing here: all nine nav items were skipped
     // as unresolvable. Pinned against the real files, not fixtures, because a
     // fixture cannot notice the tree drifting back into an unparsed shape —
-    // including the nav moving out of routes.tsx into nav.ts, which is what
-    // the two reads below are.
+    // including the nav moving out of routes.tsx into nav.ts, and then out of
+    // nav.ts into the contract, which is what the two reads below are.
     const routes = readFileSync(join(repoRoot, 'pillars/food/app/src/routes.tsx'), 'utf8');
-    const nav = readFileSync(join(repoRoot, 'pillars/food/app/src/nav.ts'), 'utf8');
+    const nav = readNavSource(join(repoRoot, 'pillars/food/app/src'), routes);
     const navItems = parseNavConfigItems(nav);
     const components = parseRouteComponents(routes);
     expect(navItems).toHaveLength(9);
@@ -302,5 +304,41 @@ describe('reportApp', () => {
   it('reports zero coverage when nothing resolves, instead of looking clean', () => {
     const report = reportApp('demo', ROUTES_SOURCE, () => undefined);
     expect(report).toMatchObject({ navItems: 3, resolved: 0, withPageHeader: 0, withIcon: 0 });
+  });
+});
+
+/**
+ * The nav a projected app reads is the contract's, in the wire's kebab
+ * spelling, while the icons this guard compares against come out of page
+ * source in PascalCase (POPS-3359). A guard that stopped projecting would
+ * report every icon as mismatched, which is loud; one that stopped *finding*
+ * the nav reports nothing at all, which is not — so both are asserted.
+ */
+describe('reading a projected nav', () => {
+  it('projects a kebab icon and leaves a PascalCase one alone', () => {
+    expect(toPascalIcon('bar-chart-3')).toBe('BarChart3');
+    expect(toPascalIcon('package')).toBe('Package');
+    expect(toPascalIcon('BarChart3')).toBe('BarChart3');
+  });
+
+  it('finds the items in a contract declaration, not only in a navConfig', () => {
+    const contract = [
+      'export const AI_NAV = {',
+      "  id: 'ai',",
+      "  icon: 'bot',",
+      "  items: [{ path: '', label: 'AI Usage', labelKey: 'ai.usage', icon: 'bar-chart-3' }],",
+      '} as const;',
+    ].join('\n');
+
+    expect(parseNavConfigItems(contract)).toEqual([{ path: '', icon: 'BarChart3' }]);
+  });
+
+  it('reads the contract when the app nav is a projection, and the app nav when it is not', () => {
+    const appDir = join(repoRoot, 'pillars', 'ai', 'app', 'src');
+
+    // The real tree: `ai` projects, so this has to reach past `app/src/nav.ts`
+    // to the contract or it finds no items at all.
+    expect(readNavSource(appDir, 'fallback')).toContain('AI_NAV');
+    expect(parseNavConfigItems(readNavSource(appDir, 'fallback'))).not.toHaveLength(0);
   });
 });

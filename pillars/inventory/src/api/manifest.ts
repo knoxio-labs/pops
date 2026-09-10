@@ -10,6 +10,7 @@
  * `pillars/inventory/app/src/routes.tsx` verbatim (icons translated to
  * the kebab-case wire form required by `NavConfigDescriptorSchema`).
  */
+import { INVENTORY_NAV } from '../contract/nav.js';
 import { INVENTORY_PAGES } from '../contract/pages.js';
 import { inventoryManifest } from '../contract/settings/index.js';
 
@@ -30,32 +31,11 @@ export function buildInventoryCapabilityReporter(): CapabilityReporter {
   return () => ({ settings: true });
 }
 
-const INVENTORY_NAV: NavConfigDescriptor = {
-  id: 'inventory',
-  label: 'Inventory',
-  labelKey: 'inventory',
-  icon: 'package',
-  color: 'amber',
-  basePath: '/inventory',
-  order: 30,
-  items: [
-    { path: '', label: 'Items', labelKey: 'inventory.items', icon: 'package' },
-    {
-      path: '/warranties',
-      label: 'Warranties',
-      labelKey: 'inventory.warranties',
-      icon: 'shield-check',
-    },
-    { path: '/locations', label: 'Locations', labelKey: 'inventory.locations', icon: 'map-pin' },
-    { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'bar-chart-3' },
-    {
-      path: '/connections',
-      label: 'Connections',
-      labelKey: 'inventory.connections',
-      icon: 'network',
-    },
-  ],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const INVENTORY_WIRE_NAV = {
+  ...INVENTORY_NAV,
+  items: [...INVENTORY_NAV.items],
+} satisfies NavConfigDescriptor;
 
 /** Projected from the contract; the `satisfies` is the conformance check. */
 const INVENTORY_WIRE_PAGES = [...INVENTORY_PAGES] as const satisfies readonly PageDescriptor[];
@@ -98,7 +78,7 @@ export function buildInventoryManifest(version: string): ManifestPayload {
     uri: { types: [] },
     consumedSettings: { keys: [] },
     settings: { manifests: [inventoryManifest] },
-    nav: INVENTORY_NAV,
+    nav: INVENTORY_WIRE_NAV,
     pages: [...INVENTORY_WIRE_PAGES],
     assetsBaseUrl: INVENTORY_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },

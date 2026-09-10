@@ -1,3 +1,4 @@
+import { PURCHASES_NAV } from '../contract/nav.js';
 import { PURCHASES_PAGES as CONTRACT_PAGES } from '../contract/pages.js';
 
 import type {
@@ -8,39 +9,11 @@ import type {
 
 export const PURCHASES_PILLAR_ID = 'purchases' as const;
 
-/**
- * Wire-format nav contribution for the purchases pillar.
- *
- * Carries one item per entry in the app's `navConfig`
- * (`pillars/purchases/app/src/routes.tsx`), in the same order and with the
- * same paths and label keys. Two fields have no counterpart there rather than
- * a matching one: `order`, which the app's config does not carry at all — the
- * rail position is a wire property, read from here — and `icon`, which names
- * the same Lucide
- * glyphs in the kebab-case the wire schema requires rather than the
- * PascalCase the app spells them in.
- *
- * `order` sits between finance (10) and media (20) rather than at the end of
- * the rail. Purchases exists to reconcile against finance transactions and
- * the operator crosses between the two constantly, so the two belong
- * adjacent; the sparse scheme's gaps are what make placing a pillar at its
- * semantic position possible without renumbering everything after it.
- */
-const PURCHASES_NAV: NavConfigDescriptor = {
-  id: 'purchases',
-  label: 'Purchases',
-  labelKey: 'purchases',
-  icon: 'receipt',
-  color: 'rose',
-  basePath: '/purchases',
-  order: 15,
-  items: [
-    { path: '', label: 'Reconcile', labelKey: 'purchases.reconcile', icon: 'receipt' },
-    { path: '/merchants', label: 'Merchants', labelKey: 'purchases.merchants', icon: 'building-2' },
-    { path: '/receipts', label: 'Receipts', labelKey: 'purchases.receipts', icon: 'file-text' },
-    { path: '/products', label: 'Products', labelKey: 'purchases.products', icon: 'package' },
-  ],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const PURCHASES_WIRE_NAV = {
+  ...PURCHASES_NAV,
+  items: [...PURCHASES_NAV.items],
+} satisfies NavConfigDescriptor;
 
 /**
  * Where the shell's runtime loader fetches this pillar's UI bundle from.
@@ -184,7 +157,7 @@ export function buildPurchasesManifest(version: string): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [...PURCHASES_URI_TYPES] },
     consumedSettings: { keys: [] },
-    nav: PURCHASES_NAV,
+    nav: PURCHASES_WIRE_NAV,
     pages: [...PURCHASES_PAGES],
     assetsBaseUrl: PURCHASES_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },

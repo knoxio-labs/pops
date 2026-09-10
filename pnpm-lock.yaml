@@ -1735,6 +1735,9 @@ importers:
       '@pops/food':
         specifier: workspace:*
         version: link:..
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../../libs/navigation
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../../libs/sdk
@@ -2132,6 +2135,9 @@ importers:
       '@pops/lists':
         specifier: workspace:*
         version: link:..
+      '@pops/navigation':
+        specifier: workspace:*
+        version: link:../../../libs/navigation
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../../libs/sdk
