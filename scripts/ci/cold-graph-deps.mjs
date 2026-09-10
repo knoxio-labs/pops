@@ -15,7 +15,7 @@
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -163,8 +163,20 @@ function unitSourceFiles(/** @type {string} */ unitDir, /** @type {Map<string, U
 const POPS_SPECIFIER = /(?:from|import)\s*\(?\s*['"](@pops\/[^'"]+)['"]/gu;
 
 /**
- * The `@pops/*` packages this unit imports whose types are emitted into
- * `dist/`.
+ * @typedef {object} ColdSpecifier
+ * @property {string} name The package name.
+ * @property {string} subpath The imported subpath, `''` for the bare specifier.
+ * @property {string} types The `types` entry that subpath publishes.
+ */
+
+/**
+ * Every `@pops/*` import in this unit whose types are emitted into `dist/`,
+ * keyed by the subpath actually imported.
+ *
+ * The subpath matters and cost a review finding to notice: a package may
+ * publish `.` from `src/` and `./manifest` from `dist/`, and asking only about
+ * `.` would call that package built while the file `tsc` is about to look for
+ * does not exist — the exact silent pass this module exists to prevent.
  *
  * Read off the unit's own source rather than its `dependencies`, because a
  * declared dependency whose types are published from `src/` costs nothing and
@@ -173,12 +185,12 @@ const POPS_SPECIFIER = /(?:from|import)\s*\(?\s*['"](@pops\/[^'"]+)['"]/gu;
  *
  * @param {string} unitDir
  * @param {Map<string, Unit>} units
- * @returns {string[]} Package names, sorted, deduplicated.
+ * @returns {ColdSpecifier[]} Sorted, deduplicated by name and subpath.
  */
-export function coldGraphDependencies(unitDir, units) {
+export function coldGraphSpecifiers(unitDir, units) {
   const self = [...units.values()].find((unit) => unit.dir === unitDir);
-  /** @type {Set<string>} */
-  const cold = new Set();
+  /** @type {Map<string, ColdSpecifier>} */
+  const cold = new Map();
   for (const file of unitSourceFiles(unitDir, units)) {
     let source;
     try {
@@ -193,44 +205,52 @@ export function coldGraphDependencies(unitDir, units) {
       if (name === self?.name) continue;
       const dependency = units.get(name);
       if (dependency === undefined) continue;
-      const types = typesEntryFor(dependency.pkg, segments.slice(2).join('/'));
-      if (types !== undefined && resolvesIntoDist(types)) cold.add(name);
+      const subpath = segments.slice(2).join('/');
+      const types = typesEntryFor(dependency.pkg, subpath);
+      if (types === undefined || !resolvesIntoDist(types)) continue;
+      cold.set(`${name}\u0000${subpath}`, { name, subpath, types });
     }
   }
-  return [...cold].toSorted();
+  return [...cold.values()].toSorted((a, b) =>
+    a.name === b.name ? a.subpath.localeCompare(b.subpath) : a.name.localeCompare(b.name)
+  );
 }
 
 /**
- * Those of `names` whose published types are not on disk yet.
- *
- * Resolved through the unit's own `node_modules`, which is where `tsc` looks:
- * pnpm links each workspace dependency there, so a missing link and an unbuilt
- * package fail the same way and are reported the same way.
+ * The distinct `@pops/*` packages this unit can only type-check once built.
  *
  * @param {string} unitDir
- * @param {string[]} names
  * @param {Map<string, Unit>} units
- * @returns {{ name: string; types: string }[]}
+ * @returns {string[]} Package names, sorted, deduplicated.
  */
-export function missingTypeEntries(unitDir, names, units) {
-  /** @type {{ name: string; types: string }[]} */
-  const missing = [];
-  for (const name of names) {
-    const dependency = units.get(name);
+export function coldGraphDependencies(unitDir, units) {
+  return [...new Set(coldGraphSpecifiers(unitDir, units).map((entry) => entry.name))].toSorted();
+}
+
+/**
+ * Those of `specifiers` whose published types are not on disk yet.
+ *
+ * Each is checked at the subpath it was imported at, inside the dependency's
+ * own directory — pnpm links every workspace dependency into the importer's
+ * `node_modules`, so a missing link and an unbuilt package fail the same way
+ * and are reported the same way.
+ *
+ * @param {ColdSpecifier[]} specifiers
+ * @param {Map<string, Unit>} units
+ * @returns {string[]} The distinct package names that are not built.
+ */
+export function missingTypeEntries(specifiers, units) {
+  /** @type {Set<string>} */
+  const missing = new Set();
+  for (const entry of specifiers) {
+    const dependency = units.get(entry.name);
     if (dependency === undefined) continue;
-    const types = typesEntryFor(dependency.pkg, '');
-    if (types === undefined || !resolvesIntoDist(types)) continue;
-    const onDisk = join(dependency.dir, types.replace(/^\.\//u, ''));
+    const onDisk = join(dependency.dir, entry.types.replace(/^\.\//u, ''));
     try {
       statSync(onDisk);
     } catch {
-      missing.push({ name, types });
+      missing.add(entry.name);
     }
   }
-  return missing;
-}
-
-/** The unit path as this repo writes it in messages. */
-export function unitLabel(/** @type {string} */ unitDir, /** @type {string} */ root = repoRoot) {
-  return relative(root, unitDir);
+  return [...missing].toSorted();
 }

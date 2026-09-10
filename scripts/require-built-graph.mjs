@@ -30,7 +30,7 @@
 import { resolve } from 'node:path';
 
 import {
-  coldGraphDependencies,
+  coldGraphSpecifiers,
   missingTypeEntries,
   readUnits,
   workspaceRootFor,
@@ -48,11 +48,9 @@ function main() {
 
   const unitDir = resolve(args[0] ?? process.cwd());
   const units = readUnits(workspaceRootFor(unitDir));
-  const needed = coldGraphDependencies(unitDir, units);
-  const missing = missingTypeEntries(unitDir, needed, units);
-  if (missing.length === 0) process.exit(0);
+  const names = missingTypeEntries(coldGraphSpecifiers(unitDir, units), units);
+  if (names.length === 0) process.exit(0);
 
-  const names = missing.map((entry) => entry.name);
   console.error(
     `${names.join(', ')} ${names.length === 1 ? 'has' : 'have'} not been built. This unit ` +
       'imports compiled output, so `tsc` here would report every one of those imports as a ' +

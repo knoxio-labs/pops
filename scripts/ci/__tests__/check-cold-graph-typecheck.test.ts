@@ -48,12 +48,16 @@ afterAll(() => {
 });
 
 interface PlantOptions {
-  /** The dependency's published types entry. */
+  /** The dependency's published types entry for `.`. */
   readonly types: string;
   /** The importing unit's `typecheck` script. */
   readonly typecheck: string;
-  /** Whether the dependency's types file exists on disk. */
+  /** Whether the dependency's `.` types file exists on disk. */
   readonly built?: boolean;
+  /** A second export the dependency publishes, and whether it is on disk. */
+  readonly subpath?: { readonly name: string; readonly types: string; readonly built: boolean };
+  /** What the importing unit imports; defaults to the bare specifier. */
+  readonly imports?: string;
 }
 
 /**
@@ -65,22 +69,32 @@ interface PlantOptions {
  * wrong export key, a nested unit swept into its parent's sources, a `dist/`
  * that is there after all.
  */
-function plantWorkspace({ types, typecheck, built = false }: PlantOptions): string {
+function plantWorkspace({
+  types,
+  typecheck,
+  built = false,
+  subpath,
+  imports = '@pops/widget',
+}: PlantOptions): string {
   const root = mkdtempSync(join(tmpdir(), 'cold-graph-'));
   plantedRoots.push(root);
   writeFileSync(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'libs/*'\n  - 'pillars/*'\n");
 
   const widget = join(root, 'libs', 'widget');
   mkdirSync(widget, { recursive: true });
+  const exports: Record<string, { types: string }> = { '.': { types } };
+  if (subpath !== undefined) exports[`./${subpath.name}`] = { types: subpath.types };
   writeFileSync(
     join(widget, 'package.json'),
-    `${JSON.stringify({ name: '@pops/widget', exports: { '.': { types } } }, null, 2)}\n`
+    `${JSON.stringify({ name: '@pops/widget', exports }, null, 2)}\n`
   );
-  if (built) {
-    const emitted = join(widget, dirname(types.replace(/^\.\//u, '')));
-    mkdirSync(emitted, { recursive: true });
-    writeFileSync(join(widget, types.replace(/^\.\//u, '')), 'export {};\n');
-  }
+  const emit = (relativePath: string): void => {
+    const target = join(widget, relativePath.replace(/^\.\//u, ''));
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, 'export {};\n');
+  };
+  if (built) emit(types);
+  if (subpath?.built === true) emit(subpath.types);
 
   const host = join(root, 'pillars', 'host');
   mkdirSync(join(host, 'src'), { recursive: true });
@@ -88,7 +102,7 @@ function plantWorkspace({ types, typecheck, built = false }: PlantOptions): stri
     join(host, 'package.json'),
     `${JSON.stringify({ name: '@pops/host', scripts: { typecheck } }, null, 2)}\n`
   );
-  writeFileSync(join(host, 'src', 'index.ts'), "import { thing } from '@pops/widget';\n");
+  writeFileSync(join(host, 'src', 'index.ts'), `import { thing } from '${imports}';\n`);
   return root;
 }
 
@@ -170,6 +184,32 @@ describe('the refusal itself', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
       types: './dist/index.d.ts',
       typecheck: 'tsc --noEmit',
       built: true,
+    });
+
+    expect(runHelper(join(root, 'pillars', 'host')).status).toBe(0);
+  });
+
+  it('answers at the subpath imported, not at the package root', () => {
+    // A package may publish `.` from src and a subpath from dist. Asking only
+    // about `.` would call this built while the file `tsc` looks for is absent.
+    const root = plantWorkspace({
+      types: './src/index.ts',
+      typecheck: 'tsc --noEmit',
+      subpath: { name: 'manifest', types: './dist/manifest.d.ts', built: false },
+      imports: '@pops/widget/manifest',
+    });
+    const { status, stderr } = runHelper(join(root, 'pillars', 'host'));
+
+    expect(status).toBe(1);
+    expect(stderr).toContain('@pops/widget');
+  });
+
+  it('is satisfied by the subpath being built, even with the root published from src', () => {
+    const root = plantWorkspace({
+      types: './src/index.ts',
+      typecheck: 'tsc --noEmit',
+      subpath: { name: 'manifest', types: './dist/manifest.d.ts', built: true },
+      imports: '@pops/widget/manifest',
     });
 
     expect(runHelper(join(root, 'pillars', 'host')).status).toBe(0);
