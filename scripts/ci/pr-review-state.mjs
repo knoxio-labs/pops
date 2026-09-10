@@ -415,10 +415,48 @@ export function computeDiffRange(baseSha, headSha, lastReviewedSha, isAncestor) 
 }
 
 /**
+ * The spellings a remedy naming a property key may legitimately take.
+ *
+ * A remedy is written the way the reviewer says it — `aria-label?:` — and a
+ * hyphenated key cannot be spelled that way in TypeScript. `aria-label` is
+ * not an identifier, so the key must be quoted (`'aria-label'?: string`), and
+ * a remedy asking for the bare form asks for a string no valid source file
+ * can contain. The finding is then permanently unresolvable and
+ * `review-findings-gate`, a required check, is permanently red with no
+ * correct exit — which trains the exits that do work: reshaping correct code
+ * until the matcher is happy, or `--admin`. Both are worse than the finding
+ * (POPS-3391, seen on POPS-3298's PR).
+ *
+ * So a LEADING property key is offered quoted as well as bare, both ways
+ * round: a remedy that quotes the key matches source that does not, and the
+ * reverse. Nothing else in the string is touched. A loose match over the
+ * whole needle would resolve findings on text that merely looks similar,
+ * which is the failure this matcher exists to avoid.
+ *
+ * @param {string} needle
+ * @returns {string[]} Candidate spellings, the original first.
+ */
+export function remedyNeedles(needle) {
+  const trimmed = needle.trim();
+  const match = /^(['"]?)([A-Za-z_$][\w$-]*)\1(\s*\??\s*:)/u.exec(trimmed);
+  if (match === null) return [needle];
+  const key = match[2] ?? '';
+  const separator = match[3] ?? '';
+  const rest = trimmed.slice(match[0].length);
+  return [
+    needle,
+    `${key}${separator}${rest}`,
+    `'${key}'${separator}${rest}`,
+    `"${key}"${separator}${rest}`,
+  ];
+}
+
+/**
  * Does `path`, as of the reviewed commit, contain `needle`?
  *
  * Whitespace-insensitive for the same reason finding identity is: a reindent
- * or a formatter pass must not change the answer.
+ * or a formatter pass must not change the answer. Quote-insensitive on a
+ * leading property key, for the reason {@link remedyNeedles} sets out.
  *
  * @param {(path: string) => string | null} readFile
  * @param {string} path
@@ -427,7 +465,9 @@ export function computeDiffRange(baseSha, headSha, lastReviewedSha, isAncestor) 
  */
 function fileContains(readFile, path, needle) {
   const content = readFile(path);
-  return content !== null && normalize(content).includes(normalize(needle));
+  if (content === null) return false;
+  const haystack = normalize(content);
+  return remedyNeedles(needle).some((candidate) => haystack.includes(normalize(candidate)));
 }
 
 /**
