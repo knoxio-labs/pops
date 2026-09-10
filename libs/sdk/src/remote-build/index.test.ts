@@ -338,6 +338,30 @@ describe('findProcessGlobalUsage', () => {
     expect(findProcessGlobalUsage([chunk('preprocess.run(); postProcess.env;')])).toEqual([]);
   });
 
+  // POPS-3406. The word at the end of a sentence, in a vendored comment, is
+  // not a member expression. Minification strips comments, so the shipped
+  // artefact was clean and this never fired — while every unminified build
+  // failed, which is what made a loader-mounted pillar undebuggable.
+  it('does not flag the word process ending a sentence in a comment', () => {
+    const found = findProcessGlobalUsage([
+      chunk('/**\n * Finalizes the encryption or decryption process.\n */\nexport const x = 1;'),
+    ]);
+    expect(found).toEqual([]);
+  });
+
+  it('still flags a real read in a chunk that also has that prose', () => {
+    // The tightening must not buy quiet by going blind: the same chunk with an
+    // actual read in it is still named.
+    const found = findProcessGlobalUsage([
+      chunk('// the decryption process.\nconst mode = process.env.NODE_ENV;'),
+    ]);
+    expect(found).toEqual(['entry.js']);
+  });
+
+  it('does not flag the same word inside a string literal', () => {
+    expect(findProcessGlobalUsage([chunk('const s = "process.";\nconst n = 1;')])).toEqual([]);
+  });
+
   /**
    * The shape that made a chunk-wide exemption necessary rather than a local
    * one: `pdfjs-dist` computes the check once, into a variable, and every
