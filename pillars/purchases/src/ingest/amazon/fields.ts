@@ -93,6 +93,42 @@ export function readTimestamp(raw: string | undefined): string | null {
 }
 
 /** {@link readTimestamp}, reporting whether the cell held concatenated values. */
+/**
+ * Does this timestamp say where, as well as when?
+ *
+ * A trailing `Z`, or an offset with minutes — `+10:00`, `+1000`. The
+ * hours-only form ISO-8601 also allows (`+10`) is deliberately absent: V8
+ * reads it as an Invalid Date, so a cell spelling it that way is dropped
+ * whatever this says, and claiming it here would only mislabel the reason.
+ */
+const STATES_A_ZONE = /(?:[Zz]|[+-]\d{2}:?\d{2})$/u;
+
+/**
+ * Refuse a timestamp that names no zone, rather than resolving it against
+ * whichever machine is running the ingest.
+ *
+ * `new Date('2026-02-02T01:41:21')` reads a naive timestamp in the HOST
+ * process timezone, and `.toISOString()` then bakes that reading in
+ * permanently. The same export file ingested on a Sydney laptop and in a UTC
+ * container would land `ordered_at` values eleven hours apart, and nothing
+ * downstream would notice: the value is plausible, it sorts correctly, and
+ * `canonicalInstant` at the DB boundary is handed an already-`Z` string it
+ * accepts without complaint. The misplacement is baked in before anything
+ * validates (POPS-2533).
+ *
+ * Refusing is the same answer `IsoTimestampSchema` gives for the same
+ * reason — a naive timestamp compared against a transaction date is
+ * ambiguous by up to a day, which is a meaningful fraction of a 14–21 day
+ * matching window — and a refused `Order Date` is a reported drop rather
+ * than a silent one, which `README.md` already describes as the intended
+ * behaviour for an unreadable one.
+ *
+ * Only the naive case is refused. Which zoned spellings a real Amazon export
+ * uses is not settled — every cell in the reference fixtures carries `Z`,
+ * but that is the fixtures speaking, not the exporter — so narrowing the
+ * accepted shapes further would risk dropping rows that work today, to fix a
+ * hazard that only the naive case actually has.
+ */
 export function readTimestampWithAnomaly(raw: string | undefined): {
   value: string | null;
   concatenated: boolean;
@@ -102,6 +138,8 @@ export function readTimestampWithAnomaly(raw: string | undefined): {
 
   const concatenated = text.includes(CONCATENATED_VALUE_SEPARATOR);
   const first = text.split(CONCATENATED_VALUE_SEPARATOR)[0]?.trim() ?? text;
+
+  if (!STATES_A_ZONE.test(first)) return { value: null, concatenated };
 
   const parsed = new Date(first);
   if (Number.isNaN(parsed.getTime())) return { value: null, concatenated };
