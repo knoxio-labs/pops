@@ -118,12 +118,6 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         ),
       })),
 
-    availableTags: () =>
-      runHttp(() => ({
-        status: 200 as const,
-        body: { tags: transactionsService.collectAvailableTags(db) },
-      })),
-
     get: ({ params }: Req['get']) =>
       runHttp(() => {
         try {

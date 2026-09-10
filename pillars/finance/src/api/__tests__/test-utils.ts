@@ -598,7 +598,6 @@ export function makeClient(app: Express) {
           total: number;
           truncated: boolean;
         }>((r) => r.get('/transactions/descriptions-preview').query(query)),
-      availableTags: () => call<{ tags: string[] }>((r) => r.get('/transactions/available-tags')),
     },
     tagRules: {
       list: (query: TagRuleListQuery = {}) =>

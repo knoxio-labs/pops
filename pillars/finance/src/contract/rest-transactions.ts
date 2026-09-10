@@ -68,12 +68,6 @@ export const financeTransactionsContract = c.router({
     },
     summary: 'Descriptions (+ checksums) of existing transactions for client-side rule preview',
   },
-  availableTags: {
-    method: 'GET',
-    path: '/transactions/available-tags',
-    responses: { 200: z.object({ tags: z.array(z.string()) }) },
-    summary: 'Distinct tag values across all transactions (autocomplete)',
-  },
   get: {
     method: 'GET',
     path: '/transactions/:id',

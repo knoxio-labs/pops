@@ -8934,25 +8934,6 @@ export type TransactionsCreateResponses = {
 export type TransactionsCreateResponse =
   TransactionsCreateResponses[keyof TransactionsCreateResponses];
 
-export type TransactionsAvailableTagsData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: '/transactions/available-tags';
-};
-
-export type TransactionsAvailableTagsResponses = {
-  /**
-   * 200
-   */
-  200: {
-    tags: Array<string>;
-  };
-};
-
-export type TransactionsAvailableTagsResponse =
-  TransactionsAvailableTagsResponses[keyof TransactionsAvailableTagsResponses];
-
 export type TransactionsDescriptionsForPreviewData = {
   body?: never;
   path?: never;

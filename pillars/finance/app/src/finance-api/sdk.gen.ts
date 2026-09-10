@@ -280,8 +280,6 @@ import type {
   TagRulesUpdateResponses,
   TagRulesVocabularyData,
   TagRulesVocabularyResponses,
-  TransactionsAvailableTagsData,
-  TransactionsAvailableTagsResponses,
   TransactionsCreateData,
   TransactionsCreateErrors,
   TransactionsCreateResponses,
@@ -1897,17 +1895,6 @@ export const transactionsCreate = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options?.headers,
     },
-  });
-
-/**
- * Distinct tag values across all transactions (autocomplete)
- */
-export const transactionsAvailableTags = <ThrowOnError extends boolean = false>(
-  options?: Options<TransactionsAvailableTagsData, ThrowOnError>
-): RequestResult<TransactionsAvailableTagsResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<TransactionsAvailableTagsResponses, unknown, ThrowOnError>({
-    url: '/transactions/available-tags',
-    ...options,
   });
 
 /**

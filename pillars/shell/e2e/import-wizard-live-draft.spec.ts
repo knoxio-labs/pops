@@ -43,7 +43,6 @@
  *   POST /finance-api/corrections/propose-changeset → the proposed ChangeSet
  *   POST /finance-api/corrections/preview-changeset → its match impact
  *   GET  /finance-api/transactions/descriptions-preview → DB rows for preview
- *   GET  /finance-api/transactions/available-tags   → { tags: [] }
  *   POST /finance-api/imports/commit                → the commit result
  *   GET  /contacts-api/entities                     → the one known merchant
  *   GET  /finance-api/accounts                      → the one account
@@ -240,8 +239,6 @@ const CommitResponseSchema = z
     message: z.string(),
   })
   .strict();
-
-const AvailableTagsResponseSchema = z.object({ tags: z.array(z.string()) }).strict();
 
 /**
  * `POST /contacts-api/entities/lookup` — the whole contact set's match columns
@@ -500,10 +497,6 @@ async function setupMocks(page: Page): Promise<void> {
       { data: [], total: 0, truncated: false },
       'transactions.descriptionsPreview'
     )
-  );
-  await page.route(
-    '**/finance-api/transactions/available-tags',
-    fulfilWith(200, AvailableTagsResponseSchema, { tags: [] }, 'transactions.availableTags')
   );
   await page.route('**/finance-api/imports/commit', (route) => {
     commitRequest = route.request().postDataJSON() as CommitRequestBody;
