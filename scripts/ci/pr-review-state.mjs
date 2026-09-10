@@ -103,6 +103,145 @@ export function findingId(file, snippet) {
 }
 
 /**
+ * A second id for a finding whose content-addressed one is already taken.
+ *
+ * Derived from the base id and the title, so it is stable across runs however
+ * the model happens to order its output — an ordinal suffix would swap two
+ * findings' identities the moment the model reported them the other way
+ * round.
+ *
+ * The title is admitted here and nowhere else on purpose. {@link findingId}
+ * excludes it so a reworded finding keeps its id and merges as an update
+ * ("its prose is refreshed from the newer run"); that property only has to
+ * hold between findings that are otherwise identical, and two findings
+ * sharing a file and a snippet are exactly the case where nothing else can
+ * tell them apart.
+ *
+ * `ordinal` is the escape for the one case the title cannot separate: two
+ * findings sharing a file, a snippet AND a title are indistinguishable by
+ * every fact this module records, so the second onwards are numbered. That
+ * numbering is only as stable as the order the model reported them in —
+ * which is why it is reached for last rather than used as the scheme.
+ *
+ * @param {string} baseId
+ * @param {string} title
+ * @param {number} [ordinal]
+ * @returns {string}
+ */
+function qualifiedFindingId(baseId, title, ordinal = 0) {
+  const suffix = ordinal === 0 ? '' : `\n${ordinal}`;
+  return createHash('sha256')
+    .update(`${baseId}\n${normalize(title)}${suffix}`)
+    .digest('hex')
+    .slice(0, 12);
+}
+
+/**
+ * Which member of a colliding group keeps the base id.
+ *
+ * Alphabetical order alone decides it only when nothing already has a claim.
+ * A row at the base id in `prior` is a finding that has been tracked there
+ * across runs, carrying its `first_seen` and its status history; handing that
+ * row to whichever title happens to sort first this run would give a brand
+ * new finding another one's age, and push the genuinely continuing finding
+ * into a fresh row. So the prior occupant is matched by title first, and a
+ * member already tracked at its own qualified id is passed over second —
+ * moving it back to the base id would abandon the row it has.
+ *
+ * One case stays undecidable: the prior occupant reworded its title in the
+ * same run a new finding started colliding with it. Nothing recorded here
+ * separates them, so title order decides and one of the two rows changes age.
+ * That is a wrong `first_seen`, not a dropped finding — the failure this
+ * module refuses is the silent overwrite, and every member still gets a row.
+ *
+ * @param {string} baseId
+ * @param {Finding[]} byTitle Group members, in title order.
+ * @param {Map<string, Finding>} priorById
+ * @returns {Finding}
+ */
+function baseIdKeeper(baseId, byTitle, priorById) {
+  const occupant = priorById.get(baseId);
+  const continuing =
+    occupant === undefined
+      ? undefined
+      : byTitle.find((f) => normalize(f.title) === normalize(occupant.title));
+  if (continuing !== undefined) return continuing;
+  const unclaimed = byTitle.find((f) => !priorById.has(qualifiedFindingId(baseId, f.title)));
+  return unclaimed ?? /** @type {Finding} */ (byTitle[0]);
+}
+
+/**
+ * Title order, the last resort when no member of a group has a prior claim.
+ *
+ * @param {Finding} a @param {Finding} b @returns {number}
+ */
+function compareTitles(a, b) {
+  return a.title.localeCompare(b.title);
+}
+
+/**
+ * Give every finding in one run an id no other finding in it shares.
+ *
+ * `findingId` hashes the file and the snippet, so two genuinely different
+ * findings in one file that both have no snippet — "X is missing" is the
+ * common shape — or that point at the same offending line hash to the same
+ * id. {@link merge}'s id-keyed map then read the second as an update of the
+ * first: one real finding was silently overwritten and never appeared in any
+ * comment, with no warning and a review that looked clean (POPS-2545).
+ *
+ * Within a colliding group one member keeps the base id and the rest are
+ * qualified, rather than all of them being qualified. A run that reports only
+ * one of the group must not change that one's id, or it would arrive as a new
+ * finding beside the row it already had. Which one keeps it is
+ * {@link baseIdKeeper}'s call, which is why `prior` is passed in.
+ *
+ * Every id handed out is checked against the ones already spoken for, and a
+ * clash is numbered rather than allowed to stand: a duplicate id here IS the
+ * silent overwrite this function exists to prevent, so it must not be
+ * reachable through any group shape, however unlikely.
+ *
+ * @param {Finding[]} findings
+ * @param {Finding[]} [prior] Findings already tracked, for id continuity.
+ * @returns {Finding[]} Same order, ids made unique.
+ */
+export function disambiguateIds(findings, prior = []) {
+  /** @type {Map<string, Finding[]>} */
+  const groups = new Map();
+  for (const finding of findings) {
+    const group = groups.get(finding.id);
+    if (group === undefined) groups.set(finding.id, [finding]);
+    else group.push(finding);
+  }
+  const priorById = new Map(prior.map((f) => [f.id, f]));
+
+  /** @type {Map<Finding, string>} */
+  const rewritten = new Map();
+  const taken = new Set(groups.keys());
+  for (const [baseId, group] of groups) {
+    if (group.length === 1) continue;
+    const byTitle = group.toSorted(compareTitles);
+    const keeper = baseIdKeeper(baseId, byTitle, priorById);
+    for (const finding of byTitle) {
+      if (finding === keeper) continue;
+      let ordinal = 0;
+      let id = qualifiedFindingId(baseId, finding.title);
+      while (taken.has(id)) {
+        ordinal += 1;
+        id = qualifiedFindingId(baseId, finding.title, ordinal);
+      }
+      taken.add(id);
+      rewritten.set(finding, id);
+    }
+  }
+
+  if (rewritten.size === 0) return findings;
+  return findings.map((finding) => {
+    const id = rewritten.get(finding);
+    return id === undefined ? finding : { ...finding, id };
+  });
+}
+
+/**
  * The state of a PR nothing has reviewed yet.
  *
  * @returns {ReviewState}
@@ -419,7 +558,7 @@ export function merge(prior, incoming) {
   /** @type {Map<string, Finding>} */
   const byId = new Map(prior.map((f) => [f.id, { ...f }]));
   const order = prior.map((f) => f.id);
-  for (const finding of incoming) {
+  for (const finding of disambiguateIds(incoming, prior)) {
     const existing = byId.get(finding.id);
     if (existing === undefined) {
       byId.set(finding.id, { ...finding });
