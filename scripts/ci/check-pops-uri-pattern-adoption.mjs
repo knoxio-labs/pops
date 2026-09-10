@@ -50,12 +50,18 @@
  * drift apart the way the factory's docstring warns about, and pillar-wide
  * `PopsUriSchema` remains the wire-level check on top of it either way.
  *
- * What this guard cannot see, tracked rather than covered here: a pattern
- * assembled through string CONCATENATION (`'^pops://' + pillar + '/' + …`)
- * rather than a single string/template argument or a regex literal. Closing
- * that generally needs an expression parser, which conflicts with this
- * guard job's install-free constraint; `pops://` string concatenation does
- * not occur anywhere in the pillar today.
+ * A `new RegExp` argument assembled through string CONCATENATION is read
+ * too: the operands of a `+` chain are joined, and any operand that is not
+ * a string or template literal is folded to `${}` — so a concatenation
+ * that splices a variable pillar reads as interpolation (sanctioned) while
+ * one that spells the pillar out reads as the hard-coded bypass it is.
+ *
+ * What this guard still cannot see, tracked rather than covered here: a
+ * pattern assembled ACROSS STATEMENTS (`const head = '^pops://finance';`
+ * then `new RegExp(head + …)`), because only the argument expression
+ * itself is scanned. Following a binding to its definition needs an
+ * expression parser, which conflicts with this guard job's install-free
+ * constraint.
  *
  * Usage:
  *   node scripts/ci/check-pops-uri-pattern-adoption.mjs
