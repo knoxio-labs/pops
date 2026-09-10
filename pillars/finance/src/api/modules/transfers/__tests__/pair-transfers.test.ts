@@ -17,6 +17,7 @@ function tx(overrides: Partial<PairCandidate> = {}): PairCandidate {
     amount: -5000,
     accountId: 'Amex',
     date: '2026-07-01',
+    description: 'TRANSFER',
     relatedTransactionId: null,
     ...overrides,
   };
@@ -121,6 +122,83 @@ describe('findPairForTransaction', () => {
     if (result.kind === 'ambiguous') {
       expect([...result.candidateIds].toSorted()).toEqual(['ONE', 'THREE', 'TWO']);
     }
+  });
+
+  describe('a bank reference number breaks an otherwise exact tie', () => {
+    // The real 2026-06-30 case: an Everyday transfer, its credit-card
+    // counterpart, and an unrelated same-day same-amount PayID deposit. Both
+    // legs of the real transfer carry the bank's reference; the deposit does not.
+    const everyday = tx({
+      id: 'EVERYDAY',
+      amount: -300000,
+      accountId: 'Everyday',
+      date: '2026-06-30',
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 964110  TO 4564XXXXXXXX7373',
+    });
+    const creditCard = tx({
+      id: 'CARD',
+      amount: 300000,
+      accountId: 'ANZ Credit Card',
+      date: '2026-06-30',
+      description: 'PAYMENT THANKYOU 964110',
+    });
+    const payId = tx({
+      id: 'PAYID',
+      amount: 300000,
+      accountId: 'Amex',
+      date: '2026-06-30',
+      description: 'PayID Payment Received, Thank you',
+    });
+
+    it('links the candidate that shares the reference', () => {
+      expect(findPairForTransaction(everyday, [payId, creditCard], 3)).toEqual({
+        kind: 'match',
+        id: 'CARD',
+      });
+    });
+
+    it('stays ambiguous when no candidate carries a reference', () => {
+      const other = tx({ ...payId, id: 'OTHER', accountId: 'ING', description: 'DEPOSIT' });
+      const result = findPairForTransaction(everyday, [payId, other], 3);
+      expect(result.kind).toBe('ambiguous');
+    });
+
+    it('stays ambiguous when the target carries no reference of its own', () => {
+      const plain = tx({ ...everyday, description: 'TRANSFER TO SAVINGS' });
+      expect(findPairForTransaction(plain, [payId, creditCard], 3).kind).toBe('ambiguous');
+    });
+
+    it('stays ambiguous when the only reference present is a different one', () => {
+      const elsewhere = tx({ ...creditCard, description: 'PAYMENT THANKYOU 111111' });
+      expect(findPairForTransaction(everyday, [payId, elsewhere], 3).kind).toBe('ambiguous');
+    });
+
+    it('stays ambiguous when two candidates share the reference', () => {
+      const twin = tx({ ...creditCard, id: 'TWIN', accountId: 'Bendigo' });
+      const result = findPairForTransaction(everyday, [creditCard, twin, payId], 3);
+      expect(result.kind).toBe('ambiguous');
+    });
+
+    it('never reads the masked card number as a reference', () => {
+      // Both descriptions contain 4564XXXXXXXX7373-shaped digits; only the
+      // phrase-anchored reference may count.
+      const cardDigits = tx({ ...payId, description: 'PAYMENT THANKYOU 7373' });
+      expect(findPairForTransaction(everyday, [cardDigits, creditCard], 3)).toEqual({
+        kind: 'match',
+        id: 'CARD',
+      });
+      const onlyCardDigits = tx({ ...creditCard, description: 'DEPOSIT 4564 7373' });
+      expect(findPairForTransaction(everyday, [payId, onlyCardDigits], 3).kind).toBe('ambiguous');
+    });
+
+    it('does not let a shared reference beat a strictly nearer candidate', () => {
+      // A tie-breaker, never an override of the date predicate.
+      const laterCard = tx({ ...creditCard, date: '2026-07-01' });
+      expect(findPairForTransaction(everyday, [payId, laterCard], 3)).toEqual({
+        kind: 'match',
+        id: 'PAYID',
+      });
+    });
   });
 
   it('handles a credit target (positive amount) symmetrically', () => {
