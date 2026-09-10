@@ -49,6 +49,22 @@ describe('Autocomplete — how it is named', () => {
     expect(screen.getByRole('combobox')).toHaveAttribute('id', 'recipe-field');
   });
 
+  it('gives the input back cmdk\u2019s own id when the caller\u2019s id goes away', () => {
+    function Harness({ withId }: { withId: boolean }) {
+      return <Autocomplete {...(withId ? { id: 'recipe-field' } : {})} suggestions={[]} value="" />;
+    }
+    const { rerender } = render(<Harness withId />);
+    expect(screen.getByRole('combobox')).toHaveAttribute('id', 'recipe-field');
+
+    rerender(<Harness withId={false} />);
+
+    // Not merely "no longer recipe-field": a combobox with no id at all cannot
+    // be pointed at, and two of them sharing a stale one is worse still.
+    const id = screen.getByRole('combobox').getAttribute('id');
+    expect(id).not.toBe('recipe-field');
+    expect(id).toBeTruthy();
+  });
+
   it('computes its accessible name from aria-label', () => {
     render(<Autocomplete aria-label="Recipe" suggestions={[]} value="" />);
 

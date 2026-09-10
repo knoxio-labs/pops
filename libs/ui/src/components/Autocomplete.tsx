@@ -192,10 +192,21 @@ function useCallerNaming(
   id: string | undefined,
   ariaLabelledBy: string | undefined
 ): void {
+  // cmdk's own id, read once before anything overwrites it. React only writes
+  // an attribute when the prop changed between renders, and cmdk's id never
+  // does, so once this effect has replaced it React will not put it back — a
+  // caller whose id becomes undefined would otherwise keep the old string
+  // forever, which for a conditionally-derived id means two elements claiming
+  // one id.
+  const generatedId = useRef<string | null>(null);
+
   useLayoutEffect(() => {
     const input = inputRef.current;
     if (input === null) return;
+    generatedId.current ??= input.id;
     if (id !== undefined) input.id = id;
+    else if (generatedId.current !== '') input.id = generatedId.current;
+    else input.removeAttribute('id');
     // Removed rather than left alone when the caller names the field some
     // other way: cmdk's target is empty, so leaving it would shadow both
     // `aria-label` and a native `<label for>`.
