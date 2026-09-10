@@ -75,6 +75,7 @@ Runs immediately after `actions/checkout`. **No third-party import, at any depth
 | `scripts/check-escape-hatches.mjs`                  | `quality.yml` → `escape-hatches`                                                | TS/TSX source, JSON baseline                                     |
 | `scripts/check-touch-targets.mjs`                   | `quality.yml` → `touch-targets`                                                 | TS/TSX source, JSON baseline                                     |
 | `scripts/check-title-icon-consistency.mjs`          | `quality.yml` → `title-icon-consistency`                                        | Per-app `routes.tsx` and `nav.ts`, page source                   |
+| `scripts/check-nav-parity.mjs`                      | `quality.yml` → `nav-parity`                                                    | Per-pillar `app/src/nav.ts` and `src/api/manifest.ts`            |
 | `scripts/ci/check-control-characters.mjs`           | `quality.yml` → `control-characters`                                            | Every tracked file, raw bytes                                    |
 | `scripts/ci/check-design-tokens.mjs`                | `quality.yml` → `design-tokens`                                                 | Frontend TS/TSX/CSS source, class strings                        |
 | `scripts/ci/check-pillar-registration.mjs`          | `quality.yml` → `pillar-registration`                                           | Pillar server source, the SDK's `known-pillar-id.ts`             |

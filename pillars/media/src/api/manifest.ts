@@ -6,8 +6,9 @@ import { MEDIA_PAGES } from '../contract/pages.js';
  * central registry on boot (opt-in via `POPS_REGISTRY_ENABLED`). The `nav` +
  * `pages` UI dimensions let the shell derive the media app-rail entry and
  * route surface from the registry walk. Source values match
- * `pillars/media/app/src/routes.tsx` (icons in the kebab-case wire form
- * required by `NavConfigDescriptorSchema`).
+ * `pillars/media/app/src/nav.ts` (icons in the kebab-case wire form required
+ * by `NavConfigDescriptorSchema`), held there by
+ * `scripts/check-nav-parity.mjs`.
  */
 import {
   arrManifest,
@@ -41,7 +42,7 @@ const MEDIA_NAV: NavConfigDescriptor = {
   label: 'Media',
   labelKey: 'media',
   icon: 'film',
-  color: 'violet',
+  color: 'indigo',
   basePath: '/media',
   order: 20,
   items: [
