@@ -349,9 +349,11 @@ behind it name the same receipt. Both aggregates are scoped to the ids on the
 page, not to the filter — see `listPurchaseRows` in
 `src/db/services/purchase-reads.ts`.
 
-**Nothing serves the bytes `receiptUri` names (POPS-2475).** The file is on
-disk, content-addressed, and reachable by no route: a consumer can key a cache
-on the URI and recognise two rows as the same receipt, and cannot render it.
+`GET /receipts/:sha256` serves the bytes it names, and
+`GET /receipts/:sha256/thumbnail` a size a list row can afford. Both draw the
+distinctions a caller has to act on differently — a hash that is not a hash, a
+hash nothing is stored under, and a receipt that is here and is not a picture —
+and `src/contract/rest-receipts.ts` says which is which.
 
 ## What is deliberately absent
 
@@ -361,7 +363,12 @@ on the URI and recognise two rows as the same receipt, and cannot render it.
   exactly this; bfm's mobile purchases cursor carries an offset until this
   does.
 - **Gmail IMAP ingest** (POPS-242). The ongoing feed, once the export/upload paths proved the reconciliation model — they have: `src/ingest/` carries `amazon/`, `amazon-digital/`, `woolworths/` and `receipt/` today. Email is the one source still unwritten.
-- **The merchant lens** (POPS-241). Its backend has been there since POPS-1752 (`GET /analytics/merchant-spend` above); the view is a separate slice. The reconciliation queue, the other half of that ticket, now exists at `/purchases` — see [`app/README.md`](app/README.md) for what its two decisions do and do not persist.
+
+**The merchant lens has left that list (POPS-241).** It sat in it on the
+grounds that only its backend existed. `app/src/pages/MerchantLensPage.tsx`
+is the view; the reconciliation queue, the other half of that ticket, is at
+`/purchases` — see [`app/README.md`](app/README.md) for what its two decisions
+do and do not persist.
 
 **A frontend is no longer among them (POPS-1506).** This pillar used to have no `app/` directory, and `buildPurchasesManifest` declared no `nav` and no `pages` on the grounds that a rail entry pointing at a bundle slot that does not exist is a dead link. That reasoning was never an argument against a frontend — it was an argument against advertising one before the slot existed. `pillars/purchases/app` is that slot, so both dimensions are now declared: one nav item, one page descriptor, one route, kept the same size on purpose. The pillar sits on the app rail between finance and media, because reconciliation is a two-pillar workflow and the operator crosses between them constantly.
 
@@ -371,7 +378,7 @@ That same argument used to be extended to `search.adapters` and `ai.tools`, and 
 
 Three of these do work the rest cannot, and are worth knowing about before changing anything here.
 
-**`contract-conformance.test.ts`** parses responses back through the zod schema the contract publishes. ts-rest validates _requests_ against the contract but not responses, so without this the contract is only half-enforced — and the generated Hey API client a frontend consumes is derived from those schemas, so a field returned as `null` where the schema says `string` produces a client whose types are a polite fiction. It also asserts `POST` and a subsequent `GET` return identical bodies, and that every declared route carries a unique `operationId`. It does not reach every declared route: the receipts and reconcile-write paths are unparsed (POPS-1772).
+**`contract-conformance.test.ts`** parses responses back through the zod schema the contract publishes. ts-rest validates _requests_ against the contract but not responses, so without this the contract is only half-enforced — and the generated Hey API client a frontend consumes is derived from those schemas, so a field returned as `null` where the schema says `string` produces a client whose types are a polite fiction. It also asserts `POST` and a subsequent `GET` return identical bodies, and that every declared route carries a unique `operationId`. Its expected route list is derived from the contract router rather than written out, so a route cannot be added without the check noticing (POPS-1772).
 
 **`accounting-properties.test.ts`** generates orders from a seeded PRNG and asserts what must hold for _any_ combination: the identity reconstructs, authorizations move nothing, a refund never raises the residual, every bucket is a safe integer. The example-based tests beside it were written from the same understanding that produced the code and share its blind spots — this one found a real modelling error on its first run. Generation is seeded rather than random, and the seed is printed on failure, so a case can be replayed.
 
