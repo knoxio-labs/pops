@@ -642,6 +642,26 @@ services:
       timeout: 5s
       retries: 3
 
+  # The cerebrum UI bundle (pillars/cerebrum/app) — a static nginx image
+  # behind the shell's `/cerebrum-ui/` location block.
+  cerebrum-ui:
+    build:
+      context: ..
+      dockerfile: pillars/cerebrum/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-cerebrum-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The lists UI bundle (pillars/lists/app) — a static nginx image behind the
   # shell's `/lists-ui/` location block.
   lists-ui:

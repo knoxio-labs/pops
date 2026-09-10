@@ -74,13 +74,16 @@ const IN_REPO_IDS = Object.keys(WORKSPACE_BUNDLE_MAP);
 
 describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   it('derives the install set from the snapshot, not the full bundle map', () => {
-    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('cerebrum')]);
+    const result = resolveBootRegistry([snapshotEntry('media')]);
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['cerebrum', 'media']);
-    // The snapshot narrowed the install set to two of the pillars the bundle
-    // map still carries, proving the registry is the source of truth. Stated
-    // against `IN_REPO_IDS` rather than a number, because POPS-3215 is
-    // emptying that map one pillar at a time.
+    expect(result.manifests.map((m) => m.id)).toEqual(['media']);
+    // The snapshot named one of the pillars the bundle map still carries and
+    // got exactly that one, proving the registry is the source of truth
+    // rather than the map. Stated against `IN_REPO_IDS` rather than a number
+    // because POPS-3215 is emptying that map one pillar at a time — and a
+    // single-entry snapshot is what keeps the comparison meaningful as it
+    // shrinks, since a two-entry one stopped being "fewer than the map" the
+    // moment cerebrum left it.
     expect(result.manifests.length).toBeLessThan(IN_REPO_IDS.length);
   });
 
@@ -193,7 +196,7 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     // under which its API is undiscoverable — the shell still boots, and
     // every pillar still in the map still mounts, which is what never-brick
     // asserts.
-    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'cerebrum']);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media']);
 
     // The result must be byte-identical to the empty-snapshot floor: the
     // zero-UI live snapshot degrades EXACTLY as if the registry were down.
@@ -233,7 +236,7 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
   it('renders the full in-repo app rail (not blank) on the fallback path', () => {
     const result = resolveBootRegistry([]);
     expect(result.registeredApps.length).toBeGreaterThan(0);
-    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'cerebrum']);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media']);
   });
 });
 
@@ -387,10 +390,10 @@ describe('fetchBootRegistry — the cached-snapshot floor', () => {
     const store = memoryStore();
     await fetchBootRegistry({ fetch: okFetch(['media']), store });
 
-    const live = await fetchBootRegistry({ fetch: okFetch(['cerebrum']), store });
+    const live = await fetchBootRegistry({ fetch: okFetch(['ego']), store });
 
     expect(live.source).toBe('registry');
-    expect(live.manifests.map((m) => m.id)).toEqual(['cerebrum']);
+    expect(live.manifests.map((m) => m.id)).toEqual(['ego']);
   });
 
   // A snapshot that mounted nothing is not a floor. Caching it would replace a
