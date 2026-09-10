@@ -17,6 +17,12 @@ export type {
 
 export * as importBatchesService from '../services/import-batches.js';
 export * as importSessionsService from '../services/import-sessions.js';
+export * as importDraftsService from '../services/import-drafts.js';
+export type {
+  ImportDraftRow,
+  CreateImportDraftInput,
+  WriteImportDraftInput,
+} from '../services/import-drafts.js';
 export * as importCommitsService from '../services/import-commits.js';
 export * as accountImportConfigService from '../services/account-import-config.js';
 

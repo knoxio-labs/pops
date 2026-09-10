@@ -198,3 +198,31 @@ export class ImportConfigInvalidError extends Error {
     this.missingField = missingField;
   }
 }
+
+/** An `import_drafts` row that does not exist: discarded, committed, or never created. */
+export class ImportDraftNotFoundError extends Error {
+  override readonly name = 'ImportDraftNotFoundError' as const;
+  readonly draftId: string;
+
+  constructor(draftId: string) {
+    super(`Import draft ${draftId} not found`);
+    this.draftId = draftId;
+  }
+}
+
+/**
+ * A write, heartbeat or claim against a draft another tab holds the lease
+ * on (POPS-3331). Carries when that owner was last seen so the caller can
+ * tell "open right now" from "left open days ago" without a second read.
+ */
+export class DraftOwnedElsewhereError extends Error {
+  override readonly name = 'DraftOwnedElsewhereError' as const;
+  readonly draftId: string;
+  readonly ownerSeenAt: string | null;
+
+  constructor(draftId: string, ownerSeenAt: string | null) {
+    super(`Import draft ${draftId} is open elsewhere`);
+    this.draftId = draftId;
+    this.ownerSeenAt = ownerSeenAt;
+  }
+}
