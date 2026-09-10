@@ -13,6 +13,7 @@ import {
 } from '../../../contract/transaction-classification.js';
 import { type FinanceDb } from '../../../db/index.js';
 import { type CorrectionRow, parseCorrectionTags } from '../corrections/index.js';
+import { resolveCorrectionLocation } from './correction-location.js';
 import { buildSuggestedTags } from './tag-management.js';
 
 import type { TransactionType } from '../../../contract/corrections-constants.js';
@@ -88,7 +89,7 @@ export function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransactio
   const applied = resolveAppliedType(correction, transaction.description);
   return {
     ...transaction,
-    location: correction.location ?? transaction.location,
+    location: resolveCorrectionLocation(transaction.location, correction.location),
     transactionType: applied.type,
     entity: {
       matchType: 'learned',
@@ -136,7 +137,7 @@ export function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
   const applied = resolveAppliedType(correction, transaction.description);
   return {
     ...transaction,
-    location: correction.location ?? transaction.location,
+    location: resolveCorrectionLocation(transaction.location, correction.location),
     transactionType: applied.type,
     entity: {
       entityId,
