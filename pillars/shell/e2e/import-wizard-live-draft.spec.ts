@@ -213,7 +213,28 @@ const CommitResponseSchema = z
           z.object({ checksum: z.string().nullable(), error: z.string() }).strict()
         ),
         retroactiveReclassifications: z.number().int().nonnegative(),
-        checkpoints: z.array(z.record(z.string(), z.unknown())).optional(),
+        /**
+         * Mirrored field by field rather than as an open record. The open
+         * shape validated nothing, so the fixture below omitted `id`,
+         * `currency` and `deltaCents` — all required — and carried a `source`
+         * the contract forbids. React then warned on a keyed list whose keys
+         * were all `undefined`, and the summary rendered a delta of NaN
+         * (POPS-3367).
+         */
+        checkpoints: z
+          .array(
+            z
+              .object({
+                id: z.string(),
+                accountId: z.string(),
+                balanceCents: z.number().int(),
+                currency: z.string(),
+                asOf: z.string(),
+                deltaCents: z.number().int(),
+              })
+              .strict()
+          )
+          .optional(),
       })
       .strict(),
     message: z.string(),
@@ -395,10 +416,12 @@ const commitBody = {
     retroactiveReclassifications: 0,
     checkpoints: [
       {
+        id: 'checkpoint-live-1',
         accountId: ACCOUNT_ID,
         balanceCents: liveSeed.balanceReportedCents,
+        currency: 'AUD',
         asOf: coles.date,
-        source: 'import',
+        deltaCents: 0,
       },
     ],
   },
@@ -527,13 +550,7 @@ test.describe('Finance — import wizard from a staged live draft (mocked)', () 
       (e) =>
         !e.includes('React Router') &&
         !e.includes('Download the React DevTools') &&
-        !e.includes('Failed to load resource') &&
-        // Two React warnings this flow really does produce, named one by one
-        // rather than filtered by a pattern so that anything else still fails
-        // the spec. They are POPS-3367; when it lands, both entries here are
-        // dead and go with it.
-        !e.includes('while rendering a different component') &&
-        !e.includes('Each child in a list should have a unique "key" prop')
+        !e.includes('Failed to load resource')
     );
     expect(pageErrors).toHaveLength(0);
     expect(realConsoleErrors).toHaveLength(0);
