@@ -22,19 +22,25 @@ import {
 const money = (value: number) =>
   formatCurrency(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function signedColor(amount: number): StatCardColor {
+export function signedColor(amount: number): StatCardColor {
   if (amount > 0) return 'emerald';
   if (amount < 0) return 'rose';
   return 'slate';
 }
 
+/** Income and expenses for the tiles, both in minor units and both non-negative. */
+export function monthTotals(transactions: Transaction[]): { income: number; expenses: number } {
+  let income = 0;
+  let expenses = 0;
+  for (const t of transactions) {
+    if (t.amountMinorUnits > 0) income += t.amountMinorUnits;
+    else expenses -= t.amountMinorUnits;
+  }
+  return { income, expenses };
+}
+
 export function StatsGrid({ transactions }: { transactions: Transaction[] }) {
-  const income = transactions
-    .filter((t) => t.amountMinorUnits > 0)
-    .reduce((sum, t) => sum + t.amountMinorUnits, 0);
-  const expenses = transactions
-    .filter((t) => t.amountMinorUnits < 0)
-    .reduce((sum, t) => sum - t.amountMinorUnits, 0);
+  const { income, expenses } = monthTotals(transactions);
   const net = (income - expenses) / 100;
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

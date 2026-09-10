@@ -48,7 +48,8 @@ function rows(n: number): string {
   return n === 1 ? '1 transaction' : `${n} transactions`;
 }
 
-function progressLine(item: PendingImport): string {
+/** The one line under the title: how far it got, or why it cannot go further. */
+export function progressLine(item: PendingImport): string {
   if (item.state === 'unusable') return item.unusableReason ?? 'Cannot be resumed.';
   if (item.state === 'live') {
     const since = item.arrivedSinceSave;
