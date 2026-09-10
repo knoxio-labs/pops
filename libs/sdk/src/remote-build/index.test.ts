@@ -358,6 +358,16 @@ describe('findProcessGlobalUsage', () => {
     expect(found).toEqual(['entry.js']);
   });
 
+  it('still flags a read written across a line break, which unminified code has', () => {
+    // Whitespace before the dot stays allowed: a multi-line member chain is a
+    // real read, and this guard is for exactly the unminified builds that have
+    // them.
+    expect(findProcessGlobalUsage([chunk('const v = process\n  .env.NODE_ENV;')])).toEqual([
+      'entry.js',
+    ]);
+    expect(findProcessGlobalUsage([chunk('const v = process .env;')])).toEqual(['entry.js']);
+  });
+
   it('does not flag the same word inside a string literal', () => {
     expect(findProcessGlobalUsage([chunk('const s = "process.";\nconst n = 1;')])).toEqual([]);
   });
