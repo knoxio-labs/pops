@@ -14,7 +14,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { tagVocabularyService } from '../../../db/index.js';
+import { createKnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import { createContactsClient } from '../client.js';
 import {
   assertKnownDefaultTags,
@@ -23,12 +23,7 @@ import {
 } from '../default-tags.js';
 import { stubHandle, unexpected } from './stub-handle.js';
 
-const KNOWN = tagVocabularyService.createKnownTagSet([
-  'venue:pub',
-  'venue:cafe',
-  'occasion:health',
-  'contains:coffee',
-]);
+const KNOWN = createKnownTagSet(['venue:pub', 'venue:cafe', 'occasion:health', 'contains:coffee']);
 
 describe('unknownDefaultTags', () => {
   it('names the value the vocabulary does not hold, and only that one', () => {

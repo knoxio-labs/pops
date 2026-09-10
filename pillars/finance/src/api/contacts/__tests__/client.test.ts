@@ -15,7 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
  */
 import { type CallResult } from '@pops/pillar-sdk/server';
 
-import { tagVocabularyService } from '../../../db/index.js';
+import { createKnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import {
   ContactsPermanentError,
   ContactsUnavailableError,
@@ -274,7 +274,7 @@ describe('createContactsClient.updateDefaultTags — the one contact write finan
 });
 
 /** The vocabulary these cases write against; see `default-tags.ts`. */
-const KNOWN = tagVocabularyService.createKnownTagSet(['venue:bar', 'venue:pub']);
+const KNOWN = createKnownTagSet(['venue:bar', 'venue:pub']);
 
 describe('createContactsClient — no service-account key (POPS-2021)', () => {
   it('fetchAllEntities degrades to empty without calling the handle', async () => {

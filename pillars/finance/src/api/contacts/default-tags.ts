@@ -21,9 +21,7 @@
  * values today, and the hole admitted any unknown tag — so what is enforced is
  * membership, for every facet, rather than a rule about one.
  */
-import { tagVocabularyService } from '../../db/index.js';
-
-import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
+import { normalizeTagForComparison, type KnownTagSet } from '../../db/services/tag-vocabulary.js';
 
 /**
  * A `defaultTags` write naming a value the vocabulary does not hold.
@@ -52,12 +50,10 @@ export class UnknownDefaultTagError extends Error {
  * Blank entries count as unknown rather than being skipped: an empty tag is not
  * a tag, and letting one through would put a value on a contact that no reader
  * can act on. Comparison is the vocabulary's own, via
- * {@link tagVocabularyService.normalizeTagForComparison}, so case is not what decides it.
+ * {@link normalizeTagForComparison}, so case is not what decides it.
  */
 export function unknownDefaultTags(defaultTags: readonly string[], known: KnownTagSet): string[] {
-  return defaultTags.filter(
-    (tag) => !known.has(tag) || tagVocabularyService.normalizeTagForComparison(tag) === ''
-  );
+  return defaultTags.filter((tag) => !known.has(tag) || normalizeTagForComparison(tag) === '');
 }
 
 /**
