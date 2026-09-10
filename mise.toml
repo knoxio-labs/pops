@@ -146,8 +146,35 @@ depends = ["test:scripts"]
 run = "mise run run-all test"
 
 [tasks."test:coverage"]
-description = "Run every unit's coverage suite (fan-out)"
-run = "mise run run-all test:coverage"
+description = "Run the coverage suite of every unit that declares one, over pnpm scripts rather than mise tasks"
+# `mise run run-all test:coverage` fanned out to NOTHING: `test:coverage` is a
+# package.json script in 32 units and a mise task in none, and `run-all`
+# resolves mise tasks. The loop body never executed and the task exited 0
+# having done nothing (POPS-3104). Both CI matrices already prefer the
+# package.json script where a unit declares one, so this runs what CI runs
+# rather than asking 32 units to restate it as a mise task.
+depends = ["build"]
+run = '''
+units="$(
+  find pillars libs -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/package.json' ';' -print
+  find pillars -mindepth 2 -maxdepth 2 -type d -name app -exec test -f '{}/package.json' ';' -print
+)"
+declaring=0
+for unit in $units; do
+  if node -e "process.exit((require('./$unit/package.json').scripts||{})['test:coverage']?0:1)"; then
+    declaring=$((declaring + 1))
+  fi
+done
+# The same refusal `run-all` makes, for the same reason: a fan-out over zero
+# units is a silent success, and this task spent its whole life being one.
+if [ "$declaring" -eq 0 ]; then
+  echo "test:coverage: no discovered unit declares a 'test:coverage' script — nothing would run." >&2
+  echo "test:coverage: it is a package.json script, not a mise task; check the units' package.json." >&2
+  exit 1
+fi
+echo "test:coverage: $declaring unit(s) declare it."
+pnpm -r --if-present run test:coverage
+'''
 
 [tasks.typecheck]
 description = "Build-check the compiled graph (tsc -b) then fan out to source units"
