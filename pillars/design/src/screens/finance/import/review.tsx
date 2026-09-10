@@ -1,6 +1,7 @@
 import { byBucket, droppedRows, importTxns, type ImportTxn } from '@/fixtures/import-transactions';
 import { DroppedRowsNotice } from '@/kit/import-dropped-rows-notice';
 import { ImportReviewContext } from '@/kit/import-review-context';
+import { ImportTakenOverNotice } from '@/kit/import-taken-over-notice';
 import { TxnCardList } from '@/kit/import-txn-card';
 import { SkippedTxnTable } from '@/kit/import-txn-skipped-table';
 import { AlertCircle, AlertTriangle, CheckCircle, Settings2, XCircle } from 'lucide-react';
@@ -117,11 +118,13 @@ function Step({
   activeTab = 'uncertain',
   choice = AMEX,
   liveArrivals,
+  takenOverAt,
 }: {
   txns: ImportTxn[];
   activeTab?: string;
   choice?: ImportChoice;
   liveArrivals?: number;
+  takenOverAt?: string;
 }) {
   const buckets = bucketsOf(txns);
   const unresolvedCount = buckets.uncertain.length + buckets.failed.length;
@@ -136,6 +139,7 @@ function Step({
         <ReviewTabs buckets={buckets} />
       </Tabs>
       <ReviewFooter unresolvedCount={unresolvedCount} committedCount={buckets.matched.length} />
+      {takenOverAt && <ImportTakenOverNotice takenAt={takenOverAt} />}
     </div>
   );
 }
@@ -158,6 +162,9 @@ export const states: ScreenStates = {
   unresolved: () => <Step txns={importTxns} activeTab="uncertain" />,
   'with-dropped-rows': () => <Step txns={importTxns} activeTab="matched" />,
   empty: () => <Step txns={[]} activeTab="matched" />,
+  'taken-over-elsewhere': () => (
+    <Step txns={importTxns} activeTab="uncertain" takenOverAt="2026-09-06T09:41:00+10:00" />
+  ),
   'live-arrivals-held-back': () => (
     <Step txns={importTxns} activeTab="uncertain" choice={UP_LIVE} liveArrivals={4} />
   ),

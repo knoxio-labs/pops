@@ -1,7 +1,10 @@
 import { type Account } from '@/fixtures/accounts';
-import { type PendingImport, pendingSets } from '@/fixtures/pending-imports';
+import { type PendingImport, pendingImportById, pendingSets } from '@/fixtures/pending-imports';
 import { AccountSelect } from '@/kit/account-select';
+import { DiscardPendingDialog } from '@/kit/discard-pending-dialog';
 import { ContinuePending, StartNewHeading } from '@/kit/import-continue-pending';
+import { AddAccountHatch, NewAccountDialog } from '@/kit/import-new-account';
+import { LiveFeedSection } from '@/kit/live-feed-section';
 import { CircleSlash, Plus, Wallet } from 'lucide-react';
 
 import {
@@ -9,15 +12,7 @@ import {
   AlertDescription,
   AlertTitle,
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   EmptyState,
-  Input,
-  Label,
   PageHeader,
   RadioInput,
 } from '@pops/ui';
@@ -55,52 +50,22 @@ function FormatSection({ account }: { account?: Account }) {
   }
   const formats = formatsForAccount(account);
   if (formats.length === 0) return <NoFormats account={account} />;
+  const live = formats[0]?.live === true;
   return (
-    <RadioInput
-      label="File format"
-      description={`What ${account.name} gives you when you export.`}
-      options={radioOptions(formats)}
-      defaultValue={formats[0]?.id}
-      name="import-format"
-    />
-  );
-}
-
-function AddAccountHatch() {
-  return (
-    <p className="text-xs text-muted-foreground">
-      Importing a bank POPS has never seen?{' '}
-      <Button variant="link" className="h-auto p-0 text-xs" prefix={<Plus className="h-3 w-3" />}>
-        Add the account
-      </Button>{' '}
-      — you come straight back here with it selected, and the file you already have stays chosen.
-    </p>
-  );
-}
-
-function NewAccountDialog() {
-  return (
-    <Dialog defaultOpen>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>New account</DialogTitle>
-          <DialogDescription>
-            The same fields as the account form, opened over the import rather than instead of it.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="new-account-name">Name</Label>
-          <Input id="new-account-name" defaultValue="Bendigo Everyday" />
-          <p className="text-xs text-muted-foreground">
-            Kind, institution and currency follow, then this closes back onto the import.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="outline">Cancel</Button>
-          <Button>Create and continue</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <RadioInput
+        label={live ? 'Source' : 'File format'}
+        description={
+          live
+            ? `${account.name} is fed by its bank. A file is only for history the feed never saw.`
+            : `What ${account.name} gives you when you export.`
+        }
+        options={radioOptions(formats)}
+        defaultValue={formats[0]?.id}
+        name="import-format"
+      />
+      {live && <LiveFeedSection account={account} />}
+    </>
   );
 }
 
@@ -136,12 +101,14 @@ function Step({
   pickerOpen = false,
   createOpen = false,
   pending = NO_PENDING,
+  discard,
 }: {
   accounts: Account[];
   selectedId?: string;
   pickerOpen?: boolean;
   createOpen?: boolean;
   pending?: PendingImport[];
+  discard?: PendingImport;
 }) {
   const selected = selectedId ? accountById(selectedId) : undefined;
   return (
@@ -166,6 +133,7 @@ function Step({
         </>
       )}
       {createOpen && <NewAccountDialog />}
+      {discard && <DiscardPendingDialog item={discard} />}
     </div>
   );
 }
@@ -180,11 +148,39 @@ export const states: ScreenStates = {
   'no-format-for-account': () => <Step accounts={importableAccounts} selectedId="a5" />,
   'no-accounts': () => <Step accounts={[]} />,
   'add-account': () => <Step accounts={importableAccounts} createOpen />,
+  'live-feed-account': () => <Step accounts={importableAccounts} selectedId="a13" />,
   'pending-to-continue': () => <Step accounts={importableAccounts} pending={pendingSets.mixed} />,
   'pending-unusable': () => (
     <Step accounts={importableAccounts} pending={pendingSets.withUnusable} />
   ),
   'pending-open-elsewhere': () => (
     <Step accounts={importableAccounts} pending={pendingSets.openElsewhere} />
+  ),
+  'pending-open-stale': () => (
+    <Step accounts={importableAccounts} pending={pendingSets.openStale} />
+  ),
+  'pending-unusable-causes': () => (
+    <Step accounts={importableAccounts} pending={pendingSets.unusableCauses} />
+  ),
+  'discard-file-draft': () => (
+    <Step
+      accounts={importableAccounts}
+      pending={pendingSets.mixed}
+      discard={pendingImportById('p-amex-aug')}
+    />
+  ),
+  'discard-live-import': () => (
+    <Step
+      accounts={importableAccounts}
+      pending={pendingSets.mixed}
+      discard={pendingImportById('p-up-live')}
+    />
+  ),
+  'discard-unusable-draft': () => (
+    <Step
+      accounts={importableAccounts}
+      pending={pendingSets.withUnusable}
+      discard={pendingImportById('p-anz-old')}
+    />
   ),
 };

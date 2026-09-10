@@ -104,12 +104,20 @@ function Step({
 const NO_WARNINGS: FictionalWarning[] = [];
 
 const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
 
 export default function ImportProcessStep() {
   return <Step choice={AMEX} message="Classifying 128 of 214 transactions…" progress={60} />;
 }
 
 export const states: ScreenStates = {
+  'live-feed': () => (
+    <Step
+      choice={UP_LIVE}
+      message="Matching 7 of 11 transactions Up sent since 2 Sep. Nothing to parse — the rows came in already read."
+      progress={64}
+    />
+  ),
   'already-processed': () => (
     <Step
       choice={AMEX}

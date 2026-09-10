@@ -40,12 +40,16 @@ export interface PendingImport {
   /** The wizard step it stopped at; absent when never opened. */
   step?: string;
   rowCount: number;
-  /** Rows the review step still wants a decision on. */
+  /** Rows the review step still wants a decision on; on a live import, what the matcher could not settle on its own. */
   unresolvedCount?: number;
+  /** Live only: the balance the provider reported with the newest row, minor units. */
+  balanceReported?: number;
   /** Rows that arrived after it was last saved — live sources only. */
   arrivedSinceSave?: number;
   /** When the draft was last written, ISO date-time. */
   savedAt: string;
+  /** `open` only: when the tab holding it last checked in. A crashed tab never closes. */
+  lastSeenAt?: string;
   /** Inclusive span of the rows it holds. */
   span?: { from: string; to: string };
   /** `unusable` only: what the person is told before discarding. */
@@ -70,6 +74,8 @@ export const pendingImports: PendingImport[] = [
     source: { kind: 'live', provider: 'Up' },
     state: 'live',
     rowCount: 11,
+    unresolvedCount: 2,
+    balanceReported: 61_215,
     savedAt: `${TODAY}T08:41:00+10:00`,
     span: { from: '2026-09-02', to: TODAY },
   },
@@ -82,6 +88,7 @@ export const pendingImports: PendingImport[] = [
     rowCount: 7,
     unresolvedCount: 1,
     savedAt: `${TODAY}T09:05:00+10:00`,
+    lastSeenAt: `${TODAY}T09:05:00+10:00`,
     span: { from: '2026-08-29', to: '2026-09-01' },
   },
   {
@@ -91,8 +98,21 @@ export const pendingImports: PendingImport[] = [
     state: 'live',
     rowCount: 4,
     arrivedSinceSave: 4,
+    balanceReported: 58_790,
     savedAt: `${TODAY}T09:40:00+10:00`,
     span: { from: TODAY, to: TODAY },
+  },
+  {
+    id: 'p-anzcc-open-stale',
+    accountId: 'a3',
+    source: { kind: 'file', format: 'ANZ credit card statement', files: ['statement-2026-08.pdf'] },
+    state: 'open',
+    step: 'Tags',
+    rowCount: 27,
+    unresolvedCount: 0,
+    savedAt: '2026-09-04T22:10:00+10:00',
+    lastSeenAt: '2026-09-04T22:10:00+10:00',
+    span: { from: '2026-07-13', to: '2026-08-12' },
   },
   {
     id: 'p-anz-old',
@@ -105,6 +125,18 @@ export const pendingImports: PendingImport[] = [
     span: { from: '2026-04-02', to: '2026-08-31' },
     unusableReason:
       'Saved before the 2 Sep deploy. Its rows are in a shape this version no longer reads, and the file is not stored — upload it again to redo the import.',
+  },
+  {
+    id: 'p-ing-archived',
+    accountId: 'a10',
+    source: { kind: 'file', format: 'ING transaction CSV', files: ['Orange-2026-07.csv'] },
+    state: 'unusable',
+    step: 'Review',
+    rowCount: 58,
+    savedAt: '2026-08-18T20:05:00+10:00',
+    span: { from: '2026-07-01', to: '2026-07-31' },
+    unusableReason:
+      'Old ING Orange was archived on 20 Aug, so nothing can be filed against it. Restore the account to resume this, or discard it.',
   },
 ];
 
@@ -131,7 +163,16 @@ export const pendingSets = {
   withUnusable: pick('p-up-live', 'p-amex-aug', 'p-anz-old'),
   /** An open live import and the one collecting behind it. */
   openElsewhere: pick('p-up-next', 'p-up-open', 'p-amex-aug'),
+  /** An import a tab left open days ago and never closed. */
+  openStale: pick('p-anzcc-open-stale', 'p-amex-aug'),
+  /** Every way a draft becomes unusable: a shape this build cannot read, an account that is gone. */
+  unusableCauses: pick('p-anz-old', 'p-ing-archived', 'p-amex-aug'),
 };
+
+/** The live import collecting for an account, when one is. */
+export function liveImportFor(accountId: string): PendingImport | undefined {
+  return pendingImports.find((p) => p.accountId === accountId && p.state === 'live');
+}
 
 export function sourceLabel(source: PendingImportSource): string {
   if (source.kind === 'live') return `${source.provider} live feed`;

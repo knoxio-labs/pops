@@ -1,3 +1,4 @@
+import { LiveFeedSection } from '@/kit/live-feed-section';
 import { AccountAvatar } from '@/screens/finance/account-chip';
 import { FileText, FileWarning, UploadCloud } from 'lucide-react';
 
@@ -112,6 +113,18 @@ function Step({
   dragging?: boolean;
   mismatched?: boolean;
 }) {
+  if (choice.format.live) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 p-6">
+        <PageHeader
+          title="What has arrived"
+          description="Nothing to upload. Up sends each transaction as it settles, and this is what it has sent."
+        />
+        <ImportContextStrip choice={choice} />
+        <LiveFeedSection account={choice.account} />
+      </div>
+    );
+  }
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <PageHeader
@@ -136,6 +149,7 @@ export default function ImportUploadStep() {
 }
 
 export const states: ScreenStates = {
+  'live-feed': () => <Step choice={choiceOf('a13', 'up-live')} />,
   dragging: () => <Step choice={AMEX} dragging />,
   'file-chosen': () => (
     <Step

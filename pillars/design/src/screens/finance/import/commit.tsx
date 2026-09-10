@@ -4,6 +4,7 @@ import {
   importTxns,
   ruleProposals,
 } from '@/fixtures/import-transactions';
+import { CheckpointSection, type LiveCheckpoint } from '@/kit/import-checkpoint-section';
 import {
   ClassificationRulesSection,
   EntitiesSection,
@@ -74,9 +75,17 @@ interface StepProps {
   confirmOpen?: boolean;
   committing?: boolean;
   error?: string;
+  checkpoint?: LiveCheckpoint;
 }
 
-function Step({ choice, summary, confirmOpen = false, committing = false, error }: StepProps) {
+function Step({
+  choice,
+  summary,
+  confirmOpen = false,
+  committing = false,
+  error,
+  checkpoint,
+}: StepProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <PageHeader
@@ -90,6 +99,7 @@ function Step({ choice, summary, confirmOpen = false, committing = false, error 
         <TagRulesSection proposals={summary.tagRules} />
         <TransactionsSection breakdown={summary.txnBreakdown} accountName={choice.account.name} />
         <TagAssignmentsSection {...summary.tagAssignment} />
+        {checkpoint && <CheckpointSection checkpoint={checkpoint} />}
         {isEmptySummary(summary) && (
           <p className="py-6 text-sm text-muted-foreground">No pending changes to review.</p>
         )}
@@ -116,6 +126,8 @@ function Step({ choice, summary, confirmOpen = false, committing = false, error 
 }
 
 const AMEX = choiceOf('a2', 'amex-csv');
+const UP_LIVE = choiceOf('a13', 'up-live');
+const UP_CHECKPOINT: LiveCheckpoint = { balanceMinor: 61_215, currency: 'AUD', asOf: '2026-09-06' };
 
 const DROPPED = droppedRows(importTxns).length;
 const DUPES = importTxns.filter((t) => t.bucket === 'skipped').length;
@@ -142,6 +154,7 @@ export default function ImportCommitStep() {
 }
 
 export const states: ScreenStates = {
+  'live-feed': () => <Step choice={UP_LIVE} summary={PENDING} checkpoint={UP_CHECKPOINT} />,
   'nothing-pending': () => <Step choice={AMEX} summary={NOTHING_PENDING} />,
   'confirm-dialog-open': () => <Step choice={AMEX} summary={PENDING} confirmOpen />,
   committing: () => <Step choice={AMEX} summary={PENDING} committing />,

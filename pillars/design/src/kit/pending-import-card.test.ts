@@ -1,5 +1,5 @@
 import { pendingImportById, type PendingImport } from '@/fixtures/pending-imports';
-import { progressLine, sortPending } from '@/kit/pending-import-card';
+import { openAge, progressLine, sortPending } from '@/kit/pending-import-card';
 import { describe, expect, it } from 'vitest';
 
 const base: PendingImport = {
@@ -40,7 +40,34 @@ describe('sortPending', () => {
   });
 });
 
+describe('openAge', () => {
+  const open = pendingImportById('p-up-open');
+
+  it('is active within a day of the tab last checking in', () => {
+    expect(openAge(open, '2026-09-06T20:00:00+10:00')).toBe('active');
+  });
+
+  it('is stale once a day has passed, and falls back to savedAt without a check-in', () => {
+    expect(openAge(open, '2026-09-07T09:06:00+10:00')).toBe('stale');
+    expect(openAge({ ...open, lastSeenAt: undefined }, '2026-09-08T09:06:00+10:00')).toBe('stale');
+  });
+
+  it('reads the staged stale fixture as stale on the pinned day', () => {
+    expect(openAge(pendingImportById('p-anzcc-open-stale'))).toBe('stale');
+    expect(openAge(open)).toBe('active');
+  });
+});
+
 describe('progressLine', () => {
+  it('says where an open import is, and when it was last seen once stale', () => {
+    expect(progressLine(pendingImportById('p-up-open'))).toMatch(
+      /^Open in another tab since .*, at Review\.$/
+    );
+    expect(progressLine(pendingImportById('p-anzcc-open-stale'))).toMatch(
+      /^Last seen 2 days ago, at Tags\. The tab probably closed/
+    );
+  });
+
   it('names the step and what is left to decide on a saved draft', () => {
     expect(progressLine(base)).toBe('3 transactions, stopped at Review · 1 still to decide.');
     expect(progressLine({ ...base, unresolvedCount: 0 })).toBe(
@@ -60,7 +87,10 @@ describe('progressLine', () => {
 
   it('says a live import is waiting, or that it holds arrivals for an open one', () => {
     expect(progressLine(pendingImportById('p-up-live'))).toMatch(
-      /^11 transactions arrived since .*, waiting for review\.$/
+      /^11 transactions arrived since .* · 2 need you\.$/
+    );
+    expect(progressLine({ ...pendingImportById('p-up-live'), unresolvedCount: 0 })).toMatch(
+      /· waiting for review\.$/
     );
     expect(progressLine(pendingImportById('p-up-next'))).toBe(
       '4 transactions arrived after the open import was started. They are held here so it stays as you left it.'

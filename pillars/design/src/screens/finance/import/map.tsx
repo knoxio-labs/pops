@@ -1,8 +1,10 @@
-import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import { NoDetectionNotice } from '@/kit/import-no-detection-notice';
+import { LiveMapStep } from '@/kit/live-mapping-notice';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, Button, Label, PageHeader, Select } from '@pops/ui';
 
-import { choiceOf } from './context';
+import { choiceOf, type ImportChoice } from './context';
 import { ImportContextStrip } from './upload';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
@@ -36,31 +38,12 @@ const MAPPED: ColumnMap = {
 
 const EMPTY: ColumnMap = {};
 const NO_ERRORS: string[] = [];
-
 const COLUMN_FIELDS: Array<{ key: keyof ColumnMap; label: string; required: boolean }> = [
   { key: 'date', label: 'Date', required: true },
   { key: 'description', label: 'Description', required: true },
   { key: 'amount', label: 'Amount', required: true },
   { key: 'location', label: 'Location (Town/City)', required: false },
 ];
-
-function NoDetectionNotice() {
-  return (
-    <div className="rounded-lg border border-warning/25 bg-warning/10 p-4 text-sm text-warning">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-        <div className="flex-1 space-y-1">
-          <p className="font-medium">No columns matched automatically</p>
-          <p className="text-xs">
-            None of this file&apos;s column names look like a date, description or amount, so
-            nothing was filled in. An export with no header row is listed as Column 1, Column 2 and
-            so on — check the bank you picked on the previous step, then map each field below.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ColumnMapFields({ headers, columnMap }: { headers: string[]; columnMap: ColumnMap }) {
   return (
@@ -168,11 +151,14 @@ function Step({
   columnMap = MAPPED,
   errors = NO_ERRORS,
   validating = false,
+  choice = AMEX,
 }: {
   columnMap?: ColumnMap;
   errors?: string[];
   validating?: boolean;
+  choice?: ImportChoice;
 }) {
+  if (choice.format.live) return <LiveMapStep choice={choice} />;
   const disabled = validating || !columnMap.date || !columnMap.description || !columnMap.amount;
   const previewRows = RAW_ROWS.slice(0, 10);
   return (
@@ -181,7 +167,7 @@ function Step({
         title="Map columns"
         description="Map CSV columns to transaction fields. Showing first 6 rows."
       />
-      <ImportContextStrip choice={choiceOf('a2', 'amex-csv')} />
+      <ImportContextStrip choice={choice} />
       {Object.keys(columnMap).length === 0 && <NoDetectionNotice />}
       <ColumnMapFields headers={RAW_HEADERS} columnMap={columnMap} />
       <PreviewTable rows={previewRows} columnMap={columnMap} />
@@ -194,11 +180,13 @@ function Step({
   );
 }
 
+const AMEX = choiceOf('a2', 'amex-csv');
 export default function ImportMapStep() {
   return <Step />;
 }
 
 export const states: ScreenStates = {
+  'live-feed': () => <Step choice={choiceOf('a13', 'up-live')} />,
   'nothing-detected': () => <Step columnMap={EMPTY} />,
   validating: () => <Step validating />,
   'validation-errors': () => (
