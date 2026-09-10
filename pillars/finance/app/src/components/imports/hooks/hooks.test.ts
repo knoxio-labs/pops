@@ -278,6 +278,10 @@ describe('useApplyRejectMutations — interface contract', () => {
   });
 });
 
+// The POPS-3358 regression is guarded at the hook, in
+// use-apply-reject-can-apply.test.tsx: `CanApplyInput` has no session field,
+// so no input here can express "no process session" and no case here would
+// catch the gate being reintroduced around this function.
 describe('deriveCanApply', () => {
   const ready = { isBusy: false, opsCount: 1, hasDirty: false, previewError: null };
 
@@ -299,13 +303,6 @@ describe('deriveCanApply', () => {
 
   it('refuses when the preview failed', () => {
     expect(deriveCanApply({ ...ready, previewError: 'fail' })).toBe(false);
-  });
-
-  // POPS-3358. A live Up draft has no process session: its rows arrive
-  // pre-mapped and skip the Process step. The gate that required one made
-  // Apply impossible to enable for every live import, which is how it shipped.
-  it('allows applying in an import that has no process session', () => {
-    expect(deriveCanApply(ready)).toBe(true);
   });
 });
 
