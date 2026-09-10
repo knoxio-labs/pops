@@ -117,6 +117,7 @@
   "import.takenOver.body": "Another tab took it over at {{at}}. Anything you change here will not be saved. Take it back to keep working here, or leave and let the other tab finish.",
   "import.takenOver.leave": "Leave",
   "import.takenOver.takeBack": "Take it back",
+  "import.takenOver.takeBackFailed": "Could not take the import back. Try again.",
   "import.pending.dashboardHint_one": "{{count}} import waiting on you",
   "import.pending.dashboardHint_other": "{{count}} imports waiting on you",
   "import.pending.continueTitle": "Continue where you left off",
