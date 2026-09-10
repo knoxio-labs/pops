@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { mergeRefs, setInputValueAndNotify } from '../lib/input-element';
 import { cn } from '../lib/utils';
 import { FieldLabel } from './FieldLabel';
 import { useTextInput } from './TextInput.hooks';
@@ -90,30 +91,6 @@ interface TextInputBodyProps {
   inputProps: React.InputHTMLAttributes<HTMLInputElement>;
 }
 
-/**
- * Imperatively clear an uncontrolled input and notify listeners. Uses the
- * native value setter so React's synthetic event system sees the change, and
- * dispatches a bubbling `input` event so ref-based subscribers (e.g.
- * react-hook-form) react to the cleared value.
- */
-function clearUncontrolledInput(el: HTMLInputElement) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-  setter?.call(el, '');
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
-/** Merge a local ref with a forwarded ref (callback or object). */
-function mergeRefs(
-  local: React.RefObject<HTMLInputElement | null>,
-  forwarded: React.Ref<HTMLInputElement>
-) {
-  return (el: HTMLInputElement | null) => {
-    local.current = el;
-    if (typeof forwarded === 'function') forwarded(el);
-    else if (forwarded) forwarded.current = el;
-  };
-}
-
 function TextInputBody({
   ti,
   inputRef,
@@ -132,7 +109,7 @@ function TextInputBody({
   const setRef = useMemo(() => mergeRefs(localRef, inputRef), [inputRef]);
 
   const handleClear = () => {
-    if (!ti.isControlled && localRef.current) clearUncontrolledInput(localRef.current);
+    if (!ti.isControlled && localRef.current) setInputValueAndNotify(localRef.current, '');
     ti.handleClear();
   };
 

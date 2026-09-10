@@ -1,4 +1,13 @@
-import { type MutableRefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type MutableRefObject,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import { setInputValueAndNotify } from '../lib/input-element';
 
 interface UseDragListenersArgs {
   isDragging: boolean;
@@ -60,14 +69,6 @@ function clamp(val: number, min?: number, max?: number): number {
   return val;
 }
 
-function makeSyntheticChange(value: number): React.ChangeEvent<HTMLInputElement> {
-  return { target: { value: String(value) } } as React.ChangeEvent<HTMLInputElement>;
-}
-
-function makeEmptySyntheticChange(): React.ChangeEvent<HTMLInputElement> {
-  return { target: { value: '' } } as React.ChangeEvent<HTMLInputElement>;
-}
-
 function isEmptyValue(v: UseNumberInputArgs['controlledValue']): boolean {
   return v === undefined || v === '';
 }
@@ -85,9 +86,17 @@ interface UseValueStateArgs {
   min?: number;
   max?: number;
   onChange?: UseNumberInputArgs['onChange'];
+  inputRef: RefObject<HTMLInputElement | null>;
 }
 
-function useValueState({ controlledValue, defaultValue, min, max, onChange }: UseValueStateArgs) {
+function useValueState({
+  controlledValue,
+  defaultValue,
+  min,
+  max,
+  onChange,
+  inputRef,
+}: UseValueStateArgs) {
   const [internalValue, setInternalValue] = useState<number | ''>(() =>
     toDisplayValue(defaultValue)
   );
@@ -95,20 +104,32 @@ function useValueState({ controlledValue, defaultValue, min, max, onChange }: Us
   const value = isControlled ? toDisplayValue(controlledValue) : internalValue;
   const isEmpty = value === '';
 
-  const commitValue = (next: number, e?: React.ChangeEvent<HTMLInputElement>) => {
-    const clamped = clamp(next, min, max);
-    if (!isControlled) setInternalValue(clamped);
-    onChange?.(e ?? makeSyntheticChange(clamped));
+  /**
+   * A stepper click or a drag step. It only writes to the element; the state
+   * update and the `onChange` call are {@link handleChange}'s, reached through
+   * the event React raises in response — so every path this component emits a
+   * change on ends in the same place, with the same event shape.
+   *
+   * The element is never absent here: both callers are reachable only while
+   * the input is mounted, since the steppers render beside it and the drag
+   * listeners are installed and torn down by an effect that owns it.
+   */
+  const commitValue = (next: number) => {
+    const input = inputRef.current;
+    if (input === null) return;
+    setInputValueAndNotify(input, String(clamp(next, min, max)));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value === '') {
       if (!isControlled) setInternalValue('');
-      onChange?.(makeEmptySyntheticChange());
+      onChange?.(e);
       return;
     }
     const newValue = Number(e.target.value);
-    if (!isNaN(newValue)) commitValue(newValue, e);
+    if (isNaN(newValue)) return;
+    if (!isControlled) setInternalValue(clamp(newValue, min, max));
+    onChange?.(e);
   };
 
   return { value, isEmpty, commitValue, handleChange };
@@ -128,6 +149,10 @@ export function useNumberInput({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number>(0);
   const dragStartValue = useRef<number>(0);
+  // The hook's own handle on the element, so the steppers and the drag
+  // gesture can raise a real change through it. `NumberInput` merges the
+  // caller's forwarded ref with this one; neither displaces the other.
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { value, commitValue, handleChange } = useValueState({
     controlledValue,
@@ -135,6 +160,7 @@ export function useNumberInput({
     min,
     max,
     onChange,
+    inputRef,
   });
 
   // Incrementing/decrementing from an unset value has no principled baseline
@@ -166,6 +192,7 @@ export function useNumberInput({
   });
 
   return {
+    inputRef,
     value,
     isFocused,
     setIsFocused,

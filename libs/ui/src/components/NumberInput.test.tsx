@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -122,5 +122,70 @@ describe('NumberInput — react-hook-form-style controlled round trip', () => {
     await user.type(input, '19');
 
     expect(input.value).toBe('19');
+  });
+});
+
+/**
+ * Every change this component emits must carry the element, not just a value.
+ *
+ * `e.currentTarget.value` is the shape React's own types encourage, and it was
+ * the one shape `NumberInput` could not deliver: the clear path and the
+ * steppers each built `{ target: { value } }` and cast it to a
+ * `ChangeEvent`, so a consumer reading `currentTarget` read `undefined.value`
+ * and threw exactly when the user emptied the field (POPS-3296). Reading
+ * `currentTarget` here rather than `target` is the whole point — swap it for
+ * `target` and these pass against the unfixed component.
+ */
+describe('NumberInput — the event a consumer receives', () => {
+  function currentTargetHarness() {
+    const seen: (string | undefined)[] = [];
+    render(
+      <NumberInput
+        placeholder="amount"
+        defaultValue={5}
+        onChange={(e) => seen.push(e.currentTarget.value)}
+      />
+    );
+    return { seen, input: screen.getByPlaceholderText('amount') as HTMLInputElement };
+  }
+
+  it('hands the input element to onChange when the field is cleared', async () => {
+    const user = userEvent.setup();
+    const { seen, input } = currentTargetHarness();
+
+    await user.clear(input);
+
+    expect(seen.at(-1)).toBe('');
+  });
+
+  it('hands the input element to onChange when a stepper is clicked', async () => {
+    const user = userEvent.setup();
+    const { seen } = currentTargetHarness();
+
+    await user.click(screen.getAllByRole('button')[1] as HTMLElement);
+
+    expect(seen.at(-1)).toBe('6');
+  });
+
+  it('hands the input element to onChange when the value is dragged', () => {
+    const seen: (string | undefined)[] = [];
+    render(
+      <NumberInput
+        placeholder="amount"
+        defaultValue={5}
+        onChange={(e) => seen.push(e.currentTarget.value)}
+      />
+    );
+    const box = (screen.getByPlaceholderText('amount') as HTMLInputElement).closest('div');
+    if (box === null) throw new Error('NumberInput container not found');
+
+    act(() => {
+      box.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientY: 100 }));
+    });
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', { clientY: 96 }));
+    });
+
+    expect(seen.at(-1)).toBe('7');
   });
 });
