@@ -49,14 +49,7 @@ export function ListItemAddForm(props: ListItemAddFormProps): React.ReactElement
   };
 
   return (
-    // `noValidate`: the kit's NumberInput types `step` as a number, so the qty
-    // field can no longer carry `step="any"`, and a decimal quantity would trip
-    // the browser's step-mismatch check and silently block submission.
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="space-y-2 rounded-md border border-dashed p-3"
-    >
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-dashed p-3">
       <LabelRow
         label={state.label}
         onChange={(label) => setState({ ...state, label })}
@@ -133,6 +126,7 @@ function ExpandedFields({
     <div className="flex gap-2">
       <NumberInput
         inputMode="decimal"
+        step="any"
         showSteppers={false}
         enableDrag={false}
         size="sm"
