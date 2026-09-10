@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 import { checkUnit, parseDirsArg, selectUnits, unresolvableDirs } from '../check-exports.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 type Unit = Parameters<typeof checkUnit>[0];
 
 const allExist = (): boolean => true;
@@ -366,7 +368,7 @@ describe('a trailing slash in the scope', () => {
   });
 });
 
-describe('the CLI, run against this checkout', () => {
+describe('the CLI, run against this checkout', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
   const run = (...args: string[]) =>

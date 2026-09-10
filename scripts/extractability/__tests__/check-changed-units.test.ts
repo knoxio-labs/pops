@@ -27,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const realScript = join(repoRoot, 'scripts', 'extractability', 'check-changed-units.sh');
 
@@ -88,7 +90,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe('check-changed-units.sh', () => {
+describe('check-changed-units.sh', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('checks only the units the diff touched', () => {
     write('libs/types/src/index.ts', 'export const a = 2;\n');
     git(['add', '-A']);

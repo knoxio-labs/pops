@@ -15,6 +15,8 @@ import {
 } from '../check-refresh-message-fixture.mjs';
 import { discoverFilesNamed, isFileNotFound } from '../fixture-copies.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const guardPath = resolve(here, '..', 'check-refresh-message-fixture.mjs');
@@ -300,7 +302,7 @@ describe('checkAllCopies', () => {
   });
 });
 
-describe('the guard CLI', () => {
+describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('its self-test passes, including the independent copy-set pin, the fabricated discovery leg and the real-tree discovery leg', () => {
     const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
 

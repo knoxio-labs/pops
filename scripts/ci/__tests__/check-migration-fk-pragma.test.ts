@@ -23,6 +23,8 @@ import { describe, expect, it } from 'vitest';
 
 import { discoverMigrationFiles, findViolations } from '../check-migration-fk-pragma.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const guard = join(repoRoot, 'scripts', 'ci', 'check-migration-fk-pragma.mjs');
@@ -144,7 +146,7 @@ describe('discoverMigrationFiles against the real repo', () => {
   });
 });
 
-describe('the guard CLI', () => {
+describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('its self-test passes', () => {
     expect(() => execFileSync('node', [guard, '--self-test'], { stdio: 'pipe' })).not.toThrow();
   });

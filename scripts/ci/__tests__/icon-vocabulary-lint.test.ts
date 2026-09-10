@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const oxlintConfig = join(repoRoot, '.oxlintrc.json');
@@ -45,7 +47,7 @@ function restrictedImportDiagnostics(source: string): OxlintDiagnostic[] {
   return lint(source).filter((d) => d.code === 'eslint(no-restricted-imports)');
 }
 
-describe('banned icon imports are reported', () => {
+describe('banned icon imports are reported', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   const cases: Array<[banned: string, canonical: string]> = [
     ['Edit2', 'Pencil'],
     ['PenLine', 'Pencil'],
@@ -82,7 +84,7 @@ describe('banned icon imports are reported', () => {
   });
 });
 
-describe('canonical icon imports are not reported', () => {
+describe('canonical icon imports are not reported', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   const canonicalNames = [
     'Plus',
     'Pencil',

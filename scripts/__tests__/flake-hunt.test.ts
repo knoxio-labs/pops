@@ -25,6 +25,8 @@ import {
 
 import type { IterationResult, TestFailure } from '../flake-hunt.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 const scriptPath = join(repoRoot, 'scripts', 'flake-hunt.mjs');
@@ -610,7 +612,7 @@ describe('spawnCapture', () => {
   });
 });
 
-describe('the CLI itself', () => {
+describe('the CLI itself', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('--self-test exits 0', () => {
     const stdout = execFileSync('node', [scriptPath, '--self-test'], { encoding: 'utf8' });
     expect(stdout).toContain('self-test OK');

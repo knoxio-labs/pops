@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const PACKAGE_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('../../../..', import.meta.url));
 const SCRIPT_PATH = fileURLToPath(new URL('../db-seed-food.ts', import.meta.url));
@@ -15,7 +17,7 @@ const SCRIPT_PATH = fileURLToPath(new URL('../db-seed-food.ts', import.meta.url)
  * running it from the repo root (or anywhere but `pillars/food`) computes a
  * path outside the food package and the dev-seed guard refuses it.
  */
-describe('db-seed-food.ts default DB path', () => {
+describe('db-seed-food.ts default DB path', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('resolves the default against the food package root, not the caller cwd', () => {
     expect(existsSync(REPO_ROOT)).toBe(true);
     expect(REPO_ROOT).not.toBe(PACKAGE_ROOT);

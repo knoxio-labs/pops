@@ -27,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   findBuilders,
   findGaps,
@@ -519,7 +521,7 @@ describe('discovery against the real repo', () => {
   });
 });
 
-describe('the guard CLI', () => {
+describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('its self-test passes', () => {
     expect(() => execFileSync('node', [guard, '--self-test'], { stdio: 'pipe' })).not.toThrow();
   });

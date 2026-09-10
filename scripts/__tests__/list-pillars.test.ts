@@ -27,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   discoverPillars,
   discoverUnanalysablePillars,
@@ -150,7 +152,7 @@ describe('reportUnanalysablePillars', () => {
   });
 });
 
-describe('the CLI the matrix job runs', () => {
+describe('the CLI the matrix job runs', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('prints the real repo pillar set as JSON on stdout, and agrees with discoverPillars', () => {
     const stdout = execFileSync(process.execPath, ['scripts/list-pillars.mjs'], {
       cwd: repoRoot,

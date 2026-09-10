@@ -8,6 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { computeProofSurface, toWireLine } from '../proof-surface.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const sandboxScript = join(repoRoot, 'scripts', 'extractability', 'sandbox.sh');
@@ -114,123 +116,131 @@ describe('toWireLine', () => {
   });
 });
 
-describe('sandbox.sh: the EX-2 skip decision (real script, fixture units)', () => {
-  let root: string;
-  let renamedUnit: string;
-  let optOutUnit: string;
-  let malformedUnit: string;
-  let multilineReasonUnit: string;
+describe(
+  'sandbox.sh: the EX-2 skip decision (real script, fixture units)',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    let root: string;
+    let renamedUnit: string;
+    let optOutUnit: string;
+    let malformedUnit: string;
+    let multilineReasonUnit: string;
 
-  beforeAll(() => {
-    root = mkdtempSync(join(tmpdir(), 'ex2-proof-surface-'));
+    beforeAll(() => {
+      root = mkdtempSync(join(tmpdir(), 'ex2-proof-surface-'));
 
-    renamedUnit = join(root, 'renamed-fixture');
-    mkdirSync(renamedUnit, { recursive: true });
-    writeFileSync(
-      join(renamedUnit, 'package.json'),
-      JSON.stringify(
-        {
-          name: '@pops/renamed-fixture',
-          version: '0.0.0',
-          private: true,
-          // The ticket's exact scenario: `typecheck` renamed to `types:check`,
-          // `build` and `test` renamed too. sandbox.sh must not treat this
-          // like a data-only package with nothing to prove.
-          scripts: { compile: 'tsc -b', 'types:check': 'tsc --noEmit', 'vitest:run': 'vitest run' },
-        },
-        null,
-        2
-      )
-    );
+      renamedUnit = join(root, 'renamed-fixture');
+      mkdirSync(renamedUnit, { recursive: true });
+      writeFileSync(
+        join(renamedUnit, 'package.json'),
+        JSON.stringify(
+          {
+            name: '@pops/renamed-fixture',
+            version: '0.0.0',
+            private: true,
+            // The ticket's exact scenario: `typecheck` renamed to `types:check`,
+            // `build` and `test` renamed too. sandbox.sh must not treat this
+            // like a data-only package with nothing to prove.
+            scripts: {
+              compile: 'tsc -b',
+              'types:check': 'tsc --noEmit',
+              'vitest:run': 'vitest run',
+            },
+          },
+          null,
+          2
+        )
+      );
 
-    optOutUnit = join(root, 'opt-out-fixture');
-    mkdirSync(optOutUnit, { recursive: true });
-    writeFileSync(
-      join(optOutUnit, 'package.json'),
-      JSON.stringify(
-        {
-          name: '@pops/opt-out-fixture',
-          version: '0.0.0',
-          private: true,
-          pops: { extractability: { noProofSurface: 'fixture: intentionally data-only' } },
-        },
-        null,
-        2
-      )
-    );
+      optOutUnit = join(root, 'opt-out-fixture');
+      mkdirSync(optOutUnit, { recursive: true });
+      writeFileSync(
+        join(optOutUnit, 'package.json'),
+        JSON.stringify(
+          {
+            name: '@pops/opt-out-fixture',
+            version: '0.0.0',
+            private: true,
+            pops: { extractability: { noProofSurface: 'fixture: intentionally data-only' } },
+          },
+          null,
+          2
+        )
+      );
 
-    malformedUnit = join(root, 'malformed-fixture');
-    mkdirSync(malformedUnit, { recursive: true });
-    writeFileSync(join(malformedUnit, 'package.json'), '{ this is not valid json');
+      malformedUnit = join(root, 'malformed-fixture');
+      mkdirSync(malformedUnit, { recursive: true });
+      writeFileSync(join(malformedUnit, 'package.json'), '{ this is not valid json');
 
-    multilineReasonUnit = join(root, 'multiline-reason-fixture');
-    mkdirSync(multilineReasonUnit, { recursive: true });
-    writeFileSync(
-      join(multilineReasonUnit, 'package.json'),
-      JSON.stringify(
-        {
-          name: '@pops/multiline-reason-fixture',
-          version: '0.0.0',
-          private: true,
-          // A legal JSON string can carry an embedded newline. The 7-line
-          // wire format between proof-surface.mjs and sandbox.sh must survive
-          // that without shifting field positions.
-          pops: { extractability: { noProofSurface: 'data-only\nsee the README for why' } },
-        },
-        null,
-        2
-      )
-    );
-  });
-
-  afterAll(() => {
-    rmSync(root, { recursive: true, force: true });
-  });
-
-  it("does NOT silently succeed when a unit's proof scripts are renamed away with no declared opt-out", () => {
-    const result = spawnSync('bash', [sandboxScript, renamedUnit], { encoding: 'utf8' });
-
-    expect(result.status).not.toBe(0);
-    expect(result.status).not.toBeNull();
-    // The specific silent-success shape this guard exists to prevent: exit 0
-    // with no evidence at all.
-    expect(result.stderr).toContain('looked for: build, typecheck, test:coverage, test');
-    expect(result.stderr).toContain('compile, types:check, vitest:run');
-    expect(result.stderr).not.toContain('nothing to prove, skipping');
-    expect(result.stderr).not.toContain('✔ EX-2');
-  });
-
-  it('skips legitimately, with the declared reason on the record, for a real opt-out', () => {
-    const result = spawnSync('bash', [sandboxScript, optOutUnit], { encoding: 'utf8' });
-
-    expect(result.status).toBe(0);
-    expect(result.stderr).toContain('declared opt-out: fixture: intentionally data-only');
-  });
-
-  it('fails loud rather than silently on a malformed package.json', () => {
-    const result = spawnSync('bash', [sandboxScript, malformedUnit], { encoding: 'utf8' });
-
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain('failed to read');
-  });
-
-  it('proof-surface.mjs prints exactly 7 lines even when the opt-out reason has an embedded newline', () => {
-    const result = spawnSync('node', [proofSurfaceScript, multilineReasonUnit], {
-      encoding: 'utf8',
+      multilineReasonUnit = join(root, 'multiline-reason-fixture');
+      mkdirSync(multilineReasonUnit, { recursive: true });
+      writeFileSync(
+        join(multilineReasonUnit, 'package.json'),
+        JSON.stringify(
+          {
+            name: '@pops/multiline-reason-fixture',
+            version: '0.0.0',
+            private: true,
+            // A legal JSON string can carry an embedded newline. The 7-line
+            // wire format between proof-surface.mjs and sandbox.sh must survive
+            // that without shifting field positions.
+            pops: { extractability: { noProofSurface: 'data-only\nsee the README for why' } },
+          },
+          null,
+          2
+        )
+      );
     });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout.split('\n')).toHaveLength(8); // 7 fields + trailing ''
-    expect(result.stdout).toContain('data-only see the README for why');
-    expect(result.stdout).not.toContain('data-only\nsee the README for why');
-  });
+    afterAll(() => {
+      rmSync(root, { recursive: true, force: true });
+    });
 
-  it("sandbox.sh still parses cleanly when a unit's opt-out reason has an embedded newline", () => {
-    const result = spawnSync('bash', [sandboxScript, multilineReasonUnit], { encoding: 'utf8' });
+    it("does NOT silently succeed when a unit's proof scripts are renamed away with no declared opt-out", () => {
+      const result = spawnSync('bash', [sandboxScript, renamedUnit], { encoding: 'utf8' });
 
-    expect(result.status).toBe(0);
-    expect(result.stderr).toContain('declared opt-out: data-only see the README for why');
-    // The array-length guard must not fire on legitimate input.
-    expect(result.stderr).not.toContain('expected 7');
-  });
-});
+      expect(result.status).not.toBe(0);
+      expect(result.status).not.toBeNull();
+      // The specific silent-success shape this guard exists to prevent: exit 0
+      // with no evidence at all.
+      expect(result.stderr).toContain('looked for: build, typecheck, test:coverage, test');
+      expect(result.stderr).toContain('compile, types:check, vitest:run');
+      expect(result.stderr).not.toContain('nothing to prove, skipping');
+      expect(result.stderr).not.toContain('✔ EX-2');
+    });
+
+    it('skips legitimately, with the declared reason on the record, for a real opt-out', () => {
+      const result = spawnSync('bash', [sandboxScript, optOutUnit], { encoding: 'utf8' });
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain('declared opt-out: fixture: intentionally data-only');
+    });
+
+    it('fails loud rather than silently on a malformed package.json', () => {
+      const result = spawnSync('bash', [sandboxScript, malformedUnit], { encoding: 'utf8' });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain('failed to read');
+    });
+
+    it('proof-surface.mjs prints exactly 7 lines even when the opt-out reason has an embedded newline', () => {
+      const result = spawnSync('node', [proofSurfaceScript, multilineReasonUnit], {
+        encoding: 'utf8',
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.split('\n')).toHaveLength(8); // 7 fields + trailing ''
+      expect(result.stdout).toContain('data-only see the README for why');
+      expect(result.stdout).not.toContain('data-only\nsee the README for why');
+    });
+
+    it("sandbox.sh still parses cleanly when a unit's opt-out reason has an embedded newline", () => {
+      const result = spawnSync('bash', [sandboxScript, multilineReasonUnit], { encoding: 'utf8' });
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain('declared opt-out: data-only see the README for why');
+      // The array-length guard must not fire on legitimate input.
+      expect(result.stderr).not.toContain('expected 7');
+    });
+  }
+);

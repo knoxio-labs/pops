@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 import {
   checkNodePin,
   collectDockerfilePins,
@@ -509,7 +511,7 @@ describe('collectUnprovisionedNodeSteps', () => {
   });
 });
 
-describe('against the live repo', () => {
+describe('against the live repo', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('every declared Node pin names one major', () => {
     expect(checkNodePin(repoRoot).violations).toEqual([]);
   });
