@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const CHECK_ARGS = ['install', '--frozen-lockfile', '--lockfile-only'];
 
@@ -77,28 +79,32 @@ afterAll(() => {
   rmSync(workspace, { recursive: true, force: true });
 });
 
-describe('pnpm install --frozen-lockfile --lockfile-only', () => {
-  it('passes when the lockfile matches the manifests', () => {
-    setAppDependencies({ '@fixture/lib': 'workspace:*' });
-    expect(runCheck()).toBe(0);
-  });
+describe(
+  'pnpm install --frozen-lockfile --lockfile-only',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    it('passes when the lockfile matches the manifests', () => {
+      setAppDependencies({ '@fixture/lib': 'workspace:*' });
+      expect(runCheck()).toBe(0);
+    });
 
-  it('fails on a dependency added to a manifest and never installed', () => {
-    setAppDependencies({ '@fixture/lib': 'workspace:*', '@fixture/root': 'workspace:*' });
-    expect(runCheck()).not.toBe(0);
-  });
+    it('fails on a dependency added to a manifest and never installed', () => {
+      setAppDependencies({ '@fixture/lib': 'workspace:*', '@fixture/root': 'workspace:*' });
+      expect(runCheck()).not.toBe(0);
+    });
 
-  // The POPS-3221 shape: `@pops/app-bfm` left `pillars/shell/package.json` and
-  // the lockfile was never regenerated.
-  it('fails on a dependency removed from a manifest while the lockfile carries it', () => {
-    setAppDependencies({});
-    expect(runCheck()).not.toBe(0);
-  });
+    // The POPS-3221 shape: `@pops/app-bfm` left `pillars/shell/package.json` and
+    // the lockfile was never regenerated.
+    it('fails on a dependency removed from a manifest while the lockfile carries it', () => {
+      setAppDependencies({});
+      expect(runCheck()).not.toBe(0);
+    });
 
-  // Nothing in this suite would notice the check being installed under
-  // different flags, or dropped from the hook entirely.
-  it('is the command the pre-push hook runs', () => {
-    const hook = readFileSync(join(REPO_ROOT, '.husky/pre-push'), 'utf8');
-    expect(hook).toContain(`pnpm ${CHECK_ARGS.join(' ')}`);
-  });
-});
+    // Nothing in this suite would notice the check being installed under
+    // different flags, or dropped from the hook entirely.
+    it('is the command the pre-push hook runs', () => {
+      const hook = readFileSync(join(REPO_ROOT, '.husky/pre-push'), 'utf8');
+      expect(hook).toContain(`pnpm ${CHECK_ARGS.join(' ')}`);
+    });
+  }
+);

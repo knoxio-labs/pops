@@ -25,6 +25,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 let registry: Server;
@@ -229,7 +231,7 @@ afterAll(async () => {
   rmSync(dataDir, { recursive: true, force: true });
 });
 
-describe('the real entry point', () => {
+describe('the real entry point', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('boots, migrates a fresh database and serves health', async () => {
     // Migrations run on a file that did not exist a moment ago — the one
     // thing an in-process test with a pre-migrated handle cannot check.

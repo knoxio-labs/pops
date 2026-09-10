@@ -19,6 +19,8 @@ import { describe, expect, it } from 'vitest';
 
 import { discoverJournals, findJournalViolations } from '../check-migration-journals.mjs';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
 const guard = join(repoRoot, 'scripts', 'ci', 'check-migration-journals.mjs');
@@ -147,7 +149,7 @@ describe('discoverJournals', () => {
   });
 });
 
-describe('the guard as CI runs it', () => {
+describe('the guard as CI runs it', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('passes its own self-test', () => {
     const out = execFileSync('node', [guard, '--self-test'], { encoding: 'utf8' });
     expect(out).toContain('self-test OK');

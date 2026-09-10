@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
+
 const here = dirname(fileURLToPath(import.meta.url));
 const workflowsDir = resolve(here, '..', '..', '..', '.github', 'workflows');
 
@@ -86,6 +88,7 @@ const marker = '<!-- pr-review-state: eyJ2ZXJzaW9uIjoxfQ== -->';
 
 describe.each(['pr-review.yml', 'pr-review-dependabot.yml'])(
   '%s sticky-comment selection',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
   (workflowFile) => {
     it('selects the bot comment carrying the real marker', () => {
       const bot: Comment = {
