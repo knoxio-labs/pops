@@ -85,6 +85,68 @@ function result(accountId: string): UpSyncResult {
   };
 }
 
+describe('POST /accounts/:id/sync with an explicit range (POPS-3352)', () => {
+  it('asks Up for the range given, not the derived one', async () => {
+    const id = upAccount();
+    const deferred = deferredRunner();
+    setUpSyncRunnerForTests(deferred.runner);
+
+    const started = await client().accountImports.triggerSync(id, {
+      from: '2019-05-01',
+      to: '2019-05-31',
+    });
+
+    expect(started.data).toMatchObject({ from: '2019-05-01', to: '2019-05-31' });
+    deferred.resolve(result(id));
+  });
+
+  it('clamps a range ending in the future to today rather than refusing it', async () => {
+    const id = upAccount();
+    const deferred = deferredRunner();
+    setUpSyncRunnerForTests(deferred.runner);
+
+    const started = await client().accountImports.triggerSync(id, {
+      from: '2019-05-01',
+      to: '2999-01-01',
+    });
+
+    expect(started.data.to).toBe(new Date().toISOString().slice(0, 10));
+    expect(started.data.from).toBe('2019-05-01');
+    deferred.resolve(result(id));
+  });
+
+  it('422s one date without the other rather than inventing the missing end', async () => {
+    const id = upAccount();
+
+    await expect(
+      client().accountImports.triggerSync(id, { from: '2019-05-01' })
+    ).rejects.toMatchObject({ status: 422 });
+    await expect(
+      client().accountImports.triggerSync(id, { to: '2019-05-31' })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('422s a range entirely in the future, which the clamp would otherwise invert', async () => {
+    const id = upAccount();
+    const year = new Date().getUTCFullYear();
+
+    await expect(
+      client().accountImports.triggerSync(id, {
+        from: `${year + 1}-10-01`,
+        to: `${year + 2}-01-01`,
+      })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('422s a range that ends before it starts', async () => {
+    const id = upAccount();
+
+    await expect(
+      client().accountImports.triggerSync(id, { from: '2019-05-31', to: '2019-05-01' })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+});
+
 describe('POST /accounts/:id/sync', () => {
   it('starts a job, which the progress route follows to its result', async () => {
     const id = upAccount();

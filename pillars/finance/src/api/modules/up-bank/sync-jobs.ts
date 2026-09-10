@@ -143,6 +143,12 @@ export interface StartUpSyncInput {
   client?: UpBankClient;
   /** The day the range ends; today unless a test says otherwise. */
   asOf?: string;
+  /**
+   * An explicit inclusive range to ask Up for, overriding {@link syncRangeFor}
+   * (POPS-3352). Only a caller walking a backfill supplies one; the scheduler
+   * never does, because a fixed range would stop tracking the account.
+   */
+  range?: { from: string; to: string };
 }
 
 export interface StartedUpSync {
@@ -168,7 +174,7 @@ export function startUpSyncJob(
     accountId: input.accountId,
     trigger: input.trigger,
     status: 'running',
-    ...syncRangeFor(db, input.accountId, asOf),
+    ...(input.range ?? syncRangeFor(db, input.accountId, asOf)),
     startedAt: new Date().toISOString(),
     finishedAt: null,
     result: null,

@@ -9,6 +9,7 @@ import { ALL_ACCOUNTS_KEY } from '../components/accounts/hooks/useAllAccounts';
 import { toAccountOptions } from '../components/accounts/toAccountOptions';
 import { unwrap } from '../finance-api-helpers.js';
 import { accountImportsWriteConfig } from '../finance-api/index.js';
+import { BackfillRange } from './account-imports/BackfillRange';
 import { BatchHistory } from './account-imports/BatchHistory';
 import { ImportActions } from './account-imports/ImportActions';
 import { accountImportConfigKey } from './account-imports/queryKeys';
@@ -119,6 +120,7 @@ function ImportsPageBody({ account, option, config, state, editing, setEditing, 
       />
       <SourceSection accountName={account.name} config={config} onEdit={() => setEditing(true)} />
       <StatusSection account={account} drafts={state.drafts} />
+      <BackfillRange accountId={account.id} config={config} />
       <section className="space-y-2">
         <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           History

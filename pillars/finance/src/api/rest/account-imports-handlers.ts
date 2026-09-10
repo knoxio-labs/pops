@@ -15,6 +15,7 @@ import {
   accountImportConfigService,
   ImportConfigInvalidError,
   importBatchesService,
+  today,
   type FinanceDb,
 } from '../../db/index.js';
 import {
@@ -30,11 +31,44 @@ import { requireAccount } from './require-account.js';
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { financeAccountImportsContract } from '../../contract/rest-account-imports.js';
+import type { TriggerSyncBody } from '../../contract/rest-account-sync-schemas.js';
 import type { ContactsClient } from '../contacts/client.js';
 
 type Req = ServerInferRequest<typeof financeAccountImportsContract>;
 
 const DEFAULT_LIMIT = 50;
+
+/**
+ * The explicit range a trigger asked for, or null for the derived one
+ * (POPS-3352).
+ *
+ * A `to` in the future is clamped rather than refused: Up cannot answer for
+ * tomorrow, and a caller typing the end of the current month means "up to
+ * whatever exists", not "fail".
+ *
+ * The clamp happens BEFORE the reversed-range check, not after. A range
+ * entirely in the future passes `from > to` on its raw dates and would clamp
+ * into an inverted one — a `from` after today with a `to` of today — which is
+ * exactly the shape the check exists to reject.
+ */
+function resolveRequestedRange(
+  body: TriggerSyncBody
+): { range: { from: string; to: string } } | null {
+  const from = body?.from;
+  const to = body?.to;
+  if (from === undefined && to === undefined) return null;
+  if (from === undefined || to === undefined) {
+    throw new UnprocessableEntityError(
+      'A sync range needs both from and to; one on its own has no range to read.'
+    );
+  }
+  const now = today();
+  const clampedTo = to > now ? now : to;
+  if (from > clampedTo) {
+    throw new UnprocessableEntityError(`Sync range ${from}..${to} ends before it starts.`);
+  }
+  return { range: { from, to: clampedTo } };
+}
 
 export function makeAccountImportsHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
@@ -79,14 +113,18 @@ export function makeAccountImportsHandlers(db: FinanceDb, contacts: ContactsClie
         }
       }),
 
-    triggerSync: ({ params }: Req['triggerSync']) =>
+    triggerSync: ({ params, body }: Req['triggerSync']) =>
       runHttp(() => {
         requireAccount(db, params.id);
         const config = accountImportConfigService.getImportConfig(db, params.id);
         if (config?.sourceKind !== 'api' || config.provider !== 'up') {
           throw new UnprocessableEntityError(`Account ${params.id} is not fed by the Up API`);
         }
-        const started = startUpSyncJob(db, contacts, { accountId: params.id, trigger: 'manual' });
+        const started = startUpSyncJob(db, contacts, {
+          accountId: params.id,
+          trigger: 'manual',
+          ...resolveRequestedRange(body),
+        });
         return { status: 202 as const, body: { data: started.job } };
       }),
 

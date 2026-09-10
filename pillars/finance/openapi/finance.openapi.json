@@ -6177,7 +6177,16 @@
             "application/json": {
               "schema": {
                 "additionalProperties": false,
-                "properties": {},
+                "properties": {
+                  "from": {
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "type": "string"
+                  },
+                  "to": {
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "type": "string"
+                  }
+                },
                 "type": "object"
               }
             }
@@ -6403,7 +6412,7 @@
             "description": "422"
           }
         },
-        "summary": "Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way",
+        "summary": "Start an Up sync for an account fed by the Up API, or report the one already running. An optional from/to pair overrides the derived range; 422 for an account not fed that way, for one date without the other, or for a reversed range",
         "tags": ["accountImports"]
       }
     },

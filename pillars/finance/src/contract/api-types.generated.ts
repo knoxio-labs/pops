@@ -310,7 +310,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Start an Up sync for an account fed by the Up API, or report the one already running; 422 for an account not fed that way */
+    /** Start an Up sync for an account fed by the Up API, or report the one already running. An optional from/to pair overrides the derived range; 422 for an account not fed that way, for one date without the other, or for a reversed range */
     post: operations['accountImports.triggerSync'];
     delete?: never;
     options?: never;
@@ -4131,7 +4131,10 @@ export interface operations {
     /** @description Body */
     requestBody?: {
       content: {
-        'application/json': Record<string, never>;
+        'application/json': {
+          from?: string;
+          to?: string;
+        };
       };
     };
     responses: {

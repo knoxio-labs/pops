@@ -11,6 +11,12 @@ import { IMPORT_DRAFTS_LIST_KEY } from '../hooks/useDraftWriteThrough';
 
 type UpSyncJob = AccountImportsGetSyncJobResponses[200]['data'];
 
+/** An inclusive `YYYY-MM-DD` range to ask Up for. */
+export interface SyncRange {
+  from: string;
+  to: string;
+}
+
 const POLL_MS = 1000;
 const MAX_POLLS = 120;
 
@@ -36,8 +42,15 @@ export function useSyncNow(accountId: string) {
   const queryClient = useQueryClient();
   const [job, setJob] = useState<UpSyncJob | null>(null);
   const mutation = useMutation({
-    mutationFn: async () => {
-      const started = unwrap(await accountImportsTriggerSync({ path: { id: accountId } })).data;
+    mutationFn: async (range?: SyncRange) => {
+      // No range means no body at all, not an empty one: a steady-state sync
+      // must reach the server exactly as it did before the range existed.
+      const started = unwrap(
+        await accountImportsTriggerSync({
+          path: { id: accountId },
+          ...(range === undefined ? {} : { body: range }),
+        })
+      ).data;
       return pollJob(accountId, started.id);
     },
     onSuccess: (finished) => {
@@ -46,7 +59,9 @@ export function useSyncNow(accountId: string) {
     },
   });
   return {
-    syncNow: () => mutation.mutate(),
+    syncNow: () => mutation.mutate(undefined),
+    /** Sync one explicit inclusive range instead of the derived one (POPS-3352). */
+    syncRange: (range: SyncRange) => mutation.mutate(range),
     isSyncing: mutation.isPending,
     lastJob: job,
     error: mutation.error,

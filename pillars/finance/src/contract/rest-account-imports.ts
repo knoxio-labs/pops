@@ -26,7 +26,7 @@ import {
   ImportConfigSchema,
   WriteImportConfigBodySchema,
 } from './rest-account-imports-schemas.js';
-import { UpSyncJobSchema } from './rest-account-sync-schemas.js';
+import { TriggerSyncBodySchema, UpSyncJobSchema } from './rest-account-sync-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_422 } from './rest-schemas.js';
 
 const c = initContract();
@@ -66,11 +66,12 @@ export const financeAccountImportsContract = c.router({
     method: 'POST',
     path: '/accounts/:id/sync',
     pathParams: AccountParams,
-    body: z.object({}).optional(),
+    body: TriggerSyncBodySchema,
     responses: { 202: z.object({ data: UpSyncJobSchema }), ...ERR_RESPONSES_WITH_422 },
     summary:
-      'Start an Up sync for an account fed by the Up API, or report the one already running; ' +
-      '422 for an account not fed that way',
+      'Start an Up sync for an account fed by the Up API, or report the one already running. ' +
+      'An optional from/to pair overrides the derived range; 422 for an account not fed that ' +
+      'way, for one date without the other, or for a reversed range',
   },
   getSyncJob: {
     method: 'GET',

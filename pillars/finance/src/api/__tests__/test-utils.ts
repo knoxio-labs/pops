@@ -505,8 +505,8 @@ export function makeClient(app: Express) {
         call<{ data: ImportConfig; message: string }>((r) =>
           r.put(`/accounts/${accountId}/import-config`).send(body)
         ),
-      triggerSync: (accountId: string) =>
-        call<{ data: UpSyncJob }>((r) => r.post(`/accounts/${accountId}/sync`).send({})),
+      triggerSync: (accountId: string, body: Record<string, unknown> = {}) =>
+        call<{ data: UpSyncJob }>((r) => r.post(`/accounts/${accountId}/sync`).send(body)),
       getSyncJob: (accountId: string, jobId: string) =>
         call<{ data: UpSyncJob }>((r) => r.get(`/accounts/${accountId}/sync/${jobId}`)),
     },
