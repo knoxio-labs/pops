@@ -121,7 +121,6 @@ vi.mock('./CorrectionProposalDialog', async () => {
         open?: boolean;
         mode?: string;
         onApproved?: () => void;
-        sessionId?: string;
       };
       // Only track proposal dialog props (not browse mode)
       if (p.mode !== 'browse') lastProposalDialogProps = props;
@@ -134,11 +133,11 @@ vi.mock('./CorrectionProposalDialog', async () => {
           'button',
           {
             'data-testid': 'proposal-approve',
+            // No process-session check (POPS-3358). This mock used to refuse
+            // without a `sessionId` prop, reimplementing a gate the real
+            // dialog had and should not have — and inventing an error string
+            // the product never showed. A live import has no process session.
             onClick: () => {
-              if (!p.sessionId) {
-                toast.error('Missing import session id');
-                return;
-              }
               if (proposalDialogApproveMode === 'error') {
                 toast.error('boom');
                 return;
