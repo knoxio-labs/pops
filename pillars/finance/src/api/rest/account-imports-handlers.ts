@@ -45,6 +45,11 @@ const DEFAULT_LIMIT = 50;
  * A `to` in the future is clamped rather than refused: Up cannot answer for
  * tomorrow, and a caller typing the end of the current month means "up to
  * whatever exists", not "fail".
+ *
+ * The clamp happens BEFORE the reversed-range check, not after. A range
+ * entirely in the future passes `from > to` on its raw dates and would clamp
+ * into an inverted one — a `from` after today with a `to` of today — which is
+ * exactly the shape the check exists to reject.
  */
 function resolveRequestedRange(
   body: TriggerSyncBody
@@ -57,11 +62,12 @@ function resolveRequestedRange(
       'A sync range needs both from and to; one on its own has no range to read.'
     );
   }
-  if (from > to) {
+  const now = today();
+  const clampedTo = to > now ? now : to;
+  if (from > clampedTo) {
     throw new UnprocessableEntityError(`Sync range ${from}..${to} ends before it starts.`);
   }
-  const now = today();
-  return { range: { from, to: to > now ? now : to } };
+  return { range: { from, to: clampedTo } };
 }
 
 export function makeAccountImportsHandlers(db: FinanceDb, contacts: ContactsClient) {

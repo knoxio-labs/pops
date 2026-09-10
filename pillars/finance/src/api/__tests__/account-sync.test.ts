@@ -126,6 +126,18 @@ describe('POST /accounts/:id/sync with an explicit range (POPS-3352)', () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
+  it('422s a range entirely in the future, which the clamp would otherwise invert', async () => {
+    const id = upAccount();
+    const year = new Date().getUTCFullYear();
+
+    await expect(
+      client().accountImports.triggerSync(id, {
+        from: `${year + 1}-10-01`,
+        to: `${year + 2}-01-01`,
+      })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
   it('422s a range that ends before it starts', async () => {
     const id = upAccount();
 
