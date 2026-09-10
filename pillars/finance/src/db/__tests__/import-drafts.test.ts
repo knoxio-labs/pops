@@ -162,7 +162,7 @@ describe('liveDraftFor', () => {
     const live = createImportDraft(db, liveDraft());
     claimImportDraft(db, live.id, 'tab-a', { now: T0 });
     expect(liveDraftFor(db, accountId)).toBeUndefined();
-    expect(getImportDraft(db, live.id)).toMatchObject({ state: 'saved', step: 1 });
+    expect(getImportDraft(db, live.id)).toMatchObject({ state: 'saved', step: null });
   });
 
   it('lets a new live draft form after the old one was claimed', () => {
@@ -280,7 +280,7 @@ describe('writeImportDraft', () => {
 });
 
 describe('claim / heartbeat / release', () => {
-  it('claims an unowned draft and keeps its step', () => {
+  it('claims an unowned draft and keeps its step, inventing none for a draft nobody has opened', () => {
     const created = createImportDraft(db, fileDraft({ step: 4 }));
     const claimed = claimImportDraft(db, created.id, 'tab-a', { now: T0 });
     expect(claimed).toMatchObject({
@@ -289,6 +289,9 @@ describe('claim / heartbeat / release', () => {
       state: 'saved',
       step: 4,
     });
+
+    const live = createImportDraft(db, liveDraft());
+    expect(claimImportDraft(db, live.id, 'tab-a', { now: T0 }).step).toBeNull();
   });
 
   it('is idempotent for the owner', () => {

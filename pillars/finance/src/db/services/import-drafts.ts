@@ -200,6 +200,11 @@ export function writeImportDraft(
  * "Take over here"). A live draft becomes `saved` here: from this point it
  * is one person's and arrivals go elsewhere.
  *
+ * `step` is left exactly as it was, null included. Which step a
+ * never-opened draft opens on depends on where its rows came from — a live
+ * draft has nothing to upload or map — and that is the wizard's decision to
+ * make from the payload, not a number to invent here.
+ *
  * @throws {ImportDraftNotFoundError}
  * @throws {DraftOwnedElsewhereError} when a live owner holds it and `force` is not set.
  */
@@ -218,12 +223,7 @@ export function claimImportDraft(
   if (held && !options.force) throw new DraftOwnedElsewhereError(id, draft.ownerSeenAt);
   return db
     .update(importDrafts)
-    .set({
-      ownerToken,
-      ownerSeenAt: now.toISOString(),
-      state: 'saved',
-      step: draft.step ?? 1,
-    })
+    .set({ ownerToken, ownerSeenAt: now.toISOString(), state: 'saved' })
     .where(eq(importDrafts.id, id))
     .returning()
     .get();
