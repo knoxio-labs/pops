@@ -20,6 +20,7 @@ import {
   normalizeEntityId,
   parseCorrectionTags,
 } from '../corrections/index.js';
+import { resolveCorrectionLocation } from './correction-location.js';
 
 /** The columns both retroactive passes select, and all these builders may read. */
 export interface BatchTxn {
@@ -72,9 +73,17 @@ function changedType(txn: BatchTxn, rule: CorrectionRow): string | null {
   return newType;
 }
 
+/**
+ * The location this rule would give the row, or `null` for no change.
+ *
+ * A rule never overwrites a location the row already states — see
+ * {@link resolveCorrectionLocation}. Same shape as the entity and tag
+ * builders either side of it: fill what is missing, never replace what is
+ * there.
+ */
 function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {
-  const newLocation = rule.location ?? null;
-  return newLocation !== null && newLocation !== (txn.location ?? null) ? newLocation : null;
+  const resolved = resolveCorrectionLocation(txn.location, rule.location) ?? null;
+  return resolved !== null && resolved !== (txn.location ?? null) ? resolved : null;
 }
 
 /**
