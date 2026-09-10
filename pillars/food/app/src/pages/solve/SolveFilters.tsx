@@ -5,13 +5,13 @@
  * chips, multi-select tag chips, and a max-time dropdown. Every filter
  * is optional; clearing them all is the equivalent of unfiltered.
  *
- * The tags control is a free-text comma-separated input rather than a chip
- * group because the food contract exposes no tag-taxonomy read surface — a
- * discoverable control would have nothing to enumerate from.
+ * The tags control passes no `suggestions` to `ChipInput`, so it stays
+ * free-text: the food contract exposes no tag-taxonomy read surface, and a
+ * discoverable dropdown would have nothing to enumerate from.
  */
 import { useTranslation } from 'react-i18next';
 
-import { Button, Select, type SelectOption } from '@pops/ui';
+import { Button, CheckboxInput, ChipInput, Select, type SelectOption } from '@pops/ui';
 
 import type { ReactElement } from 'react';
 
@@ -48,14 +48,11 @@ export function SolveFilters({ filters, onChange }: SolveFiltersProps): ReactEle
 function NoSubsToggle({ filters, onChange }: SolveFiltersProps): ReactElement {
   const { t } = useTranslation('food');
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={filters.excludeSubs}
-        onChange={(e) => onChange({ ...filters, excludeSubs: e.target.checked })}
-      />
-      {t('solve.filters.noSubstitutions')}
-    </label>
+    <CheckboxInput
+      label={t('solve.filters.noSubstitutions')}
+      checked={filters.excludeSubs}
+      onCheckedChange={(excludeSubs) => onChange({ ...filters, excludeSubs })}
+    />
   );
 }
 
@@ -88,34 +85,17 @@ function RecipeTypeChips({ filters, onChange }: SolveFiltersProps): ReactElement
 
 function TagsInput({ filters, onChange }: SolveFiltersProps): ReactElement {
   const { t } = useTranslation('food');
-  function commit(raw: string): void {
-    const seen = new Set<string>();
-    const tags: string[] = [];
-    for (const part of raw.split(',')) {
-      const tag = part.trim();
-      if (tag.length === 0) continue;
-      if (seen.has(tag)) continue;
-      seen.add(tag);
-      tags.push(tag);
-    }
-    onChange({ ...filters, tags });
-  }
-  // The `key` forces React to remount the uncontrolled input whenever
-  // the canonical filter value changes (e.g. via "Clear filters") so a
-  // stale `defaultValue` can't shadow the reset state.
-  const value = filters.tags.join(', ');
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-sm">
       <span>{t('solve.filters.tags')}</span>
-      <input
-        key={value}
-        type="text"
+      <ChipInput
+        aria-label={t('solve.filters.tags')}
         placeholder={t('solve.filters.tagsPlaceholder')}
-        defaultValue={value}
-        onBlur={(e) => commit(e.target.value)}
-        className="rounded border px-2 py-1 text-sm"
+        value={[...filters.tags]}
+        onChange={(tags) => onChange({ ...filters, tags })}
+        containerClassName="w-64"
       />
-    </label>
+    </div>
   );
 }
 

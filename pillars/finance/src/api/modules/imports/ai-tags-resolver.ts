@@ -137,7 +137,8 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
     batch = await tagsOnlyBatchWithAi(
       groups.map((group) => group.request),
       context.importBatchId,
-      context.knownTags
+      context.knownTags,
+      { tagDescriptions: context.tagDescriptions }
     );
     breaker.recordRecovery();
   } catch (error) {

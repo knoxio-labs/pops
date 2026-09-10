@@ -8,7 +8,15 @@
  */
 import { type FormEvent, type ReactElement } from 'react';
 
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input } from '@pops/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  RadioInput,
+} from '@pops/ui';
 
 import { FieldRow, FormError } from './form-controls.js';
 import { formatQty } from './format.js';
@@ -91,21 +99,13 @@ function ReasonRadios({
   onChange: (r: BatchAdjustReason) => void;
 }): ReactElement {
   return (
-    <FieldRow label="Reason">
-      <div className="space-y-1">
-        {REASONS.map((r) => (
-          <label key={r.value} className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="adjust-reason"
-              value={r.value}
-              checked={value === r.value}
-              onChange={() => onChange(r.value)}
-            />
-            {r.label}
-          </label>
-        ))}
-      </div>
+    <FieldRow label="Reason" grouped>
+      <RadioInput
+        name="adjust-reason"
+        value={value}
+        options={REASONS}
+        onValueChange={(v) => onChange(v as BatchAdjustReason)}
+      />
     </FieldRow>
   );
 }

@@ -91,6 +91,7 @@ function makeContext(): ProcessContext {
     entityLookup: new Map(),
     aliases: new Map(),
     knownTags: ['venue:supermarket', 'contains:groceries'],
+    tagDescriptions: new Map<string, string>(),
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
     correctionRules: [],
