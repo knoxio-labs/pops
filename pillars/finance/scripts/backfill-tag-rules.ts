@@ -61,30 +61,41 @@ interface PlannedRule {
 }
 
 /**
- * The merchants the ledger decides. Grocery runs are `occasion:home` — the food
- * is consumed there, which is what separates them from eating out. Somewhere
- * you sit down or drink at is `occasion:out`. A subscription is billed to the
- * household, so it is `home` unless the thing subscribed to is a work tool.
+ * The merchants the ledger decides.
+ *
+ * `occasion:` is the social setting the money was spent in, and nothing else
+ * (POPS-3285). Somewhere you sit down or drink at is `occasion:out`; a chemist
+ * is `occasion:health`; being 2000km from home is `occasion:travel`.
+ *
+ * Routine provisioning has no occasion at all, and that is what the earlier
+ * version of this file got wrong. It reasoned that "grocery runs are
+ * `occasion:home` — the food is consumed there", which is a claim about where
+ * goods end up rather than about a setting, and applied consistently it makes
+ * almost every purchase `home`. It also produced
+ * `PRICELINE PHARMACY -> occasion:home`, justified as "household provisioning,
+ * same reasoning as the grocery runs", on rows already carrying
+ * `contains:health` and `venue:pharmacy`. Migration 0105 corrects the rows and
+ * the rules; these entries are corrected so a re-run does not put them back.
  */
 const RULES: readonly PlannedRule[] = [
   {
     pattern: 'WOOLWORTHS',
-    tags: ['occasion:home', 'venue:supermarket'],
-    why: 'grocery run; the food is consumed at home',
+    tags: ['venue:supermarket'],
+    why: 'grocery run; provisioning, so no occasion',
   },
   {
     pattern: 'WW METRO',
-    tags: ['occasion:home', 'venue:supermarket'],
+    tags: ['venue:supermarket'],
     why: 'the same chain’s small-format store',
   },
   {
     pattern: 'HARRIS FARM MARKETS',
-    tags: ['occasion:home', 'venue:supermarket'],
+    tags: ['venue:supermarket'],
     why: 'grocery run',
   },
   {
     pattern: 'ROMEO.S FOODHALL IGA',
-    tags: ['occasion:home', 'venue:supermarket'],
+    tags: ['venue:supermarket'],
     why: 'grocery run',
   },
   {
@@ -94,8 +105,8 @@ const RULES: readonly PlannedRule[] = [
   },
   {
     pattern: 'PRICELINE PHARMACY',
-    tags: ['occasion:home'],
-    why: 'household provisioning, same reasoning as the grocery runs',
+    tags: ['occasion:health'],
+    why: 'a chemist; every row already carries contains:health and venue:pharmacy',
   },
   {
     pattern: 'PALMS ON OXFORD',
@@ -139,8 +150,8 @@ const RULES: readonly PlannedRule[] = [
   },
   {
     pattern: 'GOOGLE *YOUTUBEPREMIUM',
-    tags: ['occasion:home'],
-    why: 'a household subscription, already contains:subscription',
+    tags: ['contains:streaming'],
+    why: 'a streaming subscription; billed to the household is not an occasion',
   },
   {
     pattern: 'NANONOBLE',
@@ -149,8 +160,8 @@ const RULES: readonly PlannedRule[] = [
   },
   {
     pattern: 'TEMPLE & WEBSTER',
-    tags: ['contains:household'],
-    why: 'homewares retailer; already occasion:home, missing only what it contains',
+    tags: ['contains:household', 'venue:homewares'],
+    why: 'homewares retailer; what it contains and what kind of place it is',
   },
   // The two Amazon descriptors carry no facets at all, while 64 other rows in
   // the ledger already carry `enrich:amazon`. What is missing is the marker,

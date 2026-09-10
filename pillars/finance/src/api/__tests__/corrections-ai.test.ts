@@ -144,7 +144,7 @@ describe('corrections.generateRules', () => {
           {
             descriptionPattern: 'NETFLIX',
             matchType: 'contains',
-            tags: ['Entertainment'],
+            tags: ['contains:subscription', 'channel:online'],
             reasoning: 'streaming',
           },
         ]),
@@ -165,7 +165,7 @@ describe('corrections.generateRules', () => {
       {
         descriptionPattern: 'NETFLIX',
         matchType: 'contains',
-        tags: ['Entertainment'],
+        tags: ['contains:subscription', 'channel:online'],
         reasoning: 'streaming',
       },
     ]);
@@ -185,7 +185,7 @@ describe('corrections.generateRules', () => {
     __setClaudeCompleterForTests(
       completerReturning({
         'generate-rules':
-          '[{"descriptionPattern":"NETFLIX","matchType":"contains","tags":["Entertainment"],"reasoning":"streaming"}]\n\nLet me know if you would like any adjustments.',
+          '[{"descriptionPattern":"NETFLIX","matchType":"contains","tags":["contains:subscription","channel:online"],"reasoning":"streaming"}]\n\nLet me know if you would like any adjustments.',
       })
     );
     const res = await client().corrections.generateRules({
@@ -203,7 +203,7 @@ describe('corrections.generateRules', () => {
       {
         descriptionPattern: 'NETFLIX',
         matchType: 'contains',
-        tags: ['Entertainment'],
+        tags: ['contains:subscription', 'channel:online'],
         reasoning: 'streaming',
       },
     ]);

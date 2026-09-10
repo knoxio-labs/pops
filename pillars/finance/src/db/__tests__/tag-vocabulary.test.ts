@@ -19,6 +19,7 @@ import {
   createKnownTagSet,
   incrementVocabularyUsage,
   isKnownTag,
+  listVocabularyDescriptions,
   listVocabularyTags,
   listVocabularyTagsForFacets,
   loadKnownTagSet,
@@ -36,7 +37,8 @@ CREATE TABLE tag_vocabulary (
   source text DEFAULT 'seed' NOT NULL,
   is_active integer DEFAULT 1 NOT NULL,
   usage_count integer DEFAULT 0 NOT NULL,
-  created_at text DEFAULT (datetime('now')) NOT NULL
+  created_at text DEFAULT (datetime('now')) NOT NULL,
+  description text
 );
 CREATE INDEX idx_tag_vocabulary_active ON tag_vocabulary (is_active);
 CREATE INDEX idx_tag_vocabulary_kind ON tag_vocabulary (kind, usage_count);
@@ -457,5 +459,47 @@ describe('loadKnownTagSet / isKnownTag', () => {
 
   it('is empty for an empty vocabulary', () => {
     expect(loadKnownTagSet(harness.db).size).toBe(0);
+  });
+});
+
+describe('listVocabularyDescriptions', () => {
+  let harness: TestHarness;
+  beforeEach(() => {
+    harness = freshDb();
+  });
+
+  function setDescription(tag: string, description: string | null): void {
+    harness.raw
+      .prepare('UPDATE tag_vocabulary SET description = ? WHERE tag = ?')
+      .run(description, tag);
+  }
+
+  it('omits a tag with no description rather than mapping it to an empty string', () => {
+    upsertVocabularyTag(harness.db, 'trip:cairns-2026', 'user');
+    upsertVocabularyTag(harness.db, 'occasion:home', 'seed');
+    setDescription('occasion:home', 'The dwelling itself.');
+
+    const descriptions = listVocabularyDescriptions(harness.db);
+
+    expect(descriptions.get('occasion:home')).toBe('The dwelling itself.');
+    expect(descriptions.has('trip:cairns-2026')).toBe(false);
+    expect(descriptions.size).toBe(1);
+  });
+
+  it('omits a tag described with an empty string, which is not a description', () => {
+    upsertVocabularyTag(harness.db, 'occasion:home', 'seed');
+    setDescription('occasion:home', '');
+
+    expect(listVocabularyDescriptions(harness.db).has('occasion:home')).toBe(false);
+  });
+
+  it('does not describe a retired value, which is no longer offered', () => {
+    upsertVocabularyTag(harness.db, 'occasion:admin', 'seed');
+    setDescription('occasion:admin', 'Retired.');
+    harness.raw
+      .prepare('UPDATE tag_vocabulary SET is_active = 0 WHERE tag = ?')
+      .run('occasion:admin');
+
+    expect(listVocabularyDescriptions(harness.db).has('occasion:admin')).toBe(false);
   });
 });

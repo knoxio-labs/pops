@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  */
 import { useEffect, useState, type ReactElement } from 'react';
 
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, RadioInput } from '@pops/ui';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { batchesGet, batchesRelocate } from '../../food-api/index.js';
@@ -114,20 +114,12 @@ function LocationRadios({
   onChange: (loc: BatchLocation) => void;
 }): ReactElement {
   return (
-    <div className="space-y-2">
-      {LOCATIONS.map((opt) => (
-        <label key={opt.value} className="flex items-center gap-2 text-sm">
-          <input
-            type="radio"
-            name="relocate-location"
-            value={opt.value}
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-          />
-          {opt.label}
-        </label>
-      ))}
-    </div>
+    <RadioInput
+      name="relocate-location"
+      value={value}
+      options={LOCATIONS}
+      onValueChange={(v) => onChange(v as BatchLocation)}
+    />
   );
 }
 

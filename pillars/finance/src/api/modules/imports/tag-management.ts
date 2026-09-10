@@ -6,7 +6,6 @@
  * own `suggestTags` (which also takes the handle).
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
-import { CLASSIFIED_TAG_FACETS } from '../../../db/tag-facets.js';
 import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
 
 /**
@@ -30,10 +29,21 @@ import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
  * sets exist to prevent.
  */
 export function loadKnownTags(db: FinanceDb): string[] {
-  return tagVocabularyService.listVocabularyTagsForFacets(
-    db,
-    CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)
-  );
+  return tagVocabularyService.listClassifiedVocabulary(db);
+}
+
+/**
+ * Load the definition of every vocabulary value that carries one, keyed by tag
+ * (POPS-3285).
+ *
+ * The sibling of {@link loadKnownTags}, called once per import batch for the
+ * same reason and threaded to the same place. Kept a separate call rather than
+ * folded into the tag list because `knownTags` is the closed set every model
+ * reply is validated against, and a value's definition has no business in that
+ * check — what a tag means cannot make an unlisted tag admissible.
+ */
+export function loadTagDescriptions(db: FinanceDb): ReadonlyMap<string, string> {
+  return tagVocabularyService.listVocabularyDescriptions(db);
 }
 
 export interface BuildSuggestedTagsOptions {

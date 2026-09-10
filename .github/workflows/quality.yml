@@ -1112,48 +1112,26 @@ jobs:
   raw-form-controls:
     name: Raw form control ratchet
     # POPS-3168 "every form control is a kit component": no raw <select>,
-    # <input>, or <textarea> in pillar UI — @pops/ui's kit primitives exist
-    # to replace them. Per-pillar counts in .raw-form-control-baseline.json
-    # are an UPPER BOUND: growth fails, a pillar that has fallen below its
-    # entry passes untouched, so concurrent migration PRs never have to
-    # rewrite the same one-line file in lockstep (POPS-3236). What stops the
-    # bound being loosened is `--base`: the guard reads the baseline as it
-    # stood at the merge base and fails any entry this change raised above
-    # the real count. That needs history, hence `fetch-depth: 0` — the only
-    # reason this Tier A job is not the seconds-scale shallow checkout its
-    # neighbours are. It still reads pillar source directly and pulls in no
-    # third-party deps, so it skips `pnpm install`. Never scans libs/ui — the
-    # kit legitimately wraps these elements. See
+    # <input>, or <textarea> in pillar UI — @pops/ui's kit primitives exist to
+    # replace them. Every pillar is held at ZERO; the only survivors are the
+    # paths named in the guard's ALLOWLIST, each carrying a ticket and a
+    # matching row in ADR-051 (POPS-3276). There is no per-pillar count and no
+    # committed baseline file any more, so this job needs no merge base and no
+    # history — the shallow default checkout is enough, unlike the
+    # `fetch-depth: 0` the count-baseline era required. Tier A: reads pillar
+    # source directly, pulls in no third-party deps, skips `pnpm install`.
+    # Never scans libs/ui — the kit legitimately wraps these elements. See
     # scripts/ci/check-raw-form-controls.mjs.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # need a merge base to see whether the baseline was raised
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - name: Gate self-test (proves the guard reports a new control and a raised baseline)
+      - name: Gate self-test (proves the guard reports unexpected, grown and stale paths)
         run: node scripts/ci/check-raw-form-controls.mjs --self-test
-      - name: No raw form controls beyond the committed per-pillar baseline
-        env:
-          # Same three-event resolution as `contract-consumers` above:
-          # `github.base_ref` on a pull_request, the merge group's full ref
-          # on a merge_group, `main` on a push. See resolve-report-base.mjs.
-          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
-        run: |
-          set -euo pipefail
-          base=$(node scripts/ci/resolve-report-base.mjs --ref "$BASE_REF")
-          if [ -n "$base" ]; then
-            node scripts/ci/check-raw-form-controls.mjs --base "$base"
-          else
-            # No usable base: the growth half still runs and the guard prints
-            # a line saying the raised-baseline half did not. Loud, not silent
-            # — but not a build failure either, since a checkout with no merge
-            # base is a CI condition, not a violation by the change.
-            echo "No merge base against origin/$BASE_REF — the raised-baseline check cannot run."
-            node scripts/ci/check-raw-form-controls.mjs
-          fi
+      - name: Every pillar at zero raw form controls outside the allowlist
+        run: node scripts/ci/check-raw-form-controls.mjs
 
   title-icon-consistency:
     name: Title-icon consistency
