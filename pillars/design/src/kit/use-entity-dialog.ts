@@ -1,5 +1,5 @@
 import { type Entity } from '@/fixtures/entities';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * Owns the open/target state for one `EntityFormDialog` and a `key` that
@@ -12,15 +12,15 @@ import { useRef, useState } from 'react';
 export function useEntityDialog() {
   const [entity, setEntity] = useState<Entity | null>(null);
   const [open, setOpen] = useState(false);
-  const openCount = useRef(0);
+  const [key, setKey] = useState(0);
 
   return {
     open,
     setOpen,
     entity,
-    key: openCount.current,
+    key,
     openWith: (target: Entity | null) => {
-      openCount.current += 1;
+      setKey((count) => count + 1);
       setEntity(target);
       setOpen(true);
     },

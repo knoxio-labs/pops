@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * State + mutation hook for `AdjustQtyModal` — splits the React side
  * so the modal stays under the `max-lines-per-function` budget.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { batchesAdjustQty, batchesGet } from '../../food-api/index.js';
@@ -29,14 +29,16 @@ export function useAdjustQtyState({ batchId, isOpen, onClose }: UseAdjustQtyArgs
   const [delta, setDelta] = useState('');
   const [reason, setReason] = useState<BatchAdjustReason>('spoiled');
   const [error, setError] = useState<string | null>(null);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-  useEffect(() => {
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (!isOpen) {
       setDelta('');
       setReason('spoiled');
       setError(null);
     }
-  }, [isOpen]);
+  }
 
   const adjustMutation = useMutation({
     mutationFn: async ({ id, ...body }: BatchesAdjustQtyInput) =>

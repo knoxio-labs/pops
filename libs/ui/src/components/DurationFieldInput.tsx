@@ -3,7 +3,7 @@
  * with conversion logic. Stores the canonical value in milliseconds and
  * renders a user-friendly unit.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Input } from '../primitives/input';
@@ -61,15 +61,13 @@ function useDurationUnit(value: number, units: DurationUnit[], defaultUnit?: Dur
   );
   const [unit, setUnit] = useState<DurationUnit>(() => clampUnit(defaultUnit ?? inferUnit(value)));
 
-  useEffect(() => {
-    if (value === 0) return;
-    const multiplier = UNIT_MULTIPLIERS[unit];
-    if (value % multiplier !== 0) setUnit(clampUnit(inferUnit(value)));
-  }, [value, unit, clampUnit]);
-
-  useEffect(() => {
-    if (!units.includes(unit)) setUnit(clampUnit(unit));
-  }, [units, unit, clampUnit]);
+  if (value !== 0 && value % UNIT_MULTIPLIERS[unit] !== 0) {
+    const inferred = clampUnit(inferUnit(value));
+    if (inferred !== unit) setUnit(inferred);
+  } else if (!units.includes(unit)) {
+    const clamped = clampUnit(unit);
+    if (clamped !== unit) setUnit(clamped);
+  }
 
   return [unit, setUnit] as const;
 }

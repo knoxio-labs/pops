@@ -4,7 +4,7 @@
  * ingredient is picked.
  */
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
@@ -139,9 +139,11 @@ interface Props {
 function useCreateWeightDialogState(open: boolean, ingredients: readonly IngredientOption[]) {
   const { t } = useTranslation('food');
   const [form, setForm] = useState<FormState>(INITIAL);
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) setForm(INITIAL);
-  }, [open]);
+  }
   const selectedIngredientId = form.ingredientId.length > 0 ? Number(form.ingredientId) : null;
   const variantsQuery = useVariantsFor(selectedIngredientId);
   const variantOptions = buildVariantOptions(

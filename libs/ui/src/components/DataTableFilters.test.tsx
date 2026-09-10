@@ -47,6 +47,7 @@ const defaultFilters: ColumnFilter[] = [
  */
 function Harness({ filters = defaultFilters }: { filters?: ColumnFilter[] }) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  // oxlint-disable-next-line react/incompatible-library -- see DataTable.hook.ts, POPS-3356.
   const table = useReactTable({
     data: rows,
     columns,

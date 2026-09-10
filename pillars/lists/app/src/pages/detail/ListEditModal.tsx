@@ -24,10 +24,12 @@ function useEditFormState(list: ListRow) {
   const [name, setName] = useState(list.name);
   const [kind, setKind] = useState<ListKind>(list.kind);
   const [nameError, setNameError] = useState<string | null>(null);
-  useEffect(() => {
+  const [prevList, setPrevList] = useState(list);
+  if (list !== prevList) {
+    setPrevList(list);
     setName(list.name);
     setKind(list.kind);
-  }, [list]);
+  }
   return { name, setName, kind, setKind, nameError, setNameError };
 }
 

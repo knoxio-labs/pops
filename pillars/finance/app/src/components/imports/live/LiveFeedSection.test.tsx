@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,10 +45,12 @@ function ok<T>(data: T) {
   return { data, error: undefined, response: new Response(null, { status: 200 }) };
 }
 
-let lastLocation = '';
+const locationSpy = { pathname: '' };
 function LocationSpy() {
   const location = useLocation();
-  lastLocation = location.pathname + location.search;
+  useEffect(() => {
+    locationSpy.pathname = location.pathname + location.search;
+  }, [location]);
   return null;
 }
 
@@ -126,7 +129,7 @@ describe('LiveFeedSection', () => {
     expect(screen.getByText('$612.15')).toBeDefined();
     expect(screen.getByText('2 need a decision.')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Next: process what arrived' }));
-    expect(lastLocation).toBe('/finance/import?draft=d-live');
+    expect(locationSpy.pathname).toBe('/finance/import?draft=d-live');
   });
 
   it('ignores a saved draft of the same account: only the collecting one is what is waiting', async () => {

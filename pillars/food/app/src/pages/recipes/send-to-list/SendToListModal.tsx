@@ -10,7 +10,7 @@
  *  - closing mid-flight does NOT cancel the server work — onOpenChange just
  *    hides the modal
  */
-import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -57,18 +57,19 @@ export function SendToListModal({
   // Seed the form ONCE per open, the first time the lists query resolves (or
   // settles as empty). Re-seeding on every shoppingLists.length change would
   // override a user who clicked "Create new" before a refetch finished.
-  const seededRef = useRef(false);
-  useEffect(() => {
+  const [seeded, setSeeded] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) {
       setForm(initialForm);
-      seededRef.current = false;
+      setSeeded(false);
     }
-  }, [open]);
-  useEffect(() => {
-    if (!open || data.isLoading || seededRef.current) return;
-    seededRef.current = true;
+  }
+  if (open && !data.isLoading && !seeded) {
+    setSeeded(true);
     setForm((prev) => seedFormFromData(prev, data.shoppingLists.length > 0));
-  }, [open, data.isLoading, data.shoppingLists.length]);
+  }
   const mutation = useSendToListMutation({
     onSuccess: (outcome) => {
       const listName = resolveListName(form, data.shoppingLists, outcome.listId);

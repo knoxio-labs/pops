@@ -2,7 +2,7 @@
  * ImageWithFallback — image that shows a skeleton while loading, a fallback
  * source on error, and a placeholder icon when no source is available.
  */
-import { type ComponentType, useEffect, useState } from 'react';
+import { type ComponentType, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import { Skeleton } from '../primitives/skeleton';
@@ -36,7 +36,13 @@ function PlaceholderSlot({
   );
 }
 
-export function ImageWithFallback({
+export function ImageWithFallback(props: ImageWithFallbackProps) {
+  return (
+    <ImageWithFallbackForSrc key={`${props.src ?? ''}|${props.fallbackSrc ?? ''}`} {...props} />
+  );
+}
+
+function ImageWithFallbackForSrc({
   src,
   fallbackSrc,
   alt,
@@ -50,14 +56,7 @@ export function ImageWithFallback({
   const initialSrc = src ?? fallbackSrc ?? null;
   const [activeSrc, setActiveSrc] = useState<string | null>(initialSrc);
   const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    const next = src ?? fallbackSrc ?? null;
-    setActiveSrc(next);
-    setLoaded(false);
-    setFailed(next === null);
-  }, [src, fallbackSrc]);
+  const [failed, setFailed] = useState(initialSrc === null);
 
   const handleError = () => {
     if (activeSrc === src && fallbackSrc) {

@@ -61,10 +61,13 @@ export function useSearchKeyboardNav({
 }: UseSearchKeyboardNavOptions) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  // Reset selection when results change
-  useEffect(() => {
+  // Reset selection when results change, computed during this render so the
+  // reset is visible in the same paint instead of lagging one render behind.
+  const [prevResultCount, setPrevResultCount] = useState(resultCount);
+  if (prevResultCount !== resultCount) {
+    setPrevResultCount(resultCount);
     setSelectedIndex(-1);
-  }, [resultCount]);
+  }
 
   // Scroll selected item into view
   useEffect(() => {

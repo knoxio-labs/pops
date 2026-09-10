@@ -195,9 +195,12 @@ export function annotationsFor(collisions) {
  * @param {Collision[]} collisions
  * @param {number | null} otherPrCount How many open PRs were compared against,
  *   or `null` when the guard short-circuited before querying any.
+ * @param {string[]} [skipped] Open PRs listed but whose head could not be
+ *   fetched — almost always one that closed between the list call and the
+ *   fetch — so they are excluded from `otherPrCount` and every projection.
  * @returns {string}
  */
-export function summaryMarkdown(collisions, otherPrCount) {
+export function summaryMarkdown(collisions, otherPrCount, skipped = []) {
   // "0 other open PRs" and "never asked" are different facts, and a summary
   // that renders them identically is a guard claiming a comparison it did not
   // make.
@@ -205,8 +208,12 @@ export function summaryMarkdown(collisions, otherPrCount) {
     otherPrCount === null
       ? 'This PR changes no capped file, so no other PR was fetched.'
       : `Compared against ${otherPrCount} other open PR(s) on the same base.`;
+  const skipNote =
+    skipped.length === 0
+      ? ''
+      : ` (${skipped.join(', ')} closed before its head could be fetched — skipped, not compared.)`;
   if (collisions.length === 0) {
-    return `### Cross-PR line budget\n\nNo collision. ${scope}\n`;
+    return `### Cross-PR line budget\n\nNo collision. ${scope}${skipNote}\n`;
   }
   const rows = collisions
     .map(
@@ -217,7 +224,7 @@ export function summaryMarkdown(collisions, otherPrCount) {
   return (
     `### Cross-PR line budget\n\n` +
     `${collisions.length} file(s) would cross the cap if the paired PR lands first. ` +
-    `Neither PR crosses it alone, so neither will be told by any other check. ${scope}\n\n` +
+    `Neither PR crosses it alone, so neither will be told by any other check. ${scope}${skipNote}\n\n` +
     `| file | with | on base | this PR | other PR | projected |\n` +
     `| --- | --- | --- | --- | --- | --- |\n${rows}\n`
   );
@@ -344,7 +351,7 @@ export function cappedFilesFrom(cwd) {
  * @param {number} params.pr
  * @param {string} params.base Base branch name, e.g. `main`.
  * @param {string} params.cwd
- * @returns {{ collisions: Collision[], otherPrCount: number | null } | { error: string }}
+ * @returns {{ collisions: Collision[], otherPrCount: number | null, skipped: string[] } | { error: string }}
  */
 export function evaluate({ repo, pr, base, cwd }) {
   /** @type {{ max: number, isCapped: (path: string) => boolean }} */
@@ -366,7 +373,7 @@ export function evaluate({ repo, pr, base, cwd }) {
   }
   // `null`, not 0: nothing was queried, and the summary must not read as if
   // the API had been asked and answered "none".
-  if (mine.length === 0) return { collisions: [], otherPrCount: null };
+  if (mine.length === 0) return { collisions: [], otherPrCount: null, skipped: [] };
 
   /** @type {{ number: number, title: string }[]} */
   let openPrs;
@@ -380,25 +387,27 @@ export function evaluate({ repo, pr, base, cwd }) {
 
   /** @type {{ number: number, title: string, deltas: BranchDelta[] }[]} */
   const others = [];
+  // A PR the `state=open` list just returned can still close between that
+  // call and this fetch — GitHub stops serving `refs/pull/N/head` soon after
+  // a PR closes, and a closed PR is not a collision candidate any more (it
+  // cannot land first, or at all). Skipping it is the correct answer, not a
+  // reason to fail every OTHER PR's check on a race this script cannot avoid.
   /** @type {string[]} */
-  const unfetchable = [];
+  const skipped = [];
   for (const other of openPrs) {
     const ref = `refs/pull/${other.number}/head`;
     if (
       tryGit(['fetch', '--no-tags', '--depth=200', 'origin', `+${ref}:${ref}`], cwd) === undefined
     ) {
-      unfetchable.push(`#${other.number}`);
+      skipped.push(`#${other.number}`);
       continue;
     }
     const deltas = deltasFor(ref, baseRef, capped.isCapped, cwd);
     if (deltas === undefined) {
-      unfetchable.push(`#${other.number}`);
+      skipped.push(`#${other.number}`);
       continue;
     }
     others.push({ number: other.number, title: other.title, deltas });
-  }
-  if (unfetchable.length > 0) {
-    return { error: `could not read ${unfetchable.length} PR head(s): ${unfetchable.join(', ')}` };
   }
 
   /** @type {Map<string, number>} */
@@ -415,6 +424,7 @@ export function evaluate({ repo, pr, base, cwd }) {
   return {
     collisions: collisionsFor({ baseCounts, mine, others, max: capped.max }),
     otherPrCount: others.length,
+    skipped,
   };
 }
 
@@ -452,6 +462,11 @@ function main() {
   }
 
   for (const line of annotationsFor(result.collisions)) process.stdout.write(`${line}\n`);
+  if (result.skipped.length > 0) {
+    process.stdout.write(
+      `cross-PR line budget: ${result.skipped.length} PR(s) closed before their head could be fetched, skipped: ${result.skipped.join(', ')}\n`
+    );
+  }
   process.stdout.write(
     result.collisions.length === 0
       ? `cross-PR line budget: ${
@@ -467,7 +482,7 @@ function main() {
   if (summaryPath !== undefined && summaryPath !== '') {
     try {
       execFileSync('tee', ['-a', summaryPath], {
-        input: summaryMarkdown(result.collisions, result.otherPrCount),
+        input: summaryMarkdown(result.collisions, result.otherPrCount, result.skipped),
         stdio: ['pipe', 'ignore', 'inherit'],
       });
     } catch (error) {

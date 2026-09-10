@@ -119,7 +119,9 @@ export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolea
   // re-fire — and re-mutate — on every render). A ref lets the effect read
   // fresh values without either watching them.
   const latestRef = useRef({ parsedTransactions, isPending, isSuccess });
-  latestRef.current = { parsedTransactions, isPending, isSuccess };
+  useEffect(() => {
+    latestRef.current = { parsedTransactions, isPending, isSuccess };
+  });
 
   useEffect(() => {
     const latest = latestRef.current;

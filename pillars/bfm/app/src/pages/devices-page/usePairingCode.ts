@@ -39,26 +39,55 @@ export function remainingUntil(expiresAt: string, now: number): number {
 }
 
 /**
- * Milliseconds left on a deadline, re-read once a second while one is set.
+ * Milliseconds left on a deadline, re-read once a second while one is set,
+ * plus a way to resync the clock the instant a fresh deadline is known.
  *
- * `now` is seeded at mount and refreshed by the effect rather than read during
- * render. On the render immediately after a code arrives that makes the
- * readout a fraction of a second generous, which self-corrects on the first
- * tick — the alternative, a `now` that lags behind the new deadline, would
- * read as zero and expire a freshly minted code on sight.
+ * `now` is never written from inside the effect except by the interval's own
+ * callback — that callback is the legitimate case, synchronizing render with
+ * a genuinely external clock tick. The one-off resync a new deadline needs is
+ * the caller's job: `resetNow` fires from the event that produced the new
+ * `expiresAt` (the mint resolving), not from an effect reacting to it having
+ * changed. Without that resync, `now` would still hold whatever stale
+ * reading a possibly long-idle previous countdown left behind, which could
+ * be old enough to read the freshly minted code as already expired.
  */
-function useCountdownTo(expiresAt: string | null): number {
+function useCountdownTo(expiresAt: string | null): [remainingMs: number, resetNow: () => void] {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (expiresAt === null) return;
 
-    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(timer);
   }, [expiresAt]);
 
-  return expiresAt === null ? 0 : remainingUntil(expiresAt, now);
+  const resetNow = useCallback(() => setNow(Date.now()), []);
+  const remainingMs = expiresAt === null ? 0 : remainingUntil(expiresAt, now);
+  return [remainingMs, resetNow];
+}
+
+/**
+ * Clears `issued` and sets `hasExpired` the instant `isSpent` flips to true.
+ *
+ * This runs during render rather than in an effect (guarded by comparing
+ * `isSpent` against the previous render's value) — React's "adjust state
+ * during render" pattern. `visible` in `usePairingCode` already treats a
+ * spent code as gone for that render, so this only needs to make the cell
+ * cleanup and the `expired` memory stick from the next render on.
+ */
+function useClearOnSpend(
+  isSpent: boolean,
+  setIssued: (issued: null) => void,
+  setHasExpired: (hasExpired: true) => void
+): void {
+  const [prevIsSpent, setPrevIsSpent] = useState(isSpent);
+  if (isSpent !== prevIsSpent) {
+    setPrevIsSpent(isSpent);
+    if (isSpent) {
+      setIssued(null);
+      setHasExpired(true);
+    }
+  }
 }
 
 /**
@@ -76,14 +105,9 @@ export function usePairingCode(): PairingCodeModel {
   const [hasExpired, setHasExpired] = useState(false);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
 
-  const remainingMs = useCountdownTo(issued?.expiresAt ?? null);
+  const [remainingMs, resetCountdown] = useCountdownTo(issued?.expiresAt ?? null);
   const isSpent = issued !== null && remainingMs <= 0;
-
-  useEffect(() => {
-    if (!isSpent) return;
-    setIssued(null);
-    setHasExpired(true);
-  }, [isSpent]);
+  useClearOnSpend(isSpent, setIssued, setHasExpired);
 
   const mutation = useMutation({
     mutationFn: async () => unwrap(await operatorIssuePairingCode({ body: {} })),
@@ -122,6 +146,7 @@ export function usePairingCode(): PairingCodeModel {
     void mutateAsync()
       .then((code) => {
         if (currentMint.current !== id) return;
+        resetCountdown();
         setIssued(code);
         setPendingMint(null);
       })
@@ -131,7 +156,7 @@ export function usePairingCode(): PairingCodeModel {
         setPendingMint(null);
       })
       .finally(() => reset());
-  }, [mutateAsync, reset]);
+  }, [mutateAsync, reset, resetCountdown]);
 
   const dismiss = useCallback(() => {
     currentMint.current += 1;
@@ -146,7 +171,7 @@ export function usePairingCode(): PairingCodeModel {
 
   return {
     /**
-     * `hasExpired` is a memory for after the effect below has cleared
+     * `hasExpired` is a memory for after `useClearOnSpend` has cleared
      * `issued`; `isSpent` is the same fact one render earlier. The state has
      * to read both, because the code stops being *shown* the instant `isSpent`
      * flips — deriving expiry from the state cell alone left one painted frame

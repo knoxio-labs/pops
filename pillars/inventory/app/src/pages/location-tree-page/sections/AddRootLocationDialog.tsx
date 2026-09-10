@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import {
   Button,
@@ -27,10 +27,12 @@ export function AddRootLocationDialog({
   isPending,
 }: AddRootLocationDialogProps) {
   const [name, setName] = useState('');
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) setName('');
-  }, [open]);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

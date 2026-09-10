@@ -73,12 +73,14 @@ function usePickNode(
 }
 
 function useDragApply(args: UsePointerArgs, toWorld: ReturnType<typeof useToWorld>) {
+  const { draggingRef } = args.state;
+  const { nodesRef } = args;
   return useCallback(
     (cx: number, cy: number) => {
-      const drag = args.state.draggingRef.current;
+      const drag = draggingRef.current;
       if (!drag) return false;
       const { x, y } = toWorld(cx, cy);
-      const node = args.nodesRef.current.get(drag.id);
+      const node = nodesRef.current.get(drag.id);
       if (node) {
         node.x = x - drag.dx;
         node.y = y - drag.dy;
@@ -87,7 +89,7 @@ function useDragApply(args: UsePointerArgs, toWorld: ReturnType<typeof useToWorl
       }
       return true;
     },
-    [args.state.draggingRef, args.nodesRef, toWorld]
+    [draggingRef, nodesRef, toWorld]
   );
 }
 
@@ -140,43 +142,37 @@ function useBeginEnd(
   pickNode: (x: number, y: number) => InternalNode | null,
   toWorld: ReturnType<typeof useToWorld>
 ) {
+  const { draggingRef, panningRef } = args.state;
+  const { enableZoom, transform, onNodeClick } = args;
   const beginPointerInteraction = useCallback(
     (cx: number, cy: number) => {
       const hit = pickNode(cx, cy);
       if (hit) {
         const { x, y } = toWorld(cx, cy);
-        args.state.draggingRef.current = { id: hit.id, dx: x - (hit.x ?? 0), dy: y - (hit.y ?? 0) };
+        draggingRef.current = { id: hit.id, dx: x - (hit.x ?? 0), dy: y - (hit.y ?? 0) };
         return;
       }
-      if (!args.enableZoom) return;
-      args.state.panningRef.current = {
+      if (!enableZoom) return;
+      panningRef.current = {
         sx: cx,
         sy: cy,
-        ox: args.transform.x,
-        oy: args.transform.y,
+        ox: transform.x,
+        oy: transform.y,
       };
     },
-    [
-      args.enableZoom,
-      pickNode,
-      toWorld,
-      args.transform.x,
-      args.transform.y,
-      args.state.draggingRef,
-      args.state.panningRef,
-    ]
+    [enableZoom, pickNode, toWorld, transform.x, transform.y, draggingRef, panningRef]
   );
   const endPointerInteraction = useCallback(
     (cx: number, cy: number) => {
-      if (args.state.draggingRef.current) {
-        args.state.draggingRef.current = null;
+      if (draggingRef.current) {
+        draggingRef.current = null;
         return;
       }
-      args.state.panningRef.current = null;
+      panningRef.current = null;
       const hit = pickNode(cx, cy);
-      if (hit && args.onNodeClick) args.onNodeClick(hit.id);
+      if (hit && onNodeClick) onNodeClick(hit.id);
     },
-    [args.onNodeClick, pickNode, args.state.draggingRef, args.state.panningRef]
+    [onNodeClick, pickNode, draggingRef, panningRef]
   );
   return { beginPointerInteraction, endPointerInteraction };
 }
@@ -188,11 +184,12 @@ export function usePointerHandlers(args: UsePointerArgs): PointerHandlers {
   const applyPan = usePanApply(args);
   const { updateHoverFromPointer, clearHover } = useHoverHandlers(args, pickNode);
   const { beginPointerInteraction, endPointerInteraction } = useBeginEnd(args, pickNode, toWorld);
+  const { draggingRef, panningRef, activePointerIdRef } = args.state;
   const clearInteraction = useCallback(() => {
-    args.state.draggingRef.current = null;
-    args.state.panningRef.current = null;
-    args.state.activePointerIdRef.current = null;
-  }, [args.state]);
+    draggingRef.current = null;
+    panningRef.current = null;
+    activePointerIdRef.current = null;
+  }, [draggingRef, panningRef, activePointerIdRef]);
 
   return {
     toWorld,

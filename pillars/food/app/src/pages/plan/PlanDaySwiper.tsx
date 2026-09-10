@@ -11,7 +11,7 @@
  * Spec: pillars/food/docs/prds/planning-page
  */
 import { DndContext } from '@dnd-kit/core';
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useRef, useState, type ReactElement } from 'react';
 
 import { Button } from '@pops/ui';
 
@@ -39,9 +39,11 @@ export function PlanDaySwiper(props: PlanDaySwiperProps): ReactElement {
   const sensors = usePlanDndSensors();
   const { onDragEnd } = usePlanDndHandlers(entries);
   const [dayIndex, setDayIndex] = useState(0);
-  useEffect(() => {
+  const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
+  if (weekStart !== prevWeekStart) {
+    setPrevWeekStart(weekStart);
     setDayIndex(0);
-  }, [weekStart]);
+  }
   const clamped = Math.max(0, Math.min(days.length - 1, dayIndex));
   const date = days[clamped] ?? days[0] ?? weekStart;
   const goPrev = useCallback(() => setDayIndex((i) => Math.max(0, i - 1)), []);

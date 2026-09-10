@@ -2,7 +2,7 @@
  * Autocomplete component - Text input with suggestions using shadcn primitives
  * Built on Popover + Command for proper positioning and filtering
  */
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { cn } from '../lib/utils';
 import {
@@ -131,10 +131,12 @@ function useAutocompleteState({
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
+  const [lastValue, setLastValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== lastValue) {
+    setLastValue(value);
     setInputValue(value);
-  }, [value]);
+  }
 
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);

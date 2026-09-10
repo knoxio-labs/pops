@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * Distinguishes non-empty vs empty batches in the confirm copy. Calls
  * `batchesDelete`, which soft-deletes via `deleted_at`.
  */
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
 
@@ -39,10 +39,11 @@ export function DeleteBatchConfirm({
     enabled: isOpen && batchId !== null,
   });
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (!isOpen) setError(null);
-  }, [isOpen]);
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (input: BatchesDeleteInput) => unwrap(await batchesDelete({ path: input })),

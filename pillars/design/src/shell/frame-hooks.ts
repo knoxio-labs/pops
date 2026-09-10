@@ -118,47 +118,6 @@ export interface FrameSyncProps {
   onSurfacePointerDown: () => void;
 }
 
-/** What `useFrameSync` does with each message the frame reports up. */
-function useFrameMessageHandler(
-  post: (message: ShellToFrame) => void,
-  refs: {
-    frameRouteRef: RefObject<string>;
-    themeRef: RefObject<CanvasTheme>;
-    frameRef: RefObject<FrameKind>;
-    commentsActiveRef: RefObject<boolean>;
-  },
-  {
-    onRouteChange,
-    onSurfacePointerDown,
-    toggle,
-    exit,
-    setOpenCount,
-  }: Pick<FrameSyncProps, 'onRouteChange' | 'onSurfacePointerDown'> &
-    Pick<CommentMode, 'toggle' | 'exit' | 'setOpenCount'>
-): (message: FrameToShell) => void {
-  return useCallback(
-    (message: FrameToShell) => {
-      if (message.kind === 'route') {
-        refs.frameRouteRef.current = message.route;
-        onRouteChange(message.route);
-      }
-      if (message.kind === 'ready') {
-        post({ kind: 'theme', theme: refs.themeRef.current });
-        post({ kind: 'comments', active: refs.commentsActiveRef.current });
-        post({ kind: 'frame', frame: refs.frameRef.current });
-      }
-      if (message.kind === 'comment-count') setOpenCount(message.open);
-      if (message.kind === 'comments-exit') exit();
-      if (message.kind === 'pointerdown') onSurfacePointerDown();
-      if (message.kind === 'comment-shortcut') {
-        if (message.action === 'toggle') toggle();
-        if (message.action === 'exit') exit();
-      }
-    },
-    [exit, onRouteChange, onSurfacePointerDown, post, refs, setOpenCount, toggle]
-  );
-}
-
 /**
  * Keeps the frame on the shell's route, theme, comment mode and product
  * chrome: reload on route, message on the rest.
@@ -173,13 +132,20 @@ export function useFrameSync(
 ): void {
   const frameRouteRef = useRef(route);
   // The theme is read at document load only; later changes go over postMessage,
-  // so the reload effect reads it through a ref rather than depending on it.
+  // so the reload effect reads it through a ref rather than depending on it —
+  // kept current by an effect, since assigning `.current` during render is not.
   const themeRef = useRef(theme);
-  themeRef.current = theme;
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
   const frameRef = useRef(frame);
-  frameRef.current = frame;
+  useEffect(() => {
+    frameRef.current = frame;
+  }, [frame]);
   const commentsActiveRef = useRef(comments.active);
-  commentsActiveRef.current = comments.active;
+  useEffect(() => {
+    commentsActiveRef.current = comments.active;
+  }, [comments.active]);
 
   const { toggle, exit, setOpenCount } = comments;
 
@@ -190,20 +156,29 @@ export function useFrameSync(
     [iframeRef]
   );
 
-  useFrameMessages(
-    iframeRef,
-    useFrameMessageHandler(
-      post,
-      { frameRouteRef, themeRef, frameRef, commentsActiveRef },
-      {
-        onRouteChange,
-        onSurfacePointerDown,
-        toggle,
-        exit,
-        setOpenCount,
+  const handleFrameMessage = useCallback(
+    (message: FrameToShell) => {
+      if (message.kind === 'route') {
+        frameRouteRef.current = message.route;
+        onRouteChange(message.route);
       }
-    )
+      if (message.kind === 'ready') {
+        post({ kind: 'theme', theme: themeRef.current });
+        post({ kind: 'comments', active: commentsActiveRef.current });
+        post({ kind: 'frame', frame: frameRef.current });
+      }
+      if (message.kind === 'comment-count') setOpenCount(message.open);
+      if (message.kind === 'comments-exit') exit();
+      if (message.kind === 'pointerdown') onSurfacePointerDown();
+      if (message.kind === 'comment-shortcut') {
+        if (message.action === 'toggle') toggle();
+        if (message.action === 'exit') exit();
+      }
+    },
+    [exit, onRouteChange, onSurfacePointerDown, post, setOpenCount, toggle]
   );
+
+  useFrameMessages(iframeRef, handleFrameMessage);
 
   usePushChrome(post, { theme, commentsActive: comments.active, frame });
 

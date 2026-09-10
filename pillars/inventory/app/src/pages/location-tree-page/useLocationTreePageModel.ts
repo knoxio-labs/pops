@@ -24,7 +24,7 @@ function useLocationTree() {
     const map = new Map<string, LocationTreeNode>();
     if (data?.data) buildNodeMap(data.data, map);
     return map;
-  }, [data?.data]);
+  }, [data]);
   return {
     treeNodes,
     nodeMap,

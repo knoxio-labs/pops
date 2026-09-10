@@ -3,7 +3,7 @@
  * parent chain (depth ≤ 3 and acyclic). Self-as-parent is filtered out
  * client-side for clarity even though the service also rejects it.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@pops/ui';
@@ -25,12 +25,16 @@ interface Props {
 export function ChangeParentDialog(props: Props) {
   const { t } = useTranslation('food');
   const [parentValue, setParentValue] = useState<string>('');
+  const [prevOpen, setPrevOpen] = useState(props.open);
+  const [prevParentId, setPrevParentId] = useState(props.ingredient.parentId);
 
-  useEffect(() => {
+  if (props.open !== prevOpen || props.ingredient.parentId !== prevParentId) {
+    setPrevOpen(props.open);
+    setPrevParentId(props.ingredient.parentId);
     if (props.open) {
       setParentValue(props.ingredient.parentId === null ? '' : String(props.ingredient.parentId));
     }
-  }, [props.open, props.ingredient.parentId]);
+  }
 
   const currentValue = props.ingredient.parentId === null ? '' : String(props.ingredient.parentId);
   const isUnchanged = parentValue === currentValue;

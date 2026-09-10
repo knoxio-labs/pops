@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { Link } from 'react-router';
 
 import { Button, cn, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
@@ -42,9 +42,11 @@ export function DockTool({
 }) {
   const token = useContext(DismissToken);
   const [open, setOpen] = useState(false);
-  useEffect(() => {
+  const [seenToken, setSeenToken] = useState(token);
+  if (seenToken !== token) {
+    setSeenToken(token);
     setOpen(false);
-  }, [token]);
+  }
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

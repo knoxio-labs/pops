@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge, Button, Checkbox, EmptyState, Label } from '@pops/ui';
 
@@ -136,10 +136,11 @@ export function RuleCreationStep() {
   const prevStep = useImportStore((s) => s.prevStep);
   const proposals = useMemo(() => computeProposals(confirmedTransactions), [confirmedTransactions]);
   const [checked, setChecked] = useState<Set<string>>(() => new Set(defaultChecked(proposals)));
-
-  useEffect(() => {
+  const [prevProposals, setPrevProposals] = useState(proposals);
+  if (proposals !== prevProposals) {
+    setPrevProposals(proposals);
     setChecked(new Set(defaultChecked(proposals)));
-  }, [proposals]);
+  }
 
   function toggle(id: string) {
     setChecked((prev) => {

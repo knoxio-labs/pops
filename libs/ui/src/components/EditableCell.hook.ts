@@ -6,14 +6,22 @@ export interface UseEditableCellArgs<T> {
   validate?: (value: T) => boolean | string;
 }
 
+function useValueResetByProp<T>(initialValue: T) {
+  const [value, setValue] = useState(initialValue);
+  const [lastInitialValue, setLastInitialValue] = useState(initialValue);
+  if (initialValue !== lastInitialValue) {
+    setLastInitialValue(initialValue);
+    setValue(initialValue);
+  }
+  return [value, setValue] as const;
+}
+
 export function useEditableCell<T>({ initialValue, onSave, validate }: UseEditableCellArgs<T>) {
   const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState<T>(initialValue);
+  const [value, setValue] = useValueResetByProp(initialValue);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setValue(initialValue), [initialValue]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

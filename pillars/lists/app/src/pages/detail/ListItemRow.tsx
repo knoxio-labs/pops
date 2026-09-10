@@ -65,29 +65,31 @@ function useInlineEdit(
 
 export function ListItemRow(props: ListItemRowProps): React.ReactElement {
   const { t } = useTranslation('lists');
-  const sortable = useSortable({ id: props.row.id });
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({
+    id: props.row.id,
+  });
   const style = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
+    transform: CSS.Transform.toString(transform),
+    transition,
   };
   const isChecked = props.row.checked === 1;
   const edit = useInlineEdit(props.row, props.onSaveLabel);
 
   return (
     <li
-      ref={sortable.setNodeRef}
+      ref={setNodeRef}
       style={style}
       data-testid={`list-item-${props.row.id}`}
       className={`flex items-start gap-2 rounded-md border bg-card p-2 ${
-        sortable.isDragging ? 'opacity-60 shadow-lg' : ''
+        isDragging ? 'opacity-60 shadow-lg' : ''
       }`}
     >
       <button
         type="button"
         className="mt-1 cursor-grab text-muted-foreground hover:text-foreground"
         aria-label={t('detail.item.dragHandle')}
-        {...sortable.attributes}
-        {...sortable.listeners}
+        {...attributes}
+        {...listeners}
       >
         ⋮⋮
       </button>

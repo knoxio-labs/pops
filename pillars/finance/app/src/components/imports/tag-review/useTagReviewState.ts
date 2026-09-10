@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { unwrap } from '../../../finance-api-helpers.js';
 import { tagRulesFacets, tagRulesVocabulary } from '../../../finance-api/index.js';
@@ -33,8 +33,10 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
   const [suggestedTagMeta, setSuggestedTagMeta] = useState<Record<string, SuggestedTag[]>>(() =>
     Object.fromEntries(confirmedTransactions.map((t) => [t.checksum, t.suggestedTags ?? []]))
   );
+  const [prevConfirmedTransactions, setPrevConfirmedTransactions] = useState(confirmedTransactions);
 
-  useEffect(() => {
+  if (confirmedTransactions !== prevConfirmedTransactions) {
+    setPrevConfirmedTransactions(confirmedTransactions);
     setLocalTags((prev) => {
       const next = { ...prev };
       for (const t of confirmedTransactions) next[t.checksum] ??= t.tags ?? [];
@@ -45,7 +47,7 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
     setSuggestedTagMeta(
       Object.fromEntries(confirmedTransactions.map((t) => [t.checksum, t.suggestedTags ?? []]))
     );
-  }, [confirmedTransactions]);
+  }
 
   return { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta };
 }

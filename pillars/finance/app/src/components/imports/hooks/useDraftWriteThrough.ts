@@ -79,7 +79,9 @@ export interface DraftWriteThroughOptions {
 export function useDraftWriteThrough(options: DraftWriteThroughOptions): void {
   const queryClient = useQueryClient();
   const latest = useRef(options);
-  latest.current = options;
+  useEffect(() => {
+    latest.current = options;
+  });
   const { enabled, epoch } = options;
   useEffect(() => {
     if (!enabled) return;

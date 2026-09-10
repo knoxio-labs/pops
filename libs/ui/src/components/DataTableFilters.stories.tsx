@@ -65,6 +65,7 @@ function FilterBarDemo({
 }) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(initialFilters);
 
+  // oxlint-disable-next-line react/incompatible-library -- see DataTable.hook.ts, POPS-3356.
   const table = useReactTable({
     data: sampleData,
     columns: tableColumns,

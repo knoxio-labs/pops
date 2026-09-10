@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** Debounce a string value by `delay` ms. Returns the debounced copy. */
 export function useDebouncedValue(value: string, delay: number): string {
@@ -21,7 +21,9 @@ export function useDebouncedCallback<TArgs extends unknown[]>(
 ): (...args: TArgs) => void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  useLayoutEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
 
   useEffect(
     () => () => {

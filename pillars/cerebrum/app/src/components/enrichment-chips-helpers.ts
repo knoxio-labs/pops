@@ -11,6 +11,9 @@ const FAST_POLL_DURATION_MS = 10_000;
 const SLOW_POLL_MS = 5000;
 const SLOW_POLL_DURATION_MS = 30_000;
 
+/** Total time from `startedAt` before polling gives up. */
+export const POLL_TIMEOUT_MS = FAST_POLL_DURATION_MS + SLOW_POLL_DURATION_MS;
+
 /** Polling cadence: fast for the first 10 s, slower for 30 s, then stop. */
 export function refetchInterval(elapsedMs: number, enriched: boolean): number | false {
   if (enriched) return false;

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * component renders the JSX. Splitting like this keeps each function
  * under the `max-lines-per-function` budget.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { unwrap } from '../../food-api-helpers.js';
 import {
@@ -112,16 +112,25 @@ function useCreateBatchMutation(args: {
   });
 }
 
-export function useAddBatchForm({ isOpen, onAdded, onClose }: UseAddBatchFormArgs) {
-  const [form, setForm] = useState<AddBatchFormState>(INITIAL_FORM);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
+function useResetFormOnClose(
+  isOpen: boolean,
+  setForm: (next: AddBatchFormState) => void,
+  setError: (next: string | null) => void
+): void {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (!isOpen) {
       setForm(INITIAL_FORM);
       setError(null);
     }
-  }, [isOpen]);
+  }
+}
+
+export function useAddBatchForm({ isOpen, onAdded, onClose }: UseAddBatchFormArgs) {
+  const [form, setForm] = useState<AddBatchFormState>(INITIAL_FORM);
+  const [error, setError] = useState<string | null>(null);
+  useResetFormOnClose(isOpen, setForm, setError);
 
   const ingredientsSearch = form.search.trim().length > 0 ? form.search.trim() : undefined;
   const ingredientsQuery = useQuery({

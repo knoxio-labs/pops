@@ -46,6 +46,10 @@ export function useDataTable<TData, TValue>({
   const [columnVisibilityState, setColumnVisibilityState] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
+  // useReactTable mutates its own return value in place, a documented upstream React
+  // Compiler incompatibility (TanStack/table#6137); 'use no memo' does not silence this
+  // check either. POPS-3356.
+  // oxlint-disable-next-line react/incompatible-library
   const table = useReactTable({
     data,
     columns,

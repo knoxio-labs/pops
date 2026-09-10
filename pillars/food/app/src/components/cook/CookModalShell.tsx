@@ -5,7 +5,7 @@
  * per-file lint cap. Nothing here is exported outside this directory.
  */
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState, type Dispatch, type ReactElement, type SetStateAction } from 'react';
+import { useState, type Dispatch, type ReactElement, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@pops/ui';
@@ -115,17 +115,18 @@ export function useCookForm(args: UseCookFormArgs): {
 } {
   const [form, setForm] = useState<CookFormState>(initialForm);
   const [seeded, setSeeded] = useState(false);
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(args.isOpen);
+  if (args.isOpen !== prevIsOpen) {
+    setPrevIsOpen(args.isOpen);
     if (!args.isOpen) {
       setForm(initialForm);
       setSeeded(false);
     }
-  }, [args.isOpen]);
-  useEffect(() => {
-    if (!args.isOpen || args.prep === undefined || seeded) return;
+  }
+  if (args.isOpen && args.prep !== undefined && !seeded) {
     setSeeded(true);
     setForm(seedForm(args.prep));
-  }, [args.isOpen, args.prep, seeded]);
+  }
   return { form, setForm };
 }
 

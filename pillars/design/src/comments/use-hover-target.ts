@@ -28,10 +28,7 @@ export function useHoverTarget(enabled: boolean): HoverRect | null {
   const [rect, setRect] = useState<HoverRect | null>(null);
 
   useEffect(() => {
-    if (!enabled) {
-      setRect(null);
-      return undefined;
-    }
+    if (!enabled) return undefined;
     const onMove = (event: MouseEvent): void => {
       const target = findTarget(document, event.clientX, event.clientY);
       setRect(target ? rectOf(target.el) : null);
@@ -42,6 +39,7 @@ export function useHoverTarget(enabled: boolean): HoverRect | null {
     return () => {
       document.removeEventListener('mousemove', onMove, true);
       document.removeEventListener('mouseleave', onLeave);
+      setRect(null);
     };
   }, [enabled]);
 
@@ -55,5 +53,5 @@ export function useHoverTarget(enabled: boolean): HoverRect | null {
     };
   }, [enabled, rect]);
 
-  return rect;
+  return enabled ? rect : null;
 }

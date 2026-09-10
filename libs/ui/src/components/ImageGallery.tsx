@@ -36,9 +36,10 @@ function useGalleryNav(itemsLength: number) {
     [itemsLength]
   );
 
-  useEffect(() => {
-    if (activeIndex >= itemsLength) setActiveIndex(Math.max(0, itemsLength - 1));
-  }, [itemsLength, activeIndex]);
+  if (activeIndex >= itemsLength) {
+    const clamped = Math.max(0, itemsLength - 1);
+    if (clamped !== activeIndex) setActiveIndex(clamped);
+  }
 
   return { activeIndex, setActiveIndex, goPrev, goNext };
 }

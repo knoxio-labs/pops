@@ -11,6 +11,9 @@ import { RecentSearches } from './RecentSearches';
 import { SearchInputField } from './search-input/SearchInputField';
 import { SearchResultsPanel } from './SearchResultsPanel';
 
+import type { SearchResultSection } from './SearchResultsPanel';
+import type { SearchHitData } from './uri-resolver';
+
 interface MobileSearchOverlayProps {
   open: boolean;
   onClose: () => void;
@@ -64,6 +67,59 @@ function MobileSearchOverlayHeader({
   );
 }
 
+interface MobileSearchPanelProps {
+  query: string;
+  sections: SearchResultSection[];
+  queries: string[];
+  selectedIndex: number;
+  onClose: () => void;
+  onResultClick: (uri: string, data: SearchHitData) => void;
+  onShowMore: (domain: string) => Promise<void> | void;
+  onSelectRecent: (recentQuery: string) => void;
+  onClearRecent: () => void;
+}
+
+function MobileSearchPanel({
+  query,
+  sections,
+  queries,
+  selectedIndex,
+  onClose,
+  onResultClick,
+  onShowMore,
+  onSelectRecent,
+  onClearRecent,
+}: MobileSearchPanelProps) {
+  if (query.length > 0) {
+    return (
+      <SearchResultsPanel
+        sections={sections}
+        query={query}
+        onClose={onClose}
+        onResultClick={onResultClick}
+        onShowMore={onShowMore}
+        selectedIndex={selectedIndex}
+        listboxId={MOBILE_SEARCH_LISTBOX_ID}
+      />
+    );
+  }
+  return (
+    <div
+      id={MOBILE_SEARCH_LISTBOX_ID}
+      role="listbox"
+      aria-label="Recent searches"
+      className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border bg-popover shadow-lg"
+    >
+      <RecentSearches
+        queries={queries}
+        onSelect={onSelectRecent}
+        onClear={onClearRecent}
+        selectedIndex={selectedIndex}
+      />
+    </div>
+  );
+}
+
 /**
  * MobileSearchOverlay — the full-screen search surface `md:hidden` shows
  * instead of desktop's inline `SearchInput` dropdown. Renders
@@ -72,51 +128,54 @@ function MobileSearchOverlayHeader({
  * for the data/selection wiring and the Escape-handling decision.
  */
 export function MobileSearchOverlay({ open, onClose }: MobileSearchOverlayProps) {
-  const overlay = useMobileSearchOverlay({ open, onClose });
+  const {
+    inputRef,
+    containerRef,
+    query,
+    queries,
+    sections,
+    showPanel,
+    selectedIndex,
+    activeDescendantId,
+    handleChange,
+    handleClear,
+    handleCloseOverlay,
+    handleSelectResult,
+    handleShowMore,
+    selectRecentQuery,
+    clearAllRecent,
+  } = useMobileSearchOverlay({ open, onClose });
 
   if (!open) return null;
 
   return (
     <div
-      ref={overlay.containerRef}
+      ref={containerRef}
       className="fixed inset-x-0 top-0 z-50 md:hidden"
       data-testid="mobile-search-overlay"
     >
       <MobileSearchOverlayHeader
-        inputRef={overlay.inputRef}
-        query={overlay.query}
-        expanded={overlay.showPanel}
-        activeDescendantId={overlay.activeDescendantId}
-        onChange={overlay.handleChange}
-        onClear={overlay.handleClear}
-        onClose={overlay.handleCloseOverlay}
+        inputRef={inputRef}
+        query={query}
+        expanded={showPanel}
+        activeDescendantId={activeDescendantId}
+        onChange={handleChange}
+        onClear={handleClear}
+        onClose={handleCloseOverlay}
       />
-      {overlay.showPanel &&
-        (overlay.query.length > 0 ? (
-          <SearchResultsPanel
-            sections={overlay.sections}
-            query={overlay.query}
-            onClose={overlay.handleCloseOverlay}
-            onResultClick={overlay.handleSelectResult}
-            onShowMore={overlay.handleShowMore}
-            selectedIndex={overlay.selectedIndex}
-            listboxId={MOBILE_SEARCH_LISTBOX_ID}
-          />
-        ) : (
-          <div
-            id={MOBILE_SEARCH_LISTBOX_ID}
-            role="listbox"
-            aria-label="Recent searches"
-            className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border bg-popover shadow-lg"
-          >
-            <RecentSearches
-              queries={overlay.queries}
-              onSelect={overlay.selectRecentQuery}
-              onClear={overlay.clearAllRecent}
-              selectedIndex={overlay.selectedIndex}
-            />
-          </div>
-        ))}
+      {showPanel && (
+        <MobileSearchPanel
+          query={query}
+          sections={sections}
+          queries={queries}
+          selectedIndex={selectedIndex}
+          onClose={handleCloseOverlay}
+          onResultClick={handleSelectResult}
+          onShowMore={handleShowMore}
+          onSelectRecent={selectRecentQuery}
+          onClearRecent={clearAllRecent}
+        />
+      )}
     </div>
   );
 }

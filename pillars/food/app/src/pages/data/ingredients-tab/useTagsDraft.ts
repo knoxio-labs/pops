@@ -14,7 +14,7 @@
  * unit-testable in isolation.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { unwrap } from '../../../food-api-helpers.js';
 import { ingredientTagsSet } from '../../../food-api/index.js';
@@ -48,11 +48,13 @@ export function useTagsDraft({ ingredientId, remoteTags }: UseTagsDraftInput): T
   const [tags, setTags] = useState<string[]>(stableRemote.slice());
   const [pending, setPending] = useState('');
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [prevRemote, setPrevRemote] = useState(stableRemote);
 
-  useEffect(() => {
+  if (stableRemote !== prevRemote) {
+    setPrevRemote(stableRemote);
     setTags(stableRemote.slice());
     setErrorKey(null);
-  }, [stableRemote]);
+  }
 
   const commitPending = () => {
     const value = pending.trim().toLowerCase();

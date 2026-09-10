@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
@@ -136,12 +136,12 @@ export function useItemFormPageModel() {
 
   const form = useForm<ItemFormValues>({ defaultValues });
   const {
-    watch,
+    control,
     setValue,
     reset,
     formState: { isDirty },
   } = form;
-  const typeValue = watch('type');
+  const typeValue = useWatch({ control, name: 'type' });
 
   const local = useLocalFormState();
   const photoState = usePhotoUploadState(id, isEditMode);

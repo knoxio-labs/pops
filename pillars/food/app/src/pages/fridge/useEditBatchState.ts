@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * component thin enough to satisfy the `max-lines-per-function` lint
  * rule.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { unwrap } from '../../food-api-helpers.js';
 import { batchesEdit, batchesGet, prepStatesList } from '../../food-api/index.js';
@@ -41,8 +41,12 @@ export function useEditBatchState({ batchId, isOpen, onClose }: UseEditBatchArgs
   });
   const [form, setForm] = useState<EditState>(EMPTY_STATE);
   const [error, setError] = useState<string | null>(null);
+  const [prevDetailData, setPrevDetailData] = useState(detail.data);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-  useEffect(() => {
+  if (detail.data !== prevDetailData || isOpen !== prevIsOpen) {
+    setPrevDetailData(detail.data);
+    setPrevIsOpen(isOpen);
     if (detail.data !== null && detail.data !== undefined) {
       setForm({
         expiresAt: detail.data.expiresAt !== null ? detail.data.expiresAt.slice(0, 10) : '',
@@ -53,7 +57,7 @@ export function useEditBatchState({ batchId, isOpen, onClose }: UseEditBatchArgs
       setForm(EMPTY_STATE);
       setError(null);
     }
-  }, [detail.data, isOpen]);
+  }
 
   const editMutation = useMutation({
     mutationFn: async ({ id, ...body }: BatchesEditInput) =>

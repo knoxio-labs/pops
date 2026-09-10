@@ -5,7 +5,7 @@
  * and auto-restores running jobs on mount (survives page navigation).
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { unwrap } from '../media-api-helpers.js';
@@ -113,26 +113,24 @@ function useRestoreActiveJob(
   setJobId: (id: string) => void,
   setRestoredJob: (j: SyncJob) => void
 ) {
-  const restoredRef = useRef(false);
+  const [restored, setRestored] = useState(false);
   const activeJobs = useQuery<ActiveJobsResult>({
     queryKey: ['media', 'plex', 'getActiveSyncJobs'],
     queryFn: async () => unwrap(await plexGetActiveSyncJobs()),
-    enabled: !jobId && !restoredRef.current,
+    enabled: !jobId && !restored,
     refetchOnWindowFocus: false,
   });
-  const isRestoring = !restoredRef.current && !jobId && activeJobs.isLoading;
+  const isRestoring = !restored && !jobId && activeJobs.isLoading;
 
-  useEffect(() => {
-    if (restoredRef.current || jobId) return;
-    if (!activeJobs.data?.data) return;
-    restoredRef.current = true;
+  if (!restored && !jobId && activeJobs.data?.data) {
+    setRestored(true);
 
     const match = activeJobs.data.data.find((j) => j.jobType === jobType && j.status === 'running');
     if (match) {
       setJobId(match.id);
       setRestoredJob(match);
     }
-  }, [activeJobs.data?.data, jobId, jobType, setJobId, setRestoredJob]);
+  }
 
   return { isRestoring };
 }

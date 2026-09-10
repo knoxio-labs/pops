@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,9 +49,12 @@ function ok<T>(data: T) {
   return { data, error: undefined, response: new Response(null, { status: 200 }) };
 }
 
-let lastLocation = '';
+const locationSpy = { pathname: '' };
 function LocationSpy() {
-  lastLocation = useLocation().pathname + useLocation().search;
+  const location = useLocation();
+  useEffect(() => {
+    locationSpy.pathname = location.pathname + location.search;
+  }, [location]);
   return null;
 }
 
@@ -122,7 +126,7 @@ describe('PendingImportList', () => {
     await waitFor(() => expect(mocks.discard).toHaveBeenCalledWith({ path: { id: 'd9' } }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-    expect(lastLocation).toBe('/finance/import?draft=d9');
+    expect(locationSpy.pathname).toBe('/finance/import?draft=d9');
   });
 
   it('Take over claims with force and then opens the draft', async () => {
@@ -135,7 +139,7 @@ describe('PendingImportList', () => {
     ];
     renderWith(<PendingImportList items={items} />);
     fireEvent.click(screen.getByRole('button', { name: 'Take over' }));
-    await waitFor(() => expect(lastLocation).toBe('/finance/import?draft=d2'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import?draft=d2'));
     expect(mocks.claim.mock.calls[0]?.[0]).toMatchObject({
       path: { id: 'd2' },
       body: { force: true },

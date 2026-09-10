@@ -7,6 +7,7 @@
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -123,10 +124,12 @@ function draftOn(payloadOverrides: Record<string, unknown>) {
   };
 }
 
-let lastLocation = '';
+const locationSpy = { pathname: '' };
 function LocationSpy() {
   const location = useLocation();
-  lastLocation = `${location.pathname}${location.search}`;
+  useEffect(() => {
+    locationSpy.pathname = `${location.pathname}${location.search}`;
+  }, [location]);
   return null;
 }
 
@@ -227,7 +230,7 @@ describe('opening a draft', () => {
       accountId: 'acc-amex',
     });
     renderImportPage('/finance/import');
-    await waitFor(() => expect(lastLocation).toBe('/finance/import?draft=draft-1'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import?draft=draft-1'));
     expect(mocks.draftsGet).not.toHaveBeenCalled();
   });
 
@@ -244,7 +247,7 @@ describe('opening a draft', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
     await waitFor(() => expect(mocks.draftsDiscard).toHaveBeenCalledOnce());
-    await waitFor(() => expect(lastLocation).toBe('/finance/import'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import'));
     await screen.findByText('Upload');
   });
 
@@ -265,7 +268,7 @@ describe('opening a draft', () => {
   it('drops a draft that is gone from the URL and starts fresh', async () => {
     mocks.draftsGet.mockResolvedValue(failure(404, 'NotFoundError', 'not found'));
     renderImportPage('/finance/import?draft=draft-gone');
-    await waitFor(() => expect(lastLocation).toBe('/finance/import'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import'));
     await screen.findByText('Upload');
   });
 });
@@ -280,7 +283,7 @@ describe('a fresh wizard', () => {
     useImportStore.setState({ headers: ['Date'], rows: [{ Date: '01/01/2026' }] });
 
     await waitFor(() => expect(mocks.draftsCreate).toHaveBeenCalledOnce());
-    await waitFor(() => expect(lastLocation).toBe('/finance/import?draft=draft-new'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import?draft=draft-new'));
     expect(useImportStore.getState().draftId).toBe('draft-new');
   });
 
@@ -416,7 +419,7 @@ describe('losing the lease mid-run (POPS-3331)', () => {
     await screen.findByText('This import is open somewhere else now');
 
     fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
-    await waitFor(() => expect(lastLocation).toBe('/finance'));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance'));
     expect(mocks.draftsClaim).not.toHaveBeenCalled();
   });
 

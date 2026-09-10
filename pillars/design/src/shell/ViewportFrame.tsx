@@ -1,4 +1,4 @@
-import { useRef, type ReactNode, type RefObject } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { frameSrc, useAvail, useCornerDrag, useFrameSync } from './frame-hooks';
 import { frameSize, type Viewport } from './viewport';
@@ -94,7 +94,7 @@ export function ViewportFrame({
 }: ViewportFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const initialSrc = useRef(frameSrc(route, theme, frame));
+  const [initialSrc] = useState(() => frameSrc(route, theme, frame));
   const avail = useAvail(containerRef);
   useFrameSync(iframeRef, {
     route,
@@ -112,7 +112,7 @@ export function ViewportFrame({
   const iframe = (
     <iframe
       ref={iframeRef}
-      src={initialSrc.current}
+      src={initialSrc}
       title="Design canvas"
       className="h-full w-full border-0 bg-background"
     />

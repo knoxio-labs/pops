@@ -1,9 +1,10 @@
 /**
- * Sub-hook: fetches templates and scopes, stabilises references
- * with useRef to avoid memo/callback dependency churn.
+ * Sub-hook: fetches templates and scopes, holding onto the last
+ * successfully-loaded value while a refetch is in flight so
+ * dependent memos/callbacks don't churn on transient `undefined`.
  */
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useRef } from 'react';
+import { useMemo, useState } from 'react';
 
 import { scopesList, tagsList, templatesList } from '../../cerebrum-api';
 import { unwrap } from '../../cerebrum-api-helpers';
@@ -15,6 +16,22 @@ const TYPE_OPTIONS = ENGRAM_TYPES.map((typeName) => ({
   value: typeName,
   label: ENGRAM_TYPE_LABELS[typeName],
 }));
+
+/**
+ * Hold onto the last defined value of `raw` across renders, so a transient
+ * `undefined` (e.g. while a query refetches) doesn't flash callers back to
+ * `fallback`. Uses React's "adjust state during render" pattern rather than
+ * an effect, so the sticky value is available on the very render it changes.
+ */
+function useSticky<T>(raw: T | undefined, fallback: T): T {
+  const [prevRaw, setPrevRaw] = useState(raw);
+  const [sticky, setSticky] = useState(fallback);
+  if (raw !== prevRaw) {
+    setPrevRaw(raw);
+    if (raw !== undefined) setSticky(raw);
+  }
+  return sticky;
+}
 
 export function useTemplateAndScopeData() {
   const templatesQuery = useQuery({
@@ -30,20 +47,9 @@ export function useTemplateAndScopeData() {
     queryFn: async () => unwrap(await tagsList()),
   });
 
-  const templatesRef = useRef<TemplateSummary[]>([]);
-  const rawTemplates = templatesQuery.data?.templates;
-  if (rawTemplates) templatesRef.current = rawTemplates;
-  const templates = templatesRef.current;
-
-  const scopesRef = useRef<ScopeEntry[]>([]);
-  const rawScopes = scopesQuery.data?.scopes;
-  if (rawScopes) scopesRef.current = rawScopes;
-  const knownScopes = scopesRef.current;
-
-  const tagsRef = useRef<TagEntry[]>([]);
-  const rawTags = tagsQuery.data?.tags;
-  if (rawTags) tagsRef.current = rawTags;
-  const knownTags = tagsRef.current;
+  const templates = useSticky<TemplateSummary[]>(templatesQuery.data?.templates, []);
+  const knownScopes = useSticky<ScopeEntry[]>(scopesQuery.data?.scopes, []);
+  const knownTags = useSticky<TagEntry[]>(tagsQuery.data?.tags, []);
 
   const scopeSuggestions = useMemo(
     () =>

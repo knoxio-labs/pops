@@ -62,7 +62,15 @@ export function SearchResultsPanel({
     );
   }
 
-  let cursor = 0;
+  const sectionsWithStartIndex = sortedSections.reduce<
+    { section: SearchResultSection; startIndex: number }[]
+  >((acc, section) => {
+    const previous = acc[acc.length - 1];
+    const startIndex = previous ? previous.startIndex + previous.section.hits.length : 0;
+    acc.push({ section, startIndex });
+    return acc;
+  }, []);
+
   return (
     <div
       id={listboxId}
@@ -71,21 +79,17 @@ export function SearchResultsPanel({
       className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-lg border bg-popover shadow-lg"
       data-testid="search-results-panel"
     >
-      {sortedSections.map((section) => {
-        const startIndex = cursor;
-        cursor += section.hits.length;
-        return (
-          <SectionView
-            key={section.domain}
-            section={section}
-            query={query}
-            startIndex={startIndex}
-            selectedIndex={selectedIndex}
-            onResultClick={onResultClick}
-            onShowMore={onShowMore}
-          />
-        );
-      })}
+      {sectionsWithStartIndex.map(({ section, startIndex }) => (
+        <SectionView
+          key={section.domain}
+          section={section}
+          query={query}
+          startIndex={startIndex}
+          selectedIndex={selectedIndex}
+          onResultClick={onResultClick}
+          onShowMore={onShowMore}
+        />
+      ))}
     </div>
   );
 }

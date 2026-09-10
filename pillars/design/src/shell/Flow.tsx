@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { Button, cn } from '@pops/ui';
@@ -85,9 +86,7 @@ export function Flow({
   return (
     <div className="flex min-h-screen flex-col">
       <Stepper steps={steps} index={index} hrefForStep={hrefForStep} />
-      <div className="min-h-0 flex-1">
-        <ActiveStep />
-      </div>
+      <div className="min-h-0 flex-1">{createElement(ActiveStep)}</div>
       {flow.flowButtons === false ? null : (
         <div className="flex justify-between border-t border-border p-4">
           <Button variant="ghost" disabled={!prev} onClick={go(prev)}>

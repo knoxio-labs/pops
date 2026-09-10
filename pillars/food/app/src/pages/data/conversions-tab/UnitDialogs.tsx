@@ -4,7 +4,7 @@
  * The edit dialog only mutates ratio + notes: `from_unit` and `to_unit`
  * form the UNIQUE key, so changing them is delete + re-create, not an edit.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
@@ -88,9 +88,11 @@ export function CreateUnitDialog({
 }: CreateProps) {
   const { t } = useTranslation('food');
   const [form, setForm] = useState<CreateState>(CREATE_INITIAL);
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) setForm(CREATE_INITIAL);
-  }, [open]);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,9 +166,13 @@ export function EditUnitDialog({
 }: EditProps) {
   const { t } = useTranslation('food');
   const [form, setForm] = useState<EditState>({ ratio: '', notes: '' });
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevRow, setPrevRow] = useState(row);
+  if (open !== prevOpen || row !== prevRow) {
+    setPrevOpen(open);
+    setPrevRow(row);
     if (open && row !== null) setForm({ ratio: String(row.ratio), notes: row.notes ?? '' });
-  }, [open, row]);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

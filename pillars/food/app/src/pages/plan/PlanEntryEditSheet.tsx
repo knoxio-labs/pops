@@ -1,5 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Check, Trash2 } from 'lucide-react';
+import { Link } from 'react-router';
+
+import { Button, NumberInput, Textarea } from '@pops/ui';
+
+import { unwrap } from '../../food-api-helpers.js';
+import { planWeekView } from '../../food-api/index.js';
+import { useEditableEntryDraft } from './useEditableEntryDraft.js';
+import { useIsMobile } from './useIsMobile.js';
+import { usePlanEntryEdit } from './usePlanEntryEdit.js';
+
 /**
  * Plan entry edit sheet: a right-side drawer on desktop, a bottom-sheet at
  * narrow viewports (via `useIsMobile`). Surfaces servings, notes, a "Mark
@@ -9,15 +19,7 @@ import { Check, Trash2 } from 'lucide-react';
  *
  * Spec: pillars/food/docs/prds/planning-page
  */
-import { useEffect, useState, type ReactElement } from 'react';
-import { Link } from 'react-router';
-
-import { Button, NumberInput, Textarea } from '@pops/ui';
-
-import { unwrap } from '../../food-api-helpers.js';
-import { planWeekView } from '../../food-api/index.js';
-import { useIsMobile } from './useIsMobile.js';
-import { usePlanEntryEdit } from './usePlanEntryEdit.js';
+import type { ReactElement } from 'react';
 
 import type { WirePlanEntryRow } from './plan-wire-types.js';
 
@@ -91,12 +93,7 @@ interface EditableBodyProps {
 }
 
 function EditableBody({ entry, onSaved, onDeleted }: EditableBodyProps): ReactElement {
-  const [servings, setServings] = useState<number | ''>(entry.plannedServings);
-  const [notes, setNotes] = useState(entry.notes ?? '');
-  useEffect(() => {
-    setServings(entry.plannedServings);
-    setNotes(entry.notes ?? '');
-  }, [entry.id, entry.plannedServings, entry.notes]);
+  const { servings, setServings, notes, setNotes } = useEditableEntryDraft(entry);
   const edit = usePlanEntryEdit({ entryId: entry.id, onSaved, onDeleted });
   return (
     <div className="space-y-4">

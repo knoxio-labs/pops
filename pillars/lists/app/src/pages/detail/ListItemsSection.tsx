@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ListItemRow } from './ListItemRow.js';
@@ -49,9 +49,11 @@ function useReorderSensors() {
 
 function useOrderedIds(items: readonly ItemRow[]) {
   const [orderedIds, setOrderedIds] = useState<number[]>(() => items.map((r) => r.id));
-  useEffect(() => {
+  const [prevItems, setPrevItems] = useState(items);
+  if (items !== prevItems) {
+    setPrevItems(items);
     setOrderedIds(items.map((r) => r.id));
-  }, [items]);
+  }
   return [orderedIds, setOrderedIds] as const;
 }
 

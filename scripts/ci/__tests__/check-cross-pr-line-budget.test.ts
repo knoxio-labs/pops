@@ -244,6 +244,22 @@ describe('what the guard SAYS (ADR-045)', () => {
     );
     expect(md).toContain('Neither PR crosses it alone');
   });
+
+  // A PR that closes between being listed as open and having its head
+  // fetched (POPS-3358) is not a collision candidate any more — it is named,
+  // not silently dropped, so a reader can tell "compared against 3" from
+  // "compared against 3, and 1 more was too stale to ask".
+  it('names a PR skipped because its head could not be fetched, without treating it as a failure', () => {
+    const md = summaryMarkdown([], 3, ['#4431']);
+    expect(md).toContain('No collision');
+    expect(md).toContain('#4431');
+    expect(md).toContain('closed before its head could be fetched');
+  });
+
+  it('adds nothing when nothing was skipped', () => {
+    expect(summaryMarkdown([], 3, [])).not.toContain('closed before');
+    expect(summaryMarkdown([], 3)).not.toContain('closed before');
+  });
 });
 
 describe('cappedFilesFrom, against the real .oxlintrc.json', () => {

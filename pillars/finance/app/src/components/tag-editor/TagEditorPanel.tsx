@@ -125,28 +125,43 @@ function PanelActions({
   );
 }
 
-export function TagEditorPanel(props: PanelProps) {
+export function TagEditorPanel({
+  tags,
+  inputValue,
+  filtered,
+  creation,
+  isSaving,
+  isSuggesting,
+  inputRef,
+  setInputValue,
+  onSave,
+  onSuggest,
+  onCancel,
+  onAddTag,
+  onRemoveTag,
+  onKeyDown,
+}: PanelProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm font-medium">Edit tags</p>
-      <CurrentTags tags={props.tags} onRemove={props.onRemoveTag} />
+      <CurrentTags tags={tags} onRemove={onRemoveTag} />
       <TextInput
-        ref={props.inputRef}
-        value={props.inputValue}
-        onChange={(e) => props.setInputValue(e.target.value)}
-        onKeyDown={props.onKeyDown}
+        ref={inputRef}
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder="Type to add a tag…"
         aria-label="Add a tag"
         autoFocus
       />
-      <TagCreationRow creation={props.creation} onAddTag={props.onAddTag} />
-      <Suggestions filtered={props.filtered} onAddTag={props.onAddTag} />
+      <TagCreationRow creation={creation} onAddTag={onAddTag} />
+      <Suggestions filtered={filtered} onAddTag={onAddTag} />
       <PanelActions
-        isSaving={props.isSaving}
-        isSuggesting={props.isSuggesting}
-        onSave={props.onSave}
-        onSuggest={props.onSuggest}
-        onCancel={props.onCancel}
+        isSaving={isSaving}
+        isSuggesting={isSuggesting}
+        onSave={onSave}
+        onSuggest={onSuggest}
+        onCancel={onCancel}
       />
     </div>
   );

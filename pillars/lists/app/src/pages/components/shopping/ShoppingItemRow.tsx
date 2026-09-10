@@ -31,7 +31,10 @@ export interface ShoppingItemRowProps {
 }
 
 export function ShoppingItemRow(props: ShoppingItemRowProps): React.ReactElement {
-  const sortable = useSortable({ id: props.row.id, disabled: props.isDragDisabled });
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({
+    id: props.row.id,
+    disabled: props.isDragDisabled,
+  });
   const swipe = useSwipeDelete();
   const edit = useShoppingEdit(props.row, props.onSaveLabel);
   const isChecked = props.row.checked === 1;
@@ -42,22 +45,22 @@ export function ShoppingItemRow(props: ShoppingItemRowProps): React.ReactElement
     } else if (e.key === 'Escape') edit.cancel();
   };
   const style = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
+    transform: CSS.Transform.toString(transform),
+    transition,
   };
   return (
     <li
-      ref={sortable.setNodeRef}
+      ref={setNodeRef}
       style={style}
       data-testid={`shopping-item-${props.row.id}`}
       onTouchStart={swipe.onTouchStart}
       onTouchMove={swipe.onTouchMove}
       onTouchEnd={swipe.onTouchEnd}
       className={`relative flex min-h-11 items-center gap-3 rounded-md border bg-card p-2 ${
-        sortable.isDragging ? 'opacity-60 shadow-lg' : ''
+        isDragging ? 'opacity-60 shadow-lg' : ''
       }`}
     >
-      <DragHandle sortable={sortable} disabled={props.isDragDisabled} />
+      <DragHandle attributes={attributes} listeners={listeners} disabled={props.isDragDisabled} />
       <RowCheckbox row={props.row} isChecked={isChecked} onToggleChecked={props.onToggleChecked} />
       <ShoppingRowBody row={props.row} isChecked={isChecked} edit={edit} onLabelKey={onLabelKey} />
       <RowTrailing
@@ -75,10 +78,12 @@ export function ShoppingItemRow(props: ShoppingItemRowProps): React.ReactElement
 }
 
 function DragHandle({
-  sortable,
+  attributes,
+  listeners,
   disabled,
 }: {
-  sortable: ReturnType<typeof useSortable>;
+  attributes: ReturnType<typeof useSortable>['attributes'];
+  listeners: ReturnType<typeof useSortable>['listeners'];
   disabled: boolean;
 }) {
   const { t } = useTranslation('lists');
@@ -91,8 +96,8 @@ function DragHandle({
       aria-label={t('shopping.item.dragHandle')}
       title={disabled ? t('shopping.item.dragDisabled') : t('shopping.item.dragHandle')}
       disabled={disabled}
-      {...sortable.attributes}
-      {...sortable.listeners}
+      {...attributes}
+      {...listeners}
     >
       ⋮⋮
     </button>

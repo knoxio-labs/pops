@@ -72,23 +72,21 @@ export function RecipeEditShell({
 }: RecipeEditShellProps): ReactElement {
   const { t } = useTranslation('food');
   const [dsl, setDsl] = useState<string>('');
-  const dslSeeded = useRef(false);
+  const [dslSeeded, setDslSeeded] = useState(false);
   const [latestCompile, setLatestCompile] = useState<CompileResult | null>(null);
   const queryClient = useQueryClient();
 
   const { renderingQuery, proposedRows } = useRecipeEditQueries(slug, versionId, versionNo);
-  useEffect(() => {
-    if (!dslSeeded.current && renderingQuery.data) {
-      setDsl(renderingQuery.data.version.bodyDsl);
-      dslSeeded.current = true;
-    }
-  }, [renderingQuery.data]);
+  if (!dslSeeded && renderingQuery.data) {
+    setDsl(renderingQuery.data.version.bodyDsl);
+    setDslSeeded(true);
+  }
 
   const actions = useRecipeEditMutations({ slug, versionId, dsl, setLatestCompile });
   const issues = buildEditorIssues(latestCompile, proposedRows);
   const canPromote = latestCompile?.ok === true && !actions.isSaving;
 
-  if (versionId === null || !dslSeeded.current || !renderingQuery.data) {
+  if (versionId === null || !dslSeeded || !renderingQuery.data) {
     return <Status text={t('recipes.edit.opening')} />;
   }
 

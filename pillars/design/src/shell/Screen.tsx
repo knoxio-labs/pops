@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router';
 
 import { catalog } from '../registry';
@@ -59,5 +60,5 @@ export function Screen() {
 
   const Render = renderOf(screen, state);
   if (!Render) return <Note>Screen has no content.</Note>;
-  return <Render />;
+  return createElement(Render);
 }

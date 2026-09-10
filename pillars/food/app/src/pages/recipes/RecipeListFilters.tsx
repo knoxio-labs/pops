@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Button, CheckboxInput, Input, Select, type SelectOption } from '@pops/ui';
@@ -62,18 +61,11 @@ interface SearchInputProps {
 }
 
 function SearchInput({ value, onChange, t }: SearchInputProps): ReactElement {
-  const [local, setLocal] = useState(value);
-  useEffect(() => {
-    setLocal(value);
-  }, [value]);
   return (
     <Input
       type="search"
-      value={local}
-      onChange={(e) => {
-        setLocal(e.target.value);
-        onChange(e.target.value);
-      }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={t('recipes.list.searchPlaceholder')}
       aria-label={t('recipes.list.searchAriaLabel')}
     />

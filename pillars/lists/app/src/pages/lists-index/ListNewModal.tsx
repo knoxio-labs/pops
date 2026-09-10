@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -103,12 +103,11 @@ function useNewListForm(): {
   setForm: (updater: (prev: FormState) => FormState) => void;
   trimmed: string;
 } {
+  // `NewListForm` lives inside `DialogContent`, which Radix unmounts when
+  // `open` is false — so `useState`'s initializer already gives a fresh
+  // form each time the modal opens; the URL marker (`?new=1`) is the source
+  // of truth for that open/close cycle.
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  // Reset the form whenever the modal is freshly mounted — the URL marker
-  // is the source of truth, so unmounting on close also clears form state.
-  useEffect(() => {
-    setForm(EMPTY_FORM);
-  }, []);
   return { form, setForm, trimmed: form.name.trim() };
 }
 
