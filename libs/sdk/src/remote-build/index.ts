@@ -163,12 +163,25 @@ export const REMOTE_BUILD_DEFINE: Readonly<Record<string, string>> = {
  *
  * `process` matches only as a whole word not preceded by a `.`, so a property
  * or local named `process` — `queue.process(...)`, `preprocess` — is not
- * mistaken for the global.
+ * mistaken for the global. The dot must be followed immediately by an
+ * identifier for the same reason: a vendored comment ending a sentence with
+ * "…the decryption process." is not a member expression, and reading it as one
+ * failed every unminified build (POPS-3406) — minification strips comments, so
+ * the shipped artefact was clean and nothing ever fired. Whitespace BEFORE the
+ * dot is still allowed, so a multi-line member chain in an unminified
+ * dependency is caught; it is the dot's right-hand side that separates a read
+ * from prose.
+ *
+ * Chunk text is scanned as text, comments and string literals included.
+ * Stripping comments first is the tempting alternative and the worse one: a
+ * stripper that mis-parses a regex literal would HIDE a real read, which is
+ * the failure this guard exists to prevent, where a tighter match can only
+ * ever admit a spelling nothing produces.
  */
 export function findProcessGlobalUsage(
   chunks: readonly { readonly fileName: string; readonly code: string }[]
 ): string[] {
-  const globalProcess = /(?<![.\w$])process\s*\./;
+  const globalProcess = /(?<![.\w$])process\s*\.[A-Za-z_$]/;
   const featureDetected = /typeof\s+process\b/;
   return chunks
     .filter((chunk) => globalProcess.test(chunk.code) && !featureDetected.test(chunk.code))
