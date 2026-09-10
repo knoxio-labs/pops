@@ -108,6 +108,11 @@ function QtyUnitInputs({
         onChange={(unit) => setState({ ...state, unit })}
         placeholder={t('shopping.add.unit')}
         aria-label={t('shopping.add.unit')}
+        // A 128px field between two TextInputs, not a search box, and a unit
+        // the list has never heard of is normal use rather than a failed
+        // query — so no magnifier and no "no results" line (POPS-3294).
+        chrome="bare"
+        emptyMessage={null}
         className="w-32"
       />
     </>

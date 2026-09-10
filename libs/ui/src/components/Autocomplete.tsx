@@ -3,10 +3,12 @@
  * Built on Popover + Command for proper positioning and filtering
  */
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import {
   Command,
+  CommandBareInput,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -14,6 +16,7 @@ import {
   CommandList,
 } from '../primitives/command';
 import { Popover, PopoverContent, PopoverTrigger } from '../primitives/popover';
+import { containerVariants, inputVariants } from './TextInput.variants';
 
 export interface AutocompleteSuggestion {
   label: string;
@@ -58,9 +61,28 @@ export interface AutocompleteProps {
    */
   placeholder?: string;
   /**
-   * Empty message
+   * What the list says when no suggestion matches.
+   *
+   * `null` says nothing at all, which is the answer for a field where free
+   * text is valid — typing a unit that is not in the list is normal use, not
+   * a failed search, and "No results found." reads as a refusal.
+   *
+   * Omitted, it falls back to the kit's own translated string rather than to
+   * a hardcoded English one, so a consumer does not have to pass a
+   * translation per call site to be localised.
    */
-  emptyMessage?: string;
+  emptyMessage?: string | null;
+  /**
+   * Which chrome the field wears.
+   *
+   * `'search'`, the default, is `CommandInput`'s full search layout: a
+   * magnifier glyph and a bottom-rule-only box. `'bare'` drops both and wears
+   * the kit's own text-field container instead, so a compact field sitting in
+   * a row of `TextInput`s looks like one rather than announcing itself as a
+   * search (POPS-3294). The two share `TextInput.variants`, so they match by
+   * construction rather than by eye.
+   */
+  chrome?: 'search' | 'bare';
   /**
    * Suppresses the empty message while a suggestion fetch is in flight, so a
    * momentarily-empty `suggestions` array (debounce + network round-trip)
@@ -215,6 +237,37 @@ function useCallerNaming(
   });
 }
 
+interface AutocompleteFieldProps {
+  chrome: 'search' | 'bare';
+  ref: RefObject<HTMLInputElement | null>;
+  id?: string;
+  'aria-label'?: string;
+  'aria-labelledby'?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  onFocus: () => void;
+  placeholder: string;
+  disabled: boolean;
+}
+
+/**
+ * The field itself, in one of the two chromes.
+ *
+ * `'bare'` composes the kit's own `TextInput` container and input variants
+ * around `CommandBareInput` — the same two `cva` definitions `TextInput`
+ * renders — rather than restating a border and a height here. That is what
+ * makes "matches the TextInput next to it" a property of the code instead of
+ * something that has to be checked by eye each time either one changes.
+ */
+function AutocompleteField({ chrome, ...props }: AutocompleteFieldProps) {
+  if (chrome === 'search') return <CommandInput {...props} className="h-10" />;
+  return (
+    <div className={containerVariants({})}>
+      <CommandBareInput {...props} className={inputVariants({})} />
+    </div>
+  );
+}
+
 export function Autocomplete({
   id,
   'aria-label': ariaLabel,
@@ -224,7 +277,8 @@ export function Autocomplete({
   onChange,
   onSelect,
   placeholder = 'Search...',
-  emptyMessage = 'No results found.',
+  emptyMessage,
+  chrome = 'search',
   loading = false,
   disabled = false,
   className,
@@ -236,12 +290,17 @@ export function Autocomplete({
   });
   const inputRef = useRef<HTMLInputElement>(null);
   useCallerNaming(inputRef, id, ariaLabelledBy);
+  const { t } = useTranslation('ui');
+  // `null` means "say nothing"; omitted means "say the kit's own line". They
+  // are different answers, so the default cannot be a default parameter.
+  const emptyText = emptyMessage === undefined ? t('autocomplete.empty') : emptyMessage;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Command className={cn('overflow-visible bg-transparent', className)}>
         <PopoverTrigger asChild>
-          <CommandInput
+          <AutocompleteField
+            chrome={chrome}
             ref={inputRef}
             id={id}
             aria-label={ariaLabel}
@@ -251,7 +310,6 @@ export function Autocomplete({
             onFocus={() => inputValue && setOpen(true)}
             placeholder={placeholder}
             disabled={disabled}
-            className="h-10"
           />
         </PopoverTrigger>
         <PopoverContent
@@ -261,7 +319,7 @@ export function Autocomplete({
           onOpenAutoFocus={(e: Event) => e.preventDefault()}
         >
           <CommandList>
-            {!loading && <CommandEmpty>{emptyMessage}</CommandEmpty>}
+            {!loading && emptyText !== null && <CommandEmpty>{emptyText}</CommandEmpty>}
             <SuggestionItems suggestions={suggestions} onPick={handleSelect} />
           </CommandList>
         </PopoverContent>
