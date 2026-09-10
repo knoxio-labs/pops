@@ -90,10 +90,17 @@ describe('buildPurchasesManifest', () => {
   // the build context — and nothing local catches it, only the Docker Build
   // job does. Reading the source keeps the app out of this package's
   // dependency graph.
-  describe('nav + pages mirror the app (no silent drift)', () => {
+  describe('nav + pages agree with the contract they are projected from', () => {
     // Every error below names the file it was reading: a matcher that has
     // stopped seeing a file must say which file.
-    const appNavPath = fileURLToPath(new URL('../../../app/src/nav.ts', import.meta.url));
+    //
+    // The contract's declaration, not the app's. The app used to write its
+    // nav out a second time and this parsed that copy to catch the two
+    // drifting; POPS-3359 left one declaration, which both the app and the
+    // manifest below project. What is still worth asserting is that this
+    // manifest projects it rather than re-declaring it, and that every item
+    // has a page behind it.
+    const appNavPath = fileURLToPath(new URL('../../contract/nav.ts', import.meta.url));
     const appNavSource = readFileSync(appNavPath, 'utf8');
 
     function sliceBalanced(
@@ -143,12 +150,12 @@ describe('buildPurchasesManifest', () => {
       const navConfigObject = extractAssignedBracket(
         appNavPath,
         source,
-        'export const navConfig',
+        'export const PURCHASES_NAV',
         '{'
       );
       const itemsIndex = navConfigObject.indexOf('items:');
       if (itemsIndex === -1) {
-        throw new Error(`navConfig in ${appNavPath} declares no "items:"`);
+        throw new Error(`PURCHASES_NAV in ${appNavPath} declares no "items:"`);
       }
       return sliceBalanced(appNavPath, navConfigObject, navConfigObject.indexOf('[', itemsIndex), {
         open: '[',
@@ -211,21 +218,21 @@ describe('buildPurchasesManifest', () => {
       );
     }
 
-    it('carries every app nav item across the wire, in rail order', () => {
+    it('carries every contract nav item across the wire, in rail order', () => {
       const appNavItems = navItems(navItemsBlock(appNavSource));
 
       // A nav item with no page behind it is the dead link this pillar's
       // manifest was kept empty to avoid. Sorted, because nothing requires
-      // the app to declare its nav items in the order the pages are listed.
-      // The app package's own suite asserts the same equality over the real
-      // exported objects, but it runs in a different unit — `app/**` is
-      // excluded from this vitest project — so it cannot stand in here.
+      // the nav items to be declared in the order the pages are listed.
       expect(appNavItems.map((item) => item.path).toSorted()).toEqual(
         reachablePagePaths().toSorted()
       );
 
       // Unsorted: rail order is what the reader sees, and a wire nav shuffled
-      // against the app's is drift that a set comparison would wave through.
+      // against the contract's is drift a set comparison would wave through.
+      // Near-tautological now that the manifest spreads the contract — which
+      // is the point: it is what fails if somebody writes the wire literal
+      // out again instead.
       const wireNavItems = (buildPurchasesManifest('0.1.0').nav?.items ?? []).map(
         ({ path, label, labelKey }) => ({ path, label, labelKey })
       );
@@ -271,7 +278,7 @@ describe('buildPurchasesManifest', () => {
       ).toThrow(/expected "\["/);
 
       expect(() =>
-        navItemsBlock("export const navConfig = { entries: [{ path: '/x' }] };")
+        navItemsBlock("export const PURCHASES_NAV = { entries: [{ path: '/x' }] };")
       ).toThrow(/declares no "items:"/);
 
       // The discovery floor: a block the matchers no longer recognise reports

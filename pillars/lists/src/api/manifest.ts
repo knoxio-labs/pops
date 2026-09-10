@@ -1,3 +1,4 @@
+import { LISTS_NAV } from '../contract/nav.js';
 import { LISTS_PAGES } from '../contract/pages.js';
 
 import type {
@@ -8,24 +9,8 @@ import type {
 
 export const LISTS_PILLAR_ID = 'lists' as const;
 
-/**
- * Wire-format nav contribution for the lists pillar.
- *
- * Mirrors the app's `navConfig` (`pillars/lists/app/src/routes.tsx`)
- * field-for-field; Lucide icon names are kebab-case identifiers per the
- * wire schema. Detail pages (`/lists/:id`) intentionally stay off the
- * rail — they remain deep links, declared on the `pages` dimension below.
- */
-const LISTS_NAV: NavConfigDescriptor = {
-  id: 'lists',
-  label: 'Lists',
-  labelKey: 'lists',
-  icon: 'list-checks',
-  color: 'sky',
-  basePath: '/lists',
-  order: 50,
-  items: [{ path: '', label: 'Home', labelKey: 'lists.home', icon: 'layout-dashboard' }],
-};
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const LISTS_WIRE_NAV = { ...LISTS_NAV, items: [...LISTS_NAV.items] } satisfies NavConfigDescriptor;
 
 /**
  * Wire-format pages contribution for the lists pillar.
@@ -61,7 +46,7 @@ export function buildListsManifest(version: string): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [] },
     consumedSettings: { keys: [] },
-    nav: LISTS_NAV,
+    nav: LISTS_WIRE_NAV,
     pages: [...LISTS_WIRE_PAGES],
     assetsBaseUrl: LISTS_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
