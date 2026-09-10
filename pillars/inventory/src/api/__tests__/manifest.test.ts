@@ -64,14 +64,42 @@ describe('buildInventoryManifest', () => {
         { path: 'connections', bundleSlot: 'inventory-connections' },
         { path: 'warranties', bundleSlot: 'inventory-warranties' },
         { path: 'locations', bundleSlot: 'inventory-location-tree' },
-        { path: 'reports', bundleSlot: 'inventory-report-dashboard' },
-        { path: 'reports/insurance', bundleSlot: 'inventory-insurance-report' },
+        {
+          path: 'reports',
+          bundleSlot: 'inventory-reports-group',
+          children: [
+            { path: '', index: true, bundleSlot: 'inventory-report-dashboard' },
+            { path: 'insurance', bundleSlot: 'inventory-insurance-report' },
+          ],
+        },
+        { path: 'report', bundleSlot: 'inventory-report-redirect' },
+        { path: 'report/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
       ]);
     });
 
-    it('omits assetsBaseUrl for the in-repo case', () => {
+    /**
+     * Both were absent from the list above until POPS-3223. Harmless while the
+     * bundle map mounted the whole route table; a 404 on an old bookmark the
+     * moment the pillar mounted from `pages` alone. Named separately from the
+     * `toEqual` so the reason survives a future reshuffle of that list.
+     */
+    it('declares the legacy report redirects, which the route table still mounts', () => {
       const payload = buildInventoryManifest('1.2.3');
-      expect(payload.assetsBaseUrl).toBeUndefined();
+      const paths = payload.pages?.map((page) => page.path) ?? [];
+      expect(paths).toContain('report');
+      expect(paths).toContain('report/insurance');
+    });
+
+    /**
+     * Declaring it is what moves the pillar onto the runtime loader: the shell
+     * imports the bundle from this URL instead of compiling
+     * `@pops/app-inventory` into its own build (POPS-3223). Root-relative,
+     * because one deployment answers to a LAN name, a Tailscale name and
+     * `localhost`, and no absolute origin is right on all three.
+     */
+    it('declares a root-relative assetsBaseUrl', () => {
+      const payload = buildInventoryManifest('1.2.3');
+      expect(payload.assetsBaseUrl).toBe('/inventory-ui/inventory.js');
     });
 
     it('passes wire-shaped validation with the new UI dimensions populated', () => {

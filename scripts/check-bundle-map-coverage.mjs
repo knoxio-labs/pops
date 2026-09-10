@@ -426,9 +426,9 @@ function selfTest() {
   ].join('\n');
 
   // No wire manifest at all is a different failure from one that declares
-  // nothing, and the guard conflated them until POPS-3220, when `ai` still
-  // named its builder `ai-manifest.ts`: the hardcoded lookup missed it, and
-  // the reader was told to add an `assetsBaseUrl` that was already there.
+  // nothing, and the guard conflated them until POPS-3220, back when
+  // ai named its builder `ai-manifest.ts`: the hardcoded lookup missed it,
+  // and the reader was told to add an `assetsBaseUrl` that was already there.
   const noManifestFound = evaluateCoverage(apps, referencedAppPackages(gappedMap), () => ({
     assetsBaseUrl: false,
     pages: false,

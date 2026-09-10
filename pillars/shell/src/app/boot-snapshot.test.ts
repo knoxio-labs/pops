@@ -74,11 +74,13 @@ const IN_REPO_IDS = Object.keys(WORKSPACE_BUNDLE_MAP);
 
 describe('resolveBootRegistry — registry-driven (snapshot non-empty)', () => {
   it('derives the install set from the snapshot, not the full bundle map', () => {
-    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('inventory')]);
+    const result = resolveBootRegistry([snapshotEntry('media'), snapshotEntry('lists')]);
     expect(result.source).toBe('registry');
-    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['inventory', 'media']);
-    // The bundle map carries seven in-repo pillars; the snapshot narrowed the
-    // install set to two, proving the registry is the source of truth.
+    expect(result.manifests.map((m) => m.id).toSorted()).toEqual(['lists', 'media']);
+    // The snapshot narrowed the install set to two of the pillars the bundle
+    // map still carries, proving the registry is the source of truth. Stated
+    // against `IN_REPO_IDS` rather than a number, because POPS-3215 is
+    // emptying that map one pillar at a time.
     expect(result.manifests.length).toBeLessThan(IN_REPO_IDS.length);
   });
 
@@ -191,12 +193,7 @@ describe('resolveBootRegistry — never-brick on a zero-UI live snapshot', () =>
     // under which its API is undiscoverable — the shell still boots, and
     // every pillar still in the map still mounts, which is what never-brick
     // asserts.
-    expect(result.registeredApps.map((a) => a.id)).toEqual([
-      'media',
-      'inventory',
-      'lists',
-      'cerebrum',
-    ]);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'lists', 'cerebrum']);
 
     // The result must be byte-identical to the empty-snapshot floor: the
     // zero-UI live snapshot degrades EXACTLY as if the registry were down.
@@ -236,12 +233,7 @@ describe('resolveBootRegistry — never-brick fallback (snapshot empty)', () => 
   it('renders the full in-repo app rail (not blank) on the fallback path', () => {
     const result = resolveBootRegistry([]);
     expect(result.registeredApps.length).toBeGreaterThan(0);
-    expect(result.registeredApps.map((a) => a.id)).toEqual([
-      'media',
-      'inventory',
-      'lists',
-      'cerebrum',
-    ]);
+    expect(result.registeredApps.map((a) => a.id)).toEqual(['media', 'lists', 'cerebrum']);
   });
 });
 

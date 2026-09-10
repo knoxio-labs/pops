@@ -200,6 +200,61 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  inventory: {
+    assetsBaseUrl: '/inventory-ui/inventory.js',
+    nav: {
+      id: 'inventory',
+      label: 'Inventory',
+      labelKey: 'inventory',
+      icon: 'package',
+      color: 'amber',
+      basePath: '/inventory',
+      order: 30,
+      items: [
+        { path: '', label: 'Items', labelKey: 'inventory.items', icon: 'package' },
+        {
+          path: '/warranties',
+          label: 'Warranties',
+          labelKey: 'inventory.warranties',
+          icon: 'shield-check',
+        },
+        {
+          path: '/locations',
+          label: 'Locations',
+          labelKey: 'inventory.locations',
+          icon: 'map-pin',
+        },
+        { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'bar-chart-3' },
+        {
+          path: '/connections',
+          label: 'Connections',
+          labelKey: 'inventory.connections',
+          icon: 'network',
+        },
+      ],
+    },
+    pages: [
+      { path: '', index: true, bundleSlot: 'inventory-items' },
+      { path: 'items/new', bundleSlot: 'inventory-item-form' },
+      { path: 'items/:id', bundleSlot: 'inventory-item-detail' },
+      { path: 'items/:id/edit', bundleSlot: 'inventory-item-form' },
+      { path: 'connections', bundleSlot: 'inventory-connections' },
+      { path: 'warranties', bundleSlot: 'inventory-warranties' },
+      { path: 'locations', bundleSlot: 'inventory-location-tree' },
+      {
+        path: 'reports',
+        bundleSlot: 'inventory-reports-group',
+        children: [
+          { path: '', index: true, bundleSlot: 'inventory-report-dashboard' },
+          { path: 'insurance', bundleSlot: 'inventory-insurance-report' },
+        ],
+      },
+      // The two legacy redirects, which the pillar's published page list had
+      // been missing: a 404 on an old bookmark rather than a broken render.
+      { path: 'report', bundleSlot: 'inventory-report-redirect' },
+      { path: 'report/insurance', bundleSlot: 'inventory-insurance-report-redirect' },
+    ],
+  },
   food: {
     assetsBaseUrl: '/food-ui/food.js',
     nav: {

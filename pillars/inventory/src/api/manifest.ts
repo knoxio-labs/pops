@@ -10,6 +10,7 @@
  * `pillars/inventory/app/src/routes.tsx` verbatim (icons translated to
  * the kebab-case wire form required by `NavConfigDescriptorSchema`).
  */
+import { INVENTORY_PAGES } from '../contract/pages.js';
 import { inventoryManifest } from '../contract/settings/index.js';
 
 import type { CapabilityReporter } from '@pops/pillar-sdk/bootstrap';
@@ -56,17 +57,16 @@ const INVENTORY_NAV: NavConfigDescriptor = {
   ],
 };
 
-const INVENTORY_PAGES: PageDescriptor[] = [
-  { path: '', index: true, bundleSlot: 'inventory-items' },
-  { path: 'items/new', bundleSlot: 'inventory-item-form' },
-  { path: 'items/:id', bundleSlot: 'inventory-item-detail' },
-  { path: 'items/:id/edit', bundleSlot: 'inventory-item-form' },
-  { path: 'connections', bundleSlot: 'inventory-connections' },
-  { path: 'warranties', bundleSlot: 'inventory-warranties' },
-  { path: 'locations', bundleSlot: 'inventory-location-tree' },
-  { path: 'reports', bundleSlot: 'inventory-report-dashboard' },
-  { path: 'reports/insurance', bundleSlot: 'inventory-insurance-report' },
-];
+/** Projected from the contract; the `satisfies` is the conformance check. */
+const INVENTORY_WIRE_PAGES = [...INVENTORY_PAGES] as const satisfies readonly PageDescriptor[];
+
+/**
+ * Where the shell's runtime loader fetches this pillar's UI bundle from.
+ * Root-relative, because the same deployment answers to a LAN name, a
+ * Tailscale name and `localhost`, and no absolute origin is right on all of
+ * them.
+ */
+const INVENTORY_ASSETS_BASE_URL = '/inventory-ui/inventory.js';
 
 export function buildInventoryManifest(version: string): ManifestPayload {
   return {
@@ -99,7 +99,8 @@ export function buildInventoryManifest(version: string): ManifestPayload {
     consumedSettings: { keys: [] },
     settings: { manifests: [inventoryManifest] },
     nav: INVENTORY_NAV,
-    pages: INVENTORY_PAGES,
+    pages: [...INVENTORY_WIRE_PAGES],
+    assetsBaseUrl: INVENTORY_ASSETS_BASE_URL,
     healthcheck: { path: '/health' },
   };
 }
