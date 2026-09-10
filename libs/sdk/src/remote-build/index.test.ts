@@ -8,7 +8,9 @@ import {
   SHARED_RUNTIME_ENTRY_POINTS,
   type ManifestFiles,
   findBundledSharedRuntime,
+  findProcessGlobalUsage,
   isSharedRuntimeSpecifier,
+  REMOTE_BUILD_DEFINE,
   SHARED_RUNTIME_SPECIFIERS,
   type PackageNameResolver,
 } from './index.js';
@@ -281,5 +283,113 @@ describe('SHARED_RUNTIME_ENTRY_POINTS', () => {
   it('lists each specifier once', () => {
     const specifiers = SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier);
     expect(new Set(specifiers).size).toBe(specifiers.length);
+  });
+});
+
+/**
+ * A remote bundle runs in a browser as a plain ES module, with no `process`
+ * around it. A CJS dependency that carried its own `process.env` branch into
+ * the bundle throws at module scope on first mount, and the reader sees the
+ * loader's "interface could not be loaded" placeholder with nothing naming
+ * the cause — so the build asserts the absence rather than discovering it in
+ * a browser. This is the guard's own blind-spot test: what it must catch, and
+ * what it must not mistake for the global.
+ */
+describe('findProcessGlobalUsage', () => {
+  function chunk(code: string, fileName = 'entry.js') {
+    return { fileName, code };
+  }
+
+  it('flags a chunk reading process.env', () => {
+    const found = findProcessGlobalUsage([chunk('if (process.env.NODE_ENV) {}')]);
+    expect(found).toEqual(['entry.js']);
+  });
+
+  // `define` only rewrites the exact `process.env.NODE_ENV` member expression,
+  // so the guard has to see past that one shape.
+  it('flags a chunk reading a different process property', () => {
+    expect(findProcessGlobalUsage([chunk('const p = process.platform;')])).toEqual(['entry.js']);
+  });
+
+  it('names every offending chunk, not just the first', () => {
+    const found = findProcessGlobalUsage([
+      chunk('process.env.X', 'a.js'),
+      chunk('const clean = 1;', 'b.js'),
+      chunk('process.cwd()', 'c.js'),
+    ]);
+    expect(found).toEqual(['a.js', 'c.js']);
+  });
+
+  it('passes a clean chunk', () => {
+    expect(findProcessGlobalUsage([chunk('export const x = 1;')])).toEqual([]);
+  });
+
+  // The false-positive direction, which is what would make the guard
+  // unusable: `process` is an ordinary identifier, and a bundle full of
+  // queues, pipelines and handlers is full of members and locals named that.
+  it('does not flag a property or method named process', () => {
+    const found = findProcessGlobalUsage([
+      chunk('queue.process(job); this.process(); obj.process.env;'),
+    ]);
+    expect(found).toEqual([]);
+  });
+
+  it('does not flag an identifier that merely ends in process', () => {
+    expect(findProcessGlobalUsage([chunk('preprocess.run(); postProcess.env;')])).toEqual([]);
+  });
+
+  /**
+   * The shape that made a chunk-wide exemption necessary rather than a local
+   * one: `pdfjs-dist` computes the check once, into a variable, and every
+   * later read sits behind `if (r)` with no `typeof` anywhere near it. Reduced
+   * from the real emitted chunk that this guard rejected on its first run
+   * against `pillars/finance/app` — a bundle that works.
+   */
+  it('clears a chunk that feature-detects process before reading it', () => {
+    const pdfjsShape = [
+      'var r = typeof process == "object" && process + "" == "[object process]"',
+      '  && !process.versions.nw;',
+      'if (r) { let t = process.getBuiltinModule("url"); }',
+    ].join('\n');
+    expect(findProcessGlobalUsage([chunk(pdfjsShape)])).toEqual([]);
+  });
+
+  /**
+   * And the shape it must still catch, stated beside the one above because the
+   * two are what the exemption trades between: a CJS dependency's
+   * `process.env.NODE_ENV` branch, read unconditionally at module scope, which
+   * is what threw `ReferenceError: process is not defined` on the ai pillar's
+   * first browser mount.
+   */
+  it('flags an unconditional module-scope read in a chunk with no detection', () => {
+    const cjsShape = 'exports.x = process.env.NODE_ENV === "production" ? a() : b();';
+    expect(findProcessGlobalUsage([chunk(cjsShape)])).toEqual(['entry.js']);
+  });
+
+  // Per-chunk, not per-bundle: one dependency's feature detection must not
+  // clear a different chunk that has none.
+  it('clears only the chunk that carries the detection', () => {
+    const found = findProcessGlobalUsage([
+      chunk('if (typeof process !== "undefined") { process.env.X; }', 'guarded.js'),
+      chunk('const mode = process.env.NODE_ENV;', 'bare.js'),
+    ]);
+    expect(found).toEqual(['bare.js']);
+  });
+});
+
+describe('REMOTE_BUILD_DEFINE', () => {
+  // Pinned rather than read from the environment: these bundles are only ever
+  // built to be served, and a bundle whose contents depended on who ran the
+  // build is the defect `build-remote.ts` sets NODE_ENV to avoid.
+  it('pins NODE_ENV to production as a JSON string', () => {
+    expect(REMOTE_BUILD_DEFINE['process.env.NODE_ENV']).toBe('"production"');
+  });
+
+  it('is what the process guard expects to have been applied', () => {
+    const defined = Object.keys(REMOTE_BUILD_DEFINE);
+    expect(defined).toContain('process.env.NODE_ENV');
+    // Every key must be a `process.*` expression, or the guard below would
+    // report a chunk the define was supposed to have cleaned.
+    for (const key of defined) expect(key.startsWith('process.')).toBe(true);
   });
 });

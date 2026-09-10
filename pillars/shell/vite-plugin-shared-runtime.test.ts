@@ -167,7 +167,14 @@ describe('SHARED_RUNTIME_ENTRY_POINTS default-export flags', () => {
     'records the default export of $specifier correctly',
     async ({ specifier, hasDefault }) => {
       const namespace: Record<string, unknown> = await import(specifier);
-      expect(Object.hasOwn(namespace, 'default'), specifier).toBe(hasDefault);
+      // A dual-published package resolves to its CommonJS build here and to a
+      // real ESM build in the browser. Node marks that case with `__esModule`
+      // and synthesises a `default` the browser's build does not have, so the
+      // flag — which describes the module the facade re-exports from — must be
+      // false regardless of what this namespace carries.
+      const nodeGaveCommonJs = Object.hasOwn(namespace, '__esModule');
+      const browserDefault = !nodeGaveCommonJs && Object.hasOwn(namespace, 'default');
+      expect(browserDefault, specifier).toBe(hasDefault);
     }
   );
 });

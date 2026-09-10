@@ -203,8 +203,12 @@ export function advertisesLoaderMountedUi(src) {
  *
  * @param {PillarApp[]} apps        Discovered pillar apps.
  * @param {Set<string>} referenced  `@pops/app-*` specifiers the bundle map imports.
- * @param {(app: PillarApp) => { assetsBaseUrl: boolean, pages: boolean }} loaderUiOf
- *   What the pillar's wire manifest advertises.
+ * @param {(app: PillarApp) => { assetsBaseUrl: boolean, pages: boolean, found?: boolean }} loaderUiOf
+ *   What the pillar's wire manifest advertises. `found: false` means no wire
+ *   manifest could be located at all, which is reported as its own failure
+ *   rather than as a manifest that declares nothing — the two need different
+ *   fixes, and conflating them sent a reader looking for a missing
+ *   `assetsBaseUrl` in a file that was there and correct (POPS-3220).
  * @returns {CoverageResult}
  */
 export function evaluateCoverage(apps, referenced, loaderUiOf) {
@@ -229,9 +233,24 @@ export function evaluateCoverage(apps, referenced, loaderUiOf) {
       continue;
     }
     missing.push(app.pkgName);
+    if (wire.found === false) {
+      reasons.push(
+        `${app.pkgName} — absent from the bundle map, and no wire manifest could be ` +
+          `found for pillar '${app.pillarId}' (looked for src/api/manifest.ts, ` +
+          `src/api/${app.pillarId}-manifest.ts, and any src/api/*.ts building a ` +
+          `ManifestPayload)`
+      );
+      continue;
+    }
+    // Every fragment reads after a bare `no`, so one cause and two produce the
+    // same sentence shape. The article-carrying form this replaced said
+    // "declares no an assetsBaseUrl" for a single cause — and the form before
+    // THAT said "declares no a non-empty pages", so the pages-only case has
+    // been ungrammatical the whole time and only the assetsBaseUrl-only case
+    // ever read correctly.
     const lacks = [];
     if (!wire.assetsBaseUrl) lacks.push('assetsBaseUrl');
-    if (!wire.pages) lacks.push('a non-empty pages');
+    if (!wire.pages) lacks.push('non-empty pages');
     reasons.push(
       `${app.pkgName} — absent from the bundle map, and its wire manifest ` +
         `declares no ${lacks.join(' and no ')}`
@@ -239,6 +258,52 @@ export function evaluateCoverage(apps, referenced, loaderUiOf) {
   }
 
   return { missing, covered, viaLoader, reasons };
+}
+
+/**
+ * Find the file that builds a pillar's wire `ManifestPayload`.
+ *
+ * `src/api/manifest.ts` is the convention and every pillar follows it today.
+ * The fallbacks are not for a pillar that currently deviates; they are because
+ * the lookup used to hardcode that path and return "declares nothing" when it
+ * was absent, so a correct manifest under a different name read exactly like a
+ * missing `assetsBaseUrl` and the reader was sent to look for a declaration
+ * that was already there. `ai` was that pillar and has since been renamed onto
+ * the convention — what this guards against is the failure mode, not the one
+ * file (POPS-3220).
+ *
+ * The last resort scans `src/api/*.ts` for the payload type rather than
+ * enumerating more names, so a pillar that picks its own filename is found
+ * without this list having to grow. Returns `undefined` when there is
+ * genuinely nothing, which the caller reports as its own failure rather than
+ * as a manifest declaring nothing.
+ *
+ * @typedef {object} ManifestFs
+ * @property {(path: string) => boolean} existsSync
+ * @property {(path: string) => string[]} readdirSync
+ * @property {(path: string, encoding: 'utf8') => string} readFileSync
+ *
+ * @param {string} pillarId
+ * @param {ManifestFs} [files]  Injected so the self-test can drive layouts
+ *   that do not exist on disk.
+ * @returns {string | undefined} Absolute path, or undefined if none exists.
+ */
+export function locatePillarManifest(
+  pillarId,
+  files = /** @type {ManifestFs} */ ({ existsSync, readFileSync, readdirSync })
+) {
+  const apiDir = join(repoRoot, 'pillars', pillarId, 'src/api');
+  for (const name of ['manifest.ts', `${pillarId}-manifest.ts`]) {
+    const candidate = join(apiDir, name);
+    if (files.existsSync(candidate)) return candidate;
+  }
+  if (!files.existsSync(apiDir)) return undefined;
+  for (const entry of files.readdirSync(apiDir)) {
+    if (!entry.endsWith('.ts') || entry.endsWith('.test.ts')) continue;
+    const candidate = join(apiDir, entry);
+    if (files.readFileSync(candidate, 'utf8').includes('ManifestPayload')) return candidate;
+  }
+  return undefined;
 }
 
 /**
@@ -257,9 +322,11 @@ function run() {
   const bundleMapPath = locateBundleMap();
   const referenced = referencedAppPackages(readFileSync(join(repoRoot, bundleMapPath), 'utf8'));
   const { missing, covered, viaLoader, reasons } = evaluateCoverage(apps, referenced, (app) => {
-    const manifestPath = join(repoRoot, 'pillars', app.pillarId, 'src/api/manifest.ts');
-    if (!existsSync(manifestPath)) return { assetsBaseUrl: false, pages: false };
-    return advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8'));
+    const manifestPath = locatePillarManifest(app.pillarId);
+    if (manifestPath === undefined) {
+      return { assetsBaseUrl: false, pages: false, found: false };
+    }
+    return { ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8')), found: true };
   });
 
   const loaderMounted = new Set(viaLoader);
@@ -329,6 +396,7 @@ function selfTest() {
     assetsBaseUrl: true,
     pages: false,
   }));
+  const bothMissing = evaluateCoverage(apps, referencedAppPackages(gappedMap), noWireUi);
 
   const manifestWithBoth = [
     'export function build() {',
@@ -357,6 +425,51 @@ function selfTest() {
     '}',
   ].join('\n');
 
+  // No wire manifest at all is a different failure from one that declares
+  // nothing, and the guard conflated them until POPS-3220, when `ai` still
+  // named its builder `ai-manifest.ts`: the hardcoded lookup missed it, and
+  // the reader was told to add an `assetsBaseUrl` that was already there.
+  const noManifestFound = evaluateCoverage(apps, referencedAppPackages(gappedMap), () => ({
+    assetsBaseUrl: false,
+    pages: false,
+    found: false,
+  }));
+
+  /**
+   * An `src/api` holding only a differently-named manifest, with the directory
+   * scan returning nothing — so the ONLY way to find it is the explicit
+   * `<pillar>-manifest.ts` name. Without that emptiness the fallback scan finds
+   * the file too and the check passes whether or not the name list works,
+   * which is what the first version of this test did.
+   */
+  /** @type {ManifestFs} */
+  const fakeFs = {
+    existsSync: (/** @type {string} */ path) =>
+      path.endsWith('/src/api') || path.endsWith('/beta-manifest.ts'),
+    readdirSync: () => [],
+    readFileSync: () => 'ManifestPayload',
+  };
+  /** @type {ManifestFs} */
+  const conventionalFs = {
+    existsSync: (/** @type {string} */ path) =>
+      path.endsWith('/manifest.ts') || path.endsWith('/src/api'),
+    readdirSync: () => [],
+    readFileSync: () => '',
+  };
+  /** @type {ManifestFs} */
+  const scannedFs = {
+    existsSync: (/** @type {string} */ path) => path.endsWith('/src/api'),
+    readdirSync: () => ['routes.ts', 'oddly-named.ts'],
+    readFileSync: (/** @type {string} */ path) =>
+      path.endsWith('oddly-named.ts') ? 'ManifestPayload' : 'nothing',
+  };
+  /** @type {ManifestFs} */
+  const emptyFs = {
+    existsSync: (/** @type {string} */ path) => path.endsWith('/src/api'),
+    readdirSync: () => ['routes.ts'],
+    readFileSync: () => 'nothing here',
+  };
+
   const both = advertisesLoaderMountedUi(manifestWithBoth);
   const emptyPages = advertisesLoaderMountedUi(manifestWithEmptyPages);
   const mentioned = advertisesLoaderMountedUi(manifestMentioningOnly);
@@ -373,7 +486,22 @@ function selfTest() {
       gappedButOnTheWire.viaLoader.includes('@pops/app-beta'),
     'assetsBaseUrl without pages is not enough': halfDeclared.missing.length === 1,
     'the failure says what the wire lacks':
-      halfDeclared.reasons[0]?.includes('a non-empty pages') === true,
+      halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
+    // Both shapes the message can take, because each has been ungrammatical at
+    // some point and nothing asserted the wording. `halfDeclared` above drives
+    // the one-field sentence; this drives the two-field one.
+    'both missing fields read as one sentence':
+      bothMissing.reasons[0]?.includes('declares no assetsBaseUrl and no non-empty pages') === true,
+    'a missing manifest is reported as missing, not as undeclared':
+      noManifestFound.reasons[0]?.includes('no wire manifest could be found') === true &&
+      noManifestFound.reasons[0]?.includes('assetsBaseUrl') === false,
+    'the conventional manifest path is preferred':
+      locatePillarManifest('beta', conventionalFs)?.endsWith('/manifest.ts') === true,
+    'a <pillar>-manifest.ts is found':
+      locatePillarManifest('beta', fakeFs)?.endsWith('/beta-manifest.ts') === true,
+    'any src/api file building a ManifestPayload is found':
+      locatePillarManifest('beta', scannedFs)?.endsWith('/oddly-named.ts') === true,
+    'no manifest anywhere returns undefined': locatePillarManifest('beta', emptyFs) === undefined,
     'a manifest declaring both reads as loader-mounted': both.assetsBaseUrl && both.pages,
     'pages: [] reads as no pages': emptyPages.assetsBaseUrl && !emptyPages.pages,
     'a mention in prose or a string is not a declaration':

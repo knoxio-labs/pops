@@ -29,7 +29,6 @@ describe('nav registry', () => {
       'food',
       'lists',
       'cerebrum',
-      'ai',
     ]);
   });
 

@@ -642,6 +642,26 @@ services:
       timeout: 5s
       retries: 3
 
+  # The ai UI bundle (pillars/ai/app) — a static nginx image behind the
+  # shell's `/ai-ui/` location block.
+  ai-ui:
+    build:
+      context: ..
+      dockerfile: pillars/ai/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-ai-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The bfm UI bundle (pillars/bfm/app) — a static nginx image behind the
   # shell's `/bfm-ui/` location block.
   bfm-ui:

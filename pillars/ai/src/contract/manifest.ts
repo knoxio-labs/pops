@@ -3,11 +3,15 @@
  * pillar's discovery walk consumes via the package's `./manifest` export.
  *
  * `surfaces: ['app']` — the AI usage dashboard (`@pops/app-ai`) is the pillar's
- * UI surface, loaded by the shell via the in-repo bundle map.
+ * UI surface, mounted by the shell's runtime loader from the URL this pillar
+ * advertises rather than compiled into the shell (POPS-3220).
  */
 import { aiConfigManifest } from './settings/ai-manifest.js';
 
 import type { ModuleManifest } from '@pops/types';
+
+export { AI_PAGES } from './pages.js';
+export type { AiPageSlot } from './pages.js';
 
 export const aiManifest: ModuleManifest = {
   id: 'ai',

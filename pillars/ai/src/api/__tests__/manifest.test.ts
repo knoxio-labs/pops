@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
-import { buildAiManifest } from '../ai-manifest.js';
+import { buildAiManifest } from '../manifest.js';
 
 describe('buildAiManifest', () => {
   it('passes the SDK wire validator the registry bootstrap uses', () => {
