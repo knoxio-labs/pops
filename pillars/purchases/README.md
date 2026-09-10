@@ -217,6 +217,10 @@ An order's documents travel in its create request, and for a photographed receip
 
 Keep it small. [ADR-042](../../docs/architecture/adr-042-purchase-documents-and-transaction-reconciliation.md) and POPS-1528 migrate purchase evidence to the `documents` pillar, and this route migrates with it.
 
+**An order also records the offset it was placed at**, in `purchases.ordered_at_offset_minutes`, because `ordered_at` is UTC-spelled and a consumer that stores a calendar day rather than a moment has to derive one — from the order's own offset, not from the installation's configured zone, which is a fact about the household. Adapters that resolve a printed wall clock know the offset they resolved against and record it; the ones whose source states an instant and no place record null, and null means "the producer never knew" rather than "nobody filled it in".
+
+Orders written before the column existed carry null whatever their source knew. `pnpm -F @pops/purchases backfill:ordered-at-offset` reconstructs what is reconstructible — from `purchase_capture.utc_offset_minutes`, or from a `declared_time_zone` resolved at the order's own instant — and leaves the rest null: coordinates need a boundary dataset this pillar does not carry, and an Amazon order never stated a place at all. It previews by default, prints per-source counts of set-versus-left-null with the reason for each, only ever fills a NULL, and is safe to re-run. `-- --write` commits it.
+
 ## The inventory fan-out
 
 A durable line suggests an asset. `GET /purchases/:id/inventory-proposals` is that suggestion and nothing more: **it creates nothing, and nothing here fans out on its own**. Unattended fan-out fills that pillar with cables, batteries and light globes inside a month, at which point the user stops trusting it — which is why `ITEM_KINDS` calls both fan-out directions proposals. An asset is only ever created by a human answering one offer, and then by exactly one of the two routes below.
