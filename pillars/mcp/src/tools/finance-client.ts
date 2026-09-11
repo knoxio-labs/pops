@@ -2,13 +2,38 @@ import { getPillar } from '../pillar-client.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
+/**
+ * The transaction-type vocabulary `GET /transactions` enforces, mirrored from
+ * `TRANSACTION_TYPES` in `pillars/finance/src/contract/corrections-constants.ts`
+ * — the mcp pillar cannot import that contract module directly (mcp has no
+ * compile-time dependency on the finance pillar, and adding one would drag
+ * finance's whole runtime dependency set, including its native sqlite
+ * binding, into the mcp image). The finance pillar's committed OpenAPI spec
+ * is a mechanical projection of that same contract
+ * (`pnpm --filter @pops/finance generate:openapi`), so
+ * `finance-transactions-type.test.ts` reads it back as a check against the
+ * real enforcement, not a second hand-typed copy.
+ */
+export const TRANSACTION_TYPES = [
+  'purchase',
+  'transfer',
+  'income',
+  'refund',
+  'reversal',
+  'loan',
+  'rebate',
+  'tax',
+  'fee',
+] as const;
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
 export type TransactionListInput = {
   search?: string;
   startDate?: string;
   endDate?: string;
   entityId?: string;
   account?: string;
-  type?: 'income' | 'expense' | 'transfer';
+  type?: TransactionType;
   limit?: number;
   offset?: number;
 };
