@@ -18,11 +18,18 @@ export default defineConfig({
         'src/test-setup.ts',
         'src/**/*.stories.{ts,tsx}',
       ],
+      /**
+       * A ratchet, set just under the level the suite currently reaches
+       * (measured statements 62.00%, branches 60.96%, functions 62.86%,
+       * lines 64.32%), so a regression fails the gate instead of surfacing
+       * months later. Raise these when the number rises; do not lower them
+       * for convenience.
+       */
       thresholds: {
-        lines: 2,
-        functions: 1,
-        branches: 1,
-        statements: 3,
+        lines: 64,
+        functions: 62,
+        branches: 60,
+        statements: 62,
       },
     },
   },
