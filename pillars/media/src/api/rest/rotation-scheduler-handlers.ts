@@ -18,6 +18,7 @@ import { getRadarrClient, type RadarrDiskSpace } from '../clients/arr/index.js';
 import { rotationScheduler } from '../cron/rotation-scheduler.js';
 import { getProtectionExpiresAt } from '../modules/rotation-cycle-policy.js';
 import { type PreviewOverrides, previewRemoval } from '../modules/rotation-cycle.js';
+import { type RotationTuning } from '../modules/rotation-removal-ranking.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -42,10 +43,18 @@ async function readDiskSpace(
  * Split the preview's flat query into the tuning it overrides and the rest.
  *
  * An omitted knob has to stay omitted rather than become a default, so that
- * previewing an untouched form shows what the next real cycle would do.
+ * previewing an untouched form shows what the next real cycle would do —
+ * `tuning` only gets a key for a knob the caller actually sent, never an
+ * explicit `undefined` for one it didn't (which would overwrite the real
+ * configured value once spread into the cycle's own tuning downstream).
  */
-function previewOverrides(query: Req['schedulerRemovalPreview']['query']): PreviewOverrides {
-  const { graceDays, topCount, ...tuning } = query;
+export function previewOverrides(query: Req['schedulerRemovalPreview']['query']): PreviewOverrides {
+  const { graceDays, topCount, ageExponent, ratingSpread, keepUnwatched, keepExponent } = query;
+  const tuning: Partial<RotationTuning> = {};
+  if (ageExponent !== undefined) tuning.ageExponent = ageExponent;
+  if (ratingSpread !== undefined) tuning.ratingSpread = ratingSpread;
+  if (keepUnwatched !== undefined) tuning.keepUnwatched = keepUnwatched;
+  if (keepExponent !== undefined) tuning.keepExponent = keepExponent;
   return { tuning, graceDays, topCount };
 }
 

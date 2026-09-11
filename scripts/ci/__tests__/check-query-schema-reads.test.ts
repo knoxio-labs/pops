@@ -28,15 +28,24 @@ import {
   extractImportBindings,
   extractResolverFunctionText,
   fieldIsRead,
+  findAnchorCallSites,
   FINANCE_ROUTES,
+  FOOD_ROUTES,
+  INVENTORY_ROUTES,
+  LISTS_ROUTES,
+  localFunctionNames,
   matchBalanced,
+  MEDIA_ROUTES,
   OPENAPI_REL_PATH,
   parseResolverParam,
   PILLARS,
   queryAnchorForRoute,
   queryFieldsForRoute,
+  resolveNamedExportFile,
+  resolveNamespaceExportFile,
   resolveRelativeImport,
   ROUTES,
+  splitTopLevelCommaList,
 } from '../check-query-schema-reads.mjs';
 
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
@@ -111,8 +120,17 @@ describe('against the real repo', () => {
 });
 
 describe('the other real pillars', () => {
-  it('PILLARS names exactly purchases, finance, cerebrum and bfm', () => {
-    expect(PILLARS.map((p) => p.name)).toEqual(['purchases', 'finance', 'cerebrum', 'bfm']);
+  it('PILLARS names exactly purchases, finance, cerebrum, bfm, media, food, lists and inventory', () => {
+    expect(PILLARS.map((p) => p.name)).toEqual([
+      'purchases',
+      'finance',
+      'cerebrum',
+      'bfm',
+      'media',
+      'food',
+      'lists',
+      'inventory',
+    ]);
   });
 
   it.each(PILLARS.map((p) => [p.name, p] as const))(
@@ -138,6 +156,22 @@ describe('the other real pillars', () => {
 
   it('BFM_ROUTES names both bfm mobile routes known to carry query fields', () => {
     expect(BFM_ROUTES.length).toBe(2);
+  });
+
+  it('MEDIA_ROUTES names all 32 media routes known to carry query fields', () => {
+    expect(MEDIA_ROUTES.length).toBe(32);
+  });
+
+  it('FOOD_ROUTES names all 19 food routes known to carry query fields', () => {
+    expect(FOOD_ROUTES.length).toBe(19);
+  });
+
+  it('LISTS_ROUTES names both lists routes known to carry query fields', () => {
+    expect(LISTS_ROUTES.length).toBe(2);
+  });
+
+  it('INVENTORY_ROUTES names all 16 inventory routes known to carry query fields', () => {
+    expect(INVENTORY_ROUTES.length).toBe(16);
   });
 });
 
@@ -452,6 +486,191 @@ describe('extractResolverFunctionText', () => {
   it('returns null when the named function is not declared in the file', () => {
     expect(extractResolverFunctionText('export const x = 1;\n', 'resolveWindow')).toBeNull();
   });
+
+  it('skips an object-literal return-type annotation rather than mistaking it for the body', () => {
+    // The real `toListInput` shape in `pillars/food/src/api/rest/aliases-handlers.ts`:
+    // the return type is itself a `{ … }` object literal, immediately followed
+    // by the function's own body `{ … }`. A naive "find the next `{`" would
+    // capture the TYPE as the body and never see the real one.
+    const text = [
+      'function toListInput(query: ListQuery): {',
+      '  search?: string;',
+      '  target?: AliasTarget;',
+      '} {',
+      '  return { search: query.search, target: undefined };',
+      '}',
+      '',
+    ].join('\n');
+    const fn = extractResolverFunctionText(text, 'toListInput');
+    expect(fn).not.toBeNull();
+    expect(fn?.bodyText).toContain('query.search');
+    expect(fn?.bodyText).not.toContain('search?: string');
+  });
+
+  it('still finds a simple identifier return type (no object-literal ambiguity)', () => {
+    const text = [
+      'function listLibrary(db: unknown, input: LibraryListInput): LibraryListResult {',
+      '  return { rows: input.rows };',
+      '}',
+      '',
+    ].join('\n');
+    const fn = extractResolverFunctionText(text, 'listLibrary');
+    expect(fn?.bodyText).toContain('input.rows');
+  });
+});
+
+describe('splitTopLevelCommaList', () => {
+  it('splits a simple comma list', () => {
+    expect(splitTopLevelCommaList('a, b, c')).toEqual(['a', ' b', ' c']);
+  });
+
+  it('does not split inside a nested destructuring parameter', () => {
+    expect(splitTopLevelCommaList('db, { from, to }')).toEqual(['db', ' { from, to }']);
+  });
+
+  it('does not split inside a nested call or array', () => {
+    expect(splitTopLevelCommaList('foo(a, b), [c, d]')).toEqual(['foo(a, b)', ' [c, d]']);
+  });
+
+  it('returns an empty array for an empty parameter/argument list', () => {
+    expect(splitTopLevelCommaList('')).toEqual([]);
+  });
+
+  it('returns a single-element array when there is exactly one item', () => {
+    expect(splitTopLevelCommaList('query')).toEqual(['query']);
+  });
+});
+
+describe('findAnchorCallSites', () => {
+  it('finds a bare call with the anchor as the sole argument (position 0)', () => {
+    expect(findAnchorCallSites('resolve(query)', 'resolve', 'query')).toEqual([
+      { method: null, argIndex: 0 },
+    ]);
+  });
+
+  it('finds a bare call with the anchor at a non-first position', () => {
+    expect(findAnchorCallSites('resolveForLine(db, query)', 'resolveForLine', 'query')).toEqual([
+      { method: null, argIndex: 1 },
+    ]);
+  });
+
+  it('finds a namespace-qualified call with the anchor at a non-first position', () => {
+    expect(
+      findAnchorCallSites('libraryService.listLibrary(db, query)', 'libraryService', 'query')
+    ).toEqual([{ method: 'listLibrary', argIndex: 1 }]);
+  });
+
+  it('does not match an argument that merely contains the anchor (`query.sources`)', () => {
+    expect(findAnchorCallSites('resolve(query.sources)', 'resolve', 'query')).toEqual([]);
+  });
+
+  it('does not match a differently-named call', () => {
+    expect(findAnchorCallSites('other(query)', 'resolve', 'query')).toEqual([]);
+  });
+
+  it('finds every matching call site when the same name is called more than once', () => {
+    expect(findAnchorCallSites('ns.a(query); ns.b(db, query);', 'ns', 'query')).toEqual([
+      { method: 'a', argIndex: 0 },
+      { method: 'b', argIndex: 1 },
+    ]);
+  });
+});
+
+describe('resolveNamespaceExportFile', () => {
+  it('resolves a namespace declared directly with `export * as`', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/service.ts', 'export function method() { return 1; }\n');
+    writeFile(root, 'a/index.ts', "export * as ns from './service.js';\n");
+    expect(resolveNamespaceExportFile(join(root, 'a', 'index.ts'), 'ns')).toBe(
+      join(root, 'a', 'service.ts')
+    );
+  });
+
+  it('follows a bare `export *` re-export chain to find a namespace declared one level deeper', () => {
+    // The real media shape: `db/index.ts` re-exports `services/rotation/index.ts`
+    // wholesale, and THAT file (not `db/index.ts`) declares
+    // `export * as rotationCandidatesService from './candidates.js'`.
+    const root = fixtureRoot();
+    writeFile(root, 'a/candidates.ts', 'export function listCandidates() { return []; }\n');
+    writeFile(
+      root,
+      'a/rotation-index.ts',
+      "export * as rotationCandidatesService from './candidates.js';\n"
+    );
+    writeFile(root, 'a/index.ts', "export * from './rotation-index.js';\n");
+    expect(
+      resolveNamespaceExportFile(join(root, 'a', 'index.ts'), 'rotationCandidatesService')
+    ).toBe(join(root, 'a', 'candidates.ts'));
+  });
+
+  it('returns null when the namespace is never named in the export graph', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/index.ts', "export * from './other.js';\n");
+    writeFile(root, 'a/other.ts', 'export const x = 1;\n');
+    expect(resolveNamespaceExportFile(join(root, 'a', 'index.ts'), 'nope')).toBeNull();
+  });
+});
+
+describe('resolveNamedExportFile', () => {
+  it('returns the file itself when it declares the function directly', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/scope.ts', 'export function resolveThing() { return 1; }\n');
+    expect(resolveNamedExportFile(join(root, 'a', 'scope.ts'), 'resolveThing')).toBe(
+      join(root, 'a', 'scope.ts')
+    );
+  });
+
+  it('follows a named re-export to where the function is actually declared (the real lists shape)', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/list-items-search.ts', 'export function searchListItems() { return []; }\n');
+    writeFile(root, 'a/index.ts', "export { searchListItems } from './list-items-search.js';\n");
+    expect(resolveNamedExportFile(join(root, 'a', 'index.ts'), 'searchListItems')).toBe(
+      join(root, 'a', 'list-items-search.ts')
+    );
+  });
+
+  it('follows an ALIASED named re-export to the ORIGINAL declared name', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/impl.ts', 'export function original() { return 1; }\n');
+    writeFile(root, 'a/index.ts', "export { original as renamed } from './impl.js';\n");
+    expect(resolveNamedExportFile(join(root, 'a', 'index.ts'), 'renamed')).toBe(
+      join(root, 'a', 'impl.ts')
+    );
+  });
+
+  it('follows a bare `export *` re-export chain', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/impl.ts', 'export function deepFn() { return 1; }\n');
+    writeFile(root, 'a/mid.ts', "export * from './impl.js';\n");
+    writeFile(root, 'a/index.ts', "export * from './mid.js';\n");
+    expect(resolveNamedExportFile(join(root, 'a', 'index.ts'), 'deepFn')).toBe(
+      join(root, 'a', 'impl.ts')
+    );
+  });
+
+  it('returns null when the function is never declared anywhere in the export graph', () => {
+    const root = fixtureRoot();
+    writeFile(root, 'a/index.ts', 'export const x = 1;\n');
+    expect(resolveNamedExportFile(join(root, 'a', 'index.ts'), 'nope')).toBeNull();
+  });
+});
+
+describe('localFunctionNames', () => {
+  it('finds every function declaration in a file, exported or not', () => {
+    const text = [
+      'function privateHelper() {}',
+      'export function publicHelper() {}',
+      'export async function asyncHelper() {}',
+      '',
+    ].join('\n');
+    expect(localFunctionNames(text)).toEqual(
+      expect.arrayContaining(['privateHelper', 'publicHelper', 'asyncHelper'])
+    );
+  });
+
+  it('returns an empty array when the file declares no named function', () => {
+    expect(localFunctionNames('export const x = () => 1;\n')).toEqual([]);
+  });
 });
 
 describe('queryAnchorForRoute', () => {
@@ -564,6 +783,73 @@ describe('collectReachableTexts', () => {
     writeFile(root, 'a/handler.ts', "import { resolveScope } from '@pops/thing';\n");
     const scopes = collectReachableTexts(handlerAbs, 'resolveScope(query)');
     expect(scopes).toEqual([{ text: 'resolveScope(query)', anchor: 'query' }]);
+  });
+
+  it('follows a namespace-qualified call with query as a non-first positional argument', () => {
+    const root = fixtureRoot();
+    writeFile(
+      root,
+      'a/library-service.ts',
+      'export function listLibrary(db, input) {\n  return input.genre;\n}\n'
+    );
+    writeFile(root, 'a/db-index.ts', "export * as libraryService from './library-service.js';\n");
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(root, 'a/handler.ts', "import { libraryService } from './db-index.js';\n");
+    const entryText = 'libraryService.listLibrary(db, query)';
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => fieldIsRead(s.text, 'genre', s.anchor))).toBe(true);
+  });
+
+  it('follows a plain (non-namespace) call with query as a non-first positional argument, transitively (the real food resolveForLine → loadLine shape)', () => {
+    const root = fixtureRoot();
+    writeFile(
+      root,
+      'a/loaders.ts',
+      'export function loadLine(db, args) {\n  return args.lineIndex;\n}\n'
+    );
+    writeFile(
+      root,
+      'a/resolve.ts',
+      "import { loadLine } from './loaders.js';\nexport function resolveForLine(db, args) {\n  return loadLine(db, args);\n}\n"
+    );
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(root, 'a/handler.ts', "import { resolveForLine } from './resolve.js';\n");
+    const entryText = 'resolveForLine(db, query)';
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => fieldIsRead(s.text, 'lineIndex', s.anchor))).toBe(true);
+  });
+
+  it('follows a call to a helper defined in the SAME file, never imported at all (the real media buildWhereClause / food toListInput shape)', () => {
+    const root = fixtureRoot();
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(
+      root,
+      'a/handler.ts',
+      ['function toListInput(query) {', '  return { search: query.search };', '}', ''].join('\n')
+    );
+    const entryText = 'toListInput(query)';
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => fieldIsRead(s.text, 'search', s.anchor))).toBe(true);
+  });
+
+  it('follows a namespace call through a two-level `export *` barrel (the real media rotation-candidates shape)', () => {
+    const root = fixtureRoot();
+    writeFile(
+      root,
+      'a/candidates.ts',
+      'export function listCandidates(db, input) {\n  return input.status;\n}\n'
+    );
+    writeFile(
+      root,
+      'a/rotation-index.ts',
+      "export * as rotationCandidatesService from './candidates.js';\n"
+    );
+    writeFile(root, 'a/db-index.ts', "export * from './rotation-index.js';\n");
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(root, 'a/handler.ts', "import { rotationCandidatesService } from './db-index.js';\n");
+    const entryText = 'rotationCandidatesService.listCandidates(db, query)';
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => fieldIsRead(s.text, 'status', s.anchor))).toBe(true);
   });
 });
 
@@ -688,7 +974,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
    * above — no resolver chain to follow for any of these three, so only the
    * `rest/` directory (not all of `src/`) needs to exist on disk.
    */
-  function sandboxPillarRest(pillar: string): string {
+  function sandboxPillarRest(pillar: string, extraRelDirs: string[] = []): string {
     const sandbox = fixtureRoot();
     mkdirSync(join(sandbox, 'scripts', 'ci'), { recursive: true });
     execFileSync('cp', ['-R', join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts')]);
@@ -703,6 +989,14 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
       join(repoRoot, 'pillars', pillar, 'src', 'api', 'rest'),
       join(sandbox, 'pillars', pillar, 'src', 'api', 'rest'),
     ]);
+    // A namespace- or resolver-chain-following mutation proof needs the
+    // service/module files the rest handlers delegate into, which live
+    // outside `src/api/rest/` — e.g. media's `src/db/services/library.ts`.
+    for (const relDir of extraRelDirs) {
+      const dest = join(sandbox, 'pillars', pillar, ...relDir.split('/'));
+      mkdirSync(dirname(dest), { recursive: true });
+      execFileSync('cp', ['-R', join(repoRoot, 'pillars', pillar, ...relDir.split('/')), dest]);
+    }
     return sandbox;
   }
 
@@ -779,5 +1073,87 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     writeFileSync(handlerPath, mutated);
 
     expectSandboxGuardToFlag(sandbox, 'accountId');
+  });
+
+  it('fails loudly for media when GET /library regresses to dropping `genre`, read only through a namespace-qualified call', () => {
+    const sandbox = sandboxPillarRest('media', ['src/db']);
+    const servicePath = join(sandbox, 'pillars', 'media', 'src', 'db', 'services', 'library.ts');
+    const original = readFileSync(servicePath, 'utf8');
+    const mutated = original.replace(
+      '  if (input.genre) {\n    conditions.push(\n      sql`EXISTS (SELECT 1 FROM json_each(genres) WHERE json_each.value = ${input.genre})`\n    );\n  }\n',
+      ''
+    );
+    expect(mutated).not.toBe(original);
+    writeFileSync(servicePath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'genre');
+  });
+
+  it('fails loudly for food when GET /substitutions/resolve-line regresses to dropping `recipeVersionId`, read two resolver calls deep', () => {
+    // `resolveForLine`'s own body reads `args.lineIndex` directly, so that
+    // field survives even a broken `loadLine` — `recipeVersionId` is read
+    // ONLY inside `loadLine`, the actual two-levels-deep resolver this
+    // mutation targets.
+    const sandbox = sandboxPillarRest('food', ['src/api/modules']);
+    const loaderPath = join(
+      sandbox,
+      'pillars',
+      'food',
+      'src',
+      'api',
+      'modules',
+      'substitutions',
+      'substitutions-resolve-line-loaders.ts'
+    );
+    const original = readFileSync(loaderPath, 'utf8');
+    const mutated = original.replace(
+      '        eq(recipeLines.recipeVersionId, args.recipeVersionId),\n        eq(recipeLines.position, args.lineIndex)\n',
+      '        eq(recipeLines.position, args.lineIndex)\n'
+    );
+    expect(mutated).not.toBe(original);
+    writeFileSync(loaderPath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'recipeVersionId');
+  });
+
+  it('fails loudly for lists when GET /items regresses to dropping `labelContains`, read through a plain (non-namespace) delegated call', () => {
+    const sandbox = sandboxPillarRest('lists', ['src/db']);
+    const servicePath = join(
+      sandbox,
+      'pillars',
+      'lists',
+      'src',
+      'db',
+      'services',
+      'list-items-search.ts'
+    );
+    const original = readFileSync(servicePath, 'utf8');
+    const mutated = original.replace(
+      "    filter.labelContains === undefined\n      ? undefined\n      : sql`${listItems.label} LIKE ${`%${escapeLikePattern(filter.labelContains)}%`} ESCAPE '\\\\'`,\n",
+      ''
+    );
+    expect(mutated).not.toBe(original);
+    writeFileSync(servicePath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'labelContains');
+  });
+
+  it('fails loudly for inventory when GET /items regresses to dropping `assetId`', () => {
+    const sandbox = sandboxPillarRest('inventory');
+    const handlerPath = join(
+      sandbox,
+      'pillars',
+      'inventory',
+      'src',
+      'api',
+      'rest',
+      'items-handlers.ts'
+    );
+    const original = readFileSync(handlerPath, 'utf8');
+    const mutated = original.replace('            assetId: query.assetId,\n', '');
+    expect(mutated).not.toBe(original);
+    writeFileSync(handlerPath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'assetId');
   });
 });
