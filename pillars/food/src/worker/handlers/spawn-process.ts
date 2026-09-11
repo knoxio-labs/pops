@@ -3,7 +3,7 @@
  * acquisition handlers (yt-dlp, whisper, ffmpeg) actually use.
  *
  * `typeof spawn` is a four-way overloaded signature that no `vi.fn()`
- * can satisfy, which used to force `as never` casts in tests. Handlers
+ * can satisfy without a cast. Handlers
  * only read `stdout`/`stderr` data, listen for `error`/`close`, and
  * `kill()` the child, so the seam is narrowed to exactly that — a real
  * `ChildProcess` still satisfies it, so production wiring is unchanged.
