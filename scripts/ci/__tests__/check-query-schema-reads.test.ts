@@ -487,7 +487,7 @@ describe('extractResolverFunctionText', () => {
     expect(extractResolverFunctionText('export const x = 1;\n', 'resolveWindow')).toBeNull();
   });
 
-  it('skips an object-literal return-type annotation rather than mistaking it for the body (POPS-3539)', () => {
+  it('skips an object-literal return-type annotation rather than mistaking it for the body', () => {
     // The real `toListInput` shape in `pillars/food/src/api/rest/aliases-handlers.ts`:
     // the return type is itself a `{ … }` object literal, immediately followed
     // by the function's own body `{ … }`. A naive "find the next `{`" would
@@ -785,7 +785,7 @@ describe('collectReachableTexts', () => {
     expect(scopes).toEqual([{ text: 'resolveScope(query)', anchor: 'query' }]);
   });
 
-  it('follows a namespace-qualified call with query as a non-first positional argument (POPS-3539)', () => {
+  it('follows a namespace-qualified call with query as a non-first positional argument', () => {
     const root = fixtureRoot();
     writeFile(
       root,
@@ -991,8 +991,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     ]);
     // A namespace- or resolver-chain-following mutation proof needs the
     // service/module files the rest handlers delegate into, which live
-    // outside `src/api/rest/` — e.g. media's `src/db/services/library.ts`
-    // (POPS-3539).
+    // outside `src/api/rest/` — e.g. media's `src/db/services/library.ts`.
     for (const relDir of extraRelDirs) {
       const dest = join(sandbox, 'pillars', pillar, ...relDir.split('/'));
       mkdirSync(dirname(dest), { recursive: true });
@@ -1076,7 +1075,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     expectSandboxGuardToFlag(sandbox, 'accountId');
   });
 
-  it('fails loudly for media when GET /library regresses to dropping `genre`, read only through a namespace-qualified call (POPS-3539)', () => {
+  it('fails loudly for media when GET /library regresses to dropping `genre`, read only through a namespace-qualified call', () => {
     const sandbox = sandboxPillarRest('media', ['src/db']);
     const servicePath = join(sandbox, 'pillars', 'media', 'src', 'db', 'services', 'library.ts');
     const original = readFileSync(servicePath, 'utf8');
@@ -1090,7 +1089,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     expectSandboxGuardToFlag(sandbox, 'genre');
   });
 
-  it('fails loudly for food when GET /substitutions/resolve-line regresses to dropping `recipeVersionId`, read two resolver calls deep (POPS-3539)', () => {
+  it('fails loudly for food when GET /substitutions/resolve-line regresses to dropping `recipeVersionId`, read two resolver calls deep', () => {
     // `resolveForLine`'s own body reads `args.lineIndex` directly, so that
     // field survives even a broken `loadLine` — `recipeVersionId` is read
     // ONLY inside `loadLine`, the actual two-levels-deep resolver this
@@ -1117,7 +1116,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     expectSandboxGuardToFlag(sandbox, 'recipeVersionId');
   });
 
-  it('fails loudly for lists when GET /items regresses to dropping `labelContains`, read through a plain (non-namespace) delegated call (POPS-3539)', () => {
+  it('fails loudly for lists when GET /items regresses to dropping `labelContains`, read through a plain (non-namespace) delegated call', () => {
     const sandbox = sandboxPillarRest('lists', ['src/db']);
     const servicePath = join(
       sandbox,
@@ -1139,7 +1138,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     expectSandboxGuardToFlag(sandbox, 'labelContains');
   });
 
-  it('fails loudly for inventory when GET /items regresses to dropping `assetId` (POPS-3539)', () => {
+  it('fails loudly for inventory when GET /items regresses to dropping `assetId`', () => {
     const sandbox = sandboxPillarRest('inventory');
     const handlerPath = join(
       sandbox,

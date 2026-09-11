@@ -58,37 +58,31 @@
  *
  * WHAT IT DOES NOT SEE.
  *
- *   - Scope (POPS-3484, POPS-3539): {@link PILLARS} lists every pillar this
- *     guard currently enforces — purchases, finance, cerebrum, bfm, media,
- *     food, lists, inventory. Each pillar declares its own openapi file, its
- *     own hand-curated `{ handlerFile, handlerKey }` routes (the traversal
+ *   - Scope: {@link PILLARS} lists every pillar this guard currently
+ *     enforces — purchases, finance, cerebrum, bfm, media, food, lists,
+ *     inventory. Each pillar declares its own openapi file, its own
+ *     hand-curated `{ handlerFile, handlerKey }` routes (the traversal
  *     algorithm below is shared and pillar-agnostic; only these roots
  *     differ), its own allowlist, and its own discovery floor.
- *       - media, food and lists were blocked under POPS-3484 by a real gap:
- *         a real minority of their routes delegate the WHOLE query object to
- *         a shared db-service function called as `someService.method(db,
- *         query)` — `query` as one of several positional arguments, through
- *         a property access on an imported namespace object — which the
- *         resolver-following of that PR did not recognise (it only followed
- *         a sole-argument, bare-identifier call). POPS-3539 closes that gap:
- *         {@link findAnchorCallSites} matches the anchor at ANY positional
- *         argument of a call, bare or namespace-qualified, and
- *         {@link resolveNamespaceExportFile} finds the namespace's own
- *         module by following `export * as <name> from` (and, where a
- *         pillar splits a barrel one level deeper, transitively through bare
+ *       - Resolver-following recognises the anchor at ANY positional
+ *         argument of a call, bare or namespace-qualified —
+ *         {@link findAnchorCallSites} matches `resolver(query)`,
+ *         `resolver(db, query)`, and `ns.method(db, query)` alike, which is
+ *         how media, food and lists' delegation to a shared db-service
+ *         function called as `someService.method(db, query)` is followed.
+ *         {@link resolveNamespaceExportFile} finds a namespace's own module
+ *         by following `export * as <name> from` (and, where a pillar
+ *         splits a barrel one level deeper, transitively through bare
  *         `export * from` re-exports) rather than assuming the namespace
- *         object is declared in the file that imports it. All three pillars
- *         report clean under the extended traversal today.
- *       - inventory was blocked under POPS-3484 by a real product gap: its
- *         `POST /search` handler built its filter without ever reading
- *         `body.query.filters`. That was fixed on `main` independently
- *         (PR #4783, before POPS-3539); every inventory route reads its
- *         fields directly today, same as purchases, so it needed no
- *         traversal change to bring in — only its own {@link PILLARS} entry.
+ *         object is declared in the file that imports it.
+ *       - inventory's routes, including `POST /search`, all read their
+ *         query fields directly off the handler's own anchor, same as
+ *         purchases — no namespace or positional-argument traversal is
+ *         needed for this pillar to report clean.
  *       - contacts publishes no ts-rest contract at all (Rust, a different
  *         wire-schema mechanism entirely) — out of scope on its face.
- *       - ai, registry and documents were not part of POPS-3484's named
- *         starting list and were not surveyed here.
+ *       - ai, registry and documents are not in {@link PILLARS} and are not
+ *         surveyed here.
  *   - A field is only "seen read" through a resolver call whose OWN argument
  *     list carries the anchor bare — `resolver(query)`, `resolver(db, query)`,
  *     `ns.method(db, query)` — never an expression merely built FROM it
@@ -465,9 +459,9 @@ const MEDIA_MIN_ROUTES_WITH_FIELDS = 24;
  * listLibrary(db, query)` (`GET /library`), `rotationCandidatesService.
  * listCandidates(db, query)` (`GET /rotation/candidates`),
  * `rotationExclusionsService.listExclusions(db, query)` (`GET
- * /rotation/exclusions`) — exactly the shape POPS-3539 added
- * {@link findAnchorCallSites} / {@link resolveNamespaceExportFile} to
- * follow. Confirmed clean today.
+ * /rotation/exclusions`) — exactly the shape
+ * {@link findAnchorCallSites} / {@link resolveNamespaceExportFile} follow.
+ * Confirmed clean today.
  *
  * @type {RouteSpec[]}
  */
@@ -677,15 +671,14 @@ const FOOD_MIN_ROUTES_WITH_FIELDS = 14;
 
 /**
  * Food's handler layout matches purchases' in shape, with two real
- * delegation patterns POPS-3539 added support for: a plain (non-namespace)
- * resolver called with `query` at a NON-FIRST positional argument
- * (`resolveForLine(db, query)`, `GET /substitutions/resolve-line` —
- * which itself forwards its own second parameter on to a further resolver,
- * `loadLine(db, args)`, two levels deep), and a namespace-qualified call
- * with `query` as the second of two arguments (`substitutionsQueries.
- * listSubstitutions(db, query)`, `substitutionsHydrate.
- * listSubstitutionsHydrated(db, query)`, `substitutionsGraph.
- * loadGraphView(db, query)`). Confirmed clean today.
+ * delegation patterns: a plain (non-namespace) resolver called with `query`
+ * at a NON-FIRST positional argument (`resolveForLine(db, query)`, `GET
+ * /substitutions/resolve-line` — which itself forwards its own second
+ * parameter on to a further resolver, `loadLine(db, args)`, two levels
+ * deep), and a namespace-qualified call with `query` as the second of two
+ * arguments (`substitutionsQueries.listSubstitutions(db, query)`,
+ * `substitutionsHydrate.listSubstitutionsHydrated(db, query)`,
+ * `substitutionsGraph.loadGraphView(db, query)`). Confirmed clean today.
  *
  * @type {RouteSpec[]}
  */
@@ -852,10 +845,7 @@ const INVENTORY_MIN_ROUTES_WITH_FIELDS = 12;
  * Inventory's handler layout matches purchases' shape exactly — every field
  * on every route, including `POST /search`'s `body.query.filters` and
  * `body.query.text`, is read directly off its anchor in the handler body.
- * `POST /search` was the reason POPS-3484 left inventory out (a real
- * dropped read of `filters`); that was fixed independently on `main`
- * (PR #4783, before POPS-3539) — see the guard header. No traversal change
- * was needed to bring inventory in. Confirmed clean today.
+ * No traversal change is needed for this pillar to report clean.
  *
  * @type {RouteSpec[]}
  */
@@ -977,11 +967,10 @@ export const INVENTORY_ALLOWLIST = [];
  * (`extractHandlerEntryText`, `collectReachableTexts`, `fieldIsRead`, …) is
  * shared and pillar-agnostic; only these roots differ.
  *
- * media, food, lists and inventory were surveyed under POPS-3484 (all publish
- * ts-rest query schemas) and left out then for the reasons the header's
- * "WHAT IT DOES NOT SEE" recorded; POPS-3539 closed both gaps (the
- * namespace/positional traversal limit, and inventory's real dropped-field
- * bug being fixed independently on `main`) and brings all four in.
+ * media, food, lists and inventory all publish ts-rest query schemas and
+ * report clean under the traversal described in the header's "WHAT IT DOES
+ * NOT SEE" section — the namespace/positional-argument delegation each of
+ * them relies on somewhere is exactly what that traversal follows.
  *
  * @type {PillarSpec[]}
  */
@@ -3162,14 +3151,11 @@ function selfTestCases() {
       expect: /under this guard's floor/u,
     },
     {
-      // The real media `libraryService.listLibrary(db, query)` shape
-      // (POPS-3539): `query` as the SECOND of two positional arguments,
-      // through a property access on an imported namespace object. The OLD
-      // resolver only followed a sole-argument, bare-identifier call
-      // (`name(query)`), so it never found this call at all — every field
-      // reached only this way reported as unread even though the service
-      // function reads it.
-      name: 'PASSING TWIN: a namespace-qualified call passes query as a non-first positional argument (POPS-3539)',
+      // The real media `libraryService.listLibrary(db, query)` shape:
+      // `query` as the SECOND of two positional arguments, through a
+      // property access on an imported namespace object — not a
+      // sole-argument, bare-identifier call.
+      name: 'PASSING TWIN: a namespace-qualified call passes query as a non-first positional argument',
       arrange: (root) => {
         writeBaseOpenapi(root, {
           '/namespace-check': {
@@ -3228,7 +3214,7 @@ function selfTestCases() {
       expect: null,
     },
     {
-      name: 'ADVERSARIAL: a namespace-qualified resolver that stops reading a field is still caught (POPS-3539)',
+      name: 'ADVERSARIAL: a namespace-qualified resolver that stops reading a field is still caught',
       arrange: (root) => {
         writeBaseOpenapi(root, {
           '/namespace-check': {
@@ -3287,11 +3273,11 @@ function selfTestCases() {
       expect: /field 'genre'/u,
     },
     {
-      // The real food `resolveForLine(db, query)` shape (POPS-3539): a
-      // PLAIN (non-namespace) resolver called with `query` as the second of
-      // two positional arguments. The OLD resolver's sole-argument
-      // restriction missed this shape too, not only the namespaced one.
-      name: 'PASSING TWIN: a plain (non-namespace) call passes query as a non-first positional argument (POPS-3539)',
+      // The real food `resolveForLine(db, query)` shape: a PLAIN
+      // (non-namespace) resolver called with `query` as the second of two
+      // positional arguments — the same non-first-argument case as the
+      // namespace-qualified one above, without a namespace object in play.
+      name: 'PASSING TWIN: a plain (non-namespace) call passes query as a non-first positional argument',
       arrange: (root) => {
         writeBaseOpenapi(root, {
           '/resolve-line-check': {
