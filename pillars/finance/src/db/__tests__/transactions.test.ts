@@ -2,6 +2,7 @@
  * Invariant tests for the transactions service against an in-memory SQLite
  * carrying the migrated finance schema — DB + service layer only.
  */
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -9,8 +10,10 @@ import {
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
 } from '../errors.js';
+import { tagVocabulary } from '../schema.js';
 import { resolveAccountIdByName as resolveIdByName } from '../services/account-lookup.js';
 import { createAccount } from '../services/accounts.js';
+import { upsertVocabularyTag } from '../services/tag-vocabulary.js';
 import {
   createTransaction,
   deleteTransaction,
@@ -22,6 +25,15 @@ import {
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
 import type { FinanceDb } from '../services/internal.js';
+
+/** The vocabulary's live `usage_count` for one tag, or `undefined` if it has no row. */
+function usageCountOf(db: FinanceDb, tag: string): number | undefined {
+  return db
+    .select({ usageCount: tagVocabulary.usageCount })
+    .from(tagVocabulary)
+    .where(eq(tagVocabulary.tag, tag))
+    .get()?.usageCount;
+}
 
 /**
  * `createTransaction` needs a real account row to resolve `accountId`
@@ -788,5 +800,146 @@ describe('restoreTransaction', () => {
       expect(error).toBeInstanceOf(TransactionAlreadyExistsError);
       expect((error as TransactionAlreadyExistsError).id).toBe(created.id);
     }
+  });
+});
+
+// POPS-2627: `tag_vocabulary.usage_count` used to move only at import commit.
+// These pin every other write path this service owns.
+describe('usage_count maintenance (POPS-2627)', () => {
+  let db: FinanceDb;
+  beforeEach(() => {
+    db = freshDb();
+    upsertVocabularyTag(db, 'venue:cafe', 'seed');
+    upsertVocabularyTag(db, 'venue:pub', 'seed');
+  });
+
+  it('bumps a tag created with a transaction', () => {
+    createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(1);
+  });
+
+  // The ticket's headline case: editing tags after import must move the
+  // counter, not just the import-commit write.
+  it('editing a transaction to add a tag bumps it', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+    });
+
+    updateTransaction(db, created.id, { tags: ['venue:cafe'] });
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(1);
+  });
+
+  // "Fails today" per the ticket — the pre-fix counter is monotonic.
+  it('editing a transaction to remove a tag decrements it', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+    expect(usageCountOf(db, 'venue:cafe')).toBe(1);
+
+    updateTransaction(db, created.id, { tags: [] });
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(0);
+  });
+
+  it('swapping one tag for another moves the count from one row to the other', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+
+    updateTransaction(db, created.id, { tags: ['venue:pub'] });
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(0);
+    expect(usageCountOf(db, 'venue:pub')).toBe(1);
+  });
+
+  it('leaves the count alone when the patch does not touch tags', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+
+    updateTransaction(db, created.id, { description: 'Coffee Shop' });
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(1);
+  });
+
+  it('deleting a transaction decrements every tag it carried', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe', 'venue:pub'],
+    });
+
+    deleteTransaction(db, created.id);
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(0);
+    expect(usageCountOf(db, 'venue:pub')).toBe(0);
+  });
+
+  it('restoring a deleted transaction re-increments its tags', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+    const snapshot = deleteTransaction(db, created.id);
+    expect(usageCountOf(db, 'venue:cafe')).toBe(0);
+
+    restoreTransaction(db, snapshot);
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(1);
+  });
+
+  it('never drives a count below zero deleting a transaction whose tag is already exhausted', () => {
+    const created = createTransaction(db, {
+      description: 'Coffee',
+      accountId: resolveIdByName(db, 'Up'),
+      amountCents: -500,
+      type: 'purchase',
+      date: '2025-06-15',
+      tags: ['venue:cafe'],
+    });
+    // Simulate a row already short from before this fix existed.
+    db.update(tagVocabulary)
+      .set({ usageCount: 0 })
+      .where(eq(tagVocabulary.tag, 'venue:cafe'))
+      .run();
+
+    deleteTransaction(db, created.id);
+
+    expect(usageCountOf(db, 'venue:cafe')).toBe(0);
   });
 });

@@ -143,3 +143,27 @@ export function buildRetroactiveApplyUpdates(
   updates.lastEditedTime = new Date().toISOString();
   return updates;
 }
+
+/** The vocabulary usage delta `updates` (from {@link buildRetroactiveApplyUpdates}) makes, or `null` when it leaves `tags` alone. */
+export interface TagUsageDelta {
+  oldTags: string[];
+  newTags: string[];
+}
+
+/**
+ * Read the before/after tag lists a retroactive `updates` object implies, for
+ * {@link applyVocabularyUsageDelta} to reconcile in the same write (POPS-2627).
+ *
+ * Kept beside {@link buildRetroactiveApplyUpdates} rather than inlined at each
+ * write site: both `reclassifyExistingTransactions` and
+ * `applyCorrectionRuleToExistingTransactions` build `updates` the same way,
+ * and this is the one place that unpacks `updates.tags` back into the array
+ * form the vocabulary service wants.
+ */
+export function tagUsageDeltaFor(
+  txn: BatchTxn,
+  updates: Record<string, unknown>
+): TagUsageDelta | null {
+  if (typeof updates.tags !== 'string') return null;
+  return { oldTags: parseCorrectionTags(txn.tags), newTags: parseCorrectionTags(updates.tags) };
+}

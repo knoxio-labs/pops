@@ -38,6 +38,7 @@ import { asc, eq, notInArray } from 'drizzle-orm';
 
 import {
   type FinanceDb,
+  tagVocabularyService,
   transactionCorrections,
   transactionCorrectionsService,
   transactions,
@@ -47,7 +48,11 @@ import {
   findMatchingCorrectionFromRules,
   resolveCorrectionApplyStatus,
 } from '../corrections/index.js';
-import { type BatchTxn, buildRetroactiveApplyUpdates } from './retroactive-updates.js';
+import {
+  type BatchTxn,
+  buildRetroactiveApplyUpdates,
+  tagUsageDeltaFor,
+} from './retroactive-updates.js';
 
 const RECLASSIFY_BATCH_SIZE = 500;
 
@@ -118,7 +123,13 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
       if (resolveCorrectionApplyStatus(match.correction) !== 'matched') continue;
       const updates = buildRetroactiveApplyUpdates(txn, match.correction);
       if (!updates) continue;
-      db.update(transactions).set(updates).where(eq(transactions.id, txn.id)).run();
+      const tagDelta = tagUsageDeltaFor(txn, updates);
+      db.transaction((tx) => {
+        tx.update(transactions).set(updates).where(eq(transactions.id, txn.id)).run();
+        if (tagDelta) {
+          tagVocabularyService.applyVocabularyUsageDelta(tx, tagDelta.oldTags, tagDelta.newTags);
+        }
+      });
       reclassified++;
       appliedCounts.set(match.correction.id, (appliedCounts.get(match.correction.id) ?? 0) + 1);
     }
@@ -178,8 +189,14 @@ function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
   result.updated++;
   if (dryRun) return;
 
-  db.update(transactions).set(updates).where(eq(transactions.id, txn.id)).run();
-  transactionCorrectionsService.incrementTransactionCorrectionUsage(db, match.correction.id);
+  const tagDelta = tagUsageDeltaFor(txn, updates);
+  db.transaction((tx) => {
+    tx.update(transactions).set(updates).where(eq(transactions.id, txn.id)).run();
+    if (tagDelta) {
+      tagVocabularyService.applyVocabularyUsageDelta(tx, tagDelta.oldTags, tagDelta.newTags);
+    }
+    transactionCorrectionsService.incrementTransactionCorrectionUsage(tx, match.correction.id);
+  });
 }
 
 /**
