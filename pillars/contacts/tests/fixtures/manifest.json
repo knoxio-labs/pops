@@ -1,0 +1,62 @@
+{
+  "ai": {
+    "tools": []
+  },
+  "consumedSettings": {
+    "keys": []
+  },
+  "contract": {
+    "package": "@pops/contacts",
+    "tag": "contract-contacts@v0.0.0-dev",
+    "version": "0.0.0-dev"
+  },
+  "healthcheck": {
+    "path": "/health"
+  },
+  "pages": [
+    {
+      "bundleSlot": "contacts-list",
+      "index": true,
+      "path": ""
+    }
+  ],
+  "pillar": "contacts",
+  "routes": {
+    "mutations": [
+      "contacts.entities.create",
+      "contacts.entities.update",
+      "contacts.entities.delete"
+    ],
+    "queries": [
+      "contacts.entities.list",
+      "contacts.entities.get",
+      "contacts.search.search"
+    ],
+    "subscriptions": []
+  },
+  "search": {
+    "adapters": [
+      {
+        "entityType": "contact",
+        "name": "contacts",
+        "procedurePath": "contacts.search.search",
+        "queryShape": {
+          "supportsDateRange": false,
+          "supportsScope": [],
+          "supportsTags": false,
+          "supportsText": true
+        },
+        "rankFieldName": "score"
+      }
+    ]
+  },
+  "settings": {
+    "manifests": []
+  },
+  "uri": {
+    "types": [
+      "contacts/contact"
+    ]
+  },
+  "version": "0.0.0-dev"
+}
