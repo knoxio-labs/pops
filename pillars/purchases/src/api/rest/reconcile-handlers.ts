@@ -10,6 +10,7 @@ import {
   unlinkCharge,
 } from '../../db/index.js';
 import { nowIso } from '../../db/services/internal.js';
+import { toPurchaseChargeLinkBody } from './serializers.js';
 
 import type { z } from 'zod';
 
@@ -51,7 +52,10 @@ function toWireEntries(entries: readonly QueueEntry[]) {
 function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
   return entries.map((entry) => ({
     purchase: entry.purchase,
-    charges: entry.charges.map((charge) => ({ charge: charge.charge, link: charge.link })),
+    charges: entry.charges.map((charge) => ({
+      charge: charge.charge,
+      link: toPurchaseChargeLinkBody(charge.link),
+    })),
     linkedCents: entry.linkedCents,
   }));
 }

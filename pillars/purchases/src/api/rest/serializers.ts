@@ -28,12 +28,45 @@ import type {
   PurchaseDetailSchema,
   PurchaseItemDetailSchema,
 } from '../../contract/schemas/purchase-detail.js';
-import type { PurchaseItemSchema } from '../../contract/schemas/purchase.js';
-import type { PurchaseDetail, PurchaseItemDetail, PurchaseItemRow } from '../../db/index.js';
+import type {
+  PurchaseChargeLinkSchema,
+  PurchaseItemSchema,
+} from '../../contract/schemas/purchase.js';
+import type {
+  PurchaseChargeLinkRow,
+  PurchaseDetail,
+  PurchaseItemDetail,
+  PurchaseItemRow,
+} from '../../db/index.js';
 
 export type PurchaseDetailBody = z.infer<typeof PurchaseDetailSchema>;
 export type PurchaseItemBody = z.infer<typeof PurchaseItemSchema>;
 export type PurchaseItemDetailBody = z.infer<typeof PurchaseItemDetailSchema>;
+export type PurchaseChargeLinkBody = z.infer<typeof PurchaseChargeLinkSchema>;
+
+/**
+ * A charge link, projected onto exactly the fields `PurchaseChargeLinkSchema`
+ * declares.
+ *
+ * The row carries more than the wire does — `transactionDescription` is
+ * evidence the reconcile engine keeps for itself — and a spread
+ * would hand all of it out. Listed explicitly rather than derived from the
+ * row so a column added to the table later has to be added here too, on
+ * purpose, before it can reach a consumer.
+ */
+export function toPurchaseChargeLinkBody(row: PurchaseChargeLinkRow): PurchaseChargeLinkBody {
+  return {
+    id: row.id,
+    chargeId: row.chargeId,
+    transactionUri: row.transactionUri,
+    amountCents: row.amountCents,
+    linkType: row.linkType,
+    confidence: row.confidence,
+    matchRuleId: row.matchRuleId,
+    createdAt: row.createdAt,
+    confirmedAt: row.confirmedAt,
+  };
+}
 
 /**
  * A line, with its classification and its product identifier each fused to
@@ -75,7 +108,7 @@ export function toPurchaseDetailBody(detail: PurchaseDetail): PurchaseDetailBody
     items: detail.items.map(toPurchaseItemDetailBody),
     charges: detail.charges.map((entry) => ({
       charge: entry.charge,
-      links: [...entry.links],
+      links: entry.links.map(toPurchaseChargeLinkBody),
       allocations: [...entry.allocations],
     })),
     documents: [...detail.documents],
