@@ -7,10 +7,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 
 import { ReconcileQueuePage } from '../ReconcileQueuePage';
+import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
 
 import type { ReactElement } from 'react';
 
 import type { LinkType, ProposedLink, QueueEntry } from '../reconcile/types';
+
+const RAW_CATALOG_KEY = rawCatalogKeyPattern('reconcile', 'merchants');
 
 const reconcileQueueMock = vi.fn();
 const reconcileConfirmMock = vi.fn();
@@ -144,7 +147,24 @@ describe('ReconcileQueuePage — copy', () => {
     renderQueue();
     await screen.findByRole('listbox');
 
-    expect(document.body.textContent).not.toMatch(/(?:reconcile|merchants)\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(RAW_CATALOG_KEY);
+    expect(leakedAriaLabels(RAW_CATALOG_KEY)).toEqual([]);
+  });
+
+  // `reconcile.filter.kindLabel` names the kind-filter group but produces no
+  // text of its own — the group's visible content is its buttons' own labels
+  // — so it is exactly the blind spot `textContent` above cannot see (the
+  // filter guard POPS-2001 added after POPS-1978 caught the same shape on
+  // ReceiptDropZonePage). Asserted by value so a rename that breaks the
+  // catalog lookup fails loudly rather than as a silent key echo.
+  it('names the kind-filter group from the catalog', async () => {
+    queueReturns([buildEntry()]);
+    renderQueue();
+    await screen.findByRole('listbox');
+
+    expect(
+      screen.getByRole('group', { name: enAUPurchases['reconcile.filter.kindLabel'] })
+    ).toBeInTheDocument();
   });
 
   it('has a label for every link type the contract allows', async () => {
