@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type CallResult } from '@pops/pillar-sdk/client';
 
+import { PENDING_CHANGE_SETS_MAX } from '../../contract/rest-corrections-schemas.js';
 import {
   importsService,
   openFinanceDb,
@@ -42,7 +43,7 @@ import {
 } from '../contacts/client.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake, type ContactsFake, type SeedContact } from './contacts-fake.js';
-import { makeClient, waitForImportCompletion } from './test-utils.js';
+import { inertPendingChangeSets, makeClient, waitForImportCompletion } from './test-utils.js';
 
 import type { ProcessImportOutput } from '../modules/imports/types.js';
 
@@ -681,6 +682,32 @@ describe('imports.reevaluateWithPendingRules', () => {
     });
     expect(res.result).toBeDefined();
     expect(res.affectedCount).toBe(0);
+  });
+
+  it('accepts exactly the pending ChangeSet cap', async () => {
+    const c = client();
+    const sessionId = await uncertainSession(c, 'reeval-at-cap');
+
+    const res = await c.imports.reevaluateWithPendingRules({
+      sessionId,
+      minConfidence: 0.7,
+      pendingChangeSets: inertPendingChangeSets(PENDING_CHANGE_SETS_MAX),
+    });
+
+    expect(res.result.uncertain.some((t) => t.checksum === 'reeval-at-cap')).toBe(true);
+  });
+
+  it('rejects one pending ChangeSet over the cap, for a session that exists', async () => {
+    const c = client();
+    const sessionId = await uncertainSession(c, 'reeval-over-cap');
+
+    await expect(
+      c.imports.reevaluateWithPendingRules({
+        sessionId,
+        minConfidence: 0.7,
+        pendingChangeSets: inertPendingChangeSets(PENDING_CHANGE_SETS_MAX + 1),
+      })
+    ).rejects.toMatchObject({ status: 400 });
   });
 
   it('404s an unknown session', async () => {

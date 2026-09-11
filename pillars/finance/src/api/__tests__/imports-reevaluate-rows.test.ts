@@ -11,6 +11,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { PENDING_CHANGE_SETS_MAX } from '../../contract/rest-corrections-schemas.js';
 import {
   openFinanceDb,
   transactionCorrectionsService,
@@ -19,7 +20,7 @@ import {
 import { createFinanceApiApp } from '../app.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake } from './contacts-fake.js';
-import { makeClient } from './test-utils.js';
+import { inertPendingChangeSets, makeClient } from './test-utils.js';
 
 import type { ContactsClient } from '../contacts/client.js';
 
@@ -288,6 +289,28 @@ describe('imports.reevaluateRowsWithPendingRules', () => {
           skipped: rows('s', 501, 'skipped'),
         }),
         pendingChangeSets: [],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('accepts exactly the pending ChangeSet cap', async () => {
+    const c = client();
+
+    const res = await c.imports.reevaluateRowsWithPendingRules({
+      result: result({ uncertain: [row('u-1', 'ANY')] }),
+      pendingChangeSets: inertPendingChangeSets(PENDING_CHANGE_SETS_MAX),
+    });
+
+    expect(checksums(res.result.uncertain)).toEqual(['u-1']);
+  });
+
+  it('rejects one pending ChangeSet over the cap, with no session to gate it', async () => {
+    const c = client();
+
+    await expect(
+      c.imports.reevaluateRowsWithPendingRules({
+        result: result({ uncertain: [row('u-1', 'ANY')] }),
+        pendingChangeSets: inertPendingChangeSets(PENDING_CHANGE_SETS_MAX + 1),
       })
     ).rejects.toMatchObject({ status: 400 });
   });

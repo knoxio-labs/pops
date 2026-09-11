@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { CommitBatchSchema, ImportSourceSchema } from './import-source.js';
-import { TransactionTypeSchema } from './rest-corrections-schemas.js';
+import { PENDING_CHANGE_SETS_MAX, TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { RulesAppliedSchema, RuleWriteCountsSchema } from './rest-imports-rule-counts.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
@@ -296,7 +296,7 @@ export const CommitResultSchema = z.object({
 
 export const ReevaluateWithPendingRulesInputSchema = z.object({
   sessionId: z.string().uuid(),
-  pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })),
+  pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })).max(PENDING_CHANGE_SETS_MAX),
 });
 
 export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;

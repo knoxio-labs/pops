@@ -19609,6 +19609,7 @@
                       "required": ["changeSet"],
                       "type": "object"
                     },
+                    "maxItems": 200,
                     "type": "array"
                   },
                   "sessionId": {
@@ -20991,6 +20992,7 @@
                       "required": ["changeSet"],
                       "type": "object"
                     },
+                    "maxItems": 200,
                     "type": "array"
                   },
                   "result": {

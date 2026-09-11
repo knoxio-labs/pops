@@ -202,13 +202,21 @@ const PreviewChangeSetTransactionSchema = z.object({
  */
 export const CALLER_SUPPLIED_TRANSACTIONS_MAX = 2000;
 
+/**
+ * The most unsaved ChangeSets a caller may ask the server to fold over the
+ * stored rules in one request. Every route that takes `pendingChangeSets`
+ * validates against this, because each one is applied across the whole rule
+ * table before a single row is evaluated.
+ */
+export const PENDING_CHANGE_SETS_MAX = 200;
+
 export const PreviewChangeSetBody = z.object({
   changeSet: ChangeSetSchema,
   transactions: z
     .array(PreviewChangeSetTransactionSchema)
     .min(1)
     .max(CALLER_SUPPLIED_TRANSACTIONS_MAX),
-  pendingChangeSets: z.array(PendingChangeSetSchema).max(200).optional(),
+  pendingChangeSets: z.array(PendingChangeSetSchema).max(PENDING_CHANGE_SETS_MAX).optional(),
 });
 
 const CorrectionMatchSummarySchema = z.object({
@@ -235,7 +243,7 @@ export const ChangeSetPreviewSummarySchema = z.object({
 });
 
 export const ListMergedBody = z.object({
-  pendingChangeSets: z.array(PendingChangeSetSchema).max(200).optional(),
+  pendingChangeSets: z.array(PendingChangeSetSchema).max(PENDING_CHANGE_SETS_MAX).optional(),
   limit: z.number().int().positive().max(50000).optional(),
   offset: z.number().int().nonnegative().optional(),
 });
