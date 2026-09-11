@@ -144,19 +144,21 @@ bundle produces in production.
 
 ### The floor when the registry is unreachable
 
-Boot tries three sources, in order, and reports which one it used as
+Boot tries two sources, in order, and reports which one it used as
 `BootRegistry.source`:
 
 1. **`registry`** — the live snapshot. The normal path.
 2. **`cached-snapshot`** — the last snapshot that resolved to a usable shell,
    kept in `localStorage` (`src/app/snapshot-cache.ts`).
-3. **`static-floor`** — the pillars still in the bundle map.
 
-The cache exists because the third source is disappearing. It used to be the
-whole floor: whatever the build had compiled in was what the shell mounted when
-`registry-api` was unreachable. POPS-3215 empties the bundle map one pillar at
-a time, and at the end of it that floor is nothing — the shell would boot to its
-own chrome, an empty rail and the settings page (POPS-3239).
+When neither answers, `source` is **`empty`**: the shell boots to its own
+chrome, an empty rail and the settings page.
+
+The cache is the whole floor. There used to be a third source, the pillars
+compiled into the shell's static bundle map, which is what the shell mounted
+when `registry-api` was unreachable. POPS-3215 moved every pillar onto the
+runtime loader and POPS-3227 deleted the map, so without the cache a registry
+outage would leave nothing to mount (POPS-3239).
 
 A registry outage is not a pillar outage. `registry-api` can be down or
 mid-restart while `finance-api` and its UI bundle are both being served
