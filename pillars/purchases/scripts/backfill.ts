@@ -36,6 +36,44 @@ export interface IngestClient {
 }
 
 /**
+ * Loopback hostnames a `new URL(...).hostname` can produce. IPv6's `::1`
+ * comes back bracketed, `[::1]`, because that is how a URL's authority
+ * disambiguates the address's own colons from the port separator.
+ */
+const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(['localhost', '[::1]']);
+
+/** `127.0.0.0/8`: matched by shape, then every octet is range-checked. */
+const LOOPBACK_IPV4_RE = /^127\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u;
+
+/**
+ * Whether `baseUrl` names a host on this machine.
+ *
+ * Loopback only — `localhost`, `127.0.0.0/8`, `::1` — because that is the
+ * one class of address guaranteed to reach the same filesystem the CLI's
+ * receipt store just wrote to. Compared as a whole hostname, never as a
+ * substring: `localhost.example.com` contains "localhost" but is a distinct,
+ * real, remote host, and a substring test would wave through exactly the
+ * mistake this exists to catch.
+ *
+ * An unparsable value is treated as remote rather than thrown on: `new URL`
+ * rejects it, and a string that is not even a URL is not one this function
+ * can vouch for as local.
+ */
+export function isLocalBaseUrl(baseUrl: string): boolean {
+  let hostname: string;
+  try {
+    ({ hostname } = new URL(baseUrl));
+  } catch {
+    return false;
+  }
+
+  if (LOOPBACK_HOSTNAMES.has(hostname)) return true;
+
+  const ipv4 = LOOPBACK_IPV4_RE.exec(hostname);
+  return ipv4 !== null && ipv4.slice(1).every((octet) => Number(octet) <= 255);
+}
+
+/**
  * Resolve the ingest target from the environment.
  *
  * @param env Process environment to read; injectable for tests.
@@ -43,6 +81,14 @@ export interface IngestClient {
  *   defaulting to an anonymous call: an anonymous backfill is admitted today,
  *   so falling back would silently exempt the CLI from the gate it is meant to
  *   pass, and would keep working right up until `requireCredential` flips.
+ * @throws When the resolved base URL is not local (POPS-2312). The CLI's
+ *   receipt store (`resolveReceiptStoreRoot`) always writes to a directory on
+ *   THIS host; a backfill that posts to a remote server anyway would store
+ *   the bytes here and record their URI there, silently orphaning the
+ *   evidence — the failure was only visible later, when someone tried to
+ *   open an invoice the database swore existed. Refusing here, before the
+ *   bundle is even read, turns that into an error the operator sees
+ *   immediately.
  */
 export function createIngestClient(env: NodeJS.ProcessEnv = process.env): IngestClient {
   const apiKey = env[INGEST_API_KEY_ENV]?.trim() ?? '';
@@ -53,8 +99,18 @@ export function createIngestClient(env: NodeJS.ProcessEnv = process.env): Ingest
         'anonymous caller, which purchases still admits.'
     );
   }
-  const baseUrl = env['PURCHASES_BASE_URL']?.trim() ?? '';
-  return { apiKey, baseUrl: baseUrl === '' ? DEFAULT_BASE_URL : baseUrl };
+  const rawBaseUrl = env['PURCHASES_BASE_URL']?.trim() ?? '';
+  const baseUrl = rawBaseUrl === '' ? DEFAULT_BASE_URL : rawBaseUrl;
+  if (!isLocalBaseUrl(baseUrl)) {
+    throw new Error(
+      `PURCHASES_BASE_URL (${baseUrl}) is not local: refusing to run. The receipt store writes ` +
+        'bytes to a directory on this host, so posting to a remote server would store the ' +
+        'evidence here and its URI there, and every document would silently fail to resolve. ' +
+        'Run the backfill on the host that mounts the purchases volume, or point ' +
+        'PURCHASES_BASE_URL at a loopback address (localhost, 127.0.0.0/8, ::1).'
+    );
+  }
+  return { apiKey, baseUrl };
 }
 
 /**
