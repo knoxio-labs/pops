@@ -296,6 +296,44 @@ describe('header agreement across an order’s rows', () => {
     expect(dropped?.detail).toContain('Order Date');
   });
 
+  it('does not compare Order Status when the first row cannot state one, and leaves the drop to the status check', () => {
+    // Amazon's own absence sentinel on the first row, not a blank cell —
+    // `readOrderHeader` is what ends up dropping this order, because the
+    // header-agreement field is skipped rather than compared.
+    const orderId = 'D01-9000000-0000006';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': orderId, 'Order Status': 'Not Available' }),
+        digitalRowWith({ 'Order ID': orderId, 'Order Status': 'FAILURE' }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toBe(
+      'Order Status is absent rather than "SUCCESS", so the purchase did not complete and no ' +
+        'spend was recorded'
+    );
+  });
+
+  it('does not compare Base Currency Code when the first row cannot state one, and leaves the drop to the header read', () => {
+    const orderId = 'D01-9000000-0000007';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': orderId, 'Base Currency Code': 'Not Applicable' }),
+        digitalRowWith({ 'Order ID': orderId, 'Base Currency Code': 'USD' }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toBe('unreadable Base Currency Code');
+  });
+
   it('still ingests a multi-row order whose header fields agree, unchanged', () => {
     // ORDER_TWO_ITEMS already spans two Digital Order Item IDs in the golden
     // fixture; its header parses the same with or without the guard.
