@@ -293,4 +293,95 @@ describe('ProcessingStep', () => {
       await waitFor(() => expect(mockProcessImport).toHaveBeenCalledTimes(1));
     });
   });
+
+  describe('resuming onto a stored session (POPS-19)', () => {
+    // A resumed draft carries the processSessionId of the run it left. Sessions
+    // are durable for a day, so that run may still be going — or finished —
+    // and starting a second one pays for a duplicate AI pass whose suggestions
+    // can drift from the first.
+    function storedSession(data: unknown): void {
+      mockProcessSessionId = 'sess-stored';
+      mockGetImportProgress.mockResolvedValue({ data, error: undefined });
+    }
+
+    function progress(status: 'processing' | 'completed' | 'failed', extra = {}) {
+      return {
+        sessionId: 'sess-stored',
+        status,
+        errors: [],
+        currentBatch: [],
+        currentStep: 'matching',
+        processedCount: 1,
+        startedAt: '2026-01-01T00:00:00.000Z',
+        totalTransactions: 4,
+        ...extra,
+      };
+    }
+
+    /** Let the probe resolve and any follow-up it decided on start, before asserting absence. */
+    async function settle(): Promise<void> {
+      await waitFor(() =>
+        expect(mockGetImportProgress).toHaveBeenCalledWith({ query: { sessionId: 'sess-stored' } })
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    it('re-attaches to a run that is still processing instead of starting another', async () => {
+      storedSession(progress('processing'));
+      render(renderStep());
+
+      expect(await screen.findByText('Processing 1/4 transactions...')).toBeInTheDocument();
+      await settle();
+      expect(mockProcessImport).not.toHaveBeenCalled();
+    });
+
+    it("takes a finished run's result instead of processing the rows again", async () => {
+      const result = { ...emptyProcessed, matched: [{ description: 'Already done' }] };
+      storedSession(progress('completed', { result }));
+      render(renderStep());
+
+      await waitFor(() => expect(mockNextStep).toHaveBeenCalledTimes(1));
+      expect(mockSetProcessedTransactions).toHaveBeenCalledWith(result);
+      await settle();
+      expect(mockProcessImport).not.toHaveBeenCalled();
+    });
+
+    it('starts a new run when the server no longer knows the stored session', async () => {
+      storedSession(null);
+      render(renderStep());
+
+      await waitFor(() => expect(mockProcessImport).toHaveBeenCalledTimes(1));
+    });
+
+    it('starts a new run when the stored session failed, rather than showing a stale failure', async () => {
+      // A restart of the finance service marks a mid-flight session failed; the
+      // run a person comes back to should simply start again.
+      storedSession(progress('failed', { errors: [{ description: 'x', error: 'restart' }] }));
+      mockGetImportProgress
+        .mockResolvedValueOnce({ data: progress('failed'), error: undefined })
+        .mockResolvedValue({ data: progress('processing'), error: undefined });
+      render(renderStep());
+
+      await waitFor(() => expect(mockProcessImport).toHaveBeenCalledTimes(1));
+    });
+
+    it('starts a new run when reading the stored session itself fails', async () => {
+      mockProcessSessionId = 'sess-stored';
+      mockGetImportProgress.mockResolvedValue({
+        data: undefined,
+        error: { message: 'Bad gateway' },
+        response: { status: 502 } as Response,
+      });
+      render(renderStep());
+
+      await waitFor(() => expect(mockProcessImport).toHaveBeenCalledTimes(1));
+    });
+
+    it('does not ask about a session when none was stored', async () => {
+      render(renderStep());
+
+      await waitFor(() => expect(mockProcessImport).toHaveBeenCalledTimes(1));
+      expect(mockGetImportProgress).not.toHaveBeenCalled();
+    });
+  });
 });
