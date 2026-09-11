@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { unwrap } from '../../../finance-api-helpers.js';
 import { tagRulesPropose } from '../../../finance-api/index.js';
+import { closedValuesOutsideVocabulary } from '../../../lib/tags';
 import {
   collectNewTagNames,
   parseTags,
+  tagsWrittenBy,
   type ProposeOutput,
   type TagRuleProposalDialogProps,
 } from './types';
@@ -147,7 +149,15 @@ export function useTagRuleProposal(props: TagRuleProposalDialogProps) {
   useResetOnOpen(props, form);
   useSyncAcceptedTags(proposal, form.setAcceptedNewTags);
   const newTagNames = useMemo(() => collectNewTagNames(proposal), [proposal]);
+  const { facets, vocabularyTags } = props;
+  const refusedTags = useMemo(
+    () =>
+      facets === undefined || vocabularyTags === undefined
+        ? []
+        : closedValuesOutsideVocabulary(tagsWrittenBy(proposal), facets, vocabularyTags),
+    [proposal, facets, vocabularyTags]
+  );
   const mutations = useTagRuleMutations({ props, form, proposal });
   const busy = mutations.rejectMutation.isPending;
-  return { form, proposal, proposeQuery, newTagNames, busy, ...mutations };
+  return { form, proposal, proposeQuery, newTagNames, refusedTags, busy, ...mutations };
 }

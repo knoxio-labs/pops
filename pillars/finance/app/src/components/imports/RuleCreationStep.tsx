@@ -4,16 +4,20 @@ import { Badge, Button, Checkbox, EmptyState, Label } from '@pops/ui';
 
 import { useImportStore } from '../../store/importStore';
 import { TagBadgeRow } from '../tags/TagChip';
+import { stageable, useRefusedProposals } from './rule-creation/refused-proposals';
 import { buildChangeSet, computeProposals, type RuleProposal } from './rule-creation/utils';
 
 function ProposalCard({
   proposal,
   checked,
   onToggle,
+  refused,
 }: {
   proposal: RuleProposal;
   checked: boolean;
   onToggle: () => void;
+  /** Closed-axis values this rule would write that the vocabulary lacks. */
+  refused: string[];
 }) {
   return (
     <div
@@ -25,7 +29,8 @@ function ProposalCard({
       <div className="flex items-start gap-3">
         <Checkbox
           id={proposal.id}
-          checked={checked}
+          checked={checked && refused.length === 0}
+          disabled={refused.length > 0}
           onCheckedChange={onToggle}
           onClick={(e) => e.stopPropagation()}
           className="mt-0.5"
@@ -47,6 +52,12 @@ function ProposalCard({
             className="flex flex-wrap gap-1.5"
             badgeClassName="text-xs"
           />
+          {refused.length > 0 && (
+            <p role="alert" className="text-xs text-destructive">
+              Not staged: {refused.join(', ')}{' '}
+              {refused.length === 1 ? 'is not a value' : 'are not values'} of a closed tag axis.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -57,10 +68,12 @@ function ProposalsList({
   proposals,
   checked,
   onToggle,
+  refusedById,
 }: {
   proposals: RuleProposal[];
   checked: Set<string>;
   onToggle: (id: string) => void;
+  refusedById: ReadonlyMap<string, string[]>;
 }) {
   if (proposals.length === 0) {
     return (
@@ -80,6 +93,7 @@ function ProposalsList({
           proposal={proposal}
           checked={checked.has(proposal.id)}
           onToggle={() => onToggle(proposal.id)}
+          refused={refusedById.get(proposal.id) ?? []}
         />
       ))}
     </div>
@@ -135,6 +149,7 @@ export function RuleCreationStep() {
   const nextStep = useImportStore((s) => s.nextStep);
   const prevStep = useImportStore((s) => s.prevStep);
   const proposals = useMemo(() => computeProposals(confirmedTransactions), [confirmedTransactions]);
+  const refusedById = useRefusedProposals(proposals);
   const [checked, setChecked] = useState<Set<string>>(() => new Set(defaultChecked(proposals)));
   const [prevProposals, setPrevProposals] = useState(proposals);
   if (proposals !== prevProposals) {
@@ -152,7 +167,7 @@ export function RuleCreationStep() {
   }
 
   function handleCreate() {
-    for (const proposal of proposals.filter((p) => checked.has(p.id))) {
+    for (const proposal of stageable(proposals, checked, refusedById)) {
       addPendingTagRuleChangeSet({
         changeSet: buildChangeSet(proposal),
         source: 'import-batch',
@@ -172,12 +187,17 @@ export function RuleCreationStep() {
           future imports.
         </p>
       </div>
-      <ProposalsList proposals={proposals} checked={checked} onToggle={toggle} />
+      <ProposalsList
+        proposals={proposals}
+        checked={checked}
+        onToggle={toggle}
+        refusedById={refusedById}
+      />
       <StepFooter
         onBack={prevStep}
         onSkip={nextStep}
         onCreate={handleCreate}
-        selectedCount={proposals.filter((p) => checked.has(p.id)).length}
+        selectedCount={stageable(proposals, checked, refusedById).length}
         hasProposals={proposals.length > 0}
       />
     </div>

@@ -18,6 +18,11 @@ export interface UseTagReviewStateOutput {
   availableTags: string[];
   /** The tag taxonomy, for the pickers that mint a value on one of its axes. */
   facets: TagFacetOption[];
+  /**
+   * The vocabulary alone, `undefined` until loaded — what a staged tag rule is
+   * checked against, without this import's own row tags (POPS-3106).
+   */
+  vocabularyTags: readonly string[] | undefined;
   localTags: Record<string, string[]>;
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   updateTag: (checksum: string, tags: string[]) => void;
