@@ -13,7 +13,12 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PillarCallError, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
+import {
+  PillarCallError,
+  type CallFailure,
+  type CallResult,
+  type PillarHandle,
+} from '@pops/pillar-sdk/server';
 
 import {
   crossPillarUrisService,
@@ -22,9 +27,12 @@ import {
   type OpenedInventoryDb,
 } from '../../../db/index.js';
 import {
+  classifyError,
+  classifyResult,
   parseSoftUri,
   runReconciliation,
   startCrossPillarReconciliationWorker,
+  type ReconcileOutcome,
 } from '../reconcile-cross-pillar.js';
 
 import type { FinanceRouter } from '../reconcile-cross-pillar.js';
@@ -131,6 +139,71 @@ describe('parseSoftUri', () => {
       type: 'transaction',
       id: 'a/b',
     });
+  });
+});
+
+/**
+ * One row per `CallResult` kind, keyed on the union's own discriminant list
+ * rather than transcribed from the classifier — the point is that adding a
+ * kind to `CallFailure` and forgetting to add it here leaves this table
+ * incomplete, not merely the switch. `it.each` below fails loudly on a
+ * missing row (`kinds.length` mismatch) if the union grows and this table
+ * doesn't.
+ */
+const CALL_RESULT_KINDS: readonly [CallResult<unknown>, ReconcileOutcome][] = [
+  [{ kind: 'ok', value: null }, 'ok'],
+  [{ kind: 'not-found', pillar: 'finance' }, 'not-found'],
+  [{ kind: 'bad-request', pillar: 'finance' }, 'bad-request'],
+  [{ kind: 'refused', pillar: 'finance', status: 422 }, 'bad-request'],
+  [{ kind: 'unavailable', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'degraded', pillar: 'finance', reason: 'reconciling' }, 'unavailable'],
+  [{ kind: 'contract-mismatch', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'conflict', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'unauthorized', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'rate-limited', pillar: 'finance' }, 'unavailable'],
+];
+
+const CALL_FAILURE_KINDS: readonly [CallFailure, ReconcileOutcome][] = CALL_RESULT_KINDS.filter(
+  (row): row is [CallFailure, ReconcileOutcome] => row[0].kind !== 'ok'
+);
+
+describe('classifyResult', () => {
+  it.each(CALL_RESULT_KINDS)('classifies kind=%s as %s', (value, expected) => {
+    expect(classifyResult(value)).toBe(expected);
+  });
+
+  it('every CallResult kind is covered by the table above', () => {
+    const covered = new Set(CALL_RESULT_KINDS.map(([value]) => value.kind));
+    expect(covered).toEqual(
+      new Set([
+        'ok',
+        'not-found',
+        'bad-request',
+        'refused',
+        'unavailable',
+        'degraded',
+        'contract-mismatch',
+        'conflict',
+        'unauthorized',
+        'rate-limited',
+      ])
+    );
+  });
+
+  it('treats a non-CallResult shape as ok (nothing to reconcile against)', () => {
+    expect(classifyResult(undefined)).toBe('ok');
+    expect(classifyResult({ notAKind: true })).toBe('ok');
+  });
+});
+
+describe('classifyError', () => {
+  it.each(CALL_FAILURE_KINDS)('classifies PillarCallError(kind=%s) as %s', (result, expected) => {
+    expect(classifyError(new PillarCallError('finance', result))).toBe(expected);
+  });
+
+  it('treats a non-PillarCallError as unavailable (retry next tick)', () => {
+    expect(classifyError(new Error('socket hang up'))).toBe('unavailable');
+    expect(classifyError('not even an Error')).toBe('unavailable');
   });
 });
 
