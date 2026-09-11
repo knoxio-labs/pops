@@ -233,10 +233,7 @@ describe('committing a live Up import draft', () => {
     expect(getImportDraft(financeDb.db, draftId)).toBeUndefined();
   });
 
-  // Discarding the draft is the last statement of the commit transaction, so
-  // nothing can fail after it. What is observable is the other half: a commit
-  // that fails partway leaves the draft, the ledger and the checkpoint as they were.
-  it('leaves the draft, ledger and checkpoints untouched when the commit fails partway', async () => {
+  it('keeps the draft when the commit is rejected before it writes anything', async () => {
     const { accountId, draftId } = await stageLiveDraft();
     const parsed = readLiveDraftPayload(requireDraft(draftId)).parsedTransactions;
 
@@ -250,6 +247,30 @@ describe('committing a live Up import draft', () => {
         transactions: parsed.map((row) => ({ ...row, tags: [] })),
       })
     ).rejects.toMatchObject({ status: 404 });
+
+    expect(requireDraft(draftId)).toMatchObject({ state: 'live' });
+    expect(ledgerRowsFor(accountId)).toEqual([]);
+  });
+
+  // Discarding the draft is the commit transaction's last statement. Failing
+  // it there, after the ledger rows, checkpoint and batch are all written, is
+  // the only failure point that proves those writes share the draft's
+  // transaction; an earlier failure would pass with the writes outside it.
+  it('rolls back every write when discarding the draft fails', async () => {
+    const { accountId, draftId } = await stageLiveDraft();
+    const parsed = readLiveDraftPayload(requireDraft(draftId)).parsedTransactions;
+    financeDb.raw.exec(`
+      CREATE TRIGGER fail_draft_discard BEFORE DELETE ON import_drafts
+      BEGIN SELECT RAISE(ABORT, 'draft discard refused'); END;
+    `);
+
+    await expect(
+      client().imports.commitImport({
+        draftId,
+        commitKey: randomUUID(),
+        transactions: parsed.map((row) => ({ ...row, tags: [] })),
+      })
+    ).rejects.toMatchObject({ status: 500 });
 
     expect(requireDraft(draftId)).toMatchObject({ state: 'live' });
     expect(ledgerRowsFor(accountId)).toEqual([]);
