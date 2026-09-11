@@ -35,6 +35,7 @@ import { expectRow } from './internal.js';
 import { isNewer, orderRank } from './order-rank.js';
 import { deleteOrphanedProducts } from './product-dictionary-writes.js';
 import { identifyProduct, productLookupKey, productScopeKey } from './product-identity.js';
+import { mutateChunked } from './sqlite-chunk.js';
 
 import type { SkuScheme } from '../../contract/constants.js';
 import type { PurchaseProductAliasRow } from '../schema.js';
@@ -220,16 +221,21 @@ function retireUnobserved(
   );
   if (stale.length === 0) return new Set();
 
-  db.delete(purchaseProductAliases)
-    .where(
-      inArray(
-        purchaseProductAliases.id,
-        stale.map((alias) => alias.id)
-      )
-    )
-    .run();
+  const staleIds = stale.map((alias) => alias.id);
+  // Chunked rather than one `inArray`: alias cardinality tracks distinct
+  // printed wordings rather than a page or a single order, and this delete
+  // runs inside the pass's own transaction, so each chunk's delete stays
+  // part of the one commit.
+  mutateChunked(
+    staleIds,
+    (chunk) =>
+      db
+        .delete(purchaseProductAliases)
+        .where(inArray(purchaseProductAliases.id, [...chunk]))
+        .run().changes
+  );
   deleteOrphanedProducts(db);
-  return new Set(stale.map((alias) => alias.id));
+  return new Set(staleIds);
 }
 
 /** The products a human has named, which no retirement may orphan. */

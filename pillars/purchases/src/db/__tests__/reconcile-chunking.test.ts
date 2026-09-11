@@ -10,50 +10,21 @@
  * before chunking, both threw "too many SQL variables" the moment a real
  * fleet's charge count crossed it.
  */
-import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createPurchase, listRejectedPairings, tearDownUnconfirmedLinks } from '../index.js';
-import { amazonOrder, ARRANGEMENT_TIMEOUT_MS, openTempDb, seedAmazonSource } from './helpers.js';
+import {
+  amazonOrder,
+  ARRANGEMENT_TIMEOUT_MS,
+  measureSqliteMaxVariableNumber,
+  openTempDb,
+  seedAmazonSource,
+} from './helpers.js';
+
+import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
 import type { TempDb } from './helpers.js';
-
-/**
- * The largest number of `?` placeholders SQLite will bind in one statement
- * on this build, found by doubling and then bisecting rather than assumed —
- * the value differs across SQLite builds (999 historically, 32766 on
- * current ones), and asserting against a guess would make this suite pass
- * or fail on a fact about the platform it never checked.
- */
-function measureSqliteMaxVariableNumber(): number {
-  const probe = new Database(':memory:');
-  const canBind = (n: number): boolean => {
-    try {
-      probe.prepare(`SELECT 1 WHERE 1 IN (${Array.from({ length: n }, () => '?').join(',')})`);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  try {
-    let low = 1;
-    let high = 2;
-    while (canBind(high)) {
-      low = high;
-      high *= 2;
-    }
-    while (high - low > 1) {
-      const mid = Math.floor((low + high) / 2);
-      if (canBind(mid)) low = mid;
-      else high = mid;
-    }
-    return low;
-  } finally {
-    probe.close();
-  }
-}
 
 /** Bulk-insert `count` bare charges on `purchaseId`, bypassing `createPurchase` for speed. */
 function insertCharges(raw: Database.Database, purchaseId: string, count: number): string[] {

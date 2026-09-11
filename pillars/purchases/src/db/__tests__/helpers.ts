@@ -2,6 +2,8 @@ import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import Database from 'better-sqlite3';
+
 import { openPurchasesDb, upsertSource, type OpenedPurchasesDb } from '../index.js';
 
 import type { CreatePurchaseInput } from '../index.js';
@@ -146,6 +148,42 @@ export function snapshotTempDb(opened: OpenedPurchasesDb): TempDbTemplate {
   const path = join(templateDir('purchases-snapshot-'), 'purchases.db');
   copyDbTo(opened, path);
   return { open: () => openCopyOf(path) };
+}
+
+/**
+ * The largest number of `?` placeholders SQLite will bind in one statement
+ * on this build, found by doubling and then bisecting rather than assumed —
+ * the value differs across SQLite builds (999 historically, 32766 on
+ * current ones), and asserting against a guess would make a chunking test
+ * pass or fail on a fact about the platform it never checked.
+ */
+export function measureSqliteMaxVariableNumber(): number {
+  const probe = new Database(':memory:');
+  const canBind = (n: number): boolean => {
+    try {
+      probe.prepare(`SELECT 1 WHERE 1 IN (${Array.from({ length: n }, () => '?').join(',')})`);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  try {
+    let low = 1;
+    let high = 2;
+    while (canBind(high)) {
+      low = high;
+      high *= 2;
+    }
+    while (high - low > 1) {
+      const mid = Math.floor((low + high) / 2);
+      if (canBind(mid)) low = mid;
+      else high = mid;
+    }
+    return low;
+  } finally {
+    probe.close();
+  }
 }
 
 export function seedAmazonSource(opened: OpenedPurchasesDb): void {
