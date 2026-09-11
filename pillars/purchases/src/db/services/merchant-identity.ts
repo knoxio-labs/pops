@@ -25,17 +25,19 @@ import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
  * NBSP (U+00A0) are here because `trim(X, Y)` was checked against a real
  * SQLite connection and strips each of them exactly the way `.trim()` does,
  * NBSP included even though it is a multi-byte UTF-8 character (see
- * `merchant-identity.sqlite.test.ts`). Anything wider that JS `.trim()`
+ * `src/db/__tests__/merchant-filter.test.ts`). Anything wider that JS `.trim()`
  * treats as whitespace (e.g. U+2028, U+FEFF) is deliberately left out of
  * *both* sides rather than trimmed on one and not the other.
  */
-export const MERCHANT_LABEL_PADDING = ' \t\n\r\u00a0';
+const MERCHANT_LABEL_PADDING_CHARS = [' ', '\t', '\n', '\r', '\u00a0'] as const;
+
+export const MERCHANT_LABEL_PADDING = MERCHANT_LABEL_PADDING_CHARS.join('');
 
 function escapeForCharClass(char: string): string {
   return char.replace(/[\\\]^-]/g, '\\$&');
 }
 
-const PADDING_CLASS = [...MERCHANT_LABEL_PADDING].map(escapeForCharClass).join('');
+const PADDING_CLASS = MERCHANT_LABEL_PADDING_CHARS.map(escapeForCharClass).join('');
 const PADDING_PATTERN = new RegExp(`^[${PADDING_CLASS}]+|[${PADDING_CLASS}]+$`, 'gu');
 
 /** Strip {@link MERCHANT_LABEL_PADDING} from both ends — nothing wider. */
