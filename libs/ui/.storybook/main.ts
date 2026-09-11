@@ -3,17 +3,14 @@ import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { mergeConfig } from 'vite';
 
+import { storyGlobs } from './story-globs';
+
 import type { StorybookConfig } from '@storybook/react-vite';
 
 const __dirname = import.meta.dirname;
 
 const config: StorybookConfig = {
-  stories: [
-    '../src/**/*.mdx',
-    '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-    '../../*/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-    '../../../pillars/*/*/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
-  ],
+  stories: storyGlobs,
   addons: ['@storybook/addon-a11y', '@chromatic-com/storybook'],
   framework: {
     name: '@storybook/react-vite',
