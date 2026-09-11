@@ -34,6 +34,7 @@ function toPairCandidate(row: TransactionRow): PairCandidate {
     amount: row.amountCents,
     accountId: row.accountId,
     date: row.date,
+    description: row.description,
     relatedTransactionId: row.relatedTransactionId,
   };
 }

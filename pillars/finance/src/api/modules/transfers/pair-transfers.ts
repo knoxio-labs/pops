@@ -27,7 +27,25 @@ export interface PairCandidate {
   accountId: string;
   /** Calendar date, `YYYY-MM-DD`; `transactions.date` carries no time component. */
   date: string;
+  /** The bank's descriptor; read only for a transfer reference that breaks a tie. */
+  description: string;
   relatedTransactionId: string | null;
+}
+
+/**
+ * The phrases after which a bank writes the reference both legs of one transfer
+ * carry: `ANZ M-BANKING FUNDS TFER TRANSFER 964110  TO 4564XXXXXXXX7373` on the
+ * sending account, `PAYMENT THANKYOU 964110` on the receiving card.
+ *
+ * Anchored on the phrase, never on "a run of digits": the sending descriptor
+ * also carries a masked card number, and a same-day deposit can carry any
+ * number at all. A reference means something only where the bank put one.
+ */
+const TRANSFER_REFERENCE = /\b(?:FUNDS TFER TRANSFER|PAYMENT THANKYOU)\s+(\d+)\b/u;
+
+/** The bank-assigned transfer reference in a descriptor, or `null` when it has none. */
+function transferReference(description: string): string | null {
+  return TRANSFER_REFERENCE.exec(description)?.[1] ?? null;
 }
 
 /**
@@ -77,7 +95,12 @@ export function isTransferPairEnabled(): boolean {
  * the same absolute amount, the opposite sign, a different account, and a date
  * within `windowDays` of the target (inclusive). A `target` that is itself
  * already linked yields `none`. Among eligible candidates the closest date
- * wins; a single closest candidate is a `match`, a tie is `ambiguous`.
+ * wins; a single closest candidate is a `match`.
+ *
+ * A tie among the closest is broken only by a bank transfer reference that the
+ * target and exactly one of them both carry. It is a tie-breaker and nothing
+ * more: it never promotes a farther candidate over a nearer one, and a tie it
+ * cannot settle stays `ambiguous` with every equally-close candidate reported.
  *
  * @param target the row to find a counterpart for
  * @param candidates the pool to search (the target itself is ignored if present)
@@ -114,5 +137,14 @@ export function findPairForTransaction(
 
   const [best, ...rest] = closest;
   if (best && rest.length === 0) return { kind: 'match', id: best.id };
+
+  const reference = transferReference(target.description);
+  if (reference !== null) {
+    const sharing = closest.filter(
+      (candidate) => transferReference(candidate.description) === reference
+    );
+    const [only, ...others] = sharing;
+    if (only && others.length === 0) return { kind: 'match', id: only.id };
+  }
   return { kind: 'ambiguous', candidateIds: closest.map((candidate) => candidate.id) };
 }

@@ -42,7 +42,7 @@
     "start:worker": "node dist/worker/worker.js",
     "db:seed:food": "tsx scripts/db-seed-food.ts",
     "backfill:ai-inference": "tsx scripts/backfill-ai-inference.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
