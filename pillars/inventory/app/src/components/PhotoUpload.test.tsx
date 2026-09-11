@@ -1,5 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getI18n } from 'react-i18next';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import ptBRUi from '@pops/locales/pt-BR/ui.json';
 
 import { PhotoUpload, type UploadedFile } from './PhotoUpload';
 
@@ -52,7 +55,7 @@ describe('PhotoUpload', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     expect(mockOnFilesSelected).not.toHaveBeenCalled();
-    expect(screen.getByText(/not an image/i)).toBeInTheDocument();
+    expect(screen.getByText('doc.pdf is not an accepted file type')).toBeInTheDocument();
   });
 
   it('rejects oversized files', () => {
@@ -66,7 +69,7 @@ describe('PhotoUpload', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     expect(mockOnFilesSelected).not.toHaveBeenCalled();
-    expect(screen.getByText(/exceeds 1MB/i)).toBeInTheDocument();
+    expect(screen.getByText('big.jpg exceeds max size of 1.0 MB')).toBeInTheDocument();
   });
 
   it('allows HEIC files by extension even without image/ MIME type', () => {
@@ -224,5 +227,33 @@ describe('PhotoUpload', () => {
 
     const img = screen.getByAltText('thumb.jpg');
     expect(img).toHaveAttribute('src', 'blob:http://localhost/thumb');
+  });
+});
+
+describe('PhotoUpload — translated refusal (POPS-2115)', () => {
+  // Guards against the refusal reverting to a hardcoded English template
+  // literal, which `not an image`-style assertions elsewhere in this file
+  // can't catch since en-AU and the raw string looked the same.
+  beforeAll(async () => {
+    const i18n = getI18n();
+    i18n.addResourceBundle('pt-BR', 'ui', ptBRUi);
+    await i18n.changeLanguage('pt-BR');
+  });
+
+  afterAll(async () => {
+    await getI18n().changeLanguage('en-AU');
+  });
+
+  it('renders a refused file in pt-BR, not English', () => {
+    const onFilesSelected = vi.fn();
+    render(<PhotoUpload onFilesSelected={onFilesSelected} />);
+    const fileInput = document.querySelectorAll('input[type="file"]')[0] as HTMLInputElement;
+
+    const file = new File(['test'], 'doc.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(onFilesSelected).not.toHaveBeenCalled();
+    expect(screen.getByText('doc.pdf não é um tipo de arquivo aceito')).toBeInTheDocument();
+    expect(screen.queryByText(/not an accepted file type/i)).not.toBeInTheDocument();
   });
 });

@@ -1,8 +1,9 @@
 import { Camera } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useRef } from 'react';
 
 import { Button } from '@pops/ui';
 
+import { useValidatedFileSelection } from '../hooks/useValidatedFileSelection';
 import { cn } from '../lib/utils';
 import { DropZone } from './photo-upload/DropZone';
 import { UploadedFileRow } from './photo-upload/UploadedFileRow';
@@ -41,44 +42,10 @@ interface PhotoUploadProps {
 }
 
 const DEFAULT_MAX_SIZE_MB = 10;
-const DEFAULT_ACCEPT = 'image/*';
-
-function validateFiles(fileList: File[], maxSizeMb: number): { valid: File[]; errors: string[] } {
-  const maxBytes = maxSizeMb * 1024 * 1024;
-  const valid: File[] = [];
-  const errors: string[] = [];
-
-  for (const file of fileList) {
-    const isImage = file.type.startsWith('image/');
-    const isHeic = /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name);
-    if (!isImage && !isHeic) {
-      errors.push(`${file.name}: not an image`);
-      continue;
-    }
-    if (file.size > maxBytes) {
-      errors.push(`${file.name}: exceeds ${maxSizeMb}MB limit`);
-      continue;
-    }
-    valid.push(file);
-  }
-  return { valid, errors };
-}
-
-function useFileHandling(maxSizeMb: number, onFilesSelected: (files: File[]) => void) {
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  const handleFiles = useCallback(
-    (fileList: FileList | null) => {
-      if (!fileList || fileList.length === 0) return;
-      const { valid, errors } = validateFiles(Array.from(fileList), maxSizeMb);
-      setValidationError(errors.length > 0 ? errors.join(', ') : null);
-      if (valid.length > 0) onFilesSelected(valid);
-    },
-    [maxSizeMb, onFilesSelected]
-  );
-
-  return { handleFiles, validationError };
-}
+// HEIC/HEIF are listed by extension alongside the MIME wildcard because some
+// browsers report an empty `file.type` for them, which a MIME-only pattern
+// can't match.
+const DEFAULT_ACCEPT = 'image/*,.heic,.heif';
 
 function CameraButton({
   disabled,
@@ -113,7 +80,11 @@ export function PhotoUpload({
 }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const { handleFiles, validationError } = useFileHandling(maxSizeMb, onFilesSelected);
+  const { handleFiles, validationError } = useValidatedFileSelection(
+    accept,
+    maxSizeMb,
+    onFilesSelected
+  );
 
   return (
     <div className={cn('space-y-3', className)}>
