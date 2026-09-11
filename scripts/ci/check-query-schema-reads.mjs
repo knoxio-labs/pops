@@ -1481,7 +1481,7 @@ function selfTestCases() {
             '  return {',
             '    check: async ({ query }) => {',
             '      const { from } = query.nested;',
-            '      return { status: 200, body: { count: rows.length } };',
+            '      return { status: 200, body: { from } };',
             '    },',
             '  };',
             '}',
