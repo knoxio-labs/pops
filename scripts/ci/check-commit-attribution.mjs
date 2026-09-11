@@ -109,8 +109,8 @@ export function commitViolations(commit) {
   return found;
 }
 
-const FIELD = '';
-const RECORD = '';
+const FIELD = '\u001f';
+const RECORD = '\u001e';
 
 /**
  * The commits in `<base>..<head>`, oldest first.
