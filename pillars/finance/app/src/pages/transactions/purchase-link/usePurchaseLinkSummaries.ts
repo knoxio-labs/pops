@@ -15,6 +15,17 @@ import type { TransactionLinkSummary } from './types.js';
  */
 export const TRANSACTION_URI_BATCH_SIZE = 500;
 
+/**
+ * How many batch requests may be in flight at once.
+ *
+ * The chunk count grows with the whole loaded history, and every request
+ * leaves through the same-origin proxy, where a browser holds about six
+ * HTTP/1.1 connections per origin. Unbounded, a long history queued the page's
+ * own requests behind its decoration and put the whole burst on a sibling
+ * pillar at once (POPS-2430). Four leaves room for the page's own traffic.
+ */
+export const BATCH_CONCURRENCY = 4;
+
 function chunk(ids: readonly string[], size: number): string[][] {
   const chunks: string[][] = [];
   for (let index = 0; index < ids.length; index += size) {
@@ -57,19 +68,30 @@ export function fingerprint(transactionIds: readonly string[]): string {
   return `${transactionIds.length}:${fnv1a(transactionIds, first).toString(36)}:${fnv1a(transactionIds, second).toString(36)}`;
 }
 
+async function fetchChunk(ids: readonly string[]): Promise<TransactionLinkSummary[]> {
+  const page = unwrap(
+    await reconcileLinksBatch({
+      body: { transactionUris: ids.map((id) => financeTransactionUri(id)) },
+    })
+  );
+  return page.transactions;
+}
+
 async function fetchSummaries(
   transactionIds: readonly string[]
 ): Promise<TransactionLinkSummary[]> {
-  const pages = await Promise.all(
-    chunk(transactionIds, TRANSACTION_URI_BATCH_SIZE).map(async (ids) =>
-      unwrap(
-        await reconcileLinksBatch({
-          body: { transactionUris: ids.map((id) => financeTransactionUri(id)) },
-        })
-      )
-    )
-  );
-  return pages.flatMap((page) => page.transactions);
+  const chunks = chunk(transactionIds, TRANSACTION_URI_BATCH_SIZE);
+  const pages: TransactionLinkSummary[][] = [];
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < chunks.length) {
+      const index = next;
+      next += 1;
+      pages[index] = await fetchChunk(chunks[index] ?? []);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, chunks.length) }, worker));
+  return pages.flat();
 }
 
 /** What the column knows: the answers it has, and whether it got one at all. */
