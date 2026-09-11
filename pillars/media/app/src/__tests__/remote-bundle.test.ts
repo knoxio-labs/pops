@@ -36,6 +36,14 @@ function assertRemoteUiModule(value: unknown): RemoteUiModule {
 const PAGE_SLOTS = MEDIA_PAGES.map((page) => page.bundleSlot);
 
 /**
+ * The page slots that are one-line `<Navigate>` redirects rather than pages:
+ * plex, arr and rotation send the reader to their settings sections, calendar
+ * to discover. They are bound eagerly in `routes.tsx`, since a network
+ * round-trip to learn where to send someone costs more than the bytes.
+ */
+const EAGER_REDIRECT_SLOTS = 4;
+
+/**
  * `bundles.test.ts` reads the in-process record. What the shell loads is the
  * built `media.js`, so a slot the build drops, or a shared runtime it bundles,
  * is only visible here (POPS-3444).
@@ -81,5 +89,15 @@ describe('media remote bundle', () => {
     const source = await readFile(ENTRY, 'utf8');
     expect(source).toMatch(/(?:from|import)\s*["']react["']/);
     expect(source).toMatch(/(?:from|import)\s*["']react\/jsx-runtime["']/);
+  });
+
+  // Every real page keeps its own chunk, so the pillar being in the rail costs
+  // the entry alone and each page's code arrives on first navigation to it.
+  // Counted against the manifest minus the eager redirects, so a build that
+  // inlines even one lazy page into the entry fails here.
+  it('keeps each page in its own lazily-imported chunk', async () => {
+    const source = await readFile(ENTRY, 'utf8');
+    const dynamicImports = [...source.matchAll(/import\("\.\/([^"]+)"\)/g)];
+    expect(dynamicImports.length).toBeGreaterThanOrEqual(PAGE_SLOTS.length - EAGER_REDIRECT_SLOTS);
   });
 });
