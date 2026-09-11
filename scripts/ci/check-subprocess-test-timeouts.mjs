@@ -66,6 +66,24 @@
  * misclassification can only blank or fail to blank a span, and the self-test
  * covers both directions.
  *
+ * ## promisify
+ *
+ * `const execFileAsync = promisify(execFile);` reaches a spawner without ever
+ * calling it by name — `execFile` sits only in argument position, never
+ * followed by `(`, so the binding step that reads call sites missed it
+ * entirely (POPS-3464), and every test that later calls `execFileAsync(...)`
+ * read as spawning nothing. `spawnBindings` now also follows an assignment
+ * whose right-hand side is `<promisify>(<spawner>)` — where `<promisify>` is
+ * whatever name `promisify` was imported as (including `util.promisify` off a
+ * namespace or default import of `node:util`) and `<spawner>` is a name
+ * already bound to a `node:child_process` spawner (including a qualified one,
+ * `cp.execFile`) — and adds the assigned name to the same binding set. A
+ * `beforeAll`/`afterAll` that already states its own timeout is exempted from
+ * forcing every test in its block to state one too, for the same reason a
+ * test's own third argument is: the thing that actually runs the spawn has
+ * already declared its bound (the remote-bundle tests' `}, 300_000)` build
+ * hook is the example this was checked against).
+ *
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
@@ -233,23 +251,60 @@ export function spawnBindings(/** @type {string} */ source) {
     'spawnSync',
   ]);
   const from = /['"](?:node:)?child_process['"]\s*\)?\s*$/u;
+  const utilFrom = /['"](?:node:)?util['"]\s*\)?\s*$/u;
+  /** @type {Set<string>} */
+  const promisifyNames = new Set();
+
   for (const line of importStatements(source)) {
-    if (!from.test(line)) continue;
     const namespace = /(?:\*\s*as|const)\s+([A-Za-z_$][\w$]*)\s*(?:from|=)/u.exec(line);
     const braced = /\{([^}]*)\}/u.exec(line);
-    if (braced !== null) {
-      for (const entry of (braced[1] ?? '').split(',')) {
-        const parts = entry.trim().split(/\s+as\s+/u);
-        const imported = parts[0]?.trim() ?? '';
-        const local = (parts[1] ?? parts[0] ?? '').trim();
-        if (imported !== '' && SPAWNERS.has(imported) && local !== '') names.add(local);
+    if (from.test(line)) {
+      if (braced !== null) {
+        for (const entry of (braced[1] ?? '').split(',')) {
+          const parts = entry.trim().split(/\s+as\s+/u);
+          const imported = parts[0]?.trim() ?? '';
+          const local = (parts[1] ?? parts[0] ?? '').trim();
+          if (imported !== '' && SPAWNERS.has(imported) && local !== '') names.add(local);
+        }
+      } else if (namespace !== null && namespace[1] !== undefined) {
+        for (const spawner of SPAWNERS) names.add(`${namespace[1]}.${spawner}`);
       }
-      continue;
     }
-    if (namespace !== null && namespace[1] !== undefined) {
-      for (const spawner of SPAWNERS) names.add(`${namespace[1]}.${spawner}`);
+    if (utilFrom.test(line)) {
+      if (braced !== null) {
+        for (const entry of (braced[1] ?? '').split(',')) {
+          const parts = entry.trim().split(/\s+as\s+/u);
+          const imported = parts[0]?.trim() ?? '';
+          const local = (parts[1] ?? parts[0] ?? '').trim();
+          if (imported === 'promisify' && local !== '') promisifyNames.add(local);
+        }
+      }
+      // A namespace import (`import * as util from 'node:util'`) or a
+      // default import (`import util from 'node:util'`) both put `promisify`
+      // behind a qualified access — the braced form above misses either, so
+      // this is a second, independent match rather than an `else`.
+      const defaultImport =
+        /^\s*import\s+([A-Za-z_$][\w$]*)\s*(?:,\s*\{[^}]*\})?\s*from\s*['"]/u.exec(line);
+      const qualifier = namespace?.[1] ?? defaultImport?.[1];
+      if (qualifier !== undefined) promisifyNames.add(`${qualifier}.promisify`);
     }
   }
+
+  if (promisifyNames.size > 0 && names.size > 0) {
+    const clean = blankNoise(source);
+    const promisifyPattern = [...promisifyNames].map((name) => name.replace('.', '\\.')).join('|');
+    const assignment = new RegExp(
+      `(?<![.\\w$])(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:${promisifyPattern})` +
+        `\\s*\\(\\s*([A-Za-z_$][\\w$.]*)\\s*\\)`,
+      'gu'
+    );
+    for (const match of clean.matchAll(assignment)) {
+      const local = match[1];
+      const arg = match[2];
+      if (local !== undefined && arg !== undefined && names.has(arg)) names.add(local);
+    }
+  }
+
   return names;
 }
 
@@ -414,6 +469,7 @@ export function unboundedSpawningTests(/** @type {string} */ source) {
     // every describe, which runs around every test in the file.
     const spawningHook = hooks.some(
       (hook) =>
+        !hook.bounded &&
         (hook.describe === null || enclosing.some((block) => block.start === hook.describe)) &&
         reachesASpawn(hook.start, hook.end)
     );
@@ -529,10 +585,21 @@ function assignmentEnd(/** @type {string} */ clean, /** @type {number} */ from) 
 
 const HOOK = /(?<![.\w$])(beforeAll|beforeEach|afterAll|afterEach)\s*\(/gu;
 
-/** Every lifecycle hook, with the describe it belongs to (null at file level). */
+/**
+ * Every lifecycle hook, with the describe it belongs to (null at file level)
+ * and whether the hook states its own timeout (`beforeAll(fn, 30_000)`).
+ *
+ * A bounded hook is exempted from forcing every test in its block to state a
+ * timeout of its own — the thing that actually runs the spawn already
+ * declared how long it may take, which is exactly what a stated timeout on
+ * the test or its `describe` would otherwise be doing. Without this, a hook
+ * like the remote-bundle tests' `beforeAll(async () => { ... }, 300_000)`
+ * reads as an unbounded spawn and every sibling `it` gets flagged for a
+ * timeout that was already given, just to the wrong call.
+ */
 function hookSites(/** @type {string} */ clean) {
   const describes = callSites(clean).filter((site) => site.kind === 'describe');
-  /** @type {{ start: number; end: number; describe: number | null }[]} */
+  /** @type {{ start: number; end: number; describe: number | null; bounded: boolean }[]} */
   const sites = [];
   for (const match of clean.matchAll(HOOK)) {
     const open = (match.index ?? 0) + match[0].length - 1;
@@ -540,7 +607,9 @@ function hookSites(/** @type {string} */ clean) {
     const owner = describes
       .filter((block) => (match.index ?? 0) > block.start && end <= block.end)
       .toSorted((a, b) => b.start - a.start)[0];
-    sites.push({ start: match.index ?? 0, end, describe: owner?.start ?? null });
+    const args = topLevelArgs(clean.slice(open + 1, end));
+    const bounded = args.length >= 2 && (args[1]?.trim() ?? '') !== '';
+    sites.push({ start: match.index ?? 0, end, describe: owner?.start ?? null, bounded });
   }
   return sites;
 }
@@ -732,6 +801,85 @@ describe('a', () => {
 describe('a', () => {
   const run = () => execFileSync('mise', ['--version']);
   it.each([1, 2])('case %s', () => { run(); });
+});
+`,
+      1,
+    ],
+    [
+      'an unbounded test calling a promisified alias is flagged',
+      `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
+describe('a', () => { it('one', () => { execFileAsync('mise'); }); });
+`,
+      1,
+    ],
+    [
+      "the same promisified alias with the test's own timeout passes",
+      `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
+describe('a', () => { it('one', () => { execFileAsync('mise'); }, 30_000); });
+`,
+      0,
+    ],
+    [
+      'a renamed promisify import is still followed to the alias it binds',
+      `import { execFile } from 'node:child_process';
+import { promisify as p } from 'node:util';
+const run = p(execFile);
+describe('a', () => { it('one', () => { run('mise'); }); });
+`,
+      1,
+    ],
+    [
+      'util.promisify off a namespace import is still followed',
+      `import { execFile } from 'node:child_process';
+import * as util from 'node:util';
+const run = util.promisify(execFile);
+describe('a', () => { it('one', () => { run('mise'); }); });
+`,
+      1,
+    ],
+    [
+      'util.promisify off a default import is still followed',
+      `import { execFile } from 'node:child_process';
+import util from 'node:util';
+const run = util.promisify(execFile);
+describe('a', () => { it('one', () => { run('mise'); }); });
+`,
+      1,
+    ],
+    [
+      'promisify(cp.execFile) off a child_process namespace import is still followed',
+      `import * as cp from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(cp.execFile);
+describe('a', () => { it('one', () => { run('mise'); }); });
+`,
+      1,
+    ],
+    [
+      "a beforeAll that states its own timeout does not force its block's tests to state one too",
+      `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(execFile);
+describe('a', () => {
+  beforeAll(async () => { await run('mise'); }, 300_000);
+  it('one', () => {});
+  it('two', () => {});
+});
+`,
+      0,
+    ],
+    [
+      'an unbounded beforeAll that reaches a promisified spawn still binds its block',
+      `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(execFile);
+describe('a', () => {
+  beforeAll(async () => { await run('mise'); });
+  it('one', () => {});
 });
 `,
       1,
