@@ -19,14 +19,17 @@ The `design-feedback` MCP server has no lookup by id. Call `list_threads` with
 `includeResolved: true` and take the thread whose `id` matches. If none does,
 stop and say so.
 
-The thread must be `rejected`, or `open` with a reply that gives the reason for
-deferring. Anything else stops here:
+The thread must carry a reply that gives the reason for deferring, and be
+`rejected` or `open`. Anything else stops here:
 
 - `applied` — the work is done; there is nothing to defer.
 - `outdated` — the anchor no longer resolves; a ticket would point at nothing.
-- `open` with no reason — reply first with **why it is deferred**, in the
-  reviewer's terms, before anything else. A ticket that cannot say why it was
-  not done now is not worth filing.
+- `open` with no reason, or `rejected` with no reason — a thread can be
+  rejected without a reply, so the status alone does not supply one. Reply
+  first with **why it is deferred**, in the terms of whoever asked for the
+  deferral. If nobody has given a reason, ask for it and stop: do not write one
+  yourself. A ticket that cannot say why it was not done now is not worth
+  filing.
 
 ## Do not file it twice
 
