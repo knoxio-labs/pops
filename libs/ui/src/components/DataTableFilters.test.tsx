@@ -7,26 +7,30 @@ import {
 } from '@tanstack/react-table';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { type ColumnFilter, FilterBar } from './DataTableFilters';
+import { type ColumnFilter, FilterBar, numberRangeFilter } from './DataTableFilters';
 
 interface Expense {
   id: string;
   merchant: string;
   category: string;
+  amount: number;
 }
 
 const rows: Expense[] = [
-  { id: '1', merchant: 'Woolworths', category: 'groceries' },
-  { id: '2', merchant: 'Bunnings', category: 'hardware' },
-  { id: '3', merchant: 'Woolworths Metro', category: 'groceries' },
+  { id: '1', merchant: 'Woolworths', category: 'groceries', amount: 20 },
+  { id: '2', merchant: 'Bunnings', category: 'hardware', amount: 50 },
+  { id: '3', merchant: 'Woolworths Metro', category: 'groceries', amount: 80 },
 ];
 
 const columns: ColumnDef<Expense>[] = [
   { accessorKey: 'merchant', header: 'Merchant' },
   { accessorKey: 'category', header: 'Category' },
+  { accessorKey: 'amount', header: 'Amount', filterFn: numberRangeFilter },
 ];
+
+const amountRangeFilters: ColumnFilter[] = [{ id: 'amount', type: 'numberrange', label: 'Amount' }];
 
 const defaultFilters: ColumnFilter[] = [
   { id: 'merchant', type: 'text', label: 'Merchant', placeholder: 'Search merchant' },
@@ -122,5 +126,44 @@ describe('FilterBar', () => {
   it('skips a filter whose column does not exist on the table', () => {
     render(<Harness filters={[{ id: 'missing', type: 'text', label: 'Not A Column' }]} />);
     expect(screen.queryByLabelText('Not A Column')).not.toBeInTheDocument();
+  });
+
+  describe('number range filter', () => {
+    it('narrows rows to those at or above a typed min', () => {
+      render(<Harness filters={amountRangeFilters} />);
+      fireEvent.change(control('Amount (min)'), { target: { value: '50' } });
+      expect(matches()).toBe('Bunnings,Woolworths Metro');
+    });
+
+    it('narrows rows to those at or below a typed max', () => {
+      render(<Harness filters={amountRangeFilters} />);
+      fireEvent.change(control('Amount (max)'), { target: { value: '50' } });
+      expect(matches()).toBe('Woolworths,Bunnings');
+    });
+
+    it('narrows rows to those within both a typed min and max', () => {
+      render(<Harness filters={amountRangeFilters} />);
+      fireEvent.change(control('Amount (min)'), { target: { value: '25' } });
+      fireEvent.change(control('Amount (max)'), { target: { value: '60' } });
+      expect(matches()).toBe('Bunnings');
+    });
+
+    it('restores the rows a bound filtered out once that bound is cleared', () => {
+      render(<Harness filters={amountRangeFilters} />);
+      const min = control('Amount (min)');
+      fireEvent.change(min, { target: { value: '50' } });
+      expect(matches()).toBe('Bunnings,Woolworths Metro');
+
+      fireEvent.change(min, { target: { value: '' } });
+      expect(matches()).toBe('Woolworths,Bunnings,Woolworths Metro');
+    });
+
+    it('does not warn about NaN while driving the control', () => {
+      const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<Harness filters={amountRangeFilters} />);
+      fireEvent.change(control('Amount (min)'), { target: { value: '50' } });
+      expect(warn.mock.calls.flat().join(' ')).not.toMatch(/NaN/);
+      warn.mockRestore();
+    });
   });
 });

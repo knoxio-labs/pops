@@ -120,13 +120,22 @@ interface NumberRangeFilterProps<TData> {
   ariaLabel?: string;
 }
 
+// NumberInput already refuses to report an input `Number()` cannot parse, so
+// the only non-numeric value that reaches here is the empty string of a cleared bound.
+function parseFilterBound(e: React.ChangeEvent<HTMLInputElement>): number | undefined {
+  return e.target.value === '' ? undefined : Number(e.target.value);
+}
+
 export function NumberRangeFilter<TData>({
   column,
   minPlaceholder = 'Min',
   maxPlaceholder = 'Max',
   ariaLabel,
 }: NumberRangeFilterProps<TData>) {
-  const filterValue = (column.getFilterValue() as [number, number]) ?? [undefined, undefined];
+  const filterValue = (column.getFilterValue() as [number | undefined, number | undefined]) ?? [
+    undefined,
+    undefined,
+  ];
   const minLabel = ariaLabel ? `${ariaLabel} (min)` : minPlaceholder;
   const maxLabel = ariaLabel ? `${ariaLabel} (max)` : maxPlaceholder;
 
@@ -134,7 +143,10 @@ export function NumberRangeFilter<TData>({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <NumberInput
         value={filterValue[0]}
-        onChange={(value) => column.setFilterValue([value, filterValue[1]])}
+        onChange={(e) => {
+          const min = parseFilterBound(e);
+          column.setFilterValue([min, filterValue[1]]);
+        }}
         placeholder={minPlaceholder}
         className="w-full sm:w-25"
         aria-label={minLabel}
@@ -142,7 +154,10 @@ export function NumberRangeFilter<TData>({
       <span className="hidden text-muted-foreground sm:block">to</span>
       <NumberInput
         value={filterValue[1]}
-        onChange={(value) => column.setFilterValue([filterValue[0], value])}
+        onChange={(e) => {
+          const max = parseFilterBound(e);
+          column.setFilterValue([filterValue[0], max]);
+        }}
         placeholder={maxPlaceholder}
         className="w-full sm:w-25"
         aria-label={maxLabel}
