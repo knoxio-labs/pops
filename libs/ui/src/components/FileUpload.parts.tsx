@@ -83,7 +83,7 @@ export interface FileListProps {
 }
 
 export function FileList({ files, onRemoveFile }: FileListProps) {
-  const { t } = useTranslation('ui');
+  const { t, i18n } = useTranslation('ui');
   return (
     <ul className="flex flex-col gap-1.5 text-sm">
       {files.map((file, i) => (
@@ -93,7 +93,9 @@ export function FileList({ files, onRemoveFile }: FileListProps) {
         >
           <div className="min-w-0 flex-1">
             <div className="truncate font-medium">{file.name}</div>
-            <div className="text-xs text-muted-foreground">{formatBytes(file.size)}</div>
+            <div className="text-xs text-muted-foreground">
+              {formatBytes(file.size, { locale: i18n.language })}
+            </div>
           </div>
           {onRemoveFile ? (
             <Button

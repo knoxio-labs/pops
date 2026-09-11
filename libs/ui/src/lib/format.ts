@@ -90,16 +90,33 @@ export function formatDate(dateStr: string, style: DateStyle = 'short'): string 
 
 // ---------------------------------------------------------------------------
 
+export interface FormatBytesOptions {
+  locale?: string;
+  precision?: number;
+}
+
 /**
  * Format byte count as a human-readable string.
- * Supports B, KB, MB, GB with configurable decimal precision (default 1).
+ *
+ * Supports B, KB, MB, GB with configurable decimal precision (default 1). The
+ * number renders through `Intl.NumberFormat` so its decimal separator follows
+ * `locale` (default `en-AU`) — a `pt-BR` caller gets `2,0 KB`, not `2.0 KB`.
+ * The unit suffix (`B`/`KB`/`MB`/`GB`) is deliberately left untranslated: it
+ * is an SI-style abbreviation, not prose, and reads the same in every locale
+ * this app ships.
  */
-export function formatBytes(bytes: number, precision = 1): string {
+export function formatBytes(bytes: number, options: FormatBytesOptions = {}): string {
+  const { locale = 'en-AU', precision = 1 } = options;
   if (bytes === 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(precision)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(precision)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(precision)} GB`;
+  const format = (value: number) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision,
+    }).format(value);
+  if (bytes < 1024 * 1024) return `${format(bytes / 1024)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${format(bytes / (1024 * 1024))} MB`;
+  return `${format(bytes / (1024 * 1024 * 1024))} GB`;
 }
 
 // ---------------------------------------------------------------------------

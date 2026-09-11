@@ -75,7 +75,7 @@ function useFileHandlers({
 > & {
   setIsDragging: (v: boolean) => void;
 }): FileHandlers {
-  const { t } = useTranslation('ui');
+  const { t, i18n } = useTranslation('ui');
   const handleFiles = useCallback(
     (list: FileList | null) => {
       if (!list || list.length === 0) return;
@@ -87,11 +87,15 @@ function useFileHandlers({
         maxFiles,
         onError:
           onError &&
-          ((reason) => onError({ ...reason, message: describeFileValidationError(t, reason) })),
+          ((reason) =>
+            onError({
+              ...reason,
+              message: describeFileValidationError(t, reason, i18n.language),
+            })),
       });
       if (valid.length > 0) onFilesSelected(valid);
     },
-    [multiple, accept, maxSize, maxFiles, onError, onFilesSelected, t]
+    [multiple, accept, maxSize, maxFiles, onError, onFilesSelected, t, i18n.language]
   );
   return {
     handleDrop: (e) => {

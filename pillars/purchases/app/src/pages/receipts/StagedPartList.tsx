@@ -68,7 +68,7 @@ function StagedPartRow({
   onRemove,
   onMove,
 }: StagedPartRowProps): ReactElement {
-  const { t } = useTranslation('purchases');
+  const { t, i18n } = useTranslation('purchases');
   const name = part.name ?? t('receipts.parts.pasted');
 
   return (
@@ -77,7 +77,7 @@ function StagedPartRow({
         <p className="truncate text-sm font-medium">{name}</p>
         <p className="text-muted-foreground text-xs">
           {t('receipts.parts.position', { position: index + 1, count })} · {part.mediaType} ·{' '}
-          {formatBytes(part.byteLength)}
+          {formatBytes(part.byteLength, { locale: i18n.language })}
         </p>
       </div>
       <Button
