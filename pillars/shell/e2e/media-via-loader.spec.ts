@@ -7,8 +7,7 @@
  * rotation surface and four legacy redirects — none of which has a nav item,
  * so losing them would 404 silently.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('media — mounted by the runtime loader', () => {
@@ -25,16 +24,26 @@ test.describe('media — mounted by the runtime loader', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('the rail carries media and its library renders from the remote bundle', async ({
-    page,
-  }) => {
-    await page.goto('/media');
+  test.describe('mount without the media API stubbed', () => {
+    test.use({
+      allowUnroutedPillarRest:
+        'the assertion below is that the Library heading rendered, not that ' +
+        'its data loaded — the full library-data flow is media-library-' +
+        'search-add-movie.spec.ts’s job, with every one of these routes ' +
+        'stubbed there',
+    });
 
-    await expect(page.getByRole('button', { name: 'Media', exact: true })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
-    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+    test('the rail carries media and its library renders from the remote bundle', async ({
+      page,
+    }) => {
+      await page.goto('/media');
+
+      await expect(page.getByRole('button', { name: 'Media', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+    });
   });
 
   // Several of the twelve the old page list would have dropped. All are deep

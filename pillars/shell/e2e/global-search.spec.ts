@@ -8,22 +8,62 @@
  * here the shell mounts everything, so what is under test is the round trip:
  * typing issues the POST, and the sections that come back become the panel.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
+import { AccountsListResponseSchema } from './helpers/finance-accounts';
+import { stubImportDrafts } from './helpers/finance-import-drafts';
 import {
   CROSS_MODULE_SEARCH_SECTIONS,
+  fulfilWith,
   SEARCH_QUERY,
   stubOrchestratorSearch,
   stubShellBoot,
 } from './helpers/pillar-rest';
 
+import type { Page } from '@playwright/test';
+
 function searchBox(page: Page) {
   return page.getByRole('textbox', { name: 'Search POPS' });
+}
+
+/**
+ * Every `/finance-api` read the Finance dashboard fires on mount, answered
+ * empty. `/` lands there — Finance is the first installed pillar — and this
+ * file's subject is the search bar in the top bar above it, not the
+ * dashboard underneath, so an empty, valid response is all any of these
+ * need to be.
+ */
+const PagedListResponseSchema = z
+  .object({
+    data: z.array(z.unknown()),
+    pagination: z
+      .object({ total: z.number(), limit: z.number(), offset: z.number(), hasMore: z.boolean() })
+      .strict(),
+  })
+  .strict();
+
+async function stubFinanceDashboardEmpty(page: Page): Promise<void> {
+  const emptyPage = { data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } };
+  await stubImportDrafts(page, 'acc-unused');
+  await page.route(
+    /\/finance-api\/accounts\?/,
+    fulfilWith(200, AccountsListResponseSchema, emptyPage, 'accounts.list')
+  );
+  await page.route(
+    /\/finance-api\/transactions\?/,
+    fulfilWith(200, PagedListResponseSchema, emptyPage, 'transactions.list')
+  );
+  await page.route(
+    /\/finance-api\/budgets\?/,
+    fulfilWith(200, PagedListResponseSchema, emptyPage, 'budgets.list')
+  );
 }
 
 test.describe('Shell — federated search', () => {
   test.beforeEach(async ({ page }) => {
     await stubShellBoot(page);
+    await stubFinanceDashboardEmpty(page);
     await page.goto('/');
     await expect(searchBox(page)).toBeVisible();
   });

@@ -24,6 +24,8 @@
  *   GET  /media-api/library/genres             — { data: string[] }
  *   GET  /media-api/arr/config                 — { data: { radarrConfigured:false, sonarrConfigured:false } }
  *   GET  /media-api/rotation/scheduler/leaving — { data: [] }
+ *   GET  /media-api/rotation/scheduler/status  — { data: { isRunning:false, … } }
+ *   GET  /media-api/watchlist/status           — { onWatchlist:false, entryId:null }
  *   GET  /media-api/movies                      — { data: [], pagination } (in-library lookup)
  *   GET  /media-api/tv-shows                    — { data: [], pagination } (in-library lookup)
  *   GET  /media-api/search/movies               — bare { results, totalResults, totalPages, page }
@@ -38,10 +40,12 @@
  * Crash detection is wired into beforeEach/afterEach (pageerror + console
  * errors) so every test in this suite verifies no uncaught JS error occurs.
  */
-import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { assertMatchesContract, json, fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+import type { Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Contract schemas — hand-mirrored from the media pillar's own zod schemas
@@ -265,6 +269,28 @@ const LeavingMovieSchema = z
 /** `GET /rotation/scheduler/leaving` 200 — `rotationSchedulerRoutes.schedulerLeavingMovies`. */
 const RotationLeavingResponseSchema = z.object({ data: z.array(LeavingMovieSchema) }).strict();
 
+/** Mirrors `SchedulerStatusSchema` (`pillars/media/src/contract/rest-rotation-scheduler.ts`). */
+const RotationSchedulerStatusResponseSchema = z
+  .object({
+    data: z
+      .object({
+        isRunning: z.boolean(),
+        isCycleRunning: z.boolean(),
+        intervalMs: z.number(),
+        cronExpression: z.string(),
+        lastCycleAt: z.string().nullable(),
+        lastCycleError: z.string().nullable(),
+        nextRunAt: z.string().nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** `GET /watchlist/status` 200 — `mediaWatchlistContract.status` (`rest-watchlist.ts`). */
+const WatchlistStatusResponseSchema = z
+  .object({ onWatchlist: z.boolean(), entryId: z.number().nullable() })
+  .strict();
+
 // ---------------------------------------------------------------------------
 // Fixture — a movie NOT in the mocked library. Inception (tmdbId 27205)
 // starts the card in the "Add to Library" state.
@@ -433,6 +459,42 @@ async function installMediaMocks(page: Page): Promise<MockState> {
   await page.route(
     '**/media-api/rotation/scheduler/leaving',
     fulfilWith(200, RotationLeavingResponseSchema, { data: [] }, 'rotation.schedulerLeavingMovies')
+  );
+
+  // The rotation settings panel's own status poll, distinct from the leaving
+  // list above — not disabled, just idle, so the panel renders its stopped
+  // state rather than a loading spinner.
+  await page.route(
+    '**/media-api/rotation/scheduler/status',
+    fulfilWith(
+      200,
+      RotationSchedulerStatusResponseSchema,
+      {
+        data: {
+          isRunning: false,
+          isCycleRunning: false,
+          intervalMs: 0,
+          cronExpression: '',
+          lastCycleAt: null,
+          lastCycleError: null,
+          nextRunAt: null,
+        },
+      },
+      'rotation.schedulerStatus'
+    )
+  );
+
+  // The card's watchlist toggle checks this for every card on the page,
+  // including the one this spec adds — off the watchlist, which is the
+  // state a freshly-added movie starts in.
+  await page.route(
+    '**/media-api/watchlist/status?**',
+    fulfilWith(
+      200,
+      WatchlistStatusResponseSchema,
+      { onWatchlist: false, entryId: null },
+      'watchlist.status'
+    )
   );
 
   // In-library lookup lists (search page) and watchlist maps. Empty so the

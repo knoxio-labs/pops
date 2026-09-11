@@ -27,8 +27,7 @@
  * everything — asserting the defect POPS-3250 fixed rather than the gating it
  * was written for.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import {
   CROSS_MODULE_SEARCH_SECTIONS,
   failRegistry,

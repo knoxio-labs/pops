@@ -7,8 +7,7 @@
  * that can show it survived the round trip — a flattened tree still renders a
  * tab, it just rebuilds the chrome underneath it every time.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('food — mounted by the runtime loader', () => {

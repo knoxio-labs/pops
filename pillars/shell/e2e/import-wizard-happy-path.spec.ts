@@ -32,6 +32,10 @@
  *   POST /finance-api/imports/commit               → { data:{ transactionsImported:2 … }, message }
  *   GET  /contacts-api/entities                    → { data:[], pagination }
  *   GET  /finance-api/accounts                     → { data:[…1 account…], pagination }
+ *   POST /contacts-api/entities/lookup              → { entities:[], fetchedAt }
+ *   GET  /finance-api/currencies                    → { data:[…AUD…] } (account-add dialog, never opened)
+ *   GET  /finance-api/tag-rules/vocabulary          → { tags:[] } (Tag Review's picker, unused here)
+ *   GET  /finance-api/tag-rules/facets              → { facets:[] } (ditto)
  *
  * The last one is POPS-2840: the Upload step now opens on a real account
  * picker (`useAllAccounts`) before the file dropzone appears at all, so the
@@ -42,9 +46,9 @@
  * Crash detection is wired via beforeEach/afterEach so the test also
  * verifies the wizard doesn't throw uncaught errors during the full flow.
  */
-import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { AccountsListResponseSchema } from './helpers/finance-accounts';
 import { DRAFT_ID, type DraftTraffic, stubImportDrafts } from './helpers/finance-import-drafts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
@@ -258,6 +262,52 @@ const EntitiesListResponseSchema = z
   })
   .strict();
 
+/**
+ * `POST /contacts-api/entities/lookup` — the bulk match-column fetch the
+ * import matcher primes its cache from on mount, independent of the paged
+ * `/entities` list above. Hand-defined from `LookupResponse`
+ * (`pillars/contacts/src/entities/routes.rs`) for the same reason as
+ * `EntitiesListResponseSchema`.
+ */
+const EntitiesLookupResponseSchema = z
+  .object({
+    entities: z.array(
+      z.object({ id: z.string(), name: z.string(), aliases: z.array(z.string()) }).strict()
+    ),
+    fetchedAt: z.string(),
+  })
+  .strict();
+
+/** `GET /finance-api/currencies` — `financeCurrenciesContract.list` (`rest-currencies.ts`). */
+const CurrenciesListResponseSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          code: z.string(),
+          name: z.string(),
+          symbol: z.string().nullable(),
+          decimals: z.number().int().nonnegative(),
+          kind: z.enum(['fiat', 'points']),
+          createdAt: z.string(),
+        })
+        .strict()
+    ),
+  })
+  .strict();
+
+/** `GET /finance-api/tag-rules/vocabulary` — `financeTagRulesContract.vocabulary` (`rest-tag-rules.ts`). */
+const TagVocabularyResponseSchema = z.object({ tags: z.array(z.string()) }).strict();
+
+/** `GET /finance-api/tag-rules/facets` — `financeTagRulesContract.facets` (`rest-tag-rules.ts`). */
+const TagFacetsResponseSchema = z
+  .object({
+    facets: z.array(
+      z.object({ facet: z.string(), kind: z.enum(['closed', 'open', 'marker']) }).strict()
+    ),
+  })
+  .strict();
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -391,8 +441,50 @@ async function setupMocks(page: Page): Promise<void> {
     fulfilWith(200, EntitiesListResponseSchema, emptyEntitiesBody, 'contacts.entities')
   );
   await page.route(
+    '**/contacts-api/entities/lookup',
+    fulfilWith(
+      200,
+      EntitiesLookupResponseSchema,
+      { entities: [], fetchedAt: '2026-01-01T00:00:00.000Z' },
+      'contacts.entitiesLookup'
+    )
+  );
+  await page.route(
     '**/finance-api/accounts?**',
     fulfilWith(200, AccountsListResponseSchema, accountsBody, 'accounts.list')
+  );
+  // The account picker's "add account" dialog primes its currency dropdown on
+  // mount, even though this walk always picks the one already-mocked account
+  // and never opens that dialog.
+  await page.route(
+    '**/finance-api/currencies',
+    fulfilWith(
+      200,
+      CurrenciesListResponseSchema,
+      {
+        data: [
+          {
+            code: 'AUD',
+            name: 'Australian Dollar',
+            symbol: '$',
+            decimals: 2,
+            kind: 'fiat',
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+      'currencies.list'
+    )
+  );
+  // Tag Review's tag picker primes its vocabulary/facets on mount; this walk
+  // makes no tag edits, so both are answered empty.
+  await page.route(
+    '**/finance-api/tag-rules/vocabulary',
+    fulfilWith(200, TagVocabularyResponseSchema, { tags: [] }, 'tagRules.vocabulary')
+  );
+  await page.route(
+    '**/finance-api/tag-rules/facets',
+    fulfilWith(200, TagFacetsResponseSchema, { facets: [] }, 'tagRules.facets')
   );
 }
 
