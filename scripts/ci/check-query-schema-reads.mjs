@@ -28,14 +28,20 @@
  *
  * THE RULE. For each route in {@link ROUTES}: every key of the query schema
  * the OpenAPI projection publishes for it must be READ — as a property access
- * (`query.field`) or a destructured binding (`{ field } = query`) — somewhere
- * in the handler's own entry, or in a module the handler calls with the bare
- * expression `query` as an argument (a "resolver"), followed transitively
- * (a resolver that itself calls a further resolver with its own `query`
- * parameter is followed too — this is how `resolvePurchaseScope` calling
- * `resolveMerchantFilter` is covered without every merchant field having to be
- * read in the handler body itself). A field with neither is a violation
- * unless {@link ALLOWLIST} names it with a reason.
+ * (`query.field`) or a destructured binding (`{ field } = query`) — off the
+ * SPECIFIC binding that carries that route's query object: `query` in the
+ * handler's own entry (`body.query` for the `POST /search` body-nested
+ * shape), or, in a module the handler calls with the bare expression `query`
+ * as an argument (a "resolver"), whatever that resolver's OWN parameter is
+ * actually named in its signature — read from the signature, not assumed.
+ * Following is transitive (a resolver that itself calls a further resolver
+ * with its own parameter is followed too — this is how `resolvePurchaseScope`
+ * calling `resolveMerchantFilter` is covered without every merchant field
+ * having to be read in the handler body itself). A read anchored to any OTHER
+ * binding never counts, however it is spelled — `Array.from(rows)` is not a
+ * read of a `from` query field, and a resolver reading `other.field` on some
+ * unrelated object is not a read either. A field with no anchored read is a
+ * violation unless {@link ALLOWLIST} names it with a reason.
  *
  * WHY OPENAPI JSON, NOT A REGEX OVER THE ZOD SCHEMA SOURCE. `generateOpenApi`
  * already resolves `.extend`/`.omit`/`.pick`/`.merge` into a flat property
@@ -72,6 +78,25 @@
  *     a false positive in practice, but it is a real limit of the heuristic —
  *     the fix in that case is to read the field directly in the handler
  *     rather than to fight the checker.
+ *   - Once a resolver IS followed, its own reads are anchored to its own
+ *     declared parameter, parsed from its `function name(param) { … }`
+ *     signature — a simple identifier (`query`, `input`, anything) anchors
+ *     member access and destructuring inside its body to that name; a
+ *     destructured parameter (`function name({ from, to })`) is read as
+ *     equivalent to destructuring those fields off the call's own argument
+ *     directly, with no need to also read them again in the resolver body.
+ *     A resolver whose parameter cannot be parsed this way (a nested pattern,
+ *     a rest element, anything beyond a flat identifier or a flat destructure)
+ *     is not followed past that point — conservative in the same direction as
+ *     every other gap in this list: a field could be reported as unread when
+ *     the resolver does read it, never the reverse.
+ *   - Anchoring is per-scope, not global: the handler's own binding for its
+ *     entry, each followed resolver's own parameter for its own body. A field
+ *     name that merely APPEARS somewhere in reachable text — an unrelated
+ *     `.field` access on some other object, an unrelated destructuring, a
+ *     method of the same name (`Array.from`) — is never mistaken for a read
+ *     of the query field, because the read must chain off the one binding
+ *     that scope actually received the query data through.
  *   - Only relative (`./`, `../`) imports are followed into a resolver. A
  *     resolver reached through a workspace package specifier (`@pops/...`)
  *     is invisible to the traversal — no purchases handler does this today.
@@ -211,6 +236,26 @@ function readFileOrNull(path) {
 }
 
 /**
+ * The OpenAPI operation object for one route, or `null` when the document
+ * does not have it. Shared by {@link queryFieldsForRoute} and
+ * {@link queryAnchorForRoute} so the two stay looking at the same operation.
+ *
+ * @param {unknown} doc Parsed OpenAPI document.
+ * @param {string} method lowercase.
+ * @param {string} path
+ * @returns {Record<string, unknown> | null}
+ */
+function routeOperation(doc, method, path) {
+  const paths = /** @type {Record<string, unknown>} */ (
+    /** @type {{ paths?: unknown }} */ (doc)?.paths ?? {}
+  );
+  const methods = /** @type {Record<string, unknown> | undefined} */ (paths[path]);
+  if (methods === undefined) return null;
+  const spec = /** @type {Record<string, unknown> | undefined} */ (methods[method]);
+  return spec ?? null;
+}
+
+/**
  * Every query-carrying field name declared for one route.
  *
  * Two sources, unioned: `parameters` entries with `in: 'query'` (every GET
@@ -225,13 +270,8 @@ function readFileOrNull(path) {
  * @returns {string[] | null} `null` when the route is not in the document at all.
  */
 export function queryFieldsForRoute(doc, method, path) {
-  const paths = /** @type {Record<string, unknown>} */ (
-    /** @type {{ paths?: unknown }} */ (doc)?.paths ?? {}
-  );
-  const methods = /** @type {Record<string, unknown> | undefined} */ (paths[path]);
-  if (methods === undefined) return null;
-  const spec = /** @type {Record<string, unknown> | undefined} */ (methods[method]);
-  if (spec === undefined) return null;
+  const spec = routeOperation(doc, method, path);
+  if (spec === null) return null;
 
   /** @type {Set<string>} */
   const fields = new Set();
@@ -258,6 +298,45 @@ export function queryFieldsForRoute(doc, method, path) {
   }
 
   return [...fields];
+}
+
+/**
+ * The binding path a route's query fields hang off inside its own handler
+ * entry: `'query'` for the ordinary GET query-string shape (the parameter
+ * this codebase's handlers destructure as `{ query }`), or `'body.query'`
+ * for the `POST /search` shape, where the fields live nested inside the
+ * request body under its own `query` property. Every field
+ * {@link queryFieldsForRoute} finds for a route is expected to be read off
+ * exactly this one path — see {@link fieldIsRead}.
+ *
+ * @param {unknown} doc Parsed OpenAPI document.
+ * @param {string} method lowercase.
+ * @param {string} path
+ * @returns {string | null} `null` when the route is not in the document, or
+ * matches neither recognised shape.
+ */
+export function queryAnchorForRoute(doc, method, path) {
+  const spec = routeOperation(doc, method, path);
+  if (spec === null) return null;
+
+  const parameters = /** @type {unknown[] | undefined} */ (spec.parameters);
+  if (Array.isArray(parameters)) {
+    const hasQueryParameter = parameters.some((p) => {
+      const param = /** @type {Record<string, unknown>} */ (p ?? {});
+      return param.in === 'query' && typeof param.name === 'string';
+    });
+    if (hasQueryParameter) return 'query';
+  }
+
+  const requestBody = /** @type {Record<string, unknown> | undefined} */ (spec.requestBody);
+  const content = /** @type {Record<string, unknown> | undefined} */ (requestBody?.content);
+  const media = /** @type {Record<string, unknown> | undefined} */ (content?.['application/json']);
+  const bodySchema = /** @type {Record<string, unknown> | undefined} */ (media?.schema);
+  const bodyProps = /** @type {Record<string, unknown> | undefined} */ (bodySchema?.properties);
+  const queryProp = /** @type {Record<string, unknown> | undefined} */ (bodyProps?.query);
+  if (queryProp?.type === 'object') return 'body.query';
+
+  return null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -586,67 +665,232 @@ export function resolveRelativeImport(fromFileAbs, specifier) {
 }
 
 /**
- * Every module reachable from a route's handler entry by following a call
- * shaped `importedName(query)` — the whole query object, passed as-is —
- * through relative imports, transitively.
+ * A dotted binding path (`'query'`, `'body.query'`, `'input'`, …), turned
+ * into the regex fragment that matches it as a property-access chain,
+ * tolerant of whitespace and optional-chaining `?.` at each step.
  *
- * The traversal is what lets `resolvePurchaseScope` calling
- * `resolveMerchantFilter(query)` count as reading the merchant fields on
- * behalf of every route that calls `resolvePurchaseScope(query)`, without
- * each of those routes' handler bodies mentioning the merchant fields by
- * name — see the header's "THE RULE".
+ * @param {string} anchor
+ * @returns {string}
+ */
+function anchorPattern(anchor) {
+  return anchor
+    .split('.')
+    .map((part) => escapeRegExp(part))
+    .join('\\s*\\??\\.\\s*');
+}
+
+/**
+ * A resolver's own sole parameter, parsed from the raw source text between
+ * its parens — a simple identifier (`query`, `input`, optionally with a type
+ * annotation: `query: PurchaseScopeQuery`), or a flat destructuring pattern
+ * (`{ from, to }`, optionally renamed or defaulted: `{ from: f = undefined }`,
+ * in which case `from` is the field read, not `f`). Anything else (a nested
+ * pattern, a rest element as the only binding, no parameter at all) is not
+ * recognised, so the caller treats the resolver as un-followable past this
+ * point rather than guessing at what it reads — the same conservative
+ * direction as every other gap this guard's header documents.
+ *
+ * @param {string} paramText
+ * @returns {{ kind: 'identifier', name: string } | { kind: 'destructured', fields: string[] } | null}
+ */
+export function parseResolverParam(paramText) {
+  const trimmed = paramText.trim();
+  if (trimmed.length === 0) return null;
+
+  if (trimmed.startsWith('{')) {
+    const structural = blankNonStructural(trimmed);
+    const closeIdx = matchBalanced(structural, 0, '{', '}');
+    if (closeIdx === -1) return null;
+    const inner = trimmed.slice(1, closeIdx - 1);
+
+    /** @type {string[]} */
+    const fields = [];
+    for (const raw of inner.split(',')) {
+      let item = raw.trim();
+      if (item.length === 0 || item.startsWith('...')) continue;
+      const eqIdx = item.indexOf('=');
+      if (eqIdx !== -1) item = item.slice(0, eqIdx).trim();
+      const colonIdx = item.indexOf(':');
+      const name = (colonIdx === -1 ? item : item.slice(0, colonIdx)).trim();
+      if (/^[A-Za-z_$][\w$]*$/u.test(name)) fields.push(name);
+    }
+    return { kind: 'destructured', fields };
+  }
+
+  const colonIdx = trimmed.indexOf(':');
+  const name = (colonIdx === -1 ? trimmed : trimmed.slice(0, colonIdx)).trim();
+  if (!/^[A-Za-z_$][\w$]*$/u.test(name)) return null;
+  return { kind: 'identifier', name };
+}
+
+/**
+ * A resolver's own `function name(param) { … }` declaration — its raw
+ * parameter text and its body — read from its own signature rather than the
+ * whole file. Scoping to just this function is what keeps an unrelated
+ * sibling in the same module (a plain helper, an incidental `Array.from`)
+ * from ever being scanned as if it were this resolver's own reads.
+ *
+ * @param {string} fileText
+ * @param {string} name
+ * @returns {{ paramText: string; bodyText: string } | null}
+ */
+export function extractResolverFunctionText(fileText, name) {
+  const structural = blankNonStructural(fileText);
+  const fnRe = new RegExp(`\\bfunction\\s+${escapeRegExp(name)}\\s*\\(`, 'u');
+  const m = fnRe.exec(structural);
+  if (m === null) return null;
+
+  const parenStart = m.index + m[0].length - 1;
+  const parenEnd = matchBalanced(structural, parenStart, '(', ')');
+  if (parenEnd === -1) return null;
+  const paramText = fileText.slice(parenStart + 1, parenEnd - 1);
+
+  let bodyStart = parenEnd;
+  while (bodyStart < structural.length && structural[bodyStart] !== '{') bodyStart += 1;
+  if (bodyStart >= structural.length) return null;
+  const bodyEnd = matchBalanced(structural, bodyStart, '{', '}');
+  if (bodyEnd === -1) return null;
+
+  return { paramText, bodyText: fileText.slice(bodyStart, bodyEnd) };
+}
+
+/**
+ * @typedef {object} ReachableScope
+ * @property {string} text   Source text this scope's reads must be found in.
+ * @property {string} anchor The dotted binding path this scope's query data
+ *   actually arrived through — reads must chain off exactly this, not off
+ *   any other identifier that happens to share a field's name.
+ */
+
+/**
+ * Every scope reachable from a route's handler entry by following a call
+ * shaped `importedName(<anchor>)` — the exact binding that carries the query
+ * at that point, passed as-is — through relative imports, transitively. Each
+ * scope in the returned list carries its OWN anchor: the handler entry's is
+ * `startAnchor`; a followed resolver's is whatever its own signature names
+ * its parameter, read fresh from that resolver — never assumed to be `query`
+ * just because the call site's argument was.
+ *
+ * A resolver whose parameter is itself a destructuring pattern
+ * (`function r({ from, to })`) reads those fields the moment it is called —
+ * that call is equivalent to destructuring them off `<anchor>` right there,
+ * so it is recorded as a synthetic scope anchored to the CALLER's `anchor`
+ * rather than the resolver's own, and traversal does not continue past it.
+ *
+ * This is what lets `resolvePurchaseScope` calling `resolveMerchantFilter`
+ * count as reading the merchant fields on behalf of every route that calls
+ * `resolvePurchaseScope(query)`, without each of those routes' handler
+ * bodies mentioning the merchant fields by name — see the header's
+ * "THE RULE".
  *
  * @param {string} startFileAbs
  * @param {string} startEntryText The specific handler entry's own text, not the whole file.
- * @returns {string} Every reached module's text, concatenated.
+ * @param {string} [startAnchor] The binding path the entry's query fields hang off. Defaults to `'query'`.
+ * @returns {ReachableScope[]}
  */
-export function collectReachableTexts(startFileAbs, startEntryText) {
-  /** @type {string[]} */
-  const texts = [startEntryText];
+export function collectReachableTexts(startFileAbs, startEntryText, startAnchor = 'query') {
+  /** @type {ReachableScope[]} */
+  const scopes = [{ text: startEntryText, anchor: startAnchor }];
   const visited = new Set([startFileAbs]);
-  /** @type {Array<{ file: string; scanText: string }>} */
-  const queue = [{ file: startFileAbs, scanText: startEntryText }];
+  /** @type {Array<{ file: string; scanText: string; callAnchor: string }>} */
+  const queue = [{ file: startFileAbs, scanText: startEntryText, callAnchor: startAnchor }];
 
   while (queue.length > 0) {
     const next = queue.shift();
     if (next === undefined) break;
-    const { file, scanText } = next;
+    const { file, scanText, callAnchor } = next;
     const bindings = extractImportBindings(readFileOrNull(file) ?? '');
+    const callAnchorPattern = anchorPattern(callAnchor);
+
     for (const [name, specifier] of bindings) {
-      const callRe = new RegExp(`\\b${escapeRegExp(name)}\\s*\\(\\s*query\\s*\\)`, 'u');
+      const callRe = new RegExp(
+        `\\b${escapeRegExp(name)}\\s*\\(\\s*${callAnchorPattern}\\s*\\)`,
+        'u'
+      );
       if (!callRe.test(scanText)) continue;
       const resolved = resolveRelativeImport(file, specifier);
       if (resolved === null || visited.has(resolved)) continue;
       visited.add(resolved);
-      const childText = readFileOrNull(resolved);
-      if (childText === null) continue;
-      texts.push(childText);
-      queue.push({ file: resolved, scanText: childText });
+      const fileText = readFileOrNull(resolved);
+      if (fileText === null) continue;
+
+      const fn = extractResolverFunctionText(fileText, name);
+      if (fn === null) continue;
+      const param = parseResolverParam(fn.paramText);
+      if (param === null) continue;
+
+      if (param.kind === 'destructured') {
+        scopes.push({
+          text: `{ ${param.fields.join(', ')} } = ${callAnchor};`,
+          anchor: callAnchor,
+        });
+        continue;
+      }
+
+      scopes.push({ text: fn.bodyText, anchor: param.name });
+      queue.push({ file: resolved, scanText: fn.bodyText, callAnchor: param.name });
     }
   }
 
-  return texts.join('\n');
+  return scopes;
 }
 
 /**
- * Whether `field` is read somewhere in `text` — a comment-stripped join of a
- * handler entry plus every resolver module reached from it.
- *
- * Two shapes count: a property access (`query.field`, or `anything.field` —
- * deliberately not anchored to the identifier `query` itself, since a
- * resolver reads its OWN parameter, which this codebase always also spells
- * `query`, but a future rename should not have to be taught to this regex) and
- * a destructured binding (`{ field }`, `{ field: renamed }`, or `{ a, field, b }`).
+ * Whether `text` contains a `{ … }` destructuring whose braces name `field`
+ * as a source key (right after the opening `{` or a `,`, followed by `,`,
+ * `:`, `}`, or the group's own end — the same position test the pre-anchor
+ * version of this guard used, which is what keeps `{ other: field }` from
+ * counting as a read of `field`: there, `field` is the LOCAL name an alias
+ * renames `other` to, not a source key), assigned FROM `anchor` — checked
+ * against each `{ … }` group's own balanced extent, not the whole text, so a
+ * `}` that closes one group is never mistaken for the `}` that opens the
+ * `= anchor` this guard is actually looking for.
  *
  * @param {string} text
  * @param {string} field
+ * @param {string} anchorRe Pre-built {@link anchorPattern} regex fragment.
  * @returns {boolean}
  */
-export function fieldIsRead(text, field) {
+function isDestructuredFromAnchor(text, field, anchorRe) {
+  const structural = blankNonStructural(text);
   const esc = escapeRegExp(field);
-  const memberAccess = new RegExp(`\\.${esc}\\b`, 'u');
-  const destructured = new RegExp(`[{,]\\s*${esc}\\s*(?:[,:}]|$)`, 'u');
-  return memberAccess.test(text) || destructured.test(text);
+  const keyRe = new RegExp(`[{,]\\s*${esc}\\s*(?:[,:}]|$)`, 'u');
+  const afterRe = new RegExp(`^\\s*=\\s*${anchorRe}\\b`, 'u');
+
+  for (let i = 0; i < structural.length; i += 1) {
+    if (structural[i] !== '{') continue;
+    const end = matchBalanced(structural, i, '{', '}');
+    if (end === -1) continue;
+    if (!keyRe.test(text.slice(i, end))) continue;
+    if (afterRe.test(text.slice(end))) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether `field` is read in `text`, anchored to `anchor` — the dotted
+ * binding path (`'query'` by default, or `'body.query'`, or a followed
+ * resolver's own parameter name) that this text's query data actually
+ * arrived through.
+ *
+ * Two shapes count, both requiring the read to chain off `anchor` itself:
+ * a property access (`<anchor>.field`, `<anchor>?.field`) and a destructured
+ * binding assigned FROM `anchor` (`{ field } = <anchor>`,
+ * `{ field: renamed } = <anchor>`, or `{ a, field, b } = <anchor>`). A
+ * `.field` access on any other identifier, or a destructuring assigned from
+ * anything else, is not a read of this field — that anchoring is the whole
+ * fix for `Array.from(rows)` reading as though it were `query.from`.
+ *
+ * @param {string} text
+ * @param {string} field
+ * @param {string} [anchor] Defaults to `'query'`.
+ * @returns {boolean}
+ */
+export function fieldIsRead(text, field, anchor = 'query') {
+  const esc = escapeRegExp(field);
+  const anchorRe = anchorPattern(anchor);
+  const memberAccess = new RegExp(`\\b${anchorRe}\\s*\\??\\.\\s*${esc}\\b`, 'u');
+  return memberAccess.test(text) || isDestructuredFromAnchor(text, field, anchorRe);
 }
 
 /**
@@ -781,10 +1025,14 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
       continue;
     }
 
-    const reachable = stripComments(collectReachableTexts(handlerAbs, entryText));
+    const anchor = queryAnchorForRoute(doc, route.method, route.path) ?? 'query';
+    const scopes = collectReachableTexts(handlerAbs, entryText, anchor).map((scope) => ({
+      text: stripComments(scope.text),
+      anchor: scope.anchor,
+    }));
 
     for (const field of fields) {
-      if (fieldIsRead(reachable, field)) continue;
+      if (scopes.some((scope) => fieldIsRead(scope.text, field, scope.anchor))) continue;
       const allowKey = `${route.method} ${route.path} ${field}`;
       const reason = allowlistIndex.get(allowKey);
       if (reason !== undefined) continue;
@@ -1144,7 +1392,183 @@ function selfTestCases() {
       expect: null,
     },
     {
+      name: 'ADVERSARIAL: an unrelated Array.from call must not be mistaken for reading query.from (anchoring)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'from', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const rows = Array.from(query.items ?? []);',
+            '      return { status: 200, body: { count: rows.length } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: /field 'from'/u,
+    },
+    {
+      name: "PASSING TWIN: a resolver's own parameter, not literally named `query`, still anchors a read of it",
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'to', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            "import { resolveWindowEnd } from './window-scope.js';",
+            '',
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const end = resolveWindowEnd(query);',
+            '      return { status: 200, body: { end } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-scope.ts',
+          ['export function resolveWindowEnd(input) {', '  return input.to;', '}', ''].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: null,
+    },
+    {
+      name: 'PASSING TWIN: a resolver whose parameter destructures the query directly counts as reading each named field',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'from', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            "import { resolveWindowStart } from './window-scope.js';",
+            '',
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const start = resolveWindowStart(query);',
+            '      return { status: 200, body: { start } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-scope.ts',
+          ['export function resolveWindowStart({ from }) {', '  return from;', '}', ''].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: null,
+    },
+    {
+      name: "ADVERSARIAL: a resolver reading '.from' off an unrelated local object must not count as reading query.from",
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'from', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            "import { resolveWindowStart } from './window-scope.js';",
+            '',
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const start = resolveWindowStart(query);',
+            '      return { status: 200, body: { start } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-scope.ts',
+          [
+            'export function resolveWindowStart(input) {',
+            '  const other = { from: "unrelated" };',
+            '  return other.from;',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: /field 'from'/u,
+    },
+    {
       name: 'MUTATION: dropping just beforeId from a passing list handler is caught',
+
       arrange: (root) => {
         writeBaseOpenapi(root, {
           '/purchases': {

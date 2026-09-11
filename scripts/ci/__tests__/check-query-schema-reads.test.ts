@@ -23,9 +23,12 @@ import {
   collectViolations,
   extractHandlerEntryText,
   extractImportBindings,
+  extractResolverFunctionText,
   fieldIsRead,
   matchBalanced,
   OPENAPI_REL_PATH,
+  parseResolverParam,
+  queryAnchorForRoute,
   queryFieldsForRoute,
   resolveRelativeImport,
   ROUTES,
@@ -313,6 +316,124 @@ describe('fieldIsRead', () => {
       false
     );
   });
+
+  it('does NOT count an unrelated `.from` access (e.g. `Array.from`) as reading query.from', () => {
+    expect(fieldIsRead('const rows = Array.from(query.items ?? []);', 'from')).toBe(false);
+  });
+
+  it('anchors a member access to a custom anchor (a resolver reading its own, differently-named parameter)', () => {
+    expect(fieldIsRead('return input.to;', 'to', 'input')).toBe(true);
+  });
+
+  it('does not count a member access on a custom anchor for the DEFAULT `query` anchor', () => {
+    expect(fieldIsRead('return input.to;', 'to')).toBe(false);
+  });
+
+  it('anchors a member access through a dotted path (`body.query`, the POST /search shape)', () => {
+    expect(
+      fieldIsRead('const scope = searchFilterScope(body.query.filters);', 'filters', 'body.query')
+    ).toBe(true);
+  });
+
+  it('does not count a destructuring assigned from an unrelated identifier', () => {
+    expect(fieldIsRead('const { from } = other;', 'from')).toBe(false);
+  });
+
+  it('does not count an aliased destructure where the field name is only the LOCAL binding', () => {
+    // Source key is `other`; `from` is merely the local name it is renamed to.
+    expect(fieldIsRead('const { other: from } = query;', 'from')).toBe(false);
+  });
+});
+
+describe('parseResolverParam', () => {
+  it('parses a bare identifier', () => {
+    expect(parseResolverParam('query')).toEqual({ kind: 'identifier', name: 'query' });
+  });
+
+  it('parses an identifier with a type annotation', () => {
+    expect(parseResolverParam('input: PurchaseScopeQuery')).toEqual({
+      kind: 'identifier',
+      name: 'input',
+    });
+  });
+
+  it('parses a flat destructuring pattern', () => {
+    expect(parseResolverParam('{ from, to }')).toEqual({
+      kind: 'destructured',
+      fields: ['from', 'to'],
+    });
+  });
+
+  it('reads the SOURCE key of a renamed destructured field, not the local alias', () => {
+    expect(parseResolverParam('{ from: start }')).toEqual({
+      kind: 'destructured',
+      fields: ['from'],
+    });
+  });
+
+  it('ignores a rest element in a destructured pattern', () => {
+    expect(parseResolverParam('{ from, ...rest }')).toEqual({
+      kind: 'destructured',
+      fields: ['from'],
+    });
+  });
+
+  it('returns null for an empty parameter list (no query is received at all)', () => {
+    expect(parseResolverParam('')).toBeNull();
+  });
+});
+
+describe('extractResolverFunctionText', () => {
+  it('extracts a named function’s own parameter text and body, not a sibling helper’s', () => {
+    const text = [
+      'export function unrelatedHelper() {',
+      '  return Array.from([1, 2, 3]);',
+      '}',
+      '',
+      'export function resolveWindow(input: unknown) {',
+      '  return input;',
+      '}',
+      '',
+    ].join('\n');
+    const fn = extractResolverFunctionText(text, 'resolveWindow');
+    expect(fn).not.toBeNull();
+    expect(fn?.paramText.trim()).toBe('input: unknown');
+    expect(fn?.bodyText).not.toContain('Array.from');
+  });
+
+  it('returns null when the named function is not declared in the file', () => {
+    expect(extractResolverFunctionText('export const x = 1;\n', 'resolveWindow')).toBeNull();
+  });
+});
+
+describe('queryAnchorForRoute', () => {
+  it("returns 'query' for a GET route's query-string parameters", () => {
+    const doc = { paths: { '/x': { get: { parameters: [{ name: 'a', in: 'query' }] } } } };
+    expect(queryAnchorForRoute(doc, 'get', '/x')).toBe('query');
+  });
+
+  it("returns 'body.query' for the POST /search body-nested shape", () => {
+    const doc = {
+      paths: {
+        '/search': {
+          post: {
+            requestBody: {
+              content: {
+                'application/json': {
+                  schema: { properties: { query: { type: 'object', properties: { text: {} } } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(queryAnchorForRoute(doc, 'post', '/search')).toBe('body.query');
+  });
+
+  it('returns null for a route not in the document', () => {
+    expect(queryAnchorForRoute({ paths: {} }, 'get', '/nope')).toBeNull();
+  });
 });
 
 describe('collectReachableTexts', () => {
@@ -341,8 +462,38 @@ describe('collectReachableTexts', () => {
       "import { resolveScope } from './scope.js';\nexport const entry = 'resolveScope(query)';\n"
     );
     const entryText = 'resolveScope(query)';
-    const reachable = collectReachableTexts(handlerAbs, entryText);
-    expect(reachable).toContain('merchantEntityId');
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => s.text.includes('merchantEntityId') && s.anchor === 'query')).toBe(
+      true
+    );
+  });
+
+  it("anchors a followed resolver's scope to ITS OWN parameter name, not the caller's `query`", () => {
+    const root = fixtureRoot();
+    writeFile(
+      root,
+      'a/scope.ts',
+      'export function resolveWindow(input: unknown) {\n  return input.to;\n}\n'
+    );
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(root, 'a/handler.ts', "import { resolveWindow } from './scope.js';\n");
+    const scopes = collectReachableTexts(handlerAbs, 'resolveWindow(query)');
+    const resolverScope = scopes.find((s) => s.text.includes('input.to'));
+    expect(resolverScope?.anchor).toBe('input');
+  });
+
+  it('records a destructured resolver parameter as reading its fields off the CALLER’s anchor', () => {
+    const root = fixtureRoot();
+    writeFile(
+      root,
+      'a/scope.ts',
+      'export function resolveWindow({ from, to }) {\n  return from;\n}\n'
+    );
+    const handlerAbs = join(root, 'a', 'handler.ts');
+    writeFile(root, 'a/handler.ts', "import { resolveWindow } from './scope.js';\n");
+    const scopes = collectReachableTexts(handlerAbs, 'resolveWindow(query)');
+    expect(scopes.some((s) => fieldIsRead(s.text, 'from', s.anchor))).toBe(true);
+    expect(scopes.some((s) => fieldIsRead(s.text, 'to', s.anchor))).toBe(true);
   });
 
   it('does not follow a call whose argument is not the bare identifier `query`', () => {
@@ -355,16 +506,16 @@ describe('collectReachableTexts', () => {
     const handlerAbs = join(root, 'a', 'handler.ts');
     writeFile(root, 'a/handler.ts', "import { resolveScope } from './scope.js';\n");
     const entryText = 'resolveScope(query.sources)'; // not the bare identifier
-    const reachable = collectReachableTexts(handlerAbs, entryText);
-    expect(reachable).not.toContain('MARKER_SHOULD_NOT_APPEAR');
+    const scopes = collectReachableTexts(handlerAbs, entryText);
+    expect(scopes.some((s) => s.text.includes('MARKER_SHOULD_NOT_APPEAR'))).toBe(false);
   });
 
   it('does not follow a non-relative (workspace package) import', () => {
     const root = fixtureRoot();
     const handlerAbs = join(root, 'a', 'handler.ts');
     writeFile(root, 'a/handler.ts', "import { resolveScope } from '@pops/thing';\n");
-    const reachable = collectReachableTexts(handlerAbs, 'resolveScope(query)');
-    expect(reachable).toBe('resolveScope(query)');
+    const scopes = collectReachableTexts(handlerAbs, 'resolveScope(query)');
+    expect(scopes).toEqual([{ text: 'resolveScope(query)', anchor: 'query' }]);
   });
 });
 
@@ -395,7 +546,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
 
   it('its self-test passes, including both historical POPS-1966/POPS-1849 shapes', () => {
     const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
-    expect(stdout).toContain('/14 self-test cases passed.');
+    expect(stdout).toContain('/18 self-test cases passed.');
     expect(stdout).not.toContain('FAIL');
   });
 
