@@ -46,9 +46,9 @@ describe('resolvePrincipal', () => {
   });
 
   /**
-   * Nothing reaches this pillar except through the shell's Access-protected
-   * tunnel, so an unconfigured team is the registry's "trust the tunnel", not
-   * bfm's "refuse everyone".
+   * An unconfigured team is the registry's "trust the tunnel", not bfm's
+   * "refuse everyone". It does not mean nothing bypasses Access: with a team
+   * configured, a request that skips Access is anonymous (the next case).
    */
   it('resolves a tunnel user in production when no Access team is configured', async () => {
     await expect(resolvePrincipal({ headers: {} }, PRODUCTION_ENV_WITHOUT_ACCESS)).resolves.toEqual(
