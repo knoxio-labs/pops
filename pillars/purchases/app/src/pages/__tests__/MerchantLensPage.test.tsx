@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 
+import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
+
 const merchantSpendMock = vi.hoisted(() => vi.fn());
 const purchaseListMock = vi.hoisted(() => vi.fn());
 
@@ -23,6 +25,8 @@ import type {
   SpendAccounting,
   SpendPeriod,
 } from '../merchant-lens/types';
+
+const RAW_CATALOG_KEY = rawCatalogKeyPattern('merchants');
 
 /**
  * Mocked at the generated-SDK boundary and no lower, so `unwrap`, the currency
@@ -659,6 +663,27 @@ describe('MerchantLensPage — states', () => {
     await openTheOrdersOf(user, 'Amazon');
     await screen.findByRole('list', { name: 'Orders paid to Amazon' });
 
-    expect(document.body.textContent).not.toMatch(/merchants\.[a-zA-Z]/);
+    expect(document.body.textContent).not.toMatch(RAW_CATALOG_KEY);
+    expect(leakedAriaLabels(RAW_CATALOG_KEY)).toEqual([]);
+  });
+
+  // `merchants.split.meterLabel` and `merchants.list.ariaLabel` name no visible
+  // text of their own — the meter and the currency list carry the split and
+  // the merchant rows as their content, not a heading — so `textContent`
+  // above is blind to a typo in either. Asserted by value so a rename that
+  // breaks the catalog lookup fails loudly rather than as a silent key echo.
+  it('names the explained-split meter and the currency list from the catalog', async () => {
+    rollupReturns([namedMerchant('Amazon')]);
+    renderPage();
+    await settled();
+
+    expect(
+      screen.getAllByRole('meter', { name: enAUPurchases['merchants.split.meterLabel'] })
+    ).not.toHaveLength(0);
+    expect(
+      screen.getByRole('list', {
+        name: enAUPurchases['merchants.list.ariaLabel'].replace('{{currency}}', 'AUD'),
+      })
+    ).toBeVisible();
   });
 });

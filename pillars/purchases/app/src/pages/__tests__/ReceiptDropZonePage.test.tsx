@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 
+import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
+
 const receiptUploadMock = vi.hoisted(() => vi.fn());
 
 /**
@@ -68,20 +70,7 @@ async function submit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('button', { name: enAUPurchases['receipts.action.submit'] }));
 }
 
-const RAW_CATALOG_KEY = /receipts\.[a-zA-Z]/;
-
-/**
- * `aria-label` values a screen reader reads but `document.body.textContent`
- * never includes, since an attribute carries no text node of its own. A key
- * i18next echoes back unresolved (`receipts.parts.moveDown`) is exactly as
- * wrong here as it is in visible copy, and this is the only query that can
- * catch it.
- */
-function leakedAriaLabels(): string[] {
-  return Array.from(document.body.querySelectorAll('[aria-label]'))
-    .map((element) => element.getAttribute('aria-label') ?? '')
-    .filter((label) => RAW_CATALOG_KEY.test(label));
-}
+const RAW_CATALOG_KEY = rawCatalogKeyPattern('receipts');
 
 function sentParts(): { mediaType: string; dataBase64: string }[] {
   const call: unknown = receiptUploadMock.mock.calls.at(-1)?.[0];
@@ -780,7 +769,7 @@ describe('ReceiptDropZonePage — the other answers', () => {
 
     expect(await screen.findByText(enAUPurchases[settles])).toBeVisible();
     expect(document.body.textContent).not.toMatch(RAW_CATALOG_KEY);
-    expect(leakedAriaLabels()).toEqual([]);
+    expect(leakedAriaLabels(RAW_CATALOG_KEY)).toEqual([]);
   });
 
   // The staged-parts list carries two catalog keys that name no visible text
