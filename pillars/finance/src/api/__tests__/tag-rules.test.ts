@@ -119,12 +119,15 @@ describe('tagRules — vocabulary & apply', () => {
   });
 
   it('edits and removes a persisted rule via ChangeSet ops', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
 
     const edited = await client().tagRules.apply({
       changeSet: { ops: [{ op: 'edit', id, data: { tags: [CUSTOM_TAG, 'late-night'] } }] },
-      acceptedNewTags: [],
+      acceptedNewTags: ['late-night'],
     });
     expect(edited.rules[0]?.tags).toEqual([CUSTOM_TAG, 'late-night']);
 
@@ -139,9 +142,94 @@ describe('tagRules — vocabulary & apply', () => {
     await expect(
       client().tagRules.apply({
         changeSet: { ops: [{ op: 'edit', id: 'nope', data: { tags: ['x'] } }] },
-        acceptedNewTags: [],
+        acceptedNewTags: ['x'],
       })
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('drops a declined new tag from an add op, keeping the accepted one', async () => {
+    const declined = 'skip-this-one';
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'WOOLWORTHS',
+              matchType: 'contains',
+              tags: [CUSTOM_TAG, declined],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [CUSTOM_TAG],
+    });
+
+    expect(applied.rules[0]?.tags).toEqual([CUSTOM_TAG]);
+    const vocab = (await client().tagRules.vocabulary()).tags;
+    expect(vocab).toContain(CUSTOM_TAG);
+    expect(vocab).not.toContain(declined);
+  });
+
+  it('drops a declined new tag from an edit op, keeping the accepted one', async () => {
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
+    const id = created.rules[0]?.id ?? '';
+    const declined = 'skip-this-edit';
+
+    const edited = await client().tagRules.apply({
+      changeSet: { ops: [{ op: 'edit', id, data: { tags: [CUSTOM_TAG, declined] } }] },
+      acceptedNewTags: [],
+    });
+
+    expect(edited.rules[0]?.tags).toEqual([CUSTOM_TAG]);
+    expect((await client().tagRules.vocabulary()).tags).not.toContain(declined);
+  });
+
+  it('keeps a tag already in the vocabulary even when it is absent from acceptedNewTags', async () => {
+    // 'contains:food' is seeded by the baseline migration, so it is already
+    // known and never subject to accept/decline.
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'WOOLWORTHS',
+              matchType: 'contains',
+              tags: ['contains:food'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+
+    expect(applied.rules[0]?.tags).toEqual(['contains:food']);
+  });
+
+  it('creates no rule from an add op whose only tag was declined', async () => {
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'WOOLWORTHS',
+              matchType: 'contains',
+              tags: ['fully-declined'],
+            },
+          },
+        ],
+      },
+      acceptedNewTags: [],
+    });
+
+    expect(applied.rules).toHaveLength(0);
+    expect((await client().tagRules.list()).data).toHaveLength(0);
+    expect((await client().tagRules.vocabulary()).tags).not.toContain('fully-declined');
   });
 });
 
@@ -241,7 +329,7 @@ describe('tagRules — list / get / update / disable / delete', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['groceries'],
     });
     await client().tagRules.apply({
       changeSet: {
@@ -257,7 +345,7 @@ describe('tagRules — list / get / update / disable / delete', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['subscriptions'],
     });
 
     const all = await client().tagRules.list();
@@ -284,7 +372,7 @@ describe('tagRules — list / get / update / disable / delete', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['groceries'],
     });
     const inactive = await client().tagRules.apply({
       changeSet: {
@@ -295,7 +383,7 @@ describe('tagRules — list / get / update / disable / delete', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['subscriptions'],
     });
     await client().tagRules.disable(inactive.rules[0]?.id ?? '');
 
@@ -311,7 +399,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('gets a single rule by id and 404s an unknown id', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
 
     const fetched = await client().tagRules.get(id);
@@ -325,7 +416,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('edits a rule via the standalone update endpoint', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
 
     const updated = await client().tagRules.update(id, {
@@ -345,7 +439,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('rejects an update that would clear tags to empty', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
 
     await expect(client().tagRules.update(id, { tags: [] })).rejects.toMatchObject({
@@ -357,7 +454,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('disables a rule as a real mutation (isActive flips false, persists on refetch)', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
     expect(created.rules[0]?.isActive).toBe(true);
 
@@ -373,7 +473,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('deletes a rule (hard delete, no longer listed)', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
 
     const result = await client().tagRules.delete(id);
@@ -389,7 +492,10 @@ describe('tagRules — list / get / update / disable / delete', () => {
   });
 
   it('viewing a rule never mutates its usage telemetry', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const id = created.rules[0]?.id ?? '';
     expect(created.rules[0]?.timesApplied).toBe(0);
     expect(created.rules[0]?.lastUsedAt).toBeNull();
@@ -457,7 +563,10 @@ describe('tagRules — reject (POPS-2598)', () => {
   });
 
   it('records a rejection of a ChangeSet that proposes no pattern of its own', async () => {
-    const created = await client().tagRules.apply({ changeSet: addOp, acceptedNewTags: [] });
+    const created = await client().tagRules.apply({
+      changeSet: addOp,
+      acceptedNewTags: [CUSTOM_TAG],
+    });
     const ruleId = created.rules[0]?.id ?? '';
     const disableChangeSet = { source: 'test', ops: [{ op: 'disable', id: ruleId }] };
 
@@ -494,7 +603,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['bar', 'nights out'],
     });
     const id = created.rules[0]?.id;
     if (!id) throw new Error('rule not created');
@@ -605,7 +714,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['bar'],
     });
     const ruleId = created.rules[0]?.id;
     if (!ruleId) throw new Error('rule not created');
@@ -801,7 +910,7 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
           { op: 'add', data: { descriptionPattern: pattern, matchType: 'regex', tags: ['x'] } },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     expect(applied.rules[0]?.descriptionPattern).toBe(pattern);
   });
@@ -817,7 +926,7 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
             },
           ],
         },
-        acceptedNewTags: [],
+        acceptedNewTags: ['x'],
       })
     ).rejects.toMatchObject({ status: 400 });
 
@@ -836,7 +945,7 @@ describe('tagRules — regex patterns (POPS-2600)', () => {
             },
           ],
         },
-        acceptedNewTags: [],
+        acceptedNewTags: ['x'],
       })
     ).rejects.toMatchObject({
       status: 400,
@@ -876,7 +985,7 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['occasion:birthday'],
     });
     const ruleId = created.rules[0]!.id;
 
@@ -909,7 +1018,7 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     const ruleId = created.rules[0]!.id;
 
@@ -934,7 +1043,7 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
           { op: 'add', data: { descriptionPattern: 'MULTI SET', matchType: 'exact', tags: ['x'] } },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     const ruleId = created.rules[0]!.id;
 
@@ -971,7 +1080,7 @@ describe('tagRules — write path accepts numeric patterns', () => {
           { op: 'add', data: { descriptionPattern: '42', matchType: 'contains', tags: ['x'] } },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
 
     const listed = await client().tagRules.list({});
@@ -988,7 +1097,7 @@ describe('tagRules — write path accepts numeric patterns', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     expect(applied.rules[0]?.descriptionPattern).toBe('BRAND NEW MERCHANT');
   });
@@ -1012,7 +1121,7 @@ describe('tagRules — ledgerMatchStatus on list/get (POPS-2941)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['groceries'],
     });
     const id = applied.rules[0]?.id ?? '';
 
@@ -1038,7 +1147,7 @@ describe('tagRules — ledgerMatchStatus on list/get (POPS-2941)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     const id = applied.rules[0]?.id ?? '';
 
@@ -1069,7 +1178,7 @@ describe('tagRules — ledgerMatchStatus on list/get (POPS-2941)', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['x'],
     });
     const id = applied.rules[0]?.id ?? '';
 
