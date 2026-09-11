@@ -43,6 +43,17 @@
  *     pillar must still DECLARE supertest. A pillar that dropped the dependency
  *     is reported rather than silently ban-free.
  *
+ * WHAT IT DOES NOT SEE: the modules a pillar file imports. The ban matches the
+ * specifier a file names, not what that module imports in turn. A helper in a
+ * workspace lib that wraps `supertest` (say `libs/pillar-express` growing a
+ * `requestAgainst(app)`) is importable from any pillar under the lib's own
+ * name, and brings back the churn with a clean report. Closing that needs a
+ * transitive import closure out through the workspace, a materially bigger
+ * guard. No such wrapper exists today, so the boundary is written down rather
+ * than closed. The self-test case "a lib wrapper around supertest is NOT seen"
+ * pins it, and it has to flip if this guard ever learns to follow imports
+ * (POPS-2468).
+ *
  * The specifier set is derived from each pillar's manifests rather than
  * hardcoded, so a dependency alias (`"http-probe": "npm:supertest"`) is banned
  * under its alias too instead of walking straight past a specifier ban. All of
@@ -614,6 +625,26 @@ function selfTestCases() {
         );
       },
       expect: caught,
+    },
+    {
+      // POPS-2468: the documented blind spot, planted adversarially. If the
+      // guard learns to follow imports into the workspace this case fails, and
+      // the header's WHAT IT DOES NOT SEE paragraph has to change with it.
+      name: 'a lib wrapper around supertest is NOT seen when a pillar imports the lib',
+      arrange: (root) => {
+        writeCleanFixture(root);
+        writeFile(
+          root,
+          'libs/pillar-express/src/request-against.ts',
+          `import request from 'supertest';\nexport const requestAgainst = (app: unknown) => request(app);\n`
+        );
+        writeFile(
+          root,
+          victim,
+          `import { requestAgainst } from '@pops/pillar-express';\nrequestAgainst(1);\n`
+        );
+      },
+      expect: null,
     },
     {
       name: 'the transport itself is never reported',
