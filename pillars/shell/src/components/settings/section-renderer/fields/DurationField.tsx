@@ -50,6 +50,7 @@ export function DurationField({
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <div className="flex gap-2">
         <Input
+          id={settingsFieldId(field)}
           type="number"
           value={displayValue}
           min={0}
@@ -64,6 +65,7 @@ export function DurationField({
           className="w-32"
         />
         <Select
+          aria-label={`${field.label} unit`}
           options={UNIT_OPTIONS}
           value={unit}
           onChange={(e) => setUnit(e.target.value)}

@@ -19,6 +19,9 @@ import type { SaveState } from './types';
  * The `-error` / `-description` suffixes are `@pops/ui`'s
  * `fieldLabelDescribedBy` convention, reused rather than reinvented so a field
  * points at the right paragraph without a second id scheme to keep in step.
+ *
+ * The bare id is the control's own, so the wrapper's `<Label htmlFor>` names it
+ * (POPS-2590). Every field kind renders its control with this id.
  */
 export function settingsFieldId(field: SettingsField): string {
   return `settings-field-${field.key}`;
@@ -38,7 +41,7 @@ export function FieldWrapper({ field, children, saveState, error }: FieldWrapper
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <Label className="text-sm text-muted-foreground">
+        <Label htmlFor={settingsFieldId(field)} className="text-sm text-muted-foreground">
           {field.label}
           {required && (
             <span className="text-destructive" aria-hidden="true">

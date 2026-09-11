@@ -68,6 +68,7 @@ export function TextLikeField({
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <div className="flex gap-2">
         <Input
+          id={settingsFieldId(field)}
           type={inputType}
           value={value}
           onChange={(e) => onChange(e.target.value)}
