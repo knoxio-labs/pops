@@ -28,6 +28,7 @@ import {
   blankNoise,
   discoverTestFiles,
   scanRepo,
+  spawnBindings,
   spawningHelpers,
   unboundedSpawningTests,
 } from '../check-subprocess-test-timeouts.mjs';
@@ -230,5 +231,94 @@ describe('spawningHelpers', () => {
 
   it('does not follow a function that spawns nothing', () => {
     expect(namesIn('const parse = (x) => JSON.parse(x);')).toEqual([]);
+  });
+});
+
+describe('spawnBindings — promisify', () => {
+  it('follows a promisified alias to the spawner it wraps', () => {
+    const source = `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);`;
+    expect(spawnBindings(source)).toContain('execFileAsync');
+  });
+
+  it('follows a renamed promisify import', () => {
+    const source = `import { execFile } from 'node:child_process';
+import { promisify as p } from 'node:util';
+const run = p(execFile);`;
+    expect(spawnBindings(source)).toContain('run');
+  });
+
+  it("follows util.promisify off a namespace import of 'node:util'", () => {
+    const source = `import { execFile } from 'node:child_process';
+import * as util from 'node:util';
+const run = util.promisify(execFile);`;
+    expect(spawnBindings(source)).toContain('run');
+  });
+
+  it("follows util.promisify off a default import of 'node:util'", () => {
+    const source = `import { execFile } from 'node:child_process';
+import util from 'node:util';
+const run = util.promisify(execFile);`;
+    expect(spawnBindings(source)).toContain('run');
+  });
+
+  it('follows promisify(cp.execFile) off a child_process namespace import', () => {
+    const source = `import * as cp from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(cp.execFile);`;
+    expect(spawnBindings(source)).toContain('run');
+  });
+
+  it('does not bind a promisified call whose argument is not a known spawner', () => {
+    const source = `import { promisify } from 'node:util';
+import { readFile } from 'node:fs';
+const readFileAsync = promisify(readFile);`;
+    expect(spawnBindings(source)).not.toContain('readFileAsync');
+  });
+});
+
+describe('unboundedSpawningTests — promisify', () => {
+  const PROMISIFIED = `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
+describe('a', () => { it('one', () => { execFileAsync('mise'); }); });
+`;
+
+  it('flags an unbounded test that calls a promisified alias — the docker-entrypoint shape', () => {
+    expect(unboundedSpawningTests(PROMISIFIED)).toHaveLength(1);
+  });
+
+  it('passes once the test states its own timeout', () => {
+    const bounded = PROMISIFIED.replace(
+      "it('one', () => { execFileAsync('mise'); })",
+      "it('one', () => { execFileAsync('mise'); }, 30_000)"
+    );
+    expect(unboundedSpawningTests(bounded)).toHaveLength(0);
+  });
+
+  it('does not flag a promisified spawn reached only through a beforeAll that states its own timeout — the remote-bundle shape', () => {
+    const source = `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(execFile);
+describe('remote bundle', () => {
+  beforeAll(async () => { await run('pnpm', ['run', 'build:remote']); }, 300_000);
+  it('one', () => {});
+  it('two', () => {});
+});
+`;
+    expect(unboundedSpawningTests(source)).toHaveLength(0);
+  });
+
+  it('still flags a promisified spawn reached through an unbounded beforeAll', () => {
+    const source = `import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const run = promisify(execFile);
+describe('remote bundle', () => {
+  beforeAll(async () => { await run('pnpm', ['run', 'build:remote']); });
+  it('one', () => {});
+});
+`;
+    expect(unboundedSpawningTests(source)).toHaveLength(1);
   });
 });
