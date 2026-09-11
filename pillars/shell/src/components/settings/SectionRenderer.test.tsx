@@ -845,6 +845,62 @@ describe('SectionRenderer', () => {
       });
     }
 
+    // POPS-2590: every settings control is named by its label. Before, the
+    // label had no `htmlFor` and no control carried an id, so a screen reader
+    // announced an unnamed input and clicking the label focused nothing.
+    it('names a text field by its label', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('name', { label: 'Name', type: 'text', default: '' })}
+        />
+      );
+      expect(screen.getByLabelText('Name')).toBe(screen.getByRole('textbox'));
+    });
+
+    it('names a number field by its label', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('max_tokens', {
+            label: 'Max Tokens',
+            type: 'number',
+            default: '100',
+          })}
+        />
+      );
+      expect(screen.getByLabelText('Max Tokens')).toBe(screen.getByRole('spinbutton'));
+    });
+
+    it('names a select field by its label', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('mode', {
+            label: 'Mode',
+            type: 'select',
+            default: 'a',
+            options: [
+              { value: 'a', label: 'Option A' },
+              { value: 'b', label: 'Option B' },
+            ],
+          })}
+        />
+      );
+      expect(screen.getByLabelText('Mode')).toBe(screen.getByRole('combobox'));
+    });
+
+    it('names both controls of a duration field', () => {
+      render(
+        <SectionRenderer
+          manifest={manifestWithField('ttl', {
+            label: 'Cache TTL',
+            type: 'duration',
+            default: '60000',
+          })}
+        />
+      );
+      expect(screen.getByLabelText('Cache TTL')).toBe(screen.getByRole('spinbutton'));
+      expect(screen.getByLabelText('Cache TTL unit')).toBe(screen.getByRole('combobox'));
+    });
+
     it('points a text field at its error', () => {
       render(
         <SectionRenderer

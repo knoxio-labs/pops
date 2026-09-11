@@ -26,6 +26,7 @@ export function ToggleField({
   return (
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <Switch
+        id={settingsFieldId(field)}
         checked={value === 'true'}
         onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
         disabled={saveState === 'saving'}

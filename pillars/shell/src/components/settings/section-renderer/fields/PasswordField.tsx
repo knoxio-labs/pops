@@ -59,6 +59,7 @@ export function PasswordField({
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <div className="flex gap-2">
         <Input
+          id={settingsFieldId(field)}
           type={revealed ? 'text' : 'password'}
           value={value}
           placeholder={envFallbackActive ? '(from environment)' : '••••••••'}

@@ -30,9 +30,16 @@ export function SelectField({
   return (
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       {isOptionsLoading ? (
-        <Select disabled options={[]} placeholder="Loading options…" value="" />
+        <Select
+          id={settingsFieldId(field)}
+          disabled
+          options={[]}
+          placeholder="Loading options…"
+          value=""
+        />
       ) : (
         <Select
+          id={settingsFieldId(field)}
           options={field.options ?? []}
           value={value}
           onChange={(e) => onChange(e.target.value)}

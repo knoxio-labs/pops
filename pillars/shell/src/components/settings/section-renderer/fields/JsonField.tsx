@@ -26,6 +26,7 @@ export function JsonField({
   return (
     <FieldWrapper field={field} saveState={saveState} error={validationError}>
       <Textarea
+        id={settingsFieldId(field)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
