@@ -40,7 +40,12 @@ import type {
   UploadReceiptBodySchema,
 } from '../../contract/rest-receipts.js';
 import type { PurchasesDb } from '../../db/index.js';
-import type { ReceiptKind, ReceiptMediaType, ReceiptVision } from '../../ingest/receipt/vision.js';
+import type {
+  DecodedReceiptPart,
+  ReceiptKind,
+  ReceiptMediaType,
+  ReceiptVision,
+} from '../../ingest/receipt/vision.js';
 
 type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
 /**
@@ -154,10 +159,6 @@ export function makeReceiptHandlers(
         mediaType: one.mediaType,
         dataBase64: canonicalBase64(one.dataBase64),
       }));
-
-      // Decoded once, here: everything past this point — the magic-number
-      // check, the store, the EXIF reader — takes these bytes rather than
-      // decoding the wire string again on its own.
       const decodedParts = parts.map((one) => ({
         mediaType: one.mediaType,
         bytes: decodeReceiptBase64(one.dataBase64),
@@ -171,12 +172,7 @@ export function makeReceiptHandlers(
         if (bad !== undefined) return notWhatItClaims(bad.mediaType, badPartAt, parts.length);
       }
 
-      const goodParts = decodedParts.map(({ mediaType, bytes }) => {
-        if (bytes === null) {
-          throw new Error('unreachable: a malformed part is refused above, not reached here');
-        }
-        return { mediaType, bytes };
-      });
+      const goodParts = decodedParts.filter((one): one is DecodedReceiptPart => one.bytes !== null);
 
       const stored = goodParts.map((one) => storeReceiptPart(one));
 
