@@ -249,7 +249,7 @@ async function cliMain() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   cliMain().catch((error) => {
     console.error(error);
     process.exit(1);

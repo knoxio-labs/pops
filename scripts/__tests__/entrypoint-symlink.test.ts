@@ -28,7 +28,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -149,13 +149,28 @@ describe(
   }
 );
 
-describe('no guard under scripts/ still uses the symlink-unsafe entrypoint idiom', () => {
-  // A regex on the structure, not `includes()` on one exact literal: the
-  // idiom's defining shape is comparing a resolve(fileURLToPath(...)) against
-  // a resolve(process.argv[1]...), and that shape survives whitespace
-  // reflow or a dropped `?? ''` fallback — an exact-string match would not.
-  const OLD_IDIOM =
-    /resolve\(\s*fileURLToPath\(\s*import\.meta\.url\s*\)\s*\)\s*===\s*resolve\(\s*process\.argv\[1\]/u;
+describe('no guard under scripts/ still uses a symlink-unsafe entrypoint idiom', () => {
+  // Regexes on structure, not `includes()` on one exact literal: each idiom's
+  // defining shape survives whitespace reflow or a dropped `?? ''` fallback,
+  // which an exact-string match would not.
+  const UNSAFE_IDIOMS: { label: string; pattern: RegExp }[] = [
+    {
+      label: 'resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])',
+      pattern:
+        /resolve\(\s*fileURLToPath\(\s*import\.meta\.url\s*\)\s*\)\s*===\s*resolve\(\s*process\.argv\[1\]/u,
+    },
+    {
+      label: 'import.meta.url === `file://${process.argv[1]}`',
+      // import.meta.url is percent-encoded and process.argv[1] is not, so on
+      // any checkout path containing a space, `#`, `?` or non-ASCII
+      // characters the two sides disagree and the guard silently exits 0.
+      pattern: /import\.meta\.url\s*===\s*`file:\/\/\$\{\s*process\.argv\[1\]\s*\}`/u,
+    },
+    {
+      label: 'pathToFileURL(process.argv[1]) compared against import.meta.url',
+      pattern: /pathToFileURL\(\s*process\.argv\[1\]\s*\)/u,
+    },
+  ];
 
   /** Every `.mjs` file under `scripts/`, walked directly rather than trusting a glob library to be on the guard-tier that can use one. */
   function everyMjsFile(dir: string): string[] {
@@ -172,20 +187,39 @@ describe('no guard under scripts/ still uses the symlink-unsafe entrypoint idiom
     expect(everyMjsFile(scriptsDir).length).toBeGreaterThan(20);
   });
 
-  it('the resolve(argv[1]) comparison does not reappear anywhere under scripts/, in any spacing', () => {
-    const offenders = everyMjsFile(scriptsDir).filter((path) =>
-      OLD_IDIOM.test(readFileSync(path, 'utf8'))
-    );
+  it('none of the unsafe entrypoint idioms reappear anywhere under scripts/, in any spacing', () => {
+    const offenders = everyMjsFile(scriptsDir).flatMap((path) => {
+      const source = readFileSync(path, 'utf8');
+      const matchedLabels = UNSAFE_IDIOMS.filter((idiom) => idiom.pattern.test(source)).map(
+        (idiom) => idiom.label
+      );
+      return matchedLabels.length > 0
+        ? [`${relative(repoRoot, path)}: ${matchedLabels.join(', ')}`]
+        : [];
+    });
     expect(offenders).toEqual([]);
   });
 
-  it('the regex actually matches reformatted variants of the idiom, not just the original spacing', () => {
-    // A control for the assertion above: proves the regex is not simply a
+  it('the regexes actually match reformatted variants of each idiom, not just canonical spacing', () => {
+    // A control for the assertion above: proves each regex is not simply a
     // literal string match wearing a regex's syntax.
-    const reformatted = 'resolve( fileURLToPath(import.meta.url) )===resolve(process.argv[1])';
-    const noFallback = 'resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])';
-    expect(OLD_IDIOM.test(reformatted)).toBe(true);
-    expect(OLD_IDIOM.test(noFallback)).toBe(true);
-    expect(OLD_IDIOM.test('import.meta.main')).toBe(false);
+    const [resolveIdiom, templateIdiom, pathToFileUrlIdiom] = UNSAFE_IDIOMS.map((i) => i.pattern);
+
+    const reformattedResolve =
+      'resolve( fileURLToPath(import.meta.url) )===resolve(process.argv[1])';
+    const noFallbackResolve =
+      'resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1])';
+    expect(resolveIdiom?.test(reformattedResolve)).toBe(true);
+    expect(resolveIdiom?.test(noFallbackResolve)).toBe(true);
+
+    const reformattedTemplate = 'import.meta.url===`file://${ process.argv[1] }`';
+    expect(templateIdiom?.test(reformattedTemplate)).toBe(true);
+    expect(
+      templateIdiom?.test('if (import.meta.url === `file://${process.argv[1]}`) main();')
+    ).toBe(true);
+
+    expect(pathToFileUrlIdiom?.test('pathToFileURL( process.argv[1] ).href')).toBe(true);
+
+    for (const idiom of UNSAFE_IDIOMS) expect(idiom.pattern.test('import.meta.main')).toBe(false);
   });
 });
