@@ -70,6 +70,39 @@ describe('predictPairOutcome', () => {
     expect(predictPairOutcome(db, credit, 3).kind).toBe('ambiguous');
   });
 
+  it('pairs the leg that shares the bank reference, from both sides, and not the coincidental deposit', () => {
+    // The 2026-06-30 production case, through the row projection rather than a
+    // hand-built candidate: the reference has to survive `toPairCandidate`.
+    const db = freshDb();
+    const everyday = seed(db, 'Bendigo', {
+      amountCents: -300000,
+      date: '2026-06-30',
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 964110  TO 4564XXXXXXXX7373',
+    });
+    const card = seed(db, 'ANZ Credit Card', {
+      amountCents: 300000,
+      date: '2026-06-30',
+      description: 'PAYMENT THANKYOU 964110',
+    });
+    const payId = seed(db, 'Amex', {
+      amountCents: 300000,
+      date: '2026-06-30',
+      description: 'PayID Payment Received, Thank you',
+    });
+
+    const fromEveryday = predictPairOutcome(db, everyday, 3);
+    expect(fromEveryday.kind).toBe('match');
+    if (fromEveryday.kind === 'match') expect(fromEveryday.counterpart.id).toBe(card.id);
+
+    const fromCard = predictPairOutcome(db, card, 3);
+    expect(fromCard.kind).toBe('match');
+    if (fromCard.kind === 'match') expect(fromCard.counterpart.id).toBe(everyday.id);
+
+    // The deposit's only candidate is the Everyday debit, but that debit's
+    // unique best is the card — so the pairing is not mutual and must not link.
+    expect(predictPairOutcome(db, payId, 3).kind).not.toBe('match');
+  });
+
   it('predicts no-match with an empty candidate pool', () => {
     const db = freshDb();
     const lonely = seed(db, 'Amex', { amountCents: -5000 });
