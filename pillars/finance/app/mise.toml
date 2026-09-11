@@ -1,12 +1,4 @@
-# The app imports `@pops/finance` through its built `dist`, not its `src`. It
-# used to build the pillar first (`mise run -C .. build`, POPS-2631), but
-# mise's and tsc's incremental caches both key off *source* hashes, not
-# whether `dist` is actually still on disk — a `dist` removed (or gone stale)
-# out of band from those caches can leave that build step reporting "up to
-# date" while emitting nothing (POPS-2466, POPS-3488). require-built-graph.mjs
-# does a real filesystem check with no cache to lie to it, so run it first and
-# refuse with a clear message naming the unbuilt package, rather than let a
-# cold or stale pillar surface as a confusing failure deep in a test file.
+# require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
 [tasks.typecheck]
 run = ["node ../../../scripts/require-built-graph.mjs", "tsc --noEmit"]
 

@@ -163,7 +163,7 @@ describe('a planted unit that needs the graph', () => {
     expect(scanRepo(root).failures).toEqual([]);
   });
 
-  it('is reported on `test` when it is a bare vitest run — POPS-3488', () => {
+  it('is reported on `test` when it is a bare vitest run', () => {
     const root = plantWorkspace({
       types: './dist/index.d.ts',
       typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
@@ -217,7 +217,7 @@ describe('a planted unit that needs the graph', () => {
     ]);
   });
 
-  it('does not let a guarded typecheck excuse an unguarded test — POPS-3488 was exactly this gap', () => {
+  it('does not let a guarded typecheck excuse an unguarded test', () => {
     const root = plantWorkspace({
       types: './dist/index.d.ts',
       typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',

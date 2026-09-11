@@ -10,27 +10,17 @@
  * bare `vitest run`) is correct only when the graph happens to be warm.
  *
  * On a fresh clone or worktree it is not warm, and the unit reports either
- * `TS2307: Cannot find module '@pops/<x>'` (typecheck) or an error that looks
- * like a broken package rather than a missing prerequisite — e.g.
- * `TypeError: AiUsageRecordRefusedError is not a constructor` (POPS-2466) or
- * `Failed to resolve entry for package "@pops/…"`. It has cost a whole agent
- * run and a ticket filed against the wrong subsystem (POPS-3072: 93 `TS2307`s
- * from `pnpm --filter @pops/app-finance typecheck`; the graph was fine; moving
- * that pillar's own emitted output aside reproduced it, and restoring it fixed
- * it).
- *
- * POPS-3072 fixed `typecheck` for two units; POPS-2466 (#4732) then fixed
- * `test`/`test:coverage` for `pillars/purchases` the same way. POPS-3488 is
- * every other unit's turn: this guard now checks all three script kinds
- * rather than `typecheck` alone.
+ * `TS2307: Cannot find module '@pops/<x>'` (typecheck) or a runtime error
+ * against its own files (test/test:coverage). Either way it reads as a broken
+ * package rather than a missing prerequisite, so this guard checks all three
+ * script kinds for the gap.
  *
  * ## The remedy this guard demands
  *
- * A legible refusal, not a build. POPS-3072 chose it for the two units it
- * fixed, and at this scale it is the only one that stays readable: most of
- * the repo's units have such a dependency, several on half a dozen packages
- * each. A per-unit `test -e ... || echo ...` line for every one of them would
- * be six copies of the same sentence in a `package.json` string.
+ * A legible refusal, not a build: most of the repo's units import at least
+ * one such package, several on half a dozen each, so a per-unit
+ * `test -e ... || echo ...` line for every one of them would be six copies of
+ * the same sentence in a `package.json` string.
  *
  * So the demanded shape is one call to `scripts/require-built-graph.mjs`
  * before `tsc`/`vitest`, which computes the same answer from the same module
@@ -252,7 +242,7 @@ function main() {
   console.error(
     "FAIL — these units' own scripts only work when the compiled graph happens to be warm. " +
       "On a fresh clone they report TS2307, or a runtime error against the unit's own files, " +
-      'which reads as a broken package rather than a missing prerequisite (POPS-3072, POPS-2466):'
+      'which reads as a broken package rather than a missing prerequisite (POPS-3072):'
   );
   for (const failure of failures) console.error(`  ${failure}`);
   console.error(
