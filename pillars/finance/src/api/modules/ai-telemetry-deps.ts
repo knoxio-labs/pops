@@ -5,16 +5,20 @@
  * usage/cost/latency to the ai pillar's `POST /ai-usage/record`. The deps are
  * built once per process: an `httpLookupPricing` adapter pointed at the ai
  * pillar, wrapped in a per-(provider, model) memo so repeated inferences do not
- * re-hit `GET /ai-pricing` on every call, and the default env-driven report
- * sink (`createEnvReportSink` reads `AI_API_URL` first). Reporting is
- * fire-and-forget — a slow or absent sink never alters the caller's behaviour.
+ * re-hit `GET /ai-pricing` on every call, and an explicit `report` sink so a
+ * record the ai pillar refuses is logged rather than dropped (POPS-2332).
+ * Reporting is fire-and-forget — a slow or absent sink never alters the
+ * caller's behaviour.
  */
 import {
   type CallWithLoggingDeps,
+  createEnvReportSink,
   httpLookupPricing,
   type LookupPricingFn,
   type PricingEntry,
 } from '@pops/ai-telemetry';
+
+import { ledgerReportFailedMessage, resolveLedgerCredential } from './ai-ledger-credential.js';
 
 export const FINANCE_DOMAIN = 'finance';
 export const ANTHROPIC_PROVIDER = 'anthropic';
@@ -48,13 +52,22 @@ let cached: CallWithLoggingDeps | undefined;
 let override: CallWithLoggingDeps | undefined;
 
 /**
- * Process-cached telemetry deps for finance callers. The `report` field is left
- * unset so `callWithLogging` falls back to the env-driven sink, which no-ops
- * under vitest/dev when `AI_API_URL`/`POPS_API_INTERNAL_TOKEN` are unset.
+ * Process-cached telemetry deps for finance callers. `report` is built
+ * explicitly, with an `onError` that logs a refused or undelivered record
+ * (POPS-2332) — the default env-driven sink has no such hook, so leaving
+ * `report` unset made a revoked or stale credential fail silently.
  */
 export function financeTelemetryDeps(): CallWithLoggingDeps {
   if (override) return override;
-  cached ??= { lookupPricing: memoizePricing(httpLookupPricing(resolveAiApiUrl())) };
+  cached ??= {
+    lookupPricing: memoizePricing(httpLookupPricing(resolveAiApiUrl())),
+    report: createEnvReportSink({
+      credential: resolveLedgerCredential(),
+      onError: (error) => {
+        console.warn(ledgerReportFailedMessage(error));
+      },
+    }),
+  };
   return cached;
 }
 
