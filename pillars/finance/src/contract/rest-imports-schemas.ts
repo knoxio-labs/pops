@@ -11,10 +11,7 @@ import { z } from 'zod';
 import { ENTITY_TYPES, TRANSACTION_MATCH_TYPES } from '../db/index.js';
 import { FX_CAPTURE_SOURCES } from './fx-capture.js';
 import { CommitBatchSchema, ImportSourceSchema } from './import-source.js';
-import {
-  CALLER_SUPPLIED_TRANSACTIONS_MAX,
-  TransactionTypeSchema,
-} from './rest-corrections-schemas.js';
+import { TransactionTypeSchema } from './rest-corrections-schemas.js';
 import { ChangeSetSchema } from './rest-corrections.js';
 import { RulesAppliedSchema, RuleWriteCountsSchema } from './rest-imports-rule-counts.js';
 import { TagRuleChangeSetSchema } from './rest-tag-rules.js';
@@ -301,31 +298,6 @@ export const ReevaluateWithPendingRulesInputSchema = z.object({
   sessionId: z.string().uuid(),
   pendingChangeSets: z.array(z.object({ changeSet: ChangeSetSchema })),
 });
-
-/**
- * Re-evaluation of rows the caller holds rather than rows a process session
- * holds. A live draft's rows arrive pre-mapped and never pass through
- * `processImport`, so it has no session for the server to load them from.
- *
- * Strict, so a body that also carries the session form's `sessionId` is
- * rejected instead of silently evaluating one form and ignoring the other.
- * The row cap counts every bucket, `skipped` included, because it bounds the
- * request body and every bucket travels in it.
- */
-export const ReevaluateRowsWithPendingRulesInputSchema = z
-  .object({
-    result: ProcessImportOutputSchema.refine(
-      (result) =>
-        result.matched.length +
-          result.uncertain.length +
-          result.failed.length +
-          result.skipped.length <=
-        CALLER_SUPPLIED_TRANSACTIONS_MAX,
-      { message: `At most ${CALLER_SUPPLIED_TRANSACTIONS_MAX} rows can be re-evaluated at once` }
-    ),
-    pendingChangeSets: ReevaluateWithPendingRulesInputSchema.shape.pendingChangeSets,
-  })
-  .strict();
 
 export type ParsedTransaction = z.infer<typeof ParsedTransactionSchema>;
 export type EntityMatch = z.infer<typeof EntityMatchSchema>;

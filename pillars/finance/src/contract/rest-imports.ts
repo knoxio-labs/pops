@@ -17,6 +17,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ImportProgressSchema, SessionIdSchema } from './rest-imports-progress-schemas.js';
+import { ReevaluateRowsWithPendingRulesInputSchema } from './rest-imports-reevaluate-rows-schemas.js';
 import {
   ApplyChangeSetAndReevaluateInputSchema,
   ApplyChangeSetAndReevaluateOutputSchema,
@@ -25,7 +26,6 @@ import {
   CreateEntityInputSchema,
   CreateEntityOutputSchema,
   ProcessImportInputSchema,
-  ReevaluateRowsWithPendingRulesInputSchema,
   ReevaluateWithPendingRulesInputSchema,
 } from './rest-imports-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_412 } from './rest-schemas.js';
