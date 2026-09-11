@@ -1,5 +1,5 @@
 import { globSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -23,6 +23,43 @@ function matchesPerSpecifier(): string[][] {
   );
 }
 
+/**
+ * Finds the one `storyGlobs` entry a predicate identifies, by index into the
+ * shared array — so the tests below reason about "the own-stories specifier"
+ * etc. without retyping any glob literal that already lives in
+ * `story-globs.ts`.
+ */
+function findSpecifierIndex(predicate: (spec: string) => boolean): number {
+  const indices = storyGlobs.reduce<number[]>(
+    (acc, spec, index) => (predicate(spec) ? [...acc, index] : acc),
+    []
+  );
+  expect(
+    indices,
+    `expected exactly one storyGlobs entry to match, found indices: ${indices.join(', ')}`
+  ).toHaveLength(1);
+  return indices[0]!;
+}
+
+const isOwnStoriesSpecifier = (spec: string): boolean =>
+  spec.startsWith('../src/') && spec.includes('.stories.');
+const isPillarsSpecifier = (spec: string): boolean => spec.includes('/pillars/');
+const isSiblingLibSpecifier = (spec: string): boolean => spec.includes('!(ui)');
+
+/**
+ * No sibling lib has stories yet, so the sibling-lib specifier legitimately
+ * matches zero files today — that can't exercise its "!(ui)" exclusion.
+ * Swaps the story-file tail for `package.json`, which every lib has, so the
+ * exclusion is checked against matches that actually exist.
+ */
+function toLibLevelPattern(spec: string): string {
+  const pattern = spec.replace(/src\/\*\*\/\*\.stories\.@\([^)]*\)$/, 'package.json');
+  if (pattern === spec) {
+    throw new Error(`could not derive a lib-level pattern from "${spec}"`);
+  }
+  return pattern;
+}
+
 describe('storybook stories globs', () => {
   it('matches every story/mdx file with exactly one specifier', () => {
     const perSpecifier = matchesPerSpecifier();
@@ -43,6 +80,42 @@ describe('storybook stories globs', () => {
           .map(([file, count]) => `${file} (x${count})`)
           .join(', ')}`
     ).toEqual([]);
+  });
+
+  it('resolves each populated specifier to at least one file on its own', () => {
+    const perSpecifier = matchesPerSpecifier();
+    const ownIndex = findSpecifierIndex(isOwnStoriesSpecifier);
+    const pillarsIndex = findSpecifierIndex(isPillarsSpecifier);
+
+    // The sibling-lib specifier is deliberately not asserted non-empty here:
+    // no sibling lib has stories today, so it legitimately matches nothing.
+    expect(
+      perSpecifier[ownIndex]!.length,
+      `own-stories specifier "${storyGlobs[ownIndex]}" matched no files — its "@(...)" extglob may not be resolving`
+    ).toBeGreaterThan(0);
+    expect(
+      perSpecifier[pillarsIndex]!.length,
+      `pillars specifier "${storyGlobs[pillarsIndex]}" matched no files — its "@(...)" extglob may not be resolving`
+    ).toBeGreaterThan(0);
+  });
+
+  it('excludes libs/ui from the sibling-lib specifier', () => {
+    const siblingIndex = findSpecifierIndex(isSiblingLibSpecifier);
+    const siblingSpec = storyGlobs[siblingIndex]!;
+    const libLevelPattern = toLibLevelPattern(siblingSpec);
+
+    const matches = globSync(libLevelPattern, { cwd: STORYBOOK_DIR }).map((file) =>
+      resolve(STORYBOOK_DIR, file)
+    );
+
+    expect(
+      matches.length,
+      `"${libLevelPattern}" matched no files — the "!(ui)" extglob may not be resolving at all`
+    ).toBeGreaterThan(0);
+    expect(
+      matches.some((file) => file.includes(`${sep}libs${sep}ui${sep}`)),
+      `"${libLevelPattern}" matched a file under libs/ui, so "!(ui)" isn't excluding it: ${matches.join(', ')}`
+    ).toBe(false);
   });
 
   it('gives every story file with an explicit CSF title a unique title (auto-titled files are skipped)', () => {
