@@ -17,3 +17,11 @@ run = "tsx watch --clear-screen=false src/server.ts"
 
 [tasks.start]
 run = "node dist/server.js"
+
+[env]
+# mise's `_.path` interpolates `config_root` per config FILE, so the root
+# mise.toml only ever contributes the workspace-hoisted bin dir — this unit's
+# own tools (pinned via its own package.json and resolved by its own lockfile
+# importer) are otherwise never on PATH, so a bare tool name above would
+# silently resolve the root's node_modules/.bin instead of this unit's own.
+_.path = ["{{config_root}}/node_modules/.bin"]
