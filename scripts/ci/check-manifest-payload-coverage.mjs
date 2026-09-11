@@ -32,11 +32,17 @@
  *
  *   - Non-TypeScript pillars. `pillars/contacts` is Rust: it hand-writes a
  *     `ManifestPayload`-shaped `serde_json::Value` and posts it to the
- *     registry, and nothing here or anywhere else runs that through the Zod
- *     schema before boot. Both derivations below lose it at the same step
- *     (the extension filter), so the registrar cross-check cannot fire on it
- *     either. Tracked as POPS-2592; do not read this guard's OK as covering
- *     it.
+ *     registry, and nothing here reads a line of it — both derivations below
+ *     lose it at the same step (the extension filter), so the registrar
+ *     cross-check cannot fire on it either, and this guard's OK says nothing
+ *     about it. POPS-2592 closed the actual gap a different way: a committed
+ *     fixture (`pillars/contacts/tests/fixtures/manifest.json`) that
+ *     `pillars/contacts/tests/manifest_fixture.rs` pins to `manifest.rs`'s
+ *     real output, run through the real `ManifestPayloadSchema` by
+ *     `check-contacts-manifest-fixture.test.ts` in this same directory's
+ *     `__tests__` — the cross-language check this file's own doc comment
+ *     says Rust cannot do by importing the schema. Contacts is covered; it
+ *     is just never this guard that proves it.
  *   - A pillar that registers through neither `bootstrapPillar(` nor a
  *     discoverable builder. The shell registers through its own CLI, so it is
  *     covered by builder discovery alone, with no cross-check behind it.

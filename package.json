@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@pops/pillar-sdk": "workspace:*",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.3",
     "dependency-cruiser": "^18.2.0",

@@ -503,9 +503,17 @@ describe('discovery against the real repo', () => {
   });
 
   // The Rust pillar hand-writes a ManifestPayload-shaped value and registers
-  // it, and this guard cannot see a line of it. Asserting the blind spot keeps
-  // the file header honest: when contacts becomes visible, this fails and the
-  // header's "WHAT IT CANNOT SEE" section gets revisited. POPS-2592.
+  // it, and this guard still cannot see a line of it — that has not changed.
+  // What changed under POPS-2592 is that contacts no longer NEEDS this guard
+  // to see it: a committed fixture
+  // (`pillars/contacts/tests/fixtures/manifest.json`) is pinned to
+  // `manifest.rs`'s real output by `pillars/contacts/tests/manifest_fixture.rs`
+  // and run through the real `ManifestPayloadSchema` by
+  // `scripts/ci/__tests__/check-contacts-manifest-fixture.test.ts` — a
+  // cross-language check this guard's header says plainly it cannot perform
+  // itself. Asserting the blind spot keeps that header honest: if `.rs` files
+  // ever become readable here, this fails and the header's "WHAT IT CANNOT
+  // SEE" section gets revisited.
   //
   // The assertion is the blind spot itself — contacts registers a manifest and
   // appears in NEITHER derived set — not the symptom that it currently ships

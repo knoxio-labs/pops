@@ -233,6 +233,13 @@ jobs:
           node-version: "24"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # `check-contacts-manifest-fixture.test.ts` (POPS-2592) imports the real
+      # `@pops/pillar-sdk/manifest-schema` — a devDependency of this root
+      # package precisely so that import can resolve — to validate the
+      # committed contacts manifest fixture against the actual wire schema
+      # rather than a re-declared shape. That package resolves to `dist/`, and
+      # nothing else in this job builds it.
+      - run: pnpm --filter "@pops/pillar-sdk..." build
       - run: pnpm exec vitest run scripts/
       - run: mise run typecheck:scripts
 
@@ -611,8 +618,10 @@ jobs:
     # every TypeScript pillar's ManifestPayload builder to be exercised against
     # that validator in a test, and reports a pillar that registers a manifest
     # its builder discovery cannot see. It does NOT cover the Rust `contacts`
-    # pillar, whose hand-written manifest it cannot read at all (POPS-2592) —
-    # the guard's own header says so. It discovers both sides from disk, so a
+    # pillar, whose hand-written manifest it cannot read at all — the guard's
+    # own header says so. Contacts is covered a different way instead (the
+    # "Scripts tests" job's committed-fixture check, POPS-2592), not by this
+    # gate. It discovers both sides from disk, so a
     # new TypeScript pillar is covered without touching this file. It reads the
     # source tree directly and pulls in no third-party deps, so it skips
     # `pnpm install`. See scripts/ci/check-manifest-payload-coverage.mjs.

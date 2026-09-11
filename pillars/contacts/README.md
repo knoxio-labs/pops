@@ -71,9 +71,25 @@ referencing nothing.
 ## What proves cross-language wire conformance
 
 There is no generic conformance harness in the repo — no `wire-conformance`
-package, no black-box probe CLI a pillar author can point at a base URL. Three
+package, no black-box probe CLI a pillar author can point at a base URL. Four
 things stand in for one, and they are what a change to the wire shape has to
 survive.
+
+**`tests/manifest_fixture.rs` pins the manifest against the real wire schema,
+via a committed fixture.** Rust cannot import
+`libs/sdk/src/manifest-schema/schema.ts`, so nothing here can call the
+validator directly the way a TS pillar's own test does. Instead
+`tests/manifest_fixture.rs` serialises `build_contacts_manifest`'s real output
+and compares it to the committed
+`tests/fixtures/manifest.json` (regenerate with `UPDATE_MANIFEST_FIXTURE=1
+cargo test -p contacts --test manifest_fixture` when a deliberate change moves
+it), and
+`scripts/ci/__tests__/check-contacts-manifest-fixture.test.ts` parses that same
+committed file with the real `ManifestPayloadSchema`. Together the two prove
+`manifest.rs`'s actual output is schema-valid without either language reading
+the other's code — closing the gap `scripts/ci/check-manifest-payload-coverage.mjs`
+(POPS-2585) cannot: it reads `.ts`/`.tsx` only, so this pillar is invisible to
+it (POPS-2592).
 
 **The registry rejects a non-conforming manifest at register time.**
 `pillars/registry/src/api/modules/external-registry/register.ts` runs the
@@ -126,7 +142,8 @@ pillars/contacts/
 │   ├── search/             contacts search slice
 │   ├── health.rs           /health envelope
 │   └── time.rs             timestamp helpers
-└── tests/                  integration tests (entities, health, openapi, registry)
+└── tests/                  integration tests (entities, health, openapi, registry, manifest fixture)
+    └── fixtures/manifest.json  committed manifest fixture (see "What proves cross-language wire conformance")
 ```
 
 ## Build, test, run
