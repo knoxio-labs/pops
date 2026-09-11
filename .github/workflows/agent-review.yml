@@ -112,6 +112,7 @@ jobs:
           node scripts/ci/check-writable-path-defaults.mjs --self-test
           node scripts/ci/check-subprocess-test-timeouts.mjs --self-test
           node scripts/ci/check-cold-graph-typecheck.mjs --self-test
+          node scripts/ci/check-commit-attribution.mjs --self-test
           # Not a guard over the source tree like the ones above — it is the
           # gate that decides whether the merge queue's macOS compile happens.
           # It self-tests in its own job too, immediately before it answers;
@@ -126,6 +127,17 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
         run: node scripts/ci/check-contract-isolation.mjs --base "origin/${BASE_REF#refs/heads/}"
+      - name: Commit attribution guard (POPS-3430 — no commit or PR body credits an AI assistant or carries a fixture identity)
+        # Every commit in the range, not only the head: the repository
+        # squash-merges with every branch commit message copied into `main`.
+        # On a merge group the range is the queued squash commit itself, which
+        # already holds whatever the branch commits carried. The PR body only
+        # exists on a pull request, and rides in through env so its text is
+        # never interpolated into the shell.
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/ci/check-commit-attribution.mjs --base "origin/${BASE_REF#refs/heads/}"
       - name: Lib-never-imports-pillar guard
         run: node scripts/ci/check-lib-no-pillar-import.mjs
       - name: Known-pillars drift guard (PILLARS tuple vs on-disk data pillars)

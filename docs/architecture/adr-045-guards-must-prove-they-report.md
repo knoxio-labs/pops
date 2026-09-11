@@ -138,9 +138,9 @@ Two shared modules sit under Tier B and must never be imported from a Tier A gua
 
 ### Tier A guards that ride in a Tier B job
 
-`agent-review.yml` runs eleven guards in one job. Four of them are Tier B, so the job installs, and the other seven get an install they do not need:
+`agent-review.yml` runs twelve guards in one job. Four of them are Tier B, so the job installs, and the other eight get an install they do not need:
 
-`check-lib-no-pillar-import.mjs`, `check-contract-isolation.mjs`, `check-known-pillars-coverage.mjs`, `check-tests-typechecked.mjs`, `check-docs-model.mjs`, `check-subprocess-test-timeouts.mjs`, `check-cold-graph-typecheck.mjs`.
+`check-lib-no-pillar-import.mjs`, `check-contract-isolation.mjs`, `check-known-pillars-coverage.mjs`, `check-tests-typechecked.mjs`, `check-docs-model.mjs`, `check-subprocess-test-timeouts.mjs`, `check-cold-graph-typecheck.mjs`, `check-commit-attribution.mjs`.
 
 Splitting them into a second job was considered and rejected: `agent-review` is a **required context** on `main`, and only one job can carry that name. Whichever half kept the name would be the half that blocks, and the other half would silently become advisory — a guard that no longer gates is worse than a guard that waits thirty seconds for a cached install.
 
