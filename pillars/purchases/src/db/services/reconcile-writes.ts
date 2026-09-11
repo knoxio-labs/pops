@@ -126,17 +126,6 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
   return written;
 }
 
-/** Charge ids belonging to the given orders, for scoping a teardown. */
-export function chargeIdsForPurchases(db: PurchasesDb, purchaseIds: readonly string[]): string[] {
-  if (purchaseIds.length === 0) return [];
-  return db
-    .select({ id: purchaseCharges.id })
-    .from(purchaseCharges)
-    .where(inArray(purchaseCharges.purchaseId, [...purchaseIds]))
-    .all()
-    .map((row) => row.id);
-}
-
 /**
  * Remove one link entirely, confirmed or not, remembering nothing.
  *
