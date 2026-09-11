@@ -1051,6 +1051,45 @@ export type PurchaseGetResponses = {
 
 export type PurchaseGetResponse = PurchaseGetResponses[keyof PurchaseGetResponses];
 
+export type PurchaseEraseCaptureLocationData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}/capture/location';
+};
+
+export type PurchaseEraseCaptureLocationErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseEraseCaptureLocationError =
+  PurchaseEraseCaptureLocationErrors[keyof PurchaseEraseCaptureLocationErrors];
+
+export type PurchaseEraseCaptureLocationResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type PurchaseEraseCaptureLocationResponse =
+  PurchaseEraseCaptureLocationResponses[keyof PurchaseEraseCaptureLocationResponses];
+
 export type PurchaseAttachDocumentData = {
   /**
    * Body

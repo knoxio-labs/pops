@@ -10,6 +10,7 @@ import {
   createPurchase,
   decideInventoryProposal,
   deletePurchase,
+  eraseCaptureLocation,
   getPurchase,
   listInventoryProposals,
   listItemsByTag,
@@ -173,6 +174,11 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
 
     delete: async ({ params }: { params: { id: string } }) => {
       if (!deletePurchase(db, params.id)) return notFound(params.id);
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+
+    eraseCaptureLocation: async ({ params }: { params: { id: string } }) => {
+      if (!eraseCaptureLocation(db, params.id)) return notFound(params.id);
       return { status: 200 as const, body: { ok: true as const } };
     },
 

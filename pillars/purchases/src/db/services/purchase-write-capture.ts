@@ -7,9 +7,12 @@
  * that writes them is easier to hold to that when it is not buried in the
  * order-ingest path. Nothing here logs a value.
  */
-import { purchaseCapture } from '../schema.js';
+import { eq } from 'drizzle-orm';
+
+import { purchaseCapture, purchases } from '../schema.js';
 
 import type { CaptureSource } from '../../contract/constants.js';
+import type { PurchasesDb } from './internal.js';
 import type { CreateCaptureInput } from './purchase-input.js';
 import type { IngestContext } from './purchase-write-context.js';
 
@@ -72,4 +75,35 @@ export function insertCapture(ctx: IngestContext, input: CreateCaptureInput | un
       createdAt: ctx.now,
     })
     .run();
+}
+
+/**
+ * Strip a purchase's stored capture location, keeping the purchase and
+ * everything else the capture row holds.
+ *
+ * Nulls `latitude`, `longitude` and `location_source` rather than deleting
+ * the row: `capturedAt` and its timezone provenance are a separate fact the
+ * row also carries, and deleting it would erase that too. The CHECK the
+ * table already declares (`ck_purchase_capture_location_pair`) is what
+ * forces the pair to move together here as well as on every insert.
+ *
+ * Idempotent by design: a purchase with no capture row, or one whose
+ * location is already null, both report success. Only an unknown purchase
+ * id is a failure, reported as `false` so the caller can answer 404 without
+ * this function needing to know about HTTP.
+ */
+export function eraseCaptureLocation(db: PurchasesDb, purchaseId: string): boolean {
+  const found = db
+    .select({ id: purchases.id })
+    .from(purchases)
+    .where(eq(purchases.id, purchaseId))
+    .all()[0];
+  if (found === undefined) return false;
+
+  db.update(purchaseCapture)
+    .set({ latitude: null, longitude: null, locationSource: null })
+    .where(eq(purchaseCapture.purchaseId, purchaseId))
+    .run();
+
+  return true;
 }

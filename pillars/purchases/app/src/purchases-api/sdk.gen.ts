@@ -41,6 +41,9 @@ import type {
   PurchaseDeleteData,
   PurchaseDeleteErrors,
   PurchaseDeleteResponses,
+  PurchaseEraseCaptureLocationData,
+  PurchaseEraseCaptureLocationErrors,
+  PurchaseEraseCaptureLocationResponses,
   PurchaseGetData,
   PurchaseGetErrors,
   PurchaseGetResponses,
@@ -298,6 +301,29 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<PurchaseGetResponses, PurchaseGetErrors, ThrowOnError>({
     url: '/purchases/{id}',
     ...options,
+  });
+
+/**
+ * Erase an order's stored capture location, keeping the order
+ */
+export const purchaseEraseCaptureLocation = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseEraseCaptureLocationData, ThrowOnError>
+): RequestResult<
+  PurchaseEraseCaptureLocationResponses,
+  PurchaseEraseCaptureLocationErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    PurchaseEraseCaptureLocationResponses,
+    PurchaseEraseCaptureLocationErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/{id}/capture/location',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

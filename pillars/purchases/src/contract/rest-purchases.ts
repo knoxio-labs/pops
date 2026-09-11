@@ -122,6 +122,28 @@ export const purchasesPurchaseContract = c.router({
     summary: 'Hard-delete an order (everything hanging off it cascades)',
   },
   /**
+   * Strip a stored capture location while keeping the order.
+   *
+   * Before this, the cascade off `purchases` was the only way to remove a
+   * `purchase_capture` row's coordinates — which meant taking one back
+   * required deleting the order it describes. This nulls the coordinate
+   * pair and `location_source` instead, and reports success whether or not
+   * a location was ever stored: a caller correcting a mistake it cannot
+   * see the current state of should not have to distinguish "already
+   * gone" from "just erased".
+   *
+   * The response carries no coordinate, on the first call or any repeat —
+   * {@link OkSchema} is `{ ok: true }` and nothing else.
+   */
+  eraseCaptureLocation: {
+    method: 'DELETE',
+    path: '/purchases/:id/capture/location',
+    pathParams: z.object({ id: z.string() }),
+    body: z.object({}).optional(),
+    responses: { 200: OkSchema, 404: ErrorBodySchema },
+    summary: "Erase an order's stored capture location, keeping the order",
+  },
+  /**
    * The pillar's first item-level mutation, and the only way an item tag or
    * a confirmed kind is ever written.
    *
