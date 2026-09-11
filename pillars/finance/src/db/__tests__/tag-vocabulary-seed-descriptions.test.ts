@@ -190,14 +190,8 @@ describe('the seeded classified vocabulary', () => {
         .all() as { tag: string }[]
     ).map((row) => row.tag);
 
-    // POPS-3304: 0067/0069 had checked personal instance values (a person's
-    // tag, a trip, and a few other user-specific values) into this migration
-    // chain, active by default. The person-facet one had no other reference
-    // in the chain and was dropped outright; the rest stay as rows — 0067's
-    // historical relabel still writes them onto a transaction that once
-    // carried the matching old flat tag — but seeded inactive, same as any
-    // other retired value. Pinning the active list is what stops the next
-    // migration adding a personal one back without somebody deciding to.
+    // Pinning the active list is what stops a future migration from adding a
+    // personal value back in without somebody deciding to.
     expect(unclassified).toEqual([
       'enrich:amazon',
       'enrich:apple',
@@ -215,12 +209,11 @@ describe('the seeded classified vocabulary', () => {
 });
 
 /**
- * POPS-3304: `trip` and `person` are open/marker facets a human mints at
- * runtime — a specific trip or a specific person's name is never something a
- * checked-in migration should offer as active vocabulary. Unlike `asset`,
- * `hobby` and `tax`, which can legitimately carry a generic value
- * (`tax:deductible`), nothing on either of these two facets is meant to be
- * active out of the box.
+ * `trip` and `person` are open/marker facets a human mints at runtime — a
+ * specific trip or a specific person's name is never something a checked-in
+ * migration should offer as active vocabulary. Unlike `asset`, `hobby` and
+ * `tax`, which can legitimately carry a generic value (`tax:deductible`),
+ * nothing on either of these two facets is meant to be active out of the box.
  */
 describe('the seed carries no active personal-facet rows', () => {
   it('seeds no active trip or person value', () => {
