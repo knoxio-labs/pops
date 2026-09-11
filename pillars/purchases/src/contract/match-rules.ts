@@ -94,7 +94,7 @@ const NEVER_MATCHES: MatchRulePredicate = () => false;
  * representation each match type sees: `exact` and `contains` test
  * {@link MatchableDescriptor.normalized}, `regex` tests
  * {@link MatchableDescriptor.raw}, because normalisation strips digits and a
- * regex run against it could never see one (POPS-2640, POPS-2651). It also
+ * regex run against it could never see one (POPS-2640). It also
  * mirrors finance's regex flags: `i` and not `iu`, because the unicode flag
  * makes an identity escape (`\ `, `\-`) a SyntaxError, and a pattern finance
  * honours would then be silently inert on this side of the seam.

@@ -81,7 +81,7 @@ describe('compileMatchRulePattern', () => {
     expect(matches('^woolworths', 'regex', 'Amazon Mktplace AU 4128')).toBe(false);
   });
 
-  it('tests a regex against the raw descriptor, so a digit run is visible (POPS-2651)', () => {
+  it('tests a regex against the raw descriptor, so a digit run is visible', () => {
     // normalizeMatchDescriptor strips digits, so a pattern anchored on the
     // store number could never see one if it were tested against the
     // normalised form — exactly the gap finance closed for the same reason
@@ -106,7 +106,7 @@ describe('compileMatchRulePattern', () => {
     }
   });
 
-  it('still tests exact and contains against the normalised form, unchanged by POPS-2651', () => {
+  it('still tests exact and contains against the normalised form', () => {
     // Digits still must not distinguish two rows of the same shop for the
     // predicate kinds finance did not move.
     expect(matches('WOOLWORTHS SYDNEY', 'exact', 'Woolworths 1234 Sydney')).toBe(true);
@@ -114,7 +114,7 @@ describe('compileMatchRulePattern', () => {
   });
 });
 
-describe('parity with finance (POPS-2651)', () => {
+describe('parity with finance', () => {
   // `patternMatchesDescription` is not importable here — purchases has no
   // `@pops/finance` dependency, and ADR-042 is explicit that the matcher is
   // reproduced across the seam rather than imported. These triples are

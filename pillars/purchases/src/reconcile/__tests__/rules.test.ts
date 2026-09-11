@@ -80,7 +80,7 @@ describe('which rule speaks for a descriptor', () => {
     expect(matcher('PAYPAL AMZN MKTP')).toBeNull();
   });
 
-  it('tests a regex rule against the raw transaction descriptor (POPS-2651)', () => {
+  it('tests a regex rule against the raw transaction descriptor', () => {
     // The stored pattern names a store number, which normalizeMatchDescriptor
     // would strip before a regex ever saw it — the same gap finance closed
     // under POPS-2640 for the same reason.
