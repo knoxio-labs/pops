@@ -29,31 +29,11 @@
  */
 import { RequestValidationError } from '@ts-rest/express';
 
-import { DEVICE_FACING_PATHS, MOBILE_PATH_PREFIX } from '../paths.js';
+import { INVALID_REQUEST, isDeviceFacingPath } from './invalid-request-scope.js';
 
 import type { NextFunction, Response } from 'express';
 
-import type { DeviceInvalidRequestError } from '../../contract/rest-device-schemas.js';
-import type { MobileRequestError } from '../../contract/rest-schemas.js';
-
-/**
- * All this handler reads. Declared structurally rather than as express's
- * `Request` because ts-rest hands it a `TsRestRequest<…>` narrowed to the
- * contract, which is not assignable to the plain express type.
- */
-type PathOnlyRequest = { readonly path: string };
-
-/**
- * One constant, typed against both contracts that declare it — the `/mobile`
- * routes' `MobileRequestErrorSchema` and the pairing route's own 400. The two
- * are independent shapes that happen to agree on this value, so annotating it
- * twice is what keeps them from drifting apart silently: drop `invalid_request`
- * from either and this stops compiling.
- */
-const INVALID_REQUEST: MobileRequestError & DeviceInvalidRequestError = {
-  code: 'invalid_request',
-  message: 'This request does not match what the server accepts.',
-};
+import type { PathOnlyRequest } from './invalid-request-scope.js';
 
 /**
  * ts-rest's own precedence: path params, then headers, then query, then body.
@@ -62,17 +42,6 @@ const INVALID_REQUEST: MobileRequestError & DeviceInvalidRequestError = {
  */
 function defaultBody(error: RequestValidationError): unknown {
   return error.pathParams ?? error.headers ?? error.query ?? error.body;
-}
-
-function isUnderPrefix(path: string, prefix: string): boolean {
-  // Whole-segment match, the same rule `app.use` applies when mounting the
-  // perimeter — so `/mobiles` is not treated as `/mobile`.
-  return path === prefix || path.startsWith(`${prefix}/`);
-}
-
-function isDeviceFacingPath(req: PathOnlyRequest): boolean {
-  if (isUnderPrefix(req.path, MOBILE_PATH_PREFIX)) return true;
-  return DEVICE_FACING_PATHS.some((path) => isUnderPrefix(req.path, path));
 }
 
 export function createRequestValidationErrorHandler() {

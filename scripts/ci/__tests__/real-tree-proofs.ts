@@ -113,6 +113,16 @@ export const REAL_TREE_PROOFS = [
     script: 'scripts/ci/check-shared-runtime-completeness.mjs',
     args: ['--self-test'],
   },
+  {
+    id: 'check-types-node-major',
+    script: 'scripts/ci/check-types-node-major.mjs',
+    args: [],
+  },
+  {
+    id: 'check-types-node-major:self-test',
+    script: 'scripts/ci/check-types-node-major.mjs',
+    args: ['--self-test'],
+  },
 ] as const satisfies readonly RealTreeProof[];
 
 /** Key of a registered proof. */

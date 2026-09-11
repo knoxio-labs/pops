@@ -44,16 +44,48 @@ describe('finance.transactions.list', () => {
   const tool = financeTools.find((t) => t.name === 'finance.transactions.list')!;
 
   it('passes date filters through', async () => {
-    await tool.handler({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'expense' });
+    await tool.handler({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'refund' });
     expect(transactions.list).toHaveBeenCalledWith(
-      expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'expense' })
+      expect.objectContaining({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'refund' })
     );
   });
+
+  it.each(['purchase', 'transfer', 'income', 'refund', 'reversal', 'loan', 'rebate', 'tax'])(
+    'forwards the real transaction type %s to finance.transactions.list',
+    async (type) => {
+      await tool.handler({ type });
+      const call = transactions.list.mock.lastCall?.[0];
+      expect((call as Record<string, unknown>)['type']).toBe(type);
+    }
+  );
 
   it('ignores invalid type values', async () => {
     await tool.handler({ type: 'invalid' });
     const call = transactions.list.mock.lastCall?.[0];
     expect((call as Record<string, unknown>)['type']).toBeUndefined();
+  });
+
+  it('ignores "expense", which is not a real transaction type', async () => {
+    await tool.handler({ type: 'expense' });
+    const call = transactions.list.mock.lastCall?.[0];
+    expect((call as Record<string, unknown>)['type']).toBeUndefined();
+  });
+
+  it('declares the real transaction type vocabulary in the tool schema, not "expense"', () => {
+    const properties = tool.inputSchema.properties as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(properties?.['type']?.enum).toEqual([
+      'purchase',
+      'transfer',
+      'income',
+      'refund',
+      'reversal',
+      'loan',
+      'rebate',
+      'tax',
+      'fee',
+    ]);
   });
 
   it('returns isError on unavailable', async () => {

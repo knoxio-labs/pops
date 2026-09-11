@@ -1,10 +1,10 @@
 /**
  * Unit tests for the inventory cross-pillar URI reconciliation cron.
  *
- * Covers happy-path, 404, owning-pillar-unavailable, and bad-URI outcomes,
- * the alarm that fires when rows name a finance transaction the writer failed
- * to derive a URI for, and the timer-based scheduling path that arms the next
- * tick after the current one settles.
+ * Covers happy-path, 404, owning-pillar-unavailable, owning-pillar-misconfigured,
+ * and bad-URI outcomes, the alarm that fires when rows name a finance
+ * transaction the writer failed to derive a URI for, and the timer-based
+ * scheduling path that arms the next tick after the current one settles.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -13,12 +13,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  PillarCallError,
-  type CallFailure,
-  type CallResult,
-  type PillarHandle,
-} from '@pops/pillar-sdk/server';
+import { PillarCallError, type CallFailure, type CallResult } from '@pops/pillar-sdk/server';
 
 import {
   crossPillarUrisService,
@@ -32,10 +27,9 @@ import {
   parseSoftUri,
   runReconciliation,
   startCrossPillarReconciliationWorker,
+  type FinanceReconcileClient,
   type ReconcileOutcome,
 } from '../reconcile-cross-pillar.js';
-
-import type { FinanceRouter } from '../reconcile-cross-pillar.js';
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -95,8 +89,8 @@ interface FakeFinanceCall {
   error?: unknown;
 }
 
-function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): PillarHandle<FinanceRouter> {
-  const fake = {
+function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): FinanceReconcileClient {
+  return {
     callDynamic: vi.fn(
       async (
         _routerName: string,
@@ -114,7 +108,6 @@ function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): PillarHandle<F
       }
     ),
   };
-  return fake as unknown as PillarHandle<FinanceRouter>;
 }
 
 describe('parseSoftUri', () => {
@@ -157,9 +150,9 @@ const CALL_RESULT_KINDS: readonly [CallResult<unknown>, ReconcileOutcome][] = [
   [{ kind: 'refused', pillar: 'finance', status: 422 }, 'bad-request'],
   [{ kind: 'unavailable', pillar: 'finance' }, 'unavailable'],
   [{ kind: 'degraded', pillar: 'finance', reason: 'reconciling' }, 'unavailable'],
-  [{ kind: 'contract-mismatch', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'contract-mismatch', pillar: 'finance' }, 'misconfigured'],
   [{ kind: 'conflict', pillar: 'finance' }, 'unavailable'],
-  [{ kind: 'unauthorized', pillar: 'finance' }, 'unavailable'],
+  [{ kind: 'unauthorized', pillar: 'finance' }, 'misconfigured'],
   [{ kind: 'rate-limited', pillar: 'finance' }, 'unavailable'],
 ];
 
@@ -229,7 +222,7 @@ describe('runReconciliation — happy-path', () => {
       logger: { info },
     });
 
-    expect(counters).toEqual({ ok: 1, notFound: 0, unavailable: 0, badUri: 0 });
+    expect(counters).toEqual({ ok: 1, notFound: 0, unavailable: 0, badUri: 0, misconfigured: 0 });
     expect(readRow('row-1').purchaseTransactionStaleAt).toBeNull();
     expect(info).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation complete',
@@ -270,7 +263,7 @@ describe('runReconciliation — the leg has no work', () => {
       logger: { info, warn },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0 });
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0, misconfigured: 0 });
     expect(info).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
     expect(finance.callDynamic).not.toHaveBeenCalled();
@@ -282,6 +275,7 @@ describe('runReconciliation — the leg has no work', () => {
       notFound: 0,
       unavailable: 0,
       badUri: 0,
+      misconfigured: 0,
     });
   });
 
@@ -353,7 +347,7 @@ describe('runReconciliation — 404', () => {
       proxies: { finance },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 1, unavailable: 0, badUri: 0 });
+    expect(counters).toEqual({ ok: 0, notFound: 1, unavailable: 0, badUri: 0, misconfigured: 0 });
     expect(readRow('row-2').purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
     expect(inventoryDb.db.select().from(homeInventory).all()).toHaveLength(1);
   });
@@ -364,11 +358,11 @@ describe('runReconciliation — 404', () => {
       purchaseTransactionId: 'raise-404',
       purchaseTransactionUri: 'pops://finance/transaction/raise-404',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async () => {
         throw new PillarCallError('finance', { kind: 'not-found', pillar: 'finance' });
       }),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
@@ -384,12 +378,12 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       purchaseTransactionId: 'tx-3',
       purchaseTransactionUri: 'pops://finance/transaction/tx-3',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'unavailable',
         pillar: 'finance',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
     const warn = vi.fn();
 
     const counters = await runReconciliation({
@@ -398,7 +392,7 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       logger: { warn },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 1, badUri: 0 });
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 1, badUri: 0, misconfigured: 0 });
     expect(readRow('row-3').purchaseTransactionStaleAt).toBeNull();
     expect(warn).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation: owning pillar unavailable',
@@ -412,16 +406,65 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       purchaseTransactionId: 'transient',
       purchaseTransactionUri: 'pops://finance/transaction/transient',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async () => {
         throw new Error('socket hang up');
       }),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
     expect(counters.unavailable).toBe(1);
     expect(readRow('row-3b').purchaseTransactionStaleAt).toBeNull();
+  });
+});
+
+describe('runReconciliation — misconfigured', () => {
+  it('logs + leaves the row untouched on unauthorized', async () => {
+    seedRow({
+      id: 'row-3c',
+      purchaseTransactionId: 'tx-3c',
+      purchaseTransactionUri: 'pops://finance/transaction/tx-3c',
+    });
+    const finance: FinanceReconcileClient = {
+      callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
+        kind: 'unauthorized',
+        pillar: 'finance',
+      })),
+    };
+    const warn = vi.fn();
+
+    const counters = await runReconciliation({
+      db: inventoryDb.db,
+      proxies: { finance },
+      logger: { warn },
+    });
+
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0, misconfigured: 1 });
+    expect(readRow('row-3c').purchaseTransactionStaleAt).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      'inventory cross-pillar reconciliation: owning pillar misconfigured (credential or contract fault, will not heal by retrying)',
+      expect.objectContaining({ uri: 'pops://finance/transaction/tx-3c' })
+    );
+  });
+
+  it('logs + leaves the row untouched on contract-mismatch', async () => {
+    seedRow({
+      id: 'row-3d',
+      purchaseTransactionId: 'tx-3d',
+      purchaseTransactionUri: 'pops://finance/transaction/tx-3d',
+    });
+    const finance: FinanceReconcileClient = {
+      callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
+        kind: 'contract-mismatch',
+        pillar: 'finance',
+      })),
+    };
+
+    const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
+
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 0, misconfigured: 1 });
+    expect(readRow('row-3d').purchaseTransactionStaleAt).toBeNull();
   });
 });
 
@@ -441,7 +484,7 @@ describe('runReconciliation — bad-URI', () => {
       logger: { warn },
     });
 
-    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 1 });
+    expect(counters).toEqual({ ok: 0, notFound: 0, unavailable: 0, badUri: 1, misconfigured: 0 });
     expect(readRow('row-4').purchaseTransactionStaleAt).toBeNull();
     expect(warn).toHaveBeenCalledWith(
       'inventory cross-pillar reconciliation: bad uri (unparseable / wrong shape)',
@@ -455,13 +498,13 @@ describe('runReconciliation — bad-URI', () => {
       purchaseTransactionId: 'refused',
       purchaseTransactionUri: 'pops://finance/transaction/refused',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'bad-request',
         pillar: 'finance',
         message: 'no such id format',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 

@@ -8,13 +8,19 @@ import {
   type TagCreationIntent,
 } from '../../lib/tags';
 import { makeKeyDownHandler } from './tagEditorKeyDown';
-import { SUGGESTION_LIMIT, type TagEditorProps } from './utils';
+import { SUGGESTION_LIMIT, type TagEditorProps, type TagMetaEntry } from './utils';
 
 export interface PanelHandlers {
   tags: string[];
   inputValue: string;
   /** Suggestions in display order, already capped at `SUGGESTION_LIMIT`. */
   filtered: string[];
+  /**
+   * Provenance for the tags in `tags` that were added through `onSuggest`,
+   * keyed by tag string. A tag typed by hand, or one whose provenance was
+   * dropped by removing it, has no entry.
+   */
+  tagMeta: Map<string, TagMetaEntry>;
   /** What the typed text would create, driving the panel's create row. */
   creation: TagCreationIntent;
   isSaving: boolean;
@@ -29,9 +35,22 @@ export interface PanelHandlers {
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
+interface TagState {
+  tags: string[];
+  /** Provenance for tags added via `onSuggest`, dropped when a tag is removed. */
+  meta: Map<string, TagMetaEntry>;
+}
+
+function pruneMeta(meta: Map<string, TagMetaEntry>, keep: string[]): Map<string, TagMetaEntry> {
+  const keepSet = new Set(keep);
+  const next = new Map<string, TagMetaEntry>();
+  for (const [tag, entry] of meta) if (keepSet.has(tag)) next.set(tag, entry);
+  return next;
+}
+
 function useCoreState(currentTags: string[]) {
   const [open, setOpen] = useState(false);
-  const [tags, setTags] = useState<string[]>(currentTags);
+  const [tagState, setTagState] = useState<TagState>({ tags: currentTags, meta: new Map() });
   const [inputValue, setInputValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -39,13 +58,26 @@ function useCoreState(currentTags: string[]) {
   const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
   if (currentTags !== prevCurrentTags) {
     setPrevCurrentTags(currentTags);
-    setTags(currentTags);
+    setTagState((prev) => ({ tags: currentTags, meta: pruneMeta(prev.meta, currentTags) }));
   }
+  // Bridges the combined { tags, meta } state back to the plain
+  // string[]-setter shape the key-down handler and manual add/remove paths
+  // already expect, so only this hook needs to know tags and their
+  // provenance move together.
+  const setTags: React.Dispatch<React.SetStateAction<string[]>> = (update) => {
+    setTagState((prev) => ({
+      ...prev,
+      tags:
+        typeof update === 'function' ? (update as (p: string[]) => string[])(prev.tags) : update,
+    }));
+  };
   return {
     open,
     setOpen,
-    tags,
+    tags: tagState.tags,
+    tagMeta: tagState.meta,
     setTags,
+    setTagState,
     inputValue,
     setInputValue,
     isSaving,
@@ -68,13 +100,19 @@ interface ActionsArgs {
 function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
   const addTag = (tag: string) => {
     const trimmed = tag.trim();
-    if (trimmed && !s.tags.includes(trimmed)) s.setTags((prev) => [...prev, trimmed]);
+    if (trimmed) s.setTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
     s.setInputValue('');
     s.inputRef.current?.focus();
   };
-  const removeTag = (tag: string) => s.setTags((prev) => prev.filter((t) => t !== tag));
+  const removeTag = (tag: string) =>
+    s.setTagState((prev) => {
+      if (!prev.tags.includes(tag)) return prev;
+      const meta = new Map(prev.meta);
+      meta.delete(tag);
+      return { tags: prev.tags.filter((t) => t !== tag), meta };
+    });
   const handleCancel = () => {
-    s.setTags(currentTags);
+    s.setTagState((prev) => ({ tags: currentTags, meta: pruneMeta(prev.meta, currentTags) }));
     s.setInputValue('');
     s.setOpen(false);
   };
@@ -87,12 +125,30 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
       s.setIsSaving(false);
     }
   };
+  // Suggest merges every candidate straight into the tags, skipping ones
+  // already present — unlike autocomplete's one-at-a-time picks, a
+  // low-confidence AI guess still lands directly, so its provenance is what
+  // lets the panel flag it rather than a review step gating it first.
   const handleSuggest = onSuggest
     ? async () => {
         s.setIsSuggesting(true);
         try {
-          const suggested = await onSuggest();
-          s.setTags((prev) => [...prev, ...suggested.filter((t) => !prev.includes(t))]);
+          const suggestions = await onSuggest();
+          s.setTagState((prev) => {
+            const additions = suggestions.filter(
+              (suggestion) => !prev.tags.includes(suggestion.tag)
+            );
+            if (additions.length === 0) return prev;
+            const meta = new Map(prev.meta);
+            for (const addition of additions) {
+              meta.set(addition.tag, {
+                source: addition.source,
+                pattern: addition.pattern,
+                isNew: addition.isNew,
+              });
+            }
+            return { tags: [...prev.tags, ...additions.map((addition) => addition.tag)], meta };
+          });
         } finally {
           s.setIsSuggesting(false);
         }
@@ -124,6 +180,7 @@ export function useTagEditorState(props: TagEditorProps) {
     tags: s.tags,
     inputValue: s.inputValue,
     filtered,
+    tagMeta: s.tagMeta,
     creation,
     isSaving: s.isSaving,
     isSuggesting: s.isSuggesting,
@@ -161,5 +218,5 @@ export function useTagEditorState(props: TagEditorProps) {
     else handleCancel();
   };
 
-  return { open: s.open, setOpen: onOpenChange, tags: s.tags, handlers };
+  return { open: s.open, setOpen: onOpenChange, tags: s.tags, tagMeta: s.tagMeta, handlers };
 }

@@ -66,7 +66,21 @@ export function validateFiles({ list, accept, maxSize, maxFiles, onError }: Vali
   return out;
 }
 
-/** The library's own phrasing of a {@link FileValidationErrorReason}, from the `ui` catalog. */
+/**
+ * The library's default phrasing of a {@link FileValidationErrorReason} — the
+ * same sentence `FileUpload` attaches as `message` on its `onError` callback.
+ *
+ * Exported as a plain function, not a hook, so it can be called outside a
+ * component: a consumer holding onto reasons (to summarize refusals after the
+ * fact, or re-render them when the language changes) can phrase them the way
+ * the library would without waiting on another `onError` call.
+ *
+ * @param t - A translator for the `ui` namespace, e.g. from
+ * `useTranslation('ui')` or `i18n.getFixedT(locale, 'ui')`. Its bound
+ * language does not have to match `locale`.
+ * @param locale - BCP 47 locale used to format the byte size in a
+ * `too-large` reason; ignored for the other reason kinds.
+ */
 export function describeFileValidationError(
   t: TFunction<'ui'>,
   reason: FileValidationErrorReason,

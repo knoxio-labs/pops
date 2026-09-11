@@ -220,6 +220,38 @@ export class AuthFailureError extends Error {
 }
 
 /**
+ * A 503 from `/purchases` means the scope gate could not verify the
+ * credential at all — `libs/pillar-express/src/service-account-scope-gate.ts`
+ * returns exactly this status, with exactly this message, for one reason
+ * only: the registry it checks the account against is unreachable. That is
+ * account-level and transient, unlike a per-order rejection: nothing about
+ * the next order makes it likelier to succeed, but nothing about the account
+ * is actually wrong either, so the remedy is "retry once the registry is
+ * up", not "widen the grant" (that is {@link AuthFailureError}'s advice, and
+ * would be wrong here). `postPurchases` stops on the first 503 rather than
+ * waiting for a run of them: this script has no retry or backoff between
+ * requests, so riding out a blip would mean burning through the rest of the
+ * bundle against a dependency already known to be down.
+ */
+export class RegistryUnavailableError extends Error {
+  /**
+   * @param outcome What the run had already done when it stopped. A backfill
+   *   is not transactional, and the orders it skipped and the ones it failed
+   *   on are as much a part of that as the ones it wrote.
+   */
+  constructor(readonly outcome: BackfillOutcome) {
+    super(
+      'stopping: the registry is unreachable, so the service-account credential could not be ' +
+        `verified (503). ${String(outcome.created)} order(s) were written and ` +
+        `${String(outcome.skipped)} were already present before this happened; check that the ` +
+        'registry and the purchases pillar are up, then re-run — an order already written comes ' +
+        'back as a 409 and is skipped.'
+    );
+    this.name = 'RegistryUnavailableError';
+  }
+}
+
+/**
  * Hooks for a caller whose purchases reference something outside the request.
  *
  * A purchase can name a file the request does not carry — an invoice URI that
@@ -227,10 +259,10 @@ export class AuthFailureError extends Error {
  * that points at them, and must not be left behind when no row is written, so
  * the caller needs both edges of each request rather than the totals.
  *
- * A run can also end part-way through: {@link AuthFailureError} leaves the
- * purchases after the stop with neither hook called, so a caller that acts on
- * `beforeRequest` has to reconcile what it did when the call throws as well as
- * when it returns.
+ * A run can also end part-way through: {@link AuthFailureError} and
+ * {@link RegistryUnavailableError} leave the purchases after the stop with
+ * neither hook called, so a caller that acts on `beforeRequest` has to
+ * reconcile what it did when the call throws as well as when it returns.
  */
 export interface PostPurchaseHooks {
   /** Before the request is made. */
@@ -261,6 +293,8 @@ export async function postPurchases(
     else if (response.status === 409) skipped += 1;
     else if (response.status === 401 || response.status === 403) {
       throw new AuthFailureError(response.status, { created, skipped, failures });
+    } else if (response.status === 503) {
+      throw new RegistryUnavailableError({ created, skipped, failures });
     } else {
       failures.push(
         `${purchase.sourceOrderId ?? '?'} -> ${String(response.status)} ${await response.text()}`
@@ -326,16 +360,19 @@ export function isCliEntrypoint(
  * letting it surface as an unhandled rejection with a stack trace — the
  * shape every failure in these scripts should have, config errors included.
  *
- * A run stopped by {@link AuthFailureError} reports what it had already done
- * first. An ingest CLI reports through `reportOutcome(await postPurchases(...))`,
- * so a throw skips that call and the counts and failure lines collected
- * before the stop would otherwise be lost with it.
+ * A run stopped by {@link AuthFailureError} or {@link RegistryUnavailableError}
+ * reports what it had already done first. An ingest CLI reports through
+ * `reportOutcome(await postPurchases(...))`, so a throw skips that call and
+ * the counts and failure lines collected before the stop would otherwise be
+ * lost with it.
  */
 export async function runCli(main: () => Promise<void> | void): Promise<void> {
   try {
     await main();
   } catch (error) {
-    if (error instanceof AuthFailureError) reportOutcome(error.outcome);
+    if (error instanceof AuthFailureError || error instanceof RegistryUnavailableError) {
+      reportOutcome(error.outcome);
+    }
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }

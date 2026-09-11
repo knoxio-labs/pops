@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 import { ButtonPrimitive } from '@pops/ui';
 
 import { cn } from '../../../lib/utils';
+import { buildTagMetaMap } from '../../tag-editor/utils';
 import { TagEditor } from '../../TagEditor';
-import { buildTagMetaMap } from './tagReviewUtils';
 
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 

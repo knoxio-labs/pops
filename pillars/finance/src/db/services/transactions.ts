@@ -265,9 +265,11 @@ export function restoreTransaction(db: FinanceDb, snapshot: TransactionRow): Tra
 }
 
 export {
+  type ChangeSetPreviewScanRow,
   type DescriptionPreviewResult,
   type DescriptionPreviewRow,
   getLastImportInfo,
   type LastImportInfo,
+  listAllTransactionsForChangeSetPreview,
   listDescriptionsForPreview,
 } from './transactions-reads.js';

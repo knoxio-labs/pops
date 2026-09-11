@@ -975,7 +975,7 @@ export const correctionsListMerged = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Preview the before/after match impact of a ChangeSet against caller-supplied transactions
+ * Preview the before/after match impact of a ChangeSet against caller-supplied transactions, or (fullHistory) every transaction in the finance DB, paged
  */
 export const correctionsPreviewChangeSet = <ThrowOnError extends boolean = false>(
   options?: Options<CorrectionsPreviewChangeSetData, ThrowOnError>
@@ -1738,7 +1738,7 @@ export const tagRulesMatchPreview = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions
+ * Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions, or (fullHistory) every transaction in the finance DB, paged
  */
 export const tagRulesPreview = <ThrowOnError extends boolean = false>(
   options?: Options<TagRulesPreviewData, ThrowOnError>

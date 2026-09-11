@@ -217,8 +217,8 @@ services:
       FINANCE_SQLITE_PATH: /data/sqlite/finance.db
       FINANCE_SELF_BASE_URL: http://finance-api:3004
       # AI telemetry sink — the @pops/ai-telemetry wrapper POSTs usage to
-      # `${AI_API_URL}/ai-usage/record` (internal-token gated). Read FIRST so
-      # it never collides with a self-pointing POPS_API_URL.
+      # `${AI_API_URL}/ai-usage/record` (per-caller `x-pops-internal-credential`
+      # gated). Read FIRST so it never collides with a self-pointing POPS_API_URL.
       AI_API_URL: http://ai-api:3008
       POPS_REGISTRY_ENABLED: 'true'
       # Paired-transfer matching (POPS-2753): pillars/finance/src/api/modules/transfers/pair-transfers.ts
@@ -569,8 +569,8 @@ services:
   # AI Ops pillar API (PRD-055). Hosts ai.db reads/writes for the AI-ops
   # telemetry slice — observability, providers, model pricing, budgets,
   # alerts — and the cross-pillar ingest `POST /ai-usage/record`
-  # (internal-token gated; the first production writer to
-  # `ai_inference_log`). nginx routes /ai-api/ here on port 3008. Built
+  # (per-caller `x-pops-internal-credential` gated; the first production
+  # writer to `ai_inference_log`). nginx routes /ai-api/ here on port 3008. Built
   # from the hand-written pillar Dockerfile.
   ai-api:
     build:
@@ -660,8 +660,9 @@ services:
       NODE_ENV: production
       REDIS_URL: redis://pops-redis:6379
       # Results post back to the food pillar's `POST /ingest/worker-complete`
-      # (internal-token gated). The worker image's client must speak REST, not
-      # tRPC — tracked as a follow-up gap (worker source lives out-of-repo).
+      # (per-caller `x-pops-internal-credential`, see above). The worker
+      # image's client must speak REST, not tRPC — tracked as a follow-up gap
+      # (worker source lives out-of-repo).
       POPS_API_URL: http://food-api:3005
       # AI telemetry sink — the worker's @pops/ai-telemetry wrapper POSTs usage
       # to `${AI_API_URL}/ai-usage/record`. Read FIRST so it never collides with
@@ -784,7 +785,8 @@ services:
       CEREBRUM_SQLITE_PATH: /data/sqlite/cerebrum.db
       CEREBRUM_ENGRAMS_DIR: /data/cerebrum/engrams
       # AI telemetry sink — the worker's @pops/ai-telemetry wrapper POSTs usage
-      # to `${AI_API_URL}/ai-usage/record` (internal-token gated).
+      # to `${AI_API_URL}/ai-usage/record` (per-caller `x-pops-internal-credential`
+      # gated).
       AI_API_URL: http://ai-api:3008
       # The pillar LLM + embedding clients read these straight from the
       # process env (no /run/secrets convention), so surface them here.

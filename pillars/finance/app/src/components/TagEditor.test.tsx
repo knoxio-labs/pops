@@ -292,4 +292,144 @@ describe('TagEditor', () => {
 
     expect(screen.queryByRole('button', { name: /^Create / })).toBeNull();
   });
+
+  describe('tag-suggester provenance badges', () => {
+    function openAndSuggest(onSuggest: () => Promise<unknown>) {
+      render(
+        <TagEditor
+          currentTags={[]}
+          availableTags={[]}
+          onSave={vi.fn()}
+          onSuggest={onSuggest as never}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+    }
+
+    it('badges a rule-sourced chip with the matched pattern', async () => {
+      openAndSuggest(() =>
+        Promise.resolve([{ tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' }])
+      );
+
+      const chip = await screen.findByRole('button', { name: /Remove Groceries/i });
+      const chipRow = chip.closest('div')?.parentElement;
+      expect(chipRow?.textContent).toContain('Rule');
+      expect(chipRow?.querySelector('[title]')?.getAttribute('title')).toContain('IGA Coles');
+    });
+
+    it('badges an entity-sourced chip', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Rent', source: 'entity' }]));
+
+      const chip = await screen.findByRole('button', { name: /Remove Rent/i });
+      expect(chip.closest('div')?.parentElement?.textContent).toContain('Entity');
+    });
+
+    it('badges an ai-sourced chip', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Streaming', source: 'ai' }]));
+
+      const chip = await screen.findByRole('button', { name: /Remove Streaming/i });
+      expect(chip.closest('div')?.parentElement?.textContent).toContain('AI');
+    });
+
+    it('highlights a new ai-sourced chip', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Novelty', source: 'ai', isNew: true }]));
+
+      const chip = await screen.findByRole('button', { name: /Remove Novelty/i });
+      expect(chip.closest('div')?.parentElement?.textContent).toContain('New');
+    });
+
+    it('stores only the tag strings once a badged chip is saved', async () => {
+      const onSave = vi.fn();
+      const onSuggest = () =>
+        Promise.resolve([{ tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' }]);
+      render(
+        <TagEditor
+          currentTags={[]}
+          availableTags={[]}
+          onSave={onSave}
+          onSuggest={onSuggest as never}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+
+      await screen.findByRole('button', { name: /Remove Groceries/i });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith(['Groceries']));
+    });
+
+    it('merges every suggestion at once rather than offering them one at a time', async () => {
+      const onSave = vi.fn();
+      const onSuggest = () =>
+        Promise.resolve([
+          { tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' },
+          { tag: 'Streaming', source: 'ai' },
+        ]);
+      render(
+        <TagEditor
+          currentTags={[]}
+          availableTags={[]}
+          onSave={onSave}
+          onSuggest={onSuggest as never}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /Remove Groceries/i })).toBeInTheDocument()
+      );
+      expect(screen.getByRole('button', { name: /Remove Streaming/i })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith(['Groceries', 'Streaming']));
+    });
+
+    it('a tag typed by hand carries no badge', async () => {
+      const onSave = vi.fn();
+      render(<TagEditor currentTags={[]} availableTags={['Handwritten']} onSave={onSave} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      const input = screen.getByPlaceholderText(/Type to add a tag/i);
+      fireEvent.change(input, { target: { value: 'Handwritten' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      const chip = await screen.findByRole('button', { name: /Remove Handwritten/i });
+      expect(chip.closest('div')?.parentElement?.textContent).toBe('Handwritten');
+    });
+
+    it('drops provenance when a badged chip is removed and retyped by hand', async () => {
+      function openWithSuggestAndAvailable() {
+        render(
+          <TagEditor
+            currentTags={[]}
+            availableTags={['Groceries']}
+            onSave={vi.fn()}
+            onSuggest={() =>
+              Promise.resolve([{ tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' }]) as never
+            }
+          />
+        );
+        fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+      }
+      openWithSuggestAndAvailable();
+
+      const chip = await screen.findByRole('button', { name: /Remove Groceries/i });
+      fireEvent.click(chip);
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: /Remove Groceries/i })).toBeNull()
+      );
+
+      const input = screen.getByPlaceholderText(/Type to add a tag/i);
+      fireEvent.change(input, { target: { value: 'Groceries' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      const retypedChip = await screen.findByRole('button', { name: /Remove Groceries/i });
+      expect(retypedChip.closest('div')?.parentElement?.textContent).toBe('Groceries');
+    });
+  });
 });

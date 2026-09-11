@@ -165,11 +165,18 @@ export const financeTagRulesContract = c.router({
     path: '/tag-rules/preview',
     body: z.object({
       changeSet: TagRuleChangeSetSchema,
-      transactions: z.array(PreviewInputTransactionSchema),
+      transactions: z.array(PreviewInputTransactionSchema).optional().default([]),
       maxPreviewItems: MaxPreviewItems,
+      /** Scan every finance-DB transaction instead of `transactions` (POPS-15). */
+      fullHistory: z.boolean().optional().default(false),
+      /** Full-history mode only: pages `affected`, mirroring match-preview. */
+      limit: z.number().int().positive().max(500).optional(),
+      offset: z.number().int().nonnegative().optional(),
     }),
     responses: { 200: TagRulePreviewSchema, ...ERR_RESPONSES },
-    summary: 'Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions',
+    summary:
+      'Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions, ' +
+      'or (fullHistory) every transaction in the finance DB, paged',
   },
   apply: {
     method: 'POST',

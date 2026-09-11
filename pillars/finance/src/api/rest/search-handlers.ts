@@ -4,18 +4,25 @@
  * Aggregates three finance adapters, each a `LIKE` candidate scan ranked by
  * exact/prefix/contains scoring against the finance pillar's `FinanceDb`:
  *   - transactions
- *   - budgets (capped at BUDGETS_DEFAULT_LIMIT)
+ *   - budgets (capped at BUDGETS_DEFAULT_LIMIT, applied after ranking)
  *   - wishlist
- * Hits from all three are concatenated into one response.
+ * The three adapters' already-ranked hits are merged into one list ranked
+ * over their union, not concatenated.
+ *
+ * **Nothing is dropped before it is scored.** A `LIKE '%text%'` predicate
+ * cannot use an index, so the scan reads every row a scope admits whatever
+ * a limit says; a cap applied to that scan decides the answer by which rows
+ * SQLite happened to visit first. `search-ranking.ts` scores the whole scan,
+ * and only `searchBudgets` bounds its response afterwards, once the ranking
+ * has already decided which hits are worth keeping.
  *
  * `query.filters` is read into a per-adapter scope by `searchFilterScope` and
  * narrows the SQL each adapter scans, before the text match/ranking runs —
- * the same order purchases narrows in — so an excluded row cannot occupy a
- * slot in a capped adapter (`BUDGETS_DEFAULT_LIMIT`) that a caller asked not
- * to see. An unreadable filter refuses the whole request (`ValidationError`
- * → 400) rather than dropping it: a silently dropped filter looks identical
- * to a filter that matched everything, which is the defect this exists to
- * fix.
+ * the same order purchases narrows in — so an excluded row cannot spend a
+ * slot in the capped adapter's response that a caller asked not to see. An
+ * unreadable filter refuses the whole request (`ValidationError` → 400)
+ * rather than dropping it: a silently dropped filter looks identical to a
+ * filter that matched everything, which is the defect this exists to fix.
  *
  * `uri` shapes are a cross-pillar contract: the search orchestrator dispatches
  * on them and caches client links keyed by them, so they must stay stable.
@@ -35,6 +42,13 @@ import {
 import { centsToDollars, centsToDollarsNullable } from '../../money.js';
 import { ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
+import {
+  byScoreDescending,
+  classify,
+  rank,
+  type ScoredCandidate,
+  type SearchHit,
+} from './search-ranking.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -42,30 +56,8 @@ import type { financeSearchContract } from '../../contract/rest-search.js';
 
 type Req = ServerInferRequest<typeof financeSearchContract>;
 
-type MatchType = 'exact' | 'prefix' | 'contains';
-
-interface SearchHit {
-  uri: string;
-  score: number;
-  matchField: string;
-  matchType: MatchType;
-  data: Record<string, unknown>;
-}
-
+/** Budget hits kept per response, applied to the ranked list and nowhere else. */
 const BUDGETS_DEFAULT_LIMIT = 20;
-
-function classify(
-  value: string,
-  queryText: string
-): { score: number; matchType: MatchType } | null {
-  const lower = value.toLowerCase();
-  const q = queryText.toLowerCase();
-
-  if (lower === q) return { score: 1.0, matchType: 'exact' };
-  if (lower.startsWith(q)) return { score: 0.8, matchType: 'prefix' };
-  if (lower.includes(q)) return { score: 0.5, matchType: 'contains' };
-  return null;
-}
 
 function searchTransactions(
   db: FinanceDb,
@@ -91,28 +83,30 @@ function searchTransactions(
     .where(and(...conditions))
     .all();
 
-  const hits: SearchHit[] = [];
+  const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const match = classify(row.description, text);
     if (!match) continue;
 
-    hits.push({
-      uri: `pops:finance/transaction/${row.id}`,
-      score: match.score,
-      matchField: 'description',
-      matchType: match.matchType,
-      data: {
-        description: row.description,
-        amount: centsToDollars(row.amountCents),
-        date: row.date,
-        entityName: row.entityName,
-        type: row.type.toLowerCase(),
+    candidates.push({
+      tieBreak: row.date,
+      hit: {
+        uri: `pops:finance/transaction/${row.id}`,
+        score: match.score,
+        matchField: 'description',
+        matchType: match.matchType,
+        data: {
+          description: row.description,
+          amount: centsToDollars(row.amountCents),
+          date: row.date,
+          entityName: row.entityName,
+          type: row.type.toLowerCase(),
+        },
       },
     });
   }
 
-  hits.sort((a, b) => b.score - a.score);
-  return hits;
+  return rank(candidates);
 }
 
 function searchBudgets(db: FinanceDb, text: string, scope: BudgetsSearchScope): SearchHit[] {
@@ -124,28 +118,30 @@ function searchBudgets(db: FinanceDb, text: string, scope: BudgetsSearchScope): 
     .select()
     .from(budgets)
     .where(and(...conditions))
-    .limit(BUDGETS_DEFAULT_LIMIT)
     .all();
 
-  const hits: SearchHit[] = [];
+  const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const match = classify(row.category, text);
     if (!match) continue;
 
-    hits.push({
-      uri: `/budgets/${row.id}`,
-      score: match.score,
-      matchField: 'category',
-      matchType: match.matchType,
-      data: {
-        category: row.category,
-        period: row.period,
-        amount: centsToDollarsNullable(row.amountCents),
+    candidates.push({
+      tieBreak: row.lastEditedTime,
+      hit: {
+        uri: `/budgets/${row.id}`,
+        score: match.score,
+        matchField: 'category',
+        matchType: match.matchType,
+        data: {
+          category: row.category,
+          period: row.period,
+          amount: centsToDollarsNullable(row.amountCents),
+        },
       },
     });
   }
 
-  return hits.toSorted((a, b) => b.score - a.score);
+  return rank(candidates).slice(0, BUDGETS_DEFAULT_LIMIT);
 }
 
 function searchWishlist(db: FinanceDb, text: string, scope: WishlistSearchScope): SearchHit[] {
@@ -167,26 +163,28 @@ function searchWishlist(db: FinanceDb, text: string, scope: WishlistSearchScope)
     .where(and(...conditions))
     .all();
 
-  const hits: SearchHit[] = [];
+  const candidates: ScoredCandidate[] = [];
   for (const row of rows) {
     const match = classify(row.item, text);
     if (!match) continue;
 
-    hits.push({
-      uri: `/finance/wishlist`,
-      score: match.score,
-      matchField: 'item',
-      matchType: match.matchType,
-      data: {
-        item: row.item,
-        priority: row.priority,
-        targetAmount: centsToDollarsNullable(row.targetAmountCents),
+    candidates.push({
+      tieBreak: row.lastEditedTime,
+      hit: {
+        uri: `/finance/wishlist`,
+        score: match.score,
+        matchField: 'item',
+        matchType: match.matchType,
+        data: {
+          item: row.item,
+          priority: row.priority,
+          targetAmount: centsToDollarsNullable(row.targetAmountCents),
+        },
       },
     });
   }
 
-  hits.sort((a, b) => b.score - a.score);
-  return hits;
+  return rank(candidates);
 }
 
 export function makeSearchHandlers(db: FinanceDb) {
@@ -206,7 +204,7 @@ export function makeSearchHandlers(db: FinanceDb) {
           ...searchTransactions(db, text, scope.transactions),
           ...searchBudgets(db, text, scope.budgets),
           ...searchWishlist(db, text, scope.wishlist),
-        ];
+        ].toSorted(byScoreDescending);
         return { status: 200 as const, body: { hits } };
       }),
   };

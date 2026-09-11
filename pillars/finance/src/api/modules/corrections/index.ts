@@ -21,6 +21,10 @@ export {
   type PreviewTransaction,
 } from './preview-impact.js';
 export {
+  previewChangeSetFullHistory,
+  type ChangeSetFullHistoryPreview,
+} from './preview-full-history.js';
+export {
   classifyCorrectionMatch,
   resolveCorrectionApplyStatus,
   normalizeEntityId,

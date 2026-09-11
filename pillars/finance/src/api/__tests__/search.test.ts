@@ -133,6 +133,33 @@ describe('search — budgets adapter', () => {
     expect(budgetHit.score).toBe(1.0);
     expect(budgetHit.data).toMatchObject({ category: 'Groceries', period: 'Monthly' });
   });
+
+  /**
+   * `searchBudgets` used to `.limit(BUDGETS_DEFAULT_LIMIT)` before scoring,
+   * with no `ORDER BY` — so once more rows matched than the cap admitted,
+   * whichever twenty SQLite's table scan reached first (insertion order, in
+   * practice) were the only ones ever classified. Seeding more matches than
+   * the cap and writing the exact match last recreates that physical order:
+   * it is exactly the row a pre-scoring cap would have excluded.
+   */
+  it('scores every matching budget category, so the cap cannot drop the exact match', async () => {
+    const FILLER_COUNT = 25; // > BUDGETS_DEFAULT_LIMIT (20)
+    for (let index = 0; index < FILLER_COUNT; index += 1) {
+      await client().budgets.create({
+        category: `Groceries filler ${String(index)}`,
+        period: 'Monthly',
+      });
+    }
+    const created = await client().budgets.create({ category: 'Groceries', period: 'Yearly' });
+
+    const { hits } = await client().search.run({ query: { text: 'groceries' } });
+    const budgetHits = hits.filter((h) => h.uri.startsWith('/budgets/'));
+    const exactHit = budgetHits.find((h) => h.uri === `/budgets/${created.data.id}`);
+
+    expect(exactHit).toBeDefined();
+    expect(exactHit?.score).toBe(1.0);
+    expect(budgetHits[0]?.uri).toBe(`/budgets/${created.data.id}`);
+  });
 });
 
 describe('search — wishlist adapter', () => {
@@ -171,6 +198,66 @@ describe('search — aggregation & empty query', () => {
     expect(withScheme(hits, 'pops:finance/transaction/')).toHaveLength(1);
     expect(hits.filter((h) => h.uri.startsWith('/budgets/'))).toHaveLength(1);
     expect(hits.filter((h) => h.uri === '/finance/wishlist')).toHaveLength(1);
+  });
+
+  /**
+   * The handler used to concatenate the three adapters' already-sorted
+   * lists rather than ranking their union — a 0.5 transaction hit could sit
+   * above a 1.0 wishlist hit just because transactions comes first in the
+   * concatenation.
+   */
+  it('ranks the union of adapters, so a stronger wishlist hit outranks a weaker transaction hit', async () => {
+    await client().transactions.create({
+      description: 'Buy a widget online',
+      accountId: amexAccountId,
+      amount: -1,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().wishlist.create({ item: 'Widget' });
+
+    const { hits } = await client().search.run({ query: { text: 'widget' } });
+
+    expect(hits[0]?.uri).toBe('/finance/wishlist');
+    expect(hits[0]?.score).toBe(1.0);
+    expect(hits[1]?.matchType).toBe('contains');
+  });
+
+  /**
+   * Two transactions here score identically (both prefix matches), so
+   * nothing but a tie-break decides their order. Without one, ties fall
+   * back to whatever order the scan or a stable sort happened to preserve
+   * — the insertion order of this test, not the data. Asserting the
+   * date-descending order proves the response is a function of the rows,
+   * not of how they were written.
+   */
+  it('breaks tied scores by date, so the same rows always answer the same way', async () => {
+    await client().transactions.create({
+      description: 'Widget A',
+      accountId: amexAccountId,
+      amount: -1,
+      date: '2026-01-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Widget B',
+      accountId: amexAccountId,
+      amount: -1,
+      date: '2026-03-01',
+      type: 'purchase',
+    });
+    await client().transactions.create({
+      description: 'Widget C',
+      accountId: amexAccountId,
+      amount: -1,
+      date: '2026-02-01',
+      type: 'purchase',
+    });
+
+    const { hits } = await client().search.run({ query: { text: 'widget' } });
+    const txHits = withScheme(hits, 'pops:finance/transaction/');
+
+    expect(txHits.map((h) => h.data['description'])).toEqual(['Widget B', 'Widget C', 'Widget A']);
   });
 
   it('returns an empty list for an empty or whitespace query', async () => {
