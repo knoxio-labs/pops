@@ -21,13 +21,21 @@ function fileWith(name: string, size: number, lastModified: number): File {
   return new File(['x'.repeat(size)], name, { lastModified });
 }
 
+function makeProcessedTxn(description = 'WOOLWORTHS'): ProcessedTransaction {
+  return {
+    ...makeTxn('processed', description),
+    entity: { matchType: 'none' },
+    status: 'matched',
+  };
+}
+
 const sampleProcessed = (): {
   matched: ProcessedTransaction[];
   uncertain: ProcessedTransaction[];
   failed: ProcessedTransaction[];
   skipped: ProcessedTransaction[];
 } => ({
-  matched: [{ description: 'WOOLWORTHS' } as unknown as ProcessedTransaction],
+  matched: [makeProcessedTxn()],
   uncertain: [],
   failed: [],
   skipped: [],
@@ -133,7 +141,7 @@ describe('importStore — parsed/processed fingerprint', () => {
       warnings: undefined,
     });
 
-    const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
+    const fakeFile = fileWith('new.csv', 10, 1);
     useImportStore.getState().setFiles([fakeFile]);
 
     const state = useImportStore.getState();
@@ -350,7 +358,7 @@ describe('importStore — pendingEntities (local-first-import)', () => {
 
   it('setFiles with a different batch clears pending entities', () => {
     useImportStore.getState().addPendingEntity({ name: 'Test', type: 'company' });
-    const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
+    const fakeFile = fileWith('new.csv', 10, 1);
     useImportStore.getState().setFiles([fakeFile]);
     expect(useImportStore.getState().pendingEntities).toEqual([]);
   });
@@ -455,7 +463,7 @@ describe('importStore — pendingChangeSets (local-first-import)', () => {
       changeSet: sampleChangeSet,
       source: 'test',
     });
-    const fakeFile = { name: 'new.csv', size: 10, lastModified: 1 } as unknown as File;
+    const fakeFile = fileWith('new.csv', 10, 1);
     useImportStore.getState().setFiles([fakeFile]);
     expect(useImportStore.getState().pendingChangeSets).toEqual([]);
   });
