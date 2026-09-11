@@ -29,7 +29,7 @@
     "build": "tsx scripts/verify-manifest.ts && tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts",
     "dev": "tsx watch --clear-screen=false src/api/server.ts",
     "start": "node dist/api/server.js",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

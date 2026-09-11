@@ -10,7 +10,7 @@
     "build": "tsc -b tsconfig.build.json && vite build",
     "preview": "vite preview",
     "start": "node dist/api/server.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

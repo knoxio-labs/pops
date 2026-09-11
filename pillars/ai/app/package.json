@@ -11,7 +11,7 @@
   "scripts": {
     "build": "pnpm run build:remote",
     "build:remote": "tsx scripts/build-remote.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

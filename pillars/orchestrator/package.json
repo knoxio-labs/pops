@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch --clear-screen=false src/server.ts",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },

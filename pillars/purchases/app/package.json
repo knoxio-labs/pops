@@ -13,7 +13,7 @@
     "build:remote": "tsx scripts/build-remote.ts",
     "dev:standalone": "vite --config vite.standalone.config.ts",
     "build:standalone": "vite build --config vite.standalone.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
