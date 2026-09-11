@@ -13,12 +13,7 @@ import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  PillarCallError,
-  type CallFailure,
-  type CallResult,
-  type PillarHandle,
-} from '@pops/pillar-sdk/server';
+import { PillarCallError, type CallFailure, type CallResult } from '@pops/pillar-sdk/server';
 
 import {
   crossPillarUrisService,
@@ -32,10 +27,9 @@ import {
   parseSoftUri,
   runReconciliation,
   startCrossPillarReconciliationWorker,
+  type FinanceReconcileClient,
   type ReconcileOutcome,
 } from '../reconcile-cross-pillar.js';
-
-import type { FinanceRouter } from '../reconcile-cross-pillar.js';
 
 let tmpDir: string;
 let inventoryDb: OpenedInventoryDb;
@@ -95,8 +89,8 @@ interface FakeFinanceCall {
   error?: unknown;
 }
 
-function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): PillarHandle<FinanceRouter> {
-  const fake = {
+function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): FinanceReconcileClient {
+  return {
     callDynamic: vi.fn(
       async (
         _routerName: string,
@@ -114,7 +108,6 @@ function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): PillarHandle<F
       }
     ),
   };
-  return fake as unknown as PillarHandle<FinanceRouter>;
 }
 
 describe('parseSoftUri', () => {
@@ -365,11 +358,11 @@ describe('runReconciliation — 404', () => {
       purchaseTransactionId: 'raise-404',
       purchaseTransactionUri: 'pops://finance/transaction/raise-404',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async () => {
         throw new PillarCallError('finance', { kind: 'not-found', pillar: 'finance' });
       }),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
@@ -385,12 +378,12 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       purchaseTransactionId: 'tx-3',
       purchaseTransactionUri: 'pops://finance/transaction/tx-3',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'unavailable',
         pillar: 'finance',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
     const warn = vi.fn();
 
     const counters = await runReconciliation({
@@ -413,11 +406,11 @@ describe('runReconciliation — owning-pillar-unavailable', () => {
       purchaseTransactionId: 'transient',
       purchaseTransactionUri: 'pops://finance/transaction/transient',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async () => {
         throw new Error('socket hang up');
       }),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
@@ -433,12 +426,12 @@ describe('runReconciliation — misconfigured', () => {
       purchaseTransactionId: 'tx-3c',
       purchaseTransactionUri: 'pops://finance/transaction/tx-3c',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'unauthorized',
         pillar: 'finance',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
     const warn = vi.fn();
 
     const counters = await runReconciliation({
@@ -461,12 +454,12 @@ describe('runReconciliation — misconfigured', () => {
       purchaseTransactionId: 'tx-3d',
       purchaseTransactionUri: 'pops://finance/transaction/tx-3d',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'contract-mismatch',
         pillar: 'finance',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 
@@ -505,13 +498,13 @@ describe('runReconciliation — bad-URI', () => {
       purchaseTransactionId: 'refused',
       purchaseTransactionUri: 'pops://finance/transaction/refused',
     });
-    const finance: PillarHandle<FinanceRouter> = {
+    const finance: FinanceReconcileClient = {
       callDynamic: vi.fn(async (): Promise<CallResult<unknown>> => ({
         kind: 'bad-request',
         pillar: 'finance',
         message: 'no such id format',
       })),
-    } as unknown as PillarHandle<FinanceRouter>;
+    };
 
     const counters = await runReconciliation({ db: inventoryDb.db, proxies: { finance } });
 

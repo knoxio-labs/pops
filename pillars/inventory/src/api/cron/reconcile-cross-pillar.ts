@@ -47,8 +47,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type { ReconcileLogger };
 
+/**
+ * The only member this worker calls on `finance` is `callDynamic` (see the
+ * `probe` below). Narrowing the injected dependency to that one member keeps
+ * a real `PillarHandle<FinanceRouter>` assignable here (structurally, no
+ * change needed at the production call site) while letting a test fake the
+ * handle with a plain object -- no `PillarHandle`'s index signature to
+ * satisfy, so no cast.
+ */
+export type FinanceReconcileClient = Pick<PillarHandle<FinanceRouter>, 'callDynamic'>;
+
 export interface ReconcileProxies {
-  finance?: PillarHandle<FinanceRouter>;
+  finance?: FinanceReconcileClient;
 }
 
 export interface ReconcileWorkerOptions {
