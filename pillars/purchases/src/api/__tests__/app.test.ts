@@ -970,6 +970,40 @@ describe('purchase handler edge paths', () => {
       expect(checksums(res.body)).toEqual(['merchant-2']);
     });
 
+    // POPS-2342: `merchantEntityName: ''` used to become its own `name`
+    // group, which `ListPurchasesQuerySchema` (`z.string().min(1)`) can
+    // never spell as a query parameter — a permanent, un-openable row.
+    it('stores an empty-string merchantEntityName as null and folds it into the unattributed bucket', async () => {
+      const created = await requestOn(app)
+        .post('/purchases')
+        .send({ ...minimalOrder, merchantEntityName: '' });
+
+      expect(created.status).toBe(201);
+      expect(created.body.purchase.merchantEntityName).toBeNull();
+
+      const spend = await requestOn(app).get('/analytics/merchant-spend');
+      expect(spend.body.merchants).toEqual([
+        expect.objectContaining({
+          merchant: { resolution: 'unattributed', entityId: null, name: null },
+        }),
+      ]);
+
+      const opened = await requestOn(app).get('/purchases?merchantUnattributed=true');
+      expect(checksums(opened.body)).toEqual([minimalOrder.checksum]);
+    });
+
+    it('treats a whitespace-only merchantEntityName the same way', async () => {
+      const created = await requestOn(app)
+        .post('/purchases')
+        .send({ ...minimalOrder, merchantEntityName: '   ' });
+
+      expect(created.status).toBe(201);
+      expect(created.body.purchase.merchantEntityName).toBeNull();
+
+      const opened = await requestOn(app).get('/purchases?merchantUnattributed=true');
+      expect(checksums(opened.body)).toEqual([minimalOrder.checksum]);
+    });
+
     // A client sending its control's state unconditionally must not thereby
     // forbid the other two parameters, so `false` is the absence of a filter
     // rather than a request to exclude the bucket.

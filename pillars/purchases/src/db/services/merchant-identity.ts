@@ -5,8 +5,41 @@
  * this rule is a second answer to "is a matching label the same merchant" —
  * and the two would disagree the first time one of them was corrected.
  */
+import { sql } from 'drizzle-orm';
+
 import { isNewer, orderRank, type OrderRank } from './order-rank.js';
 import { tupleKey } from './tuple-key.js';
+
+import type { SQL } from 'drizzle-orm';
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+
+/**
+ * A stored label with no usable content — `null`, `''`, or whitespace only —
+ * is the same fact as no label at all, so every reader of `merchantEntityName`
+ * folds it through here rather than checking `!== null` on its own. Write
+ * normalisation, {@link identifyMerchant} and the unattributed filter's SQL
+ * ({@link blankMerchantLabel}) are the three readers; this is the one
+ * spelling of "usable" they all defer to.
+ *
+ * Trims rather than only blanking, so `"Amazon "` and `"Amazon"` cannot land
+ * in different groups depending on which adapter happened to pad the label —
+ * `identifyMerchant`'s key and the filter's `eq` both compare the stored
+ * value verbatim, so a trim anywhere but here would still let the two drift.
+ */
+export function normalizeMerchantLabel(name: string | null | undefined): string | null {
+  const trimmed = name?.trim();
+  return trimmed !== undefined && trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * SQL equivalent of `normalizeMerchantLabel(column) === null`, for the
+ * unattributed bucket's filter — a stored empty or whitespace-only label has
+ * to open the same bucket a `null` one does, or the fold on the read side has
+ * a group the filter still cannot name.
+ */
+export function blankMerchantLabel(column: AnySQLiteColumn): SQL {
+  return sql`(${column} is null or trim(${column}) = '')`;
+}
 
 /**
  * Who the spend is attributed to, and how confidently.
@@ -55,8 +88,9 @@ export interface LabelledMerchant {
  */
 export function identifyMerchant(
   entityId: string | null,
-  name: string | null
+  rawName: string | null
 ): { key: string; identity: MerchantIdentity } {
+  const name = normalizeMerchantLabel(rawName);
   if (entityId !== null) {
     return {
       key: tupleKey('entity', entityId),

@@ -5,7 +5,10 @@
  * so that a group `GET /analytics/merchant-spend` returns can be named here —
  * otherwise the one view built around merchants is the one view that cannot
  * open a merchant's orders. The two are exhaustive over the same
- * {@link MerchantResolution} vocabulary, asserted rather than assumed.
+ * {@link MerchantResolution} vocabulary, asserted rather than assumed — and
+ * that holds over every stored value, not just well-formed ones: a blank or
+ * whitespace-only label has no usable content and folds to `unattributed` on
+ * both sides (POPS-2342).
  *
  * A union rather than three loose fields because `resolution` constrains the
  * value rather than describing it: there is no such thing as an entity filter
