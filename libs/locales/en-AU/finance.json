@@ -323,5 +323,10 @@
   "rules.active": "Active",
   "rules.inactiveSkipped": "Inactive rules are skipped by the matcher.",
   "tagRules.title": "Tag Rules",
-  "tagRules.description": "Browse and manage tag-suggestion rules"
+  "tagRules.description": "Browse and manage tag-suggestion rules",
+  "tagRules.applyExisting.tagged_one": "Tagged {{count}} existing transaction",
+  "tagRules.applyExisting.tagged_other": "Tagged {{count}} existing transactions",
+  "tagRules.applyExisting.none": "No existing transactions needed tagging",
+  "tagRules.applyExisting.refused_one": "{{count}} was refused — it already carries a conflicting tag",
+  "tagRules.applyExisting.refused_other": "{{count}} were refused — they already carry a conflicting tag"
 }

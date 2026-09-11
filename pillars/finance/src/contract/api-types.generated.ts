@@ -12705,7 +12705,7 @@ export interface operations {
             data: {
               dryRun: boolean;
               matched: number;
-              skippedManual: number;
+              refusedFacetConflict: number;
               updated: number;
             };
           };

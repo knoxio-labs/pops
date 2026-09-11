@@ -517,7 +517,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
       dryRun: false,
       matched: 1,
       updated: 1,
-      skippedManual: 0,
+      refusedFacetConflict: 0,
     });
 
     const refetched = await client().transactions.get(txn.id);
@@ -547,7 +547,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ruleId = await seedRule();
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, refusedFacetConflict: 0 });
 
     const refetched = await client().transactions.get(txn.id);
     expect(refetched.data.tags).not.toEqual([]);
@@ -566,7 +566,12 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     await client().tagRules.disable(ruleId);
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ dryRun: false, matched: 0, updated: 0, skippedManual: 0 });
+    expect(result.data).toMatchObject({
+      dryRun: false,
+      matched: 0,
+      updated: 0,
+      refusedFacetConflict: 0,
+    });
   });
 
   it('an entity-scoped tag rule only matches its own entity, leaving other entities untouched', async () => {
@@ -606,7 +611,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     if (!ruleId) throw new Error('rule not created');
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, refusedFacetConflict: 0 });
 
     const ownRow = await client().transactions.get(ownEntityTxn.id);
     expect(ownRow.data.tags).toEqual(['bar']);
@@ -630,7 +635,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ruleId = await seedRule();
 
     const result = await client().tagRules.applyExisting(ruleId);
-    expect(result.data).toMatchObject({ matched: 1, updated: 1, skippedManual: 0 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, refusedFacetConflict: 0 });
 
     const row = transactionsService.getTransaction(db, txn.id);
     expect(row.matchType).toBe('learned');
@@ -651,7 +656,12 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     const ruleId = await seedRule();
 
     const preview = await client().tagRules.applyExisting(ruleId, { dryRun: true });
-    expect(preview.data).toMatchObject({ dryRun: true, matched: 1, updated: 1, skippedManual: 0 });
+    expect(preview.data).toMatchObject({
+      dryRun: true,
+      matched: 1,
+      updated: 1,
+      refusedFacetConflict: 0,
+    });
 
     const refetched = await client().transactions.get(txn.id);
     expect(refetched.data.tags).toEqual([]);
@@ -676,7 +686,7 @@ describe('tagRules — applyExisting (retroactive apply, #3660)', () => {
     expect(first.data.updated).toBe(1);
 
     const second = await client().tagRules.applyExisting(ruleId);
-    expect(second.data).toMatchObject({ matched: 1, updated: 0, skippedManual: 0 });
+    expect(second.data).toMatchObject({ matched: 1, updated: 0, refusedFacetConflict: 0 });
 
     const rule = await client().tagRules.get(ruleId);
     expect(rule.data.timesApplied).toBe(1);
@@ -721,13 +731,16 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
     }).id;
   }
 
-  it('leaves the venue the row already carries and adds nothing on that facet', async () => {
+  // Asserting only `updated: 0` also passes when the rule's tag was simply
+  // already present — this must additionally prove the refusal is counted
+  // and distinguishable from that case.
+  it('counts the refusal separately from "already had it", and leaves the row untouched', async () => {
     const txnId = seedTxn(['venue:restaurant']);
     const ruleId = await seedVenueRule(['venue:pub']);
 
     const result = await client().tagRules.applyExisting(ruleId);
 
-    expect(result.data).toMatchObject({ matched: 1, updated: 0 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 0, refusedFacetConflict: 1 });
     const refetched = await client().transactions.get(txnId);
     expect(refetched.data.tags).toEqual(['venue:restaurant']);
   });
@@ -738,7 +751,7 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
 
     const result = await client().tagRules.applyExisting(ruleId);
 
-    expect(result.data).toMatchObject({ matched: 1, updated: 1 });
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, refusedFacetConflict: 1 });
     const refetched = await client().transactions.get(txnId);
     expect(refetched.data.tags.toSorted()).toEqual(['contains:alcohol', 'venue:restaurant']);
   });
@@ -747,8 +760,9 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
     const txnId = seedTxn(['contains:food']);
     const ruleId = await seedVenueRule(['contains:alcohol']);
 
-    await client().tagRules.applyExisting(ruleId);
+    const result = await client().tagRules.applyExisting(ruleId);
 
+    expect(result.data).toMatchObject({ refusedFacetConflict: 0 });
     const refetched = await client().transactions.get(txnId);
     expect(refetched.data.tags.toSorted()).toEqual(['contains:alcohol', 'contains:food']);
   });
@@ -757,8 +771,9 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
     const txnId = seedTxn(['contains:food']);
     const ruleId = await seedVenueRule(['venue:pub']);
 
-    await client().tagRules.applyExisting(ruleId);
+    const result = await client().tagRules.applyExisting(ruleId);
 
+    expect(result.data).toMatchObject({ refusedFacetConflict: 0 });
     const refetched = await client().transactions.get(txnId);
     expect(refetched.data.tags.toSorted()).toEqual(['contains:food', 'venue:pub']);
   });
@@ -769,8 +784,9 @@ describe('tagRules — applyExisting refuses a second value on a single-valued f
     const txnId = seedTxn([]);
     const ruleId = await seedVenueRule(['venue:pub', 'venue:restaurant']);
 
-    await client().tagRules.applyExisting(ruleId);
+    const result = await client().tagRules.applyExisting(ruleId);
 
+    expect(result.data).toMatchObject({ matched: 1, updated: 1, refusedFacetConflict: 1 });
     const refetched = await client().transactions.get(txnId);
     expect(refetched.data.tags).toEqual(['venue:pub']);
   });

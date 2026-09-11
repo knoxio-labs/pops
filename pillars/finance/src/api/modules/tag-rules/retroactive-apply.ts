@@ -58,7 +58,7 @@ function mergeTags(
   ruleTags: readonly string[],
   ruleId: string,
   transactionId: string
-): string[] {
+): { tags: string[]; refused: boolean } {
   const { tags, dropped } = mergeTagsWithinFacetLimits(existing, ruleTags);
   for (const tag of dropped) {
     console.warn(
@@ -66,7 +66,7 @@ function mergeTags(
         `${transactionId}: the row already carries a value on that single-valued facet`
     );
   }
-  return tags;
+  return { tags, refused: dropped.length > 0 };
 }
 
 interface BatchTxn {
@@ -117,9 +117,10 @@ function ruleMatchesTransaction(
  *
  * `matched` mirrors the correction-rule counterpart's semantics
  * (`CorrectionRuleRetroactiveResult.matched`): it counts every transaction the
- * rule's pattern (and entity scope) matches, including ones then skipped as
- * `skippedManual`. `updated` and `skippedManual` are sub-counts of `matched`,
- * not a disjoint partition of it.
+ * rule's pattern (and entity scope) matches, regardless of outcome. `updated`
+ * and `refusedFacetConflict` are both sub-counts of `matched`, not a disjoint
+ * partition of it or of each other — a transaction that gains some of the
+ * rule's tags while refusing others counts in both.
  */
 export interface TagRuleRetroactiveResult {
   dryRun: boolean;
@@ -128,12 +129,13 @@ export interface TagRuleRetroactiveResult {
   /** Of `matched`, the ones actually written (or that would be, under `dryRun`). */
   updated: number;
   /**
-   * Always 0 since POPS-2662 — a manual classification fix no longer blocks an
-   * additive tag merge. Kept because the field is in the published REST
-   * response; removing it is a contract change with a codegen fan-out, and
-   * belongs in its own edit rather than a data fix.
+   * Of `matched`, the ones where at least one of the rule's tags was refused
+   * because the row already carries a different value on that single-valued
+   * facet (`mergeTagsWithinFacetLimits`'s `dropped`). Distinguishes "already
+   * had it" (not counted here, and not in `updated`) from "would have broken
+   * cardinality" — both look identical from `updated: 0` alone.
    */
-  skippedManual: number;
+  refusedFacetConflict: number;
 }
 
 /**
@@ -148,7 +150,12 @@ export function applyTagRuleToExistingTransactions(
   options: { dryRun?: boolean } = {}
 ): TagRuleRetroactiveResult {
   const dryRun = options.dryRun ?? false;
-  const result: TagRuleRetroactiveResult = { dryRun, matched: 0, updated: 0, skippedManual: 0 };
+  const result: TagRuleRetroactiveResult = {
+    dryRun,
+    matched: 0,
+    updated: 0,
+    refusedFacetConflict: 0,
+  };
 
   const rule = transactionTagRulesService.getTransactionTagRule(db, ruleId);
   const ruleTags = parseStoredTags(rule.tags);
@@ -173,7 +180,8 @@ export function applyTagRuleToExistingTransactions(
       result.matched++;
 
       const existingTags = parseStoredTags(txn.tags);
-      const merged = mergeTags(existingTags, ruleTags, rule.id, txn.id);
+      const { tags: merged, refused } = mergeTags(existingTags, ruleTags, rule.id, txn.id);
+      if (refused) result.refusedFacetConflict++;
       if (merged.length === existingTags.length) continue;
 
       result.updated++;

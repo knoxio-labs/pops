@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../finance-api-helpers.js';
@@ -128,8 +129,15 @@ function useDisableFlow() {
  * apply — the browser doesn't offer a preview step since the operation is
  * additive-only and skips manual overrides, so there is nothing destructive
  * to confirm.
+ *
+ * A transaction that already carries a conflicting value on a single-valued
+ * facet (`venue`, `occasion`, `channel`) is refused rather than merged
+ * (POPS-2673); `refusedFacetConflict` is only appended to the toast when it's
+ * non-zero, mirroring how `updated` itself is hidden behind the "no existing
+ * transactions" fallback rather than ever showing a bare `0`.
  */
 function useApplyExistingFlow() {
+  const { t } = useTranslation('finance');
   const queryClient = useQueryClient();
   const applyExistingMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -137,12 +145,16 @@ function useApplyExistingFlow() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
       void queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
-      const { updated } = result.data;
-      toast.success(
+      const { updated, refusedFacetConflict } = result.data;
+      const taggedMessage =
         updated > 0
-          ? `Tagged ${updated} existing transaction${updated === 1 ? '' : 's'}`
-          : 'No existing transactions needed tagging'
-      );
+          ? t('tagRules.applyExisting.tagged', { count: updated })
+          : t('tagRules.applyExisting.none');
+      const message =
+        refusedFacetConflict > 0
+          ? `${taggedMessage} ${t('tagRules.applyExisting.refused', { count: refusedFacetConflict })}`
+          : taggedMessage;
+      toast.success(message);
     },
     onError: (err: Error) => toast.error(err.message),
   });

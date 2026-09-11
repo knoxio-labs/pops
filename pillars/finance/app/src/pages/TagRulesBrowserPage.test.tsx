@@ -11,6 +11,7 @@ const tagRulesUpdate = vi.fn();
 const tagRulesDisable = vi.fn();
 const tagRulesDelete = vi.fn();
 const tagRulesMatchPreview = vi.fn();
+const tagRulesApplyExisting = vi.fn();
 
 vi.mock('../finance-api/index.js', () => ({
   tagRulesList: (...a: unknown[]) => tagRulesList(...a),
@@ -19,6 +20,17 @@ vi.mock('../finance-api/index.js', () => ({
   tagRulesDisable: (...a: unknown[]) => tagRulesDisable(...a),
   tagRulesDelete: (...a: unknown[]) => tagRulesDelete(...a),
   tagRulesMatchPreview: (...a: unknown[]) => tagRulesMatchPreview(...a),
+  tagRulesApplyExisting: (...a: unknown[]) => tagRulesApplyExisting(...a),
+}));
+
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...a: unknown[]) => toastSuccess(...a),
+    error: (...a: unknown[]) => toastError(...a),
+  },
 }));
 
 vi.mock('../contacts-api/index.js', () => ({
@@ -360,6 +372,9 @@ beforeEach(() => {
   tagRulesDisable.mockResolvedValue(ok({ message: 'Tag rule disabled' }));
   tagRulesDelete.mockResolvedValue(ok({ message: 'Tag rule deleted' }));
   tagRulesMatchPreview.mockResolvedValue(ok({ data: { matches: [], totalCount: 0 } }));
+  tagRulesApplyExisting.mockResolvedValue(
+    ok({ data: { dryRun: false, matched: 0, updated: 0, refusedFacetConflict: 0 } })
+  );
 });
 
 describe('TagRulesBrowserPage', () => {
@@ -498,6 +513,45 @@ describe('TagRulesBrowserPage', () => {
           isActive: true,
         },
       })
+    );
+  });
+
+  it('shows the tagged count on an apply-existing with no refusals', async () => {
+    const user = userEvent.setup();
+    tagRulesApplyExisting.mockResolvedValue(
+      ok({ data: { dryRun: false, matched: 3, updated: 3, refusedFacetConflict: 0 } })
+    );
+    renderPage();
+    const applyButtons = await screen.findAllByRole('button', {
+      name: /apply tag rule .* to existing transactions/i,
+    });
+    await user.click(applyButtons[0]!);
+    await waitFor(() =>
+      expect(tagRulesApplyExisting).toHaveBeenCalledWith({ path: { id: 'rule-1' }, body: {} })
+    );
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith('Tagged 3 existing transactions')
+    );
+  });
+
+  // Proves the dry-run/apply surface's toast distinguishes "already had it"
+  // from "refused, would have broken cardinality" (POPS-2673) — a plain
+  // `updated: 0` toast can't tell those apart, so this must fail without a
+  // dedicated refusal count in the response.
+  it('shows the refused-facet-conflict count alongside the tagged count', async () => {
+    const user = userEvent.setup();
+    tagRulesApplyExisting.mockResolvedValue(
+      ok({ data: { dryRun: false, matched: 2, updated: 1, refusedFacetConflict: 1 } })
+    );
+    renderPage();
+    const applyButtons = await screen.findAllByRole('button', {
+      name: /apply tag rule .* to existing transactions/i,
+    });
+    await user.click(applyButtons[0]!);
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        'Tagged 1 existing transaction 1 was refused — it already carries a conflicting tag'
+      )
     );
   });
 
