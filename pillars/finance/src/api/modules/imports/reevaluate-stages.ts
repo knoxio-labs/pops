@@ -15,7 +15,7 @@ import {
 } from '../corrections/index.js';
 import { applyLearnedCorrection, correctionOutcomeBucket } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
-import { transactionChanged } from './reevaluate-diff.js';
+import { correctionApplicationChanged, transactionChanged } from './reevaluate-diff.js';
 import { buildSuggestedTags } from './tag-management.js';
 
 import type { EntityMaps } from '../../../db/index.js';
@@ -61,7 +61,7 @@ function tryApplyCorrectionStage(
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
     countsAsUsage: (applied) =>
-      transactionChanged(item.tx, applied.processed, item.bucket, applied.bucket),
+      correctionApplicationChanged(item.tx, applied.processed, item.bucket, applied.bucket),
   });
   if (!correctionApplied) return { handled: false, changed: false };
 
@@ -197,7 +197,8 @@ export function reapplyCorrectionToMatched(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
-    countsAsUsage: (applied) => transactionChanged(tx, keepMatched(tx, applied.processed, winner)),
+    countsAsUsage: (applied) =>
+      correctionApplicationChanged(tx, keepMatched(tx, applied.processed, winner)),
   });
   if (!correctionApplied) {
     buckets.matched.push(tx);
