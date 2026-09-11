@@ -28,7 +28,7 @@
     "start": "node dist/api/server.js",
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
-    "test:live-seam": "vitest run --config vitest.live-seam.config.ts",
+    "test:live-seam": "node ../../scripts/require-built-graph.mjs && vitest run --config vitest.live-seam.config.ts",
     "test:watch": "vitest",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
   },

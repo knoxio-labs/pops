@@ -56,6 +56,8 @@ interface PlantOptions {
   readonly test?: string;
   /** The importing unit's `test:coverage` script, when it declares one. */
   readonly testCoverage?: string;
+  /** The importing unit's `test:live-seam` script, when it declares one. */
+  readonly testLiveSeam?: string;
   /** Whether the dependency's `.` types file exists on disk. */
   readonly built?: boolean;
   /** A second export the dependency publishes, and whether it is on disk. */
@@ -78,6 +80,7 @@ function plantWorkspace({
   typecheck,
   test,
   testCoverage,
+  testLiveSeam,
   built = false,
   subpath,
   imports = '@pops/widget',
@@ -107,6 +110,7 @@ function plantWorkspace({
   const scripts: Record<string, string> = { typecheck };
   if (test !== undefined) scripts.test = test;
   if (testCoverage !== undefined) scripts['test:coverage'] = testCoverage;
+  if (testLiveSeam !== undefined) scripts['test:live-seam'] = testLiveSeam;
   writeFileSync(
     join(host, 'package.json'),
     `${JSON.stringify({ name: '@pops/host', scripts }, null, 2)}\n`
@@ -225,6 +229,31 @@ describe('a planted unit that needs the graph', () => {
     });
 
     expect(scanRepo(root).failures).toEqual(['pillars/host (test) — imports @pops/widget']);
+  });
+
+  it('is reported on `test:live-seam` when it is a bare vitest run', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'node ../../scripts/require-built-graph.mjs && vitest run',
+      testLiveSeam: 'vitest run --config vitest.live-seam.config.ts',
+    });
+    const { needing, failures } = scanRepo(root);
+
+    expect(needing).toBe(1);
+    expect(failures).toEqual(['pillars/host (test:live-seam) — imports @pops/widget']);
+  });
+
+  it('is not reported on `test:live-seam` once it calls the helper first', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'node ../../scripts/require-built-graph.mjs && vitest run',
+      testLiveSeam:
+        'node ../../scripts/require-built-graph.mjs && vitest run --config vitest.live-seam.config.ts',
+    });
+
+    expect(scanRepo(root).failures).toEqual([]);
   });
 });
 

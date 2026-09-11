@@ -73,6 +73,7 @@ const CHECKED_SCRIPTS = /** @type {const} */ ([
   { key: 'typecheck', guarded: guardsItsOwnGraph },
   { key: 'test', guarded: guardsItsOwnTests },
   { key: 'test:coverage', guarded: guardsItsOwnTests },
+  { key: 'test:live-seam', guarded: guardsItsOwnTests },
 ]);
 
 /**

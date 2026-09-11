@@ -46,7 +46,7 @@
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "test:live-seam": "vitest run --config vitest.live-seam.config.ts",
+    "test:live-seam": "node ../../scripts/require-built-graph.mjs && vitest run --config vitest.live-seam.config.ts",
     "generate:manifest": "tsx scripts/generate-manifest.ts",
     "verify:manifest": "tsx scripts/verify-manifest.ts",
     "generate:openapi": "tsx scripts/generate-openapi.ts",
