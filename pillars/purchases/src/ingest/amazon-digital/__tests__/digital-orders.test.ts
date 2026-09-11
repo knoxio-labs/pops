@@ -242,6 +242,85 @@ describe('rows it refuses to turn into spend', () => {
   });
 });
 
+describe('header agreement across an order’s rows', () => {
+  it('drops an order whose rows disagree on currency', () => {
+    const orderId = 'D01-9000000-0000001';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': orderId, 'Base Currency Code': 'AUD' }),
+        digitalRowWith({ 'Order ID': orderId, 'Base Currency Code': 'USD' }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toContain('Base Currency Code');
+    expect(dropped?.detail).toContain('AUD');
+    expect(dropped?.detail).toContain('USD');
+  });
+
+  it('drops an order whose rows disagree on status', () => {
+    // The first row alone reads SUCCESS, which is what makes this different
+    // from the plain dropped-order case above: a first-row-only reading
+    // would ingest it.
+    const orderId = 'D01-9000000-0000002';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': orderId, 'Order Status': 'SUCCESS' }),
+        digitalRowWith({ 'Order ID': orderId, 'Order Status': 'FAILURE' }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toContain('Order Status');
+  });
+
+  it('drops an order whose rows disagree on date', () => {
+    const orderId = 'D01-9000000-0000003';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': orderId, 'Order Date': '2025-01-01T00:00:00Z' }),
+        digitalRowWith({ 'Order ID': orderId, 'Order Date': '2025-01-02T00:00:00Z' }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toContain('Order Date');
+  });
+
+  it('still ingests a multi-row order whose header fields agree, unchanged', () => {
+    // ORDER_TWO_ITEMS already spans two Digital Order Item IDs in the golden
+    // fixture; its header parses the same with or without the guard.
+    expect(orderFor(ORDER_TWO_ITEMS)).toMatchObject({
+      currency: 'AUD',
+      totalCents: 1100,
+    });
+  });
+
+  it('leaves other orders in the same file unaffected by one bad header', () => {
+    const badOrderId = 'D01-9000000-0000004';
+    const goodOrderId = 'D01-9000000-0000005';
+    const result = parseAmazonDigitalOrders(
+      digitalCsvWithRows([
+        digitalRowWith({ 'Order ID': badOrderId, 'Base Currency Code': 'AUD' }),
+        digitalRowWith({ 'Order ID': badOrderId, 'Base Currency Code': 'USD' }),
+        digitalRowWith({ 'Order ID': goodOrderId }),
+      ])
+    );
+
+    expect(result.orders.some((order) => order.sourceOrderId === badOrderId)).toBe(false);
+    expect(result.orders.some((order) => order.sourceOrderId === goodOrderId)).toBe(true);
+  });
+});
+
 describe('the checksum', () => {
   it('separates two orders the file states identically', () => {
     // `purchases.checksum` is unique GLOBALLY. Two subscription renewals of

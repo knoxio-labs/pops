@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 
 import { parseBundleRows } from '../amazon/csv.js';
 import { readText, readTimestamp } from '../amazon/fields.js';
+import { reportHeaderDisagreement, type HeaderField } from '../amazon/header-agreement.js';
 import {
   buildRefundCharges,
   reportOrphanRefunds,
@@ -52,6 +53,21 @@ export const PROMOTION_OFFSET_TAG = 'promotion-offset';
 
 /** Stands in on an anomaly for a row that names no order at all. */
 const UNKNOWN_ORDER_ID = '(no order id)';
+
+/**
+ * The three facts `readOrderHeader` takes from a single row, checked
+ * against every other row of the group before that row is trusted.
+ *
+ * Normalisation matches what `readOrderHeader` itself does with the value —
+ * lower-cased status, upper-cased currency, a parsed instant for the date —
+ * so two rows spelling the same fact differently are not reported as a
+ * disagreement.
+ */
+const DIGITAL_HEADER_FIELDS: readonly HeaderField[] = [
+  { column: 'Order Status', normalize: (raw) => readText(raw)?.toLowerCase() ?? null },
+  { column: 'Order Date', normalize: (raw) => readTimestamp(raw) },
+  { column: 'Base Currency Code', normalize: (raw) => readText(raw)?.toUpperCase() ?? null },
+];
 
 export interface AmazonDigitalParseResult {
   readonly orders: readonly CreatePurchaseInput[];
@@ -134,6 +150,8 @@ function buildOrder(
 ): CreatePurchaseInput | null {
   const first = rows[0];
   if (first === undefined) return null;
+
+  if (reportHeaderDisagreement(rows, DIGITAL_HEADER_FIELDS, sourceOrderId, anomalies)) return null;
 
   const header = readOrderHeader(first, sourceOrderId, anomalies);
   if (header === null) return null;
