@@ -323,5 +323,14 @@
   "rules.active": "Ativo",
   "rules.inactiveSkipped": "Regras inativas são ignoradas pelo matcher.",
   "tagRules.title": "Regras de Tags",
-  "tagRules.description": "Navegar e gerenciar regras de sugestão de tags"
+  "tagRules.description": "Navegar e gerenciar regras de sugestão de tags",
+  "tagRules.applyExisting.tagged_one": "{{count}} transação existente marcada",
+  "tagRules.applyExisting.tagged_other": "{{count}} transações existentes marcadas",
+  "tagRules.applyExisting.none": "Nenhuma transação existente precisou de tag",
+  "tagRules.applyExisting.refusedClause_one": "{{count}} foi recusada porque já possui uma tag conflitante",
+  "tagRules.applyExisting.refusedClause_other": "{{count}} foram recusadas porque já possuem uma tag conflitante",
+  "tagRules.applyExisting.taggedWithRefused_one": "{{count}} transação existente marcada; {{refusedClause}}",
+  "tagRules.applyExisting.taggedWithRefused_other": "{{count}} transações existentes marcadas; {{refusedClause}}",
+  "tagRules.applyExisting.refusedOnly_one": "Nenhuma transação foi marcada — {{count}} transação correspondente já possui uma tag conflitante",
+  "tagRules.applyExisting.refusedOnly_other": "Nenhuma transação foi marcada — {{count}} transações correspondentes já possuem uma tag conflitante"
 }

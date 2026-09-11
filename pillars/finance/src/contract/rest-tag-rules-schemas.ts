@@ -198,5 +198,5 @@ export const TagRuleApplyExistingResultSchema = z.object({
   dryRun: z.boolean(),
   matched: z.number(),
   updated: z.number(),
-  skippedManual: z.number(),
+  refusedFacetConflict: z.number(),
 });

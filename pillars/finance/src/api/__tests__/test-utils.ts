@@ -341,7 +341,7 @@ interface TagRuleApplyExistingResult {
   dryRun: boolean;
   matched: number;
   updated: number;
-  skippedManual: number;
+  refusedFacetConflict: number;
 }
 
 interface CorrectionApplyExistingResult {

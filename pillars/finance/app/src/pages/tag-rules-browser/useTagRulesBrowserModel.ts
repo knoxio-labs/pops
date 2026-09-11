@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { unwrap } from '../../finance-api-helpers.js';
@@ -123,13 +124,41 @@ function useDisableFlow() {
 }
 
 /**
+ * Words the apply-existing toast per combination of `updated` and
+ * `refusedFacetConflict` rather than concatenating fragments, so a rule
+ * whose matches were all refused (POPS-2673) never reads as "nothing needed
+ * tagging" — that phrasing is reserved for when nothing matched at all.
+ */
+function applyExistingMessage(
+  t: ReturnType<typeof useTranslation<'finance'>>['t'],
+  { updated, refusedFacetConflict }: { updated: number; refusedFacetConflict: number }
+): string {
+  if (updated > 0 && refusedFacetConflict > 0) {
+    return t('tagRules.applyExisting.taggedWithRefused', {
+      count: updated,
+      refusedClause: t('tagRules.applyExisting.refusedClause', { count: refusedFacetConflict }),
+    });
+  }
+  if (updated > 0) return t('tagRules.applyExisting.tagged', { count: updated });
+  if (refusedFacetConflict > 0) {
+    return t('tagRules.applyExisting.refusedOnly', { count: refusedFacetConflict });
+  }
+  return t('tagRules.applyExisting.none');
+}
+
+/**
  * Retroactive apply (#3660): merges a rule's tags into every existing
  * matching transaction it hasn't already tagged. A direct, real (non-dryRun)
  * apply — the browser doesn't offer a preview step since the operation is
  * additive-only and skips manual overrides, so there is nothing destructive
  * to confirm.
+ *
+ * A transaction that already carries a conflicting value on a single-valued
+ * facet (`venue`, `occasion`, `channel`) is refused rather than merged
+ * (POPS-2673); see {@link applyExistingMessage} for how the toast is worded.
  */
 function useApplyExistingFlow() {
+  const { t } = useTranslation('finance');
   const queryClient = useQueryClient();
   const applyExistingMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -137,12 +166,7 @@ function useApplyExistingFlow() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
       void queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
-      const { updated } = result.data;
-      toast.success(
-        updated > 0
-          ? `Tagged ${updated} existing transaction${updated === 1 ? '' : 's'}`
-          : 'No existing transactions needed tagging'
-      );
+      toast.success(applyExistingMessage(t, result.data));
     },
     onError: (err: Error) => toast.error(err.message),
   });

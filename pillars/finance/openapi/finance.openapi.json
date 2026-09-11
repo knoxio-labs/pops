@@ -27150,14 +27150,14 @@
                         "matched": {
                           "type": "number"
                         },
-                        "skippedManual": {
+                        "refusedFacetConflict": {
                           "type": "number"
                         },
                         "updated": {
                           "type": "number"
                         }
                       },
-                      "required": ["dryRun", "matched", "updated", "skippedManual"],
+                      "required": ["dryRun", "matched", "updated", "refusedFacetConflict"],
                       "type": "object"
                     }
                   },
