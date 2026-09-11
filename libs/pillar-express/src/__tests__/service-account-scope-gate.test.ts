@@ -91,6 +91,38 @@ describe('the scope table derived from the contract', () => {
   });
 });
 
+describe('an empty projection', () => {
+  it('throws rather than building a gate that admits every request', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract: {},
+        rootScope: 'widgets',
+        logPrefix: 'widgets-api',
+      })
+    ).toThrow(/widgets-api/);
+  });
+
+  it('names the pillar so the wrong-object mistake is findable from the crash', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract: { openapi: '3.0.0', paths: {} },
+        rootScope: 'sources',
+        logPrefix: 'sources-api',
+      })
+    ).toThrow(/sources-api/);
+  });
+
+  it('still throws for a contract shaped as a bare route leaf with no children', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract: { method: 'GET' },
+        rootScope: 'widgets',
+        logPrefix: 'widgets-api',
+      })
+    ).toThrow();
+  });
+});
+
 describe('a request presenting no credential', () => {
   it('reaches the handler under the default posture, without consulting the registry', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
