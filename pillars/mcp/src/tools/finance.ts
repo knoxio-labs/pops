@@ -1,9 +1,11 @@
 import { accountsTools } from './finance-accounts.js';
 import {
+  BUDGET_PERIODS,
   ENTITY_TYPES,
   TRANSACTION_TYPES,
   contacts,
   finance,
+  type BudgetPeriod,
   type EntityType,
   type TransactionType,
 } from './finance-client.js';
@@ -103,7 +105,7 @@ const budgetsList: ToolDef = {
       search: { type: 'string', description: 'Search by budget name' },
       period: {
         type: 'string',
-        enum: ['monthly', 'yearly'],
+        enum: BUDGET_PERIODS,
         description: 'Filter by budget period',
       },
       active: { type: 'string', enum: ['true', 'false'], description: 'Filter by active state' },
@@ -114,8 +116,9 @@ const budgetsList: ToolDef = {
   handler: async (args) => {
     const result = await finance().budgets.list({
       search: typeof args['search'] === 'string' ? args['search'] : undefined,
-      period:
-        args['period'] === 'monthly' || args['period'] === 'yearly' ? args['period'] : undefined,
+      period: (BUDGET_PERIODS as readonly string[]).includes(args['period'] as string)
+        ? (args['period'] as BudgetPeriod)
+        : undefined,
       active: args['active'] === 'true' || args['active'] === 'false' ? args['active'] : undefined,
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,

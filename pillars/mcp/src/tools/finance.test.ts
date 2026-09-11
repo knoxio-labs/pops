@@ -153,16 +153,29 @@ describe('finance.budgets.list', () => {
   const tool = financeTools.find((t) => t.name === 'finance.budgets.list')!;
 
   it('passes period and active filters', async () => {
-    await tool.handler({ period: 'monthly', active: 'true' });
+    await tool.handler({ period: 'Monthly', active: 'true' });
     expect(budgets.list).toHaveBeenCalledWith(
-      expect.objectContaining({ period: 'monthly', active: 'true' })
+      expect.objectContaining({ period: 'Monthly', active: 'true' })
     );
+  });
+
+  it("ignores lowercase period values, which do not match finance's stored casing", async () => {
+    await tool.handler({ period: 'monthly' });
+    const call = budgets.list.mock.lastCall?.[0];
+    expect((call as Record<string, unknown>)['period']).toBeUndefined();
   });
 
   it('ignores invalid period values', async () => {
     await tool.handler({ period: 'weekly' });
     const call = budgets.list.mock.lastCall?.[0];
     expect((call as Record<string, unknown>)['period']).toBeUndefined();
+  });
+
+  it('declares the real budget period vocabulary in the tool schema', () => {
+    const properties = tool.inputSchema.properties as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(properties?.['period']?.enum).toEqual(['Monthly', 'Yearly']);
   });
 
   it('returns isError on unavailable', async () => {
