@@ -110,7 +110,7 @@ describe('against the real repo', () => {
   });
 });
 
-describe('the other real pillars (POPS-3484)', () => {
+describe('the other real pillars', () => {
   it('PILLARS names exactly purchases, finance, cerebrum and bfm', () => {
     expect(PILLARS.map((p) => p.name)).toEqual(['purchases', 'finance', 'cerebrum', 'bfm']);
   });
