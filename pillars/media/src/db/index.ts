@@ -49,60 +49,16 @@ export * as plexSettingsService from './services/plex-settings.js';
 
 export * as settingsService from './services/settings-adapter.js';
 
+export * from './services/rotation/index.js';
+// These four names are also exported by './row-types.js'. Naming them here
+// keeps the rotation services' definitions winning, as the explicit exports
+// did before the split, instead of two `export *` lines colliding.
 export type {
-  AddToQueueInput,
-  CandidateListRow,
-  CandidateStatus,
-  CandidateStatusResult,
-  ListCandidatesInput,
-  ListCandidatesResult,
   RotationCandidateRow,
-} from './services/rotation/candidates.js';
-
-export * as rotationCandidatesService from './services/rotation/candidates.js';
-
-export type { FetchedCandidate } from './services/rotation/candidate-sync.js';
-
-export * as rotationCandidateSyncService from './services/rotation/candidate-sync.js';
-
-export type { AddExclusionInput, RotationExclusionRow } from './services/rotation/exclusions.js';
-
-export * as rotationExclusionsService from './services/rotation/exclusions.js';
-
-export type {
-  CreateSourceInput,
-  RotationSourceRow,
-  SourceWithCount,
-  UpdateSourceInput,
-} from './services/rotation/sources.js';
-
-export * as rotationSourcesService from './services/rotation/sources.js';
-
-export * as rotationSettingsService from './services/rotation/settings.js';
-
-export type {
-  ListRotationLogResult,
-  RotationCycleLog,
-  RotationFailedMovieRef,
+  RotationExclusionRow,
   RotationLogRow,
-  RotationLogStats,
-  RotationMovieRef,
-} from './services/rotation/rotation-log.js';
-
-export * as rotationLogService from './services/rotation/rotation-log.js';
-
-export type { SelectedCandidate } from './services/rotation/selection-policy.js';
-
-export * as rotationSelectionService from './services/rotation/selection-policy.js';
-
-export type {
-  EligibleMovie,
-  ExpiredMovie,
-  LeavingMovie,
-  MovieSizeMap,
-} from './services/rotation/removal-queries.js';
-
-export * as rotationRemovalQueries from './services/rotation/removal-queries.js';
+  RotationSourceRow,
+} from './services/rotation/index.js';
 
 export type { DismissedDiscoverRow } from './services/dismissed-discover.js';
 
