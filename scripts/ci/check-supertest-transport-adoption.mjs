@@ -145,7 +145,7 @@ const SKIP_DIRECTORIES = new Set([
  * bare `'supertest'` string literal keeps prose out of the results — the three
  * pillars discuss supertest in a dozen file headers.
  */
-const SPECIFIER = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/gu;
+const SPECIFIER = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\(\s*)(['"`])([^'"`\n]+)\1/gu;
 
 /** Posix-separated and repo-relative, so violations read the same on any host. */
 const toPosix = (/** @type {string} */ path) => path.split(sep).join('/');
@@ -537,6 +537,18 @@ function selfTestCases() {
     {
       name: 'dynamic import',
       arrange: plant(`const { default: request } = await import('supertest');\nrequest(1);\n`),
+      expect: caught,
+    },
+    {
+      // POPS-2516: a backtick template literal with no interpolation is a valid
+      // specifier for the call forms, and resolves exactly like a quoted one.
+      name: 'dynamic import, backtick template literal',
+      arrange: plant(`const { default: request } = await import(\`supertest\`);\nrequest(1);\n`),
+      expect: caught,
+    },
+    {
+      name: 'CJS require, backtick template literal',
+      arrange: plant(`const request = require(\`supertest\`);\nrequest(1);\n`),
       expect: caught,
     },
     {
