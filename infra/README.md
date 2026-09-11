@@ -36,13 +36,13 @@ has a matching `mkdir`/`chown` and `ENV` in its pillar image so the path is
 writable with no compose at all (POPS-2737); the volume is what makes it
 survive an image roll.
 
-**Secrets** — 17, each `file: ../secrets/<name>`, resolved from `infra/` (so the
+**Secrets** — 16, each `file: ../secrets/<name>`, resolved from `infra/` (so the
 gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
 `finance_api_key`, `instagram_cookies`, `notion_api_token`,
-`paperless_admin_password`, `paperless_secret_key`, `pops_api_internal_token`,
+`paperless_admin_password`, `paperless_secret_key`,
 `pops_api_key`, `pops_bfm_api_key`, `pops_finance_api_key`,
 `pops_purchases_api_key`, `telegram_bot_token`, `thetvdb_api_key`,
-`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 13 are mounted into a
+`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 12 are mounted into a
 service (`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
 `moltbot-validator`, `bfm-api`, `purchases-api`, `finance-api`,
 `cerebrum-api`); the other 4 are declared and mounted nowhere.

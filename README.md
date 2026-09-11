@@ -164,7 +164,7 @@ cp .env.example .env                  # then edit: POPS_DOMAIN, image tag, watch
 # (or leave the file empty if the corresponding integration is unused).
 mkdir -p secrets && cd secrets
 for name in claude_api_key up_bank_token up_webhook_secret notion_api_token \
-            telegram_bot_token finance_api_key pops_api_key pops_api_internal_token \
+            telegram_bot_token finance_api_key pops_api_key \
             instagram_cookies tmdb_api_key thetvdb_api_key \
             paperless_secret_key paperless_admin_password; do
   : > "$name"
