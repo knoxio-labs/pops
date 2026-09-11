@@ -21,7 +21,12 @@ vi.mock('../../../purchases-api/index.js', () => ({
 import { DataTable } from '@pops/ui';
 
 import { buildColumns } from '../columns';
-import { fingerprint, usePurchaseLinkSummaries } from './usePurchaseLinkSummaries';
+import {
+  BATCH_CONCURRENCY,
+  TRANSACTION_URI_BATCH_SIZE,
+  fingerprint,
+  usePurchaseLinkSummaries,
+} from './usePurchaseLinkSummaries';
 
 import type { Transaction } from '../types';
 import type { TransactionLinkSummary } from './types';
@@ -362,6 +367,44 @@ describe('the batched request', () => {
       return request.body.transactionUris.length;
     });
     expect(sizes).toEqual([500, 1]);
+  });
+
+  it('never has more than the concurrency cap of batch requests in flight', async () => {
+    const chunks = BATCH_CONCURRENCY * 2 + 1;
+    const many = Array.from({ length: TRANSACTION_URI_BATCH_SIZE * chunks }, (_, index) => ({
+      id: `tx-${index}`,
+    }));
+    let inFlight = 0;
+    let peak = 0;
+    const held: (() => void)[] = [];
+    reconcileLinksBatchMock.mockImplementation(
+      (request: { body: { transactionUris: string[] } }) => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        const [firstUri = ''] = request.body.transactionUris;
+        return new Promise((resolve) => {
+          held.push(() => {
+            inFlight -= 1;
+            resolve({ data: { transactions: [summary(firstUri.split('/').at(-1) ?? '', {})] } });
+          });
+        });
+      }
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => usePurchaseLinkSummaries(many), {
+      wrapper: withClient(client),
+    });
+
+    for (let released = 0; released < chunks; released += 1) {
+      await waitFor(() => expect(held.length).toBeGreaterThan(0));
+      held.shift()?.();
+    }
+
+    await waitFor(() => expect(result.current.byTransactionId.size).toBe(chunks));
+    expect(reconcileLinksBatchMock).toHaveBeenCalledTimes(chunks);
+    expect(peak).toBe(BATCH_CONCURRENCY);
+    expect(result.current.unavailable).toBe(false);
   });
 
   it('asks nothing at all while the transactions list is still empty', async () => {
