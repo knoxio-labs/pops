@@ -13,9 +13,8 @@ import {
   runYtDlp,
 } from '../instagram-acquisition.js';
 
-import type { ChildProcess, SpawnOptions } from 'node:child_process';
-
 import type { RunInstagramAcquisitionOptions, YtDlpResult } from '../instagram-acquisition.js';
+import type { SpawnedProcess, SpawnProcess } from '../spawn-process.js';
 import type { HandlerContext } from '../types.js';
 
 const NEVER_CANCELLED: HandlerContext = { isCancelled: () => false };
@@ -398,29 +397,35 @@ describe('runInstagramAcquisition', () => {
   });
 });
 
-/** How `runYtDlp` actually calls its `spawnFn` seam. */
-type SpawnLike = (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess;
+/**
+ * Fake `SpawnedProcess` for tests. Extends `EventEmitter` (giving it
+ * `emit` to drive the fake from test code) and implements
+ * `SpawnedProcess` directly — no cast needed since the seam only
+ * requires `stdout`/`stderr`/`on`/`kill`, all of which a plain
+ * `EventEmitter` already provides or this class adds.
+ */
+class FakeChildProcess extends EventEmitter implements SpawnedProcess {
+  readonly stdout = new EventEmitter();
+  readonly stderr = new EventEmitter();
+  kill = vi.fn((sig?: NodeJS.Signals | number): boolean => {
+    setImmediate(() => this.emit('close', null, sig ?? 'SIGTERM'));
+    return true;
+  });
+}
 
 function makeFakeChild(opts: {
   exit?: { code: number | null; signal: NodeJS.Signals | null } | { error: Error };
   stdout?: string;
   stderr?: string;
   killAfterMs?: number;
-}): ChildProcess {
-  const child = new EventEmitter() as ChildProcess;
-  const stdout = new EventEmitter() as ChildProcess['stdout'];
-  const stderr = new EventEmitter() as ChildProcess['stderr'];
-  Object.defineProperty(child, 'stdout', { value: stdout });
-  Object.defineProperty(child, 'stderr', { value: stderr });
-
-  child.kill = vi.fn((sig?: NodeJS.Signals | number): boolean => {
-    setImmediate(() => child.emit('close', null, sig ?? 'SIGTERM'));
-    return true;
-  });
+}): FakeChildProcess {
+  const child = new FakeChildProcess();
 
   setImmediate(() => {
-    if (opts.stdout != null && opts.stdout !== '') stdout?.emit('data', Buffer.from(opts.stdout));
-    if (opts.stderr != null && opts.stderr !== '') stderr?.emit('data', Buffer.from(opts.stderr));
+    if (opts.stdout != null && opts.stdout !== '')
+      child.stdout.emit('data', Buffer.from(opts.stdout));
+    if (opts.stderr != null && opts.stderr !== '')
+      child.stderr.emit('data', Buffer.from(opts.stderr));
     const exit = opts.exit;
     if (exit != null && 'error' in exit) {
       child.emit('error', exit.error);
@@ -436,7 +441,7 @@ function makeFakeChild(opts: {
 
 describe('runYtDlp', () => {
   it('resolves with stdout/stderr/exitCode on a normal exit', async () => {
-    const spawnFn = vi.fn<SpawnLike>(() =>
+    const spawnFn = vi.fn<SpawnProcess>(() =>
       makeFakeChild({
         exit: { code: 0, signal: null },
         stdout: 'video downloaded\n',
@@ -448,7 +453,7 @@ describe('runYtDlp', () => {
       url: 'https://instagram.com/reel/x/',
       cookiesPath: '/tmp/cookies.txt',
       output: '/tmp/wd',
-      spawnFn: spawnFn as never,
+      spawnFn,
     });
 
     expect(result).toEqual({
@@ -480,7 +485,7 @@ describe('runYtDlp', () => {
       url: 'https://instagram.com/reel/x/',
       cookiesPath: '/tmp/cookies.txt',
       output: '/tmp/wd',
-      spawnFn: spawnFn as never,
+      spawnFn,
     });
 
     expect(result.exitCode).toBe(1);
@@ -495,7 +500,7 @@ describe('runYtDlp', () => {
         url: 'https://instagram.com/reel/x/',
         cookiesPath: '/tmp/cookies.txt',
         output: '/tmp/wd',
-        spawnFn: spawnFn as never,
+        spawnFn,
       })
     ).rejects.toThrow(/ENOENT yt-dlp/);
   });
@@ -509,7 +514,7 @@ describe('runYtDlp', () => {
       url: 'https://instagram.com/reel/x/',
       cookiesPath: '/tmp/cookies.txt',
       output: '/tmp/wd',
-      spawnFn: spawnFn as never,
+      spawnFn,
       signal: controller.signal,
     });
 
@@ -529,7 +534,7 @@ describe('runYtDlp', () => {
       url: 'https://instagram.com/reel/x/',
       cookiesPath: '/tmp/cookies.txt',
       output: '/tmp/wd',
-      spawnFn: spawnFn as never,
+      spawnFn,
       timeoutMs: 100,
     });
 
@@ -543,9 +548,7 @@ describe('runYtDlp', () => {
 
   it('escalates SIGTERM to SIGKILL after the grace period if the child does not exit', async () => {
     vi.useFakeTimers();
-    const child = new EventEmitter() as ChildProcess;
-    Object.defineProperty(child, 'stdout', { value: new EventEmitter() });
-    Object.defineProperty(child, 'stderr', { value: new EventEmitter() });
+    const child = new FakeChildProcess();
     // The fake child swallows SIGTERM (does NOT emit close) so we can
     // observe the escalation. SIGKILL closes the process.
     child.kill = vi.fn((sig?: NodeJS.Signals | number): boolean => {
@@ -560,7 +563,7 @@ describe('runYtDlp', () => {
       url: 'https://instagram.com/reel/x/',
       cookiesPath: '/tmp/cookies.txt',
       output: '/tmp/wd',
-      spawnFn: spawnFn as never,
+      spawnFn,
       timeoutMs: 100,
       sigkillGraceMs: 50,
     });

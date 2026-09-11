@@ -9,6 +9,8 @@
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
+import type { SpawnedProcess, SpawnProcess } from './spawn-process.js';
+
 export const DEFAULT_YT_DLP_TIMEOUT_MS = 60_000;
 export const DEFAULT_RATE_LIMIT_FALLBACK_SEC = 300;
 /** Grace period between SIGTERM and SIGKILL. Bounded so a misbehaving
@@ -27,7 +29,7 @@ export interface RunYtDlpOptions {
    *  (timeout or signal abort). Defaults to `DEFAULT_SIGKILL_GRACE_MS`. */
   sigkillGraceMs?: number;
   /** Test seam — defaults to `spawn` from `node:child_process`. */
-  spawnFn?: typeof spawn;
+  spawnFn?: SpawnProcess;
   /** Aborts the child process when fired. The handler uses this to wire
    *  cooperative cancellation through to a running yt-dlp child. */
   signal?: AbortSignal;
@@ -72,10 +74,7 @@ interface KillSwitch {
  * is a no-op while the SIGKILL timer is still armed. `clear()` cancels
  * a pending SIGKILL when the child exits cleanly first.
  */
-function makeKillSwitch(
-  child: import('node:child_process').ChildProcess,
-  graceMs: number
-): KillSwitch {
+function makeKillSwitch(child: SpawnedProcess, graceMs: number): KillSwitch {
   let sigkillTimer: NodeJS.Timeout | null = null;
   return {
     forceKill: () => {
