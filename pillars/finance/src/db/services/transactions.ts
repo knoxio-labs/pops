@@ -25,7 +25,9 @@ import {
   TransactionNotFoundError,
 } from '../errors.js';
 import { transactions } from '../schema.js';
+import { parseStoredTags } from '../tag-facets.js';
 import { getAccount } from './accounts.js';
+import { applyVocabularyUsageDelta } from './tag-vocabulary.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb, TransactionRow } from './internal.js';
@@ -102,27 +104,31 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const accountId = getAccount(db, input.accountId).id;
+  const tags = input.tags ?? [];
 
-  db.insert(transactions)
-    .values({
-      id,
-      description: input.description,
-      accountId,
-      amountCents: input.amountCents,
-      date: input.date,
-      type,
-      tags: JSON.stringify(input.tags ?? []),
-      entityId: input.entityId ?? null,
-      entityName: input.entityName ?? null,
-      location: input.location ?? null,
-      country: input.country ?? null,
-      relatedTransactionId: input.relatedTransactionId ?? null,
-      notes: input.notes ?? null,
-      checksum: input.checksum ?? null,
-      rawRow: input.rawRow ?? null,
-      lastEditedTime: now,
-    })
-    .run();
+  db.transaction((tx) => {
+    tx.insert(transactions)
+      .values({
+        id,
+        description: input.description,
+        accountId,
+        amountCents: input.amountCents,
+        date: input.date,
+        type,
+        tags: JSON.stringify(tags),
+        entityId: input.entityId ?? null,
+        entityName: input.entityName ?? null,
+        location: input.location ?? null,
+        country: input.country ?? null,
+        relatedTransactionId: input.relatedTransactionId ?? null,
+        notes: input.notes ?? null,
+        checksum: input.checksum ?? null,
+        rawRow: input.rawRow ?? null,
+        lastEditedTime: now,
+      })
+      .run();
+    applyVocabularyUsageDelta(tx, [], tags);
+  });
 
   return getTransaction(db, id);
 }
@@ -228,7 +234,12 @@ export function updateTransaction(
   const updates = buildTransactionUpdates(db, input);
   if (Object.keys(updates).length > 0) {
     updates.lastEditedTime = new Date().toISOString();
-    db.update(transactions).set(updates).where(eq(transactions.id, id)).run();
+    db.transaction((tx) => {
+      tx.update(transactions).set(updates).where(eq(transactions.id, id)).run();
+      if (input.tags !== undefined) {
+        applyVocabularyUsageDelta(tx, parseStoredTags(stored.tags), input.tags);
+      }
+    });
   }
 
   return getTransaction(db, id);
@@ -243,8 +254,12 @@ export function updateTransaction(
 export function deleteTransaction(db: FinanceDb, id: string): TransactionRow {
   const snapshot = getTransaction(db, id);
 
-  const result = db.delete(transactions).where(eq(transactions.id, id)).run();
-  if (result.changes === 0) throw new TransactionNotFoundError(id);
+  db.transaction((tx) => {
+    const result = tx.delete(transactions).where(eq(transactions.id, id)).run();
+    if (result.changes === 0) throw new TransactionNotFoundError(id);
+    applyVocabularyUsageDelta(tx, parseStoredTags(snapshot.tags), []);
+  });
+
   return snapshot;
 }
 
@@ -260,7 +275,10 @@ export function restoreTransaction(db: FinanceDb, snapshot: TransactionRow): Tra
   if (existing) {
     throw new TransactionAlreadyExistsError(snapshot.id);
   }
-  db.insert(transactions).values(snapshot).run();
+  db.transaction((tx) => {
+    tx.insert(transactions).values(snapshot).run();
+    applyVocabularyUsageDelta(tx, [], parseStoredTags(snapshot.tags));
+  });
   return getTransaction(db, snapshot.id);
 }
 

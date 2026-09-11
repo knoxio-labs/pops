@@ -166,7 +166,53 @@ export function upsertVocabularyTag(db: FinanceDb, tag: string, source: TagVocab
 }
 
 /**
- * Bump the usage count of every named tag that is already in the vocabulary.
+ * Reconcile the vocabulary's usage counts with one transaction's tag change:
+ * every tag gained since `oldTags` is bumped, every tag lost is dropped, and a
+ * tag present in both is left alone (POPS-2627).
+ *
+ * The one counting rule every tag-write path shares, so `usage_count` stays
+ * "how many transactions carry this tag" rather than drifting into "how many
+ * times a tag was written at import commit". Each side is deduplicated with a
+ * `Set` before comparing — a transaction carrying a tag twice uses it once,
+ * matching both {@link incrementVocabularyUsage} and the 0069 backfill this
+ * table was seeded from. A tag outside the vocabulary is silently skipped on
+ * both sides, the same as the increment-only path this replaces. The decrement
+ * is floored at zero in SQL so a tag whose row predates this fix (and is
+ * already short by however many un-tracked writes came before it) cannot be
+ * driven negative.
+ *
+ * Call this in the same DB transaction as the tag write it accounts for —
+ * a crash between the two would otherwise leave the counter permanently wrong
+ * in a way nothing after it can detect.
+ */
+export function applyVocabularyUsageDelta(
+  db: FinanceDb,
+  oldTags: readonly string[],
+  newTags: readonly string[]
+): void {
+  const before = new Set(oldTags);
+  const after = new Set(newTags);
+  const added = [...after].filter((tag) => !before.has(tag));
+  const removed = [...before].filter((tag) => !after.has(tag));
+
+  if (added.length > 0) {
+    db.update(tagVocabulary)
+      .set({ usageCount: sql`${tagVocabulary.usageCount} + 1` })
+      .where(inArray(tagVocabulary.tag, added))
+      .run();
+  }
+  if (removed.length > 0) {
+    db.update(tagVocabulary)
+      .set({ usageCount: sql`max(${tagVocabulary.usageCount} - 1, 0)` })
+      .where(inArray(tagVocabulary.tag, removed))
+      .run();
+  }
+}
+
+/**
+ * Bump the usage count of every named tag that is already in the vocabulary —
+ * the import-commit case of {@link applyVocabularyUsageDelta}, where the
+ * transaction had no prior tags to lose.
  *
  * Deliberately does not insert: a tag absent from the vocabulary is not given
  * standing by being used, which is the ratchet POPS-2606 removes. Duplicate
@@ -174,12 +220,7 @@ export function upsertVocabularyTag(db: FinanceDb, tag: string, source: TagVocab
  * once.
  */
 export function incrementVocabularyUsage(db: FinanceDb, tags: readonly string[]): void {
-  const distinct = Array.from(new Set(tags));
-  if (distinct.length === 0) return;
-  db.update(tagVocabulary)
-    .set({ usageCount: sql`${tagVocabulary.usageCount} + 1` })
-    .where(inArray(tagVocabulary.tag, distinct))
-    .run();
+  applyVocabularyUsageDelta(db, [], tags);
 }
 
 /**

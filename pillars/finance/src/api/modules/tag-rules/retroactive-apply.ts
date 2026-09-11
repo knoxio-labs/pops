@@ -39,6 +39,7 @@ import { asc, eq } from 'drizzle-orm';
 
 import {
   type FinanceDb,
+  tagVocabularyService,
   transactionCorrectionsService,
   transactionTagRulesService,
   transactions,
@@ -187,14 +188,17 @@ export function applyTagRuleToExistingTransactions(
       result.updated++;
       if (dryRun) continue;
 
-      db.update(transactions)
-        .set({
-          tags: JSON.stringify(merged),
-          lastEditedTime: new Date().toISOString(),
-        })
-        .where(eq(transactions.id, txn.id))
-        .run();
-      transactionTagRulesService.incrementTransactionTagRuleUsage(db, rule.id);
+      db.transaction((tx) => {
+        tx.update(transactions)
+          .set({
+            tags: JSON.stringify(merged),
+            lastEditedTime: new Date().toISOString(),
+          })
+          .where(eq(transactions.id, txn.id))
+          .run();
+        tagVocabularyService.applyVocabularyUsageDelta(tx, existingTags, merged);
+        transactionTagRulesService.incrementTransactionTagRuleUsage(tx, rule.id);
+      });
     }
 
     offset += BATCH_SIZE;

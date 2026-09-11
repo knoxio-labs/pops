@@ -17,11 +17,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import {
   openFinanceDb,
+  tagVocabularyService,
   transactionCorrections,
   transactions,
   type FinanceDb,
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
+import { tagVocabulary } from '../../../../db/schema.js';
 import {
   applyCorrectionRuleToExistingTransactions,
   reclassifyExistingTransactions,
@@ -102,6 +104,14 @@ function readTxn(id: string) {
   const row = db.select().from(transactions).where(eq(transactions.id, id)).get();
   if (!row) throw new Error(`transaction ${id} vanished`);
   return row;
+}
+
+function usageCountOf(tag: string): number | undefined {
+  return db
+    .select({ usageCount: tagVocabulary.usageCount })
+    .from(tagVocabulary)
+    .where(eq(tagVocabulary.tag, tag))
+    .get()?.usageCount;
 }
 
 beforeEach(() => {
@@ -418,6 +428,65 @@ describe('reclassifyExistingTransactions — tag-merge + provenance + usage tele
   });
 });
 
+describe('reclassifyExistingTransactions — usage_count (POPS-2627)', () => {
+  it('bumps only the tag actually merged onto the row, not one the row already had', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    tagVocabularyService.upsertVocabularyTag(db, 'existing-tag', 'seed');
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null, tags: ['existing-tag'] });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries', 'existing-tag'],
+      confidence: 0.95,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    expect(usageCountOf('groceries')).toBe(1);
+    expect(usageCountOf('existing-tag')).toBe(0);
+  });
+
+  it('does not bump a rule tag on a row a manual override skipped', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    seedTxn({
+      description: 'WOOLWORTHS',
+      type: 'income',
+      entityId: 'ent-user-picked',
+      matchType: 'manual',
+    });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    expect(usageCountOf('groceries')).toBe(0);
+  });
+
+  it('a rule change touching only classification fields never bumps a tag count', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null, tags: ['groceries'] });
+    seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      confidence: 0.95,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    expect(usageCountOf('groceries')).toBe(0);
+  });
+});
+
 describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive apply (#3660)', () => {
   it('applies only the targeted rule, even when a different rule also matches', () => {
     const txnId = seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
@@ -521,6 +590,60 @@ describe('applyCorrectionRuleToExistingTransactions — single-rule retroactive 
 
   it('throws TransactionCorrectionNotFoundError for an unknown rule id', () => {
     expect(() => applyCorrectionRuleToExistingTransactions(db, 'nope')).toThrow();
+  });
+});
+
+describe('applyCorrectionRuleToExistingTransactions — usage_count (POPS-2627)', () => {
+  it('bumps the merged tag for the targeted rule', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    applyCorrectionRuleToExistingTransactions(db, ruleId);
+
+    expect(usageCountOf('groceries')).toBe(1);
+  });
+
+  it('does not bump anything on a dry run', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    applyCorrectionRuleToExistingTransactions(db, ruleId, { dryRun: true });
+
+    expect(usageCountOf('groceries')).toBe(0);
+  });
+
+  it('a second real apply is a no-op for usage as well as for the row', () => {
+    tagVocabularyService.upsertVocabularyTag(db, 'groceries', 'seed');
+    seedTxn({ description: 'WOOLWORTHS', type: 'income', entityId: null });
+    const ruleId = seedRule({
+      descriptionPattern: 'WOOLWORTHS',
+      entityId: 'ent-woolies',
+      entityName: 'Woolworths',
+      transactionType: 'purchase',
+      tags: ['groceries'],
+      confidence: 0.95,
+    });
+
+    applyCorrectionRuleToExistingTransactions(db, ruleId);
+    applyCorrectionRuleToExistingTransactions(db, ruleId);
+
+    expect(usageCountOf('groceries')).toBe(1);
   });
 });
 

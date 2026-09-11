@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { tagVocabulary } from '../schema.js';
 import {
+  applyVocabularyUsageDelta,
   createKnownTagSet,
   incrementVocabularyUsage,
   isKnownTag,
@@ -336,6 +337,103 @@ describe('incrementVocabularyUsage', () => {
       incrementVocabularyUsage(db, []);
 
       expect(countOf(raw, 'venue:bar')).toBe(0);
+    } finally {
+      raw.close();
+    }
+  });
+});
+
+describe('applyVocabularyUsageDelta', () => {
+  function countOf(raw: TestHarness['raw'], tag: string): number {
+    return (
+      raw.prepare('SELECT usage_count AS n FROM tag_vocabulary WHERE tag = ?').get(tag) as {
+        n: number;
+      }
+    ).n;
+  }
+
+  it('increments a tag gained and decrements one lost', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      upsertVocabularyTag(db, 'venue:cafe', 'seed');
+      incrementVocabularyUsage(db, ['venue:bar']);
+
+      applyVocabularyUsageDelta(db, ['venue:bar'], ['venue:cafe']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(0);
+      expect(countOf(raw, 'venue:cafe')).toBe(1);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('leaves a tag present on both sides untouched', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      incrementVocabularyUsage(db, ['venue:bar']);
+
+      applyVocabularyUsageDelta(db, ['venue:bar'], ['venue:bar']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(1);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('never drives a count below zero', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+
+      applyVocabularyUsageDelta(db, ['venue:bar'], []);
+
+      expect(countOf(raw, 'venue:bar')).toBe(0);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('counts a tag repeated within one side once, on both the add and the remove path', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      upsertVocabularyTag(db, 'venue:cafe', 'seed');
+
+      applyVocabularyUsageDelta(db, ['venue:bar', 'venue:bar'], ['venue:cafe', 'venue:cafe']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(0);
+      expect(countOf(raw, 'venue:cafe')).toBe(1);
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('ignores a tag on either side that is absent from the vocabulary', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      incrementVocabularyUsage(db, ['venue:bar']);
+
+      applyVocabularyUsageDelta(db, ['venue:bar', 'venue:unknown'], ['venue:new-unknown']);
+
+      expect(countOf(raw, 'venue:bar')).toBe(0);
+      expect(raw.prepare('SELECT COUNT(*) AS n FROM tag_vocabulary').get()).toEqual({ n: 1 });
+    } finally {
+      raw.close();
+    }
+  });
+
+  it('is a no-op when both lists are empty', () => {
+    const { db, raw } = freshDb();
+    try {
+      upsertVocabularyTag(db, 'venue:bar', 'seed');
+      incrementVocabularyUsage(db, ['venue:bar']);
+
+      applyVocabularyUsageDelta(db, [], []);
+
+      expect(countOf(raw, 'venue:bar')).toBe(1);
     } finally {
       raw.close();
     }
