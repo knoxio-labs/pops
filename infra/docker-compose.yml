@@ -207,6 +207,8 @@ services:
       - backend
     volumes:
       - sqlite-data:/data/sqlite
+    secrets:
+      - pops_finance_api_key
     environment:
       NODE_ENV: production
       PORT: '3004'
@@ -219,6 +221,12 @@ services:
       POPS_REGISTRY_ENABLED: 'true'
       # Paired-transfer matching (POPS-2753): pillars/finance/src/api/modules/transfers/pair-transfers.ts
       FINANCE_TRANSFER_PAIR_ENABLED: 'true'
+      # A PATH, not the value, as for bfm and purchases. Without the key every
+      # outbound leg (the contacts entity matcher, the usage rollup, the import
+      # commit's pre-create, the registry owner-URI cron) reports
+      # `no-credential` (POPS-2689). Provisioning:
+      # infra/secrets.example/finance/README.md.
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_finance_api_key
     expose:
       - '3004'
     depends_on:
@@ -696,6 +704,8 @@ services:
     volumes:
       - sqlite-data:/data/sqlite
       - cerebrum-engrams-data:/data/cerebrum/engrams
+    secrets:
+      - claude_api_key
     environment:
       NODE_ENV: production
       PORT: '3007'
@@ -708,6 +718,10 @@ services:
       # AI telemetry sink — read FIRST so it never collides with the
       # self-pointing POPS_API_URL cerebrum sets elsewhere.
       AI_API_URL: http://ai-api:3008
+      # A PATH, not the value, as for purchases. ANTHROPIC_API_KEY below is
+      # only the fallback when the file cannot be read:
+      # pillars/cerebrum/src/api/modules/anthropic-key.ts.
+      ANTHROPIC_API_KEY_FILE: /run/secrets/claude_api_key
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EMBEDDING_API_URL: ${EMBEDDING_API_URL:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
@@ -1635,6 +1649,12 @@ secrets:
   # `purchases-api`.
   pops_purchases_api_key:
     file: ../secrets/pops_purchases_api_key
+  # finance's own service account, for the same reason. Its grant is the two
+  # domains its outbound legs read — see
+  # pillars/finance/src/api/pillars/service-account.ts. Mounted by
+  # `finance-api`.
+  pops_finance_api_key:
+    file: ../secrets/pops_finance_api_key
   # The HS256 key bfm signs mobile access tokens with, and verifies every
   # `/mobile/*` request against. Mounted by `bfm-api`, which refuses to boot
   # without it. Rotating the value invalidates every live access token, which
