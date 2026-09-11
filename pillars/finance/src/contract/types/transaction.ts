@@ -1,20 +1,14 @@
+import type { z } from 'zod';
+
+import type { TransactionSchema } from '../rest-transactions-schemas.js';
+
 /**
- * A single finance transaction (camelCase). The DB-internal row shape lives in
- * the pillar's `src/db` layer and is not surfaced through the contract.
+ * A single finance transaction (camelCase), as served by the `transactions.*`
+ * endpoints. The DB-internal row shape lives in the pillar's `src/db` layer
+ * and is not surfaced through the contract.
  *
- * Deliberately narrower than what the API emits: it pins only the fields
- * downstream consumers (apps, iOS Swift codegen, SDK) need. Fields outside
- * this interface carry no contract guarantee.
+ * Derived from `TransactionSchema` (`pillars/finance/src/contract/rest-transactions-schemas.ts`)
+ * rather than hand-maintained, so this type cannot drift from what the wire
+ * actually serves (POPS-1510).
  */
-export interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  /** Date-only string (`YYYY-MM-DD`). Validated by `TransactionSchema` via `.date()`. */
-  date: string;
-  entityId: string | null;
-  /** Tag ids in source-row order; empty when the transaction has no tags. */
-  tagIds: readonly string[];
-  /** ISO-8601 timestamp. Validated by `TransactionSchema` via `.datetime()`. */
-  lastEditedTime: string;
-}
+export type Transaction = z.infer<typeof TransactionSchema>;
