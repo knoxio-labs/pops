@@ -66,3 +66,11 @@ export {
   DocumentItemNotFoundError,
   DocumentNotFoundError,
 } from './services/documents-errors.js';
+
+export { searchFilterScope } from './services/search-filters.js';
+
+export type {
+  InventorySearchScope,
+  SearchFilter,
+  SearchScopeResult,
+} from './services/search-filters.js';

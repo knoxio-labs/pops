@@ -5,13 +5,28 @@
  * order against a shared `limit` budget: later tiers stop once the budget is
  * hit, name hits skip uris already seen, and the final list is sorted
  * descending by score and capped at the limit.
+ *
+ * `query.filters` is read by `searchFilterScope` into a scope applied to
+ * every tier's own SQL, before the budget is spent — the same order
+ * purchases and finance narrow in — so an excluded row can never occupy a
+ * slot in the capped `limit` that a caller asked not to see. An unreadable
+ * filter refuses the whole request (`ValidationError` → 400) rather than
+ * dropping it: a silently dropped filter looks identical to a filter that
+ * matched everything, which is the defect this exists to fix.
  */
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
-import { homeInventory, type InventoryDb } from '../../db/index.js';
+import {
+  homeInventory,
+  type InventoryDb,
+  type InventorySearchScope,
+  searchFilterScope,
+} from '../../db/index.js';
+import { ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+import type { SQL } from 'drizzle-orm';
 
 import type { inventorySearchContract } from '../../contract/rest-search.js';
 
@@ -48,6 +63,29 @@ function rowToData(row: Row): InventoryItemHitData {
 }
 
 /**
+ * The `homeInventory` columns a filter scope narrows on. Applied to every
+ * tier's own SQL so an excluded row is never scanned in the first place,
+ * rather than filtered out of an already-capped result.
+ */
+function scopeConditions(scope: InventorySearchScope): SQL[] {
+  const conditions: SQL[] = [];
+  if (scope.room !== undefined) conditions.push(eq(homeInventory.room, scope.room));
+  if (scope.type !== undefined) conditions.push(eq(homeInventory.type, scope.type));
+  if (scope.condition !== undefined) {
+    conditions.push(sql`lower(${homeInventory.condition}) = lower(${scope.condition})`);
+  }
+  if (scope.inUse !== undefined) conditions.push(eq(homeInventory.inUse, scope.inUse ? 1 : 0));
+  if (scope.deductible !== undefined) {
+    conditions.push(eq(homeInventory.deductible, scope.deductible ? 1 : 0));
+  }
+  if (scope.locationId !== undefined) {
+    conditions.push(eq(homeInventory.locationId, scope.locationId));
+  }
+  if (scope.assetId !== undefined) conditions.push(eq(homeInventory.assetId, scope.assetId));
+  return conditions;
+}
+
+/**
  * Mutable scan state threaded through the ranking tiers. Bundled into one
  * object so each tier stays under the 4-param lint cap.
  */
@@ -56,13 +94,14 @@ interface SearchScan {
   readonly lowerText: string;
   readonly limit: number;
   readonly hits: SearchHit[];
+  readonly conditions: SQL[];
 }
 
 function searchAssetExact(scan: SearchScan): void {
   const rows = scan.db
     .select()
     .from(homeInventory)
-    .where(sql`lower(${homeInventory.assetId}) = ${scan.lowerText}`)
+    .where(and(sql`lower(${homeInventory.assetId}) = ${scan.lowerText}`, ...scan.conditions))
     .all();
   for (const row of rows) {
     scan.hits.push({
@@ -80,7 +119,10 @@ function searchAssetPrefix(scan: SearchScan): void {
     .select()
     .from(homeInventory)
     .where(
-      sql`lower(${homeInventory.assetId}) like ${scan.lowerText + '%'} and lower(${homeInventory.assetId}) != ${scan.lowerText}`
+      and(
+        sql`lower(${homeInventory.assetId}) like ${scan.lowerText + '%'} and lower(${homeInventory.assetId}) != ${scan.lowerText}`,
+        ...scan.conditions
+      )
     )
     .all();
   for (const row of rows) {
@@ -108,7 +150,12 @@ function searchByName(scan: SearchScan): void {
   const rows = scan.db
     .select()
     .from(homeInventory)
-    .where(sql`lower(${homeInventory.itemName}) like ${'%' + scan.lowerText + '%'}`)
+    .where(
+      and(
+        sql`lower(${homeInventory.itemName}) like ${'%' + scan.lowerText + '%'}`,
+        ...scan.conditions
+      )
+    )
     .all();
 
   const seenIds = new Set(scan.hits.map((h) => h.uri));
@@ -121,8 +168,14 @@ function searchByName(scan: SearchScan): void {
   }
 }
 
-function searchItems(db: InventoryDb, text: string): SearchHit[] {
-  const scan: SearchScan = { db, lowerText: text.toLowerCase(), limit: DEFAULT_LIMIT, hits: [] };
+function searchItems(db: InventoryDb, text: string, scope: InventorySearchScope): SearchHit[] {
+  const scan: SearchScan = {
+    db,
+    lowerText: text.toLowerCase(),
+    limit: DEFAULT_LIMIT,
+    hits: [],
+    conditions: scopeConditions(scope),
+  };
 
   searchAssetExact(scan);
   if (scan.hits.length < scan.limit) searchAssetPrefix(scan);
@@ -136,9 +189,17 @@ export function makeSearchHandlers(db: InventoryDb) {
   return {
     search: ({ body }: Req['search']) =>
       runHttp(() => {
+        const filterResult = searchFilterScope(body.query.filters ?? []);
+        if (!filterResult.ok) {
+          throw new ValidationError(filterResult.message, { filters: body.query.filters });
+        }
+
         const text = body.query.text.trim();
         if (!text) return { status: 200 as const, body: { hits: [] } };
-        return { status: 200 as const, body: { hits: searchItems(db, text) } };
+        return {
+          status: 200 as const,
+          body: { hits: searchItems(db, text, filterResult.scope) },
+        };
       }),
   };
 }
