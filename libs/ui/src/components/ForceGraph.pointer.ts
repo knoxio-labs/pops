@@ -94,14 +94,16 @@ function useDragApply(args: UsePointerArgs, toWorld: ReturnType<typeof useToWorl
 }
 
 function usePanApply(args: UsePointerArgs) {
+  const { panningRef } = args.state;
+  const { enableZoom, setTransform } = args;
   return useCallback(
     (cx: number, cy: number) => {
-      const pan = args.state.panningRef.current;
-      if (!pan || !args.enableZoom) return false;
-      args.setTransform((t) => ({ ...t, x: pan.ox + (cx - pan.sx), y: pan.oy + (cy - pan.sy) }));
+      const pan = panningRef.current;
+      if (!pan || !enableZoom) return false;
+      setTransform((t) => ({ ...t, x: pan.ox + (cx - pan.sx), y: pan.oy + (cy - pan.sy) }));
       return true;
     },
-    [args.state.panningRef, args.enableZoom, args.setTransform]
+    [panningRef, enableZoom, setTransform]
   );
 }
 
