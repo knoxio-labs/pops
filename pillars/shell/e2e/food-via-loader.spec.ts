@@ -57,6 +57,24 @@ test.describe('food — mounted by the runtime loader', () => {
   });
 
   /**
+   * The point of carrying the tree rather than flattening it. The layout holds
+   * the header and tab strip; switching tabs must swap only the outlet beneath
+   * them. A flattened tree, or anything else that remounts the layout, replaces
+   * the tab strip's node, so a mark left on it before the switch is gone after.
+   */
+  test('switching data tabs keeps the layout mounted', async ({ page }) => {
+    await page.goto('/food/data/ingredients');
+    const tabStrip = page.getByRole('tablist');
+    await expect(tabStrip).toBeVisible();
+    await tabStrip.evaluate((node) => node.setAttribute('data-e2e-mounted-before-switch', ''));
+
+    await tabStrip.getByRole('tab').nth(1).click();
+
+    await expect(page).toHaveURL(/\/food\/data\/aliases/);
+    await expect(page.locator('[role="tablist"][data-e2e-mounted-before-switch]')).toHaveCount(1);
+  });
+
+  /**
    * A route two levels deep and reachable from nothing on the rail — the kind
    * most easily dropped from the page list, and the kind whose absence shows
    * up as a 404 rather than as anything visibly broken.
