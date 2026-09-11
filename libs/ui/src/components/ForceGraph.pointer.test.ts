@@ -20,7 +20,12 @@ interface HarnessProps {
   nodes: Map<string, InternalNode>;
   transform: Transform;
   onNodeHover?: (id: string | null) => void;
+  onNodeClick?: (id: string) => void;
+  enableZoom?: boolean;
+  setTransform?: UsePointerArgs['setTransform'];
 }
+
+const noopSetTransform: UsePointerArgs['setTransform'] = () => {};
 
 /**
  * Mirrors how `ForceGraph` calls the hook: the refs are owned by the caller and
@@ -39,9 +44,10 @@ function useHarness(props: HarnessProps) {
     nodesRef,
     state,
     transform: props.transform,
-    setTransform: () => {},
-    enableZoom: true,
+    setTransform: props.setTransform ?? noopSetTransform,
+    enableZoom: props.enableZoom ?? true,
     onNodeHover: props.onNodeHover,
+    onNodeClick: props.onNodeClick,
   };
   return usePointerHandlers(args);
 }
@@ -133,5 +139,109 @@ describe('useHoverHandlers — hover notifications', () => {
 
     expect(onNodeHover).toHaveBeenCalledTimes(1);
     expect(onNodeHover).toHaveBeenCalledWith('a');
+  });
+});
+
+describe('usePanApply', () => {
+  it('applies the pan delta relative to where the drag started', () => {
+    const setTransform = vi.fn();
+    const { view } = setup({ setTransform, transform: { x: 10, y: 20, k: 1 } });
+
+    view.result.current.beginPointerInteraction(500, 500);
+    const applied = view.result.current.applyPan(520, 540);
+
+    expect(applied).toBe(true);
+    expect(setTransform).toHaveBeenCalledTimes(1);
+    const call = setTransform.mock.calls[0];
+    if (!call) throw new Error('setTransform was not called');
+    const updater = call[0] as (t: Transform) => Transform;
+    expect(updater({ x: 10, y: 20, k: 1 })).toEqual({ x: 30, y: 60, k: 1 });
+  });
+
+  it('does nothing when zoom is disabled', () => {
+    const setTransform = vi.fn();
+    const { view } = setup({ setTransform, enableZoom: false });
+
+    view.result.current.beginPointerInteraction(500, 500);
+    const applied = view.result.current.applyPan(520, 540);
+
+    expect(applied).toBe(false);
+    expect(setTransform).not.toHaveBeenCalled();
+  });
+
+  it('keeps applyPan stable across re-renders with unchanged inputs', () => {
+    const { view, props } = setup();
+    const first = view.result.current.applyPan;
+
+    view.rerender(props);
+    view.rerender(props);
+
+    expect(view.result.current.applyPan).toBe(first);
+  });
+
+  it('rebuilds applyPan when enableZoom changes', () => {
+    const { view, props } = setup({ enableZoom: true });
+    const first = view.result.current.applyPan;
+
+    view.rerender({ ...props, enableZoom: false });
+
+    expect(view.result.current.applyPan).not.toBe(first);
+  });
+});
+
+describe('useBeginEnd — click notifications', () => {
+  it('fires onNodeClick with the hit node id on pointer-up over a node', () => {
+    const onNodeClick = vi.fn();
+    const { view } = setup({ onNodeClick });
+
+    view.result.current.beginPointerInteraction(500, 500);
+    view.result.current.endPointerInteraction(0, 0);
+
+    expect(onNodeClick).toHaveBeenCalledWith('a');
+  });
+
+  it('does not fire onNodeClick when the pointer ends over empty space', () => {
+    const onNodeClick = vi.fn();
+    const { view } = setup({ onNodeClick });
+
+    view.result.current.beginPointerInteraction(500, 500);
+    view.result.current.endPointerInteraction(500, 500);
+
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+
+  it('does not fire onNodeClick after a drag', () => {
+    const onNodeClick = vi.fn();
+    const { view } = setup({ onNodeClick });
+
+    view.result.current.beginPointerInteraction(0, 0);
+    view.result.current.endPointerInteraction(500, 500);
+
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('useBeginEnd — callback identity', () => {
+  it('keeps endPointerInteraction stable across re-renders with unchanged inputs', () => {
+    const { view, props } = setup({ onNodeClick: vi.fn() });
+    const first = view.result.current.endPointerInteraction;
+
+    view.rerender(props);
+    view.rerender(props);
+
+    expect(view.result.current.endPointerInteraction).toBe(first);
+  });
+
+  it('rebuilds endPointerInteraction when the click consumer changes', () => {
+    const { view, props } = setup({ onNodeClick: vi.fn() });
+    const first = view.result.current.endPointerInteraction;
+
+    const nextClick = vi.fn();
+    view.rerender({ ...props, onNodeClick: nextClick });
+
+    expect(view.result.current.endPointerInteraction).not.toBe(first);
+    view.result.current.beginPointerInteraction(500, 500);
+    view.result.current.endPointerInteraction(0, 0);
+    expect(nextClick).toHaveBeenCalledWith('a');
   });
 });
