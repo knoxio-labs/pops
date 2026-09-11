@@ -10,12 +10,15 @@
  *
  * A window bound is read here too, and a bound naming no instant is refused
  * with the request rather than carried into a predicate. `IsoTimestampSchema`
- * closes the shape and the calendar range, so an impossible date is already a
- * `400` from the contract; what it does not close is the offset range, so
- * `+99:00` still reaches a handler. Compared as text against a canonical
- * column such a bound would answer `200` over a window nobody asked for,
- * which is the one thing a filter must never do. `POST /search` refuses the
- * same values, so the two hold one rule about which timestamps are legal.
+ * now closes the shape, the calendar range and the offset range, so an
+ * impossible date or an offset like `+99:00` is already a `400` from the
+ * contract before this file runs. The `canonicalInstant` check below is kept
+ * anyway: it is what turns the accepted spellings into the one canonical
+ * form the predicate compares against, and it is the backstop for a bound
+ * that reaches this route some other way than the wire — reading it as text
+ * against a canonical column would answer `200` over a window nobody asked
+ * for, which is the one thing a filter must never do. `POST /search` refuses
+ * the same values, so the two hold one rule about which timestamps are legal.
  */
 import {
   MERCHANT_FILTER_PARAMETERS,

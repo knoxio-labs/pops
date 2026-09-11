@@ -13,6 +13,7 @@
  * Shared: the Everyday Rewards adapter reads it out of a POS footer, and
  * the drop-zone reads it off a photograph. Both then face the same problem.
  */
+import { naiveUtcMillis } from '../contract/schemas/scalars.js';
 
 /**
  * Where the shops are.
@@ -136,27 +137,20 @@ export interface LocalParts {
 /**
  * The reading as if it were UTC, or null when it is not a real moment.
  *
- * `Date.UTC` normalises rather than rejects: month 13 becomes January of
- * the next year, 31 February becomes 3 March, hour 25 becomes tomorrow. A
- * garbled reading would yield a confident, wrong date. Refusing anything
- * the round-trip does not reproduce catches all of it, including 31
- * February, without a table of month lengths.
+ * Delegates the round-trip itself to `naiveUtcMillis` in
+ * `../contract/schemas/scalars.ts`, which the contract's `IsoTimestampSchema`
+ * uses for the same test — one rule for what counts as a real moment,
+ * shared rather than kept as two copies that could silently drift apart.
  */
 function naiveUtcOf(parts: LocalParts): number | null {
-  const second = parts.second ?? 0;
-  const naive = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, second);
-  const roundTrip = new Date(naive);
-  if (
-    roundTrip.getUTCFullYear() !== parts.year ||
-    roundTrip.getUTCMonth() !== parts.month - 1 ||
-    roundTrip.getUTCDate() !== parts.day ||
-    roundTrip.getUTCHours() !== parts.hour ||
-    roundTrip.getUTCMinutes() !== parts.minute ||
-    roundTrip.getUTCSeconds() !== second
-  ) {
-    return null;
-  }
-  return naive;
+  return naiveUtcMillis({
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+    second: parts.second ?? 0,
+  });
 }
 
 /**

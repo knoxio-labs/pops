@@ -208,6 +208,23 @@ describe('POST /purchases', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rejects an orderedAt naming no such day rather than storing it two days later', async () => {
+    // 2026-02-30 has the right shape and names nothing. `new Date` rolls it
+    // into 2026-03-02 rather than erroring — this must be a 400, not a 201
+    // that silently ordered_at the wrong month.
+    const res = await requestOn(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, orderedAt: '2026-02-30T00:00:00Z' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects an orderedAt offset with no zone on Earth', async () => {
+    const res = await requestOn(app)
+      .post('/purchases')
+      .send({ ...minimalOrder, orderedAt: '2026-02-02T00:00:00+24:00' });
+    expect(res.status).toBe(400);
+  });
+
   it('answers 409 on a duplicate checksum so an adapter can treat it as a skip', async () => {
     await requestOn(app).post('/purchases').send(minimalOrder);
     const res = await requestOn(app).post('/purchases').send(minimalOrder);
@@ -307,6 +324,11 @@ describe('GET /purchases', () => {
 
   it('rejects an impossible from bound rather than reading it as a February window over March', async () => {
     const res = await requestOn(app).get('/purchases?from=2026-02-30T00:00:00Z');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a from bound whose offset names no zone on Earth', async () => {
+    const res = await requestOn(app).get('/purchases?from=2026-02-02T00:00:00+24:00');
     expect(res.status).toBe(400);
   });
 
@@ -429,6 +451,15 @@ describe('GET /purchases', () => {
 
     it('rejects a beforeId sent without beforeOrderedAt', async () => {
       const res = await requestOn(app).get('/purchases?beforeId=some-id');
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects an impossible beforeOrderedAt anchor rather than paging past a moved day', async () => {
+      // Same hazard as the `from` bound: a keyset anchor sharing
+      // IsoTimestampSchema must refuse the same overflowing day.
+      const res = await requestOn(app).get(
+        '/purchases?beforeOrderedAt=2026-02-30T00:00:00.000Z&beforeId=some-id'
+      );
       expect(res.status).toBe(400);
     });
   });

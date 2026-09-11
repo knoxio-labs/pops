@@ -280,26 +280,6 @@ describe('POST /search with filters', () => {
     }
   );
 
-  it('names the bound it refused when the value is one the contract admits', async () => {
-    // `from` and `to` are typed `IsoTimestampSchema`, which closes the shape
-    // and the calendar range both, so an impossible date is refused ahead of
-    // every handler and answered with the contract's fixed body — correct,
-    // but it cannot name the value. An out-of-range offset is what the
-    // schema does admit: the shape is legal and the fields are a real date,
-    // so it reaches the scope reader, which is the layer that can say which
-    // bound it could not read.
-    seedCoffeeOrder();
-    const bound = '2026-01-01T00:00:00+99:00';
-
-    const listed = await requestOn(app).get('/purchases').query({ from: bound });
-    const rolledUp = await requestOn(app).get('/analytics/merchant-spend').query({ to: bound });
-
-    expect(listed.status).toBe(400);
-    expect(rolledUp.status).toBe(400);
-    expect(listed.body.message).toContain(bound);
-    expect(rolledUp.body.message).toContain(bound);
-  });
-
   it('scopes to the requested status', async () => {
     seedCoffeeOrder();
 

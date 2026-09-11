@@ -56,13 +56,14 @@ import type { SQL } from 'drizzle-orm';
  * process runs — the misplacement `src/ingest/local-time.ts` exists to
  * prevent, arrived at from the other end.
  *
- * A date that does not exist never reaches the parse: the schema checks its
- * calendar fields round-trip, so `2026-02-30` and `2026-13-01` are refused
- * by the shape check above rather than rolled into the following month. What
- * still reaches the parse is a value whose shape and calendar fields are
- * both legal and which names no instant anyway — an offset outside the
- * ±23:59 a zone can hold, like `+99:00`. That yields null here, which is why
- * the check is a parse and not a second copy of the schema's rules.
+ * A value naming no instant is refused before the parse now, not after it:
+ * the schema checks its calendar fields round-trip and its offset's shape,
+ * so `2026-02-30`, `2026-13-01`, `T24:00:00` and `+99:00` are all refused by
+ * the schema check above rather than rolled into the following month, the
+ * next day, or accepted as a zone nothing has ever been on. The parse stays
+ * regardless: `canonicalInstant` does its own schema check rather than
+ * trusting a caller to have done one first, so the two lines are what make
+ * that self-contained, not a second copy of the schema's rules.
  */
 export function canonicalInstant(value: string): string | null {
   if (!IsoTimestampSchema.safeParse(value).success) return null;

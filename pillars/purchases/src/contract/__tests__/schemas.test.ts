@@ -153,13 +153,42 @@ describe('IsoTimestampSchema', () => {
   });
 
   it('accepts a real leap day', () => {
-    // 2026-02-30 is properly rejected — 2028-02-29 must not be caught in
-    // the same net, since 2028 is a leap year and the 29th is real.
-    expect(IsoTimestampSchema.safeParse('2028-02-29T00:00:00Z').success).toBe(true);
+    // 2026-02-30 is properly rejected — 2024-02-29 must not be caught in
+    // the same net, since 2024 is a leap year and the 29th is real.
+    expect(IsoTimestampSchema.safeParse('2024-02-29T00:00:00Z').success).toBe(true);
   });
 
   it('rejects 29 February in a non-leap year', () => {
     expect(IsoTimestampSchema.safeParse('2026-02-29T00:00:00Z').success).toBe(false);
+  });
+
+  it('rejects a day that overflows a 30-day month', () => {
+    // April has 30 days; the 31st has the right shape and names nothing.
+    expect(IsoTimestampSchema.safeParse('2026-04-31T00:00:00Z').success).toBe(false);
+  });
+
+  it('rejects midnight spelled as the 24th hour', () => {
+    // T24:00:00 has the right shape and rolls into tomorrow rather than
+    // erroring, same failure mode as the day overflow above.
+    expect(IsoTimestampSchema.safeParse('2026-02-02T24:00:00Z').success).toBe(false);
+  });
+
+  it('rejects a minute that overflows the hour', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-02T23:60:00Z').success).toBe(false);
+  });
+
+  it('rejects an offset with no zone on Earth', () => {
+    // +24:00 has the right shape for the regex's digit count, but no zone
+    // is a full day ahead of UTC — the offset equivalent of 2026-02-30.
+    expect(IsoTimestampSchema.safeParse('2026-02-02T00:00:00+24:00').success).toBe(false);
+  });
+
+  it('rejects an offset whose minutes overflow the hour', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-02T00:00:00+23:60').success).toBe(false);
+  });
+
+  it('accepts fractional seconds together with an explicit offset', () => {
+    expect(IsoTimestampSchema.safeParse('2026-02-02T01:41:21.123+10:00').success).toBe(true);
   });
 });
 
