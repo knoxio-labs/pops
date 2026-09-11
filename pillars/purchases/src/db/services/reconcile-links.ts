@@ -14,7 +14,7 @@
  * auto-link source never enters it at all. Both are established links, and
  * both are exactly what a finance view is asking about.
  */
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { asc, desc, eq, inArray } from 'drizzle-orm';
 
 import { purchaseChargeLinks, purchaseCharges, purchases } from '../schema.js';
 
@@ -33,44 +33,6 @@ export interface LinkedPurchase {
   readonly linkedCents: number;
 }
 
-export interface TransactionLinksFilter {
-  readonly limit?: number;
-  readonly offset?: number;
-}
-
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 500;
-
-/** One row per (charge, its order), grouped into a {@link LinkedPurchase} per order. */
-function groupByPurchase(
-  chargeRows: readonly { charge: PurchaseChargeRow; purchase: PurchaseRow }[],
-  linksByCharge: ReadonlyMap<string, PurchaseChargeLinkRow>
-): LinkedPurchase[] {
-  const byPurchase = new Map<string, { purchase: PurchaseRow; charges: LinkedCharge[] }>();
-  for (const row of chargeRows) {
-    const link = linksByCharge.get(row.charge.id);
-    // A link whose charge is gone cannot exist — the foreign key cascades,
-    // and both reads this is called from run in one transaction, so a
-    // concurrent tear-down cannot land between them — so this narrows the
-    // type rather than handling a real case.
-    if (link === undefined) continue;
-
-    const linked: LinkedCharge = { charge: row.charge, link };
-    const bucket = byPurchase.get(row.purchase.id);
-    if (bucket === undefined) {
-      byPurchase.set(row.purchase.id, { purchase: row.purchase, charges: [linked] });
-    } else {
-      bucket.charges.push(linked);
-    }
-  }
-
-  return [...byPurchase.values()].map((entry) => ({
-    purchase: entry.purchase,
-    charges: entry.charges,
-    linkedCents: entry.charges.reduce((sum, charge) => sum + charge.link.amountCents, 0),
-  }));
-}
-
 /**
  * Every order with at least one charge linked to `transactionUri`, newest
  * order first.
@@ -82,12 +44,8 @@ function groupByPurchase(
  */
 export function listPurchasesForTransaction(
   db: PurchasesDb,
-  transactionUri: string,
-  filter: TransactionLinksFilter = {}
+  transactionUri: string
 ): readonly LinkedPurchase[] {
-  const limit = Math.min(Math.max(filter.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
-  const offset = Math.max(filter.offset ?? 0, 0);
-
   // Both reads run in one transaction so they see the same snapshot: this
   // pillar is multi-process (the ingest CLI and the cron sweep write the
   // same database file), and a link tear-down plus its cascaded charge
@@ -104,24 +62,6 @@ export function listPurchasesForTransaction(
 
     const linksByCharge = new Map(linkRows.map((link) => [link.chargeId, link]));
 
-    // Paging is over orders, not charges — the page a caller asks for is
-    // "the Nth order this transaction paid for", and a combined settlement's
-    // charges belong together on one page. Selecting the page of purchase
-    // ids first, ahead of the join below, is what keeps that true: paging
-    // the joined charge rows directly could split one order's charges
-    // across two pages.
-    const pageOfPurchaseIds = tx
-      .selectDistinct({ purchaseId: purchases.id })
-      .from(purchaseCharges)
-      .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
-      .where(inArray(purchaseCharges.id, [...linksByCharge.keys()]))
-      .orderBy(desc(purchases.orderedAt), asc(purchases.id))
-      .limit(limit)
-      .offset(offset)
-      .all()
-      .map((row) => row.purchaseId);
-    if (pageOfPurchaseIds.length === 0) return [];
-
     // Charges and their orders in one join rather than two round trips,
     // ordered here so no caller has to re-sort: ids are random UUIDs and every
     // row of one ingest shares a `createdAt` to the second, so without an
@@ -130,12 +70,7 @@ export function listPurchasesForTransaction(
       .select({ charge: purchaseCharges, purchase: purchases })
       .from(purchaseCharges)
       .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
-      .where(
-        and(
-          inArray(purchaseCharges.id, [...linksByCharge.keys()]),
-          inArray(purchases.id, pageOfPurchaseIds)
-        )
-      )
+      .where(inArray(purchaseCharges.id, [...linksByCharge.keys()]))
       .orderBy(
         desc(purchases.orderedAt),
         asc(purchases.id),
@@ -144,6 +79,28 @@ export function listPurchasesForTransaction(
       )
       .all();
 
-    return groupByPurchase(chargeRows, linksByCharge);
+    const byPurchase = new Map<string, { purchase: PurchaseRow; charges: LinkedCharge[] }>();
+    for (const row of chargeRows) {
+      const link = linksByCharge.get(row.charge.id);
+      // A link whose charge is gone cannot exist — the foreign key cascades,
+      // and both reads run in this one transaction, so a concurrent
+      // tear-down cannot land between them — so this narrows the type
+      // rather than handling a real case.
+      if (link === undefined) continue;
+
+      const linked: LinkedCharge = { charge: row.charge, link };
+      const bucket = byPurchase.get(row.purchase.id);
+      if (bucket === undefined) {
+        byPurchase.set(row.purchase.id, { purchase: row.purchase, charges: [linked] });
+      } else {
+        bucket.charges.push(linked);
+      }
+    }
+
+    return [...byPurchase.values()].map((entry) => ({
+      purchase: entry.purchase,
+      charges: entry.charges,
+      linkedCents: entry.charges.reduce((sum, charge) => sum + charge.link.amountCents, 0),
+    }));
   });
 }

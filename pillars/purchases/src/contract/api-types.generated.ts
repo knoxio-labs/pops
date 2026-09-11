@@ -2541,8 +2541,6 @@ export interface operations {
     parameters: {
       query: {
         transactionUri: string;
-        limit?: number;
-        offset?: number;
       };
       header?: never;
       path?: never;

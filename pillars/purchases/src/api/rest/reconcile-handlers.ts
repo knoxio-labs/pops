@@ -82,12 +82,7 @@ export function makeReconcileHandlers(db: PurchasesDb, sweep?: SweepTrigger) {
         // passed around, cached or logged away from the request that
         // produced it.
         transactionUri: query.transactionUri,
-        purchases: toWireLinkedPurchases(
-          listPurchasesForTransaction(db, query.transactionUri, {
-            ...(query.limit === undefined ? {} : { limit: query.limit }),
-            ...(query.offset === undefined ? {} : { offset: query.offset }),
-          })
-        ),
+        purchases: toWireLinkedPurchases(listPurchasesForTransaction(db, query.transactionUri)),
       },
     }),
 

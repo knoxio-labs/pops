@@ -84,8 +84,6 @@ export const ReconcileQueueQuerySchema = z.object({
 
 export const TransactionLinksQuerySchema = z.object({
   transactionUri: FinanceTransactionUriSchema,
-  limit: z.coerce.number().int().min(1).max(500).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
 });
 
 /** One charge and the link attaching it to the transaction being asked about. */
@@ -178,6 +176,15 @@ export const purchasesReconcileContract = c.router({
    * is every one of the charges a finance view most wants to explain. This
    * one indexes the link table itself, so it sees every established link
    * whatever its state, and reports that state rather than filtering on it.
+   *
+   * Deliberately has no `limit`/`offset`, unlike {@link
+   * purchasesReconcileContract.queue}. It is scoped to a single
+   * `transactionUri`, so its size is bounded by however many charges that
+   * one transaction settles, not by the whole link table. That bound is
+   * also why a page cap would be wrong here: `listPurchasesForTransaction`
+   * (`pillars/purchases/src/db/services/reconcile-links.ts`) treats a
+   * combined settlement as a modelled case, not an anomaly, and a cap with
+   * no continuation signal would silently drop the rest of it.
    */
   links: {
     method: 'GET',
