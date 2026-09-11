@@ -57,6 +57,23 @@ function seedRule(id: string): void {
     .run();
 }
 
+function seedRuleWithLocation(id: string, location: string): void {
+  db.insert(transactionCorrections)
+    .values({
+      id,
+      descriptionPattern: 'COLES',
+      matchType: 'contains',
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      location,
+      tags: '[]',
+      isActive: true,
+      confidence: 0.95,
+      priority: 0,
+    })
+    .run();
+}
+
 function seedTagRule(pattern: string, tags: string[]): void {
   db.insert(transactionTagRules)
     .values({
@@ -393,6 +410,50 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
     });
 
+    expect(timesApplied('r-1')).toBe(1);
+  });
+
+  it('credits a rule that only rewrites tags on an already-matched row (POPS-2659)', async () => {
+    // The row is already matched to exactly the entity r-1 names — nothing
+    // about its classification would change — but a tag rule added since it
+    // was first matched gives it real new output on re-evaluation.
+    seedRule('r-1');
+    seedTagRule('COLES', ['venue:supermarket']);
+    const alreadyRight = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'learned',
+      confidence: 0.95,
+    });
+
+    const { nextResult, affectedCount } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [alreadyRight], uncertain: [], failed: [], skipped: [] },
+    });
+
+    expect(nextResult.matched[0]?.suggestedTags?.map((t) => t.tag)).toEqual(['venue:supermarket']);
+    expect(affectedCount).toBe(0);
+    expect(timesApplied('r-1')).toBe(1);
+  });
+
+  it('credits a rule that only rewrites location on an already-matched row (POPS-2659)', async () => {
+    seedRuleWithLocation('r-1', 'Sydney CBD');
+    const alreadyRight = matchedTxn('COLES SYDNEY', {
+      entityId: 'ent-coles',
+      entityName: 'Coles',
+      matchType: 'learned',
+      confidence: 0.95,
+    });
+
+    const { nextResult, affectedCount } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: { matched: [alreadyRight], uncertain: [], failed: [], skipped: [] },
+    });
+
+    expect(nextResult.matched[0]?.location).toBe('Sydney CBD');
+    expect(affectedCount).toBe(0);
     expect(timesApplied('r-1')).toBe(1);
   });
 
