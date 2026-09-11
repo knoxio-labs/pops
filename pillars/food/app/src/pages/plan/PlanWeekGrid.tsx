@@ -4,8 +4,6 @@
  * dragging within a cell calls `reorderSlot`. The mobile day-swiper variant
  * lives in `PlanDaySwiper.tsx`; `PlanPage` picks one or the other via
  * `useIsMobile`.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { DndContext } from '@dnd-kit/core';
 

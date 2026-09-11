@@ -1,8 +1,6 @@
 /**
  * Mocks the generated food SDK (src/food-api) so the section renders against
  * controlled data without a live registry-mounted backend.
- *
- * See pillars/food/docs/prds/conversion-table.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';

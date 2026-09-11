@@ -1,6 +1,6 @@
 /**
- * Default name for the "Create new list" radio
- * (pillars/food/docs/prds/send-to-list): `"Shopping list — <yyyy-MM-dd>"`.
+ * Default name for the "Create new list" radio:
+ * `"Shopping list — <yyyy-MM-dd>"`.
  * Pulled out so the test suite can inject a stable clock without freezing
  * the whole modal.
  */

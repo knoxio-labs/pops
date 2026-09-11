@@ -100,7 +100,7 @@ function render150(): void {
   );
 }
 
-describe('SolvePage — pillars/food/docs/prds/cook-solver', () => {
+describe('SolvePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

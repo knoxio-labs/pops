@@ -64,7 +64,7 @@ export function formatQty(value: number): string {
 }
 
 /**
- * Assemble the yield label (see pillars/food/docs/prds/dsl-renderer):
+ * Assemble the yield label:
  *   "Roma tomato, braised, shredded (500 g)"
  * Falls back to ingredient name alone when variant + prep are null.
  */

@@ -1,13 +1,12 @@
 /**
- * Web URL LLM fallback prompt (see pillars/food/docs/prds/web-llm-fallback).
+ * Web URL LLM fallback prompt.
  *
  * Used when JSON-LD recipe data is absent on a recipe page (the
- * deterministic extractor in pillars/food/docs/prds/web-jsonld returns
- * `JsonLdMissing`). Sends readability-extracted page text to Claude and
- * asks for a structured DSL recipe.
+ * deterministic extractor returns `JsonLdMissing`). Sends
+ * readability-extracted page text to Claude and asks for a structured DSL
+ * recipe.
  *
- * Registered with the food prompt viewer
- * (pillars/food/docs/prds/ai-usage-prompts). Bump `PROMPT_VERSION_WEB_LLM`
+ * Registered with the food prompt viewer. Bump `PROMPT_VERSION_WEB_LLM`
  * whenever the template changes.
  */
 export const PROMPT_VERSION_WEB_LLM = 'web-llm-v0.1';

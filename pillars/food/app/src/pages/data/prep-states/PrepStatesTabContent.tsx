@@ -1,5 +1,5 @@
 /**
- * `/food/data/prep-states` tab content (pillars/food/docs/prds/data-page).
+ * `/food/data/prep-states` tab content.
  *
  * Read-only list of all prep states (seeded + user-added) plus an Add
  * button. The delete affordance is deliberately omitted — recipe_lines

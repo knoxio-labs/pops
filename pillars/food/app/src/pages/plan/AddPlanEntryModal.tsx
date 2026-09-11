@@ -2,8 +2,6 @@
  * "Add plan entry" modal: `(date, slot)` is pre-filled from the trigger;
  * the form adds a recipe typeahead plus servings and notes. On success the
  * caller's `onAdded` runs after the week query invalidates.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { Plus } from 'lucide-react';
 import { type ReactElement } from 'react';

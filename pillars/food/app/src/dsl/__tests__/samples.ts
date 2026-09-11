@@ -1,6 +1,5 @@
 /**
  * Sample recipes covering the grammar's positive surface.
- * See pillars/food/docs/prds/dsl-parser.
  *
  * Duplicated from the food pillar's `src/dsl/__tests__/samples.ts`. The
  * canonical copy lives there alongside the parser tests; this copy stays

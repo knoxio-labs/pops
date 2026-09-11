@@ -1,6 +1,6 @@
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 /**
- * Single row in the existing-list picker (pillars/food/docs/prds/send-to-list).
+ * Single row in the existing-list picker.
  *
  * The already-sent badge is a soft warning — it never blocks selection.
  */

@@ -9,8 +9,6 @@ import { render } from '@testing-library/react';
  * heavyweight mocks for marginal value — the leaf components are where
  * a11y regressions actually surface (badges, labels, focus order, role
  * hierarchy). Page-level a11y is verified via Storybook addon-a11y.
- *
- * Spec: pillars/food/docs/prds/recipe-crud-pages
  */
 import axeCore from 'axe-core';
 import { createInstance } from 'i18next';

@@ -1,5 +1,5 @@
 /**
- * RTL coverage for the planning page (spec: pillars/food/docs/prds/planning-page).
+ * RTL coverage for the planning page.
  *
  * Mocks the generated food SDK so every endpoint return is pinned. Drag-and-drop
  * is covered at the @dnd-kit level, so this file focuses on wiring + happy paths.

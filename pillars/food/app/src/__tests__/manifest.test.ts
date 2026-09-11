@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { manifest, navConfig, routes } from '../index.js';
 
-describe('food app module manifest (pillars/food/docs/prds/app-shell)', () => {
+describe('food app module manifest', () => {
   it('declares id="food"', () => {
     expect(manifest.id).toBe('food');
   });

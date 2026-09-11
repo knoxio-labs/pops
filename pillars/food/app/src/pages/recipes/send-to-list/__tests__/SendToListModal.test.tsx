@@ -1,5 +1,5 @@
 /**
- * RTL coverage for the send-to-list modal (pillars/food/docs/prds/send-to-list).
+ * RTL coverage for the send-to-list modal.
  *
  * Mocks the food Hey API SDK (prepare + send) and the lists Hey API SDK
  * (the cross-pillar `GET /lists` read) so all three calls are controllable

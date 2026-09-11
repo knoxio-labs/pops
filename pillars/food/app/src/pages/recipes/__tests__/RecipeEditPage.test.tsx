@@ -3,8 +3,6 @@
  * `HeroImageUploader` with the recipe's id + heroImagePath, and that the
  * upload/remove callbacks invalidate the rendering query so the new path
  * round-trips into the editor surface.
- *
- * Spec: pillars/food/docs/prds/hero-image-upload
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';

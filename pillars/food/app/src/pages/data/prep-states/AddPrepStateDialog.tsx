@@ -1,5 +1,5 @@
 /**
- * Add-prep-state dialog (pillars/food/docs/prds/data-page).
+ * Add-prep-state dialog.
  *
  * Prep states have heavy reference impact (every recipe_line references
  * one), so v1 only supports add — no rename, no delete. The dialog

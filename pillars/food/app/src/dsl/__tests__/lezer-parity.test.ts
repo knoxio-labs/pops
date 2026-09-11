@@ -12,8 +12,6 @@
  * deliberately does NOT compare full AST shapes — the Lezer grammar is
  * permissive and doesn't validate semantics; the parity contract is
  * "calls land in the same order with the same names".
- *
- * See pillars/food/docs/prds/dsl-editor and pillars/food/docs/prds/dsl-parser.
  */
 import { describe, expect, it } from 'vitest';
 

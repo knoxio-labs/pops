@@ -1,10 +1,10 @@
 /**
- * Instagram Reel ingest prompts (see pillars/food/docs/prds/instagram-stt-vision).
+ * Instagram Reel ingest prompts.
  *
  * Primary path: ffmpeg keyframes + faster-whisper transcript → Claude
  * vision. The text-only variant (`PROMPT_VERSION_IG_VISION_TEXT_FALLBACK`)
  * covers a failed vision call. Both are registered with the food prompt
- * viewer (pillars/food/docs/prds/ai-usage-prompts).
+ * viewer.
  *
  * Bump the version constant on any template change so `ai_inference_log`
  * rows stay reproducible.

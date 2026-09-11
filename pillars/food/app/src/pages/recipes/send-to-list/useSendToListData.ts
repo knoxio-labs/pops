@@ -1,6 +1,5 @@
 /**
- * Combined data hook for the send-to-list modal
- * (pillars/food/docs/prds/send-to-list).
+ * Combined data hook for the send-to-list modal.
  *
  * Fetches the preview (`sendToListPrepare`, food REST client) and the
  * available shopping lists (`listListAggregate`, lists REST client) in

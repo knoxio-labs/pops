@@ -4,8 +4,6 @@
  * `PlanWeekGrid` (desktop) and `PlanDaySwiper` (mobile). Keeping it in one
  * place means a touch tap on the mobile swiper resolves the same way it does
  * on the desktop grid.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import {
   type DragEndEvent,

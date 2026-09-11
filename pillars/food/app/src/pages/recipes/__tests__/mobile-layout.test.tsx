@@ -7,8 +7,6 @@
  * survive a 375px viewport. The real responsive audit is delivered via
  * Storybook + manual review — these tests guard against regressions on
  * the contracts the page-level code depends on.
- *
- * Spec: pillars/food/docs/prds/recipe-crud-pages
  */
 import { render, screen } from '@testing-library/react';
 import { createInstance } from 'i18next';

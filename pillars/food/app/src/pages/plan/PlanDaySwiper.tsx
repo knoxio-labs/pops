@@ -7,8 +7,6 @@
  * (one column of stacked cells instead of a 7-column table). The Mon→Sun
  * index is internal state; the caller still owns the visible week via
  * `weekStart`.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { DndContext } from '@dnd-kit/core';
 import { useCallback, useRef, useState, type ReactElement } from 'react';
