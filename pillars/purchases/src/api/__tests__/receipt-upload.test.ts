@@ -608,6 +608,16 @@ describe('uploads it declines before the model sees them', () => {
     expect(asJpeg.body.code).toBe('NOT_THE_STATED_TYPE');
   });
 
+  it('refuses base64 that is not base64, the same way as a mislabelled file', async () => {
+    // `Buffer.from(s, 'base64')` never throws — it skips what it does not
+    // recognise and decodes whatever is left — so a corrupted upload must be
+    // refused by its shape before anything decodes it, not discovered after.
+    const response = await upload(appWith(saying(GOOD_READING)), 'not base64 at all!!');
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('NOT_THE_STATED_TYPE');
+    expect(readdirSync(receiptDir)).toHaveLength(0);
+  });
+
   it('refuses a media type the drop-zone does not accept at all', async () => {
     // Rejected by the contract's own enum, before any handler runs.
     const response = await upload(appWith(saying(GOOD_READING)), JPEG_BASE64, 'application/zip');
@@ -635,5 +645,27 @@ describe('a model that says nothing usable', () => {
   it('keeps the photograph even then, so it can be read again later', async () => {
     await upload(appWith(saying(null)));
     expect(readdirSync(receiptDir)).toHaveLength(1);
+  });
+});
+
+describe('decoding a part exactly once', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('base64-decodes a single-part upload once, not once per consumer', async () => {
+    // The media-type check, the store and the EXIF reader used to each call
+    // `Buffer.from(dataBase64, 'base64')` on the same string independently.
+    // Decoded once at the edge, this is the only call left that names it.
+    const spy = vi.spyOn(Buffer, 'from');
+
+    const response = await upload(appWith(saying(GOOD_READING)));
+    expect(response.status).toBe(200);
+
+    const decodesOfThisPart = spy.mock.calls.filter((call) => {
+      const args: unknown[] = [...call];
+      return args[0] === JPEG_BASE64 && args[1] === 'base64';
+    });
+    expect(decodesOfThisPart).toHaveLength(1);
   });
 });

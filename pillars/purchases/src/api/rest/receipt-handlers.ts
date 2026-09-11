@@ -21,6 +21,7 @@ import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purch
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import {
   canonicalBase64,
+  decodeReceiptBase64,
   looksLikeMediaType,
   receiptKey,
   storeReceiptPart,
@@ -153,15 +154,31 @@ export function makeReceiptHandlers(
         mediaType: one.mediaType,
         dataBase64: canonicalBase64(one.dataBase64),
       }));
-      const badPartAt = parts.findIndex(
-        (one) => !looksLikeMediaType(one.dataBase64, one.mediaType)
+
+      // Decoded once, here: everything past this point — the magic-number
+      // check, the store, the EXIF reader — takes these bytes rather than
+      // decoding the wire string again on its own.
+      const decodedParts = parts.map((one) => ({
+        mediaType: one.mediaType,
+        bytes: decodeReceiptBase64(one.dataBase64),
+      }));
+
+      const badPartAt = decodedParts.findIndex(
+        (one) => one.bytes === null || !looksLikeMediaType(one.bytes, one.mediaType)
       );
       if (badPartAt !== -1) {
         const bad = parts[badPartAt];
         if (bad !== undefined) return notWhatItClaims(bad.mediaType, badPartAt, parts.length);
       }
 
-      const stored = parts.map((one) => storeReceiptPart(one));
+      const goodParts = decodedParts.map(({ mediaType, bytes }) => {
+        if (bytes === null) {
+          throw new Error('unreachable: a malformed part is refused above, not reached here');
+        }
+        return { mediaType, bytes };
+      });
+
+      const stored = goodParts.map((one) => storeReceiptPart(one));
 
       // Before the model, not after. The parts' digest IS the key, so a
       // re-upload is already knowable here — and letting it reach the
@@ -198,7 +215,7 @@ export function makeReceiptHandlers(
       // it is resolved after the reading (`ingest/receipt/capture.ts`).
       const capture = resolveCapture(
         body.capture,
-        firstPhotoCapture(parts),
+        firstPhotoCapture(goodParts),
         outcome.extracted.timeZone
       );
 

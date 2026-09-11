@@ -50,7 +50,7 @@ import { isRealFix } from './exif.js';
 
 import type { CaptureSource } from '../../contract/constants.js';
 import type { CaptureLocalTime, CaptureLocation, PhotoCapture } from './exif.js';
-import type { ReceiptPart } from './vision.js';
+import type { DecodedReceiptPart } from './vision.js';
 
 export type { CaptureLocation } from './exif.js';
 
@@ -109,9 +109,9 @@ export interface ResolvedCapture {
  * that kept its metadata — is why this looks past the parts that carry
  * none rather than stopping at part one.
  */
-export function firstPhotoCapture(parts: readonly ReceiptPart[]): PhotoCapture | null {
+export function firstPhotoCapture(parts: readonly DecodedReceiptPart[]): PhotoCapture | null {
   for (const part of parts) {
-    const capture = readPhotoCapture(Buffer.from(part.dataBase64, 'base64'), part.mediaType);
+    const capture = readPhotoCapture(part.bytes, part.mediaType);
     if (capture !== null) return capture;
   }
   return null;

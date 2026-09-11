@@ -84,6 +84,18 @@ export interface ReceiptPart {
   readonly dataBase64: string;
 }
 
+/**
+ * {@link ReceiptPart}, decoded once at the edge.
+ *
+ * Everything past the edge check — the store, the EXIF reader — wants the
+ * bytes, not the wire string, so this is the shape they take instead of each
+ * calling `Buffer.from(dataBase64, 'base64')` on their own.
+ */
+export interface DecodedReceiptPart {
+  readonly mediaType: ReceiptMediaType;
+  readonly bytes: Buffer;
+}
+
 export interface ReceiptVision {
   /**
    * Read one receipt from one or more parts of it.
