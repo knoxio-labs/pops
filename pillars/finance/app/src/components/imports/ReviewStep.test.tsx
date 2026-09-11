@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,13 +11,15 @@ const mockEntitiesQuery = vi.fn();
 // Finance-served reevaluate moved to the generated REST SDK. The mock resolves
 // the Hey API `{ data, error }` envelope; per-call `onSuccess` in the component
 // fires on resolve, so tests assert via the resulting UI rather than callbacks.
-const { mockReevaluate, mockSuggestTags } = vi.hoisted(() => ({
+const { mockReevaluate, mockReevaluateRows, mockSuggestTags } = vi.hoisted(() => ({
   mockReevaluate: vi.fn(),
+  mockReevaluateRows: vi.fn(),
   mockSuggestTags: vi.fn(),
 }));
 
 vi.mock('../../finance-api/index.js', () => ({
   importsReevaluateWithPendingRules: (...args: unknown[]) => mockReevaluate(...args),
+  importsReevaluateRowsWithPendingRules: (...args: unknown[]) => mockReevaluateRows(...args),
   // Assigning an entity by hand re-derives the row's tag suggestions
   // (POPS-2595). Without this the lookup would throw inside the hook and the
   // step would silently exercise the failure path in every test below.
@@ -73,6 +75,10 @@ let mockPendingChangeSets: unknown[] = [];
  * against.
  */
 let mockProcessSessionId: string | null = null;
+/** The store's `draftSource`: `null` for a file import, `{ kind: 'live' }` for a live Up draft. */
+let mockDraftSource: { kind: 'live'; provider: 'up' } | null = null;
+/** The store's persisted `manuallyResolvedChecksums`, seeded into the hook's resolved set on mount. */
+let mockManuallyResolvedChecksums: string[] = [];
 
 /** The session a file import carries out of the Process step. */
 const FILE_IMPORT_SESSION_ID = '11111111-1111-1111-1111-111111111111';
@@ -82,6 +88,7 @@ vi.mock('../../store/importStore', () => {
     processedTransactions: mockProcessedTransactions,
     setConfirmedTransactions: mockSetConfirmedTransactions,
     processSessionId: mockProcessSessionId,
+    draftSource: mockDraftSource,
     setProcessedTransactions: mockSetProcessedTransactions,
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
@@ -101,9 +108,11 @@ vi.mock('../../store/importStore', () => {
   hook.getState = () => ({
     pendingChangeSets: mockPendingChangeSets,
     pendingEntities: mockPendingEntities,
+    processedTransactions: mockProcessedTransactions,
     setProcessedTransactions: mockSetProcessedTransactions,
     processSessionId: mockProcessSessionId,
-    manuallyResolvedChecksums: [],
+    draftSource: mockDraftSource,
+    manuallyResolvedChecksums: mockManuallyResolvedChecksums,
     markChecksumsResolved: vi.fn(),
   });
 
@@ -122,6 +131,7 @@ vi.mock('./EntityCreateDialog', () => ({
 }));
 
 let lastProposalDialogProps: unknown = null;
+let lastBrowseDialogProps: { onBrowseClose?: (hadChanges: boolean) => void } | null = null;
 let proposalDialogApproveMode: 'success' | 'error' = 'success';
 vi.mock('./CorrectionProposalDialog', async () => {
   const React = await import('react');
@@ -132,11 +142,15 @@ vi.mock('./CorrectionProposalDialog', async () => {
         open?: boolean;
         mode?: string;
         onApproved?: () => void;
+        onBrowseClose?: (hadChanges: boolean) => void;
       };
-      // Only track proposal dialog props (not browse mode)
-      if (p.mode !== 'browse') lastProposalDialogProps = props;
-      // Browse dialog is always hidden in tests (not under test here)
-      if (p.mode === 'browse') return null;
+      // The browse dialog renders nothing here; a test closes it through the
+      // captured `onBrowseClose`.
+      if (p.mode === 'browse') {
+        lastBrowseDialogProps = p;
+        return null;
+      }
+      lastProposalDialogProps = props;
       return React.createElement(
         'div',
         { 'data-testid': 'proposal-dialog' },
@@ -364,10 +378,20 @@ function makeTx(description: string, overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   lastProposalDialogProps = null;
+  lastBrowseDialogProps = null;
   proposalDialogApproveMode = 'success';
   mockPendingEntities = [];
   mockPendingChangeSets = [];
   mockProcessSessionId = FILE_IMPORT_SESSION_ID;
+  mockDraftSource = null;
+  mockManuallyResolvedChecksums = [];
+  mockReevaluateRows.mockResolvedValue({
+    data: {
+      result: { matched: [], uncertain: [], failed: [], skipped: [] },
+      affectedCount: 0,
+    },
+    error: undefined,
+  });
   mockEntitiesQuery.mockResolvedValue({
     data: {
       entities: [
@@ -554,7 +578,7 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     expect(appliedToCalls).toHaveLength(0);
   });
 
-  it('approval updates localTransactions with re-evaluated result and shows affected-count toast', async () => {
+  it('approval updates localTransactions with the re-evaluated result, with no count toast for a file import', async () => {
     const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
     mockProcessedTransactions = {
       matched: [],
@@ -604,10 +628,12 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
       body: expect.objectContaining({ sessionId: FILE_IMPORT_SESSION_ID }),
     });
     expect(mockToastSuccess).toHaveBeenCalledWith('Rules saved locally');
+    expect(mockToastSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Rules applied'));
   });
 
-  it('applies a rule in a live draft, which re-evaluates nothing because it has no session', async () => {
+  it('applies a rule in a live draft and re-buckets the rows it holds, with no count toast', async () => {
     mockProcessSessionId = null;
+    mockDraftSource = { kind: 'live', provider: 'up' };
     const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
     mockProcessedTransactions = {
       matched: [],
@@ -615,6 +641,13 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
       failed: [],
       skipped: [],
     };
+    mockReevaluateRows.mockResolvedValue({
+      data: {
+        result: { matched: [{ ...tx, status: 'matched' }], uncertain: [], failed: [], skipped: [] },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
 
     const { rerender } = render(reviewStepTree());
 
@@ -630,19 +663,141 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     ];
     rerender(reviewStepTree());
 
-    // The rule is staged locally, exactly as it is for a file import: applying
-    // builds the ChangeSet from local ops and never calls the server.
+    // Staging is local, exactly as it is for a file import.
     expect(mockToastSuccess).toHaveBeenCalledWith('Rules saved locally');
 
-    // Re-evaluation is the one thing that does need a session, and
-    // `useReevaluatePending` returns early without one rather than sending an
-    // empty `sessionId` the route would reject as a non-uuid.
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
+    expect(mockToastSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Rules applied'));
+    expect(mockReevaluateRows).toHaveBeenCalledExactlyOnceWith({
+      body: expect.objectContaining({ result: expect.objectContaining({ uncertain: [tx] }) }),
+    });
+    expect(mockReevaluate).not.toHaveBeenCalled();
+  });
+
+  it('closing the rule browser with changes in a live draft re-buckets its rows and reports the count exactly once', async () => {
+    mockProcessSessionId = null;
+    mockDraftSource = { kind: 'live', provider: 'up' };
+    const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [tx],
+      failed: [],
+      skipped: [],
+    };
+    mockReevaluateRows.mockResolvedValue({
+      data: {
+        result: { matched: [{ ...tx, status: 'matched' }], uncertain: [], failed: [], skipped: [] },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    render(reviewStepTree());
+    const closeBrowser = lastBrowseDialogProps?.onBrowseClose;
+    expect(closeBrowser).toBeTypeOf('function');
+
+    act(() => closeBrowser?.(false));
+    expect(mockReevaluateRows).not.toHaveBeenCalled();
+
+    act(() => closeBrowser?.(true));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
+    const countToasts = mockToastSuccess.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('Rules applied')
+    );
+    expect(countToasts).toEqual([['Rules applied — 1 transaction re-evaluated']]);
+    expect(mockReevaluateRows).toHaveBeenCalledExactlyOnceWith({
+      body: expect.objectContaining({ result: expect.objectContaining({ uncertain: [tx] }) }),
+    });
+    expect(mockReevaluate).not.toHaveBeenCalled();
+  });
+
+  it('closing the rule browser with changes in a file import reports the count exactly once', async () => {
+    const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [tx],
+      failed: [],
+      skipped: [],
+    };
+    mockReevaluate.mockResolvedValue({
+      data: {
+        result: { matched: [{ ...tx, status: 'matched' }], uncertain: [], failed: [], skipped: [] },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    render(reviewStepTree());
+    const closeBrowser = lastBrowseDialogProps?.onBrowseClose;
+    expect(closeBrowser).toBeTypeOf('function');
+
+    act(() => closeBrowser?.(false));
     expect(mockReevaluate).not.toHaveBeenCalled();
 
-    // So the buckets are unchanged: nothing re-buckets a live draft's rows in
-    // review (POPS-3363).
-    expect(screen.getByText(/Matched \(0\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Uncertain \(1\)/)).toBeInTheDocument();
+    act(() => closeBrowser?.(true));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
+    const countToasts = mockToastSuccess.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('Rules applied')
+    );
+    expect(countToasts).toEqual([['Rules applied — 1 transaction re-evaluated']]);
+    expect(mockReevaluate).toHaveBeenCalledExactlyOnceWith({
+      body: expect.objectContaining({ sessionId: FILE_IMPORT_SESSION_ID }),
+    });
+    expect(mockReevaluateRows).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hand-resolved row when closing the rule browser in a live draft', async () => {
+    mockProcessSessionId = null;
+    mockDraftSource = { kind: 'live', provider: 'up' };
+    const resolvedByHand = makeTx('RESOLVED BY HAND', {
+      status: 'matched',
+      entity: { entityId: 'ent-9', entityName: 'Resolved Co', matchType: 'manual' },
+    });
+    const ruleTarget = makeTx('RULE TARGET');
+    mockManuallyResolvedChecksums = [resolvedByHand.checksum];
+    mockProcessedTransactions = {
+      matched: [resolvedByHand],
+      uncertain: [ruleTarget],
+      failed: [],
+      skipped: [],
+    };
+    // The server re-processes both rows from scratch and hands the
+    // hand-resolved one back as uncertain — it has no idea the user already
+    // settled it.
+    mockReevaluateRows.mockResolvedValue({
+      data: {
+        result: {
+          matched: [{ ...ruleTarget, status: 'matched' }],
+          uncertain: [{ ...resolvedByHand, status: 'uncertain', entity: { matchType: 'none' } }],
+          failed: [],
+          skipped: [],
+        },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    render(reviewStepTree());
+    const closeBrowser = lastBrowseDialogProps?.onBrowseClose;
+    expect(closeBrowser).toBeTypeOf('function');
+
+    act(() => closeBrowser?.(true));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(2\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
   });
 
   it('approval failure shows error toast and local state remains unchanged', async () => {

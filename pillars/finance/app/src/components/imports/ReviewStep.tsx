@@ -37,7 +37,7 @@ function toPreviewList(local: LocalTxState) {
  * Step 4: Review transactions and resolve uncertain/failed matches
  */
 export function ReviewStep() {
-  const { processedTransactions, processSessionId, goToStep } = useImportStore();
+  const { processedTransactions, goToStep } = useImportStore();
   const { review, proposal, reviewActions, editing, bulk, commit, isRecomputingTags } =
     useReviewStepHooks();
 
@@ -49,7 +49,6 @@ export function ReviewStep() {
         proposal={proposal}
         bulk={bulk}
         review={review}
-        processSessionId={processSessionId ?? ''}
         allPreviewTransactions={allPreviewTransactions}
       />
       <LiveArrivalsBanner />

@@ -17,6 +17,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ImportProgressSchema, SessionIdSchema } from './rest-imports-progress-schemas.js';
+import { ReevaluateRowsWithPendingRulesInputSchema } from './rest-imports-reevaluate-rows-schemas.js';
 import {
   ApplyChangeSetAndReevaluateInputSchema,
   ApplyChangeSetAndReevaluateOutputSchema,
@@ -77,5 +78,13 @@ export const financeImportsContract = c.router({
     body: ReevaluateWithPendingRulesInputSchema,
     responses: { 200: ApplyChangeSetAndReevaluateOutputSchema, ...ERR_RESPONSES_WITH_412 },
     summary: 'Re-evaluate the import session against merged (DB + pending) rules; no DB writes',
+  },
+  reevaluateRowsWithPendingRules: {
+    method: 'POST',
+    path: '/imports/reevaluate-pending-rows',
+    body: ReevaluateRowsWithPendingRulesInputSchema,
+    responses: { 200: ApplyChangeSetAndReevaluateOutputSchema, ...ERR_RESPONSES },
+    summary:
+      'Re-evaluate caller-supplied rows (a live draft, which has no process session) against merged (DB + pending) rules; no DB writes',
   },
 });

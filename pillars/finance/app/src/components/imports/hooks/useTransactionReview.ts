@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import { useImportStore } from '../../../store/importStore';
 import { collectChangedChecksums, mergeReevaluatedResult } from './local-tx-reconcile';
-import { useReevaluatePending } from './useReevaluatePending';
+import { reevaluateVia, type ReevaluateVia, useReevaluatePending } from './useReevaluatePending';
 
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -100,7 +100,7 @@ function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
 }
 
 /**
- * When pendingChangeSets changes, ask the API to re-evaluate the session
+ * When pendingChangeSets changes, ask the API to re-evaluate the import
  * against (DB rules + pending). Server-side merge avoids the case where a
  * pending edit targets a rule outside the client's paginated list.
  *
@@ -111,7 +111,7 @@ function useSyncedLocalTransactions(processedTransactions: ProcessedTxState) {
 function useReevalOnChangeSets(
   applyReevaluatedResult: (result: ProcessedTxState) => void,
   pendingChangeSets: ReturnType<typeof useImportStore.getState>['pendingChangeSets'],
-  sessionId: string | null
+  via: ReevaluateVia
 ) {
   const prevChangeSetsRef = useRef(pendingChangeSets);
   const { runReevaluate, isReevaluating } = useReevaluatePending();
@@ -124,7 +124,7 @@ function useReevalOnChangeSets(
   useEffect(() => {
     if (prevChangeSetsRef.current === pendingChangeSets) return;
     prevChangeSetsRef.current = pendingChangeSets;
-    if (!sessionId) return;
+    if (!via) return;
 
     latestRunRef.current += 1;
     const runId = latestRunRef.current;
@@ -132,7 +132,7 @@ function useReevalOnChangeSets(
       if (!outcome || runId !== latestRunRef.current) return;
       applyReevaluatedResult(outcome.result);
     });
-  }, [pendingChangeSets, sessionId, applyReevaluatedResult, runReevaluate]);
+  }, [pendingChangeSets, via, applyReevaluatedResult, runReevaluate]);
   return { isReevaluating };
 }
 
@@ -143,18 +143,14 @@ function useReevalOnChangeSets(
 export function useTransactionReview() {
   const processedTransactions = useImportStore((s) => s.processedTransactions);
   const pendingChangeSets = useImportStore((s) => s.pendingChangeSets);
-  const processSessionId = useImportStore((s) => s.processSessionId);
+  const via = useImportStore(reevaluateVia);
   const { localTransactions, setLocalTransactions, applyReevaluatedResult } =
     useSyncedLocalTransactions(processedTransactions);
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
   const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
   const { activeTab, handleTabChange } = useTabWithScrollMemory(initialTab);
 
-  const { isReevaluating } = useReevalOnChangeSets(
-    applyReevaluatedResult,
-    pendingChangeSets,
-    processSessionId
-  );
+  const { isReevaluating } = useReevalOnChangeSets(applyReevaluatedResult, pendingChangeSets, via);
 
   const unresolvedCount = useMemo(
     () => localTransactions.uncertain.length + localTransactions.failed.length,
@@ -186,5 +182,6 @@ export function useTransactionReview() {
     uncertainGroups,
     failedGroups,
     isReevaluating,
+    reevaluateVia: via,
   };
 }

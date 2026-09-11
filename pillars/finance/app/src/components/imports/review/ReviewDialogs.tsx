@@ -3,17 +3,18 @@ import { toast } from 'sonner';
 import { toRestSignal } from '../../../lib/rest-changeset';
 import { CorrectionProposalDialog } from '../CorrectionProposalDialog';
 import { EntityCreateDialog } from '../EntityCreateDialog';
-import { useReevaluatePending } from '../hooks/useReevaluatePending';
+import { toastRulesApplied, useReevaluatePending } from '../hooks/useReevaluatePending';
 
 import type { PreviewTransactionEntry } from '../correction-proposal-shared';
 import type { useBulkAssignment } from '../hooks/useBulkAssignment';
 import type { useProposalGeneration } from '../hooks/useProposalGeneration';
+import type { ReevaluateVia } from '../hooks/useReevaluatePending';
 import type { useTransactionReview } from '../hooks/useTransactionReview';
 
 interface BrowseDialogProps {
   open: boolean;
   setOpen: (v: boolean) => void;
-  sessionId: string;
+  reevaluateVia: ReevaluateVia;
   previewTransactions: PreviewTransactionEntry[];
   applyReevaluatedResult: ReturnType<typeof useTransactionReview>['applyReevaluatedResult'];
 }
@@ -21,19 +22,17 @@ interface BrowseDialogProps {
 function BrowseDialog({
   open,
   setOpen,
-  sessionId,
+  reevaluateVia,
   previewTransactions,
   applyReevaluatedResult,
 }: BrowseDialogProps) {
   const { runReevaluate } = useReevaluatePending();
   const onClose = (hadChanges: boolean) => {
-    if (!hadChanges || !sessionId) return;
+    if (!hadChanges || !reevaluateVia) return;
     void runReevaluate().then((outcome) => {
       if (!outcome) return;
       applyReevaluatedResult(outcome.result);
-      toast.success(
-        `Rules applied — ${outcome.affectedCount} transaction${outcome.affectedCount === 1 ? '' : 's'} re-evaluated`
-      );
+      toastRulesApplied(outcome.affectedCount);
     });
   };
   return (
@@ -53,17 +52,10 @@ interface DialogsProps {
   proposal: ReturnType<typeof useProposalGeneration>;
   bulk: ReturnType<typeof useBulkAssignment>;
   review: ReturnType<typeof useTransactionReview>;
-  processSessionId: string;
   allPreviewTransactions: PreviewTransactionEntry[];
 }
 
-export function ReviewDialogs({
-  proposal,
-  bulk,
-  review,
-  processSessionId,
-  allPreviewTransactions,
-}: DialogsProps) {
+export function ReviewDialogs({ proposal, bulk, review, allPreviewTransactions }: DialogsProps) {
   return (
     <>
       <CorrectionProposalDialog
@@ -79,7 +71,7 @@ export function ReviewDialogs({
       <BrowseDialog
         open={proposal.browseOpen}
         setOpen={proposal.setBrowseOpen}
-        sessionId={processSessionId}
+        reevaluateVia={review.reevaluateVia}
         previewTransactions={allPreviewTransactions}
         applyReevaluatedResult={review.applyReevaluatedResult}
       />
