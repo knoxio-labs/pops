@@ -116,10 +116,21 @@ export function openTempDb(): TempDb {
  * once for a whole block: it has been seen to fire on a developer box busy
  * with a dozen unrelated builds, where the arrangement was not slow and
  * nothing was wrong. The arrangements it covers cost well under a second
- * each with the box to themselves, so this is not headroom for a slow test
- * — it is far enough above them to mean only one thing when it fires, which
- * is that the build has hung. Every *test* still runs at vitest's 5s
- * default, which is where a wall-clock assertion belongs.
+ * each with the box to themselves, so this is not headroom for a slow test.
+ * Every *test* still runs at vitest's 5s default, which is where a
+ * wall-clock assertion belongs.
+ *
+ * What it can tell apart, stated exactly, because an earlier version of this
+ * comment claimed more: on a box running roughly as much as it has cores for,
+ * 30s is far enough above the real cost that a miss means the build hung. On
+ * a box running far more than that it is not. `merchant-spend`'s and
+ * `accounting-properties`'s arrangements have missed it at a 1-minute load
+ * average of 27-30 on 14 CPUs, with nothing hung. So when this fires, look at
+ * the load before looking for a hang — and do not raise it: a bound that
+ * grows until contention can never reach it stops detecting a hang at all,
+ * and the load that defeats it is a property of the box, not of these
+ * arrangements (`pillars/purchases/vitest.config.ts` records the same call
+ * for the suite as a whole).
  */
 export const ARRANGEMENT_TIMEOUT_MS = 30_000;
 
