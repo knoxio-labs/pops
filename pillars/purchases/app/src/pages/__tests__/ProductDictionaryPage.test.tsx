@@ -162,6 +162,39 @@ describe('ProductDictionaryPage — what the dictionary has learned', () => {
     expect(screen.getByText(/^Asserted /)).toBeInTheDocument();
   });
 
+  // `labelConfirmedAt` puts a product beyond the proposal pass's reach the same
+  // way `confirmedAt` does for a wording, and a reader has no way to tell a
+  // protected name from a till abbreviation unless the page says so.
+  it('marks a product a human named with a visible, textual marker', async () => {
+    dictionaryReturns([
+      buildProduct({
+        id: 'product-named',
+        label: 'Chicken breast 1kg',
+        labelConfirmedAt: '2026-05-03T00:00:00.000Z',
+      }),
+    ]);
+    renderDictionary();
+
+    const entry = await entryFor('Chicken breast 1kg');
+    // A colour swap alone has no accessible name; the marker must carry text,
+    // and it must not be the heading itself (which does not start this way).
+    expect(within(entry).getByText(/^Named /)).toBeInTheDocument();
+  });
+
+  it('marks a product still wearing a till proposal with the proposal marker', async () => {
+    dictionaryReturns([
+      buildProduct({
+        id: 'product-proposal',
+        label: 'Proposal product',
+        labelConfirmedAt: null,
+      }),
+    ]);
+    renderDictionary();
+
+    const entry = await entryFor('Proposal product');
+    expect(within(entry).getByText(enAUPurchases['products.label.proposed'])).toBeInTheDocument();
+  });
+
   it('reports a product holding one proposal as unfinished, not as asserted', async () => {
     dictionaryReturns([
       buildProduct({

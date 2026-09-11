@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, TextInput } from '@pops/ui';
+import { Button, formatDate, TextInput } from '@pops/ui';
 
 import { ArmedAction } from './ArmedAction.js';
 
@@ -45,6 +45,7 @@ export function ProductLabelEditor({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <h3 className="text-base font-medium">{product.label}</h3>
+      <ProductLabelStatus product={product} />
       <Button
         size="sm"
         variant="outline"
@@ -56,6 +57,34 @@ export function ProductLabelEditor({
       </Button>
       <ForgetProductButtons product={product} isPending={isPending} onEdit={onEdit} />
     </div>
+  );
+}
+
+/**
+ * Whether this product's label is a name a human typed or still a till's
+ * wording, mirroring how `AliasRow`'s `WordingSummary` marks a wording
+ * asserted or proposed.
+ *
+ * `labelConfirmedAt` is to a product what `confirmedAt` is to a wording: null
+ * means the proposal pass minted the label and may retire the product once
+ * nothing prints its wordings, non-null means a person named it and it is
+ * beyond the pass's reach. The marker carries that in text, not colour alone,
+ * because colour has no accessible name.
+ */
+function ProductLabelStatus({ product }: { product: DictionaryProduct }): ReactElement {
+  const { t } = useTranslation('purchases');
+  const { labelConfirmedAt } = product;
+
+  return (
+    <span
+      className={
+        labelConfirmedAt === null ? 'text-muted-foreground text-xs italic' : 'text-xs font-medium'
+      }
+    >
+      {labelConfirmedAt === null
+        ? t('products.label.proposed')
+        : t('products.label.named', { at: formatDate(labelConfirmedAt) })}
+    </span>
   );
 }
 

@@ -294,6 +294,8 @@
   "products.alias.source": "from {{source}}",
   "products.alias.proposed": "Proposed by the pass",
   "products.alias.asserted": "Asserted {{at}}",
+  "products.label.proposed": "Not yet named, still the pass's wording",
+  "products.label.named": "Named {{at}}",
   "products.action.assert": "Assert",
   "products.action.retract": "Retract",
   "products.action.split": "Give it its own product",

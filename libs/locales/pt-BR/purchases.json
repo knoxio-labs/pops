@@ -294,6 +294,8 @@
   "products.alias.source": "de {{source}}",
   "products.alias.proposed": "Proposto pela passagem",
   "products.alias.asserted": "Afirmado em {{at}}",
+  "products.label.proposed": "Ainda não nomeado, é o texto da passagem",
+  "products.label.named": "Nomeado em {{at}}",
   "products.action.assert": "Afirmar",
   "products.action.retract": "Retratar",
   "products.action.split": "Dar um produto só dele",
