@@ -194,7 +194,18 @@ const clickHandler = ViewPlugin.define((view) => {
   };
 });
 
-const theme = EditorView.baseTheme({
+/**
+ * Chip theme spec, exported as a plain object (rather than only the
+ * compiled `EditorView.baseTheme` extension) so a test can assert it
+ * points at real design tokens instead of the undefined `--cm-dsl-chip-*`
+ * variables it used to fall back from.
+ *
+ * The four `--kind` backgrounds reuse the chart ramp as a categorical set
+ * (these are DSL token *kinds*, not app status colours); `--error` is the
+ * one state that overrides a kind's colour, so it gets the real
+ * `--destructive` semantic token.
+ */
+export const dslChipThemeSpec = {
   '.cm-dsl-chip': {
     display: 'inline-flex',
     alignItems: 'center',
@@ -202,17 +213,17 @@ const theme = EditorView.baseTheme({
     margin: '0 1px',
     borderRadius: '999px',
     fontSize: '0.85em',
-    border: '1px solid var(--cm-dsl-chip-border, #d4d4d8)',
-    background: 'var(--cm-dsl-chip-bg, #f4f4f5)',
-    color: 'var(--cm-dsl-chip-fg, #18181b)',
+    border: '1px solid var(--border)',
+    background: 'var(--muted)',
+    color: 'var(--foreground)',
   },
-  '.cm-dsl-chip--ref-index': { background: 'var(--cm-dsl-chip-bg-ref, #e0f2fe)' },
-  '.cm-dsl-chip--ref-slug': { background: 'var(--cm-dsl-chip-bg-slug, #ecfdf5)' },
-  '.cm-dsl-chip--time': { background: 'var(--cm-dsl-chip-bg-time, #fef3c7)' },
-  '.cm-dsl-chip--temperature': { background: 'var(--cm-dsl-chip-bg-temp, #fee2e2)' },
+  '.cm-dsl-chip--ref-index': { background: 'var(--chart-1)' },
+  '.cm-dsl-chip--ref-slug': { background: 'var(--chart-2)' },
+  '.cm-dsl-chip--time': { background: 'var(--chart-4)' },
+  '.cm-dsl-chip--temperature': { background: 'var(--chart-3)' },
   '.cm-dsl-chip--error': {
-    background: 'var(--cm-dsl-chip-bg-error, #fecaca)',
-    color: 'var(--cm-dsl-chip-fg-error, #7f1d1d)',
+    background: 'var(--destructive)',
+    color: 'var(--destructive-foreground)',
   },
   '.cm-dsl-chip--inline': {
     padding: '0 2px',
@@ -223,10 +234,12 @@ const theme = EditorView.baseTheme({
   },
   '.cm-dsl-chip--jump': { cursor: 'pointer' },
   '.cm-dsl-chip--jump:focus-visible': {
-    outline: '2px solid var(--cm-dsl-chip-focus, #2563eb)',
+    outline: '2px solid var(--ring)',
     outlineOffset: '1px',
   },
-});
+};
+
+const theme = EditorView.baseTheme(dslChipThemeSpec);
 
 export function chipWidgetsExtension(options: ChipWidgetsOptions = {}) {
   const compact = options.compact === true;

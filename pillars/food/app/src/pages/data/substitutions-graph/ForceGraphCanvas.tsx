@@ -12,6 +12,8 @@ import { useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useTranslation } from 'react-i18next';
 
+import { GRAPH_COLORS } from '@pops/ui/theme/graph-colors';
+
 import { edgeThicknessPx, edgeThickness, nodeLabel } from './helpers';
 
 import type { LinkObject, NodeObject } from 'react-force-graph-2d';
@@ -58,7 +60,7 @@ export function ForceGraphCanvas(props: ForceGraphCanvasProps): React.ReactEleme
       props.nodes.map((node) => ({
         ...node,
         label: nodeLabel(node),
-        color: node.kind === 'variant' ? '#3b82f6' : '#9ca3af',
+        color: node.kind === 'variant' ? GRAPH_COLORS.node.current : GRAPH_COLORS.node.default,
       })),
     [props.nodes]
   );
@@ -115,8 +117,8 @@ function ForceGraphImpl(props: ForceGraphInternalProps): React.ReactElement {
       height={props.height}
       nodeId="id"
       nodeLabel="label"
-      nodeColor={(n: FGNode) => n.color ?? '#9ca3af'}
-      linkColor={() => '#94a3b8'}
+      nodeColor={(n: FGNode) => n.color ?? GRAPH_COLORS.node.default}
+      linkColor={() => GRAPH_COLORS.fallbacks.edge}
       linkWidth={(l: FGLink) => l.width ?? 1}
       linkLineDash={(l: FGLink) => l.dash ?? null}
       linkDirectionalArrowLength={6}

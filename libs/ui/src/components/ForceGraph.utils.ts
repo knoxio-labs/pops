@@ -1,3 +1,5 @@
+import { GRAPH_COLORS } from '../theme/graph-colors';
+
 import type { ForceEdge, ForceNode } from './ForceGraph';
 
 export interface InternalNode extends ForceNode {
@@ -135,8 +137,23 @@ export function drawEdges(
   }
 }
 
+export type NodeDrawingContext = Pick<
+  CanvasRenderingContext2D,
+  | 'font'
+  | 'textAlign'
+  | 'textBaseline'
+  | 'fillStyle'
+  | 'strokeStyle'
+  | 'lineWidth'
+  | 'beginPath'
+  | 'arc'
+  | 'fill'
+  | 'stroke'
+  | 'fillText'
+>;
+
 export function drawNodes(
-  ctx: CanvasRenderingContext2D,
+  ctx: NodeDrawingContext,
   nodes: Iterable<InternalNode>,
   opts: { defaultNodeColor: string; labelColor: string; hoveredId: string | null }
 ) {
@@ -152,7 +169,7 @@ export function drawNodes(
     ctx.fill();
 
     if (opts.hoveredId === n.id) {
-      ctx.strokeStyle = '#1d4ed8';
+      ctx.strokeStyle = GRAPH_COLORS.node.currentBorder;
       ctx.lineWidth = 2;
       ctx.stroke();
     }

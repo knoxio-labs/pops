@@ -7,6 +7,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
  * and dimension weights on the Discover page.
  */
 import { Skeleton } from '@pops/ui';
+import { CHART_CATEGORICAL_COLORS } from '@pops/ui/theme/chart-colors';
 
 interface GenreDistribution {
   genre: string;
@@ -41,16 +42,7 @@ interface PreferenceProfileProps {
   isLoading: boolean;
 }
 
-const CHART_COLORS = [
-  'var(--color-primary)',
-  'hsl(220, 70%, 55%)',
-  'hsl(260, 60%, 55%)',
-  'hsl(340, 65%, 55%)',
-  'hsl(30, 70%, 50%)',
-  'hsl(160, 55%, 45%)',
-  'hsl(190, 60%, 50%)',
-  'hsl(280, 50%, 55%)',
-];
+export const CHART_COLORS = ['var(--color-primary)', ...CHART_CATEGORICAL_COLORS];
 
 function CompareCTA() {
   return (

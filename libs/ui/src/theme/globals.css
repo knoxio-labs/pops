@@ -72,6 +72,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
 
   /* StatCard palette tokens — hues not covered by semantic tokens */
   --color-stat-sky: var(--stat-sky);
@@ -218,6 +220,8 @@
   --chart-3: oklch(0.5 0.15 30);
   --chart-4: oklch(0.8 0.15 80);
   --chart-5: oklch(0.6 0.15 330);
+  --chart-6: oklch(0.6 0.15 340);
+  --chart-7: oklch(0.65 0.13 200);
 
   /* StatCard palette */
   --stat-sky: oklch(0.6 0.15 220);

@@ -12,6 +12,7 @@
       "default": "./src/theme/globals.css"
     },
     "./theme/graph-colors": "./src/theme/graph-colors.ts",
+    "./theme/chart-colors": "./src/theme/chart-colors.ts",
     "./testing/decode-qr": "./src/testing/decode-qr.ts"
   },
   "scripts": {

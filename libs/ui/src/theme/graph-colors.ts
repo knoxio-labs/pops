@@ -5,6 +5,13 @@
  * colors are intentionally hardcoded hex values rather than CSS variables.
  * Structural colors (edges, labels) should use getComputedStyle at render
  * time to support dark mode.
+ *
+ * Sanctioned consumers — any other canvas/chart JS colour constant should
+ * import from here instead of hardcoding hex/hsl (AGENTS.md "Styling"):
+ * - `pillars/inventory/app/src/components/connection-graph/draw.ts`
+ * - `pillars/food/app/src/pages/data/substitutions-graph/ForceGraphCanvas.tsx`
+ * - `libs/ui/src/components/ForceGraph.tsx`
+ * - `libs/ui/src/components/ForceGraph.utils.ts`
  */
 export const GRAPH_COLORS = {
   types: {
