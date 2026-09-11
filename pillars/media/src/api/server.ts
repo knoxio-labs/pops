@@ -94,17 +94,29 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
 // the process off leaves that half-applied. Disarm the timer, then give the
 // in-flight cycle a bounded window to settle before the server closes.
 const ROTATION_DRAIN_TIMEOUT_MS = 30_000;
+const PLEX_DRAIN_TIMEOUT_MS = 30_000;
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[media-api] Shutting down (${signal})`);
-  plexScheduler.stop();
+  plexScheduler.stopForShutdown();
   rotationScheduler.stopForShutdown();
   void shutdownPillar({
     label: 'media-api',
     steps: [
+      {
+        name: 'plex-drain',
+        run: async () => {
+          const drained = await plexScheduler.waitForCycleEnd(PLEX_DRAIN_TIMEOUT_MS);
+          if (!drained) {
+            console.warn(
+              `[media-api] plex sync tick did not settle within ${PLEX_DRAIN_TIMEOUT_MS}ms; closing anyway`
+            );
+          }
+        },
+      },
       {
         name: 'rotation-drain',
         run: async () => {

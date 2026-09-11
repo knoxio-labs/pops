@@ -11,6 +11,9 @@
  *
  * Persisted state lives in `plex_settings` (`plex_scheduler_enabled` +
  * `plex_scheduler_interval_ms`); `resumeIfEnabled` reads it on boot.
+ * `stopForShutdown` clears the timer WITHOUT persisting the disabled flag, and
+ * `waitForCycleEnd` lets the shutdown path wait for an in-flight tick
+ * (POPS-2583), the same split POPS-78 made for the rotation scheduler.
  *
  * Gate: a tick runs ONLY movies / tv / watchlist sync. The Plex Discover
  * watch sync is deferred to wave 3 — see `plex-scheduler-tick.ts`.
@@ -18,9 +21,11 @@
 import { type MediaDb, plexSettingsService } from '../../db/index.js';
 import { getLastSyncAt, getLastSyncCounts, getLastSyncError } from '../../db/services/sync-logs.js';
 import { PLEX_KEYS } from '../clients/plex/keys.js';
+import { waitForSettled } from './drain.js';
 import { runPlexSyncTick } from './plex-scheduler-tick.js';
 
 const DEFAULT_INTERVAL_MS = 60 * 60 * 1000;
+const DEFAULT_DRAIN_TIMEOUT_MS = 30_000;
 
 export interface PlexSchedulerStatus {
   isRunning: boolean;
@@ -48,6 +53,7 @@ interface SchedulerState {
 }
 
 let state: SchedulerState | null = null;
+let currentTick: Promise<void> | null = null;
 let nextSyncAt: string | null = null;
 
 function persistEnabled(db: MediaDb, intervalMs: number): void {
@@ -65,10 +71,16 @@ interface TickArgs {
 }
 
 async function runOnce(db: MediaDb, args: TickArgs): Promise<void> {
-  await runPlexSyncTick(db, {
+  const run = runPlexSyncTick(db, {
     movieSectionId: args.movieSectionId,
     tvSectionId: args.tvSectionId,
-  });
+  }).then(() => undefined);
+  currentTick = run;
+  try {
+    await run;
+  } finally {
+    if (currentTick === run) currentTick = null;
+  }
 }
 
 function arm(): void {
@@ -115,7 +127,11 @@ export const plexScheduler = {
     return plexScheduler.status(options.db);
   },
 
-  /** Clear the timer and persist the disabled flag. No-op if not running. */
+  /**
+   * Clear the timer and persist the disabled flag: the operator switching the
+   * scheduler off. Process shutdown uses {@link stopForShutdown} instead.
+   * No-op if not running.
+   */
   stop(): void {
     if (state === null) return;
     const { db, timer } = state;
@@ -123,6 +139,26 @@ export const plexScheduler = {
     persistDisabled(db);
     state = null;
     nextSyncAt = null;
+  },
+
+  /**
+   * Clear the timer WITHOUT persisting the disabled flag, for process shutdown.
+   * Persisting here would leave every restarted container with Plex sync
+   * silently switched off, a state `resumeIfEnabled` then reads as an operator
+   * decision nobody made.
+   */
+  stopForShutdown(): void {
+    if (state?.timer !== undefined) clearTimeout(state.timer);
+    state = null;
+    nextSyncAt = null;
+  },
+
+  /**
+   * Resolve once the in-flight tick settles, or after `timeoutMs`: `true` when
+   * it drained, `false` when the bound elapsed first.
+   */
+  async waitForCycleEnd(timeoutMs: number = DEFAULT_DRAIN_TIMEOUT_MS): Promise<boolean> {
+    return waitForSettled(currentTick, timeoutMs);
   },
 
   /** Run a single sync tick directly (no timer). Persists a sync log. */
@@ -157,6 +193,7 @@ export const plexScheduler = {
   _reset(): void {
     if (state?.timer !== undefined) clearTimeout(state.timer);
     state = null;
+    currentTick = null;
     nextSyncAt = null;
   },
 };
