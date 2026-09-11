@@ -121,7 +121,24 @@ export function createServiceAccountScopeGate(
   options: ServiceAccountScopeGateOptions
 ): ServiceAccountScopeGate {
   const scopeMap = buildContractScopeMap(options.contract, options.rootScope);
-  const { logPrefix, requireCredential } = options;
+  const { logPrefix, rootScope, requireCredential } = options;
+
+  // `resolveContractScope` treats an unmatched path as "outside the
+  // contract" and the auth decision admits it unconditionally (ADR-044's
+  // `not-scoped` reason). An empty table therefore makes every path look
+  // outside the contract, so the gate silently admits everything instead of
+  // enforcing anything — and every behavioural test still passes, because
+  // none of them can distinguish "correctly unscoped" from "never scoped at
+  // all". Fail at construction instead of at runtime, so the wrong contract
+  // object is a boot failure rather than a decorative gate.
+  if (scopeMap.routes.length === 0) {
+    throw new Error(
+      `[${logPrefix}] createServiceAccountScopeGate('${rootScope}') projected zero routes from ` +
+        `its contract. The gate would admit every request. Pass the pillar's ts-rest contract ` +
+        `router (the object holding the route leaves), not its OpenAPI document, handler map, ` +
+        `or an empty object.`
+    );
+  }
 
   const createMiddleware = (verify: ServiceAccountVerifier): RequestHandler => {
     return (req: Request, res: Response, next: NextFunction): void => {
