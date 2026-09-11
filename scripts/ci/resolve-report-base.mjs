@@ -43,35 +43,50 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /**
- * `process.env` with git's repository-location overrides removed, so every
- * invocation here is about the directory it is run in and nothing else — the
- * same regression `merge-group-scope.mjs` documents on `GIT_LOCATION_VARS`:
- * a `.husky/pre-push` hook exports `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE`
- * for the repo being pushed, and this script's self-test fixtures would
- * silently run against that repo instead of their own temp directory.
+ * git's repository-location overrides — the one list every script and test
+ * under `scripts/` strips before running git (POPS-3426).
  *
- * Exported because `check-raw-form-controls.mjs` shells out to git for the
- * same reason under the same pre-push hook, and a second copy of this list
- * is a second copy that can go stale.
+ * Every one of these is exported into the environment of a git hook. A
+ * `.husky/pre-push` that runs a Vitest suite therefore hands it a
+ * `GIT_INDEX_FILE`, a `GIT_DIR` and friends belonging to the repo being
+ * pushed, and a throwaway fixture repo inherits them: `git init` in a temp
+ * directory fails outright, or worse, succeeds against somebody else's index.
+ * `merge-group-scope.mjs` found it exactly that way — its suite passed
+ * standalone and failed in the hook.
+ *
+ * Credential and transport variables (`GIT_ASKPASS`, `GIT_SSH_COMMAND`,
+ * `GIT_TERMINAL_PROMPT`, …) are deliberately NOT in this list: a fetch needs
+ * them.
+ *
+ * One list, because copies drift: a private four-entry copy in
+ * `check-cross-pr-line-budget.test.ts` forgot `GIT_COMMON_DIR`, and a leaked
+ * one sent that suite's sandbox at another repository.
+ */
+export const GIT_LOCATION_VARS = Object.freeze([
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+  'GIT_QUARANTINE_PATH',
+  'GIT_NAMESPACE',
+]);
+
+/**
+ * `process.env` with {@link GIT_LOCATION_VARS} removed, so every invocation is
+ * about the directory it is run in and nothing else.
+ *
+ * `extra` is merged first and then stripped too, so a caller cannot pass a
+ * location override back in by accident.
  *
  * @param {Record<string, string | undefined>} [extra]
  * @returns {Record<string, string | undefined>}
  */
 export function gitEnv(extra = {}) {
   const env = { ...process.env, ...extra };
-  for (const name of [
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_INDEX_FILE',
-    'GIT_COMMON_DIR',
-    'GIT_OBJECT_DIRECTORY',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_PREFIX',
-    'GIT_QUARANTINE_PATH',
-    'GIT_NAMESPACE',
-  ]) {
-    delete env[name];
-  }
+  for (const name of GIT_LOCATION_VARS) delete env[name];
   return env;
 }
 

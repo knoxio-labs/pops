@@ -118,6 +118,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { gitEnv } from './resolve-report-base.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 
@@ -480,33 +482,6 @@ export function countBudgetLines(source) {
 // ---------------------------------------------------------------------------
 // Git plumbing.
 // ---------------------------------------------------------------------------
-
-/**
- * git's repository-location overrides, removed from every invocation here.
- * `.husky/pre-push` runs this guard with `GIT_DIR` exported for the repo
- * being pushed; without the scrub, the self-test's throwaway fixtures would
- * commit into THAT repo instead of their own temp directory. Same regression
- * `scripts/ci/resolve-report-base.mjs` documents.
- *
- * @returns {Record<string, string | undefined>}
- */
-function gitEnv() {
-  const env = { ...process.env };
-  for (const name of [
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_INDEX_FILE',
-    'GIT_COMMON_DIR',
-    'GIT_OBJECT_DIRECTORY',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_PREFIX',
-    'GIT_QUARANTINE_PATH',
-    'GIT_NAMESPACE',
-  ]) {
-    delete env[name];
-  }
-  return env;
-}
 
 /**
  * @param {string[]} args

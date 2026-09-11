@@ -75,6 +75,7 @@ import {
   matchesAnyGlob,
   parseMaxLinesConfig,
 } from './check-line-budget-headroom.mjs';
+import { gitEnv } from './resolve-report-base.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
@@ -233,7 +234,15 @@ export function summaryMarkdown(collisions, otherPrCount, skipped = []) {
 /** A git invocation that returns `undefined` rather than throwing. */
 function tryGit(/** @type {string[]} */ args, /** @type {string} */ cwd) {
   try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    // The location git acts on is `cwd`, never one a hook exported: without
+    // gitEnv() a leaked GIT_COMMON_DIR sends this at another repository, and
+    // the catch below turns that into "could not look" rather than an error.
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      env: gitEnv(),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
   } catch {
     return undefined;
   }

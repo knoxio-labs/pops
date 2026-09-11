@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { load as parseYaml } from 'js-yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { GIT_LOCATION_VARS } from '../ci/resolve-report-base.mjs';
 import { bundleFileName } from '../pack-moltbot-bundle.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -62,7 +63,7 @@ interface Commit {
  * (breaking `git status` in every sibling worktree) and commits this fixture's
  * `chore: seed` onto whatever branch is checked out. Observed exactly that way,
  * on this branch. Every `GIT_*` name is dropped rather than the handful in
- * {@link REPO_LOCATING_GIT_VARS}, because that list is git's to grow; the named
+ * `GIT_LOCATION_VARS` (`scripts/ci/resolve-report-base.mjs`), because that list is git's to grow; the named
  * list is what the pre-flight check reports on.
  *
  * The identity vars are then set back deliberately: with no global config
@@ -91,29 +92,11 @@ interface ReleaseOutcome {
 }
 
 /**
- * Names that would point a git child process at a repository other than its cwd.
- *
- * `scripts/ci/merge-group-scope.mjs` carries the same list, arrived at the same
- * way and for the same reason; consolidating the two is tracked separately.
- */
-const REPO_LOCATING_GIT_VARS = [
-  'GIT_DIR',
-  'GIT_WORK_TREE',
-  'GIT_INDEX_FILE',
-  'GIT_COMMON_DIR',
-  'GIT_OBJECT_DIRECTORY',
-  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-  'GIT_PREFIX',
-  'GIT_QUARANTINE_PATH',
-  'GIT_NAMESPACE',
-] as const;
-
-/**
  * @param env Environment about to be handed to a `git` child process.
- * @throws {Error} When any of {@link REPO_LOCATING_GIT_VARS} survived the scrub.
+ * @throws {Error} When any of `GIT_LOCATION_VARS` (`scripts/ci/resolve-report-base.mjs`) survived the scrub.
  */
 export function assertNoInheritedGitEnv(env: NodeJS.ProcessEnv): void {
-  const leaked = REPO_LOCATING_GIT_VARS.filter((name) => env[name] !== undefined);
+  const leaked = GIT_LOCATION_VARS.filter((name) => env[name] !== undefined);
   if (leaked.length > 0) {
     throw new Error(
       `refusing to run git with an inherited environment: ${leaked.join(', ')} would ` +
@@ -240,7 +223,7 @@ describe('fixture isolation', { timeout: RUNS_RELEASE_SH_TIMEOUT_MS }, () => {
   });
 
   it('refuses to run git at all when one leaks through', () => {
-    for (const name of REPO_LOCATING_GIT_VARS) {
+    for (const name of GIT_LOCATION_VARS) {
       expect(() => assertNoInheritedGitEnv({ [name]: '/some/real/repo/.git' })).toThrow(
         /refusing to run git/u
       );

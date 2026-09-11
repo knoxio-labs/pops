@@ -34,22 +34,9 @@ import {
   describeCollision,
   summaryMarkdown,
 } from '../check-cross-pr-line-budget.mjs';
+import { gitEnv } from '../resolve-report-base.mjs';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
-
-/**
- * git's repository-location overrides, scrubbed — mirrors the sibling guard's
- * test. Without this, a run from inside `.husky/pre-push` (which exports
- * `GIT_DIR` for the repo being pushed) would point these throwaway fixtures
- * at that repo instead of their own temp directory.
- */
-function gitEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  for (const name of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY']) {
-    delete env[name];
-  }
-  return env;
-}
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, { cwd, encoding: 'utf8', env: gitEnv() });
@@ -334,6 +321,33 @@ describe(
       git(dir, 'commit', '--quiet', '-m', 'base');
 
       expect(deltasFor('HEAD', 'no-such-ref', () => true, dir)).toBeUndefined();
+    });
+
+    it('answers for its own repo when a hook has exported a different common dir', () => {
+      // A git hook exports the location of the repository being pushed, and
+      // every git call that inherits it acts on that repository instead of
+      // the one it was run in. GIT_COMMON_DIR is one of the variables the old
+      // private list here forgot. The leaked location is an empty decoy, so an
+      // unfixed run cannot write objects or refs into a real repository.
+      const decoy = mkdtempSync(join(tmpdir(), 'cross-pr-decoy-common-'));
+      tempDirs.push(decoy);
+      const saved = process.env.GIT_COMMON_DIR;
+      process.env.GIT_COMMON_DIR = decoy;
+      try {
+        const dir = throwawayRepo();
+        writeFileSync(join(dir, 'a.ts'), lines(10));
+        git(dir, 'add', '.');
+        git(dir, 'commit', '--quiet', '-m', 'base');
+
+        git(dir, 'checkout', '--quiet', '-b', 'feature');
+        writeFileSync(join(dir, 'a.ts'), lines(13));
+        git(dir, 'commit', '--quiet', '-am', 'grow by three');
+
+        expect(deltasFor('feature', 'main', () => true, dir)).toEqual([{ file: 'a.ts', delta: 3 }]);
+      } finally {
+        if (saved === undefined) delete process.env.GIT_COMMON_DIR;
+        else process.env.GIT_COMMON_DIR = saved;
+      }
     });
   }
 );

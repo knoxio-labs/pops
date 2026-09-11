@@ -33,31 +33,7 @@ import {
   matchesAnyGlob,
   parseMaxLinesConfig,
 } from '../check-line-budget-headroom.mjs';
-
-/**
- * git's repository-location overrides, scrubbed — mirrors
- * `check-line-budget-headroom.mjs`'s own `gitEnv()`. Without this, a test run
- * from inside `.husky/pre-push` (which exports `GIT_DIR` for the repo being
- * pushed) would point these throwaway fixtures at that repo instead of their
- * own temp directory.
- */
-function gitEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  for (const name of [
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_INDEX_FILE',
-    'GIT_COMMON_DIR',
-    'GIT_OBJECT_DIRECTORY',
-    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_PREFIX',
-    'GIT_QUARANTINE_PATH',
-    'GIT_NAMESPACE',
-  ]) {
-    delete env[name];
-  }
-  return env;
-}
+import { gitEnv } from '../resolve-report-base.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
