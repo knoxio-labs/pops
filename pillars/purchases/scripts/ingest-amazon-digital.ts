@@ -15,6 +15,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
+
 import {
   AMAZON_DIGITAL_SOURCE_ID,
   DIGITAL_ORDERS_BUNDLE_PATH,
@@ -23,7 +25,6 @@ import {
 } from '../src/ingest/amazon-digital/index.js';
 import {
   createIngestClient,
-  isCliEntrypoint,
   postPurchases,
   readBundlePath,
   reportOutcome,

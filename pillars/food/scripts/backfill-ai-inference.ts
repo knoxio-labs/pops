@@ -1,3 +1,5 @@
+import Database from 'better-sqlite3';
+
 /**
  * One-shot, idempotent backfill of food's historical `ai_inference_log` rows
  * into the ai pillar's cross-pillar telemetry store.
@@ -27,9 +29,7 @@
  * `POPS_INTERNAL_CREDENTIAL` (`ops-backfill.<secret>`). Reads food's DB at
  * `FOOD_SQLITE_PATH` / `SQLITE_PATH` (same resolver food-api uses).
  */
-import { pathToFileURL } from 'node:url';
-
-import Database from 'better-sqlite3';
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { resolveFoodSqlitePath } from '../src/api/food-sqlite-path.js';
 import {
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
   if (summary.failed > 0) process.exitCode = 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (isCliEntrypoint(import.meta.url)) {
   main().catch((err: unknown) => {
     console.error('[backfill] fatal:', err);
     process.exitCode = 1;

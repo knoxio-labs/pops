@@ -28,6 +28,8 @@
  * retired wording spells is a run that found a hole in that guarantee, and
  * that is exactly what an operator needs to see before committing it.
  */
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
+
 import { resolvePurchasesSqlitePath } from '../src/api/purchases-sqlite-path.js';
 import {
   openPurchasesDb,
@@ -37,7 +39,7 @@ import {
   type ProposalOutcome,
   type PurchasesDb,
 } from '../src/db/index.js';
-import { isCliEntrypoint, runCli } from './backfill.js';
+import { runCli } from './backfill.js';
 
 /** How many minted and retired wordings are named before the rest are counted. */
 const SAMPLE_LIMIT = 10;
