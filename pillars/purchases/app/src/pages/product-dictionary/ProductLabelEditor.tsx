@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, formatDate, TextInput } from '@pops/ui';
 
 import { ArmedAction } from './ArmedAction.js';
+import { productIsNamed } from './assertion.js';
 
 import type { FormEvent, ReactElement } from 'react';
 
@@ -73,18 +74,16 @@ export function ProductLabelEditor({
  */
 function ProductLabelStatus({ product }: { product: DictionaryProduct }): ReactElement {
   const { t } = useTranslation('purchases');
-  const { labelConfirmedAt } = product;
 
+  if (productIsNamed(product)) {
+    return (
+      <span className="text-xs font-medium">
+        {t('products.label.named', { at: formatDate(product.labelConfirmedAt) })}
+      </span>
+    );
+  }
   return (
-    <span
-      className={
-        labelConfirmedAt === null ? 'text-muted-foreground text-xs italic' : 'text-xs font-medium'
-      }
-    >
-      {labelConfirmedAt === null
-        ? t('products.label.proposed')
-        : t('products.label.named', { at: formatDate(labelConfirmedAt) })}
-    </span>
+    <span className="text-muted-foreground text-xs italic">{t('products.label.proposed')}</span>
   );
 }
 

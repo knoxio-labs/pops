@@ -43,7 +43,9 @@ export function aliasIsAsserted(alias: DictionaryAlias): boolean {
  * identical product after one is deleted, while a name somebody typed is
  * reconstructible from nothing.
  */
-export function productIsNamed(product: DictionaryProduct): boolean {
+export function productIsNamed(
+  product: DictionaryProduct
+): product is DictionaryProduct & { labelConfirmedAt: string } {
   return product.labelConfirmedAt !== null;
 }
 

@@ -407,8 +407,12 @@ by hand: forgetting its last wording, or pointing that wording at another
 product, leaves nothing resolving to it and the orphan sweep takes it, name
 and all. **Forget this wording** is a single click where **Forget this
 product** asks twice, so today the shorter path to losing a name is the one
-with less ceremony — POPS-2518. The page does not yet distinguish a named
-product from a proposal either (POPS-2486).
+with less ceremony — POPS-2518.
+
+The page distinguishes a named product from a proposal (POPS-2486): beside
+each product's label, a named product reads as named on the date it was
+typed, and a till-minted one reads as proposed by the pass. It is the same
+asserted-or-proposed distinction each wording row already draws.
 
 ### Running the pass
 
