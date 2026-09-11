@@ -1,5 +1,12 @@
 import { accountsTools } from './finance-accounts.js';
-import { ENTITY_TYPES, contacts, finance, type EntityType } from './finance-client.js';
+import {
+  ENTITY_TYPES,
+  TRANSACTION_TYPES,
+  contacts,
+  finance,
+  type EntityType,
+  type TransactionType,
+} from './finance-client.js';
 import { correctionsTools } from './finance-corrections.js';
 import { importsTools } from './finance-imports.js';
 import { searchTools } from './finance-search.js';
@@ -22,7 +29,7 @@ const transactionsList: ToolDef = {
       account: { type: 'string', description: 'Filter by account name' },
       type: {
         type: 'string',
-        enum: ['income', 'expense', 'transfer'],
+        enum: TRANSACTION_TYPES,
         description: 'Transaction type',
       },
       limit: { type: 'number', description: 'Max results (default 50)' },
@@ -36,10 +43,9 @@ const transactionsList: ToolDef = {
       endDate: typeof args['endDate'] === 'string' ? args['endDate'] : undefined,
       entityId: typeof args['entityId'] === 'string' ? args['entityId'] : undefined,
       account: typeof args['account'] === 'string' ? args['account'] : undefined,
-      type:
-        args['type'] === 'income' || args['type'] === 'expense' || args['type'] === 'transfer'
-          ? args['type']
-          : undefined,
+      type: (TRANSACTION_TYPES as readonly string[]).includes(args['type'] as string)
+        ? (args['type'] as TransactionType)
+        : undefined,
       limit: typeof args['limit'] === 'number' ? args['limit'] : undefined,
       offset: typeof args['offset'] === 'number' ? args['offset'] : undefined,
     });
