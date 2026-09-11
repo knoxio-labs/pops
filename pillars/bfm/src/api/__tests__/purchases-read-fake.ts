@@ -8,9 +8,12 @@
  *
  * The list implementation reproduces the producer's contract rather than a
  * convenient approximation — `orderedAt DESC, id ASC`, an inclusive `limit`,
- * and an `offset` applied after ordering — because bfm's cursor is an offset
- * into exactly that order. `pillars/purchases/src/db/services/purchase-reads.ts`
- * is what holds purchases to it; the two must be read as a pair.
+ * and a `beforeOrderedAt`/`beforeId` keyset anchor applied after ordering —
+ * because bfm's cursor is that exact anchor. `orderedAt < anchor OR
+ * (orderedAt = anchor AND id > anchorId)` is not a convenience rewrite of
+ * "skip past the anchor row": it is the same predicate
+ * `pillars/purchases/src/db/services/purchase-reads.ts` builds, and the two
+ * must be read as a pair.
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
@@ -66,7 +69,8 @@ export function purchasesRow(
 
 export interface PurchasesListCall {
   limit?: number;
-  offset?: number;
+  beforeOrderedAt?: string;
+  beforeId?: string;
 }
 
 export interface PurchasesReadFake {
@@ -86,7 +90,12 @@ function readListCall(input: unknown): PurchasesListCall {
   if (input === null || typeof input !== 'object') return {};
   return {
     limit: 'limit' in input && typeof input.limit === 'number' ? input.limit : undefined,
-    offset: 'offset' in input && typeof input.offset === 'number' ? input.offset : undefined,
+    beforeOrderedAt:
+      'beforeOrderedAt' in input && typeof input.beforeOrderedAt === 'string'
+        ? input.beforeOrderedAt
+        : undefined,
+    beforeId:
+      'beforeId' in input && typeof input.beforeId === 'string' ? input.beforeId : undefined,
   };
 }
 
@@ -110,6 +119,19 @@ function compareRows(left: PurchasesFakeRow, right: PurchasesFakeRow): number {
 }
 
 /**
+ * Whether a row sorts strictly after `(anchorOrderedAt, anchorId)` under
+ * `compareRows`' own order — `orderedAt` strictly earlier, or the same
+ * instant with a strictly greater id. Mirrors the predicate
+ * `purchase-reads.ts` builds; a fake that filtered on offset instead would
+ * pass every test here while proving nothing about the anchor the producer
+ * actually implements.
+ */
+function isPastAnchor(row: PurchasesFakeRow, anchorOrderedAt: string, anchorId: string): boolean {
+  if (row.orderedAt !== anchorOrderedAt) return row.orderedAt < anchorOrderedAt;
+  return row.id > anchorId;
+}
+
+/**
  * Build the fake over a mutable set of rows.
  *
  * @param detail What `purchase.get` answers, per id. An id absent from the map
@@ -127,11 +149,15 @@ export function createPurchasesReadFake(
     const input = readListCall(rawInput);
     listCalls.push(input);
     const ordered = [...rows].sort(compareRows);
-    const offset = input.offset ?? 0;
     const limit = input.limit ?? 100;
+    const { beforeOrderedAt, beforeId } = input;
+    const afterAnchor =
+      beforeOrderedAt !== undefined && beforeId !== undefined
+        ? ordered.filter((row) => isPastAnchor(row, beforeOrderedAt, beforeId))
+        : ordered;
     return Promise.resolve({
       kind: 'ok',
-      value: { items: ordered.slice(offset, offset + limit) },
+      value: { items: afterAnchor.slice(0, limit) },
     });
   };
 

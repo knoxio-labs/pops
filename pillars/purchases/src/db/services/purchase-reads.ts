@@ -6,7 +6,7 @@
  * every consumer wants and re-deriving it per caller is how the residual
  * ends up computed three different ways.
  */
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
 
 import {
   purchaseDocuments,
@@ -63,6 +63,19 @@ export interface PurchaseScopeFilter {
 export interface ListPurchasesFilter extends PurchaseScopeFilter {
   readonly limit?: number;
   readonly offset?: number;
+  /**
+   * Keyset anchor: return only rows that sort strictly AFTER `(beforeOrderedAt,
+   * beforeId)` under this service's `orderedAt DESC, id ASC` order. Both
+   * halves are required together — an instant alone cannot separate two
+   * orders placed at the same moment, which is the entire reason the anchor
+   * carries an id.
+   *
+   * `beforeOrderedAt` must already be in the column's canonical stored form
+   * (see `ordered-at.ts`); the REST layer is what canonicalises a caller's
+   * bound before it reaches here, the same way it does for `from`/`to`.
+   */
+  readonly beforeOrderedAt?: string;
+  readonly beforeId?: string;
 }
 
 /**
@@ -153,11 +166,41 @@ function merchantConditions(merchant: MerchantFilter): readonly SQL[] {
   }
 }
 
+/**
+ * The lexicographic expansion of `(orderedAt, id) > (beforeOrderedAt,
+ * beforeId)` under the `orderedAt DESC, id ASC` order {@link listPurchases}
+ * imposes.
+ *
+ * The direction is not finance's. `transactions-list.ts` orders `date DESC,
+ * id DESC`, so its keyset takes the row strictly BEFORE the anchor on both
+ * legs (`lt`/`lt`). Here the id leg sorts ascending, so "the next row after
+ * this one" is `orderedAt` strictly earlier OR the same instant with a
+ * STRICTLY GREATER id — flip the tiebreak and a page replays the anchor row
+ * forever instead of moving past it.
+ *
+ * Written out rather than as a row-value comparison because drizzle has no
+ * row-value builder. Returns `undefined` when the anchor is absent or
+ * half-supplied; the REST layer rejects a half anchor outright rather than
+ * reaching this.
+ */
+function buildKeysetCondition(
+  beforeOrderedAt: string | undefined,
+  beforeId: string | undefined
+): SQL | undefined {
+  if (beforeOrderedAt === undefined || beforeId === undefined) return undefined;
+  return or(
+    lt(purchases.orderedAt, beforeOrderedAt),
+    and(eq(purchases.orderedAt, beforeOrderedAt), gt(purchases.id, beforeId))
+  );
+}
+
 export function listPurchases(
   db: PurchasesDb,
   filter: ListPurchasesFilter = {}
 ): readonly PurchaseRow[] {
-  const conditions = purchaseFilterConditions(filter);
+  const conditions = [...purchaseFilterConditions(filter)];
+  const keyset = buildKeysetCondition(filter.beforeOrderedAt, filter.beforeId);
+  if (keyset !== undefined) conditions.push(keyset);
 
   const base = db.select().from(purchases);
   const filtered = conditions.length > 0 ? base.where(and(...conditions)) : base;

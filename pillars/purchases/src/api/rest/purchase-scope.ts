@@ -29,7 +29,10 @@ import type { ListPurchasesQuerySchema } from '../../contract/rest-schemas.js';
 import type { PurchaseScopeFilter } from '../../db/index.js';
 import type { ErrorBody } from './error-mapping.js';
 
-export type PurchaseScopeQuery = Omit<z.infer<typeof ListPurchasesQuerySchema>, 'limit' | 'offset'>;
+export type PurchaseScopeQuery = Omit<
+  z.infer<typeof ListPurchasesQuerySchema>,
+  'limit' | 'offset' | 'beforeOrderedAt' | 'beforeId'
+>;
 
 export type PurchaseScopeResolution =
   | { readonly ok: true; readonly scope: PurchaseScopeFilter }

@@ -134,6 +134,8 @@ export const MerchantSpendRollupSchema = z.object({
 export const MerchantSpendQuerySchema = ListPurchasesQuerySchema.omit({
   limit: true,
   offset: true,
+  beforeOrderedAt: true,
+  beforeId: true,
 });
 
 /**

@@ -533,6 +533,14 @@ export type PurchaseListData = {
     to?: string;
     limit?: number;
     offset?: number;
+    /**
+     * Keyset anchor: the `orderedAt` of the last row you already have, as an ISO-8601 timestamp with a timezone. Must be sent together with `beforeId` — supplying one without the other is a 400, because two orders can share an instant and `orderedAt` alone cannot separate them. Returns rows sorting strictly after that row under `orderedAt DESC, id ASC`. Prefer this over `offset` when paging a list that can change underneath you.
+     */
+    beforeOrderedAt?: string;
+    /**
+     * Keyset anchor: the `id` of the last row you already have. Must be sent together with `beforeOrderedAt` — supplying one without the other is a 400. This half is what separates rows sharing an instant.
+     */
+    beforeId?: string;
   };
   url: '/purchases';
 };
