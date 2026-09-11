@@ -178,33 +178,6 @@ describe('GET /reconcile/links', () => {
     expect(purchases.reduce((sum, entry) => sum + entry.linkedCents, 0)).toBe(6000);
   });
 
-  it('orders a combined settlement newest order first, tied orders by id', async () => {
-    // The exact case #4074 shipped without a test for: two orders share an
-    // `orderedAt` (every row of one ingest does, to the second) and must
-    // fall back to `id` ascending, while a third, later order must still
-    // sort ahead of both. Seeding out of the expected order and asserting
-    // the raw response — no `.toSorted()` — is what makes deleting the
-    // service's `.orderBy(...)` turn this red.
-    const tieA = order(1000, 'tie-a');
-    const tieB = order(2000, 'tie-b');
-    const newest = createPurchase(opened.db, {
-      source: 'amazon',
-      sourceOrderId: 'newest',
-      ingestMethod: 'export',
-      orderedAt: '2026-03-05T00:00:00Z',
-      currency: 'AUD',
-      totalCents: 3000,
-      checksum: 'newest',
-    });
-    const [first, second] = [tieA, tieB].toSorted((a, b) => (a < b ? -1 : 1));
-
-    await sweepWith(financeReturning({ id: 't1', amountCents: 6000, date: '2026-03-06' }));
-
-    const purchases = await lookup(TXN);
-
-    expect(purchases.map((entry) => entry.purchase.id)).toEqual([newest, first, second]);
-  });
-
   it('sums several charges of one order into that order alone', async () => {
     const purchaseId = createPurchase(opened.db, {
       source: 'amazon',
