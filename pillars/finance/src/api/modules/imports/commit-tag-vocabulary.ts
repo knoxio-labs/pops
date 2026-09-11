@@ -41,8 +41,19 @@ import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
 import { ValidationError } from '../../shared/errors.js';
 import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
 
+import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
 import type { KnownTagSet } from '../../../db/services/tag-vocabulary.js';
 import type { CommitPayload } from './types.js';
+
+/**
+ * A staged tag-rule ChangeSet paired with which of its new tags the user
+ * accepted — the shape both the commit path's `tagRuleChangeSets` entries and
+ * the standalone `POST /tag-rules/apply` body carry.
+ */
+export interface TagRuleTagDecision {
+  changeSet: TagRuleChangeSet;
+  acceptedNewTags?: string[];
+}
 
 /** The vocabulary writes a commit has been cleared to make. */
 export interface CommitTagPlan {
@@ -88,16 +99,20 @@ function trimmedTags(tags: readonly string[] | undefined): string[] {
  * discard the rest of that edit. An edit left with no fields at all once
  * `tags` is gone is a no-op and is dropped. `disable`/`remove` ops, and an
  * `edit` op that never carried a `tags` array, pass through untouched.
+ *
+ * Shared by both writers of a {@link TagRuleTagDecision} — the commit path's
+ * `tagRuleChangeSets` entries and the standalone `POST /tag-rules/apply`
+ * body — so they cannot disagree on which tags survive.
  */
-function filterTagRuleChangeSetEntry(
+export function filterTagRuleChangeSetEntry(
   known: KnownTagSet,
-  entry: CommitPayload['tagRuleChangeSets'][number]
-): CommitPayload['tagRuleChangeSets'][number] | undefined {
+  entry: TagRuleTagDecision
+): TagRuleTagDecision | undefined {
   if (!entry.acceptedNewTags) return entry;
   const accepted = tagVocabularyService.createKnownTagSet(entry.acceptedNewTags);
 
   const isKept = (tag: string): boolean => known.has(tag) || accepted.has(tag);
-  const ops: CommitPayload['tagRuleChangeSets'][number]['changeSet']['ops'] = [];
+  const ops: TagRuleChangeSet['ops'] = [];
   for (const op of entry.changeSet.ops) {
     if (!isTagBearingTagRuleOp(op) || !op.data.tags) {
       ops.push(op);

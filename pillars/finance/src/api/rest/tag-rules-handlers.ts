@@ -20,6 +20,7 @@ import {
   transactionTagRulesService,
 } from '../../db/index.js';
 import { TAG_FACETS } from '../../db/tag-facets.js';
+import { filterTagRuleChangeSetEntry } from '../modules/imports/commit-tag-vocabulary.js';
 import {
   previewTagRuleChangeSet,
   previewTagRuleChangeSetFullHistory,
@@ -199,10 +200,16 @@ export function makeTagRulesHandlers(db: FinanceDb) {
     apply: ({ body }: Req['apply']) =>
       runHttp(() => {
         try {
+          const known = tagVocabularyService.loadKnownTagSet(db);
           for (const tag of body.acceptedNewTags) {
             if (tag.trim()) tagVocabularyService.upsertVocabularyTag(db, tag.trim(), 'user');
           }
-          const { rules } = applyTagRuleChangeSet(db, body.changeSet);
+          const filtered = filterTagRuleChangeSetEntry(known, {
+            changeSet: body.changeSet,
+            acceptedNewTags: body.acceptedNewTags,
+          });
+          const changeSet = filtered?.changeSet ?? { ...body.changeSet, ops: [] };
+          const { rules } = applyTagRuleChangeSet(db, changeSet);
           return { status: 200 as const, body: { rules } };
         } catch (err) {
           translateTagRuleError(err);

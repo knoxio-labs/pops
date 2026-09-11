@@ -61,7 +61,7 @@ describe('transactions.suggestTags', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['groceries'],
     });
 
     const matched = await client().transactions.suggestTags({ description: 'WOOLWORTHS METRO' });
@@ -85,7 +85,7 @@ describe('transactions.suggestTags', () => {
           },
         ],
       },
-      acceptedNewTags: [],
+      acceptedNewTags: ['groceries'],
     });
 
     const { tags } = await client().transactions.suggestTags({ description: 'WOOLWORTHS METRO' });
