@@ -1794,6 +1794,8 @@ export type ReconcileLinksData = {
   path?: never;
   query: {
     transactionUri: string;
+    limit?: number;
+    offset?: number;
   };
   url: '/reconcile/links';
 };

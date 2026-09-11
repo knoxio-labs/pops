@@ -84,6 +84,8 @@ export const ReconcileQueueQuerySchema = z.object({
 
 export const TransactionLinksQuerySchema = z.object({
   transactionUri: FinanceTransactionUriSchema,
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 /** One charge and the link attaching it to the transaction being asked about. */

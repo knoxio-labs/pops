@@ -6346,6 +6346,24 @@
               "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
           }
         ],
         "responses": {

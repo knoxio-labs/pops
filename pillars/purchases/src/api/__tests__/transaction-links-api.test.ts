@@ -247,4 +247,31 @@ describe('GET /reconcile/links', () => {
   it('requires the transaction to be named at all', async () => {
     await requestOn(app).get('/reconcile/links').expect(400);
   });
+
+  it('pages a combined settlement with `limit` and `offset`', async () => {
+    order(1000, 'a');
+    order(2000, 'b');
+    order(3000, 'c');
+    await sweepWith(financeReturning({ id: 't1', amountCents: 6000, date: '2026-03-06' }));
+
+    const first = await requestOn(app)
+      .get(`/reconcile/links?transactionUri=${encodeURIComponent(TXN)}&limit=2`)
+      .expect(200);
+    const second = await requestOn(app)
+      .get(`/reconcile/links?transactionUri=${encodeURIComponent(TXN)}&limit=2&offset=2`)
+      .expect(200);
+
+    expect(first.body.purchases).toHaveLength(2);
+    expect(second.body.purchases).toHaveLength(1);
+    const ids = [...first.body.purchases, ...second.body.purchases].map(
+      (entry: WireLinkedPurchase) => entry.purchase.id
+    );
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it('refuses a limit above the maximum', async () => {
+    await requestOn(app)
+      .get(`/reconcile/links?transactionUri=${encodeURIComponent(TXN)}&limit=501`)
+      .expect(400);
+  });
 });
