@@ -112,6 +112,7 @@ decision reaches the code. That is a loop, and each step of it is a skill under
 | Retire a question nobody will answer       | `design-archive-experiment` |
 | Act on a comment pinned on the playground  | `design-apply-feedback`     |
 | Wait for the next comment and act on it    | `design-monitor-feedback`   |
+| File a comment deferred as "not now"       | `design-defer-feedback`     |
 | Turn a decided experiment into an issue    | `design-promote`            |
 
 The mechanics of scaffolding are in `scripts/design-new-experiment.mjs`, not in
