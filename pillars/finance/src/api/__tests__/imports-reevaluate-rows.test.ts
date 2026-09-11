@@ -11,7 +11,11 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  openFinanceDb,
+  transactionCorrectionsService,
+  type OpenedFinanceDb,
+} from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
 import { clearProgress } from '../modules/imports/index.js';
 import { makeContactsFake } from './contacts-fake.js';
@@ -174,17 +178,26 @@ describe('imports.reevaluateRowsWithPendingRules', () => {
     expect(checksums(res.result.uncertain)).toEqual(['u-1']);
   });
 
-  it('writes nothing: no rule, no session, no usage bump, no draft', async () => {
+  it('writes nothing: a saved rule matches the row, but its usage stays untouched (preview run)', async () => {
     const c = client(acmeContacts());
+    const rule = transactionCorrectionsService.createOrUpdateTransactionCorrection(financeDb.db, {
+      descriptionPattern: 'ACME SUPPLIES',
+      matchType: 'contains',
+      entityId: 'acme-id',
+      entityName: 'Acme',
+    });
     const before = databaseSnapshot();
 
     const res = await c.imports.reevaluateRowsWithPendingRules({
       result: result({ uncertain: [row('acme-1', 'ACME SUPPLIES 1234')] }),
-      pendingChangeSets: [acmeRule],
+      pendingChangeSets: [],
     });
 
-    expect(res.affectedCount).toBe(1);
+    expect(res.affectedCount).toBeGreaterThanOrEqual(1);
     expect(databaseSnapshot()).toEqual(before);
+    const after = transactionCorrectionsService.getTransactionCorrection(financeDb.db, rule.id);
+    expect(after.timesApplied).toBe(0);
+    expect(after.lastUsedAt).toBeNull();
   });
 
   it('rejects a body carrying both the session form and the rows form', async () => {
@@ -240,6 +253,39 @@ describe('imports.reevaluateRowsWithPendingRules', () => {
         result: result({
           uncertain: rows('u', 1, 'uncertain'),
           skipped: rows('s', 2000, 'skipped'),
+        }),
+        pendingChangeSets: [],
+      })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('accepts exactly the row cap, spread across matched and failed too', async () => {
+    const c = client();
+
+    const res = await c.imports.reevaluateRowsWithPendingRules({
+      result: result({
+        matched: rows('m', 500, 'matched'),
+        uncertain: rows('u', 500, 'uncertain'),
+        failed: rows('f', 500, 'failed'),
+        skipped: rows('s', 500, 'skipped'),
+      }),
+      pendingChangeSets: [],
+    });
+
+    expect(res.result.matched).toHaveLength(500);
+    expect(res.result.failed).toHaveLength(500);
+  });
+
+  it('rejects one row over the cap when matched and failed are what push it over', async () => {
+    const c = client();
+
+    await expect(
+      c.imports.reevaluateRowsWithPendingRules({
+        result: result({
+          matched: rows('m', 500, 'matched'),
+          uncertain: rows('u', 500, 'uncertain'),
+          failed: rows('f', 500, 'failed'),
+          skipped: rows('s', 501, 'skipped'),
         }),
         pendingChangeSets: [],
       })

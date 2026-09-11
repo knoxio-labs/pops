@@ -405,10 +405,10 @@ describe('useTransactionReview — a live draft re-evaluates its own rows, with 
       }),
     });
     expect(reevaluateMock).not.toHaveBeenCalled();
-    expect(toastMock.success).toHaveBeenCalledWith('Rules applied — 1 transaction re-evaluated');
+    expect(toastMock.success).not.toHaveBeenCalled();
   });
 
-  it('leaves every bucket alone when the rule matches none of its rows, and still reports the count', async () => {
+  it('leaves every bucket alone when the rule matches none of its rows, with no count toast', async () => {
     const untouched = makeTx('live-untouched');
     liveDraft({ uncertain: [untouched] });
 
@@ -425,10 +425,134 @@ describe('useTransactionReview — a live draft re-evaluates its own rows, with 
 
     stageRule();
 
-    await waitFor(() =>
-      expect(toastMock.success).toHaveBeenCalledWith('Rules applied — 0 transactions re-evaluated')
-    );
+    await waitFor(() => expect(rowsReevaluateMock).toHaveBeenCalledTimes(1));
     expect(result.current.localTransactions.uncertain).toEqual([untouched]);
+    expect(result.current.localTransactions.matched).toEqual([]);
+    expect(toastMock.success).not.toHaveBeenCalled();
+  });
+
+  it('captures the rows at execution time, not when the run is queued', async () => {
+    const first = makeTx('live-first');
+    const second = makeTx('live-second');
+    liveDraft({ uncertain: [first, second] });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionReview(), { wrapper });
+
+    let resolveFirst: (value: unknown) => void = () => {};
+    rowsReevaluateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+    );
+
+    stageRule();
+    await waitFor(() => expect(rowsReevaluateMock).toHaveBeenCalledTimes(1));
+
+    rowsReevaluateMock.mockResolvedValueOnce({
+      data: {
+        result: { matched: [], uncertain: [first, second], failed: [], skipped: [] },
+        affectedCount: 0,
+      },
+      error: undefined,
+    });
+    // Queues a second run while the first is still in flight.
+    stageRule();
+
+    const editedSecond: ProcessedTransaction = {
+      ...second,
+      description: 'EDITED BY HAND',
+      manuallyEdited: true,
+    };
+    act(() => {
+      result.current.setLocalTransactions((prev) => ({
+        ...prev,
+        uncertain: prev.uncertain.map((t) => (t.checksum === 'live-second' ? editedSecond : t)),
+      }));
+    });
+
+    act(() => {
+      resolveFirst({
+        data: {
+          result: { matched: [], uncertain: [first, second], failed: [], skipped: [] },
+          affectedCount: 0,
+        },
+        error: undefined,
+      });
+    });
+
+    await waitFor(() => expect(rowsReevaluateMock).toHaveBeenCalledTimes(2));
+
+    expect(rowsReevaluateMock).toHaveBeenNthCalledWith(2, {
+      body: expect.objectContaining({
+        result: expect.objectContaining({ uncertain: [first, editedSecond] }),
+      }),
+    });
+  });
+
+  it('discards a stale rows response instead of applying it once a fresher run is queued', async () => {
+    const tx = makeTx('live-order');
+    liveDraft({ uncertain: [tx] });
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useTransactionReview(), { wrapper });
+
+    let resolveFirst: (value: unknown) => void = () => {};
+    rowsReevaluateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+    );
+    stageRule();
+    await waitFor(() => expect(rowsReevaluateMock).toHaveBeenCalledTimes(1));
+
+    let resolveSecond: (value: unknown) => void = () => {};
+    rowsReevaluateMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        })
+    );
+    stageRule();
+
+    const staleMatched: ProcessedTransaction = {
+      ...tx,
+      status: 'matched',
+      entity: { entityId: 'stale-entity', entityName: 'Stale', matchType: 'manual' },
+    };
+    act(() => {
+      resolveFirst({
+        data: {
+          result: { matched: [staleMatched], uncertain: [], failed: [], skipped: [] },
+          affectedCount: 1,
+        },
+        error: undefined,
+      });
+    });
+
+    // The queued (fresher) run has now been dispatched, but has not resolved
+    // yet — the stale first response must not have been applied in the
+    // meantime.
+    await waitFor(() => expect(rowsReevaluateMock).toHaveBeenCalledTimes(2));
+    expect(result.current.localTransactions.matched).toEqual([]);
+    expect(result.current.localTransactions.uncertain).toEqual([tx]);
+
+    const freshUncertain: ProcessedTransaction = { ...tx, status: 'uncertain' };
+    act(() => {
+      resolveSecond({
+        data: {
+          result: { matched: [], uncertain: [freshUncertain], failed: [], skipped: [] },
+          affectedCount: 0,
+        },
+        error: undefined,
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.localTransactions.uncertain).toEqual([freshUncertain])
+    );
     expect(result.current.localTransactions.matched).toEqual([]);
   });
 });

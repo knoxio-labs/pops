@@ -107,6 +107,20 @@ describe('useReevaluatePending', () => {
 
     expect(await result.current.runReevaluate()).toBeNull();
     expect(reevaluateMock).not.toHaveBeenCalled();
+    expect(rowsReevaluateMock).not.toHaveBeenCalled();
+  });
+
+  it('never routes a sessionless file import onto the rows path — only draftSource.kind === "live" does', async () => {
+    // No processSessionId and no draftSource is what a file import looks like
+    // before Process has run, not a live draft. The rows path is keyed off
+    // draftSource.kind, never off "no session" as a proxy for it.
+    useImportStore.getState().setProcessSessionId(null);
+
+    const { result } = renderHook(() => useReevaluatePending());
+
+    expect(await result.current.runReevaluate()).toBeNull();
+    expect(rowsReevaluateMock).not.toHaveBeenCalled();
+    expect(reevaluateMock).not.toHaveBeenCalled();
   });
 
   it('sends the store pending change sets converted to the REST shape in the request body', async () => {

@@ -77,6 +77,8 @@ let mockPendingChangeSets: unknown[] = [];
 let mockProcessSessionId: string | null = null;
 /** The store's `draftSource`: `null` for a file import, `{ kind: 'live' }` for a live Up draft. */
 let mockDraftSource: { kind: 'live'; provider: 'up' } | null = null;
+/** The store's persisted `manuallyResolvedChecksums`, seeded into the hook's resolved set on mount. */
+let mockManuallyResolvedChecksums: string[] = [];
 
 /** The session a file import carries out of the Process step. */
 const FILE_IMPORT_SESSION_ID = '11111111-1111-1111-1111-111111111111';
@@ -110,7 +112,7 @@ vi.mock('../../store/importStore', () => {
     setProcessedTransactions: mockSetProcessedTransactions,
     processSessionId: mockProcessSessionId,
     draftSource: mockDraftSource,
-    manuallyResolvedChecksums: [],
+    manuallyResolvedChecksums: mockManuallyResolvedChecksums,
     markChecksumsResolved: vi.fn(),
   });
 
@@ -382,6 +384,7 @@ beforeEach(() => {
   mockPendingChangeSets = [];
   mockProcessSessionId = FILE_IMPORT_SESSION_ID;
   mockDraftSource = null;
+  mockManuallyResolvedChecksums = [];
   mockReevaluateRows.mockResolvedValue({
     data: {
       result: { matched: [], uncertain: [], failed: [], skipped: [] },
@@ -575,7 +578,7 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
     expect(appliedToCalls).toHaveLength(0);
   });
 
-  it('approval updates localTransactions with re-evaluated result and shows affected-count toast', async () => {
+  it('approval updates localTransactions with the re-evaluated result, with no count toast for a file import', async () => {
     const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
     mockProcessedTransactions = {
       matched: [],
@@ -625,9 +628,10 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
       body: expect.objectContaining({ sessionId: FILE_IMPORT_SESSION_ID }),
     });
     expect(mockToastSuccess).toHaveBeenCalledWith('Rules saved locally');
+    expect(mockToastSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Rules applied'));
   });
 
-  it('applies a rule in a live draft and re-buckets the rows it holds, with no session', async () => {
+  it('applies a rule in a live draft and re-buckets the rows it holds, with no count toast', async () => {
     mockProcessSessionId = null;
     mockDraftSource = { kind: 'live', provider: 'up' };
     const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
@@ -666,14 +670,14 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
       expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
       expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
     });
-    expect(mockToastSuccess).toHaveBeenCalledWith('Rules applied — 1 transaction re-evaluated');
+    expect(mockToastSuccess).not.toHaveBeenCalledWith(expect.stringContaining('Rules applied'));
     expect(mockReevaluateRows).toHaveBeenCalledExactlyOnceWith({
       body: expect.objectContaining({ result: expect.objectContaining({ uncertain: [tx] }) }),
     });
     expect(mockReevaluate).not.toHaveBeenCalled();
   });
 
-  it('closing the rule browser with changes in a live draft re-buckets its rows and reports the count', async () => {
+  it('closing the rule browser with changes in a live draft re-buckets its rows and reports the count exactly once', async () => {
     mockProcessSessionId = null;
     mockDraftSource = { kind: 'live', provider: 'up' };
     const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
@@ -704,11 +708,96 @@ describe('ReviewStep — Save & Learn proposal flow', () => {
       expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
       expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
     });
-    expect(mockToastSuccess).toHaveBeenCalledWith('Rules applied — 1 transaction re-evaluated');
+    const countToasts = mockToastSuccess.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('Rules applied')
+    );
+    expect(countToasts).toEqual([['Rules applied — 1 transaction re-evaluated']]);
     expect(mockReevaluateRows).toHaveBeenCalledExactlyOnceWith({
       body: expect.objectContaining({ result: expect.objectContaining({ uncertain: [tx] }) }),
     });
     expect(mockReevaluate).not.toHaveBeenCalled();
+  });
+
+  it('closing the rule browser with changes in a file import reports the count exactly once', async () => {
+    const tx = makeTx('WOOLWORTHS 1234 SYDNEY');
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [tx],
+      failed: [],
+      skipped: [],
+    };
+    mockReevaluate.mockResolvedValue({
+      data: {
+        result: { matched: [{ ...tx, status: 'matched' }], uncertain: [], failed: [], skipped: [] },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    render(reviewStepTree());
+    const closeBrowser = lastBrowseDialogProps?.onBrowseClose;
+    expect(closeBrowser).toBeTypeOf('function');
+
+    act(() => closeBrowser?.(false));
+    expect(mockReevaluate).not.toHaveBeenCalled();
+
+    act(() => closeBrowser?.(true));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(1\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
+    const countToasts = mockToastSuccess.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('Rules applied')
+    );
+    expect(countToasts).toEqual([['Rules applied — 1 transaction re-evaluated']]);
+    expect(mockReevaluate).toHaveBeenCalledExactlyOnceWith({
+      body: expect.objectContaining({ sessionId: FILE_IMPORT_SESSION_ID }),
+    });
+    expect(mockReevaluateRows).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hand-resolved row when closing the rule browser in a live draft', async () => {
+    mockProcessSessionId = null;
+    mockDraftSource = { kind: 'live', provider: 'up' };
+    const resolvedByHand = makeTx('RESOLVED BY HAND', {
+      status: 'matched',
+      entity: { entityId: 'ent-9', entityName: 'Resolved Co', matchType: 'manual' },
+    });
+    const ruleTarget = makeTx('RULE TARGET');
+    mockManuallyResolvedChecksums = [resolvedByHand.checksum];
+    mockProcessedTransactions = {
+      matched: [resolvedByHand],
+      uncertain: [ruleTarget],
+      failed: [],
+      skipped: [],
+    };
+    // The server re-processes both rows from scratch and hands the
+    // hand-resolved one back as uncertain — it has no idea the user already
+    // settled it.
+    mockReevaluateRows.mockResolvedValue({
+      data: {
+        result: {
+          matched: [{ ...ruleTarget, status: 'matched' }],
+          uncertain: [{ ...resolvedByHand, status: 'uncertain', entity: { matchType: 'none' } }],
+          failed: [],
+          skipped: [],
+        },
+        affectedCount: 1,
+      },
+      error: undefined,
+    });
+
+    render(reviewStepTree());
+    const closeBrowser = lastBrowseDialogProps?.onBrowseClose;
+    expect(closeBrowser).toBeTypeOf('function');
+
+    act(() => closeBrowser?.(true));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText(/Matched \(2\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Uncertain \(0\)/)).toBeInTheDocument();
+    });
   });
 
   it('approval failure shows error toast and local state remains unchanged', async () => {
