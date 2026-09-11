@@ -20,9 +20,12 @@
 --   3. Deactivates the whole existing vocabulary and seeds the 77 namespaced
 --      values as the active set, so a database built from migrations carries the
 --      vocabulary rather than deriving it from whatever rows happen to exist.
---      POPS-3304 later dropped six of those: personal instance values on
---      unclassified facets (a person's tag, a trip, a hobby, an asset, a tax
---      note) that had no place in a checked-in migration.
+--      One personal instance value on an unclassified facet had no other
+--      reference anywhere in the migration chain and is dropped outright. Five
+--      other personal instance values on unclassified facets are seeded
+--      inactive: the historical relabel below still writes them onto a
+--      transaction that once carried the matching flat tag, so a fresh
+--      database does not offer them as active choices.
 --
 -- Overrides. Dropping the rollups would strip some rows to zero tags — on
 -- capivara, 14 transactions and 6 rules. Each is given the value the rollup was

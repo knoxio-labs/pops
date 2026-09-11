@@ -39,8 +39,7 @@
 -- divergence for the axis that carries the most values. They are also all
 -- generic — `streaming`, `haircut`, `office-supplies`. Nothing personal is
 -- seeded, and the values that genuinely are (a specific trip, a specific
--- person's name, a specific hobby — see POPS-3304) sit on unclassified facets
--- and stay out.
+-- person's name, a specific hobby) sit on unclassified facets and stay out.
 --
 -- Descriptions are carried on the insert rather than left to 0104. 0104's
 -- UPDATEs are keyed on the tag, so on a database that did not hold the row they

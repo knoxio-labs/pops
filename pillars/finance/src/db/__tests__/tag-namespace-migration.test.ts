@@ -221,18 +221,22 @@ describe('0067_tag_namespace', () => {
         tag: string;
       }[]
     ).map((row) => row.tag);
-    // The flat pre-migration values plus the five namespaced ones POPS-3304
-    // seeds inactive: they're still written by the historical relabel below,
-    // just no longer offered by a fresh database.
-    expect(deactivated).toEqual([
-      'Bar',
-      'Eurovision',
-      'Groceries',
-      'asset:car',
-      'asset:homelab',
-      'hobby:brewing',
-      'tax:novated-lease',
-      'trip:hunter-valley-2026',
+    // Deactivated rows are the three flat pre-migration values, plus a fixed
+    // set of personal instance values the historical relabel below still
+    // writes onto a transaction that once carried the matching flat tag —
+    // still written, just no longer offered by a fresh database as active
+    // choices. Pinning by facet rather than by value keeps the assertion from
+    // naming any of them.
+    const flatDeactivated = deactivated.filter((tag) => !tag.includes(':'));
+    const namespacedDeactivated = deactivated.filter((tag) => tag.includes(':'));
+    expect(flatDeactivated).toEqual(['Bar', 'Eurovision', 'Groceries']);
+    expect(namespacedDeactivated).toHaveLength(5);
+    expect(namespacedDeactivated.map((tag) => tag.split(':')[0]).toSorted()).toEqual([
+      'asset',
+      'asset',
+      'hobby',
+      'tax',
+      'trip',
     ]);
   });
 
