@@ -23,6 +23,9 @@ import {
   type PurchasesDb,
 } from '../../db/index.js';
 import { PURCHASES_PILLAR_ID } from '../manifest.js';
+import { warnUnavailable } from './reconcile-unavailable.js';
+
+import type { PendingUnavailable } from './reconcile-unavailable.js';
 
 export type ReconcileLookupResult =
   | { kind: 'ok' }
@@ -171,6 +174,7 @@ interface ApplyContext {
   nowIso: string;
   stats: ReconcileCounts;
   logger: ReconcileWorkerLogger | undefined;
+  pendingUnavailable: PendingUnavailable[];
 }
 
 // The two writes below stand on their own line on purpose: inlined into a
@@ -234,7 +238,10 @@ function applyResult(ctx: ApplyContext, result: ReconcileLookupResult): void {
       // `safeLookup` has already logged this URI with the thrown message;
       // a second line here would just repeat it.
       if (result.reason === 'lookup-threw') return;
-      warnPreserved(ctx, 'purchases reconcile owning pillar unavailable', result.reason);
+      // Held back rather than warned here: whether this is one line per URI
+      // or one summary line for the whole leg depends on how the leg as a
+      // whole turns out, which is not known until every URI has been tried.
+      ctx.pendingUnavailable.push({ uri: ctx.uri, reason: result.reason });
       return;
   }
 }
@@ -284,6 +291,7 @@ export async function runLeg(ctx: RunLegContext): Promise<ReconcileLegStats> {
   const lookup = leg.lookup(ctx.lookups);
   const uris = leg.listUris(db).filter((uri) => !isOwnedByThisPillar(uri));
   const stats: ReconcileLegStats = { leg: leg.label, checked: uris.length, ...emptyCounts() };
+  const pendingUnavailable: PendingUnavailable[] = [];
   for (const uri of uris) {
     const parsed = parseSoftUri(uri);
     if (!shapeMatches(parsed, leg)) {
@@ -295,8 +303,12 @@ export async function runLeg(ctx: RunLegContext): Promise<ReconcileLegStats> {
       continue;
     }
     const result = await safeLookup(lookup, parsed.id, logger);
-    applyResult({ db, leg, uri, nowIso: ctx.now().toISOString(), stats, logger }, result);
+    applyResult(
+      { db, leg, uri, nowIso: ctx.now().toISOString(), stats, logger, pendingUnavailable },
+      result
+    );
   }
+  warnUnavailable(leg, stats, pendingUnavailable, logger);
   logger?.info?.('purchases reconcile leg complete', { ...stats });
   return stats;
 }

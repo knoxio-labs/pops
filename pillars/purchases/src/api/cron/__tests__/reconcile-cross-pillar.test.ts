@@ -503,6 +503,86 @@ describe('per-leg work-set reporting', () => {
   });
 });
 
+describe('an owning pillar unavailable for a whole leg', () => {
+  const ITEM_URI_2 = 'pops://inventory/item/def';
+  const ITEM_URI_3 = 'pops://inventory/item/ghi';
+
+  it('emits one summary line naming the leg and the count, not one per URI', async () => {
+    seed({ itemUris: [ITEM_URI, ITEM_URI_2, ITEM_URI_3] });
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: always({ kind: 'unavailable', reason: 'precondition-failed' }),
+      logger: { warn },
+    }).runOnce();
+
+    const perUriCalls = warn.mock.calls.filter(
+      ([message]) => message === 'purchases reconcile owning pillar unavailable'
+    );
+    expect(perUriCalls).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith('purchases reconcile owning pillar unavailable (summary)', {
+      leg: 'inventory-item',
+      count: 3,
+      reason: 'precondition-failed',
+    });
+  });
+
+  it('still warns per URI when the leg is mixed', async () => {
+    seed({ itemUris: [ITEM_URI, ITEM_URI_2] });
+    const byId = new Map<string, ReconcileLookupResult>([['abc', { kind: 'ok' }]]);
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: (id) =>
+        Promise.resolve(byId.get(id) ?? { kind: 'unavailable', reason: 'precondition-failed' }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile owning pillar unavailable',
+      expect.objectContaining({
+        leg: 'inventory-item',
+        uri: ITEM_URI_2,
+        reason: 'precondition-failed',
+      })
+    );
+    expect(warn).not.toHaveBeenCalledWith(
+      'purchases reconcile owning pillar unavailable (summary)',
+      expect.anything()
+    );
+  });
+
+  it('still warns per URI for a bad URI even when the rest of the leg is unavailable', async () => {
+    const BAD_URI = 'pops://finance/item/1';
+    seed({ itemUris: [ITEM_URI, ITEM_URI_2, BAD_URI] });
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: always({ kind: 'unavailable', reason: 'precondition-failed' }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith(
+      'purchases reconcile bad uri (unparseable / wrong shape)',
+      expect.objectContaining({ leg: 'inventory-item', uri: BAD_URI })
+    );
+    expect(warn).toHaveBeenCalledWith('purchases reconcile owning pillar unavailable (summary)', {
+      leg: 'inventory-item',
+      count: 2,
+      reason: 'precondition-failed',
+    });
+  });
+
+  it('warns nothing for a healthy leg', async () => {
+    seed({ itemUris: [ITEM_URI, ITEM_URI_2] });
+    const warn = vi.fn();
+
+    await start({ inventoryItem: always({ kind: 'ok' }), logger: { warn } }).runOnce();
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
+
 describe('logging', () => {
   /**
    * Regression: the mark/clear writes once lived inside the argument list of
