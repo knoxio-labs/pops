@@ -19,10 +19,9 @@
  * written out, because a hand-maintained list fails the same way the incident
  * did: a pillar that starts reading a `*_FILE` variable and is not added to
  * the list reads as clean. It is derived from source rather than from
- * `infra/docker-compose.yml` because the two disagree — finance reads
- * `POPS_INTERNAL_API_KEY_FILE` and this repo's compose sets it for neither
- * finance nor cerebrum (POPS-3379), which is its own ticket and not something this
- * guard should inherit.
+ * `infra/docker-compose.yml` because compose is a second description of what
+ * a pillar reads, and has drifted from it before: it once set
+ * `POPS_INTERNAL_API_KEY_FILE` for neither finance nor cerebrum (POPS-3379).
  *
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
