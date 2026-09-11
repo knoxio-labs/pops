@@ -9,6 +9,11 @@
  * {@link describePatternStorageRule} — and a returned `add` op is checked
  * against the transactions the correction was raised from before it is
  * offered for approval (POPS-3000).
+ *
+ * Model and max-tokens are resolved through the shared settings > env var >
+ * compiled-default ladder (POPS-2589) — `finance.ruleGen.model`/
+ * `finance.ruleGen.maxTokens`, `FINANCE_CORRECTIONS_AI_MODEL`, then this
+ * call's own compiled cap.
  */
 import {
   describeForMatching,
@@ -16,10 +21,18 @@ import {
   patternMatchesDescription,
 } from '../../../contract/pattern-match.js';
 import { ChangeSetSchema, type ChangeSet } from '../../../contract/rest-corrections.js';
+import {
+  RULE_GEN_MAX_TOKENS_KEY,
+  RULE_GEN_MODEL_KEY,
+} from '../../../contract/settings/ai-settings-keys.js';
 import { transactionCorrections, type FinanceDb } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { getClaudeCompleter } from './ai-runtime.js';
+import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { CORRECTIONS_DEFAULT_MODEL, getClaudeCompleter } from './ai-runtime.js';
 import { buildTargetRulesMap, type Correction, type CorrectionSignal } from './ai-types.js';
+
+/** This call's own natural cap (matches the manifest's `finance.ruleGen.maxTokens` default of 2000) — a revised ChangeSet can carry as many ops as the one it replaces. */
+const REVISE_MAX_TOKENS_DEFAULT = 2000;
 
 export interface ReviseArgs {
   signal: CorrectionSignal;
@@ -150,7 +163,18 @@ export async function reviseChangeSet(db: FinanceDb, args: ReviseArgs): Promise<
 
   const text = await getClaudeCompleter()({
     prompt: buildRevisePrompt(args, sanitizedInstruction),
-    maxTokens: 2000,
+    model: resolveAiString(
+      db,
+      RULE_GEN_MODEL_KEY,
+      'FINANCE_CORRECTIONS_AI_MODEL',
+      CORRECTIONS_DEFAULT_MODEL
+    ),
+    maxTokens: resolveAiMaxTokens(
+      db,
+      RULE_GEN_MAX_TOKENS_KEY,
+      undefined,
+      REVISE_MAX_TOKENS_DEFAULT
+    ),
     operation: 'revise-changeset',
   });
   if (!text) throw new Error('reviseChangeSet: AI unavailable');

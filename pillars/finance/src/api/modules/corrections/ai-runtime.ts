@@ -8,6 +8,12 @@
  * Mirrors the finance AI-categorizer's env-based key + the monolith's
  * best-effort feedback persistence (try/catch, degrade gracefully when the
  * settings write fails).
+ *
+ * `ClaudeRequest.model` is an optional override: `analyzeCorrection` and
+ * `interpretRejectionFeedback` pass it in, resolved through the settings-aware
+ * `ai-settings-resolver.ts` ladder (`finance.ruleGen.model`, POPS-2589);
+ * `resolveModel` below stays as the env-only fallback for a request that
+ * doesn't supply one.
  */
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -26,6 +32,8 @@ export interface ClaudeRequest {
   prompt: string;
   maxTokens: number;
   operation: string;
+  /** Overrides {@link resolveModel}'s env-only default when the caller has already resolved one (e.g. from settings). */
+  model?: string;
 }
 
 /**
@@ -68,7 +76,7 @@ const defaultCompleter: ClaudeCompleter = async (req) => {
   const apiKey = resolveApiKey();
   if (!apiKey) return null;
   const client = new Anthropic({ apiKey, maxRetries: 0 });
-  const model = resolveModel();
+  const model = req.model ?? resolveModel();
   try {
     const response = await callWithLogging(
       {

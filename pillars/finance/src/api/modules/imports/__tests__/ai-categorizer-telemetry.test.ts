@@ -5,7 +5,14 @@
  * `lookupPricing`, so these assert the categorizer reports usage to the ai
  * pillar with the right operation/domain and returns its result unchanged.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 
 import type { InferenceRecord, PricingEntry } from '@pops/ai-telemetry';
 
@@ -23,6 +30,10 @@ const { PROMPT_VERSION_CATEGORIZE, PROMPT_VERSION_CATEGORIZE_BATCH } =
 
 const FLAG = 'FINANCE_AI_CATEGORIZER_ENABLED';
 const KEY = 'ANTHROPIC_API_KEY';
+
+let tmpDir: string;
+let opened: OpenedFinanceDb;
+let db: FinanceDb;
 
 const PRICING: PricingEntry = { input: 1, output: 5 };
 
@@ -68,6 +79,10 @@ beforeEach(() => {
   createMock.mockReset();
   process.env[FLAG] = 'true';
   process.env[KEY] = 'sk-test';
+  invalidateAiSettingsCache();
+  tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-categorizer-telemetry-test-'));
+  opened = openFinanceDb(join(tmpDir, 'finance.db'));
+  db = opened.db;
 });
 
 afterEach(() => {
@@ -75,6 +90,8 @@ afterEach(() => {
   delete process.env[FLAG];
   delete process.env[KEY];
   delete process.env['FINANCE_AI_CATEGORIZER_MODEL'];
+  opened.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
 });
 
 /** Closed vocabulary in the shape `loadKnownTags` returns (POPS-2606). */
@@ -87,7 +104,9 @@ describe('categorizeWithAi — telemetry', () => {
       textResponse('{"entityName":"Woolworths","contains":["groceries"]}')
     );
 
-    const out = await categorizeWithAi({ description: 'WOOLWORTHS 1234' }, 'batch-9', VOCAB);
+    const out = await categorizeWithAi({ description: 'WOOLWORTHS 1234' }, 'batch-9', VOCAB, {
+      db,
+    });
     const record = await captured.nextReport();
 
     expect(out.result?.entityName).toBe('Woolworths');
@@ -109,7 +128,9 @@ describe('categorizeWithAi — telemetry', () => {
     const captured = captureReports();
     createMock.mockResolvedValue(textResponse('{"entityName":"Aldi","tags":[]}'));
 
-    await categorizeWithAi({ description: 'ALDI SUPERMARKET 4455 SYDNEY' }, 'batch-1', VOCAB);
+    await categorizeWithAi({ description: 'ALDI SUPERMARKET 4455 SYDNEY' }, 'batch-1', VOCAB, {
+      db,
+    });
     const record = await captured.nextReport();
 
     const serialized = JSON.stringify(record);
@@ -121,7 +142,9 @@ describe('categorizeWithAi — telemetry', () => {
     const captured = captureReports();
     createMock.mockRejectedValue(new Error('network down'));
 
-    await expect(categorizeWithAi({ description: 'X' }, 'batch-2', VOCAB)).rejects.toBeDefined();
+    await expect(
+      categorizeWithAi({ description: 'X' }, 'batch-2', VOCAB, { db })
+    ).rejects.toBeDefined();
     const record = await captured.nextReport();
 
     expect(record.status).toBe('error');
@@ -140,7 +163,7 @@ describe('categorizeBatchWithAi — telemetry (CF096/#3671)', () => {
       textResponse('[{"entityName":"Woolworths","tags":["groceries"]}]')
     );
 
-    await categorizeBatchWithAi([{ description: 'WOOLWORTHS 1234' }], 'batch-10', VOCAB);
+    await categorizeBatchWithAi([{ description: 'WOOLWORTHS 1234' }], 'batch-10', VOCAB, { db });
     const record = await captured.nextReport();
 
     expect(record.operation).toBe('imports.categorize_batch');

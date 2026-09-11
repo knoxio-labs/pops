@@ -4,8 +4,14 @@
  * malformation), cost accounting, and env gating are exercised without a
  * network call — mirrors ai-categorizer.test.ts for the single-row path.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 import { AiCategorizationError } from '../ai-categorizer-error.js';
 
 const createMock = vi.hoisted(() => vi.fn());
@@ -19,6 +25,10 @@ const { categorizeBatchWithAi } = await import('../ai-categorizer.js');
 
 const FLAG = 'FINANCE_AI_CATEGORIZER_ENABLED';
 const KEY = 'ANTHROPIC_API_KEY';
+
+let tmpDir: string;
+let opened: OpenedFinanceDb;
+let db: FinanceDb;
 
 /** Closed vocabulary in the shape `loadKnownTags` returns (POPS-2606). */
 const VOCAB = ['contains:groceries', 'venue:supermarket', 'occasion:home'];
@@ -39,6 +49,10 @@ function promptSentToApi(): string {
 
 beforeEach(() => {
   createMock.mockReset();
+  invalidateAiSettingsCache();
+  tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-categorizer-batch-test-'));
+  opened = openFinanceDb(join(tmpDir, 'finance.db'));
+  db = opened.db;
 });
 
 afterEach(() => {
@@ -46,11 +60,13 @@ afterEach(() => {
   delete process.env[KEY];
   delete process.env['FINANCE_AI_CATEGORIZER_BATCH_SIZE'];
   delete process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'];
+  opened.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe('categorizeBatchWithAi — gating', () => {
   it('resolves an empty array of results for an empty input with no call', async () => {
-    const out = await categorizeBatchWithAi([], undefined, VOCAB);
+    const out = await categorizeBatchWithAi([], undefined, VOCAB, { db });
     expect(out.results).toEqual([]);
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -59,7 +75,8 @@ describe('categorizeBatchWithAi — gating', () => {
     const out = await categorizeBatchWithAi(
       [{ description: 'A' }, { description: 'B' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
     expect(out.results).toEqual([null, null]);
     expect(out.usage).toBeUndefined();
@@ -69,7 +86,7 @@ describe('categorizeBatchWithAi — gating', () => {
   it('throws NO_API_KEY when enabled without a key', async () => {
     process.env[FLAG] = 'true';
     await expect(
-      categorizeBatchWithAi([{ description: 'A' }], undefined, VOCAB)
+      categorizeBatchWithAi([{ description: 'A' }], undefined, VOCAB, { db })
     ).rejects.toMatchObject({
       name: 'AiCategorizationError',
       code: 'NO_API_KEY',
@@ -94,7 +111,8 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     const out = await categorizeBatchWithAi(
       [{ description: 'WOOLWORTHS 1234' }, { description: 'ALDI 4823' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
 
     expect(createMock).toHaveBeenCalledTimes(1);
@@ -109,7 +127,8 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     await categorizeBatchWithAi(
       [{ description: 'FIRST ROW' }, { description: 'SECOND ROW' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
 
     const prompt = promptSentToApi();
@@ -126,7 +145,8 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     const out = await categorizeBatchWithAi(
       [{ description: 'WOOLWORTHS' }, { description: 'GARBLED' }, { description: 'ALDI' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
 
     expect(out.results[0]?.entityName).toBe('Woolworths');
@@ -140,7 +160,8 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     const out = await categorizeBatchWithAi(
       [{ description: 'WOOLWORTHS' }, { description: 'UNSEEN ROW' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
 
     expect(out.results).toHaveLength(2);
@@ -150,7 +171,7 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
 
   it('rejects with AiCategorizationError(PARSE_ERROR) when the whole reply has no JSON array', async () => {
     createMock.mockResolvedValue(textResponse('Sorry, I could not process these.'));
-    const err = await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB).catch(
+    const err = await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB, { db }).catch(
       (e: unknown) => e
     );
     expect(err).toBeInstanceOf(AiCategorizationError);
@@ -162,7 +183,7 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     try {
       const err = Object.assign(new Error('Too Many Requests'), { status: 429 });
       createMock.mockRejectedValue(err);
-      const promise = categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB).catch(
+      const promise = categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB, { db }).catch(
         (e: unknown) => e
       );
       await vi.runAllTimersAsync();
@@ -177,7 +198,7 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
   it('honours the FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS override', async () => {
     process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'] = '999';
     createMock.mockResolvedValue(textResponse('[{"entityName":"A"}]'));
-    await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB);
+    await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB, { db });
     const req = createMock.mock.calls[0]?.[0] as { max_tokens: number };
     expect(req.max_tokens).toBe(999);
   });
@@ -194,7 +215,8 @@ describe('categorizeBatchWithAi — PII allowlist (CF008)', () => {
     await categorizeBatchWithAi(
       [{ description: 'ALDI STORES', amount: 18.9, date: '2026-03-14' }],
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
 
     const prompt = promptSentToApi();

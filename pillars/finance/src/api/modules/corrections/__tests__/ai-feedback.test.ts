@@ -5,8 +5,14 @@
  * its primary output, so a `ClaudeCompletionError` here must fall back to the
  * original signal rather than aborting the whole propose flow.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 import { interpretRejectionFeedback } from '../ai-feedback.js';
 import { __setClaudeCompleterForTests, ClaudeCompletionError } from '../ai-runtime.js';
 
@@ -18,8 +24,21 @@ const originalSignal: CorrectionSignal = {
   entityName: 'Woolworths',
 };
 
+let tmpDir: string;
+let opened: OpenedFinanceDb;
+let db: FinanceDb;
+
+beforeEach(() => {
+  invalidateAiSettingsCache();
+  tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-feedback-test-'));
+  opened = openFinanceDb(join(tmpDir, 'finance.db'));
+  db = opened.db;
+});
+
 afterEach(() => {
   __setClaudeCompleterForTests(null);
+  opened.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe('interpretRejectionFeedback — degrades on ClaudeCompletionError', () => {
@@ -29,6 +48,7 @@ describe('interpretRejectionFeedback — degrades on ClaudeCompletionError', () 
     });
 
     const result = await interpretRejectionFeedback(
+      db,
       originalSignal,
       {
         ops: [
@@ -51,6 +71,7 @@ describe('interpretRejectionFeedback — degrades on ClaudeCompletionError', () 
 
     await expect(
       interpretRejectionFeedback(
+        db,
         originalSignal,
         {
           ops: [

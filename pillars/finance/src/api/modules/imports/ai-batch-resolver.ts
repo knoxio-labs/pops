@@ -108,7 +108,7 @@ async function resolveChunk(
       items.map((item) => toCategorizerInput(item.transaction)),
       context.importBatchId,
       context.knownTags,
-      { knownEntityNames, tagDescriptions: context.tagDescriptions }
+      { db, knownEntityNames, tagDescriptions: context.tagDescriptions }
     );
     breaker.recordRecovery();
     if (usage) {

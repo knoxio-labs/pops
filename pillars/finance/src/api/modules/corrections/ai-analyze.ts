@@ -11,11 +11,19 @@
 import { desc, eq } from 'drizzle-orm';
 
 import { describeForMatching, patternMatchesDescription } from '../../../contract/pattern-match.js';
+import {
+  RULE_GEN_MAX_TOKENS_KEY,
+  RULE_GEN_MODEL_KEY,
+} from '../../../contract/settings/ai-settings-keys.js';
 import { type FinanceDb, transactionCorrections } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { getClaudeCompleter } from './ai-runtime.js';
+import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { CORRECTIONS_DEFAULT_MODEL, getClaudeCompleter } from './ai-runtime.js';
 import { type CorrectionAnalysis } from './ai-types.js';
 import { parseCorrectionTags } from './types.js';
+
+/** This call's own natural cap (matches the manifest's `finance.ruleGen.maxTokens` default of 200) — a short JSON object of matchType/pattern/confidence. */
+const ANALYZE_MAX_TOKENS_DEFAULT = 200;
 
 const MIN_PATTERN_LENGTH = 3;
 export const MATCH_TYPES = ['exact', 'contains', 'regex'] as const;
@@ -125,7 +133,18 @@ export async function analyzeCorrection(
 ): Promise<CorrectionAnalysis | null> {
   const text = await getClaudeCompleter()({
     prompt: buildAnalyzePrompt(input, loadRecentAcceptedCorrections(db)),
-    maxTokens: 200,
+    model: resolveAiString(
+      db,
+      RULE_GEN_MODEL_KEY,
+      'FINANCE_CORRECTIONS_AI_MODEL',
+      CORRECTIONS_DEFAULT_MODEL
+    ),
+    maxTokens: resolveAiMaxTokens(
+      db,
+      RULE_GEN_MAX_TOKENS_KEY,
+      undefined,
+      ANALYZE_MAX_TOKENS_DEFAULT
+    ),
     operation: 'analyze-correction',
   });
   if (!text) return null;

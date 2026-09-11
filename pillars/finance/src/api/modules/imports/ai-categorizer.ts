@@ -9,8 +9,11 @@
  * asked for.
  *
  * Differences from the monolith categorizer (deliberate for the pillar):
- *   - config from env, not core-settings (`FINANCE_AI_CATEGORIZER_MODEL`,
- *     `FINANCE_AI_CATEGORIZER_MAX_TOKENS`, `ANTHROPIC_API_KEY`/`CLAUDE_API_KEY`);
+ *   - model and max-tokens resolve from finance's settings store
+ *     (`finance.aiCategorizer.model`/`.maxTokens`, POPS-2589), falling back to
+ *     `FINANCE_AI_CATEGORIZER_MODEL`/`FINANCE_AI_CATEGORIZER_MAX_TOKENS` and
+ *     then a compiled default — `ANTHROPIC_API_KEY`/`CLAUDE_API_KEY` stay
+ *     env-only, never operator-editable;
  *   - gated by `FINANCE_AI_CATEGORIZER_ENABLED` (disabled → no call, `{result:null}`);
  *   - no disk cache and no budget enforcement.
  *
@@ -54,6 +57,7 @@ export {
 
 export type { TagsOnlyEntry, TagsOnlyInput } from './ai-tags-only-api.js';
 
+import type { FinanceDb } from '../../../db/index.js';
 import type { TagDescriptions } from '../vocabulary-prompt.js';
 import type {
   AiBatchCallResult,
@@ -77,15 +81,17 @@ function requireApiKey(): string {
 }
 
 /**
- * The optional grounding a categorizer call may carry beyond the closed
- * vocabulary itself.
+ * Grounding a categorizer call carries beyond the closed vocabulary itself —
+ * `db` to resolve settings-backed model/max-tokens (POPS-2589), the rest
+ * optional hints the caller supplies when it has them.
  *
- * One object rather than a positional tail: both members are hints the caller
- * supplies when it has them, neither is meaningful without `knownTags`, and a
- * third would otherwise push these signatures past the parameter cap — which is
- * the cap doing its job rather than an obstacle to route around.
+ * One object rather than a positional tail: a fourth positional parameter
+ * would push these signatures past the parameter cap — which is the cap
+ * doing its job rather than an obstacle to route around.
  */
 export interface CategorizerHints {
+  /** Settings store handle for the model/max-tokens resolver (POPS-2589). */
+  db: FinanceDb;
   /** Bounded closed-set hint of existing entity names (CF062/#3661). */
   knownEntityNames?: string[];
   /** `facet:value` → the vocabulary's definition of it, where it has one (POPS-3285). */
@@ -109,7 +115,7 @@ export async function categorizeWithAi(
   input: CategorizerInput,
   importBatchId: string | undefined,
   knownTags: string[],
-  hints: CategorizerHints = {}
+  hints: CategorizerHints
 ): Promise<AiCallResult> {
   if (!isAiCategorizerEnabled()) return { result: null };
 
@@ -117,8 +123,8 @@ export async function categorizeWithAi(
     client: createCategorizerClient(requireApiKey()),
     input,
     sanitizedDescription: input.description.trim().slice(0, 100),
-    model: getModel(),
-    maxTokens: getMaxTokens(),
+    model: getModel(hints.db),
+    maxTokens: getMaxTokens(hints.db),
     knownTags,
     knownEntityNames: hints.knownEntityNames ?? [],
     ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),
@@ -146,7 +152,7 @@ export async function categorizeBatchWithAi(
   inputs: CategorizerInput[],
   importBatchId: string | undefined,
   knownTags: string[],
-  hints: CategorizerHints = {}
+  hints: CategorizerHints
 ): Promise<AiBatchCallResult> {
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
@@ -154,7 +160,7 @@ export async function categorizeBatchWithAi(
   const response = await callBatchApiOrThrow({
     client: createCategorizerClient(requireApiKey()),
     inputs,
-    model: getModel(),
+    model: getModel(hints.db),
     maxTokens: getBatchMaxTokens(inputs.length),
     knownTags,
     knownEntityNames: hints.knownEntityNames ?? [],
@@ -184,7 +190,7 @@ export async function tagsOnlyBatchWithAi(
   inputs: TagsOnlyInput[],
   importBatchId: string | undefined,
   knownTags: string[],
-  hints: CategorizerHints = {}
+  hints: CategorizerHints
 ): Promise<TagsOnlyBatchResult> {
   if (inputs.length === 0) return { results: [] };
   if (!isAiCategorizerEnabled()) return { results: inputs.map(() => null) };
@@ -192,7 +198,7 @@ export async function tagsOnlyBatchWithAi(
   const response = await callTagsOnlyApiOrThrow({
     client: createCategorizerClient(requireApiKey()),
     inputs,
-    model: getModel(),
+    model: getModel(hints.db),
     maxTokens: getTagsOnlyMaxTokens(inputs.length),
     knownTags,
     ...(hints.tagDescriptions === undefined ? {} : { tagDescriptions: hints.tagDescriptions }),

@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { financeKeyDefaults } from '../../contract/settings/key-defaults.js';
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
 import { createFinanceApiApp } from '../app.js';
+import { invalidateAiSettingsCache, resolveAiString } from '../modules/ai-settings-resolver.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { requestOn } from './test-utils.js';
 
@@ -34,6 +35,7 @@ function app() {
 }
 
 beforeEach(() => {
+  invalidateAiSettingsCache();
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-settings-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
 });
@@ -107,5 +109,49 @@ describe('finance federated /settings', () => {
     );
     expect(res.status).toBe(400);
     expect(res.body.message).toContain('finance.notAThing');
+  });
+});
+
+// POPS-2589 — the AI settings resolver caches its read for the life of the
+// process; these prove the real write path (`PUT /settings/:key`, the route
+// an operator's save actually hits) drops that cache, not just a unit calling
+// `invalidateAiSettingsCache` directly.
+describe('finance federated /settings — AI resolver cache invalidation (POPS-2589)', () => {
+  it('a save through PUT /settings/:key is observed by the next resolver read, no restart', async () => {
+    const before = resolveAiString(
+      financeDb.db,
+      'finance.aiCategorizer.model',
+      undefined,
+      'claude-haiku-4-5-20251001'
+    );
+    expect(before).toBe('claude-haiku-4-5-20251001');
+
+    const put = await requestOn(app(), (agent) =>
+      agent.put('/settings/finance.aiCategorizer.model').send({ value: 'claude-opus-test' })
+    );
+    expect(put.status).toBe(200);
+
+    const after = resolveAiString(
+      financeDb.db,
+      'finance.aiCategorizer.model',
+      undefined,
+      'claude-haiku-4-5-20251001'
+    );
+    expect(after).toBe('claude-opus-test');
+  });
+
+  it('a save via set-many also invalidates the cache', async () => {
+    resolveAiString(financeDb.db, 'finance.ruleGen.model', undefined, 'claude-haiku-4-5-20251001');
+
+    const res = await requestOn(app(), (agent) =>
+      agent
+        .post('/settings/set-many')
+        .send({ entries: [{ key: 'finance.ruleGen.model', value: 'claude-sonnet-test' }] })
+    );
+    expect(res.status).toBe(200);
+
+    expect(
+      resolveAiString(financeDb.db, 'finance.ruleGen.model', undefined, 'claude-haiku-4-5-20251001')
+    ).toBe('claude-sonnet-test');
   });
 });

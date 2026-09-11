@@ -4,8 +4,14 @@
  * sanitisation), cost accounting, env gating, and error-code mapping are
  * exercised without a network call.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 import { AiCategorizationError } from '../ai-categorizer-error.js';
 
 import type { ParsedTransaction } from '../types.js';
@@ -22,6 +28,10 @@ const { categorizeWithAi, isAiCategorizerEnabled, toCategorizerInput } =
 
 const FLAG = 'FINANCE_AI_CATEGORIZER_ENABLED';
 const KEY = 'ANTHROPIC_API_KEY';
+
+let tmpDir: string;
+let opened: OpenedFinanceDb;
+let db: FinanceDb;
 
 /**
  * A closed vocabulary in the shape `loadKnownTags` now returns (POPS-2606):
@@ -47,6 +57,10 @@ function textResponse(text: string, inputTokens = 100, outputTokens = 20) {
 
 beforeEach(() => {
   createMock.mockReset();
+  invalidateAiSettingsCache();
+  tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-categorizer-test-'));
+  opened = openFinanceDb(join(tmpDir, 'finance.db'));
+  db = opened.db;
 });
 
 afterEach(() => {
@@ -54,12 +68,14 @@ afterEach(() => {
   delete process.env[KEY];
   delete process.env['FINANCE_AI_CATEGORIZER_MODEL'];
   delete process.env['FINANCE_AI_CATEGORIZER_MAX_TOKENS'];
+  opened.raw.close();
+  rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe('categorizeWithAi — gating', () => {
   it('is disabled by default and never calls the SDK', async () => {
     expect(isAiCategorizerEnabled()).toBe(false);
-    const out = await categorizeWithAi({ description: 'SOME MERCHANT' }, undefined, VOCAB);
+    const out = await categorizeWithAi({ description: 'SOME MERCHANT' }, undefined, VOCAB, { db });
     expect(out.result).toBeNull();
     expect(out.usage).toBeUndefined();
     expect(createMock).not.toHaveBeenCalled();
@@ -67,7 +83,9 @@ describe('categorizeWithAi — gating', () => {
 
   it('throws NO_API_KEY when enabled without a key', async () => {
     process.env[FLAG] = 'true';
-    await expect(categorizeWithAi({ description: 'RAW' }, undefined, VOCAB)).rejects.toMatchObject({
+    await expect(
+      categorizeWithAi({ description: 'RAW' }, undefined, VOCAB, { db })
+    ).rejects.toMatchObject({
       name: 'AiCategorizationError',
       code: 'NO_API_KEY',
     });
@@ -85,7 +103,9 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     createMock.mockResolvedValue(
       textResponse('{"entityName":"Woolworths","venue":"supermarket","contains":["groceries"]}')
     );
-    const out = await categorizeWithAi({ description: 'WOOLWORTHS 1234' }, undefined, VOCAB);
+    const out = await categorizeWithAi({ description: 'WOOLWORTHS 1234' }, undefined, VOCAB, {
+      db,
+    });
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const req = createMock.mock.calls[0]?.[0] as { model: string; max_tokens: number };
@@ -102,7 +122,7 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     process.env['FINANCE_AI_CATEGORIZER_MODEL'] = 'claude-sonnet-4-6';
     process.env['FINANCE_AI_CATEGORIZER_MAX_TOKENS'] = '512';
     createMock.mockResolvedValue(textResponse('{"entityName":"X","contains":[]}'));
-    await categorizeWithAi({ description: 'X' }, undefined, VOCAB);
+    await categorizeWithAi({ description: 'X' }, undefined, VOCAB, { db });
     const req = createMock.mock.calls[0]?.[0] as { model: string; max_tokens: number };
     expect(req.model).toBe('claude-sonnet-4-6');
     expect(req.max_tokens).toBe(512);
@@ -112,7 +132,7 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     createMock.mockResolvedValue(
       textResponse('```json\n{"entityName":"Aldi","contains":["groceries"]}\n```')
     );
-    const out = await categorizeWithAi({ description: 'ALDI' }, undefined, VOCAB);
+    const out = await categorizeWithAi({ description: 'ALDI' }, undefined, VOCAB, { db });
     expect(out.result?.entityName).toBe('Aldi');
   });
 
@@ -125,7 +145,8 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     const out = await categorizeWithAi(
       { description: 'OZTURK JR 176752 DARLINGTON' },
       undefined,
-      VOCAB
+      VOCAB,
+      { db }
     );
     expect(out.result?.entityName).toBe('Ozturk Jr');
     expect(out.result?.tags).toEqual(['venue:restaurant']);
@@ -138,7 +159,7 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
   // process-transaction.ts.
   it('rejects with AiCategorizationError(PARSE_ERROR) on an unparseable reply', async () => {
     createMock.mockResolvedValue(textResponse('Sorry, I cannot determine the merchant.'));
-    const err = await categorizeWithAi({ description: 'MYSTERY' }, undefined, VOCAB).catch(
+    const err = await categorizeWithAi({ description: 'MYSTERY' }, undefined, VOCAB, { db }).catch(
       (e: unknown) => e
     );
     expect(err).toBeInstanceOf(AiCategorizationError);
@@ -147,7 +168,7 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
 
   it('sanitises a placeholder entity name to null (usage still recorded)', async () => {
     createMock.mockResolvedValue(textResponse('{"entityName":"Unknown Vendor","tags":["misc"]}'));
-    const out = await categorizeWithAi({ description: 'MYSTERY CHARGE' }, undefined, VOCAB);
+    const out = await categorizeWithAi({ description: 'MYSTERY CHARGE' }, undefined, VOCAB, { db });
     expect(out.result?.entityName).toBeNull();
     expect(out.usage).toBeDefined();
   });
@@ -158,7 +179,9 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
       message: 'bad request',
       error: { error: { message: 'Your credit balance is too low' } },
     });
-    await expect(categorizeWithAi({ description: 'X' }, undefined, VOCAB)).rejects.toMatchObject({
+    await expect(
+      categorizeWithAi({ description: 'X' }, undefined, VOCAB, { db })
+    ).rejects.toMatchObject({
       name: 'AiCategorizationError',
       code: 'INSUFFICIENT_CREDITS',
     });
@@ -166,7 +189,7 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
 
   it('maps other failures to API_ERROR', async () => {
     createMock.mockRejectedValue(new Error('network down'));
-    const err = await categorizeWithAi({ description: 'X' }, undefined, VOCAB).catch(
+    const err = await categorizeWithAi({ description: 'X' }, undefined, VOCAB, { db }).catch(
       (e: unknown) => e
     );
     expect(err).toBeInstanceOf(AiCategorizationError);
@@ -218,7 +241,7 @@ describe('categorizeWithAi — PII allowlist (CF008)', () => {
       checksum: 'deadbeef',
     };
 
-    await categorizeWithAi(toCategorizerInput(transaction), 'batch-x', VOCAB);
+    await categorizeWithAi(toCategorizerInput(transaction), 'batch-x', VOCAB, { db });
 
     const prompt = promptSentToApi();
     expect(prompt).toContain('WOOLWORTHS METRO 1234');
@@ -248,7 +271,7 @@ describe('categorizeWithAi — PII allowlist (CF008)', () => {
       checksum: 'cafef00d',
     };
 
-    await categorizeWithAi(toCategorizerInput(transaction), undefined, VOCAB);
+    await categorizeWithAi(toCategorizerInput(transaction), undefined, VOCAB, { db });
 
     const prompt = promptSentToApi();
     expect(prompt).toContain('ALDI STORES');
@@ -277,7 +300,9 @@ describe('categorizeWithAi — closed-set validation', () => {
         )
       );
 
-      const out = await categorizeWithAi({ description: 'THE STAR PYRMONT' }, undefined, VOCAB);
+      const out = await categorizeWithAi({ description: 'THE STAR PYRMONT' }, undefined, VOCAB, {
+        db,
+      });
 
       expect(out.result?.entityName).toBe('The Star');
       expect(out.result?.tags).toEqual(['occasion:out', 'contains:food']);
@@ -291,13 +316,13 @@ describe('categorizeWithAi — closed-set validation', () => {
   it('leaves rejectedTagValues absent when everything the model returned was valid', async () => {
     createMock.mockResolvedValue(textResponse('{"entityName":"Aldi","contains":["groceries"]}'));
 
-    const out = await categorizeWithAi({ description: 'ALDI' }, undefined, VOCAB);
+    const out = await categorizeWithAi({ description: 'ALDI' }, undefined, VOCAB, { db });
 
     expect(out.result?.rejectedTagValues).toBeUndefined();
   });
 
   it('degrades to EMPTY_VOCABULARY rather than prompting with no vocabulary', async () => {
-    const err = await categorizeWithAi({ description: 'ALDI' }, undefined, []).catch(
+    const err = await categorizeWithAi({ description: 'ALDI' }, undefined, [], { db }).catch(
       (e: unknown) => e
     );
 
@@ -328,6 +353,7 @@ describe('categorizeWithAi — tag descriptions reach the prompt', () => {
 
   it('renders a described value with its definition', async () => {
     await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB, {
+      db,
       tagDescriptions: new Map([['occasion:home', 'Spent on the dwelling itself.']]),
     });
 
@@ -335,7 +361,7 @@ describe('categorizeWithAi — tag descriptions reach the prompt', () => {
   });
 
   it('falls back to the bare list when the caller supplies no descriptions', async () => {
-    await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB);
+    await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB, { db });
 
     expect(promptSent()).toContain('- occasion: exactly one of [home, out]');
   });

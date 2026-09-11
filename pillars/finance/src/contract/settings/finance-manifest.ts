@@ -1,4 +1,10 @@
 import {
+  AI_CATEGORIZER_MAX_TOKENS_KEY,
+  AI_CATEGORIZER_MODEL_KEY,
+  RULE_GEN_MAX_TOKENS_KEY,
+  RULE_GEN_MODEL_KEY,
+} from './ai-settings-keys.js';
+import {
   UP_SYNC_DEFAULT_ENABLED,
   UP_SYNC_DEFAULT_INTERVAL_MINUTES,
   UP_SYNC_ENABLED_KEY,
@@ -24,7 +30,7 @@ export const financeManifest: SettingsManifest = {
       description: 'Model and limits for AI-powered transaction categorisation.',
       fields: [
         {
-          key: 'finance.aiCategorizer.model',
+          key: AI_CATEGORIZER_MODEL_KEY,
           label: 'Categorizer Model',
           type: 'text',
           default: 'claude-haiku-4-5-20251001',
@@ -32,7 +38,7 @@ export const financeManifest: SettingsManifest = {
             'Anthropic model id, passed through verbatim. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
         },
         {
-          key: 'finance.aiCategorizer.maxTokens',
+          key: AI_CATEGORIZER_MAX_TOKENS_KEY,
           label: 'Max Tokens',
           type: 'number',
           default: '200',
@@ -46,7 +52,7 @@ export const financeManifest: SettingsManifest = {
           },
         },
         {
-          key: 'finance.ruleGen.model',
+          key: RULE_GEN_MODEL_KEY,
           label: 'Rule Generation Model',
           type: 'text',
           default: 'claude-haiku-4-5-20251001',
@@ -54,7 +60,7 @@ export const financeManifest: SettingsManifest = {
             'Anthropic model id used when your manual corrections are analysed for a repeatable rule. Runs once per analysis rather than once per row, so a larger model here is far cheaper than on the categorizer.',
         },
         {
-          key: 'finance.ruleGen.maxTokens',
+          key: RULE_GEN_MAX_TOKENS_KEY,
           label: 'Rule Gen Max Tokens',
           type: 'number',
           default: '200',
