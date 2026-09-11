@@ -1799,6 +1799,9 @@ importers:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
         version: 0.99.0(magicast@0.5.4)(typescript@6.0.3)
+      '@lezer/common':
+        specifier: ^1.5.2
+        version: 1.5.2
       '@lezer/generator':
         specifier: ^1.8.0
         version: 1.8.0

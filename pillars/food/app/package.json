@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
+    "@lezer/common": "^1.5.2",
     "@lezer/generator": "^1.8.0",
     "@pops/lists": "workspace:*",
     "@pops/locales": "workspace:*",
