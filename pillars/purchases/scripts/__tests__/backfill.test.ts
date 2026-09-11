@@ -22,6 +22,7 @@ import {
   isCliEntrypoint,
   isLocalBaseUrl,
   postPurchases,
+  RegistryUnavailableError,
   runCli,
   upsertSource,
   type IngestClient,
@@ -112,6 +113,25 @@ async function authFailureFrom(
   );
   if (caught instanceof AuthFailureError) return caught;
   throw new Error(`the run did not stop with an AuthFailureError, it gave ${String(caught)}`);
+}
+
+/**
+ * Drive `postPurchases` to the registry-unavailable stop it should stop on,
+ * narrowing to it soundly. A run that completes, or that throws anything
+ * else, fails here rather than at an assertion on properties of something
+ * that was never a `RegistryUnavailableError`.
+ */
+async function registryUnavailableFrom(
+  purchases: readonly CreatePurchaseInput[]
+): Promise<RegistryUnavailableError> {
+  const caught: unknown = await postPurchases(CLIENT, purchases).then(
+    () => undefined,
+    (error: unknown) => error
+  );
+  if (caught instanceof RegistryUnavailableError) return caught;
+  throw new Error(
+    `the run did not stop with a RegistryUnavailableError, it gave ${String(caught)}`
+  );
 }
 
 beforeEach(() => {
@@ -316,6 +336,60 @@ describe('postPurchases', () => {
     expect(error.message).toContain('2 were already present');
   });
 
+  it('stops the run on a mid-run 503 instead of reporting one failure per remaining order', async () => {
+    stubFetchSequence([201, 201, 503]);
+
+    const promise = postPurchases(CLIENT, [
+      purchase('order-1'),
+      purchase('order-2'),
+      purchase('order-3'),
+      purchase('order-4'),
+    ]);
+
+    await expect(promise).rejects.toThrow(RegistryUnavailableError);
+    expect(calls).toHaveLength(3);
+  });
+
+  it('names the registry as the cause of a 503 stop and preserves what ran before it', async () => {
+    stubFetchSequence([201, 409, 503]);
+
+    const error = await registryUnavailableFrom([
+      purchase('order-1'),
+      purchase('already-there'),
+      purchase('order-3'),
+    ]);
+
+    expect(error.outcome).toEqual({ created: 1, skipped: 1, failures: [] });
+    expect(error.message).toContain('registry is unreachable');
+    expect(error.message).toContain('1 order(s) were written');
+    expect(error.message).toContain('1 were already present');
+  });
+
+  it('gives a 503 stop a message distinct from the 401/403 auth stop', async () => {
+    stubFetchSequence([503]);
+    const registryError = await registryUnavailableFrom([purchase('order-1')]);
+
+    calls = [];
+    stubFetchSequence([401]);
+    const authError = await authFailureFrom([purchase('order-1')]);
+
+    expect(registryError.message).not.toBe(authError.message);
+    expect(registryError.message).toContain('registry is unreachable');
+    expect(registryError.message).not.toContain('grant the account');
+    expect(authError.message).toContain('grant the account');
+    expect(authError.message).not.toContain('registry is unreachable');
+  });
+
+  it('does not stop the run on a per-order 422, unlike a 503', async () => {
+    stubFetchSequence([422, 201]);
+
+    const outcome = await postPurchases(CLIENT, [purchase('bad'), purchase('good')]);
+
+    expect(outcome.created).toBe(1);
+    expect(outcome.failures).toEqual(['bad -> 422 nope']);
+    expect(calls).toHaveLength(2);
+  });
+
   it('runs the before-request hook ahead of the request it belongs to', async () => {
     // A purchase can name a file the request does not carry, and those bytes
     // have to be on the volume before the row that points at them exists.
@@ -410,6 +484,24 @@ describe('runCli', () => {
 
     expect(warnSpy).toHaveBeenCalledWith('created 2, skipped 30, failed 1');
     expect(errorSpy).toHaveBeenCalledWith('  bad -> 422 malformed');
+    expect(errorSpy).toHaveBeenCalledWith(stopped.message);
+    expect(process.exitCode).toBe(1);
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('reports what an aborted run had already done before printing a registry-unavailable stop', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const stopped = new RegistryUnavailableError({
+      created: 5,
+      skipped: 1,
+      failures: [],
+    });
+
+    await runCli(() => Promise.reject(stopped));
+
+    expect(warnSpy).toHaveBeenCalledWith('created 5, skipped 1, failed 0');
     expect(errorSpy).toHaveBeenCalledWith(stopped.message);
     expect(process.exitCode).toBe(1);
     warnSpy.mockRestore();
