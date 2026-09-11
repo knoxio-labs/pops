@@ -58,64 +58,63 @@
  *
  * WHAT IT DOES NOT SEE.
  *
- *   - Scope (POPS-3484): {@link PILLARS} lists every pillar this guard
- *     currently enforces — purchases, finance, cerebrum, bfm. Each pillar
- *     declares its own openapi file, its own hand-curated `{ handlerFile,
- *     handlerKey }` routes (the traversal algorithm below is shared and
- *     pillar-agnostic; only these roots differ), its own allowlist, and its
- *     own discovery floor. Every pillar surveyed for POPS-3484 that also
- *     publishes ts-rest query schemas is accounted for, in or out:
- *       - media, food and lists are NOT here. Most of their routes read
- *         fields directly, exactly like purchases, but a real minority
- *         delegate the WHOLE query object to a shared db-service function
- *         called as `someService.method(db, query)` — `query` as one of
- *         SEVERAL positional arguments, through a property access on an
- *         imported namespace object, not the sole-argument bare-identifier
- *         call this guard's resolver-following recognises (see the next
- *         bullet). Every field reached only that way reports as unread
- *         whether or not the service function actually reads it — confirmed
- *         by hand for `GET /library` (media), which does read every field it
- *         was flagged for. Adding these pillars today would mean either
- *         allowlisting fields that are NOT deliberately unread (misusing
- *         {@link AllowlistEntry} to paper over a guard gap, not to record a
- *         real omission) or extending resolver-following to multi-argument,
- *         namespace-qualified calls — a change to the shared traversal
- *         algorithm every pillar depends on, wide enough to need its own
- *         review rather than riding in on a scope-extension PR.
- *       - inventory is NOT here either, for a different reason: it is
- *         otherwise fully compatible (every OTHER route reads its fields
- *         directly, same as purchases), but `POST /search` genuinely never
- *         reads `body.query.filters` at all — confirmed by reading the
- *         handler, not a guard artefact. That is a real product gap, not
- *         something this guard should paper over with a reasonless-in-spirit
- *         allowlist entry; it needs a real fix (structured-filter support in
- *         `pillars/inventory/src/api/rest/search-handlers.ts`) before this
- *         pillar can report clean.
+ *   - Scope (POPS-3484, POPS-3539): {@link PILLARS} lists every pillar this
+ *     guard currently enforces — purchases, finance, cerebrum, bfm, media,
+ *     food, lists, inventory. Each pillar declares its own openapi file, its
+ *     own hand-curated `{ handlerFile, handlerKey }` routes (the traversal
+ *     algorithm below is shared and pillar-agnostic; only these roots
+ *     differ), its own allowlist, and its own discovery floor.
+ *       - media, food and lists were blocked under POPS-3484 by a real gap:
+ *         a real minority of their routes delegate the WHOLE query object to
+ *         a shared db-service function called as `someService.method(db,
+ *         query)` — `query` as one of several positional arguments, through
+ *         a property access on an imported namespace object — which the
+ *         resolver-following of that PR did not recognise (it only followed
+ *         a sole-argument, bare-identifier call). POPS-3539 closes that gap:
+ *         {@link findAnchorCallSites} matches the anchor at ANY positional
+ *         argument of a call, bare or namespace-qualified, and
+ *         {@link resolveNamespaceExportFile} finds the namespace's own
+ *         module by following `export * as <name> from` (and, where a
+ *         pillar splits a barrel one level deeper, transitively through bare
+ *         `export * from` re-exports) rather than assuming the namespace
+ *         object is declared in the file that imports it. All three pillars
+ *         report clean under the extended traversal today.
+ *       - inventory was blocked under POPS-3484 by a real product gap: its
+ *         `POST /search` handler built its filter without ever reading
+ *         `body.query.filters`. That was fixed on `main` independently
+ *         (PR #4783, before POPS-3539); every inventory route reads its
+ *         fields directly today, same as purchases, so it needed no
+ *         traversal change to bring in — only its own {@link PILLARS} entry.
  *       - contacts publishes no ts-rest contract at all (Rust, a different
  *         wire-schema mechanism entirely) — out of scope on its face.
  *       - ai, registry and documents were not part of POPS-3484's named
  *         starting list and were not surveyed here.
- *   - A field is only "seen read" through a resolver call shaped exactly
- *     `identifierBoundToAnImport(query)` — a bare identifier literally named
- *     `query`, passed as the sole argument. A handler that destructures
- *     individual fields out of `query` before calling a resolver
- *     (`resolve({ sources: query.sources })`), or spreads it (`{ ...query }`),
- *     is not followed into that resolver; the guard would then report those
- *     fields as unread even if the resolver reads them. Every resolver call in
- *     `pillars/purchases` today passes the whole object, so this has not been
- *     a false positive in practice, but it is a real limit of the heuristic —
- *     the fix in that case is to read the field directly in the handler
- *     rather than to fight the checker.
+ *   - A field is only "seen read" through a resolver call whose OWN argument
+ *     list carries the anchor bare — `resolver(query)`, `resolver(db, query)`,
+ *     `ns.method(db, query)` — never an expression merely built FROM it
+ *     (`resolve({ sources: query.sources })`) or a spread (`{ ...query }`).
+ *     A handler that destructures individual fields out before calling a
+ *     resolver, or spreads the object, is not followed into that resolver;
+ *     the guard would then report those fields as unread even if the
+ *     resolver reads them. Every resolver call across every pillar in
+ *     {@link PILLARS} today passes the whole object as one argument, so this
+ *     has not been a false positive in practice, but it is a real limit of
+ *     the heuristic — the fix in that case is to read the field directly in
+ *     the handler rather than to fight the checker.
  *   - Once a resolver IS followed, its own reads are anchored to its own
- *     declared parameter, parsed from its `function name(param) { … }`
- *     signature — a simple identifier (`query`, `input`, anything) anchors
- *     member access and destructuring inside its body to that name; a
- *     destructured parameter (`function name({ from, to })`) is read as
- *     equivalent to destructuring those fields off the call's own argument
- *     directly, with no need to also read them again in the resolver body.
- *     A resolver whose parameter cannot be parsed this way (a nested pattern,
- *     a rest element, anything beyond a flat identifier or a flat destructure)
- *     is not followed past that point — conservative in the same direction as
+ *     declared parameter AT THE SAME POSITION the call passed the anchor in
+ *     — parsed from its `function name(...params) { … }` signature by
+ *     splitting that parameter list on top-level commas
+ *     ({@link splitTopLevelCommaList}) and taking the one at the matching
+ *     index, not assumed to be the first or only one. A simple identifier
+ *     (`query`, `input`, `db`, anything) anchors member access and
+ *     destructuring inside its body to that name; a destructured parameter
+ *     (`function name({ from, to })`) is read as equivalent to destructuring
+ *     those fields off the call's own argument directly, with no need to
+ *     also read them again in the resolver body. A resolver whose matched
+ *     parameter cannot be parsed this way (a nested pattern, a rest element,
+ *     anything beyond a flat identifier or a flat destructure) is not
+ *     followed past that point — conservative in the same direction as
  *     every other gap in this list: a field could be reported as unread when
  *     the resolver does read it, never the reverse.
  *   - Anchoring is per-scope, not global: the handler's own binding for its
@@ -125,9 +124,11 @@
  *     method of the same name (`Array.from`) — is never mistaken for a read
  *     of the query field, because the read must chain off the one binding
  *     that scope actually received the query data through.
- *   - Only relative (`./`, `../`) imports are followed into a resolver. A
- *     resolver reached through a workspace package specifier (`@pops/...`)
- *     is invisible to the traversal — no purchases handler does this today.
+ *   - Only relative (`./`, `../`) imports are followed into a resolver, or
+ *     into a namespace's own `export * as`/`export *` chain. A resolver, or
+ *     a namespace's home module, reached only through a workspace package
+ *     specifier (`@pops/...`) is invisible to the traversal — no pillar in
+ *     {@link PILLARS} does this today.
  *   - One handler-object literal per file, found as the `return { … }` inside
  *     the file's own `function make*Handlers(…) { … }` factory — plain helper
  *     functions defined elsewhere in the file (`notFound`, `itemNotFound`, …)
@@ -450,6 +451,516 @@ export const BFM_ROUTES = [
 /** Empty today: every field on every known bfm route is read. @type {AllowlistEntry[]} */
 export const BFM_ALLOWLIST = [];
 
+/** Repo-relative, posix. The committed OpenAPI projection of the media contract. */
+export const MEDIA_OPENAPI_REL_PATH = 'pillars/media/openapi/media.openapi.json';
+
+/** Today's real count of media routes carrying query fields is 32. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const MEDIA_MIN_ROUTES_WITH_FIELDS = 24;
+
+/**
+ * Media's handler layout matches purchases' in shape (one `make*Handlers`
+ * factory per file, fields read directly off `query`), with a real minority
+ * that delegate the WHOLE query object one level down through a property
+ * access on an imported db-service namespace object — `libraryService.
+ * listLibrary(db, query)` (`GET /library`), `rotationCandidatesService.
+ * listCandidates(db, query)` (`GET /rotation/candidates`),
+ * `rotationExclusionsService.listExclusions(db, query)` (`GET
+ * /rotation/exclusions`) — exactly the shape POPS-3539 added
+ * {@link findAnchorCallSites} / {@link resolveNamespaceExportFile} to
+ * follow. Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const MEDIA_ROUTES = [
+  {
+    method: 'get',
+    path: '/arr/sonarr/calendar',
+    handlerFile: 'pillars/media/src/api/rest/arr-sonarr-handlers.ts',
+    handlerKey: 'getCalendar',
+  },
+  {
+    method: 'get',
+    path: '/arr/sonarr/series/{sonarrId}/episodes',
+    handlerFile: 'pillars/media/src/api/rest/arr-sonarr-handlers.ts',
+    handlerKey: 'getSeriesEpisodes',
+  },
+  {
+    method: 'get',
+    path: '/comparison-rankings',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-scores-handlers.ts',
+    handlerKey: 'rankings',
+  },
+  {
+    method: 'get',
+    path: '/comparison-scores',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-scores-handlers.ts',
+    handlerKey: 'scores',
+  },
+  {
+    method: 'get',
+    path: '/comparison-staleness',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-scores-handlers.ts',
+    handlerKey: 'getStaleness',
+  },
+  {
+    method: 'get',
+    path: '/comparisons/for-media',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-handlers.ts',
+    handlerKey: 'listForMedia',
+  },
+  {
+    method: 'get',
+    path: '/comparisons/smart-pair',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-handlers.ts',
+    handlerKey: 'getSmartPair',
+  },
+  {
+    method: 'get',
+    path: '/comparisons',
+    handlerFile: 'pillars/media/src/api/rest/comparisons-handlers.ts',
+    handlerKey: 'listAll',
+  },
+  {
+    method: 'get',
+    path: '/discovery/context-picks',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'contextPicks',
+  },
+  {
+    method: 'get',
+    path: '/discovery/genre-spotlight/page',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'genreSpotlightPage',
+  },
+  {
+    method: 'get',
+    path: '/discovery/quick-pick',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'quickPick',
+  },
+  {
+    method: 'get',
+    path: '/discovery/recommendations',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'recommendations',
+  },
+  {
+    method: 'get',
+    path: '/discovery/shelves/{shelfId}',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'getShelfPage',
+  },
+  {
+    method: 'get',
+    path: '/discovery/trending-plex',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'trendingPlex',
+  },
+  {
+    method: 'get',
+    path: '/discovery/trending',
+    handlerFile: 'pillars/media/src/api/rest/discovery-handlers.ts',
+    handlerKey: 'trending',
+  },
+  {
+    method: 'get',
+    path: '/library/quick-pick',
+    handlerFile: 'pillars/media/src/api/rest/library-handlers.ts',
+    handlerKey: 'quickPick',
+  },
+  {
+    method: 'get',
+    path: '/library',
+    handlerFile: 'pillars/media/src/api/rest/library-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/movies',
+    handlerFile: 'pillars/media/src/api/rest/movies-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/plex/scheduler/sync-logs',
+    handlerFile: 'pillars/media/src/api/rest/plex-scheduler-handlers.ts',
+    handlerKey: 'getSyncLogs',
+  },
+  {
+    method: 'get',
+    path: '/rotation/candidates',
+    handlerFile: 'pillars/media/src/api/rest/rotation-candidate-handlers.ts',
+    handlerKey: 'listCandidates',
+  },
+  {
+    method: 'get',
+    path: '/rotation/exclusions',
+    handlerFile: 'pillars/media/src/api/rest/rotation-candidate-handlers.ts',
+    handlerKey: 'listExclusions',
+  },
+  {
+    method: 'get',
+    path: '/rotation/scheduler/log',
+    handlerFile: 'pillars/media/src/api/rest/rotation-scheduler-handlers.ts',
+    handlerKey: 'listRotationLog',
+  },
+  {
+    method: 'get',
+    path: '/rotation/scheduler/removal-preview',
+    handlerFile: 'pillars/media/src/api/rest/rotation-scheduler-handlers.ts',
+    handlerKey: 'schedulerRemovalPreview',
+  },
+  {
+    method: 'get',
+    path: '/search/movies',
+    handlerFile: 'pillars/media/src/api/rest/search-handlers.ts',
+    handlerKey: 'movies',
+  },
+  {
+    method: 'get',
+    path: '/search/tv-shows',
+    handlerFile: 'pillars/media/src/api/rest/search-handlers.ts',
+    handlerKey: 'tvShows',
+  },
+  {
+    method: 'get',
+    path: '/shelf-impressions/freshness',
+    handlerFile: 'pillars/media/src/api/rest/shelf-impressions-handlers.ts',
+    handlerKey: 'freshness',
+  },
+  {
+    method: 'get',
+    path: '/shelf-impressions/recent',
+    handlerFile: 'pillars/media/src/api/rest/shelf-impressions-handlers.ts',
+    handlerKey: 'recent',
+  },
+  {
+    method: 'get',
+    path: '/tv-shows',
+    handlerFile: 'pillars/media/src/api/rest/tv-shows-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/watch-history/recent',
+    handlerFile: 'pillars/media/src/api/rest/watch-history-handlers.ts',
+    handlerKey: 'listRecent',
+  },
+  {
+    method: 'get',
+    path: '/watch-history',
+    handlerFile: 'pillars/media/src/api/rest/watch-history-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/watchlist/status',
+    handlerFile: 'pillars/media/src/api/rest/watchlist-handlers.ts',
+    handlerKey: 'status',
+  },
+  {
+    method: 'get',
+    path: '/watchlist',
+    handlerFile: 'pillars/media/src/api/rest/watchlist-handlers.ts',
+    handlerKey: 'list',
+  },
+];
+
+/** Empty today: every field on every known media route is read. @type {AllowlistEntry[]} */
+export const MEDIA_ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the food contract. */
+export const FOOD_OPENAPI_REL_PATH = 'pillars/food/openapi/food.openapi.json';
+
+/** Today's real count of food routes carrying query fields is 19. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const FOOD_MIN_ROUTES_WITH_FIELDS = 14;
+
+/**
+ * Food's handler layout matches purchases' in shape, with two real
+ * delegation patterns POPS-3539 added support for: a plain (non-namespace)
+ * resolver called with `query` at a NON-FIRST positional argument
+ * (`resolveForLine(db, query)`, `GET /substitutions/resolve-line` —
+ * which itself forwards its own second parameter on to a further resolver,
+ * `loadLine(db, args)`, two levels deep), and a namespace-qualified call
+ * with `query` as the second of two arguments (`substitutionsQueries.
+ * listSubstitutions(db, query)`, `substitutionsHydrate.
+ * listSubstitutionsHydrated(db, query)`, `substitutionsGraph.
+ * loadGraphView(db, query)`). Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const FOOD_ROUTES = [
+  {
+    method: 'get',
+    path: '/aliases/with-targets',
+    handlerFile: 'pillars/food/src/api/rest/aliases-handlers.ts',
+    handlerKey: 'listWithTargets',
+  },
+  {
+    method: 'get',
+    path: '/aliases',
+    handlerFile: 'pillars/food/src/api/rest/aliases-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/conversions/resolve',
+    handlerFile: 'pillars/food/src/api/rest/conversions-handlers.ts',
+    handlerKey: 'resolve',
+  },
+  {
+    method: 'get',
+    path: '/conversions/units',
+    handlerFile: 'pillars/food/src/api/rest/conversions-handlers.ts',
+    handlerKey: 'listUnits',
+  },
+  {
+    method: 'get',
+    path: '/conversions/weights',
+    handlerFile: 'pillars/food/src/api/rest/conversions-handlers.ts',
+    handlerKey: 'listWeights',
+  },
+  {
+    method: 'get',
+    path: '/fridge/recipes-using-batch',
+    handlerFile: 'pillars/food/src/api/rest/fridge-handlers.ts',
+    handlerKey: 'recipesUsingBatch',
+  },
+  {
+    method: 'get',
+    path: '/inbox/review',
+    handlerFile: 'pillars/food/src/api/rest/inbox-handlers.ts',
+    handlerKey: 'getForReview',
+  },
+  {
+    method: 'get',
+    path: '/ingredient-tags/by-tag',
+    handlerFile: 'pillars/food/src/api/rest/ingredient-tags-handlers.ts',
+    handlerKey: 'byTag',
+  },
+  {
+    method: 'get',
+    path: '/ingredient-tags/distinct',
+    handlerFile: 'pillars/food/src/api/rest/ingredient-tags-handlers.ts',
+    handlerKey: 'distinct',
+  },
+  {
+    method: 'get',
+    path: '/ingredient-tags',
+    handlerFile: 'pillars/food/src/api/rest/ingredient-tags-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/ingredients',
+    handlerFile: 'pillars/food/src/api/rest/ingredients-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/plan/week',
+    handlerFile: 'pillars/food/src/api/rest/plan-handlers.ts',
+    handlerKey: 'weekView',
+  },
+  {
+    method: 'get',
+    path: '/recipes/{slug}',
+    handlerFile: 'pillars/food/src/api/rest/recipes-handlers.ts',
+    handlerKey: 'getForRendering',
+  },
+  {
+    method: 'get',
+    path: '/recipes/versions/{versionId}/send-to-list/preview',
+    handlerFile: 'pillars/food/src/api/rest/send-to-list-handlers.ts',
+    handlerKey: 'prepare',
+  },
+  {
+    method: 'get',
+    path: '/slugs/search',
+    handlerFile: 'pillars/food/src/api/rest/slugs-handlers.ts',
+    handlerKey: 'search',
+  },
+  {
+    method: 'get',
+    path: '/substitutions/graph-view',
+    handlerFile: 'pillars/food/src/api/rest/substitutions-handlers.ts',
+    handlerKey: 'graphView',
+  },
+  {
+    method: 'get',
+    path: '/substitutions/hydrated',
+    handlerFile: 'pillars/food/src/api/rest/substitutions-handlers.ts',
+    handlerKey: 'listHydrated',
+  },
+  {
+    method: 'get',
+    path: '/substitutions/resolve-line',
+    handlerFile: 'pillars/food/src/api/rest/substitutions-handlers.ts',
+    handlerKey: 'resolveForLine',
+  },
+  {
+    method: 'get',
+    path: '/substitutions',
+    handlerFile: 'pillars/food/src/api/rest/substitutions-handlers.ts',
+    handlerKey: 'list',
+  },
+];
+
+/** Empty today: every field on every known food route is read. @type {AllowlistEntry[]} */
+export const FOOD_ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the lists contract. */
+export const LISTS_OPENAPI_REL_PATH = 'pillars/lists/openapi/lists.openapi.json';
+
+/** Today's real count of lists routes carrying query fields is 2 — below every other pillar's floor, but lists' own REST surface is small; the floor still catches a collapse to 0. */
+const LISTS_MIN_ROUTES_WITH_FIELDS = 2;
+
+/**
+ * Lists' `GET /items` delegates the whole query object to a plain
+ * (non-namespace) function at a non-first positional argument —
+ * `searchListItems(db, query)` — the same generalisation food's
+ * `resolveForLine` needed. `GET /lists` reads every field directly off
+ * `query`. Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const LISTS_ROUTES = [
+  {
+    method: 'get',
+    path: '/items',
+    handlerFile: 'pillars/lists/src/api/rest/items-handlers.ts',
+    handlerKey: 'search',
+  },
+  {
+    method: 'get',
+    path: '/lists',
+    handlerFile: 'pillars/lists/src/api/rest/list-handlers.ts',
+    handlerKey: 'listAggregate',
+  },
+];
+
+/** Empty today: every field on every known lists route is read. @type {AllowlistEntry[]} */
+export const LISTS_ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the inventory contract. */
+export const INVENTORY_OPENAPI_REL_PATH = 'pillars/inventory/openapi/inventory.openapi.json';
+
+/** Today's real count of inventory routes carrying query fields is 16. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const INVENTORY_MIN_ROUTES_WITH_FIELDS = 12;
+
+/**
+ * Inventory's handler layout matches purchases' shape exactly — every field
+ * on every route, including `POST /search`'s `body.query.filters` and
+ * `body.query.text`, is read directly off its anchor in the handler body.
+ * `POST /search` was the reason POPS-3484 left inventory out (a real
+ * dropped read of `filters`); that was fixed independently on `main`
+ * (PR #4783, before POPS-3539) — see the guard header. No traversal change
+ * was needed to bring inventory in. Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const INVENTORY_ROUTES = [
+  {
+    method: 'delete',
+    path: '/connections',
+    handlerFile: 'pillars/inventory/src/api/rest/connections-handlers.ts',
+    handlerKey: 'disconnect',
+  },
+  {
+    method: 'get',
+    path: '/fixtures',
+    handlerFile: 'pillars/inventory/src/api/rest/fixtures-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/connections/graph',
+    handlerFile: 'pillars/inventory/src/api/rest/connections-handlers.ts',
+    handlerKey: 'graph',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/connections/trace',
+    handlerFile: 'pillars/inventory/src/api/rest/connections-handlers.ts',
+    handlerKey: 'trace',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/connections',
+    handlerFile: 'pillars/inventory/src/api/rest/connections-handlers.ts',
+    handlerKey: 'listForItem',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/documents',
+    handlerFile: 'pillars/inventory/src/api/rest/documents-handlers.ts',
+    handlerKey: 'listForItem',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/fixtures',
+    handlerFile: 'pillars/inventory/src/api/rest/fixtures-handlers.ts',
+    handlerKey: 'listForItem',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/photos',
+    handlerFile: 'pillars/inventory/src/api/rest/photos-handlers.ts',
+    handlerKey: 'listForItem',
+  },
+  {
+    method: 'get',
+    path: '/items/{itemId}/uploads',
+    handlerFile: 'pillars/inventory/src/api/rest/document-files-handlers.ts',
+    handlerKey: 'listForItem',
+  },
+  {
+    method: 'get',
+    path: '/items/search/by-asset-id',
+    handlerFile: 'pillars/inventory/src/api/rest/items-handlers.ts',
+    handlerKey: 'searchByAssetId',
+  },
+  {
+    method: 'get',
+    path: '/items/stats/count-by-asset-prefix',
+    handlerFile: 'pillars/inventory/src/api/rest/items-handlers.ts',
+    handlerKey: 'countByAssetPrefix',
+  },
+  {
+    method: 'get',
+    path: '/items',
+    handlerFile: 'pillars/inventory/src/api/rest/items-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'delete',
+    path: '/locations/{id}',
+    handlerFile: 'pillars/inventory/src/api/rest/locations-handlers.ts',
+    handlerKey: 'delete',
+  },
+  {
+    method: 'get',
+    path: '/paperless/search',
+    handlerFile: 'pillars/inventory/src/api/rest/paperless-handlers.ts',
+    handlerKey: 'search',
+  },
+  {
+    method: 'get',
+    path: '/reports/insurance',
+    handlerFile: 'pillars/inventory/src/api/rest/reports-handlers.ts',
+    handlerKey: 'insuranceReport',
+  },
+  {
+    method: 'post',
+    path: '/search',
+    handlerFile: 'pillars/inventory/src/api/rest/search-handlers.ts',
+    handlerKey: 'search',
+  },
+];
+
+/** Empty today: every field on every known inventory route is read. @type {AllowlistEntry[]} */
+export const INVENTORY_ALLOWLIST = [];
+
 /**
  * @typedef {object} PillarSpec
  * @property {string} name
@@ -466,10 +977,11 @@ export const BFM_ALLOWLIST = [];
  * (`extractHandlerEntryText`, `collectReachableTexts`, `fieldIsRead`, …) is
  * shared and pillar-agnostic; only these roots differ.
  *
- * media, food, inventory and lists were surveyed (all publish ts-rest query
- * schemas, per POPS-3484) and are deliberately NOT here yet — see the header's
- * "WHAT IT DOES NOT SEE" for why each is excluded rather than force-added
- * allowlisted or forked with special-case logic.
+ * media, food, lists and inventory were surveyed under POPS-3484 (all publish
+ * ts-rest query schemas) and left out then for the reasons the header's
+ * "WHAT IT DOES NOT SEE" recorded; POPS-3539 closed both gaps (the
+ * namespace/positional traversal limit, and inventory's real dropped-field
+ * bug being fixed independently on `main`) and brings all four in.
  *
  * @type {PillarSpec[]}
  */
@@ -501,6 +1013,34 @@ export const PILLARS = [
     routes: BFM_ROUTES,
     allowlist: BFM_ALLOWLIST,
     minRoutesWithFields: BFM_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'media',
+    openapiRelPath: MEDIA_OPENAPI_REL_PATH,
+    routes: MEDIA_ROUTES,
+    allowlist: MEDIA_ALLOWLIST,
+    minRoutesWithFields: MEDIA_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'food',
+    openapiRelPath: FOOD_OPENAPI_REL_PATH,
+    routes: FOOD_ROUTES,
+    allowlist: FOOD_ALLOWLIST,
+    minRoutesWithFields: FOOD_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'lists',
+    openapiRelPath: LISTS_OPENAPI_REL_PATH,
+    routes: LISTS_ROUTES,
+    allowlist: LISTS_ALLOWLIST,
+    minRoutesWithFields: LISTS_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'inventory',
+    openapiRelPath: INVENTORY_OPENAPI_REL_PATH,
+    routes: INVENTORY_ROUTES,
+    allowlist: INVENTORY_ALLOWLIST,
+    minRoutesWithFields: INVENTORY_MIN_ROUTES_WITH_FIELDS,
   },
 ];
 
@@ -1153,13 +1693,273 @@ export function extractResolverFunctionText(fileText, name) {
   if (parenEnd === -1) return null;
   const paramText = fileText.slice(parenStart + 1, parenEnd - 1);
 
-  let bodyStart = parenEnd;
-  while (bodyStart < structural.length && structural[bodyStart] !== '{') bodyStart += 1;
-  if (bodyStart >= structural.length) return null;
+  const bodyStart = skipReturnTypeAnnotation(structural, parenEnd);
+  if (bodyStart === -1 || structural[bodyStart] !== '{') return null;
   const bodyEnd = matchBalanced(structural, bodyStart, '{', '}');
   if (bodyEnd === -1) return null;
 
   return { paramText, bodyText: fileText.slice(bodyStart, bodyEnd) };
+}
+
+/**
+ * The index of a function's own body-opening `{`, given the index just past
+ * its parameter list's closing `)` — skipping an explicit return-type
+ * annotation in between, WHOSE OWN TOP-LEVEL TYPE may itself be an object
+ * literal type (`): { a?: string } {`, `toListInput`'s real shape in
+ * `pillars/food/src/api/rest/aliases-handlers.ts`), which a naive "find the
+ * next `{`" would mistake for the body. Bracket pairs (`()`, `[]`, `<>`,
+ * `{}`) in the return type are skipped as balanced units; a `{` is treated
+ * as the return type's own object-literal type, not the body, exactly when
+ * ANOTHER `{` immediately follows it (only whitespace between) — the shape
+ * every real return-type-then-body sequence in this codebase has.
+ *
+ * @param {string} structural `blankNonStructural`-processed file text.
+ * @param {number} from Index just past the parameter list's closing `)`.
+ * @returns {number} Index of the body's own `{`, or `-1` if unparseable.
+ */
+export function skipReturnTypeAnnotation(structural, from) {
+  let cursor = from;
+  while (cursor < structural.length && /\s/u.test(structural[cursor] ?? '')) cursor += 1;
+  if (structural[cursor] !== ':') return cursor;
+  cursor += 1;
+
+  const closers = { '{': '}', '(': ')', '[': ']', '<': '>' };
+  while (cursor < structural.length) {
+    while (cursor < structural.length && /\s/u.test(structural[cursor] ?? '')) cursor += 1;
+    const ch = structural[cursor];
+    if (ch === undefined) return -1;
+    if (ch === '{') {
+      const closeIdx = matchBalanced(structural, cursor, '{', '}');
+      if (closeIdx === -1) return -1;
+      let peek = closeIdx;
+      while (peek < structural.length && /\s/u.test(structural[peek] ?? '')) peek += 1;
+      if (structural[peek] === '{') {
+        cursor = peek;
+        continue;
+      }
+      return cursor;
+    }
+    const closer = closers[/** @type {'(' | '[' | '<'} */ (ch)];
+    if (closer !== undefined) {
+      const closeIdx = matchBalanced(structural, cursor, ch, closer);
+      if (closeIdx === -1) return -1;
+      cursor = closeIdx;
+      continue;
+    }
+    cursor += 1;
+  }
+  return -1;
+}
+
+/**
+ * Splits `text` on top-level commas — a comma nested inside a balanced `()`,
+ * `{}` or `[]` does not split. Shared by a call's own argument list and a
+ * function's own parameter list, which are the same shape: comma-separated
+ * expressions (or, for parameters, bindings — themselves sometimes `{ … }`
+ * destructuring patterns, which is exactly the nesting this must not split
+ * inside of).
+ *
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function splitTopLevelCommaList(text) {
+  const structural = blankNonStructural(text);
+  /** @type {string[]} */
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < structural.length; i += 1) {
+    const ch = structural[i];
+    if (ch === '(' || ch === '{' || ch === '[') depth += 1;
+    else if (ch === ')' || ch === '}' || ch === ']') depth -= 1;
+    else if (ch === ',' && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  const last = text.slice(start);
+  if (last.trim().length > 0 || parts.length > 0) parts.push(last);
+  return parts;
+}
+
+/**
+ * @typedef {object} CallSite
+ * @property {string | null} method `null` for a direct call `name(…)`; the
+ *   property name for a namespace-qualified call `name.method(…)`.
+ * @property {number} argIndex 0-based position of `anchor` among the call's
+ *   own top-level arguments.
+ */
+
+/**
+ * Every call to `name` in `scanText` — bare (`name(…)`) or namespace-
+ * qualified (`name.method(…)`, a property access on an imported namespace
+ * object) — whose own argument list carries `anchor` itself, bare, as one of
+ * its top-level arguments, reporting which position. An argument merely
+ * CONTAINING `anchor` (`anchor.field`, `{ x: anchor.field }`, `[anchor]`)
+ * does not count — only the exact binding, unwrapped, the same restriction
+ * {@link fieldIsRead}'s anchoring applies to a read.
+ *
+ * @param {string} scanText
+ * @param {string} name
+ * @param {string} anchor
+ * @returns {CallSite[]}
+ */
+export function findAnchorCallSites(scanText, name, anchor) {
+  const structural = blankNonStructural(scanText);
+  const callRe = new RegExp(
+    `(?<![\\w$.])${escapeRegExp(name)}\\s*(?:\\.\\s*([A-Za-z_$][\\w$]*))?\\s*\\(`,
+    'gu'
+  );
+  const anchorRe = new RegExp(`^${anchorPattern(anchor)}$`, 'u');
+  /** @type {CallSite[]} */
+  const sites = [];
+
+  for (const m of structural.matchAll(callRe)) {
+    const method = m[1] ?? null;
+    const parenStart = m.index + m[0].length - 1;
+    const parenEnd = matchBalanced(structural, parenStart, '(', ')');
+    if (parenEnd === -1) continue;
+    const argsText = scanText.slice(parenStart + 1, parenEnd - 1);
+    const args = splitTopLevelCommaList(argsText);
+    const argIndex = args.findIndex((arg) => anchorRe.test(arg.trim()));
+    if (argIndex === -1) continue;
+    sites.push({ method, argIndex });
+  }
+
+  return sites;
+}
+
+/**
+ * Where an imported namespace binding's OWN module actually is — read by
+ * following `export * as <name> from '<spec>'` in `fileAbs` or, failing
+ * that, recursing into every bare `export * from '<spec>'` re-export in that
+ * file. That second shape is real: `pillars/media/src/db/index.ts` re-
+ * exports `./services/rotation/index.js` wholesale, and it is THAT file, not
+ * `db/index.ts` itself, that declares `export * as rotationCandidatesService
+ * from './candidates.js'` — a barrel split one level deeper to stay under a
+ * line cap. Only relative specifiers are followed, the same restriction
+ * every other resolution step in this guard applies; a cycle in the
+ * `export *` graph is broken by `visited` rather than looped forever.
+ *
+ * @param {string} fileAbs
+ * @param {string} name
+ * @param {Set<string>} [visited]
+ * @returns {string | null} Absolute path of the module `name` is a namespace
+ *   over, or `null` when this file's `export *` graph never names it.
+ */
+export function resolveNamespaceExportFile(fileAbs, name, visited = new Set()) {
+  if (visited.has(fileAbs)) return null;
+  visited.add(fileAbs);
+  const fileText = readFileOrNull(fileAbs);
+  if (fileText === null) return null;
+  const stripped = stripComments(fileText);
+
+  const asRe = new RegExp(
+    `export\\s+\\*\\s+as\\s+${escapeRegExp(name)}\\s+from\\s+(['"])([^'"]+)\\1`,
+    'u'
+  );
+  const asMatch = asRe.exec(stripped);
+  const asSpecifier = asMatch?.[2];
+  if (asSpecifier !== undefined) return resolveRelativeImport(fileAbs, asSpecifier);
+
+  const wildcardRe = /export\s+\*\s+from\s+(['"])([^'"]+)\1/gu;
+  for (const m of stripped.matchAll(wildcardRe)) {
+    const specifier = m[2];
+    if (specifier === undefined) continue;
+    const resolved = resolveRelativeImport(fileAbs, specifier);
+    if (resolved === null) continue;
+    const found = resolveNamespaceExportFile(resolved, name, visited);
+    if (found !== null) return found;
+  }
+
+  return null;
+}
+
+/**
+ * Where a plainly-imported (non-namespace) binding's own function is
+ * actually DEFINED — `fileAbs` when it declares `function <name>(…)`
+ * directly, or, when `fileAbs` only re-exports it, following that re-export
+ * to where it is. Two re-export shapes are followed: a named re-export
+ * (`export { originalName as name } from '<spec>'`, or unaliased `export {
+ * name } from '<spec>'` — real for `pillars/lists`, whose `db/index.ts`
+ * re-exports `searchListItems` by name from `./services/list-items-
+ * search.js` rather than defining it), and a bare `export * from '<spec>'`
+ * wildcard re-export (the same barrel shape {@link resolveNamespaceExportFile}
+ * follows). Only relative specifiers are followed; a cycle is broken by
+ * `visited`.
+ *
+ * @param {string} fileAbs
+ * @param {string} name
+ * @param {Set<string>} [visited]
+ * @returns {string | null} Absolute path of the module that actually
+ *   declares `function <name>(…)`, or `null` when this file's export graph
+ *   never leads to one.
+ */
+export function resolveNamedExportFile(fileAbs, name, visited = new Set()) {
+  if (visited.has(fileAbs)) return null;
+  visited.add(fileAbs);
+  const fileText = readFileOrNull(fileAbs);
+  if (fileText === null) return null;
+  const stripped = stripComments(fileText);
+
+  if (new RegExp(`\\bfunction\\s+${escapeRegExp(name)}\\s*\\(`, 'u').test(stripped)) {
+    return fileAbs;
+  }
+
+  const namedRe = /export\s*\{([^}]*)\}\s*from\s*(['"])([^'"]+)\2/gu;
+  for (const m of stripped.matchAll(namedRe)) {
+    const clause = m[1];
+    const specifier = m[3];
+    if (clause === undefined || specifier === undefined) continue;
+    for (const raw of clause.split(',')) {
+      const item = raw.trim();
+      if (item.length === 0 || item.startsWith('type ')) continue;
+      const asMatch = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/u.exec(item);
+      const exportedAs = asMatch?.[2] ?? item;
+      const originalName = asMatch?.[1] ?? item;
+      if (exportedAs !== name) continue;
+      const resolved = resolveRelativeImport(fileAbs, specifier);
+      if (resolved === null) continue;
+      const found = resolveNamedExportFile(resolved, originalName, visited);
+      if (found !== null) return found;
+    }
+  }
+
+  const wildcardRe = /export\s+\*\s+from\s+(['"])([^'"]+)\1/gu;
+  for (const m of stripped.matchAll(wildcardRe)) {
+    const specifier = m[2];
+    if (specifier === undefined) continue;
+    const resolved = resolveRelativeImport(fileAbs, specifier);
+    if (resolved === null) continue;
+    const found = resolveNamedExportFile(resolved, name, visited);
+    if (found !== null) return found;
+  }
+
+  return null;
+}
+
+/**
+ * Every name a `function <name>(…)` declaration in `fileText` introduces —
+ * used to let {@link collectReachableTexts} follow a call to a resolver
+ * defined in the SAME file as the code calling it (a private helper, never
+ * imported at all: media's `library.ts` reads `type`/`search`/`genre` this
+ * way inside a local `buildWhereClause(input)`, called from the exported
+ * `listLibrary` in the same module; food's `aliases-handlers.ts` reads
+ * `targetKind`/`targetId` inside a local `toListInput(query)` called from
+ * the handler entry itself). Exported and non-exported declarations both
+ * count — visibility outside the module is irrelevant to a same-file call.
+ *
+ * @param {string} fileText
+ * @returns {string[]}
+ */
+export function localFunctionNames(fileText) {
+  const structural = blankNonStructural(fileText);
+  const names = new Set();
+  for (const m of structural.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/gu)) {
+    const name = m[1];
+    if (name !== undefined) names.add(name);
+  }
+  return [...names];
 }
 
 /**
@@ -1172,14 +1972,23 @@ export function extractResolverFunctionText(fileText, name) {
 
 /**
  * Every scope reachable from a route's handler entry by following a call
- * shaped `importedName(<anchor>)` — the exact binding that carries the query
- * at that point, passed as-is — through relative imports, transitively. Each
- * scope in the returned list carries its OWN anchor: the handler entry's is
- * `startAnchor`; a followed resolver's is whatever its own signature names
- * its parameter, read fresh from that resolver — never assumed to be `query`
- * just because the call site's argument was.
+ * that passes the exact binding carrying the query at that point as ONE OF
+ * ITS OWN ARGUMENTS — any position, not only a sole argument — to a function
+ * reached through a relative import, transitively. Two call shapes are
+ * followed: a bare call (`importedName(…, <anchor>, …)`) and a namespace-
+ * qualified one (`importedNamespace.method(…, <anchor>, …)`, a property
+ * access on an imported namespace object — see {@link resolveNamespaceExportFile}
+ * for how the namespace's OWN module is found). Both resolve the callee the
+ * same way once found: read its own parameter at the SAME position the call
+ * passed the anchor in, from its own signature — never assumed to be
+ * `query` just because the call site's argument was.
  *
- * A resolver whose parameter is itself a destructuring pattern
+ * Each scope in the returned list carries its OWN anchor: the handler
+ * entry's is `startAnchor`; a followed resolver's is whatever its own
+ * signature names the parameter at that position, read fresh from that
+ * resolver.
+ *
+ * A resolver whose matched parameter is itself a destructuring pattern
  * (`function r({ from, to })`) reads those fields the moment it is called —
  * that call is equivalent to destructuring them off `<anchor>` right there,
  * so it is recorded as a synthetic scope anchored to the CALLER's `anchor`
@@ -1189,7 +1998,13 @@ export function extractResolverFunctionText(fileText, name) {
  * count as reading the merchant fields on behalf of every route that calls
  * `resolvePurchaseScope(query)`, without each of those routes' handler
  * bodies mentioning the merchant fields by name — see the header's
- * "THE RULE".
+ * "THE RULE". It is also what lets a media handler's
+ * `libraryService.listLibrary(db, query)` — `query` as the SECOND argument,
+ * through a property access on an imported namespace object — count as
+ * reading whatever `listLibrary`'s own second parameter reads, and what lets
+ * `listLibrary`, in turn, calling a private same-file `buildWhereClause(input)`
+ * (never imported at all — see {@link localFunctionNames}) count as reading
+ * whatever THAT function reads.
  *
  * @param {string} startFileAbs
  * @param {string} startEntryText The specific handler entry's own text, not the whole file.
@@ -1199,7 +2014,7 @@ export function extractResolverFunctionText(fileText, name) {
 export function collectReachableTexts(startFileAbs, startEntryText, startAnchor = 'query') {
   /** @type {ReachableScope[]} */
   const scopes = [{ text: startEntryText, anchor: startAnchor }];
-  const visited = new Set([startFileAbs]);
+  const visited = new Set([`${startFileAbs}::`]);
   /** @type {Array<{ file: string; scanText: string; callAnchor: string }>} */
   const queue = [{ file: startFileAbs, scanText: startEntryText, callAnchor: startAnchor }];
 
@@ -1207,36 +2022,67 @@ export function collectReachableTexts(startFileAbs, startEntryText, startAnchor 
     const next = queue.shift();
     if (next === undefined) break;
     const { file, scanText, callAnchor } = next;
-    const bindings = extractImportBindings(readFileOrNull(file) ?? '');
-    const callAnchorPattern = anchorPattern(callAnchor);
+    const fileOwnText = readFileOrNull(file) ?? '';
+    const importedNames = new Set();
+    /** @type {Array<[string, string | null]>} */
+    const candidates = [];
+    for (const [name, specifier] of extractImportBindings(fileOwnText)) {
+      importedNames.add(name);
+      candidates.push([name, specifier]);
+    }
+    for (const name of localFunctionNames(fileOwnText)) {
+      if (!importedNames.has(name)) candidates.push([name, null]);
+    }
 
-    for (const [name, specifier] of bindings) {
-      const callRe = new RegExp(
-        `(?<![\\w$.])${escapeRegExp(name)}\\s*\\(\\s*${callAnchorPattern}\\s*\\)`,
-        'u'
-      );
-      if (!callRe.test(scanText)) continue;
-      const resolved = resolveRelativeImport(file, specifier);
-      if (resolved === null || visited.has(resolved)) continue;
-      visited.add(resolved);
-      const fileText = readFileOrNull(resolved);
-      if (fileText === null) continue;
+    for (const [name, specifier] of candidates) {
+      const sites = findAnchorCallSites(scanText, name, callAnchor);
+      if (sites.length === 0) continue;
 
-      const fn = extractResolverFunctionText(fileText, name);
-      if (fn === null) continue;
-      const param = parseResolverParam(fn.paramText);
-      if (param === null) continue;
+      for (const site of sites) {
+        /** @type {string | null} */
+        let targetFile;
+        /** @type {string} */
+        let fnName;
+        if (specifier === null) {
+          targetFile = file;
+          fnName = name;
+        } else if (site.method === null) {
+          const bindingFile = resolveRelativeImport(file, specifier);
+          targetFile = bindingFile === null ? null : resolveNamedExportFile(bindingFile, name);
+          fnName = name;
+        } else {
+          const bindingHome = resolveRelativeImport(file, specifier);
+          targetFile = bindingHome === null ? null : resolveNamespaceExportFile(bindingHome, name);
+          fnName = site.method;
+        }
+        if (targetFile === null) continue;
 
-      if (param.kind === 'destructured') {
-        scopes.push({
-          text: `{ ${param.fields.join(', ')} } = ${callAnchor};`,
-          anchor: callAnchor,
-        });
-        continue;
+        const visitKey = `${targetFile}::${fnName}`;
+        if (visited.has(visitKey)) continue;
+        visited.add(visitKey);
+
+        const fileText = readFileOrNull(targetFile);
+        if (fileText === null) continue;
+
+        const fn = extractResolverFunctionText(fileText, fnName);
+        if (fn === null) continue;
+        const paramTexts = splitTopLevelCommaList(fn.paramText);
+        const paramText = paramTexts[site.argIndex];
+        if (paramText === undefined) continue;
+        const param = parseResolverParam(paramText);
+        if (param === null) continue;
+
+        if (param.kind === 'destructured') {
+          scopes.push({
+            text: `{ ${param.fields.join(', ')} } = ${callAnchor};`,
+            anchor: callAnchor,
+          });
+          continue;
+        }
+
+        scopes.push({ text: fn.bodyText, anchor: param.name });
+        queue.push({ file: targetFile, scanText: fn.bodyText, callAnchor: param.name });
       }
-
-      scopes.push({ text: fn.bodyText, anchor: param.name });
-      queue.push({ file: resolved, scanText: fn.bodyText, callAnchor: param.name });
     }
   }
 
@@ -2314,6 +3160,184 @@ function selfTestCases() {
         return { routes: [] };
       },
       expect: /under this guard's floor/u,
+    },
+    {
+      // The real media `libraryService.listLibrary(db, query)` shape
+      // (POPS-3539): `query` as the SECOND of two positional arguments,
+      // through a property access on an imported namespace object. The OLD
+      // resolver only followed a sole-argument, bare-identifier call
+      // (`name(query)`), so it never found this call at all — every field
+      // reached only this way reported as unread even though the service
+      // function reads it.
+      name: 'PASSING TWIN: a namespace-qualified call passes query as a non-first positional argument (POPS-3539)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/namespace-check': {
+            get: {
+              parameters: [
+                { name: 'type', in: 'query' },
+                { name: 'genre', in: 'query' },
+              ],
+            },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/db-index.ts',
+          "export * as libraryService from './services/library-service.js';\n"
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/services/library-service.ts',
+          [
+            'export function listLibrary(db, input) {',
+            '  return { type: input.type, genre: input.genre };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/namespace-handlers.ts',
+          [
+            "import { libraryService } from '../../db-index.js';",
+            '',
+            'export function makeNamespaceHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => ({',
+            '      status: 200,',
+            '      body: libraryService.listLibrary(db, query),',
+            '    }),',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/namespace-check',
+              handlerFile: 'pillars/purchases/src/api/rest/namespace-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: null,
+    },
+    {
+      name: 'ADVERSARIAL: a namespace-qualified resolver that stops reading a field is still caught (POPS-3539)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/namespace-check': {
+            get: {
+              parameters: [
+                { name: 'type', in: 'query' },
+                { name: 'genre', in: 'query' },
+              ],
+            },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/db-index.ts',
+          "export * as libraryService from './services/library-service.js';\n"
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/services/library-service.ts',
+          [
+            'export function listLibrary(db, input) {',
+            '  return { type: input.type };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/namespace-handlers.ts',
+          [
+            "import { libraryService } from '../../db-index.js';",
+            '',
+            'export function makeNamespaceHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => ({',
+            '      status: 200,',
+            '      body: libraryService.listLibrary(db, query),',
+            '    }),',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/namespace-check',
+              handlerFile: 'pillars/purchases/src/api/rest/namespace-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: /field 'genre'/u,
+    },
+    {
+      // The real food `resolveForLine(db, query)` shape (POPS-3539): a
+      // PLAIN (non-namespace) resolver called with `query` as the second of
+      // two positional arguments. The OLD resolver's sole-argument
+      // restriction missed this shape too, not only the namespaced one.
+      name: 'PASSING TWIN: a plain (non-namespace) call passes query as a non-first positional argument (POPS-3539)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/resolve-line-check': {
+            get: { parameters: [{ name: 'lineIndex', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/resolve-line-scope.ts',
+          [
+            'export function resolveForLine(db, args) {',
+            '  return { lineIndex: args.lineIndex };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/resolve-line-handlers.ts',
+          [
+            "import { resolveForLine } from './resolve-line-scope.js';",
+            '',
+            'export function makeResolveLineHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => ({',
+            '      status: 200,',
+            '      body: resolveForLine(db, query),',
+            '    }),',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/resolve-line-check',
+              handlerFile: 'pillars/purchases/src/api/rest/resolve-line-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: null,
     },
   ];
 }
