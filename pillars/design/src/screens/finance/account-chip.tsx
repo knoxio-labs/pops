@@ -51,7 +51,7 @@ export function AccountAvatar({
   if (institution) {
     return (
       <span
-        className={cn(shape, 'font-semibold text-white')}
+        className={cn(shape, 'font-semibold text-on-media')}
         style={{ backgroundColor: institution.colour }}
         aria-hidden
       >

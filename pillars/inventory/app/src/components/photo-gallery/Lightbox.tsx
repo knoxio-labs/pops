@@ -30,7 +30,7 @@ function NavButton({
     <Button
       variant="ghost"
       size="icon"
-      className={`absolute ${side}-4 text-white hover:bg-white/20`}
+      className={`absolute ${side}-4 text-on-media hover:bg-on-media/20`}
       onClick={onClick}
       aria-label={ariaLabel}
     >
@@ -60,8 +60,8 @@ function LightboxBody({
         alt={photo.caption ?? 'Photo'}
         className="max-w-full max-h-[80vh] object-contain rounded-md"
       />
-      {photo.caption && <p className="text-white text-sm text-center">{photo.caption}</p>}
-      <p className="text-white/60 text-xs">
+      {photo.caption && <p className="text-on-media text-sm text-center">{photo.caption}</p>}
+      <p className="text-on-media/60 text-xs">
         {index + 1} / {total}
       </p>
     </div>
@@ -86,7 +86,7 @@ export function Lightbox({ photo, index, total, src, onClose, onNext, onPrev }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-overlay-scrim/90 flex items-center justify-center"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -95,7 +95,7 @@ export function Lightbox({ photo, index, total, src, onClose, onNext, onPrev }: 
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-4 right-4 text-white hover:bg-white/20"
+        className="absolute top-4 right-4 text-on-media hover:bg-on-media/20"
         onClick={onClose}
         aria-label="Close lightbox"
       >

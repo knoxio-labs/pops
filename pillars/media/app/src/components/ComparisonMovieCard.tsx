@@ -79,7 +79,7 @@ export function ComparisonMovieCard(props: ComparisonMovieCardProps) {
           topLeft={topLeft}
           topRight={topRight}
           overlay={overlay}
-          overlayGradient="from-black/60"
+          overlayGradient="from-overlay-scrim/60"
           lazy={false}
           className="rounded-none"
         />

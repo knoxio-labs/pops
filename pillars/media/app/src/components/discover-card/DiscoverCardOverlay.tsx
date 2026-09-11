@@ -21,7 +21,7 @@ function IconButton({
     <Button
       size="icon"
       variant="ghost"
-      className="h-7 w-7 text-white hover:bg-white/20"
+      className="h-7 w-7 text-on-media hover:bg-on-media/20"
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -152,7 +152,7 @@ export function DiscoverCardOverlay(props: DiscoverCardProps & { year: string | 
       <Button
         size="icon"
         variant="ghost"
-        className="ml-auto h-7 w-7 text-white hover:bg-white/20"
+        className="ml-auto h-7 w-7 text-on-media hover:bg-on-media/20"
         onClick={() => onNotInterested?.(tmdbId)}
         disabled={isDismissing}
         title="Not Interested"

@@ -16,14 +16,14 @@ export function MovieHeroBreadcrumb({ title }: { title: string }) {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/media" className="text-white/70 hover:text-white">
+              <Link to="/media" className="text-on-media/70 hover:text-on-media">
                 Media
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbSeparator className="text-white/50" />
+          <BreadcrumbSeparator className="text-on-media/50" />
           <BreadcrumbItem>
-            <BreadcrumbPage className="text-white/90">{title}</BreadcrumbPage>
+            <BreadcrumbPage className="text-on-media/90">{title}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

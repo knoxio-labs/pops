@@ -88,7 +88,7 @@ export function InstitutionMark({ institution }: { institution: Institution }) {
   }
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-on-media"
       style={{ backgroundColor: institution.colour }}
       aria-hidden
     >

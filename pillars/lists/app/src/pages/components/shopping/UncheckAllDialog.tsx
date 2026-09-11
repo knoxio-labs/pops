@@ -30,7 +30,7 @@ export function UncheckAllDialog(props: UncheckAllDialogProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="shopping-uncheck-all-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay-scrim/40 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}

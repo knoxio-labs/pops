@@ -115,7 +115,7 @@ export function EntityColourField({
         {colour ? (
           <span className="inline-flex items-center gap-2 text-sm">
             <span
-              className="size-3.5 rounded-full border border-black/10"
+              className="size-3.5 rounded-full border border-border"
               style={{ backgroundColor: colour.swatch }}
             />
             {colour.swatch}

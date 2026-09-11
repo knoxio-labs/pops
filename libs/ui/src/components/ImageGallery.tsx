@@ -106,7 +106,7 @@ function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: Li
     <div
       role="dialog"
       aria-modal
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay-scrim/90 p-4"
       onClick={onClose}
     >
       <div className="relative max-h-full max-w-6xl" onClick={(e) => e.stopPropagation()}>
@@ -116,7 +116,7 @@ function Lightbox({ active, itemsLength, onDelete, goPrev, goNext, onClose }: Li
           className="max-h-[calc(100vh-6rem)] max-w-full object-contain"
         />
         {active.caption ? (
-          <div className="mt-2 text-center text-sm text-white/80">{active.caption}</div>
+          <div className="mt-2 text-center text-sm text-on-media/80">{active.caption}</div>
         ) : null}
         <div className="absolute right-2 top-2 flex gap-1">
           {onDelete ? (
@@ -187,7 +187,7 @@ export function ImageGallery({
           className="aspect-video w-full object-contain transition-transform group-hover:scale-[1.01]"
         />
         {active.caption ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-left text-sm text-white">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-overlay-scrim/70 to-transparent p-3 text-left text-sm text-on-media">
             {active.caption}
           </div>
         ) : null}

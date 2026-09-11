@@ -95,6 +95,11 @@
   --color-print-rule-strong: var(--print-rule-strong);
   --color-print-tint: var(--print-tint);
 
+  /* Overlay scrim / on-media — deliberately theme-invariant, see the :root
+     definitions */
+  --color-overlay-scrim: var(--overlay-scrim);
+  --color-on-media: var(--on-media);
+
   /* Wordmark gradient stops */
   --color-brand-gradient-from: var(--brand-gradient-from);
   --color-brand-gradient-via: var(--brand-gradient-via);
@@ -248,6 +253,16 @@
   --print-rule: oklch(0.87 0 0);
   --print-rule-strong: oklch(0.71 0 0);
   --print-tint: oklch(0.96 0 0);
+
+  /* Overlay scrim / on-media. Not overridden in `.dark`: these sit on a
+     photograph, video frame, or a colour the user chose (an institution or
+     tier colour) rather than the page itself, so the colour behind or on top
+     of that surface is theme-invariant by construction — a modal scrim over
+     a poster, and the caption text on it or on a user-chosen chip colour,
+     stay black and white regardless of which theme the surrounding chrome is
+     in. */
+  --overlay-scrim: oklch(0 0 0);
+  --on-media: oklch(1 0 0);
 
   /* Wordmark gradient. Theme-invariant on purpose — the POPS wordmark is the
      one piece of chrome that reads the same in both themes. */

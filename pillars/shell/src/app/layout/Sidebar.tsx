@@ -31,7 +31,7 @@ export function Sidebar({ open }: SidebarProps) {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        className="fixed inset-0 bg-overlay-scrim/50 z-40 md:hidden"
         onClick={close}
         aria-hidden="true"
       />

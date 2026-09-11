@@ -173,7 +173,7 @@ export function CardWithActionOverlay({
   onClick,
   disabled,
   ariaLabel,
-  overlayGradient = 'from-black/80',
+  overlayGradient = 'from-overlay-scrim/80',
   'data-testid': testId,
 }: CardWithActionOverlayProps) {
   const i = getInteractiveProps(onClick, disabled, ariaLabel, alt);

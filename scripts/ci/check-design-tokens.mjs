@@ -188,6 +188,17 @@ const PALETTE_UTILITY_RE = new RegExp(
 );
 
 /**
+ * `white` and `black` carry no numeric shade, so `PALETTE_UTILITY_RE` never
+ * sees them — but `bg-black/50` and `text-white` are exactly as raw as
+ * `bg-slate-900`, just theme-invariant by accident of Tailwind's naming
+ * rather than by design. This matcher closes that gap.
+ */
+const BASE_COLOR_UTILITY_RE = new RegExp(
+  String.raw`(?<![\w-])${VARIANT_CHAIN}${IMPORTANT}(?:${COLOR_PROPERTIES.join('|')})-(?:white|black)${OPACITY_MODIFIER}${IMPORTANT}${UTILITY_BOUNDARY_AHEAD}`,
+  'g'
+);
+
+/**
  * A colour utility whose arbitrary value is a CSS named colour: `text-[red]`,
  * `dark:bg-[tomato]`. Restricted to colour properties, so `w-[tan]` — which is
  * not a thing, but neither is it a colour — cannot be dragged in.
@@ -256,6 +267,9 @@ const SUGGESTED_TOKEN = {
   zinc: 'muted / muted-foreground / border',
   neutral: 'muted / muted-foreground / border',
   stone: 'muted / muted-foreground / border',
+  white: 'a matching *-foreground token on a filled background, or on-media over a photo/video',
+  black:
+    'a matching *-foreground token on a filled background, or overlay-scrim over a photo/video',
 };
 
 /**
@@ -302,6 +316,16 @@ export function findViolations(relPath, source) {
         kind: 'palette',
         text: match[0],
         hint: hue === undefined ? undefined : SUGGESTED_TOKEN[hue],
+      });
+    }
+    for (const match of line.matchAll(BASE_COLOR_UTILITY_RE)) {
+      const hue = match[0].includes('white') ? 'white' : 'black';
+      violations.push({
+        file: relPath,
+        line: index + 1,
+        kind: 'palette',
+        text: match[0],
+        hint: SUGGESTED_TOKEN[hue],
       });
     }
     for (const re of [COLOR_LITERAL_ARBITRARY_RE, NAMED_COLOR_ARBITRARY_RE]) {
