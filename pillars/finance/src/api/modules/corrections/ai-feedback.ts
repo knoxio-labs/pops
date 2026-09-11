@@ -6,9 +6,19 @@ import { ChangeSetSchema, type ChangeSet } from '../../../contract/rest-correcti
  * `FeedbackStore` (`ai-runtime.ts`).
  * Ported from the monolith `core/corrections/handlers/ai-inference.ts`.
  */
+import {
+  RULE_GEN_MAX_TOKENS_KEY,
+  RULE_GEN_MODEL_KEY,
+} from '../../../contract/settings/ai-settings-keys.js';
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
 import { extractJsonFromReply } from '../ai-json.js';
-import { ClaudeCompletionError, getClaudeCompleter, getFeedbackStore } from './ai-runtime.js';
+import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import {
+  ClaudeCompletionError,
+  CORRECTIONS_DEFAULT_MODEL,
+  getClaudeCompleter,
+  getFeedbackStore,
+} from './ai-runtime.js';
 import {
   AdaptedSignalSchema,
   ChangeSetImpactSummarySchema,
@@ -18,6 +28,9 @@ import {
 import type { ChangeSetImpactSummary } from './ai-types.js';
 
 const { normalizePatternForStorage } = transactionCorrectionsService;
+
+/** This call's own natural cap — an adapted signal is a handful of fields, smaller than a fresh proposal. */
+const INTERPRET_MAX_TOKENS_DEFAULT = 250;
 
 export interface RejectedChangeSetFeedbackRecord {
   createdAt: string;
@@ -151,6 +164,7 @@ function parseAdaptedSignal(text: string, originalSignal: CorrectionSignal): Cor
  * the existing "no text back" degrade below.
  */
 export async function interpretRejectionFeedback(
+  db: FinanceDb,
   originalSignal: CorrectionSignal,
   rejectedChangeSet: ChangeSet,
   feedback: string
@@ -163,7 +177,18 @@ export async function interpretRejectionFeedback(
         rejectedChangeSet,
         feedback.trim().slice(0, 500)
       ),
-      maxTokens: 250,
+      model: resolveAiString(
+        db,
+        RULE_GEN_MODEL_KEY,
+        'FINANCE_CORRECTIONS_AI_MODEL',
+        CORRECTIONS_DEFAULT_MODEL
+      ),
+      maxTokens: resolveAiMaxTokens(
+        db,
+        RULE_GEN_MAX_TOKENS_KEY,
+        undefined,
+        INTERPRET_MAX_TOKENS_DEFAULT
+      ),
       operation: 'rejection-interpret',
     });
   } catch (error) {

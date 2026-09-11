@@ -42,6 +42,7 @@ async function resolveEffectiveSignal(
   });
   if (!latest) return { effectiveSignal: signal, feedback: null };
   const effectiveSignal = await interpretRejectionFeedback(
+    db,
     signal,
     latest.changeSet,
     latest.feedback

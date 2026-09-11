@@ -20,6 +20,7 @@ import {
   type FinanceDb,
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 import {
   analyzeCorrection,
   buildAnalyzePrompt,
@@ -34,6 +35,7 @@ let opened: OpenedFinanceDb;
 let db: FinanceDb;
 
 beforeEach(() => {
+  invalidateAiSettingsCache();
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-analyze-test-'));
   opened = openFinanceDb(join(tmpDir, 'finance.db'));
   db = opened.db;

@@ -130,7 +130,7 @@ interface ChunkArgs {
 
 async function resolveChunk(args: ChunkArgs): Promise<void> {
   const { env, groups, breaker, knownTagSet } = args;
-  const { context, counters } = env;
+  const { db, context, counters } = env;
 
   let batch;
   try {
@@ -138,7 +138,7 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
       groups.map((group) => group.request),
       context.importBatchId,
       context.knownTags,
-      { tagDescriptions: context.tagDescriptions }
+      { db, tagDescriptions: context.tagDescriptions }
     );
     breaker.recordRecovery();
   } catch (error) {

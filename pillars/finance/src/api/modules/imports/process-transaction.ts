@@ -129,6 +129,7 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
 }
 
 async function tryAiCategorization(
+  db: FinanceDb,
   transaction: ParsedTransaction,
   context: ProcessContext,
   counters: AiCounters
@@ -145,6 +146,7 @@ async function tryAiCategorization(
       context.importBatchId,
       context.knownTags,
       {
+        db,
         knownEntityNames: buildKnownEntityHint(context.entityLookup),
         tagDescriptions: context.tagDescriptions,
       }
@@ -245,8 +247,8 @@ async function classifyTransaction(
   const staged = classifyWithoutAi(args);
   if (staged.kind === 'resolved') return staged.result;
 
-  const { transaction, context, counters } = args;
-  const aiEntry = await tryAiCategorization(transaction, context, counters);
+  const { db, transaction, context, counters } = args;
+  const aiEntry = await tryAiCategorization(db, transaction, context, counters);
   return finalizeAiResult(args, aiEntry);
 }
 

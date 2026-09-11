@@ -1,14 +1,28 @@
 /**
- * Env-derived configuration for every categorizer call shape — the model, the
- * API key, the token budgets, the batch size and the USD cost estimate.
+ * Configuration for every categorizer call shape — the model, the API key,
+ * the token budgets, the batch size and the USD cost estimate.
  *
  * Split out of `ai-categorizer.ts` so the tag-only caller (POPS-2596) reads the
  * same model/key/pricing as the entity categorizer instead of carrying a second
- * copy of the env plumbing that could drift from it.
+ * copy of the config plumbing that could drift from it.
+ *
+ * `getModel`/`getMaxTokens` resolve through the settings store first
+ * (POPS-2589, `finance.aiCategorizer.*`), then their env var, then the
+ * constants below — see `ai-settings-resolver.ts` for the shared ladder.
+ * `getBatchMaxTokens`/`getTagsOnlyMaxTokens` stay env-only: the manifest
+ * declares no per-batch or tag-only cap, only the single-row one.
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-/** Default categorizer model, overridable via `FINANCE_AI_CATEGORIZER_MODEL`. */
+import {
+  AI_CATEGORIZER_MAX_TOKENS_KEY,
+  AI_CATEGORIZER_MODEL_KEY,
+} from '../../../contract/settings/ai-settings-keys.js';
+import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+
+import type { FinanceDb } from '../../../db/index.js';
+
+/** Default categorizer model, overridable via `finance.aiCategorizer.model` then `FINANCE_AI_CATEGORIZER_MODEL`. */
 export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
 const DEFAULT_MAX_TOKENS = 200;
 // Claude Haiku pricing (USD per 1M tokens) for the cost estimate.
@@ -49,13 +63,22 @@ export function isTagsForMatchedEnabled(): boolean {
   return process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] === 'true';
 }
 
-export function getModel(): string {
-  return process.env['FINANCE_AI_CATEGORIZER_MODEL'] ?? CATEGORIZER_DEFAULT_MODEL;
+export function getModel(db: FinanceDb): string {
+  return resolveAiString(
+    db,
+    AI_CATEGORIZER_MODEL_KEY,
+    'FINANCE_AI_CATEGORIZER_MODEL',
+    CATEGORIZER_DEFAULT_MODEL
+  );
 }
 
-export function getMaxTokens(): number {
-  const parsed = envInt('FINANCE_AI_CATEGORIZER_MAX_TOKENS');
-  return Number.isNaN(parsed) ? DEFAULT_MAX_TOKENS : parsed;
+export function getMaxTokens(db: FinanceDb): number {
+  return resolveAiMaxTokens(
+    db,
+    AI_CATEGORIZER_MAX_TOKENS_KEY,
+    'FINANCE_AI_CATEGORIZER_MAX_TOKENS',
+    DEFAULT_MAX_TOKENS
+  );
 }
 
 export function getApiKey(): string {

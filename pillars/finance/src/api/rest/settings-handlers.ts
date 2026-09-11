@@ -12,6 +12,12 @@
  * `UnknownSettingKeyError` (a free-form `setMany`/`set` addressing an undeclared
  * key) is remapped to the pillar's `ValidationError` so `runHttp` returns a 400
  * rather than letting it escape as a 500.
+ *
+ * Every write path (`set`/`setMany`/`resetKey`/`reset`) also drops the AI
+ * settings resolver's cache (POPS-2589) — the categorizer and corrections AI
+ * cluster cache their settings read for the life of the process, and this is
+ * the seam that makes a save observed on the next read instead of needing a
+ * restart.
  */
 import {
   makeSettingsHandlers as makeSharedSettingsHandlers,
@@ -21,6 +27,7 @@ import {
 
 import { financeKeyDefaults } from '../../contract/settings/key-defaults.js';
 import { type FinanceDb } from '../../db/index.js';
+import { invalidateAiSettingsCache } from '../modules/ai-settings-resolver.js';
 import { ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 
@@ -74,20 +81,30 @@ export function makeSettingsHandlers(db: FinanceDb) {
       runSettings(() => ({ status: 200 as const, body: shared.getMany(undefined, body.keys) })),
 
     set: ({ params, body }: Req['set']) =>
-      runSettings(() => ({
-        status: 200 as const,
-        body: shared.set(undefined, params.key, body.value),
-      })),
+      runSettings(() => {
+        const result = shared.set(undefined, params.key, body.value);
+        invalidateAiSettingsCache();
+        return { status: 200 as const, body: result };
+      }),
 
     setMany: ({ body }: Req['setMany']) =>
-      runSettings(() => ({ status: 200 as const, body: shared.setMany(undefined, body.entries) })),
+      runSettings(() => {
+        const result = shared.setMany(undefined, body.entries);
+        invalidateAiSettingsCache();
+        return { status: 200 as const, body: result };
+      }),
 
     resetKey: ({ params }: Req['resetKey']) =>
-      runSettings(() => ({ status: 200 as const, body: shared.resetKey(undefined, params.key) })),
+      runSettings(() => {
+        const result = shared.resetKey(undefined, params.key);
+        invalidateAiSettingsCache();
+        return { status: 200 as const, body: result };
+      }),
 
     reset: ({ body }: Req['reset']) =>
       runSettings(() => {
         const result = shared.reset(undefined, body.keys);
+        invalidateAiSettingsCache();
         return {
           status: 200 as const,
           body: { reset: [...result.reset], settings: { ...result.settings } },
