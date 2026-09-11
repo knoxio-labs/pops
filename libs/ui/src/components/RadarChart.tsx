@@ -32,7 +32,14 @@ export interface RadarChartProps {
   style?: CSSProperties;
 }
 
-const DEFAULT_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+/** SVG can resolve CSS custom properties at paint time, so the `--chart-1..5` ramp is used directly. */
+const DEFAULT_COLORS = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+];
 
 function pointOn(cx: number, cy: number, r: number, angle: number): [number, number] {
   return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];

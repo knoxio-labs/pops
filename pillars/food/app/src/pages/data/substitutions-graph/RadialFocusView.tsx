@@ -55,7 +55,7 @@ export function RadialFocusView(props: RadialFocusViewProps): React.ReactElement
         onEdgeClick={props.onEdgeClick}
       />
       <g>
-        <circle cx={CENTRE_X} cy={CENTRE_Y} r={28} fill="#1f2937" />
+        <circle cx={CENTRE_X} cy={CENTRE_Y} r={28} fill="var(--primary)" />
         <text
           x={CENTRE_X}
           y={CENTRE_Y + 4}
@@ -131,7 +131,7 @@ function RadialSpoke(props: RadialSpokeProps): React.ReactElement {
         y1={CENTRE_Y}
         x2={props.x}
         y2={props.y}
-        stroke="#64748b"
+        stroke="var(--muted-foreground)"
         strokeWidth={strokeWidth}
         strokeDasharray={dasharray}
         onClick={() => props.onEdgeClick(props.edge)}
@@ -166,7 +166,7 @@ function RadialOtherNode({
       onClick={() => onNodeClick(node)}
       style={{ cursor: 'pointer' }}
     >
-      <circle r={20} fill={node.kind === 'variant' ? '#3b82f6' : '#9ca3af'} />
+      <circle r={20} fill={node.kind === 'variant' ? 'var(--info)' : 'var(--muted-foreground)'} />
       <text textAnchor="middle" fontSize="11" y={4} fill="white" fontWeight="500">
         {truncate(nodeLabel(node))}
       </text>

@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PreferenceProfile } from './PreferenceProfile';
+import { CHART_CATEGORICAL_COLORS } from '@pops/ui/theme/chart-colors';
+
+import { CHART_COLORS, PreferenceProfile } from './PreferenceProfile';
 
 // Mock recharts to avoid SVG rendering issues in jsdom
 vi.mock('recharts', () => ({
@@ -119,5 +121,13 @@ describe('PreferenceProfile', () => {
     renderProfile({ data: fullProfile, isLoading: false });
 
     expect(screen.getByText('Your Preference Profile')).toBeInTheDocument();
+  });
+
+  it('sources the genre-distribution ramp from CHART_CATEGORICAL_COLORS, not a hand-rolled hsl list', () => {
+    expect(CHART_COLORS).toEqual(['var(--color-primary)', ...CHART_CATEGORICAL_COLORS]);
+    for (const color of CHART_COLORS) {
+      expect(color).not.toMatch(/^hsl\(/);
+      expect(color).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    }
   });
 });

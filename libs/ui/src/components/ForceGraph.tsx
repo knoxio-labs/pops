@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '../lib/utils';
+import { GRAPH_COLORS } from '../theme/graph-colors';
 import {
   type PointerHandlers,
   useAnimationLoop,
@@ -48,6 +49,13 @@ export interface ForceGraphProps {
   className?: string;
   height?: number;
 }
+
+/** Default prop values, kept in sync with `GRAPH_COLORS` so a re-hardcode fails a test. */
+export const FORCE_GRAPH_DEFAULT_COLORS = {
+  node: GRAPH_COLORS.node.default,
+  edge: GRAPH_COLORS.fallbacks.edge,
+  label: GRAPH_COLORS.fallbacks.label,
+} as const;
 
 interface PointerOverlayProps {
   handlers: PointerHandlers;
@@ -88,9 +96,9 @@ function pointerHandlerProps({ handlers, activePointerIdRef }: PointerOverlayPro
 export function ForceGraph({
   nodes,
   edges,
-  defaultNodeColor = '#64748b',
-  edgeColor = '#cbd5e1',
-  labelColor = '#334155',
+  defaultNodeColor = FORCE_GRAPH_DEFAULT_COLORS.node,
+  edgeColor = FORCE_GRAPH_DEFAULT_COLORS.edge,
+  labelColor = FORCE_GRAPH_DEFAULT_COLORS.label,
   onNodeClick,
   onNodeHover,
   iterationsPerFrame = 1,

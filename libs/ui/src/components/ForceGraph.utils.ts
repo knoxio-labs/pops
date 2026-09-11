@@ -1,3 +1,5 @@
+import { GRAPH_COLORS } from '../theme/graph-colors';
+
 import type { ForceEdge, ForceNode } from './ForceGraph';
 
 export interface InternalNode extends ForceNode {
@@ -152,7 +154,7 @@ export function drawNodes(
     ctx.fill();
 
     if (opts.hoveredId === n.id) {
-      ctx.strokeStyle = '#1d4ed8';
+      ctx.strokeStyle = GRAPH_COLORS.node.currentBorder;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
