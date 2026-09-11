@@ -38,9 +38,23 @@ export type TransactionListInput = {
   offset?: number;
 };
 
+/**
+ * The budget period vocabulary the finance pillar actually stores and
+ * enforces on `POST /budgets` / `PATCH /budgets/:id`, mirrored from the
+ * `BudgetPeriodBody` zod enum in `pillars/finance/src/contract/rest-budgets.ts`
+ * — the mcp pillar cannot import that contract module directly (see
+ * `TRANSACTION_TYPES` above for why). `GET /budgets`'s own `period` query
+ * param is a loose string, not a closed enum server-side, so this mirrors
+ * the create/update enum instead — the same casing the column actually
+ * holds. Kept in step by `finance-budget-period.test.ts`, which reads the
+ * enum back off the finance pillar's committed OpenAPI spec.
+ */
+export const BUDGET_PERIODS = ['Monthly', 'Yearly'] as const;
+export type BudgetPeriod = (typeof BUDGET_PERIODS)[number];
+
 export type BudgetListInput = {
   search?: string;
-  period?: 'monthly' | 'yearly';
+  period?: BudgetPeriod;
   active?: 'true' | 'false';
   limit?: number;
   offset?: number;
