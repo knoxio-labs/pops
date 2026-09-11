@@ -516,16 +516,20 @@ describe('TagRulesBrowserPage', () => {
     );
   });
 
-  it('shows the tagged count on an apply-existing with no refusals', async () => {
-    const user = userEvent.setup();
-    tagRulesApplyExisting.mockResolvedValue(
-      ok({ data: { dryRun: false, matched: 3, updated: 3, refusedFacetConflict: 0 } })
-    );
+  async function clickApplyExisting(user: ReturnType<typeof userEvent.setup>) {
     renderPage();
     const applyButtons = await screen.findAllByRole('button', {
       name: /apply tag rule .* to existing transactions/i,
     });
     await user.click(applyButtons[0]!);
+  }
+
+  it('shows the tagged count on an apply-existing with no refusals', async () => {
+    const user = userEvent.setup();
+    tagRulesApplyExisting.mockResolvedValue(
+      ok({ data: { dryRun: false, matched: 3, updated: 3, refusedFacetConflict: 0 } })
+    );
+    await clickApplyExisting(user);
     await waitFor(() =>
       expect(tagRulesApplyExisting).toHaveBeenCalledWith({ path: { id: 'rule-1' }, body: {} })
     );
@@ -534,25 +538,52 @@ describe('TagRulesBrowserPage', () => {
     );
   });
 
+  it('shows nothing matched when no rows were touched and none were refused', async () => {
+    const user = userEvent.setup();
+    tagRulesApplyExisting.mockResolvedValue(
+      ok({ data: { dryRun: false, matched: 0, updated: 0, refusedFacetConflict: 0 } })
+    );
+    await clickApplyExisting(user);
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith('No existing transactions needed tagging')
+    );
+  });
+
   // Proves the dry-run/apply surface's toast distinguishes "already had it"
   // from "refused, would have broken cardinality" (POPS-2673) — a plain
   // `updated: 0` toast can't tell those apart, so this must fail without a
   // dedicated refusal count in the response.
-  it('shows the refused-facet-conflict count alongside the tagged count', async () => {
+  it('states both outcomes distinctly when some rows are tagged and some refused', async () => {
     const user = userEvent.setup();
     tagRulesApplyExisting.mockResolvedValue(
       ok({ data: { dryRun: false, matched: 2, updated: 1, refusedFacetConflict: 1 } })
     );
-    renderPage();
-    const applyButtons = await screen.findAllByRole('button', {
-      name: /apply tag rule .* to existing transactions/i,
-    });
-    await user.click(applyButtons[0]!);
+    await clickApplyExisting(user);
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
-        'Tagged 1 existing transaction 1 was refused — it already carries a conflicting tag'
+        'Tagged 1 existing transaction; 1 was refused because it already carries a conflicting tag'
       )
     );
+  });
+
+  // The exact case POPS-2673 exists to distinguish: every matching row was
+  // refused, so nothing was tagged. This must never read like the "no
+  // existing transactions" no-op fallback — that would say a conflicting
+  // rule found nothing to do, when in fact it found rows and was refused.
+  it('never says "needed tagging" when every matching row was refused', async () => {
+    const user = userEvent.setup();
+    tagRulesApplyExisting.mockResolvedValue(
+      ok({ data: { dryRun: false, matched: 1, updated: 0, refusedFacetConflict: 1 } })
+    );
+    await clickApplyExisting(user);
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        'Nothing was tagged — 1 matching transaction already carries a conflicting tag'
+      )
+    );
+    const [message] = toastSuccess.mock.calls[0]!;
+    expect(message).not.toMatch(/needed tagging/);
+    expect(message).not.toMatch(/already had it/);
   });
 
   it('resets an entity-scoped rule back to Global via the edit dialog', async () => {

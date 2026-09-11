@@ -327,6 +327,10 @@
   "tagRules.applyExisting.tagged_one": "Tagged {{count}} existing transaction",
   "tagRules.applyExisting.tagged_other": "Tagged {{count}} existing transactions",
   "tagRules.applyExisting.none": "No existing transactions needed tagging",
-  "tagRules.applyExisting.refused_one": "{{count}} was refused — it already carries a conflicting tag",
-  "tagRules.applyExisting.refused_other": "{{count}} were refused — they already carry a conflicting tag"
+  "tagRules.applyExisting.refusedClause_one": "{{count}} was refused because it already carries a conflicting tag",
+  "tagRules.applyExisting.refusedClause_other": "{{count}} were refused because they already carry a conflicting tag",
+  "tagRules.applyExisting.taggedWithRefused_one": "Tagged {{count}} existing transaction; {{refusedClause}}",
+  "tagRules.applyExisting.taggedWithRefused_other": "Tagged {{count}} existing transactions; {{refusedClause}}",
+  "tagRules.applyExisting.refusedOnly_one": "Nothing was tagged — {{count}} matching transaction already carries a conflicting tag",
+  "tagRules.applyExisting.refusedOnly_other": "Nothing was tagged — {{count}} matching transactions already carry a conflicting tag"
 }

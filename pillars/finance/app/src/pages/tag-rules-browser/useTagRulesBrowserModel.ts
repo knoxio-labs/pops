@@ -124,6 +124,29 @@ function useDisableFlow() {
 }
 
 /**
+ * Words the apply-existing toast per combination of `updated` and
+ * `refusedFacetConflict` rather than concatenating fragments, so a rule
+ * whose matches were all refused (POPS-2673) never reads as "nothing needed
+ * tagging" — that phrasing is reserved for when nothing matched at all.
+ */
+function applyExistingMessage(
+  t: ReturnType<typeof useTranslation<'finance'>>['t'],
+  { updated, refusedFacetConflict }: { updated: number; refusedFacetConflict: number }
+): string {
+  if (updated > 0 && refusedFacetConflict > 0) {
+    return t('tagRules.applyExisting.taggedWithRefused', {
+      count: updated,
+      refusedClause: t('tagRules.applyExisting.refusedClause', { count: refusedFacetConflict }),
+    });
+  }
+  if (updated > 0) return t('tagRules.applyExisting.tagged', { count: updated });
+  if (refusedFacetConflict > 0) {
+    return t('tagRules.applyExisting.refusedOnly', { count: refusedFacetConflict });
+  }
+  return t('tagRules.applyExisting.none');
+}
+
+/**
  * Retroactive apply (#3660): merges a rule's tags into every existing
  * matching transaction it hasn't already tagged. A direct, real (non-dryRun)
  * apply — the browser doesn't offer a preview step since the operation is
@@ -132,9 +155,7 @@ function useDisableFlow() {
  *
  * A transaction that already carries a conflicting value on a single-valued
  * facet (`venue`, `occasion`, `channel`) is refused rather than merged
- * (POPS-2673); `refusedFacetConflict` is only appended to the toast when it's
- * non-zero, mirroring how `updated` itself is hidden behind the "no existing
- * transactions" fallback rather than ever showing a bare `0`.
+ * (POPS-2673); see {@link applyExistingMessage} for how the toast is worded.
  */
 function useApplyExistingFlow() {
   const { t } = useTranslation('finance');
@@ -145,16 +166,7 @@ function useApplyExistingFlow() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['finance', 'tagRules', 'list'] });
       void queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
-      const { updated, refusedFacetConflict } = result.data;
-      const taggedMessage =
-        updated > 0
-          ? t('tagRules.applyExisting.tagged', { count: updated })
-          : t('tagRules.applyExisting.none');
-      const message =
-        refusedFacetConflict > 0
-          ? `${taggedMessage} ${t('tagRules.applyExisting.refused', { count: refusedFacetConflict })}`
-          : taggedMessage;
-      toast.success(message);
+      toast.success(applyExistingMessage(t, result.data));
     },
     onError: (err: Error) => toast.error(err.message),
   });
