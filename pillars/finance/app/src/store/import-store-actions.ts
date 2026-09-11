@@ -1,6 +1,7 @@
 import { firstImportStep } from '../components/imports/step-labels';
 import { pendingTagRuleKey } from '../lib/tag-rule-reconcile';
 import { findSimilarTransactions } from '../lib/transaction-utils';
+import { fileIdentity, matchesFileIdentities } from './file-identity';
 import {
   type AddPendingChangeSetInput,
   type AddPendingEntityInput,
@@ -27,9 +28,17 @@ export function buildSetters(set: StoreSet) {
     setFiles: (files: File[]) =>
       set((state) => {
         const sourceFileNames = files.map((f) => f.name);
-        return isSameFileSet(state.files, files)
-          ? { files, sourceFileNames }
-          : { ...downstreamReset, files, sourceFileNames };
+        const sourceFileIdentities = files.map(fileIdentity);
+        // A resumed draft has no handles — the file is never stored — so the
+        // identities it recorded are the only way to recognise the same file
+        // picked again. While live handles exist they stay the authority.
+        const sameBatch =
+          state.files.length > 0
+            ? isSameFileSet(state.files, files)
+            : matchesFileIdentities(state.sourceFileIdentities, files);
+        return sameBatch
+          ? { files, sourceFileNames, sourceFileIdentities }
+          : { ...downstreamReset, files, sourceFileNames, sourceFileIdentities };
       }),
     setAccount: (accountId: string, accountName: string) => set({ accountId, accountName }),
     setDialectId: (dialectId: ImportStore['dialectId']) => set({ dialectId }),

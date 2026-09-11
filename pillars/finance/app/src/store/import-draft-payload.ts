@@ -3,10 +3,16 @@
  * the card fields derived from it on every write.
  *
  * `files` is deliberately not in it: a `File` handle is not serialisable,
- * and the file is not stored anywhere. On resume there is nothing to
- * compare a re-selected file against, so selecting one reads as a new batch
- * and cascades the usual downstream reset; only `sourceFileNames` survives,
- * to label the card.
+ * and the file is not stored anywhere. What survives is each file's name,
+ * size and modification time (`sourceFileIdentities`) — enough to recognise
+ * the same file picked again after a resume and keep the work, where a
+ * different file still reads as a new batch and cascades the downstream
+ * reset (POPS-18). `sourceFileNames` labels the card.
+ *
+ * `sourceFileIdentities` is optional on the wire. Drafts never expire, and
+ * one written before it existed must still resume: it hydrates over
+ * `initialState`, so the field is simply empty and a re-selection resets, as
+ * it always did.
  *
  * The payload crosses the wire as opaque JSON. What makes it safe to put
  * back into the store is the server's `shapeVersion`, which it stamps on
@@ -37,11 +43,13 @@ export type DraftPayload = Pick<
   | 'pendingChangeSets'
   | 'pendingTagRuleChangeSets'
   | 'manuallyResolvedChecksums'
->;
+> &
+  Partial<Pick<ImportStore, 'sourceFileIdentities'>>;
 
 export const DRAFT_PAYLOAD_KEYS = [
   'currentStep',
   'sourceFileNames',
+  'sourceFileIdentities',
   'accountId',
   'accountName',
   'dialectId',
@@ -65,6 +73,7 @@ export function toDraftPayload(state: ImportStore): DraftPayload {
   return {
     currentStep: state.currentStep,
     sourceFileNames: state.sourceFileNames,
+    sourceFileIdentities: state.sourceFileIdentities,
     accountId: state.accountId,
     accountName: state.accountName,
     dialectId: state.dialectId,
@@ -108,6 +117,15 @@ const ARRAY_KEYS = [
 
 const BUCKETS = ['matched', 'uncertain', 'failed', 'skipped'] as const;
 
+function isFileIdentity(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.name === 'string' &&
+    typeof value.size === 'number' &&
+    typeof value.lastModified === 'number'
+  );
+}
+
 /** Structural check that a draft's JSON is the slice this build writes. */
 export function isDraftPayload(value: Record<string, unknown>): value is DraftPayload {
   if (typeof value.currentStep !== 'number') return false;
@@ -115,6 +133,9 @@ export function isDraftPayload(value: Record<string, unknown>): value is DraftPa
   if (value.accountId !== null && typeof value.accountId !== 'string') return false;
   if (!isRecord(value.columnMap)) return false;
   if (!ARRAY_KEYS.every((key) => Array.isArray(value[key]))) return false;
+  const identities = value.sourceFileIdentities;
+  if (identities !== undefined && !(Array.isArray(identities) && identities.every(isFileIdentity)))
+    return false;
   const processed = value.processedTransactions;
   return isRecord(processed) && BUCKETS.every((bucket) => Array.isArray(processed[bucket]));
 }

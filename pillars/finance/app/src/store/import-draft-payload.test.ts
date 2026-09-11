@@ -68,6 +68,7 @@ describe('toDraftPayload', () => {
         'processedForFingerprint',
         'processedTransactions',
         'rows',
+        'sourceFileIdentities',
         'sourceFileNames',
       ].toSorted()
     );
@@ -83,8 +84,18 @@ describe('isDraftPayload', () => {
     ['columnMap', null],
     ['processedTransactions', { matched: [] }],
     ['pendingChangeSets', undefined],
+    ['sourceFileIdentities', 'statement.csv'],
+    ['sourceFileIdentities', [{ name: 'statement.csv', size: '2048', lastModified: 1 }]],
+    ['sourceFileIdentities', [{ name: 'statement.csv', lastModified: 1 }]],
   ])('rejects a payload whose %s is malformed', (key, value) => {
     expect(isDraftPayload({ ...base(), [key]: value })).toBe(false);
+  });
+
+  it('accepts a draft written before file identities were recorded', () => {
+    // Drafts never expire, and a payload from before this field existed must
+    // still resume — it simply has no identity to compare a re-selection to.
+    const { sourceFileIdentities: _omitted, ...older } = base();
+    expect(isDraftPayload(older)).toBe(true);
   });
 
   it('rejects an empty record', () => {

@@ -16,6 +16,11 @@ function makeTxn(checksum: string, description = 'WOOLWORTHS'): ParsedTransactio
   };
 }
 
+/** A real `File` with the exact identity `isSameFile` compares — `size` is its content length. */
+function fileWith(name: string, size: number, lastModified: number): File {
+  return new File(['x'.repeat(size)], name, { lastModified });
+}
+
 const sampleProcessed = (): {
   matched: ProcessedTransaction[];
   uncertain: ProcessedTransaction[];
@@ -135,6 +140,89 @@ describe('importStore — parsed/processed fingerprint', () => {
     expect(state.parsedTransactionsFingerprint).toBe('');
     expect(state.processedForFingerprint).toBeNull();
     expect(state.processedTransactions.matched).toHaveLength(0);
+  });
+
+  it('setFiles records the identity of each file it was given, in order', () => {
+    const a = fileWith('a.csv', 10, 1);
+    const b = fileWith('b.csv', 20, 2);
+    useImportStore.getState().setFiles([a, b]);
+    expect(useImportStore.getState().sourceFileIdentities).toEqual([
+      { name: 'a.csv', size: 10, lastModified: 1 },
+      { name: 'b.csv', size: 20, lastModified: 2 },
+    ]);
+  });
+});
+
+describe('importStore — re-selecting a file after resume (POPS-18)', () => {
+  // A resumed draft holds no `File` handle — the file is never stored — only the
+  // identity of the one it was parsed from. These build that state the way
+  // hydration does: the work, the identity, and `files: []`.
+  const identity = { name: 'statement.csv', size: 2048, lastModified: 1_757_000_000_000 };
+
+  function resumeWithWork(): void {
+    useImportStore.getState().reset();
+    const original = fileWith(identity.name, identity.size, identity.lastModified);
+    useImportStore.getState().setFiles([original]);
+    useImportStore.getState().setParsedTransactions([makeTxn('a'), makeTxn('b')]);
+    useImportStore
+      .getState()
+      .setProcessedTransactions({ ...sampleProcessed(), warnings: undefined });
+    useImportStore.setState({ files: [] });
+  }
+
+  it('keeps the resumed work when the byte-identical file is picked again', () => {
+    resumeWithWork();
+    const fingerprint = useImportStore.getState().parsedTransactionsFingerprint;
+
+    useImportStore
+      .getState()
+      .setFiles([fileWith(identity.name, identity.size, identity.lastModified)]);
+
+    const state = useImportStore.getState();
+    expect(state.files).toHaveLength(1);
+    expect(state.parsedTransactionsFingerprint).toBe(fingerprint);
+    expect(state.processedForFingerprint).toBe(fingerprint);
+    expect(state.processedTransactions.matched).toHaveLength(1);
+  });
+
+  it.each([
+    ['a different name', { name: 'other.csv' }],
+    ['a different size', { size: 4096 }],
+    ['a different modification time', { lastModified: 1_757_000_000_001 }],
+  ])('still resets when the file picked has %s', (_label, change) => {
+    resumeWithWork();
+
+    const picked = { ...identity, ...change };
+    useImportStore.getState().setFiles([fileWith(picked.name, picked.size, picked.lastModified)]);
+
+    const state = useImportStore.getState();
+    expect(state.parsedTransactionsFingerprint).toBe('');
+    expect(state.processedTransactions.matched).toHaveLength(0);
+  });
+
+  it('still resets when a second file is added to the resumed batch', () => {
+    resumeWithWork();
+    const extra = fileWith('extra.csv', 1, 1);
+
+    useImportStore
+      .getState()
+      .setFiles([fileWith(identity.name, identity.size, identity.lastModified), extra]);
+
+    expect(useImportStore.getState().parsedTransactionsFingerprint).toBe('');
+  });
+
+  it('prefers the live handles over the stored identities while it still has them', () => {
+    // Without a resume there is a handle to compare against, and it is the
+    // authority: a stale identity must not override it.
+    useImportStore.getState().reset();
+    const live = fileWith('live.csv', 1, 1);
+    useImportStore.getState().setFiles([live]);
+    useImportStore.getState().setParsedTransactions([makeTxn('a')]);
+    useImportStore.setState({ sourceFileIdentities: [identity] });
+
+    useImportStore.getState().setFiles([live]);
+
+    expect(useImportStore.getState().parsedTransactionsFingerprint).toBe('a');
   });
 });
 

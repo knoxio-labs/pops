@@ -8,6 +8,8 @@ import type {
   TagRuleChangeSet,
 } from '@pops/finance';
 
+import type { SourceFileIdentity } from './file-identity';
+
 /**
  * Which CSV dialect to parse the upload with (see `bank-dialect.ts`) — a
  * label picked on the Upload step to select a parser, not a claim about
@@ -92,6 +94,12 @@ export interface ImportStore {
   currentStep: number;
   files: File[];
   sourceFileNames: string[];
+  /**
+   * What each selected file was, kept in the draft because `files` is not: after
+   * a resume it is all there is to tell a re-selection of the same file from a
+   * new batch (POPS-18).
+   */
+  sourceFileIdentities: SourceFileIdentity[];
   /** The real account transactions land in — `null` until picked in the Upload step's account field. */
   accountId: string | null;
   /** Kept alongside `accountId` so the picked account survives a persisted-state reload without a refetch. */
@@ -171,6 +179,7 @@ export const initialState = {
   currentStep: 1,
   files: [],
   sourceFileNames: [],
+  sourceFileIdentities: [] as SourceFileIdentity[],
   accountId: null,
   accountName: '',
   dialectId: 'Amex' as BankDialectId,
