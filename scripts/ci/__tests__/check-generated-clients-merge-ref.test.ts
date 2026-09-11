@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -12,6 +11,7 @@ import {
   resolveMergeRoot,
   runTarget,
 } from '../check-generated-clients.mjs';
+import { commit, fixtureRepo as makeFixtureRepo, write } from './git-fixture.js';
 
 /**
  * POPS-1874: `check-generated-clients.mjs --base <ref>` must judge the merge
@@ -31,23 +31,9 @@ import {
 const created: string[] = [];
 
 function fixtureRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'codegen-drift-fixture-'));
+  const root = makeFixtureRepo();
   created.push(root);
-  execFileSync('git', ['init', '--quiet', '--initial-branch=main', root]);
-  execFileSync('git', ['-C', root, 'config', 'user.email', 'fixture@localhost']);
-  execFileSync('git', ['-C', root, 'config', 'user.name', 'fixture']);
   return root;
-}
-
-function write(root: string, relPath: string, content: string): void {
-  const full = join(root, relPath);
-  mkdirSync(join(full, '..'), { recursive: true });
-  writeFileSync(full, content);
-}
-
-function commit(root: string, message: string): void {
-  execFileSync('git', ['-C', root, 'add', '-A']);
-  execFileSync('git', ['-C', root, 'commit', '--quiet', '-m', message]);
 }
 
 /** Fake `generate`: source.txt's content, wrapped — stands in for openapi-ts. */
