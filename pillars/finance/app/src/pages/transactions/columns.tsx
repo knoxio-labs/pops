@@ -12,6 +12,7 @@ import { RowActions, type RowActionHandlers } from './RowActions';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 
+import type { SuggestedTag } from '@pops/finance';
 import type { AccountOption } from '@pops/ui';
 
 import type { PurchaseLinkSummaries } from './purchase-link/usePurchaseLinkSummaries';
@@ -33,7 +34,7 @@ interface BuildColumnsBase {
     entityId: string | null,
     description: string
   ) => (tags: string[]) => Promise<void>;
-  onTagSuggest: (description: string, entityId: string | null) => () => Promise<string[]>;
+  onTagSuggest: (description: string, entityId: string | null) => () => Promise<SuggestedTag[]>;
 }
 
 interface BuildColumnsArgs extends BuildColumnsBase, RowActionHandlers {}

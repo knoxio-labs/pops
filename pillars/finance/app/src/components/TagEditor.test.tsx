@@ -292,4 +292,77 @@ describe('TagEditor', () => {
 
     expect(screen.queryByRole('button', { name: /^Create / })).toBeNull();
   });
+
+  describe('tag-suggester provenance badges', () => {
+    function openAndSuggest(onSuggest: () => Promise<unknown>) {
+      render(
+        <TagEditor
+          currentTags={[]}
+          availableTags={[]}
+          onSave={vi.fn()}
+          onSuggest={onSuggest as never}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+    }
+
+    it('shows a rule marker with the matched pattern on a rule suggestion', async () => {
+      openAndSuggest(() =>
+        Promise.resolve([{ tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' }])
+      );
+
+      const suggestion = await screen.findByRole('button', { name: /Add Groceries/i });
+      expect(suggestion.textContent).toContain('Rule');
+      expect(suggestion.getAttribute('aria-label')).toContain('Matched');
+      expect(suggestion.getAttribute('aria-label')).toContain('IGA Coles');
+    });
+
+    it('shows an entity marker on an entity-default suggestion', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Rent', source: 'entity' }]));
+
+      const suggestion = await screen.findByRole('button', { name: /Add Rent/i });
+      expect(suggestion.textContent).toContain('Entity');
+    });
+
+    it('shows an AI marker on an ai suggestion', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Streaming', source: 'ai' }]));
+
+      const suggestion = await screen.findByRole('button', { name: /Add Streaming/i });
+      expect(suggestion.textContent).toContain('AI');
+    });
+
+    it('highlights a new AI tag with a new marker', async () => {
+      openAndSuggest(() => Promise.resolve([{ tag: 'Novelty', source: 'ai', isNew: true }]));
+
+      const suggestion = await screen.findByRole('button', { name: /Add Novelty/i });
+      expect(suggestion.textContent).toContain('New');
+    });
+
+    it('stores only the tag string when a suggestion is chosen', async () => {
+      const onSave = vi.fn();
+      const onSuggest = () =>
+        Promise.resolve([{ tag: 'Groceries', source: 'rule', pattern: 'IGA Coles' }]);
+      render(
+        <TagEditor
+          currentTags={[]}
+          availableTags={[]}
+          onSave={onSave}
+          onSuggest={onSuggest as never}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Suggest/i }));
+
+      const suggestion = await screen.findByRole('button', { name: /Add Groceries/i });
+      fireEvent.click(suggestion);
+      // Picking it removes it from the suggestion list — it is now a current tag.
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: /Add Groceries/i })).toBeNull()
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith(['Groceries']));
+    });
+  });
 });

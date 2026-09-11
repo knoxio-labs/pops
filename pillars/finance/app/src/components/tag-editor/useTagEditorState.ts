@@ -10,11 +10,19 @@ import {
 import { makeKeyDownHandler } from './tagEditorKeyDown';
 import { SUGGESTION_LIMIT, type TagEditorProps } from './utils';
 
+import type { SuggestedTag } from '@pops/finance';
+
 export interface PanelHandlers {
   tags: string[];
   inputValue: string;
   /** Suggestions in display order, already capped at `SUGGESTION_LIMIT`. */
   filtered: string[];
+  /**
+   * Tag-suggester candidates fetched via `onSuggest`, minus whatever is
+   * already in `tags` — picking one only adds its `tag` string, the same as
+   * any other suggestion.
+   */
+  suggestedTags: SuggestedTag[];
   /** What the typed text would create, driving the panel's create row. */
   creation: TagCreationIntent;
   isSaving: boolean;
@@ -35,6 +43,7 @@ function useCoreState(currentTags: string[]) {
   const [inputValue, setInputValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggested, setSuggested] = useState<SuggestedTag[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
   if (currentTags !== prevCurrentTags) {
@@ -52,6 +61,8 @@ function useCoreState(currentTags: string[]) {
     setIsSaving,
     isSuggesting,
     setIsSuggesting,
+    suggested,
+    setSuggested,
     inputRef,
   };
 }
@@ -76,23 +87,27 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
   const handleCancel = () => {
     s.setTags(currentTags);
     s.setInputValue('');
+    s.setSuggested([]);
     s.setOpen(false);
   };
   const handleSave = async () => {
     s.setIsSaving(true);
     try {
       await onSave(s.tags);
+      s.setSuggested([]);
       s.setOpen(false);
     } finally {
       s.setIsSaving(false);
     }
   };
+  // Fetches candidates and lets the user pick one at a time — badged with
+  // their source — rather than merging every suggestion in blind, so a
+  // low-confidence AI guess is never applied without a look.
   const handleSuggest = onSuggest
     ? async () => {
         s.setIsSuggesting(true);
         try {
-          const suggested = await onSuggest();
-          s.setTags((prev) => [...prev, ...suggested.filter((t) => !prev.includes(t))]);
+          s.setSuggested(await onSuggest());
         } finally {
           s.setIsSuggesting(false);
         }
@@ -119,11 +134,15 @@ export function useTagEditorState(props: TagEditorProps) {
     onSave,
     onSuggest,
   });
+  // A suggestion that has already been added (by this button or the same tag
+  // typed manually) drops off the list rather than lingering as a stale offer.
+  const suggestedTags = s.suggested.filter((suggestion) => !s.tags.includes(suggestion.tag));
 
   const handlers: PanelHandlers = {
     tags: s.tags,
     inputValue: s.inputValue,
     filtered,
+    suggestedTags,
     creation,
     isSaving: s.isSaving,
     isSuggesting: s.isSuggesting,

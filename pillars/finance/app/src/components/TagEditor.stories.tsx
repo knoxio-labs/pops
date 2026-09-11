@@ -76,7 +76,10 @@ export const WithSuggest: Story = {
     onSuggest: () =>
       new Promise((resolve) =>
         setTimeout(() => {
-          resolve(['Online', 'Tax Deductible']);
+          resolve([
+            { tag: 'Online', source: 'rule', pattern: 'checkout.example.com' },
+            { tag: 'Tax Deductible', source: 'ai', isNew: true },
+          ]);
         }, 600)
       ),
   },
@@ -117,7 +120,7 @@ export const WithSaveLatency: Story = {
     onSuggest: () =>
       new Promise((resolve) =>
         setTimeout(() => {
-          resolve(['Subscriptions']);
+          resolve([{ tag: 'Subscriptions', source: 'entity' }]);
         }, 800)
       ),
   },

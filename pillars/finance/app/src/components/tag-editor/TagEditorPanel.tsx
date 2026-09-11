@@ -8,11 +8,15 @@ import {
 } from '../../lib/tags';
 import { FacetHeading, TagChip } from '../tags/TagChip';
 import { TagCreationRow } from '../tags/TagCreationRow';
+import { EngineSuggestions } from './EngineSuggestions';
+
+import type { SuggestedTag } from '@pops/finance';
 
 interface PanelProps {
   tags: string[];
   inputValue: string;
   filtered: string[];
+  suggestedTags: SuggestedTag[];
   creation: TagCreationIntent;
   isSaving: boolean;
   isSuggesting: boolean;
@@ -129,6 +133,7 @@ export function TagEditorPanel({
   tags,
   inputValue,
   filtered,
+  suggestedTags,
   creation,
   isSaving,
   isSuggesting,
@@ -155,6 +160,7 @@ export function TagEditorPanel({
         autoFocus
       />
       <TagCreationRow creation={creation} onAddTag={onAddTag} />
+      <EngineSuggestions suggestedTags={suggestedTags} onAddTag={onAddTag} />
       <Suggestions filtered={filtered} onAddTag={onAddTag} />
       <PanelActions
         isSaving={isSaving}

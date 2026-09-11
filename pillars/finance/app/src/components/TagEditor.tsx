@@ -4,18 +4,13 @@ import { Badge, Button, type ButtonProps, Popover, PopoverContent, PopoverTrigge
 
 import { orderTagsByFacet } from '../lib/tags';
 import { cn } from '../lib/utils';
+import { SOURCE_ICONS } from './tag-editor/sourceMeta';
 import { TagEditorPanel } from './tag-editor/TagEditorPanel';
 import { type PanelHandlers, useTagEditorState } from './tag-editor/useTagEditorState';
 import { type TagEditorProps, type TagMetaEntry, type TagSource } from './tag-editor/utils';
 import { TagBadge } from './tags/TagChip';
 
 export type { PanelHandlers, TagEditorProps, TagMetaEntry, TagSource };
-
-const SOURCE_ICONS: Record<TagSource, string> = {
-  ai: '🤖',
-  rule: '📋',
-  entity: '🏪',
-};
 
 interface TriggerProps extends Omit<ButtonProps, 'children'> {
   tags: string[];
