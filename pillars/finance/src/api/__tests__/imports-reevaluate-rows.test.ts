@@ -193,7 +193,7 @@ describe('imports.reevaluateRowsWithPendingRules', () => {
       pendingChangeSets: [],
     });
 
-    expect(res.affectedCount).toBeGreaterThanOrEqual(1);
+    expect(res.affectedCount).toBe(1);
     expect(databaseSnapshot()).toEqual(before);
     const after = transactionCorrectionsService.getTransactionCorrection(financeDb.db, rule.id);
     expect(after.timesApplied).toBe(0);
