@@ -11,7 +11,7 @@ import type { PillarHandle } from '@pops/pillar-sdk/client';
  * binding, into the mcp image). The finance pillar's committed OpenAPI spec
  * is a mechanical projection of that same contract
  * (`pnpm --filter @pops/finance generate:openapi`), so
- * `finance-transactions-type.test.ts` reads it back as a check against the
+ * `finance-transaction-type.test.ts` reads it back as a check against the
  * real enforcement, not a second hand-typed copy.
  */
 export const TRANSACTION_TYPES = [
