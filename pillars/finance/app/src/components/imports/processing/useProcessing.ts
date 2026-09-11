@@ -106,9 +106,35 @@ export function useCompletionHandler(state: ProcessingState): void {
   }, [progressQuery.data, setProcessedTransactions, nextStep, setPollingEnabled]);
 }
 
+/**
+ * Whether a stored session is one to follow rather than replace: still running,
+ * or finished with a result the completion handler can take.
+ *
+ * Anything else starts a new run, which is what a resume always did: a session
+ * the server no longer knows (`null`), one that failed — including one a
+ * restart of the finance service marked failed mid-flight — and a progress read
+ * that itself errors. Falling back to a fresh run is never worse than before;
+ * following a dead session would leave the step waiting on nothing.
+ */
+async function canReattach(sessionId: string): Promise<boolean> {
+  try {
+    const progress = toProgressShape(
+      unwrap(await importsGetImportProgress({ query: { sessionId } }))
+    );
+    if (progress === null) return false;
+    return (
+      progress.status === 'processing' ||
+      (progress.status === 'completed' && progress.result !== undefined)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolean): void {
-  const { parsedTransactions } = useImportStore();
+  const { parsedTransactions, processSessionId } = useImportStore();
   const { mutate, isPending, isSuccess } = state.processImportMutation;
+  const { setPollingEnabled } = state;
 
   // The guard must always see this render's latest transactions/mutation
   // status, but the effect itself must only re-fire on the real trigger
@@ -118,20 +144,40 @@ export function useAutoStart(state: ProcessingState, hasAlreadyProcessed: boolea
   // array reference on every read, so depending on it directly would
   // re-fire — and re-mutate — on every render). A ref lets the effect read
   // fresh values without either watching them.
-  const latestRef = useRef({ parsedTransactions, isPending, isSuccess });
+  const latestRef = useRef({ parsedTransactions, isPending, isSuccess, processSessionId });
   useEffect(() => {
-    latestRef.current = { parsedTransactions, isPending, isSuccess };
+    latestRef.current = { parsedTransactions, isPending, isSuccess, processSessionId };
   });
 
   useEffect(() => {
     const latest = latestRef.current;
     if (
-      latest.parsedTransactions.length > 0 &&
-      !hasAlreadyProcessed &&
-      !latest.isPending &&
-      !latest.isSuccess
+      latest.parsedTransactions.length === 0 ||
+      hasAlreadyProcessed ||
+      latest.isPending ||
+      latest.isSuccess
     ) {
-      mutate({ transactions: latest.parsedTransactions });
+      return;
     }
-  }, [parsedTransactions.length, hasAlreadyProcessed, mutate]);
+    const startRun = () => mutate({ transactions: latest.parsedTransactions });
+
+    // A stored session always belongs to these rows: `downstreamReset` clears
+    // it whenever the parsed set changes. So a resumed draft's session is worth
+    // asking about before paying for a second AI pass over the same rows
+    // (POPS-19).
+    const stored = latest.processSessionId;
+    if (stored === null) {
+      startRun();
+      return;
+    }
+    let cancelled = false;
+    void canReattach(stored).then((reattach) => {
+      if (cancelled) return;
+      if (reattach) setPollingEnabled(true);
+      else startRun();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parsedTransactions.length, hasAlreadyProcessed, mutate, setPollingEnabled]);
 }
