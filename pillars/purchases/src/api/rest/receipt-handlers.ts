@@ -21,6 +21,7 @@ import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purch
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import {
   canonicalBase64,
+  decodeReceiptBase64,
   looksLikeMediaType,
   receiptKey,
   storeReceiptPart,
@@ -39,7 +40,12 @@ import type {
   UploadReceiptBodySchema,
 } from '../../contract/rest-receipts.js';
 import type { PurchasesDb } from '../../db/index.js';
-import type { ReceiptKind, ReceiptMediaType, ReceiptVision } from '../../ingest/receipt/vision.js';
+import type {
+  DecodedReceiptPart,
+  ReceiptKind,
+  ReceiptMediaType,
+  ReceiptVision,
+} from '../../ingest/receipt/vision.js';
 
 type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
 /**
@@ -153,15 +159,22 @@ export function makeReceiptHandlers(
         mediaType: one.mediaType,
         dataBase64: canonicalBase64(one.dataBase64),
       }));
-      const badPartAt = parts.findIndex(
-        (one) => !looksLikeMediaType(one.dataBase64, one.mediaType)
+      const decodedParts = parts.map((one) => ({
+        mediaType: one.mediaType,
+        bytes: decodeReceiptBase64(one.dataBase64),
+      }));
+
+      const badPartAt = decodedParts.findIndex(
+        (one) => one.bytes === null || !looksLikeMediaType(one.bytes, one.mediaType)
       );
       if (badPartAt !== -1) {
         const bad = parts[badPartAt];
         if (bad !== undefined) return notWhatItClaims(bad.mediaType, badPartAt, parts.length);
       }
 
-      const stored = parts.map((one) => storeReceiptPart(one));
+      const goodParts = decodedParts.filter((one): one is DecodedReceiptPart => one.bytes !== null);
+
+      const stored = goodParts.map((one) => storeReceiptPart(one));
 
       // Before the model, not after. The parts' digest IS the key, so a
       // re-upload is already knowable here — and letting it reach the
@@ -198,7 +211,7 @@ export function makeReceiptHandlers(
       // it is resolved after the reading (`ingest/receipt/capture.ts`).
       const capture = resolveCapture(
         body.capture,
-        firstPhotoCapture(parts),
+        firstPhotoCapture(goodParts),
         outcome.extracted.timeZone
       );
 

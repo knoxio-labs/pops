@@ -12,7 +12,7 @@ import { dms } from './exif-fixtures.js';
 import { jpegWithExif, jpegWithTiff } from './image-fixtures.js';
 
 import type { PhotoCapture } from '../exif.js';
-import type { ReceiptPart } from '../vision.js';
+import type { DecodedReceiptPart } from '../vision.js';
 
 const PERTH_PHOTO: PhotoCapture = {
   localTime: { year: 2026, month: 8, day: 1, hour: 14, minute: 32, second: 7 },
@@ -198,9 +198,9 @@ describe('where it was taken', () => {
 });
 
 describe('reading a submission of several parts', () => {
-  const part = (bytes: Buffer): ReceiptPart => ({
+  const part = (bytes: Buffer): DecodedReceiptPart => ({
     mediaType: 'image/jpeg',
-    dataBase64: bytes.toString('base64'),
+    bytes,
   });
 
   it('looks past the frames that carry nothing', () => {
@@ -222,9 +222,9 @@ describe('reading a submission of several parts', () => {
   });
 
   it('reads nothing out of a pasted body or a PDF', () => {
-    const text: ReceiptPart = {
+    const text: DecodedReceiptPart = {
       mediaType: 'text/plain',
-      dataBase64: Buffer.from('Total $27.50', 'utf8').toString('base64'),
+      bytes: Buffer.from('Total $27.50', 'utf8'),
     };
     expect(firstPhotoCapture([text])).toBeNull();
   });

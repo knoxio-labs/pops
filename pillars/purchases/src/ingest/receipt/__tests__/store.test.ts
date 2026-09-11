@@ -6,6 +6,7 @@ import { afterEach, afterAll, describe, expect, it } from 'vitest';
 
 import { resolvePurchasesSqlitePath } from '../../../api/purchases-sqlite-path.js';
 import {
+  decodeReceiptBase64,
   looksLikeMediaType,
   receiptUri,
   resolveReceiptStoreRoot,
@@ -15,7 +16,7 @@ import {
 } from '../store.js';
 import { MEDIA_TYPES } from '../vision.js';
 
-import type { ReceiptPart } from '../vision.js';
+import type { DecodedReceiptPart } from '../vision.js';
 
 const root = mkdtempSync(join(tmpdir(), 'pops-receipts-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -28,9 +29,12 @@ const PNG = Buffer.concat([
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n', 'binary');
 const EMAIL = Buffer.from('Your order\nTimber Pine DAR 42x19  $12.50\nTotal  $12.50\n', 'utf8');
 
-const image = (bytes: Buffer, mediaType: ReceiptPart['mediaType'] = 'image/jpeg'): ReceiptPart => ({
+const image = (
+  bytes: Buffer,
+  mediaType: DecodedReceiptPart['mediaType'] = 'image/jpeg'
+): DecodedReceiptPart => ({
   mediaType,
-  dataBase64: bytes.toString('base64'),
+  bytes,
 });
 
 describe('resolveReceiptStoreRoot', () => {
@@ -171,21 +175,47 @@ describe('storing the shapes that are not photographs', () => {
   });
 });
 
+describe('decoding an upload before anything else looks at it', () => {
+  it('decodes base64 to the bytes it names', () => {
+    expect(decodeReceiptBase64(JPEG.toString('base64'))?.equals(JPEG)).toBe(true);
+  });
+
+  it('tolerates the line breaks a base64 encoder may insert', () => {
+    const wrapped = JPEG.toString('base64').replace(/(.{4})/u, '$1\n');
+    expect(decodeReceiptBase64(wrapped)?.equals(JPEG)).toBe(true);
+  });
+
+  it('refuses base64 that is not base64', () => {
+    // `Buffer.from(s, 'base64')` never throws — it skips what it does not
+    // recognise and returns a short buffer — so a corrupted upload used to
+    // reach the model, the store and the EXIF reader as a plausible-looking
+    // image. The shape is checked before decoding, once, here.
+    expect(decodeReceiptBase64('not base64 at all!!')).toBeNull();
+    expect(decodeReceiptBase64('////@@@@////')).toBeNull();
+    // Truncated: a valid alphabet, but not a whole number of quanta.
+    expect(decodeReceiptBase64(JPEG.toString('base64').slice(0, -1))).toBeNull();
+  });
+
+  it('refuses an empty string', () => {
+    expect(decodeReceiptBase64('')).toBeNull();
+  });
+});
+
 describe('checking an upload before the model sees it', () => {
   it('accepts each type it claims to accept', () => {
-    expect(looksLikeMediaType(JPEG.toString('base64'), 'image/jpeg')).toBe(true);
-    expect(looksLikeMediaType(PNG.toString('base64'), 'image/png')).toBe(true);
+    expect(looksLikeMediaType(JPEG, 'image/jpeg')).toBe(true);
+    expect(looksLikeMediaType(PNG, 'image/png')).toBe(true);
     const gif = Buffer.concat([Buffer.from('GIF89a', 'ascii'), Buffer.alloc(16)]);
-    expect(looksLikeMediaType(gif.toString('base64'), 'image/gif')).toBe(true);
+    expect(looksLikeMediaType(gif, 'image/gif')).toBe(true);
     const webp = Buffer.concat([
       Buffer.from('RIFF', 'ascii'),
       Buffer.alloc(4),
       Buffer.from('WEBP', 'ascii'),
       Buffer.alloc(8),
     ]);
-    expect(looksLikeMediaType(webp.toString('base64'), 'image/webp')).toBe(true);
-    expect(looksLikeMediaType(PDF.toString('base64'), 'application/pdf')).toBe(true);
-    expect(looksLikeMediaType(EMAIL.toString('base64'), 'text/plain')).toBe(true);
+    expect(looksLikeMediaType(webp, 'image/webp')).toBe(true);
+    expect(looksLikeMediaType(PDF, 'application/pdf')).toBe(true);
+    expect(looksLikeMediaType(EMAIL, 'text/plain')).toBe(true);
   });
 
   it('accepts a PDF whatever version it claims', () => {
@@ -193,34 +223,34 @@ describe('checking an upload before the model sees it', () => {
     // generate these from whatever their accounting package emits.
     for (const version of ['1.3', '1.4', '1.7', '2.0']) {
       const pdf = Buffer.concat([Buffer.from(`%PDF-${version}\n`, 'ascii'), Buffer.alloc(16)]);
-      expect(looksLikeMediaType(pdf.toString('base64'), 'application/pdf')).toBe(true);
+      expect(looksLikeMediaType(pdf, 'application/pdf')).toBe(true);
     }
   });
 
   it('refuses a file mislabelled as another type', () => {
     // "That is not a JPEG" is something the user can act on. A vision
     // model's confusion about it is not, and costs a call to discover.
-    expect(looksLikeMediaType(PNG.toString('base64'), 'image/jpeg')).toBe(false);
-    expect(looksLikeMediaType(JPEG.toString('base64'), 'image/png')).toBe(false);
-    expect(looksLikeMediaType(JPEG.toString('base64'), 'application/pdf')).toBe(false);
-    expect(looksLikeMediaType(PDF.toString('base64'), 'image/jpeg')).toBe(false);
+    expect(looksLikeMediaType(PNG, 'image/jpeg')).toBe(false);
+    expect(looksLikeMediaType(JPEG, 'image/png')).toBe(false);
+    expect(looksLikeMediaType(JPEG, 'application/pdf')).toBe(false);
+    expect(looksLikeMediaType(PDF, 'image/jpeg')).toBe(false);
   });
 
   it('refuses binary claiming to be a pasted body', () => {
     // Text has no magic number, so decoding as UTF-8 is what stands in for
     // one. Without it a mislabelled binary sails through the one check that
     // exists to catch exactly that, and gets billed for.
-    expect(looksLikeMediaType(JPEG.toString('base64'), 'text/plain')).toBe(false);
-    expect(looksLikeMediaType(PNG.toString('base64'), 'text/plain')).toBe(false);
+    expect(looksLikeMediaType(JPEG, 'text/plain')).toBe(false);
+    expect(looksLikeMediaType(PNG, 'text/plain')).toBe(false);
     const invalidUtf8 = Buffer.from([0xc3, 0x28, 0xff, 0xfe, 0x80, 0x81, 0x82, 0x83, 0, 0, 0, 0]);
-    expect(looksLikeMediaType(invalidUtf8.toString('base64'), 'text/plain')).toBe(false);
+    expect(looksLikeMediaType(invalidUtf8, 'text/plain')).toBe(false);
   });
 
   it('refuses a pasted body that is only whitespace', () => {
     // Long enough to clear the floor and empty of anything to read. Sending
     // it to the model buys an "unreadable" that cost money.
     const blank = Buffer.from('   \n\t  \n     ', 'utf8');
-    expect(looksLikeMediaType(blank.toString('base64'), 'text/plain')).toBe(false);
+    expect(looksLikeMediaType(blank, 'text/plain')).toBe(false);
   });
 
   it('accepts a pasted body in any script', () => {
@@ -228,32 +258,13 @@ describe('checking an upload before the model sees it', () => {
     // edge check that only passed ASCII would refuse the receipts that
     // instruction exists for.
     for (const body of ['Итого 1 234,56 ₽', '合計 ¥1,200 税込', 'Σύνολο 12,50 €']) {
-      expect(looksLikeMediaType(Buffer.from(body, 'utf8').toString('base64'), 'text/plain')).toBe(
-        true
-      );
+      expect(looksLikeMediaType(Buffer.from(body, 'utf8'), 'text/plain')).toBe(true);
     }
   });
 
   it('refuses something that is not an image at all', () => {
-    expect(looksLikeMediaType(PDF.toString('base64'), 'image/jpeg')).toBe(false);
-    expect(looksLikeMediaType(Buffer.from('hello there').toString('base64'), 'image/png')).toBe(
-      false
-    );
-  });
-
-  it('refuses base64 that is not base64', () => {
-    // `Buffer.from(s, 'base64')` never throws — it skips what it does not
-    // recognise and returns a short buffer — so a corrupted upload used to
-    // reach the model as a plausible-looking image.
-    expect(looksLikeMediaType('not base64 at all!!', 'image/jpeg')).toBe(false);
-    expect(looksLikeMediaType('////@@@@////', 'image/jpeg')).toBe(false);
-    // Truncated: a valid alphabet, but not a whole number of quanta.
-    expect(looksLikeMediaType(JPEG.toString('base64').slice(0, -1), 'image/jpeg')).toBe(false);
-  });
-
-  it('tolerates the line breaks a base64 encoder may insert', () => {
-    const wrapped = JPEG.toString('base64').replace(/(.{4})/u, '$1\n');
-    expect(looksLikeMediaType(wrapped, 'image/jpeg')).toBe(true);
+    expect(looksLikeMediaType(PDF, 'image/jpeg')).toBe(false);
+    expect(looksLikeMediaType(Buffer.from('hello there'), 'image/png')).toBe(false);
   });
 
   it('accepts a paste too short to be a JPEG', () => {
@@ -261,22 +272,16 @@ describe('checking an upload before the model sees it', () => {
     // does not, and inheriting that floor made a short paste impossible to
     // send while the contract advertised a one-character minimum.
     for (const body of ['Tea $3', 'x', 'Итого 5']) {
-      expect(looksLikeMediaType(Buffer.from(body, 'utf8').toString('base64'), 'text/plain')).toBe(
-        true
-      );
+      expect(looksLikeMediaType(Buffer.from(body, 'utf8'), 'text/plain')).toBe(true);
     }
   });
 
   it('refuses an upload too short to be anything', () => {
-    expect(looksLikeMediaType('', 'image/jpeg')).toBe(false);
+    expect(looksLikeMediaType(Buffer.alloc(0), 'image/jpeg')).toBe(false);
     // Two bytes that satisfy the JPEG magic number and are not a JPEG. The
     // floor is what catches this, not the magic check.
-    expect(looksLikeMediaType(Buffer.from([0xff, 0xd8]).toString('base64'), 'image/jpeg')).toBe(
-      false
-    );
-    expect(looksLikeMediaType(Buffer.from('%PDF-').toString('base64'), 'application/pdf')).toBe(
-      false
-    );
+    expect(looksLikeMediaType(Buffer.from([0xff, 0xd8]), 'image/jpeg')).toBe(false);
+    expect(looksLikeMediaType(Buffer.from('%PDF-'), 'application/pdf')).toBe(false);
   });
 
   it('has a rule for every media type the drop-zone accepts', () => {
@@ -285,7 +290,7 @@ describe('checking an upload before the model sees it', () => {
     // back this are exhaustive by type, so the compiler catches it first;
     // this is what catches it if the records ever stop being exhaustive.
     for (const mediaType of MEDIA_TYPES) {
-      expect(() => looksLikeMediaType(JPEG.toString('base64'), mediaType)).not.toThrow();
+      expect(() => looksLikeMediaType(JPEG, mediaType)).not.toThrow();
     }
   });
 });

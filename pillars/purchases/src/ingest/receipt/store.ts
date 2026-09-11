@@ -25,7 +25,7 @@ import { dirname, join } from 'node:path';
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
 import { MEDIA_TYPES } from './vision.js';
 
-import type { ReceiptMediaType, ReceiptPart } from './vision.js';
+import type { DecodedReceiptPart, ReceiptMediaType } from './vision.js';
 
 const EXTENSIONS: Readonly<Record<ReceiptMediaType, string>> = {
   'image/jpeg': 'jpg',
@@ -198,12 +198,12 @@ export function storeReceiptBytes(
   return { sha256, path, uri: receiptUri(sha256), bytes: bytes.length, alreadyPresent: false };
 }
 
-/** {@link storeReceiptBytes} for an upload, which arrives base64-encoded. */
+/** {@link storeReceiptBytes} for an upload, already decoded once at the edge. */
 export function storeReceiptPart(
-  part: ReceiptPart,
+  part: DecodedReceiptPart,
   root = resolveReceiptStoreRoot()
 ): StoredReceipt {
-  return storeReceiptBytes(Buffer.from(part.dataBase64, 'base64'), part.mediaType, root);
+  return storeReceiptBytes(part.bytes, part.mediaType, root);
 }
 
 /**
@@ -226,6 +226,22 @@ const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/u;
  */
 export function canonicalBase64(dataBase64: string): string {
   return dataBase64.replaceAll(/\s/gu, '');
+}
+
+/**
+ * Decode once, at the edge, or refuse the shape.
+ *
+ * This is the one place in the upload path that calls `Buffer.from` on the
+ * wire string — the media-type check, the store and the EXIF reader all take
+ * the {@link Buffer} this returns instead of decoding it again themselves.
+ * `Buffer.from(s, 'base64')` never throws, so the shape is checked first:
+ * without that, a truncated or corrupted upload would silently become a
+ * short buffer rather than the refusal this returns `null` for.
+ */
+export function decodeReceiptBase64(dataBase64: string): Buffer | null {
+  const compact = canonicalBase64(dataBase64);
+  if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return null;
+  return Buffer.from(compact, 'base64');
 }
 
 /**
@@ -279,12 +295,11 @@ const MINIMUM_BYTES: Readonly<Record<ReceiptMediaType, number>> = {
  * Checked at the edge rather than discovered by the vision model, because
  * "that is not a JPEG" is an answer the user can act on immediately and a
  * model's confusion about it is not, and costs a call to obtain.
+ *
+ * Takes the already-decoded bytes: the base64 shape is {@link
+ * decodeReceiptBase64}'s question, not this one's.
  */
-export function looksLikeMediaType(dataBase64: string, mediaType: ReceiptMediaType): boolean {
-  const compact = canonicalBase64(dataBase64);
-  if (compact.length % 4 !== 0 || !BASE64_RE.test(compact)) return false;
-
-  const bytes = Buffer.from(compact, 'base64');
+export function looksLikeMediaType(bytes: Buffer, mediaType: ReceiptMediaType): boolean {
   if (bytes.length < MINIMUM_BYTES[mediaType]) return false;
 
   return MAGIC[mediaType](bytes);
