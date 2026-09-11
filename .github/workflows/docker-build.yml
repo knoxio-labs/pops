@@ -259,7 +259,7 @@ jobs:
       # `docker compose config` resolves `secrets:` file paths but never opens
       # them — it does not fail when `secrets/` is absent entirely, checked
       # against every secret this file currently declares, dev-only and
-      # profile-gated included (POPS-1482). A hand-listed stub here would
+      # profile-gated included. A hand-listed stub here would
       # only be load-bearing for `docker compose up`, which this job never
       # runs; keeping one invites a no-op edit on every PR that adds a secret,
       # which is exactly what got flagged as a false CI-breaking omission on
