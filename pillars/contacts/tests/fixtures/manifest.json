@@ -27,11 +27,7 @@
       "contacts.entities.update",
       "contacts.entities.delete"
     ],
-    "queries": [
-      "contacts.entities.list",
-      "contacts.entities.get",
-      "contacts.search.search"
-    ],
+    "queries": ["contacts.entities.list", "contacts.entities.get", "contacts.search.search"],
     "subscriptions": []
   },
   "search": {
@@ -54,9 +50,7 @@
     "manifests": []
   },
   "uri": {
-    "types": [
-      "contacts/contact"
-    ]
+    "types": ["contacts/contact"]
   },
   "version": "0.0.0-dev"
 }

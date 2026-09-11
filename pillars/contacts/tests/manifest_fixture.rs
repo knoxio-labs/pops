@@ -15,8 +15,11 @@
 //!
 //! `UPDATE_MANIFEST_FIXTURE=1 cargo test -p contacts --test manifest_fixture`
 //! rewrites the fixture instead of comparing — the only way to change it
-//! deliberately. A plain `cargo test` compares and fails with a diff-shaped
-//! message naming that variable when the two disagree.
+//! deliberately. A plain `cargo test` compares and fails with a message naming
+//! that variable when the two disagree.
+//!
+//! The comparison is on parsed JSON, not bytes, so the repository formatter
+//! owns the file's layout and no formatter exemption is needed for it.
 
 use std::fs;
 use std::path::PathBuf;
@@ -58,8 +61,11 @@ fn manifest_matches_committed_fixture() {
         )
     });
 
+    let committed: serde_json::Value = serde_json::from_str(&committed)
+        .unwrap_or_else(|err| panic!("{} is not valid JSON: {err}", path.display()));
+
     assert_eq!(
-        committed, rendered,
+        committed, manifest,
         "pillars/contacts/tests/fixtures/manifest.json no longer matches \
          build_contacts_manifest({FIXTURE_VERSION:?}).\n\
          If this change is deliberate, regenerate the fixture with:\n\

@@ -40,7 +40,6 @@
     "**/*.icon/**",
     "**/__tests__/fixtures/*.json",
     "libs/*/tests/fixtures/*.json",
-    "pillars/*/tests/fixtures/*.json",
     "*.csv",
     "*.jsonl",
     "**/*.tsbuildinfo",
