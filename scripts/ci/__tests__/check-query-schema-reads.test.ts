@@ -317,6 +317,18 @@ describe('fieldIsRead', () => {
     );
   });
 
+  it('does NOT count a read through a longer chain that merely ends in the anchor (`other.query.from`)', () => {
+    expect(fieldIsRead('const window = other.query.from;', 'from')).toBe(false);
+  });
+
+  it('does NOT count a destructuring from a path nested under the anchor (`= query.nested`)', () => {
+    expect(fieldIsRead('const { from } = query.nested;', 'from')).toBe(false);
+  });
+
+  it('still counts a destructuring from the anchor itself', () => {
+    expect(fieldIsRead('const { from } = query;', 'from')).toBe(true);
+  });
+
   it('does NOT count an unrelated `.from` access (e.g. `Array.from`) as reading query.from', () => {
     expect(fieldIsRead('const rows = Array.from(query.items ?? []);', 'from')).toBe(false);
   });
@@ -546,7 +558,9 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
 
   it('its self-test passes, including both historical POPS-1966/POPS-1849 shapes', () => {
     const stdout = execFileSync('node', [guardPath, '--self-test'], { encoding: 'utf8' });
-    expect(stdout).toContain('/18 self-test cases passed.');
+    const tally = /(\d+)\/(\d+) self-test cases passed\./u.exec(stdout);
+    expect(tally?.[1]).toBeDefined();
+    expect(tally?.[1]).toBe(tally?.[2]);
     expect(stdout).not.toContain('FAIL');
   });
 

@@ -804,7 +804,7 @@ export function collectReachableTexts(startFileAbs, startEntryText, startAnchor 
 
     for (const [name, specifier] of bindings) {
       const callRe = new RegExp(
-        `\\b${escapeRegExp(name)}\\s*\\(\\s*${callAnchorPattern}\\s*\\)`,
+        `(?<![\\w$.])${escapeRegExp(name)}\\s*\\(\\s*${callAnchorPattern}\\s*\\)`,
         'u'
       );
       if (!callRe.test(scanText)) continue;
@@ -855,7 +855,7 @@ function isDestructuredFromAnchor(text, field, anchorRe) {
   const structural = blankNonStructural(text);
   const esc = escapeRegExp(field);
   const keyRe = new RegExp(`[{,]\\s*${esc}\\s*(?:[,:}]|$)`, 'u');
-  const afterRe = new RegExp(`^\\s*=\\s*${anchorRe}\\b`, 'u');
+  const afterRe = new RegExp(`^\\s*=\\s*${anchorRe}\\b(?!\\s*\\??\\.)`, 'u');
 
   for (let i = 0; i < structural.length; i += 1) {
     if (structural[i] !== '{') continue;
@@ -889,7 +889,7 @@ function isDestructuredFromAnchor(text, field, anchorRe) {
 export function fieldIsRead(text, field, anchor = 'query') {
   const esc = escapeRegExp(field);
   const anchorRe = anchorPattern(anchor);
-  const memberAccess = new RegExp(`\\b${anchorRe}\\s*\\??\\.\\s*${esc}\\b`, 'u');
+  const memberAccess = new RegExp(`(?<![\\w$.])${anchorRe}\\s*\\??\\.\\s*${esc}\\b`, 'u');
   return memberAccess.test(text) || isDestructuredFromAnchor(text, field, anchorRe);
 }
 
@@ -1407,6 +1407,80 @@ function selfTestCases() {
             '  return {',
             '    check: async ({ query }) => {',
             '      const rows = Array.from(query.items ?? []);',
+            '      return { status: 200, body: { count: rows.length } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: /field 'from'/u,
+    },
+    {
+      name: 'ADVERSARIAL: a longer chain ending in query (other.query.from) must not count as reading query.from (anchoring)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'from', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const rows = other.query.from;',
+            '      return { status: 200, body: { count: rows.length } };',
+            '    },',
+            '  };',
+            '}',
+            '',
+          ].join('\n')
+        );
+        return {
+          routes: [
+            ...fillerRoutes(root),
+            {
+              method: 'get',
+              path: '/analytics/window-check',
+              handlerFile: 'pillars/purchases/src/api/rest/window-handlers.ts',
+              handlerKey: 'check',
+            },
+          ],
+        };
+      },
+      expect: /field 'from'/u,
+    },
+    {
+      name: 'ADVERSARIAL: a destructuring from a path nested under query must not count as reading query.from (anchoring)',
+      arrange: (root) => {
+        writeBaseOpenapi(root, {
+          '/analytics/window-check': {
+            get: { parameters: [{ name: 'from', in: 'query' }] },
+          },
+        });
+        writeFile(
+          root,
+          'pillars/purchases/src/api/rest/window-handlers.ts',
+          [
+            'export function makeWindowHandlers(db) {',
+            '  return {',
+            '    check: async ({ query }) => {',
+            '      const { from } = query.nested;',
             '      return { status: 200, body: { count: rows.length } };',
             '    },',
             '  };',
