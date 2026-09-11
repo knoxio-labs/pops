@@ -9,13 +9,28 @@ run = [
 sources = ["src/**/*.ts", "scripts/**/*.ts", "tsconfig.build.json"]
 outputs = ["dist/**", "openapi/*.json", "src/**/api-types.generated.ts"]
 
+# This pillar imports `@pops/ai-telemetry`, `@pops/pillar-express`,
+# `@pops/pillar-sdk` and `@pops/types` through their built `dist`, not their
+# `src`. `depends = ["build"]` looks like it covers that, but it does not:
+# mise's and tsc's own incremental caches both key off *source* hashes, not
+# whether `dist` is actually still on disk, so a `dist` removed (or gone
+# stale) out of band from its cache can leave `tsc -b`/`mise run build`
+# reporting "up to date" while the import resolves to nothing or to
+# outdated exports (POPS-2466). require-built-graph.mjs does a real
+# filesystem check with no cache to lie to it, so run it first and refuse
+# with a clear message naming the unbuilt package, rather than let a cold or
+# stale sibling surface as a confusing `TypeError` deep in a test file.
 [tasks.typecheck]
 depends = ["build"]
-run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
+run = [
+  "node ../../scripts/require-built-graph.mjs",
+  "tsc --noEmit",
+  "tsc --noEmit -p scripts/tsconfig.json",
+]
 
 [tasks.test]
 depends = ["build"]
-run = "vitest run"
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src scripts && oxfmt --check ."
