@@ -1,7 +1,5 @@
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
-import type { TagMetaEntry } from '../../TagEditor';
-
 /** Group of confirmed transactions sharing the same entity */
 export interface ConfirmedGroup {
   entityName: string;
@@ -28,15 +26,6 @@ export function groupByEntity(transactions: ConfirmedTransaction[]): ConfirmedGr
 /** Union of all distinct tags across an array of tag lists */
 export function unionTags(tagLists: string[][]): string[] {
   return [...new Set(tagLists.flat())].toSorted();
-}
-
-/** Build a tagMeta Map from a SuggestedTag array for the TagEditor */
-export function buildTagMetaMap(suggestedTags: SuggestedTag[]): Map<string, TagMetaEntry> {
-  const map = new Map<string, TagMetaEntry>();
-  for (const s of suggestedTags) {
-    map.set(s.tag, { source: s.source, pattern: s.pattern });
-  }
-  return map;
 }
 
 /**

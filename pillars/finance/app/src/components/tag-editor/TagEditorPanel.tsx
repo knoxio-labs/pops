@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { Button, TextInput } from '@pops/ui';
 
 import {
@@ -8,11 +10,14 @@ import {
 } from '../../lib/tags';
 import { FacetHeading, TagChip } from '../tags/TagChip';
 import { TagCreationRow } from '../tags/TagCreationRow';
+import { describeSourceMeta, type SourceMarkerText } from './sourceMeta';
+import { type TagMetaEntry } from './utils';
 
 interface PanelProps {
   tags: string[];
   inputValue: string;
   filtered: string[];
+  tagMeta: Map<string, TagMetaEntry>;
   creation: TagCreationIntent;
   isSaving: boolean;
   isSuggesting: boolean;
@@ -26,19 +31,52 @@ interface PanelProps {
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
-function CurrentTags({ tags, onRemove }: { tags: string[]; onRemove: (tag: string) => void }) {
+/**
+ * The source marker riding alongside a chip whose tag came from `onSuggest`.
+ * Secondary to the chip's own hash colour — it never replaces it, only adds
+ * the rule/AI/entity provenance next to it.
+ */
+function ProvenanceBadge({ icon, visibleText, accessibleText }: SourceMarkerText) {
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 text-2xs uppercase tracking-wide text-muted-foreground"
+      title={accessibleText}
+    >
+      <span aria-hidden="true">{icon}</span>
+      {visibleText}
+    </span>
+  );
+}
+
+function CurrentTags({
+  tags,
+  tagMeta,
+  onRemove,
+}: {
+  tags: string[];
+  tagMeta: Map<string, TagMetaEntry>;
+  onRemove: (tag: string) => void;
+}) {
+  const { t } = useTranslation('finance');
   if (tags.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2">
-      {orderTagsByFacet(tags).map((parsed) => (
-        <TagChip
-          key={parsed.raw}
-          tag={parsed.raw}
-          removable
-          onRemove={() => onRemove(parsed.raw)}
-          className="border"
-        />
-      ))}
+      {orderTagsByFacet(tags).map((parsed) => {
+        const meta = tagMeta.get(parsed.raw);
+        const marker = meta ? describeSourceMeta(t, meta) : undefined;
+        return (
+          <div key={parsed.raw} className="inline-flex items-center gap-1">
+            <TagChip
+              tag={parsed.raw}
+              removable
+              onRemove={() => onRemove(parsed.raw)}
+              className="border"
+              context={marker?.accessibleText}
+            />
+            {marker && <ProvenanceBadge {...marker} />}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -129,6 +167,7 @@ export function TagEditorPanel({
   tags,
   inputValue,
   filtered,
+  tagMeta,
   creation,
   isSaving,
   isSuggesting,
@@ -144,7 +183,7 @@ export function TagEditorPanel({
   return (
     <div className="space-y-3">
       <p className="text-sm font-medium">Edit tags</p>
-      <CurrentTags tags={tags} onRemove={onRemoveTag} />
+      <CurrentTags tags={tags} tagMeta={tagMeta} onRemove={onRemoveTag} />
       <TextInput
         ref={inputRef}
         value={inputValue}

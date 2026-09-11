@@ -1,3 +1,5 @@
+import type { SuggestedTag } from '@pops/finance';
+
 import type { TagFacetOption } from '../../lib/tags';
 
 /** Source attribution for a tag — from AI, correction rule, or entity defaults. */
@@ -7,6 +9,8 @@ export interface TagMetaEntry {
   source: TagSource;
   /** For rule-sourced tags: the description_pattern from the matched correction. */
   pattern?: string;
+  /** True for an AI tag not yet in the known vocabulary. */
+  isNew?: boolean;
 }
 
 export interface TagEditorProps {
@@ -14,8 +18,12 @@ export interface TagEditorProps {
   currentTags: string[];
   /** Called with the final tag list when the user saves. May be async. */
   onSave: (tags: string[]) => void | Promise<void>;
-  /** Optional async callback for AI-powered tag suggestions. */
-  onSuggest?: () => Promise<string[]>;
+  /**
+   * Optional async callback returning tag-suggester candidates for this
+   * transaction, each attributed to its source (`rule`/`ai`/`entity`) so the
+   * panel can badge them. Picking one only ever stores its `tag` string.
+   */
+  onSuggest?: () => Promise<SuggestedTag[]>;
   /** Available tags for autocomplete. */
   availableTags?: string[];
   /**
@@ -32,3 +40,11 @@ export interface TagEditorProps {
 
 /** How many autocomplete suggestions the panel offers at once. */
 export const SUGGESTION_LIMIT = 8;
+
+/** Build a tagMeta Map from a SuggestedTag array, for the badge rendering both TagEditor and Tag Review share. */
+export function buildTagMetaMap(suggestedTags: SuggestedTag[]): Map<string, TagMetaEntry> {
+  const map = new Map<string, TagMetaEntry>();
+  for (const s of suggestedTags)
+    map.set(s.tag, { source: s.source, pattern: s.pattern, isNew: s.isNew });
+  return map;
+}
