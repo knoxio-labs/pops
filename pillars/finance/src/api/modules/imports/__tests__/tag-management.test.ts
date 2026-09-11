@@ -70,10 +70,7 @@ describe('loadKnownTags — the vocabulary is the only source', () => {
       const known = loadKnownTags(harness.db);
 
       expect(known).toContain('occasion:out');
-      expect(known).not.toContain('trip:hunter-valley-2026');
-      expect(known).not.toContain('asset:homelab');
       expect(known).not.toContain('enrich:amazon');
-      expect(known).not.toContain('person:rosane');
       expect(known).not.toContain('flag:needs-review');
       expect(known).not.toContain('tax:deductible');
     } finally {

@@ -180,23 +180,19 @@ describe('the seeded classified vocabulary', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('pins the unclassified values too, so a personal one cannot be added quietly', () => {
+  it('pins the active unclassified values too, so a personal one cannot be added quietly', () => {
     const { raw } = freshMigratedFinanceDb();
     const unclassified = (
       raw
         .prepare(
-          "SELECT tag FROM tag_vocabulary WHERE facet NOT IN ('venue','occasion','contains','channel','fee') ORDER BY tag"
+          "SELECT tag FROM tag_vocabulary WHERE facet NOT IN ('venue','occasion','contains','channel','fee') AND is_active = 1 ORDER BY tag"
         )
         .all() as { tag: string }[]
     ).map((row) => row.tag);
 
-    // 0067/0069 seeded this user's own trip and a person's name into a
-    // checked-in migration. That is POPS-3304's debt, not this ticket's to
-    // widen — pinning the list is what stops the next migration adding to it
-    // without somebody deciding to.
+    // Pinning the active list is what stops a future migration from adding a
+    // personal value back in without somebody deciding to.
     expect(unclassified).toEqual([
-      'asset:car',
-      'asset:homelab',
       'enrich:amazon',
       'enrich:apple',
       'enrich:bigw',
@@ -207,11 +203,25 @@ describe('the seeded classified vocabulary', () => {
       'enrich:paylab',
       'enrich:paypal',
       'flag:needs-review',
-      'hobby:brewing',
-      'person:rosane',
       'tax:deductible',
-      'tax:novated-lease',
-      'trip:hunter-valley-2026',
     ]);
+  });
+});
+
+/**
+ * `trip` and `person` are open/marker facets a human mints at runtime — a
+ * specific trip or a specific person's name is never something a checked-in
+ * migration should offer as active vocabulary. Unlike `asset`, `hobby` and
+ * `tax`, which can legitimately carry a generic value (`tax:deductible`),
+ * nothing on either of these two facets is meant to be active out of the box.
+ */
+describe('the seed carries no active personal-facet rows', () => {
+  it('seeds no active trip or person value', () => {
+    const { raw } = freshMigratedFinanceDb();
+    const rows = raw
+      .prepare("SELECT tag FROM tag_vocabulary WHERE facet IN ('trip', 'person') AND is_active = 1")
+      .all() as { tag: string }[];
+
+    expect(rows).toEqual([]);
   });
 });

@@ -17,9 +17,15 @@
 --   2. Drops the four rollup tags (`Purchase`, `Shopping`, `Transport`,
 --      `Entertainment`) and the two non-tags (`Income`, `Unknown`), which
 --      asserted nothing a namespaced value does not.
---   3. Deactivates the whole existing vocabulary and seeds the 83 namespaced
+--   3. Deactivates the whole existing vocabulary and seeds the 77 namespaced
 --      values as the active set, so a database built from migrations carries the
 --      vocabulary rather than deriving it from whatever rows happen to exist.
+--      One personal instance value on an unclassified facet had no other
+--      reference anywhere in the migration chain and is dropped outright. Five
+--      other personal instance values on unclassified facets are seeded
+--      inactive: the historical relabel below still writes them onto a
+--      transaction that once carried the matching flat tag, so a fresh
+--      database does not offer them as active choices.
 --
 -- Overrides. Dropping the rollups would strip some rows to zero tags — on
 -- capivara, 14 transactions and 6 rules. Each is given the value the rollup was
@@ -322,8 +328,8 @@ UPDATE transaction_tag_rules
 UPDATE tag_vocabulary SET is_active = 0;
 --> statement-breakpoint
 INSERT INTO tag_vocabulary (tag, source, is_active) VALUES
-	('asset:car', 'seed', 1),
-	('asset:homelab', 'seed', 1),
+	('asset:car', 'seed', 0),
+	('asset:homelab', 'seed', 0),
 	('channel:in-person', 'seed', 1),
 	('channel:online', 'seed', 1),
 	('contains:accommodation', 'seed', 1),
@@ -379,16 +385,15 @@ INSERT INTO tag_vocabulary (tag, source, is_active) VALUES
 	('fee:membership', 'seed', 1),
 	('fee:surcharge', 'seed', 1),
 	('flag:needs-review', 'seed', 1),
-	('hobby:brewing', 'seed', 1),
+	('hobby:brewing', 'seed', 0),
 	('occasion:admin', 'seed', 1),
 	('occasion:home', 'seed', 1),
 	('occasion:out', 'seed', 1),
 	('occasion:travel', 'seed', 1),
 	('occasion:work', 'seed', 1),
-	('person:rosane', 'seed', 1),
 	('tax:deductible', 'seed', 1),
-	('tax:novated-lease', 'seed', 1),
-	('trip:hunter-valley-2026', 'seed', 1),
+	('tax:novated-lease', 'seed', 0),
+	('trip:hunter-valley-2026', 'seed', 0),
 	('venue:arcade', 'seed', 1),
 	('venue:bakery', 'seed', 1),
 	('venue:bar', 'seed', 1),
@@ -405,7 +410,7 @@ INSERT INTO tag_vocabulary (tag, source, is_active) VALUES
 	('venue:supermarket', 'seed', 1),
 	('venue:takeaway', 'seed', 1),
 	('venue:vending-machine', 'seed', 1)
-ON CONFLICT(tag) DO UPDATE SET is_active = 1;
+ON CONFLICT(tag) DO UPDATE SET is_active = excluded.is_active;
 --> statement-breakpoint
 DROP TABLE _tag_ns_map;--> statement-breakpoint
 DROP TABLE _tag_ns_dropped;--> statement-breakpoint
