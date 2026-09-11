@@ -523,7 +523,28 @@ describe('an owning pillar unavailable for a whole leg', () => {
     expect(warn).toHaveBeenCalledWith('purchases reconcile owning pillar unavailable (summary)', {
       leg: 'inventory-item',
       count: 3,
-      reason: 'precondition-failed',
+      reasons: { 'precondition-failed': 3 },
+    });
+  });
+
+  it('counts each distinct reason in the summary when one leg fails for more than one cause', async () => {
+    seed({ itemUris: [ITEM_URI, ITEM_URI_2, ITEM_URI_3] });
+    const reasonById = new Map<string, string>([['ghi', 'network']]);
+    const warn = vi.fn();
+
+    await start({
+      inventoryItem: (id) =>
+        Promise.resolve({
+          kind: 'unavailable',
+          reason: reasonById.get(id) ?? 'precondition-failed',
+        }),
+      logger: { warn },
+    }).runOnce();
+
+    expect(warn).toHaveBeenCalledWith('purchases reconcile owning pillar unavailable (summary)', {
+      leg: 'inventory-item',
+      count: 3,
+      reasons: { network: 1, 'precondition-failed': 2 },
     });
   });
 
@@ -569,7 +590,7 @@ describe('an owning pillar unavailable for a whole leg', () => {
     expect(warn).toHaveBeenCalledWith('purchases reconcile owning pillar unavailable (summary)', {
       leg: 'inventory-item',
       count: 2,
-      reason: 'precondition-failed',
+      reasons: { 'precondition-failed': 2 },
     });
   });
 
