@@ -76,9 +76,15 @@ export default defineConfig({
      * on `merchant-spend`'s and `accounting-properties`'s corpus-building
      * `beforeAll` — an already-bounded, already-measured 30s timeout, missed
      * anyway — and `two-process.test.ts`'s real child process not answering
-     * its health check in time. Those are a different layer (a real
-     * subprocess boot, not a supertest request) and are tracked separately
-     * rather than re-litigated here.
+     * its health check in time. Both are a different layer from the
+     * transport — a real process boot and a one-off arrangement, not a
+     * supertest request — and both are the same residual as below, not a
+     * defect of their own. The arrangement bound's comment in
+     * `src/db/__tests__/helpers.ts` now says what a miss can and cannot mean
+     * rather than claiming it only fires on a hang. The two-process miss was
+     * its own 30s health deadline expiring inside a hook already bounded at
+     * 60s, so no shorter hook default cut it off: the child simply did not
+     * boot in 30s on a box running at twice its core count.
      *
      * So the decision on the residual is the third of the levers that were
      * open: a box running far more than it has cores for is a property of
