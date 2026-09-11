@@ -4,11 +4,15 @@ run = "tsc -b tsconfig.build.json"
 sources = ["src/**/*.ts", "tsconfig.build.json", "package.json"]
 outputs = ["dist/**"]
 
+# This lib imports `@pops/types` through its built `dist`, not its `src` — so
+# a change to `libs/types/src` is invisible to `tsc`/vitest here until that
+# lib is rebuilt (POPS-2671). Build it first rather than trusting whatever
+# `dist` happens to be on disk.
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = ["mise run -C ../types build", "tsc --noEmit"]
 
 [tasks.test]
-run = "vitest run"
+run = ["mise run -C ../types build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

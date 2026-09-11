@@ -4,11 +4,15 @@ run = "tsc -b tsconfig.build.json"
 sources = ["src/**/*.ts", "tsconfig.build.json", "package.json"]
 outputs = ["dist/**"]
 
+# This lib imports `@pops/pillar-sdk` through its built `dist`, not its `src`
+# — so a change to `libs/sdk/src` is invisible to `tsc`/vitest here until that
+# lib is rebuilt (POPS-2671). Build it first rather than trusting whatever
+# `dist` happens to be on disk.
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = ["mise run -C ../sdk build", "tsc --noEmit"]
 
 [tasks.test]
-run = "vitest run"
+run = ["mise run -C ../sdk build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
