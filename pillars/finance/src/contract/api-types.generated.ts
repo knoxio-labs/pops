@@ -484,7 +484,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Preview the before/after match impact of a ChangeSet against caller-supplied transactions */
+    /** Preview the before/after match impact of a ChangeSet against caller-supplied transactions, or (fullHistory) every transaction in the finance DB, paged */
     post: operations['corrections.previewChangeSet'];
     delete?: never;
     options?: never;
@@ -1121,7 +1121,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions */
+    /** Preview the suggestion-impact of a tag-rule ChangeSet over the supplied transactions, or (fullHistory) every transaction in the finance DB, paged */
     post: operations['tagRules.preview'];
     delete?: never;
     options?: never;
@@ -5596,6 +5596,10 @@ export interface operations {
             reason?: string;
             source?: string;
           };
+          /** @default false */
+          fullHistory: boolean;
+          limit?: number;
+          offset?: number;
           pendingChangeSets?: {
             changeSet: {
               ops: (
@@ -5677,6 +5681,7 @@ export interface operations {
               source?: string;
             };
           }[];
+          /** @default [] */
           transactions: {
             accountId?: string;
             checksum?: string;
@@ -5712,6 +5717,12 @@ export interface operations {
               checksum?: string;
               description: string;
             }[];
+            pagination?: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
             summary: {
               netMatchedDelta: number;
               newMatches: number;
@@ -11914,8 +11925,13 @@ export interface operations {
             reason?: string;
             source?: string;
           };
+          /** @default false */
+          fullHistory: boolean;
+          limit?: number;
           /** @default 200 */
           maxPreviewItems: number;
+          offset?: number;
+          /** @default [] */
           transactions: {
             description: string;
             entityId?: string | null;
@@ -11962,6 +11978,12 @@ export interface operations {
               suggestionChanges: number;
             };
             newTags: string[];
+            pagination?: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
           };
         };
       };
@@ -12119,6 +12141,12 @@ export interface operations {
                 suggestionChanges: number;
               };
               newTags: string[];
+              pagination?: {
+                hasMore: boolean;
+                limit: number;
+                offset: number;
+                total: number;
+              };
             };
             rationale: string;
           };

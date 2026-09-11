@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 
-import { LimitQuery, OffsetQuery } from './rest-schemas.js';
+import { LimitQuery, OffsetQuery, PaginationMetaSchema } from './rest-schemas.js';
 
 export const MatchTypeSchema = z.enum(['exact', 'contains', 'regex']);
 
@@ -108,11 +108,16 @@ const TagRuleImpactCountsSchema = z.object({
  * `counts` covers every supplied transaction; `affected` is capped at the
  * request's `maxPreviewItems`, so `affected.length < counts.affected` means
  * the list is truncated and the caller must say so.
+ *
+ * `pagination` is present only for the full-history scan mode (POPS-15):
+ * caller-list mode pages nothing, `affected` there being the from-the-top
+ * `maxPreviewItems` cap it always was.
  */
 export const TagRulePreviewSchema = z.object({
   counts: TagRuleImpactCountsSchema,
   affected: z.array(TagRuleImpactItemSchema),
   newTags: z.array(z.string()),
+  pagination: PaginationMetaSchema.optional(),
 });
 
 export const TagRuleChangeSetProposalSchema = z.object({

@@ -4,6 +4,7 @@
  * interfaces back the deterministic preview/propose computation.
  */
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
+import type { PaginationMeta } from '../../shared/pagination.js';
 import type { TagSuggestionSource } from '../tag-suggester/index.js';
 
 export type { TagSuggestionSource };
@@ -58,6 +59,17 @@ export interface TagRulePreview {
    * which would miss every new tag past the cap.
    */
   newTags: string[];
+}
+
+/**
+ * {@link TagRulePreview} for the full-history scan mode (POPS-15): `affected`
+ * is a true `limit`/`offset` window over every changed row across the whole
+ * finance DB — not the caller-list mode's "first `maxPreviewItems`" cap — so
+ * `pagination.total` is the changed-row count, mirroring
+ * `previewRuleMatchTransactions`'s `totalCount`.
+ */
+export interface TagRulePreviewPage extends TagRulePreview {
+  pagination: PaginationMeta;
 }
 
 export interface TagRuleChangeSetProposal {

@@ -160,11 +160,14 @@ export const financeCorrectionsContract = c.router({
       200: z.object({
         diffs: z.array(ChangeSetPreviewDiffSchema),
         summary: ChangeSetPreviewSummarySchema,
+        /** Full-history mode only (POPS-15): pages `diffs`, mirroring match-preview. */
+        pagination: PaginationMetaSchema.optional(),
       }),
       ...ERR_RESPONSES,
     },
     summary:
-      'Preview the before/after match impact of a ChangeSet against caller-supplied transactions',
+      'Preview the before/after match impact of a ChangeSet against caller-supplied ' +
+      'transactions, or (fullHistory) every transaction in the finance DB, paged',
   },
   applyChangeSet: {
     method: 'POST',

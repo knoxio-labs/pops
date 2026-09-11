@@ -4,11 +4,20 @@
  * keep that file under the per-file line cap; re-exported through it so
  * they stay on the `transactionsService` namespace.
  */
-import { count, max } from 'drizzle-orm';
+import { asc, count, max } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
 
 import type { FinanceDb } from './internal.js';
+
+/** One transaction projected for a full-history ChangeSet-preview scan (POPS-15). */
+export interface ChangeSetPreviewScanRow {
+  id: string;
+  description: string;
+  entityId: string | null;
+  accountId: string;
+  checksum: string | null;
+}
 
 /** Result of {@link getLastImportInfo}. */
 export interface LastImportInfo {
@@ -76,4 +85,30 @@ export function getLastImportInfo(db: FinanceDb, now: Date = new Date()): LastIm
   const elapsedMs = now.getTime() - lastEditedMs;
   const daysSinceLastImport = Math.max(0, Math.floor(elapsedMs / (24 * 60 * 60 * 1000)));
   return { lastEditedTime, daysSinceLastImport };
+}
+
+/**
+ * Every transaction in the finance DB, projected for a full-history
+ * ChangeSet-preview diff (POPS-15) — the shared scan behind both
+ * `previewTagRuleChangeSet`'s and `previewChangeSetImpact`'s full-history
+ * mode, so the two previews cannot drift on what "every transaction" means.
+ *
+ * Ordered by `id` for a stable, deterministic scan order; the diff itself is
+ * computed over the whole result in memory (mirroring
+ * `previewRuleMatchTransactions`'s full-DB scan) rather than paged at the SQL
+ * level, because the interesting page is of CHANGED rows, a predicate SQL
+ * cannot evaluate.
+ */
+export function listAllTransactionsForChangeSetPreview(db: FinanceDb): ChangeSetPreviewScanRow[] {
+  return db
+    .select({
+      id: transactions.id,
+      description: transactions.description,
+      entityId: transactions.entityId,
+      accountId: transactions.accountId,
+      checksum: transactions.checksum,
+    })
+    .from(transactions)
+    .orderBy(asc(transactions.id))
+    .all();
 }
