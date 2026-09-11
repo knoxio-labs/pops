@@ -16,6 +16,8 @@ import { join } from 'node:path';
 
 import { runSubprocess } from './subprocess.js';
 
+import type { SpawnProcess } from '../spawn-process.js';
+
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_MODEL = 'distil-large-v3';
 const DEFAULT_BIN = 'python3';
@@ -31,7 +33,7 @@ export interface RunWhisperOptions {
   /** Override timeout (default 120s). */
   timeoutMs?: number;
   /** Test seam: substitute the spawn implementation. */
-  spawnImpl?: typeof spawn;
+  spawnImpl?: SpawnProcess;
   /** Test seam: substitute the file reader for the produced VTT. */
   readFileImpl?: (path: string) => Promise<string>;
 }

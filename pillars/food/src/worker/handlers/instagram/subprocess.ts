@@ -13,7 +13,9 @@
  *     signal (timeout or abort). Callers distinguish "real exit non-zero"
  *     from "forcefully terminated" via the boolean tuple element.
  */
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn } from 'node:child_process';
+
+import type { SpawnedProcess, SpawnProcess } from '../spawn-process.js';
 
 export const DEFAULT_SIGKILL_GRACE_MS = 5_000;
 
@@ -24,7 +26,7 @@ export interface RunSubprocessOptions {
   /** Override the SIGTERM → SIGKILL escalation window. */
   sigkillGraceMs?: number;
   /** Test seam — defaults to `spawn` from `node:child_process`. */
-  spawnImpl?: typeof spawn;
+  spawnImpl?: SpawnProcess;
 }
 
 export interface SubprocessResult {
@@ -75,9 +77,9 @@ export function runSubprocess(opts: RunSubprocessOptions): Promise<SubprocessRes
   });
 }
 
-function drain(child: ChildProcess, stderrChunks: Buffer[]): void {
-  child.stderr?.on('data', (chunk: Buffer) => {
-    stderrChunks.push(chunk);
+function drain(child: SpawnedProcess, stderrChunks: Buffer[]): void {
+  child.stderr?.on('data', (chunk: Buffer | string) => {
+    stderrChunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
   });
   child.stdout?.on('data', () => {
     // The chatty processes (ffmpeg, whisper) write progress info to
@@ -86,7 +88,7 @@ function drain(child: ChildProcess, stderrChunks: Buffer[]): void {
   });
 }
 
-function makeKillSwitch(child: ChildProcess, graceMs: number): KillSwitch {
+function makeKillSwitch(child: SpawnedProcess, graceMs: number): KillSwitch {
   let sigkillTimer: NodeJS.Timeout | null = null;
   return {
     forceKill: () => {

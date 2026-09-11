@@ -14,6 +14,8 @@ import { join } from 'node:path';
 
 import { runSubprocess } from './subprocess.js';
 
+import type { SpawnProcess } from '../spawn-process.js';
+
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_BIN = 'ffmpeg';
 const SCENE_THRESHOLD = 0.3;
@@ -25,7 +27,7 @@ export interface ExtractKeyframesOptions {
   workDir: string;
   ffmpegBin?: string;
   timeoutMs?: number;
-  spawnImpl?: typeof spawn;
+  spawnImpl?: SpawnProcess;
   mkdirImpl?: (path: string) => Promise<unknown>;
   readdirImpl?: (path: string) => Promise<string[]>;
 }
@@ -69,7 +71,7 @@ export async function extractKeyframes(opts: ExtractKeyframesOptions): Promise<K
 }
 
 interface RunFfmpegArgs {
-  spawnImpl: typeof spawn;
+  spawnImpl: SpawnProcess;
   ffmpegBin: string;
   args: readonly string[];
   timeoutMs: number;
