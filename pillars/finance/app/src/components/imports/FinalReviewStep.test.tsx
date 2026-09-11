@@ -9,6 +9,7 @@ const mockPrevStep = vi.fn();
 const mockNextStep = vi.fn();
 const mockSetCommitResult = vi.fn();
 const mockSetDraftId = vi.fn();
+const mockRemoveTagRule = vi.fn();
 
 let storeState: Record<string, unknown> = {};
 
@@ -27,6 +28,7 @@ vi.mock('../../finance-api/index.js', () => ({
     error: undefined,
   }),
   importsCommitImport: (...args: unknown[]) => mockCommitImport(...args),
+  tagRulesResolveAddCollisions: async () => ({ data: { collisions: [] }, error: undefined }),
 }));
 
 vi.mock('../../lib/commit-payload', () => ({
@@ -82,6 +84,7 @@ function makeStoreState(overrides: Partial<typeof storeState> = {}) {
     setCommitResult: mockSetCommitResult,
     draftId: 'draft-1',
     setDraftId: mockSetDraftId,
+    removePendingTagRuleChangeSet: mockRemoveTagRule,
     ...overrides,
   };
 }
@@ -154,6 +157,59 @@ describe('FinalReviewStep', () => {
     expect(screen.getByText('WOOLWORTHS*')).toBeDefined();
     expect(screen.getByText('Coles')).toBeDefined();
     expect(screen.getByText('Rule rule-def')).toBeDefined();
+  });
+
+  describe('staged tag rules (POPS-3106)', () => {
+    function stagedRule(tempId: string, descriptionPattern: string) {
+      return {
+        tempId,
+        appliedAt: '2026-09-11T00:00:00.000Z',
+        source: 'tag-review',
+        changeSet: {
+          source: 'tag-review',
+          ops: [
+            { op: 'add', data: { descriptionPattern, matchType: 'contains', tags: ['venue:pub'] } },
+          ],
+        },
+      };
+    }
+
+    it('gives every staged rule its own remove control', () => {
+      storeState = makeStoreState({
+        pendingTagRuleChangeSets: [
+          stagedRule('tr-1', 'GRIFFIN HOTEL'),
+          stagedRule('tr-2', 'ROYAL OAK'),
+        ],
+      });
+      render(renderStep());
+      expect(screen.getByRole('button', { name: 'Remove tag rule GRIFFIN HOTEL' })).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Remove tag rule ROYAL OAK' })).toBeDefined();
+    });
+
+    it('removes exactly the rule whose control was used, by its tempId', () => {
+      storeState = makeStoreState({
+        pendingTagRuleChangeSets: [
+          stagedRule('tr-1', 'GRIFFIN HOTEL'),
+          stagedRule('tr-2', 'ROYAL OAK'),
+        ],
+      });
+      render(renderStep());
+      fireEvent.click(screen.getByRole('button', { name: 'Remove tag rule ROYAL OAK' }));
+      expect(mockRemoveTagRule).toHaveBeenCalledTimes(1);
+      expect(mockRemoveTagRule).toHaveBeenCalledWith('tr-2');
+    });
+
+    it('no longer shows a rule once the store has dropped it', () => {
+      storeState = makeStoreState({
+        pendingTagRuleChangeSets: [stagedRule('tr-1', 'GRIFFIN HOTEL')],
+      });
+      const { rerender } = render(renderStep());
+      expect(screen.getByRole('button', { name: 'Remove tag rule GRIFFIN HOTEL' })).toBeDefined();
+      storeState = makeStoreState({ pendingTagRuleChangeSets: [] });
+      rerender(renderStep());
+      expect(screen.queryByRole('button', { name: 'Remove tag rule GRIFFIN HOTEL' })).toBeNull();
+      expect(screen.queryByText('Tag Rule Changes')).toBeNull();
+    });
   });
 
   it('shows transaction breakdown with AC labels (matched/corrected/manual)', () => {
