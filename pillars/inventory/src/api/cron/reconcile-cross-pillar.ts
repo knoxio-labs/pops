@@ -19,6 +19,9 @@ import {
  *                       is best-effort
  *   - `unavailable`   → log + leave the row alone; retry next tick
  *   - `bad-request`   → log "bad URI" for ops + leave the row alone
+ *   - `misconfigured` → log + leave the row alone; this pillar's own
+ *                       credential or contract with finance is broken and
+ *                       will not heal by retrying — see `classifyResult`
  *
  * The next tick is armed only after the current one settles, so a slow
  * reconciliation cannot pile up overlapping runs.
@@ -44,8 +47,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type { ReconcileLogger };
 
+/**
+ * The only member this worker calls on `finance` is `callDynamic` (see the
+ * `probe` below). Narrowing the injected dependency to that one member keeps
+ * a real `PillarHandle<FinanceRouter>` assignable here (structurally, no
+ * change needed at the production call site) while letting a test fake the
+ * handle with a plain object -- no `PillarHandle`'s index signature to
+ * satisfy, so no cast.
+ */
+export type FinanceReconcileClient = Pick<PillarHandle<FinanceRouter>, 'callDynamic'>;
+
 export interface ReconcileProxies {
-  finance?: PillarHandle<FinanceRouter>;
+  finance?: FinanceReconcileClient;
 }
 
 export interface ReconcileWorkerOptions {
@@ -65,6 +78,7 @@ export interface ReconcileCounters {
   notFound: number;
   unavailable: number;
   badUri: number;
+  misconfigured: number;
 }
 
 interface ParsedUri {
@@ -95,7 +109,7 @@ function isCallResult(value: unknown): value is CallResult<unknown> {
   );
 }
 
-export type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request';
+export type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request' | 'misconfigured';
 
 /**
  * TRANSIENT (`unavailable`) vs the other buckets, for every `CallResult`
@@ -103,14 +117,6 @@ export type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request
  * `entity-fetch.ts`'s `classifyContactsFailureKind`: a kind added to
  * `CallResult` that isn't listed in one of these arms fails the build here
  * instead of being silently folded into `unavailable` by a catch-all.
- *
- * `degraded`, `contract-mismatch`, `conflict`, `unauthorized` and
- * `rate-limited` are not distinguished from `unavailable` today — they were
- * reached only through the if-chain's catch-all before this switch existed,
- * and nothing here has decided they deserve their own bucket. Keeping them
- * explicit (rather than re-introducing a catch-all) preserves that behaviour
- * while making the next kind's omission a compile error rather than a silent
- * default.
  */
 export function classifyResult(value: unknown): ReconcileOutcome {
   if (!isCallResult(value)) return 'ok';
@@ -125,12 +131,22 @@ export function classifyResult(value: unknown): ReconcileOutcome {
     case 'refused':
       return 'bad-request';
     case 'unavailable':
+      return 'unavailable';
+    // Transient by unanimous precedent (`toGatewayFailure`, `classifyContactsFailureKind`, both reconcile `pillar-lookup.ts` adapters): retry next tick.
     case 'degraded':
-    case 'contract-mismatch':
+      return 'unavailable';
+    // No write this cron makes has anything to conflict with (its writes are unconditional, keyed on the uri) — uninterpretable here, so it folds like the sibling reconcile crons do.
     case 'conflict':
-    case 'unauthorized':
+      return 'unavailable';
+    // Genuinely transient (429, producer's own retry schedule) in every consumer that classifies it — retry next tick.
     case 'rate-limited':
       return 'unavailable';
+    // A deployment/version skew, not an outage — `toGatewayFailure` and `classifyContactsFailureKind` both treat it as non-retryable; won't heal by waiting.
+    case 'contract-mismatch':
+      return 'misconfigured';
+    // A credential/scope fault this pillar owns — `toGatewayFailure` and finance's own reconcile cron both count it apart from `unavailable` because waiting doesn't fix a grant.
+    case 'unauthorized':
+      return 'misconfigured';
   }
 }
 
@@ -143,12 +159,22 @@ export function classifyError(err: unknown): ReconcileOutcome {
     case 'refused':
       return 'bad-request';
     case 'unavailable':
+      return 'unavailable';
+    // Transient by unanimous precedent (`toGatewayFailure`, `classifyContactsFailureKind`, both reconcile `pillar-lookup.ts` adapters): retry next tick.
     case 'degraded':
-    case 'contract-mismatch':
+      return 'unavailable';
+    // No write this cron makes has anything to conflict with (its writes are unconditional, keyed on the uri) — uninterpretable here, so it folds like the sibling reconcile crons do.
     case 'conflict':
-    case 'unauthorized':
+      return 'unavailable';
+    // Genuinely transient (429, producer's own retry schedule) in every consumer that classifies it — retry next tick.
     case 'rate-limited':
       return 'unavailable';
+    // A deployment/version skew, not an outage — `toGatewayFailure` and `classifyContactsFailureKind` both treat it as non-retryable; won't heal by waiting.
+    case 'contract-mismatch':
+      return 'misconfigured';
+    // A credential/scope fault this pillar owns — `toGatewayFailure` and finance's own reconcile cron both count it apart from `unavailable` because waiting doesn't fix a grant.
+    case 'unauthorized':
+      return 'misconfigured';
   }
 }
 
@@ -168,7 +194,13 @@ export async function runReconciliation(options: {
 }): Promise<ReconcileCounters> {
   const now = options.now ?? Date.now;
   const stampIso = new Date(now()).toISOString();
-  const counters: ReconcileCounters = { ok: 0, notFound: 0, unavailable: 0, badUri: 0 };
+  const counters: ReconcileCounters = {
+    ok: 0,
+    notFound: 0,
+    unavailable: 0,
+    badUri: 0,
+    misconfigured: 0,
+  };
   const db = options.db;
 
   const purchaseTransactionUris = crossPillarUrisService.listDistinctPurchaseTransactionUris(db);

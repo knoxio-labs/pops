@@ -21,9 +21,10 @@ interface MutableCounters {
   notFound: number;
   unavailable: number;
   badUri: number;
+  misconfigured: number;
 }
 
-type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request';
+type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request' | 'misconfigured';
 
 export interface ReconcileBatch {
   db: InventoryDb;
@@ -46,31 +47,49 @@ function isShapeMatch(
   return parsed !== null && parsed.pillar === expectedPillar && parsed.type === expectedType;
 }
 
+function applyOk(batch: ReconcileBatch, uri: string): void {
+  batch.onOk(uri);
+  batch.counters.ok += 1;
+}
+
+function applyNotFound(batch: ReconcileBatch, uri: string): void {
+  batch.onNotFound(uri);
+  batch.counters.notFound += 1;
+  batch.logger?.info?.('inventory cross-pillar reconciliation: uri 404', { uri });
+}
+
+function applyUnavailable(batch: ReconcileBatch, uri: string): void {
+  batch.counters.unavailable += 1;
+  batch.logger?.warn?.('inventory cross-pillar reconciliation: owning pillar unavailable', {
+    uri,
+  });
+}
+
+function applyBadRequest(batch: ReconcileBatch, uri: string): void {
+  batch.counters.badUri += 1;
+  batch.logger?.warn?.('inventory cross-pillar reconciliation: bad uri (parsed, pillar rejected)', {
+    uri,
+  });
+}
+
+function applyMisconfigured(batch: ReconcileBatch, uri: string): void {
+  batch.counters.misconfigured += 1;
+  batch.logger?.warn?.(
+    'inventory cross-pillar reconciliation: owning pillar misconfigured (credential or contract fault, will not heal by retrying)',
+    { uri }
+  );
+}
+
+const OUTCOME_HANDLERS: Record<ReconcileOutcome, (batch: ReconcileBatch, uri: string) => void> = {
+  ok: applyOk,
+  'not-found': applyNotFound,
+  unavailable: applyUnavailable,
+  'bad-request': applyBadRequest,
+  misconfigured: applyMisconfigured,
+};
+
 function applyOutcomeToBatch(batch: ReconcileBatch, uri: string, outcome: ReconcileOutcome): void {
-  switch (outcome) {
-    case 'ok':
-      batch.onOk(uri);
-      batch.counters.ok += 1;
-      return;
-    case 'not-found':
-      batch.onNotFound(uri);
-      batch.counters.notFound += 1;
-      batch.logger?.info?.('inventory cross-pillar reconciliation: uri 404', { uri });
-      return;
-    case 'unavailable':
-      batch.counters.unavailable += 1;
-      batch.logger?.warn?.('inventory cross-pillar reconciliation: owning pillar unavailable', {
-        uri,
-      });
-      return;
-    case 'bad-request':
-      batch.counters.badUri += 1;
-      batch.logger?.warn?.(
-        'inventory cross-pillar reconciliation: bad uri (parsed, pillar rejected)',
-        { uri }
-      );
-      return;
-  }
+  OUTCOME_HANDLERS[outcome](batch, uri);
 }
 
 export async function reconcileUriBatch(batch: ReconcileBatch): Promise<void> {
