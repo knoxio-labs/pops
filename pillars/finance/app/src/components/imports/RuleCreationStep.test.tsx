@@ -249,12 +249,45 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('venue:speakeasy');
   });
 
-  it('does not stage a refused proposal, even though it was checked by default', async () => {
-    closedVenueImport();
+  it('stages the valid proposal and not the refused one, though both were checked by default', async () => {
+    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
+    taxonomy.tags = ['venue:bar'];
+    storeState = {
+      ...storeState,
+      confirmedTransactions: [
+        makeTxn({
+          checksum: 'a',
+          entityId: 'e-speakeasy',
+          entityName: 'Speakeasy',
+          tags: ['venue:speakeasy'],
+        }),
+        makeTxn({
+          checksum: 'b',
+          entityId: 'e-speakeasy',
+          entityName: 'Speakeasy',
+          tags: ['venue:speakeasy'],
+        }),
+        makeTxn({
+          checksum: 'c',
+          entityId: 'e-griffin',
+          entityName: 'Griffin',
+          tags: ['venue:bar'],
+        }),
+        makeTxn({
+          checksum: 'd',
+          entityId: 'e-griffin',
+          entityName: 'Griffin',
+          tags: ['venue:bar'],
+        }),
+      ],
+    };
     render(withQuery(<RuleCreationStep />));
     await screen.findByRole('alert');
-    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
-    expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /create 1 rule/i }));
+    expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
+    const staged = JSON.stringify(mockAddPendingTagRuleChangeSet.mock.calls);
+    expect(staged).toContain('venue:bar');
+    expect(staged).not.toContain('venue:speakeasy');
   });
 
   it('stages a closed-axis value the vocabulary holds', async () => {
