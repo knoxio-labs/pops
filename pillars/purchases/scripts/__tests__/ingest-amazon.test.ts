@@ -109,6 +109,32 @@ describe('main', () => {
 
     expect(warnings()).toContain('found 0 invoice PDF(s)');
   });
+
+  it('refuses a remote PURCHASES_BASE_URL before a byte is stored or a request is sent', async () => {
+    vi.stubEnv(INGEST_API_KEY_ENV, 'k');
+    vi.stubEnv('PURCHASES_BASE_URL', 'http://capivara');
+    const receipts = temporaryReceiptStore('amazon-receipts-');
+    parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });
+    stubFetch(201);
+
+    await expect(main([bundleWith({ '1.pdf': invoiceFor(KNOWN_ORDER) })])).rejects.toThrow(
+      /PURCHASES_BASE_URL/
+    );
+
+    expect(requests).toEqual([]);
+    expect(storedFiles(receipts)).toEqual([]);
+  });
+
+  it('proceeds when PURCHASES_BASE_URL resolves to this host', async () => {
+    vi.stubEnv(INGEST_API_KEY_ENV, 'k');
+    vi.stubEnv('PURCHASES_BASE_URL', 'http://127.0.0.1:3013');
+    parseMock.mockReturnValue({ orders: [orderNamed(KNOWN_ORDER)], anomalies: [] });
+    stubFetch(201);
+
+    await expect(main([bundleWith()])).resolves.toBeUndefined();
+
+    expect(requests.length).toBeGreaterThan(0);
+  });
 });
 
 describe('invoice reporting', () => {

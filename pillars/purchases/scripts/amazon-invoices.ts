@@ -107,9 +107,10 @@ export interface InvoiceWriter {
  *
  * **The store is a local directory.** It resolves beside this pillar's SQLite
  * file and nowhere else, so pointing `PURCHASES_SQLITE_PATH` at the volume is
- * what puts the evidence on it. Run against a remote `PURCHASES_BASE_URL` from
- * a machine that cannot see the server's volume and the URIs will resolve to
- * bytes that are not there — the write succeeds and the evidence is on the
+ * what puts the evidence on it. `createIngestClient` (POPS-2312) refuses to
+ * build a client at all when `PURCHASES_BASE_URL` is not local, so this
+ * writer never runs against a remote host that cannot see the server's
+ * volume — that used to succeed silently, with the evidence left on the
  * wrong host. Run this where the volume is mounted.
  */
 export function createInvoiceWriter(plan: InvoicePlan): InvoiceWriter {

@@ -20,6 +20,7 @@ import {
   DEFAULT_BASE_URL,
   INGEST_API_KEY_ENV,
   isCliEntrypoint,
+  isLocalBaseUrl,
   postPurchases,
   runCli,
   upsertSource,
@@ -148,12 +149,67 @@ describe('createIngestClient', () => {
     expect(createIngestClient({ [INGEST_API_KEY_ENV]: ' k \n' }).apiKey).toBe('k');
   });
 
-  it('defaults the base URL and lets the environment override it', () => {
+  it('defaults the base URL to the local default', () => {
     expect(createIngestClient({ [INGEST_API_KEY_ENV]: 'k' }).baseUrl).toBe(DEFAULT_BASE_URL);
+  });
+
+  it('lets the environment override the base URL when the override is still local', () => {
     expect(
-      createIngestClient({ [INGEST_API_KEY_ENV]: 'k', PURCHASES_BASE_URL: 'http://elsewhere' })
+      createIngestClient({ [INGEST_API_KEY_ENV]: 'k', PURCHASES_BASE_URL: 'http://127.0.0.5:9000' })
         .baseUrl
-    ).toBe('http://elsewhere');
+    ).toBe('http://127.0.0.5:9000');
+  });
+
+  it('refuses a remote PURCHASES_BASE_URL rather than storing here and posting there', () => {
+    expect(() =>
+      createIngestClient({ [INGEST_API_KEY_ENV]: 'k', PURCHASES_BASE_URL: 'http://capivara' })
+    ).toThrow(/PURCHASES_BASE_URL/);
+  });
+
+  it('names the value it refused and why, in the same error', () => {
+    let message = '';
+    try {
+      createIngestClient({ [INGEST_API_KEY_ENV]: 'k', PURCHASES_BASE_URL: 'http://elsewhere' });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain('http://elsewhere');
+    expect(message).toContain('not local');
+  });
+});
+
+describe('isLocalBaseUrl', () => {
+  it('accepts the bare loopback hostname', () => {
+    expect(isLocalBaseUrl('http://localhost:3013')).toBe(true);
+  });
+
+  it('accepts every address in 127.0.0.0/8, not only 127.0.0.1', () => {
+    expect(isLocalBaseUrl('http://127.0.0.2')).toBe(true);
+    expect(isLocalBaseUrl('http://127.0.0.1:3013')).toBe(true);
+    expect(isLocalBaseUrl('http://127.255.255.255')).toBe(true);
+  });
+
+  it('accepts the IPv6 loopback address, bracketed as a URL requires', () => {
+    expect(isLocalBaseUrl('http://[::1]:3000')).toBe(true);
+  });
+
+  it('rejects a hostname that merely contains "localhost"', () => {
+    // A substring match here would wave through exactly the mistake this
+    // exists to catch: a real, remote, different host.
+    expect(isLocalBaseUrl('http://localhost.example.com')).toBe(false);
+  });
+
+  it('rejects a real remote host', () => {
+    expect(isLocalBaseUrl('http://capivara')).toBe(false);
+    expect(isLocalBaseUrl('http://192.168.1.50:3013')).toBe(false);
+  });
+
+  it('rejects an octet run that only looks like 127.0.0.0/8', () => {
+    expect(isLocalBaseUrl('http://1270.0.0.1')).toBe(false);
+  });
+
+  it('treats an unparsable URL as remote rather than throwing', () => {
+    expect(isLocalBaseUrl('not a url')).toBe(false);
   });
 });
 
