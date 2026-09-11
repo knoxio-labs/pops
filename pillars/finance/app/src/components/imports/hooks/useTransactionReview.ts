@@ -3,12 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import { useImportStore } from '../../../store/importStore';
 import { collectChangedChecksums, mergeReevaluatedResult } from './local-tx-reconcile';
-import {
-  reevaluateVia,
-  toastRulesApplied,
-  type ReevaluateVia,
-  useReevaluatePending,
-} from './useReevaluatePending';
+import { reevaluateVia, type ReevaluateVia, useReevaluatePending } from './useReevaluatePending';
 
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -136,9 +131,6 @@ function useReevalOnChangeSets(
     void runReevaluate().then((outcome) => {
       if (!outcome || runId !== latestRunRef.current) return;
       applyReevaluatedResult(outcome.result);
-      // A file import's apply path has never announced a count here, and it is
-      // left exactly as it was; only a live draft reports what its rules moved.
-      if (via === 'rows') toastRulesApplied(outcome.affectedCount);
     });
   }, [pendingChangeSets, via, applyReevaluatedResult, runReevaluate]);
   return { isReevaluating };
