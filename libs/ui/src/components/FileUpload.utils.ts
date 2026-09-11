@@ -69,7 +69,8 @@ export function validateFiles({ list, accept, maxSize, maxFiles, onError }: Vali
 /** The library's own phrasing of a {@link FileValidationErrorReason}, from the `ui` catalog. */
 export function describeFileValidationError(
   t: TFunction<'ui'>,
-  reason: FileValidationErrorReason
+  reason: FileValidationErrorReason,
+  locale: string
 ): string {
   switch (reason.type) {
     case 'not-accepted':
@@ -77,7 +78,7 @@ export function describeFileValidationError(
     case 'too-large':
       return t('fileUpload.errors.tooLarge', {
         name: reason.file.name,
-        size: formatBytes(reason.maxSize),
+        size: formatBytes(reason.maxSize, { locale }),
       });
     case 'too-many':
       return t('fileUpload.errors.tooMany', { count: reason.maxFiles });
