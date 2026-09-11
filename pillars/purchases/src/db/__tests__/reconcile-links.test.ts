@@ -157,7 +157,7 @@ describe('listPurchasesForTransaction', () => {
     temp.cleanup();
   });
 
-  it('reflects one snapshot: a concurrent charge delete between the two reads cannot understate linkedCents', () => {
+  it('reflects one snapshot: a concurrent charge delete between the two reads does not understate linkedCents', () => {
     const temp = openTempDb();
     const opened = temp.opened;
     seedAmazonSource(opened);
