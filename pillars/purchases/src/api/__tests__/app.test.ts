@@ -380,6 +380,58 @@ describe('GET /purchases', () => {
 
     expect(res.body.items[0]).toHaveProperty('itemCount', 0);
   });
+
+  describe('keyset paging', () => {
+    async function seedThree(): Promise<{ id: string; orderedAt: string }[]> {
+      const seeded: { id: string; orderedAt: string }[] = [];
+      const orderedAts = [
+        '2026-03-03T00:00:00.000Z',
+        '2026-03-02T00:00:00.000Z',
+        '2026-03-01T00:00:00.000Z',
+      ];
+      for (const [index, orderedAt] of orderedAts.entries()) {
+        const res = await requestOn(app)
+          .post('/purchases')
+          .send({
+            ...minimalOrder,
+            sourceOrderId: `keyset-${index}`,
+            checksum: `keyset-checksum-${index}`,
+            orderedAt,
+          });
+        expect(res.status).toBe(201);
+        seeded.push({ id: res.body.purchase.id, orderedAt });
+      }
+      return seeded;
+    }
+
+    it('pages past the anchor without repeating or skipping a row', async () => {
+      const seeded = await seedThree();
+
+      const first = await requestOn(app).get('/purchases?limit=2');
+      expect(first.status).toBe(200);
+      expect(first.body.items.map((row: { id: string }) => row.id)).toEqual([
+        seeded[0]?.id,
+        seeded[1]?.id,
+      ]);
+
+      const anchor = first.body.items[1];
+      const second = await requestOn(app).get(
+        `/purchases?limit=2&beforeOrderedAt=${encodeURIComponent(String(anchor.orderedAt))}&beforeId=${String(anchor.id)}`
+      );
+      expect(second.status).toBe(200);
+      expect(second.body.items.map((row: { id: string }) => row.id)).toEqual([seeded[2]?.id]);
+    });
+
+    it('rejects a beforeOrderedAt sent without beforeId', async () => {
+      const res = await requestOn(app).get('/purchases?beforeOrderedAt=2026-03-02T00:00:00.000Z');
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a beforeId sent without beforeOrderedAt', async () => {
+      const res = await requestOn(app).get('/purchases?beforeId=some-id');
+      expect(res.status).toBe(400);
+    });
+  });
 });
 
 describe('GET /items', () => {

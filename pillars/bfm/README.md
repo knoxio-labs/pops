@@ -337,10 +337,12 @@ purchase made at 9pm re-dates itself when its owner flies west. The detail
 carries `orderedAt` beside the day for anything that genuinely needs the
 instant; a client must never re-derive the day from it.
 
-**The cursor carries an OFFSET, not an anchor.** `purchases`' list exposes no
-keyset anchor, so the walk has the instability the finance leg was built to
-avoid: an order captured at the head mid-scroll shifts every offset by one.
-Opacity is what keeps that fixable without touching a handset (POPS-2476).
+**The cursor carries a keyset anchor, like the finance leg's.** `purchases`'
+list grew `beforeOrderedAt`/`beforeId` (POPS-2476), so this leg no longer
+compromises on an offset: the cursor names `(orderedAt, id)` of the last row
+served, which stays a valid position in the data no matter what lands at the
+head of the list mid-scroll. Opacity is what let that change without touching
+a handset — a cursor of the old offset shape simply fails to decode.
 
 ## The mobile write
 

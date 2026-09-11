@@ -17,6 +17,7 @@ import {
 } from '../../db/index.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { tryMapServiceError } from './error-mapping.js';
+import { resolvePurchaseListKeyset } from './purchase-list-keyset.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
 import {
   toPurchaseDetailBody,
@@ -91,10 +92,15 @@ export function makePurchaseHandlers(db: PurchasesDb, onIngest: () => void = () 
       const scope = resolvePurchaseScope(query);
       if (!scope.ok) return { status: 400 as const, body: scope.body };
 
+      const keyset = resolvePurchaseListKeyset(query);
+      if (!keyset.ok) return { status: 400 as const, body: keyset.body };
+
       const rows = listPurchaseRows(db, {
         ...scope.scope,
         limit: query.limit,
         offset: query.offset,
+        beforeOrderedAt: keyset.beforeOrderedAt,
+        beforeId: keyset.beforeId,
       });
       return {
         status: 200 as const,

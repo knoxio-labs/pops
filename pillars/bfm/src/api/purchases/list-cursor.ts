@@ -1,26 +1,29 @@
 /**
  * The opaque page cursor the mobile purchases list hands out.
  *
- * It carries an OFFSET, and that is a compromise rather than a design. The
- * finance leg's cursor beside this one carries a keyset anchor — the `(date,
- * id)` of the last row served — because an anchor names a position in the data
- * and an offset names a position in a result set that moves. `purchases`'
- * `GET /purchases` exposes only `limit`/`offset` today, so there is no anchor
- * to carry; an order landing at the head mid-scroll shifts every offset by one
- * and the next page repeats a row and skips another. The producer growing an
- * anchor is tracked, and the pillar README says so.
+ * It carries a keyset anchor — the `(orderedAt, id)` of the last row served —
+ * the same shape the finance leg's cursor beside this one carries, and for
+ * the same reason: an anchor names a position in the data rather than a
+ * distance from the start of a result set that can move underneath a scroll.
+ * `purchases`' `GET /purchases` grew `beforeOrderedAt`/`beforeId` for this
+ * (POPS-2476), so this leg no longer has to compromise on an offset — an
+ * order landing at the head mid-scroll used to shift every offset by one,
+ * repeating a row the walk had already served and skipping one it never did.
  *
- * Opacity is what makes that fixable. The app must echo the cursor back
- * unmodified and must never construct or read one, so the day the payload
- * becomes an anchor no handset in the field has to be taught the new shape —
- * a cursor of the old shape simply fails to decode, and the list restarts.
+ * Opacity is what makes the cursor's own shape changeable without teaching a
+ * handset in the field about it. The app must echo the cursor back unmodified
+ * and must never construct or read one, so a cursor of the old `{ o }` shape
+ * simply fails to decode — the app gets the existing `invalid_cursor` 400
+ * rather than a walk that silently restarts from page one.
  */
 import { z } from 'zod';
 
-/** The decoded position: how many rows the walk has already served. */
+/** The decoded position: the last row the walk has already served. */
 export const PurchasesPageCursorSchema = z.object({
-  /** Rows already served. Never negative; zero is the first page and needs no cursor. */
-  o: z.number().int().positive(),
+  /** `orderedAt` of the last row served, exactly as `purchases` sent it. */
+  orderedAt: z.string().min(1),
+  /** `id` of the last row served. Together with `orderedAt`, the full anchor. */
+  id: z.string().min(1),
 });
 
 export type PurchasesPageCursor = z.infer<typeof PurchasesPageCursorSchema>;

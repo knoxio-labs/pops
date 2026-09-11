@@ -298,6 +298,43 @@ export const ListPurchasesQuerySchema = z.object({
   to: IsoTimestampSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  /**
+   * Keyset anchor — the `orderedAt` of the last row you already have, in any
+   * ISO-8601 form with a timezone. Sent with `beforeId`; the pair selects
+   * rows sorting strictly after that row under the list's `orderedAt DESC,
+   * id ASC` order.
+   *
+   * Prefer this over `offset` for anything that pages a list which can
+   * change underneath it: an order landing at the head mid-scroll shifts
+   * every offset by one, so the next page repeats a row and skips another.
+   * A keyset anchor names a position in the data rather than a distance from
+   * the start, so it is unaffected. `offset` stays for callers that jump to
+   * a page.
+   *
+   * Both halves are validated rather than taken as free strings, because an
+   * anchor is compared against the canonical stored form and a bad one
+   * changes which rows come back WITHOUT failing. Supplying one without the
+   * other is a 400 — an instant alone cannot separate two orders placed at
+   * the same moment, which is exactly what the `id` half is for.
+   */
+  beforeOrderedAt: IsoTimestampSchema.optional().describe(
+    'Keyset anchor: the `orderedAt` of the last row you already have, as an ISO-8601 ' +
+      'timestamp with a timezone. Must be sent together with `beforeId` — supplying one ' +
+      'without the other is a 400, because two orders can share an instant and `orderedAt` ' +
+      'alone cannot separate them. Returns rows sorting strictly after that row under ' +
+      '`orderedAt DESC, id ASC`. Prefer this over `offset` when paging a list that can change ' +
+      'underneath you.'
+  ),
+  /** Keyset anchor — the `id` of the last row you already have. Sent with `beforeOrderedAt`. */
+  beforeId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Keyset anchor: the `id` of the last row you already have. ' +
+        'Must be sent together with `beforeOrderedAt` — supplying one without the other is a 400. ' +
+        'This half is what separates rows sharing an instant.'
+    ),
 });
 
 export const ListItemsByTagQuerySchema = z.object({

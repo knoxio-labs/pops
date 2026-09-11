@@ -345,7 +345,43 @@ describe('walking the pages', () => {
 
     await list(app, token, '?limit=2');
 
-    expect(fake.listCalls).toEqual([{ limit: 3, offset: 0 }]);
+    expect(fake.listCalls).toEqual([{ limit: 3 }]);
+  });
+
+  it('anchors the next request on the last row served, not an offset', async () => {
+    const { app, token, fake } = openWithRows(three);
+
+    const first = await list(app, token, '?limit=2');
+    await list(app, token, `?limit=2&cursor=${first.body.nextCursor}`);
+
+    expect(fake.listCalls).toEqual([
+      { limit: 3 },
+      { limit: 3, beforeOrderedAt: '2026-08-12T02:00:00.000Z', beforeId: 'pur-2' },
+    ]);
+  });
+
+  it('never repeats or skips a row when an order lands at the head mid-scroll', async () => {
+    // The defect an offset-based cursor could not avoid: an insertion at the
+    // head of the list shifts every later row's position by one, so a walk
+    // that names its position as a distance from the start re-reads a row it
+    // already served. A keyset anchor names a position IN THE DATA instead,
+    // so it is unaffected by what lands ahead of it.
+    const { app, token, fake } = openWithRows(three);
+
+    const first = await list(app, token, '?limit=2');
+    expect(first.body.data.map((row: { id: string }) => row.id)).toEqual(['pur-1', 'pur-2']);
+
+    fake.insert(purchasesRow({ id: 'pur-0', orderedAt: '2026-08-14T02:00:00.000Z' }));
+
+    const second = await list(app, token, `?limit=2&cursor=${String(first.body.nextCursor)}`);
+    expect(second.body.data.map((row: { id: string }) => row.id)).toEqual(['pur-3']);
+    expect(second.body.nextCursor).toBeNull();
+
+    const servedIds: string[] = [...first.body.data, ...second.body.data].map(
+      (row: { id: string }) => row.id
+    );
+    expect(servedIds).toEqual(['pur-1', 'pur-2', 'pur-3']);
+    expect(new Set(servedIds).size).toBe(servedIds.length);
   });
 
   it('refuses a cursor it did not mint rather than restarting the list', async () => {

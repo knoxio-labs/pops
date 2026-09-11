@@ -65,7 +65,11 @@ export type PurchasesReceiptRouter = {
     }) => Promise<unknown>;
   };
   purchase: {
-    list: (input: { limit?: number; offset?: number }) => Promise<unknown>;
+    list: (input: {
+      limit?: number;
+      beforeOrderedAt?: string;
+      beforeId?: string;
+    }) => Promise<unknown>;
     get: (input: { id: string }) => Promise<unknown>;
   };
 };
@@ -134,10 +138,9 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
       // row's existence is what proves another page exists, and asking the
       // producer for a total instead would be a second count query per scroll
       // tick answering with a number that is stale the moment it is read.
-      const offset = request.cursor?.o ?? 0;
       const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
         PURCHASES_PILLAR_ID,
-        (handle) => handle.purchase.list({ limit: request.limit + 1, offset })
+        (handle) => handle.purchase.list(toListInput(request))
       );
 
       const page = parseOrMismatch(
@@ -148,7 +151,7 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
       );
       if (!isGatewayOk(page)) return page;
 
-      return { kind: 'ok', value: toPage(page.value.items, request.limit, offset) };
+      return { kind: 'ok', value: toPage(page.value.items, request.limit) };
     },
 
     async getPurchase(id: string) {
@@ -211,22 +214,36 @@ async function fetchReceiptBytes(
   return { kind: 'ok', value: answered.value };
 }
 
+/** The wire input one `purchase.list` call sends for a page request. */
+function toListInput(request: ListPurchasesRequest): {
+  limit: number;
+  beforeOrderedAt?: string;
+  beforeId?: string;
+} {
+  return {
+    limit: request.limit + 1,
+    beforeOrderedAt: request.cursor?.orderedAt,
+    beforeId: request.cursor?.id,
+  };
+}
+
 /**
  * Trim the probe row off the over-fetched page and mint the next cursor.
  *
- * The cursor counts rows SERVED, not rows fetched: naming the probe row would
- * skip it, since the app never saw it.
+ * The cursor names the LAST ROW SERVED, not the probe: naming the probe row
+ * would anchor the next page one row too far forward, since the app never saw
+ * it and could not have served it.
  */
-function toPage(
-  rows: readonly PurchasesListRow[],
-  limit: number,
-  offset: number
-): MobilePurchasesPage {
+function toPage(rows: readonly PurchasesListRow[], limit: number): MobilePurchasesPage {
   const hasMore = rows.length > limit;
   const served = hasMore ? rows.slice(0, limit) : rows;
+  const last = served.at(-1);
 
   return {
     data: served.map(toMobilePurchase),
-    nextCursor: hasMore ? encodePurchasesCursor({ o: offset + served.length }) : null,
+    nextCursor:
+      hasMore && last !== undefined
+        ? encodePurchasesCursor({ orderedAt: last.orderedAt, id: last.id })
+        : null,
   };
 }
