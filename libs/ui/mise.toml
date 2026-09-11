@@ -1,9 +1,15 @@
 # require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
 [tasks.typecheck]
-run = ["node ../../scripts/require-built-graph.mjs", "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"]
+run = [
+  "node ../../scripts/require-built-graph.mjs",
+  "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+]
 
 [tasks.test]
-run = ["node ../../scripts/require-built-graph.mjs", "vitest run && node scripts/check-storybook-coverage.mjs"]
+run = [
+  "node ../../scripts/require-built-graph.mjs",
+  "vitest run && node scripts/check-storybook-coverage.mjs",
+]
 
 [tasks.lint]
 run = "oxlint src scripts && oxfmt --check ."
