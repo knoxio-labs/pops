@@ -9,6 +9,60 @@ import { storyGlobs } from '../../.storybook/story-globs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STORYBOOK_DIR = resolve(HERE, '../../.storybook');
 
+interface DocumentedGlob {
+  pattern: string;
+  isExcluded: (matchedRelativePath: string) => boolean;
+}
+
+const WHOLE_SEGMENT_NEGATION = /^!\(([^|)]+)\)$/;
+const ALTERNATION_GROUP = /@\(([^)]+)\)/g;
+const UNSUPPORTED_EXTGLOB = /[?+*!]\(/;
+
+/**
+ * `main.ts` passes `storyGlobs` straight to Storybook, which resolves them
+ * with picomatch (documents extglob). `fs.globSync` only documents `*`,
+ * `**`, `?`, `[...]` and `{...}` — it happens to also resolve `@(...)` and
+ * `!(...)` today, but that's unspecified behaviour this test shouldn't rely
+ * on. This translates the two extglob forms `story-globs.ts` actually uses
+ * into documented syntax, and throws on anything else so a future
+ * specifier can't silently mistranslate.
+ */
+function toDocumentedGlob(spec: string): DocumentedGlob {
+  let exclusion: { segmentIndex: number; excluded: string } | undefined;
+
+  const segments = spec.split('/').map((segment, segmentIndex) => {
+    const wholeSegmentNegation = WHOLE_SEGMENT_NEGATION.exec(segment);
+    if (wholeSegmentNegation) {
+      if (exclusion) {
+        throw new Error(
+          `unsupported glob "${spec}": more than one "!(...)" segment is not supported`
+        );
+      }
+      exclusion = { segmentIndex, excluded: wholeSegmentNegation[1]! };
+      return '*';
+    }
+
+    const translated = segment.replace(
+      ALTERNATION_GROUP,
+      (_match, alternatives: string) => `{${alternatives.split('|').join(',')}}`
+    );
+
+    if (UNSUPPORTED_EXTGLOB.test(translated)) {
+      throw new Error(`unsupported extglob syntax in "${spec}": segment "${segment}"`);
+    }
+
+    return translated;
+  });
+
+  const pattern = segments.join('/');
+  const isExcluded = exclusion
+    ? (matchedRelativePath: string) =>
+        matchedRelativePath.split('/')[exclusion!.segmentIndex] === exclusion!.excluded
+    : () => false;
+
+  return { pattern, isExcluded };
+}
+
 /**
  * `main.ts` and this test both import `storyGlobs` — there is exactly one
  * list of specifiers, and this expands it exactly the way Storybook does:
@@ -18,9 +72,12 @@ const STORYBOOK_DIR = resolve(HERE, '../../.storybook');
  * match is resolved to an absolute path up front.
  */
 function matchesPerSpecifier(): string[][] {
-  return storyGlobs.map((spec) =>
-    globSync(spec, { cwd: STORYBOOK_DIR }).map((file) => resolve(STORYBOOK_DIR, file))
-  );
+  return storyGlobs.map((spec) => {
+    const { pattern, isExcluded } = toDocumentedGlob(spec);
+    return globSync(pattern, { cwd: STORYBOOK_DIR })
+      .filter((file) => !isExcluded(file))
+      .map((file) => resolve(STORYBOOK_DIR, file));
+  });
 }
 
 /**
@@ -60,7 +117,42 @@ function toLibLevelPattern(spec: string): string {
   return pattern;
 }
 
+describe('toDocumentedGlob', () => {
+  it('turns a shared @(...) alternation into the documented brace form', () => {
+    expect(toDocumentedGlob('@(ts|tsx)').pattern).toBe('{ts,tsx}');
+  });
+
+  it('turns a whole-segment !(...) into * plus a positional exclusion', () => {
+    const { pattern, isExcluded } = toDocumentedGlob('../../!(ui)/src/x');
+
+    expect(pattern).toBe('../../*/src/x');
+    expect(isExcluded('../../ui/src/x')).toBe(true);
+    expect(isExcluded('../../date/src/x')).toBe(false);
+  });
+
+  it('throws on unsupported extglob forms', () => {
+    expect(() => toDocumentedGlob('?(x)')).toThrow();
+    expect(() => toDocumentedGlob('+(x)')).toThrow();
+    expect(() => toDocumentedGlob('*(x)')).toThrow();
+    expect(() => toDocumentedGlob('prefix!(x)suffix')).toThrow();
+  });
+});
+
 describe('storybook stories globs', () => {
+  it('never hands fs.globSync raw extglob syntax', () => {
+    for (const spec of storyGlobs) {
+      const { pattern } = toDocumentedGlob(spec);
+      expect(
+        pattern,
+        `translated "${spec}" to "${pattern}", which still contains "@("`
+      ).not.toContain('@(');
+      expect(
+        pattern,
+        `translated "${spec}" to "${pattern}", which still contains "!("`
+      ).not.toContain('!(');
+    }
+  });
+
   it('matches every story/mdx file with exactly one specifier', () => {
     const perSpecifier = matchesPerSpecifier();
     const countByFile = new Map<string, number>();
@@ -102,19 +194,26 @@ describe('storybook stories globs', () => {
   it('excludes libs/ui from the sibling-lib specifier', () => {
     const siblingIndex = findSpecifierIndex(isSiblingLibSpecifier);
     const siblingSpec = storyGlobs[siblingIndex]!;
-    const libLevelPattern = toLibLevelPattern(siblingSpec);
+    const libLevelSpec = toLibLevelPattern(siblingSpec);
+    const { pattern, isExcluded } = toDocumentedGlob(libLevelSpec);
 
-    const matches = globSync(libLevelPattern, { cwd: STORYBOOK_DIR }).map((file) =>
-      resolve(STORYBOOK_DIR, file)
-    );
+    const rawMatches = globSync(pattern, { cwd: STORYBOOK_DIR });
 
     expect(
-      matches.length,
-      `"${libLevelPattern}" matched no files — the "!(ui)" extglob may not be resolving at all`
+      rawMatches.length,
+      `"${pattern}" matched no files — the "*" substituted for "!(ui)" may not be resolving at all`
     ).toBeGreaterThan(0);
     expect(
+      rawMatches.some((file) => isExcluded(file)),
+      `none of the raw matches for "${pattern}" were recognised as "ui" — the exclusion's segment index may be wrong: ${rawMatches.join(', ')}`
+    ).toBe(true);
+
+    const matches = rawMatches
+      .filter((file) => !isExcluded(file))
+      .map((file) => resolve(STORYBOOK_DIR, file));
+    expect(
       matches.some((file) => file.includes(`${sep}libs${sep}ui${sep}`)),
-      `"${libLevelPattern}" matched a file under libs/ui, so "!(ui)" isn't excluding it: ${matches.join(', ')}`
+      `"${pattern}" matched a file under libs/ui after filtering, so the exclusion predicate isn't excluding it: ${matches.join(', ')}`
     ).toBe(false);
   });
 
