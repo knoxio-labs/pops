@@ -10,10 +10,11 @@
  * diffing it against the drizzle definitions, in both directions — for
  * columns, NOT NULL, primary keys, foreign keys with their ON DELETE
  * behaviour, and indexes (including the indexes SQLite creates for a
- * `unique()` constraint or a column-level `.unique()`). Every expectation
- * is read out of `getTableConfig()`; nothing here is a hand-maintained
- * literal, so a schema change with no matching migration edit fails
- * without anyone having to remember to update this file too.
+ * `unique()` constraint or a column-level `.unique()`, and the `WHERE`
+ * predicate of a partial index). Every expectation is read out of
+ * `getTableConfig()`; nothing here is a hand-maintained literal, so a
+ * schema change with no matching migration edit fails without anyone
+ * having to remember to update this file too.
  *
  * Column *types* are deliberately not compared. SQLite's type affinity
  * means the migration's declared column type and drizzle's declared column
@@ -21,7 +22,7 @@
  * or a `text` column drizzle types as an enum), so a literal string compare
  * would flag drift that changes nothing about how the column behaves.
  */
-import { getTableConfig, uniqueKeyName } from 'drizzle-orm/sqlite-core';
+import { getTableConfig, SQLiteSyncDialect, uniqueKeyName } from 'drizzle-orm/sqlite-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -45,6 +46,7 @@ import {
 } from '../schema.js';
 import { openTempDb } from './helpers.js';
 
+import type { SQL } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
 import type { OpenedPurchasesDb } from '../index.js';
@@ -228,6 +230,35 @@ interface ExpectedIndex {
   readonly name: string;
   readonly columns: readonly string[];
   readonly unique: boolean;
+  readonly partial: boolean;
+  /** Normalised `WHERE` predicate text, present only when {@link partial} is true. */
+  readonly predicate: string | undefined;
+}
+
+const indexDialect = new SQLiteSyncDialect();
+
+/**
+ * Renders a partial index's `WHERE` condition into SQL text the same way
+ * drizzle would when generating a `CREATE INDEX` statement, then normalises
+ * it for comparison against the migration's own text — see
+ * {@link normalisePredicate}.
+ */
+function declaredPredicateOf(where: SQL): string {
+  return normalisePredicate(indexDialect.sqlToQuery(where, 'indexes').sql);
+}
+
+/**
+ * Quoting is the only thing that legitimately differs here: drizzle always
+ * double-quotes identifiers, the hand-written migrations use backticks, and
+ * SQLite accepts brackets too. Whitespace differences are just as
+ * meaningless. Stripping identifier-quote characters and collapsing
+ * whitespace leaves only what the predicate actually asserts.
+ */
+function normalisePredicate(predicate: string): string {
+  return predicate
+    .replaceAll(/[`"[\]]/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -235,7 +266,8 @@ interface ExpectedIndex {
  * through `index()`/`uniqueIndex()`, the ones declared through the
  * table-level `unique()` builder, and the ones a column-level `.unique()`
  * produces under drizzle's own default name — three different drizzle APIs
- * that all end up as a `CREATE INDEX` in the migration.
+ * that all end up as a `CREATE INDEX` in the migration. Only the first can
+ * be partial: `unique()` and `.unique()` have no `.where()` to call.
  */
 function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
   const { indexes, uniqueConstraints, columns } = getTableConfig(table);
@@ -246,6 +278,9 @@ function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
       'name' in column && typeof column.name === 'string' ? column.name : '(expression)'
     ),
     unique: index.config.unique,
+    partial: index.config.where !== undefined,
+    predicate:
+      index.config.where === undefined ? undefined : declaredPredicateOf(index.config.where),
   }));
 
   const fromTableUnique = uniqueConstraints.map((constraint) => ({
@@ -257,6 +292,8 @@ function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
       ),
     columns: constraint.columns.map((c) => c.name),
     unique: true,
+    partial: false,
+    predicate: undefined,
   }));
 
   const fromColumnUnique = columns
@@ -265,6 +302,8 @@ function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
       name: column.uniqueName ?? uniqueKeyName(table, [column.name]),
       columns: [column.name],
       unique: true,
+      partial: false,
+      predicate: undefined,
     }));
 
   return [...fromIndexBuilder, ...fromTableUnique, ...fromColumnUnique];
@@ -273,6 +312,23 @@ function expectedIndexesOf(table: SQLiteTable): ExpectedIndex[] {
 interface LiveIndex {
   readonly name: string;
   readonly unique: boolean;
+  readonly partial: boolean;
+}
+
+/**
+ * The `WHERE` predicate SQLite actually built the index with, read out of
+ * its own record of the statement rather than the migration source file —
+ * `sqlite_master.sql` is what applied, not what was written. `undefined`
+ * for a non-partial index, or one this pillar's `migrations/*.sql` never
+ * created.
+ */
+function livePredicateOf(indexName: string): string | undefined {
+  const row = opened.raw
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?`)
+    .get(indexName) as { sql: string | null } | undefined;
+  if (row?.sql === undefined || row.sql === null) return undefined;
+  const predicate = /\bwhere\b\s+([\s\S]+)$/i.exec(row.sql)?.[1];
+  return predicate === undefined ? undefined : normalisePredicate(predicate);
 }
 
 /**
@@ -298,10 +354,11 @@ function liveIndexesOf(table: string): LiveIndex[] {
       name: string;
       unique: number;
       origin: string;
+      partial: number;
     }[]
   )
     .filter((row) => row.origin !== 'pk')
-    .map((row) => ({ name: row.name, unique: row.unique === 1 }));
+    .map((row) => ({ name: row.name, unique: row.unique === 1, partial: row.partial === 1 }));
 }
 
 function liveIndexColumns(indexName: string): string[] {
@@ -341,6 +398,20 @@ describe('indexes and unique constraints match drizzle exactly, in both directio
         expect(liveIndexColumns(index.name)).toEqual(index.columns);
         expect(liveIndexesOf(name).find((i) => i.name === index.name)?.unique).toBe(index.unique);
       });
+
+      // A migration can drop or narrow a `WHERE` clause without touching
+      // the index's name, columns or uniqueness — every assertion above
+      // would still pass on an index that has quietly stopped being
+      // partial, or is partial over a different subset of rows.
+      it(`${index.name} agrees with drizzle on whether it is partial`, () => {
+        expect(liveIndexesOf(name).find((i) => i.name === index.name)?.partial).toBe(index.partial);
+      });
+
+      if (index.partial) {
+        it(`${index.name} predicate matches drizzle's WHERE clause`, () => {
+          expect(livePredicateOf(index.name)).toBe(index.predicate);
+        });
+      }
     }
   }
 });
