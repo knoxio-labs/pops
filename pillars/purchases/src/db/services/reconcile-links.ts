@@ -66,6 +66,12 @@ export function listPurchasesForTransaction(
     // ordered here so no caller has to re-sort: ids are random UUIDs and every
     // row of one ingest shares a `createdAt` to the second, so without an
     // explicit order the result is genuinely non-deterministic.
+    //
+    // `inArray` here is bounded by the links on ONE transaction, not by
+    // order history — a combined settlement spans a handful of orders, never
+    // the whole fleet — so unlike the sweep's charge-scoped queries this
+    // list cannot approach SQLite's bound-parameter cap and needs no
+    // chunking.
     const chargeRows = tx
       .select({ charge: purchaseCharges, purchase: purchases })
       .from(purchaseCharges)

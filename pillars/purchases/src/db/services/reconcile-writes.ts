@@ -16,6 +16,7 @@ import {
 } from '../schema.js';
 import { expectRow, type PurchasesDb } from './internal.js';
 import { recordMatchRule } from './match-rules.js';
+import { mutateChunked } from './sqlite-chunk.js';
 
 import type { ProposedLink } from '../../reconcile/types.js';
 
@@ -34,15 +35,22 @@ import type { ProposedLink } from '../../reconcile/types.js';
 export function tearDownUnconfirmedLinks(db: PurchasesDb, chargeIds: readonly string[]): number {
   if (chargeIds.length === 0) return 0;
 
-  return db
-    .delete(purchaseChargeLinks)
-    .where(
-      and(
-        inArray(purchaseChargeLinks.chargeId, [...chargeIds]),
-        isNull(purchaseChargeLinks.confirmedAt)
-      )
-    )
-    .run().changes;
+  // Chunked rather than one `inArray`: a full sweep's charge list scales
+  // with order history, and this delete runs inside the sweep's own
+  // transaction, so each chunk's delete stays part of the one commit.
+  return mutateChunked(
+    chargeIds,
+    (chunk) =>
+      db
+        .delete(purchaseChargeLinks)
+        .where(
+          and(
+            inArray(purchaseChargeLinks.chargeId, [...chunk]),
+            isNull(purchaseChargeLinks.confirmedAt)
+          )
+        )
+        .run().changes
+  );
 }
 
 /**

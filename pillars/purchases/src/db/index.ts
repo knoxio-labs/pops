@@ -160,6 +160,13 @@ export {
 } from './services/reconcile-reads.js';
 
 export {
+  chunkIds,
+  mutateChunked,
+  queryChunked,
+  SQLITE_IN_CHUNK_SIZE,
+} from './services/sqlite-chunk.js';
+
+export {
   listPurchasesForTransaction,
   type LinkedCharge,
   type LinkedPurchase,
