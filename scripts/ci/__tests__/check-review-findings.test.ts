@@ -53,6 +53,24 @@ describe('evaluateReviewState', () => {
     expect(result.outcome === 'fail' && result.findings?.map((f) => f.id)).toEqual(['f1']);
   });
 
+  // AGENTS.md says every open finding blocks, whatever its severity (POPS-3415).
+  // A severity filter added here later has to fail this first.
+  it.each(['low', 'medium', 'high', undefined])(
+    'fails on one open finding of severity %s, because severity is not a gate',
+    (severity) => {
+      const result = evaluateReviewState({
+        comments: [
+          stateComment({
+            last_reviewed_sha: HEAD,
+            findings: [{ id: 'f1', file: 'a.ts', title: 'small thing', severity, status: 'open' }],
+          }),
+        ],
+        headSha: HEAD,
+      });
+      expect(result.outcome).toBe('fail');
+    }
+  );
+
   it('passes when every finding is resolved', () => {
     const result = evaluateReviewState({
       comments: [
