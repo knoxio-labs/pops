@@ -1,10 +1,11 @@
 /**
- * The per-column reconciliation loop behind the soft-URI cron, plus the
- * vocabulary it and its adapters share.
+ * The per-column reconciliation loop behind the soft-URI cron.
  *
  * Lives in a sibling file so the worker in `reconcile-cross-pillar.ts`
  * stays under the file-size budget — the same split the inventory cron
- * uses (`reconcile-cross-pillar-runner.ts`).
+ * uses (`reconcile-cross-pillar-runner.ts`). The vocabulary this file and
+ * `reconcile-unavailable.ts` both need lives in `reconcile-types.ts`,
+ * a leaf neither of them may import from the other without a cycle.
  *
  * A "leg" is one column's worth of work: where the URIs come from, what
  * shape they must have, who answers for them, and how to mark or clear the
@@ -25,63 +26,24 @@ import {
 import { PURCHASES_PILLAR_ID } from '../manifest.js';
 import { warnUnavailable } from './reconcile-unavailable.js';
 
+import type {
+  ReconcileCounts,
+  ReconcileLeg,
+  ReconcileLookupFn,
+  ReconcileLookupResult,
+  ReconcileLookups,
+  ReconcileWorkerLogger,
+} from './reconcile-types.js';
 import type { PendingUnavailable } from './reconcile-unavailable.js';
 
-export type ReconcileLookupResult =
-  | { kind: 'ok' }
-  | { kind: 'not-found' }
-  | { kind: 'bad-uri'; reason: string }
-  /**
-   * The owning pillar refused this pillar's service-account credential, or
-   * this process had none to send. Preserved like `unavailable` — a pillar
-   * that would not answer says nothing about whether the row exists — but
-   * counted and logged apart from it, because waiting fixes an outage and
-   * does not fix a grant.
-   */
-  | { kind: 'unauthorized'; reason: string }
-  | { kind: 'unavailable'; reason: string };
-
-/**
- * Probe one reference by the id parsed out of its URI.
- *
- * Takes the id rather than the whole URI — unlike the finance cron, whose
- * single peer happens to accept a URI verbatim. Both peers here address by
- * id (`GET /items/:id`, `GET /paperless/documents/:id`), so parsing in the
- * loop keeps the shape check in one place and leaves the adapters as pure
- * transport.
- */
-export type ReconcileLookupFn = (id: string) => Promise<ReconcileLookupResult>;
-
-export interface ReconcileLookups {
-  /** Resolves `pops://inventory/item/<id>`. */
-  inventoryItem: ReconcileLookupFn;
-  /** Resolves `pops://documents/document/<id>`. */
-  document: ReconcileLookupFn;
-}
-
-export interface ReconcileWorkerLogger {
-  info?: (msg: string, meta?: Record<string, unknown>) => void;
-  warn?: (msg: string, meta?: Record<string, unknown>) => void;
-}
-
-/**
- * The five outcomes a URI in the work set can have, tallied per leg and
- * again per tick. Not just probed URIs: one addressed to the wrong pillar
- * is counted as `badUri` by {@link runLeg} without ever being probed.
- *
- * `unauthorized` is deliberately not folded into `unavailable`. A tick that
- * reports every URI unavailable reads as a peer being down and is normally
- * survivable; the same tick reporting them unauthorized means this pillar
- * cannot reconcile at all until a grant is fixed, and it will keep saying so
- * every night until someone does.
- */
-export interface ReconcileCounts {
-  resolved: number;
-  staleMarked: number;
-  badUri: number;
-  unauthorized: number;
-  unavailable: number;
-}
+export type {
+  ReconcileCounts,
+  ReconcileLeg,
+  ReconcileLookupFn,
+  ReconcileLookupResult,
+  ReconcileLookups,
+  ReconcileWorkerLogger,
+} from './reconcile-types.js';
 
 /**
  * One leg's tick.
@@ -104,17 +66,6 @@ export interface ReconcileLegStats extends ReconcileCounts {
 /** Totals across every leg of one tick, plus each leg's own line. */
 export interface ReconcileTickStats extends ReconcileCounts {
   legs: ReconcileLegStats[];
-}
-
-/** One column's worth of reconciliation. Constructed only as a row in {@link LEGS}. */
-export interface ReconcileLeg {
-  readonly label: string;
-  readonly expectedPillar: string;
-  readonly expectedType: string;
-  readonly listUris: (db: PurchasesDb) => string[];
-  readonly markStale: (db: PurchasesDb, uri: string, nowIso: string) => number;
-  readonly clearStale: (db: PurchasesDb, uri: string) => number;
-  readonly lookup: (lookups: ReconcileLookups) => ReconcileLookupFn;
 }
 
 export const LEGS: readonly ReconcileLeg[] = [

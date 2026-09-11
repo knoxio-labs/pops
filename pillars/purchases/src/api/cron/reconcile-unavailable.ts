@@ -3,7 +3,7 @@
  * whole leg is unavailable, split out of `reconcile-legs.ts` to keep that
  * file under its line budget.
  */
-import type { ReconcileCounts, ReconcileLeg, ReconcileWorkerLogger } from './reconcile-legs.js';
+import type { ReconcileCounts, ReconcileLeg, ReconcileWorkerLogger } from './reconcile-types.js';
 
 /** One URI whose `unavailable` warning was withheld until the leg finishes. */
 export interface PendingUnavailable {
