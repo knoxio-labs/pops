@@ -5,8 +5,8 @@
 --
 -- The two columns are not the same kind of thing. `facet` IS derived: the
 -- `facet:value` encoding introduced by 0067 makes the split unambiguous.
--- `kind` is not derivable from any tag string — nothing in
--- `trip:hunter-valley-2026` says whether `trip` is open or closed. It is policy,
+-- `kind` is not derivable from any tag string — nothing in an open-facet
+-- tag's own text says whether its facet is open or closed. It is policy,
 -- written out here by facet name and mirrored in `src/db/tag-facets.ts`'s
 -- `TAG_FACET_KINDS`. It is spelled out rather than taken from a
 -- `SELECT DISTINCT` for the same reason: `project` is a real open facet with

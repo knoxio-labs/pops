@@ -201,13 +201,13 @@ describe('0067_tag_namespace', () => {
     expect(ruleTagsOf('r-spot')).toEqual(['contains:household']);
   });
 
-  it('rebuilds the vocabulary as the 83 namespaced values', () => {
+  it('rebuilds the vocabulary as the 77 namespaced values', () => {
     seedVocabulary('Bar', 'Groceries', 'Eurovision');
 
     migrate();
 
     const active = activeVocabulary();
-    expect(active).toHaveLength(83);
+    expect(active).toHaveLength(77);
     expect(active).toContain('venue:bar');
     expect(active).toContain('contains:groceries');
     // Values that exist only in the vocabulary are namespaced too.
@@ -221,13 +221,25 @@ describe('0067_tag_namespace', () => {
         tag: string;
       }[]
     ).map((row) => row.tag);
-    expect(deactivated).toEqual(['Bar', 'Eurovision', 'Groceries']);
+    // The flat pre-migration values plus the five namespaced ones POPS-3304
+    // seeds inactive: they're still written by the historical relabel below,
+    // just no longer offered by a fresh database.
+    expect(deactivated).toEqual([
+      'Bar',
+      'Eurovision',
+      'Groceries',
+      'asset:car',
+      'asset:homelab',
+      'hobby:brewing',
+      'tax:novated-lease',
+      'trip:hunter-valley-2026',
+    ]);
   });
 
   it('seeds the vocabulary into a database that has none', () => {
     migrate();
 
-    expect(activeVocabulary()).toHaveLength(83);
+    expect(activeVocabulary()).toHaveLength(77);
   });
 
   it('preserves the source of a vocabulary value it reactivates', () => {
