@@ -37,8 +37,8 @@ export function AccountMark({
   if (institution) {
     return (
       <span
-        className={cn(shape, 'font-semibold')}
-        style={{ backgroundColor: institution.colour, color: '#fff' }}
+        className={cn(shape, 'font-semibold text-on-media')}
+        style={{ backgroundColor: institution.colour }}
         aria-hidden
       >
         {initials(institution.name)}
