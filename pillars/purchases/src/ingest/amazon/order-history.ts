@@ -19,6 +19,7 @@ import {
 } from './columns.js';
 import { parseBundleRows } from './csv.js';
 import { readText, readTimestamp } from './fields.js';
+import { reportHeaderDisagreement, type HeaderField } from './header-agreement.js';
 import { buildRefundCharges, reportOrphanRefunds, type SourceRefund } from './refund-charges.js';
 import { parseAmazonRefundDetails } from './refunds.js';
 
@@ -28,6 +29,19 @@ export { AMAZON_SOURCE_ID };
 
 /** Stands in on an anomaly for a row that names no order at all. */
 const UNKNOWN_ORDER_ID = '(no order id)';
+
+/**
+ * The two facts `readOrderHeader` takes from a single row, checked against
+ * every other row of the group before that row is trusted.
+ *
+ * `Order Status` is deliberately absent: `buildOrder` already reads it
+ * across every row (the all-cancelled check below), so there is no
+ * first-row-only reading of it to guard against.
+ */
+const HEADER_FIELDS: readonly HeaderField[] = [
+  { column: 'Order Date', normalize: (raw) => readTimestamp(raw) },
+  { column: 'Currency', normalize: (raw) => readText(raw)?.toUpperCase() ?? null },
+];
 
 export interface AmazonParseResult {
   readonly orders: readonly CreatePurchaseInput[];
@@ -105,6 +119,8 @@ function buildOrder(
 ): CreatePurchaseInput | null {
   const firstRow = rows[0];
   if (firstRow === undefined) return null;
+
+  if (reportHeaderDisagreement(rows, HEADER_FIELDS, sourceOrderId, anomalies)) return null;
 
   const header = readOrderHeader(firstRow, sourceOrderId, anomalies);
   if (header === null) return null;

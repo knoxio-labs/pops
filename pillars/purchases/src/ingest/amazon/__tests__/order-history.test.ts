@@ -372,6 +372,63 @@ describe('rows the parser cannot fully take', () => {
   });
 });
 
+describe('header agreement across an order’s rows', () => {
+  it('drops an order whose rows disagree on currency', () => {
+    const orderId = '249-9000000-0000001';
+    const result = parseAmazonOrderHistory(
+      csvWithRows([
+        rowWith({ 'Order ID': orderId, Currency: 'AUD' }),
+        rowWith({ 'Order ID': orderId, Currency: 'USD' }),
+      ])
+    );
+
+    expect(result.orders.some((order_) => order_.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toContain('Currency');
+    expect(dropped?.detail).toContain('AUD');
+    expect(dropped?.detail).toContain('USD');
+  });
+
+  it('drops an order whose rows disagree on date', () => {
+    const orderId = '249-9000000-0000002';
+    const result = parseAmazonOrderHistory(
+      csvWithRows([
+        rowWith({ 'Order ID': orderId, 'Order Date': '2025-01-01T00:00:00Z' }),
+        rowWith({ 'Order ID': orderId, 'Order Date': '2025-01-02T00:00:00Z' }),
+      ])
+    );
+
+    expect(result.orders.some((order_) => order_.sourceOrderId === orderId)).toBe(false);
+    const dropped = result.anomalies.find(
+      (anomaly) => anomaly.sourceOrderId === orderId && anomaly.kind === 'dropped-order'
+    );
+    expect(dropped?.detail).toContain('Order Date');
+  });
+
+  it('still ingests a multi-row order whose header fields agree, unchanged', () => {
+    // ORDER_TWO_SHIPMENTS already carries two rows with the same Currency
+    // and Order Date; its header parses the same with or without the guard.
+    expect(order(ORDER_TWO_SHIPMENTS)).toMatchObject({ currency: 'AUD' });
+  });
+
+  it('leaves other orders in the same file unaffected by one bad header', () => {
+    const badOrderId = '249-9000000-0000003';
+    const goodOrderId = '249-9000000-0000004';
+    const result = parseAmazonOrderHistory(
+      csvWithRows([
+        rowWith({ 'Order ID': badOrderId, Currency: 'AUD' }),
+        rowWith({ 'Order ID': badOrderId, Currency: 'USD' }),
+        rowWith({ 'Order ID': goodOrderId }),
+      ])
+    );
+
+    expect(result.orders.some((order_) => order_.sourceOrderId === badOrderId)).toBe(false);
+    expect(result.orders.some((order_) => order_.sourceOrderId === goodOrderId)).toBe(true);
+  });
+});
+
 describe('determinism and idempotency', () => {
   it('produces byte-identical output across runs', () => {
     const again = parseAmazonOrderHistory(ORDER_HISTORY_CSV);
