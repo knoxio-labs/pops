@@ -648,7 +648,6 @@ services:
       - food-ingest-data:/data/food/ingest
     secrets:
       - claude_api_key
-      - pops_api_internal_token
       # Cookie file is operator-managed — see the runbook at
       # pillars/food/docs/runbooks/instagram-cookie-refresh.md. Mounted via
       # a Docker secret rather than a bind-mount so an empty placeholder
@@ -1675,8 +1674,6 @@ secrets:
   # refresh tokens are opaque database rows rather than JWTs.
   bfm_jwt_signing_key:
     file: ../secrets/bfm_jwt_signing_key
-  pops_api_internal_token:
-    file: ../secrets/pops_api_internal_token
   instagram_cookies:
     file: ../secrets/instagram_cookies
   tmdb_api_key:
