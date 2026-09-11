@@ -80,6 +80,17 @@ describe('which rule speaks for a descriptor', () => {
     expect(matcher('PAYPAL AMZN MKTP')).toBeNull();
   });
 
+  it('tests a regex rule against the raw transaction descriptor (POPS-2651)', () => {
+    // The stored pattern names a store number, which normalizeMatchDescriptor
+    // would strip before a regex ever saw it — the same gap finance closed
+    // under POPS-2640 for the same reason.
+    const matcher = ruleMatcherFor(charge(), [
+      rule({ matchType: 'regex', descriptionPattern: '^WOOLWORTHS \\d{4} SYDNEY$' }),
+    ]);
+    expect(matcher('Woolworths 1234 Sydney')?.id).toBe('rule-1');
+    expect(matcher('Woolworths Sydney')).toBeNull();
+  });
+
   it('ignores an unparseable regex rather than failing the whole sweep', () => {
     // A sweep is a batch over every charge in a window. One malformed row
     // aborting it would present as a night's reconciliation not happening.

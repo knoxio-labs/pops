@@ -55,8 +55,27 @@ export function matchPatternFor(description: string | null): string | null {
   return normalized === '' ? null : normalized;
 }
 
-/** Tests one stored pattern against already-normalised descriptors. */
-export type MatchRulePredicate = (normalizedDescription: string) => boolean;
+/**
+ * A transaction descriptor in both of the forms the matcher needs — raw as
+ * the bank sent it, and {@link normalizeMatchDescriptor}'s digit-stripped
+ * merchant form.
+ *
+ * Mirrors finance's `MatchableDescription`
+ * (`pillars/finance/src/contract/pattern-match.ts`): `regex` is tested
+ * against `raw`, `exact` and `contains` against `normalized`.
+ */
+export interface MatchableDescriptor {
+  readonly raw: string;
+  readonly normalized: string;
+}
+
+/** Pair a raw descriptor with its normalised form for {@link compileMatchRulePattern}. */
+export function describeForMatching(raw: string): MatchableDescriptor {
+  return { raw, normalized: normalizeMatchDescriptor(raw) };
+}
+
+/** Tests one stored pattern against a descriptor's raw and normalised forms. */
+export type MatchRulePredicate = (descriptor: MatchableDescriptor) => boolean;
 
 const NEVER_MATCHES: MatchRulePredicate = () => false;
 
@@ -71,18 +90,14 @@ const NEVER_MATCHES: MatchRulePredicate = () => false;
  * transaction) pair instead of once per charge.
  *
  * Interpretation mirrors finance's `patternMatchesDescription`
- * (`pillars/finance/src/contract/pattern-match.ts`) for the reason the
- * module header gives, down to the regex flags: `i` and not `iu`, because
- * the unicode flag makes an identity escape (`\ `, `\-`) a SyntaxError, and
- * a pattern finance honours would then be silently inert on this side of
- * the seam.
- *
- * **The mirror is currently broken for `regex`.** Finance now tests a regex
- * against the raw description, because normalisation strips digits and a
- * regex could never see one (POPS-2640); this side still tests the
- * normalised descriptor, so the two pillars disagree about the same stored
- * rule. POPS-2651 closes the gap. Only hand-written rows are affected — the
- * queue's writer stores `exact` exclusively.
+ * (`pillars/finance/src/contract/pattern-match.ts`), down to which
+ * representation each match type sees: `exact` and `contains` test
+ * {@link MatchableDescriptor.normalized}, `regex` tests
+ * {@link MatchableDescriptor.raw}, because normalisation strips digits and a
+ * regex run against it could never see one (POPS-2640, POPS-2651). It also
+ * mirrors finance's regex flags: `i` and not `iu`, because the unicode flag
+ * makes an identity escape (`\ `, `\-`) a SyntaxError, and a pattern finance
+ * honours would then be silently inert on this side of the seam.
  *
  * `contains` and `regex` are honoured even though the queue's writer only
  * ever stores `exact`: the column accepts all three, so a reader that
@@ -107,16 +122,16 @@ export function compileMatchRulePattern(pattern: string, matchType: MatchType): 
   switch (matchType) {
     case 'exact': {
       const wanted = pattern.toUpperCase();
-      return (normalizedDescription) => wanted === normalizedDescription;
+      return (descriptor) => wanted === descriptor.normalized;
     }
     case 'contains': {
       const needle = pattern.toUpperCase();
-      return (normalizedDescription) => normalizedDescription.includes(needle);
+      return (descriptor) => descriptor.normalized.includes(needle);
     }
     case 'regex': {
       const compiled = compiledOrNull(pattern);
       if (compiled === null) return NEVER_MATCHES;
-      return (normalizedDescription) => compiled.test(normalizedDescription);
+      return (descriptor) => compiled.test(descriptor.raw);
     }
   }
 }
@@ -130,17 +145,17 @@ function compiledOrNull(pattern: string): RegExp | null {
 }
 
 /**
- * Does a stored pattern match an already-normalised descriptor?
+ * Does a stored pattern match a descriptor?
  *
- * The caller normalises, because a reader testing many patterns against one
- * descriptor would otherwise re-normalise it per rule. A caller testing the
- * same pattern more than once wants {@link compileMatchRulePattern}, which
- * is what this is.
+ * The caller builds both forms via {@link describeForMatching}, because a
+ * reader testing many patterns against one descriptor would otherwise
+ * re-derive them per rule. A caller testing the same pattern more than once
+ * wants {@link compileMatchRulePattern}, which is what this is.
  */
 export function matchRulePatternMatches(
   pattern: string,
   matchType: MatchType,
-  normalizedDescription: string
+  descriptor: MatchableDescriptor
 ): boolean {
-  return compileMatchRulePattern(pattern, matchType)(normalizedDescription);
+  return compileMatchRulePattern(pattern, matchType)(descriptor);
 }

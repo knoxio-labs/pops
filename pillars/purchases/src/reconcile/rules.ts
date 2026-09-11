@@ -15,7 +15,7 @@
  * engine rests on, that matching is arithmetic.
  */
 import { MIN_MATCH_CONFIDENCE } from '../contract/constants.js';
-import { compileMatchRulePattern, normalizeMatchDescriptor } from '../contract/match-rules.js';
+import { compileMatchRulePattern, describeForMatching } from '../contract/match-rules.js';
 
 import type { SolvableCharge, SolvableRule } from './types.js';
 
@@ -77,7 +77,7 @@ export function ruleMatcherFor(
   if (scoped.length === 0) return NO_RULE;
 
   return (descriptor) => {
-    const normalized = normalizeMatchDescriptor(descriptor);
-    return scoped.find((candidate) => candidate.matches(normalized))?.rule ?? null;
+    const described = describeForMatching(descriptor);
+    return scoped.find((candidate) => candidate.matches(described))?.rule ?? null;
   };
 }
