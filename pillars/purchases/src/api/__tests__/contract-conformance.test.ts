@@ -45,6 +45,7 @@ import {
   PurchaseItemDetailSchema,
 } from '../../contract/schemas/purchase-detail.js';
 import {
+  PurchaseChargeLinkSchema,
   PurchaseItemSchema,
   PurchaseSchema,
   PurchaseSourceSchema,
@@ -132,6 +133,18 @@ function expectConforms<T extends z.ZodType>(schema: T, value: unknown, label: s
     throw new Error(`${label} does not conform to its contract schema:\n${result.error.message}`);
   }
   expect(result.success).toBe(true);
+}
+
+/**
+ * `expectConforms` cannot catch an extra field: a zod object's default
+ * `.safeParse` strips unrecognised keys and still reports success, so a
+ * response carrying more than the schema declares reads as conforming. This
+ * compares the wire object's own key set against the schema's declared
+ * shape instead — derived from `.shape` rather than restated as a literal,
+ * so the check tracks the schema across a future field addition or removal.
+ */
+function expectExactKeys(schema: z.ZodObject<z.ZodRawShape>, value: object, label: string): void {
+  expect(Object.keys(value).toSorted(), label).toEqual(Object.keys(schema.shape).toSorted());
 }
 
 const BARE_ORDER = {
@@ -255,6 +268,33 @@ describe('GET /purchases/:id response', () => {
     // Create and read must agree. A consumer that renders the POST response
     // and then refetches should not see the record change under it.
     expect(fetched.body).toEqual(created.body);
+  });
+
+  it("does not leak a link row's undeclared fields onto the wire", async () => {
+    // `purchase_charge_links.transaction_description` is evidence
+    // the reconcile engine keeps for itself, not a field
+    // `PurchaseChargeLinkSchema` declares — `expectConforms` alone would
+    // not have caught it, since zod strips unknown keys before comparing.
+    const created = await requestOn(app).post('/purchases').send(RICH_ORDER);
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({ id: 'link-keys-1', amountCents: 4499, date: '2026-02-03' }),
+      defaultWindowDays: 21,
+    });
+
+    const fetched = await requestOn(app).get(`/purchases/${String(created.body.purchase.id)}`);
+    expect(fetched.status).toBe(200);
+    expectConforms(PurchaseDetailSchema, fetched.body, 'GET /purchases/:id (linked)');
+
+    const links = (fetched.body.charges as { links: unknown[] }[]).flatMap((c) => c.links);
+    expect(links.length).toBeGreaterThan(0);
+    for (const [i, link] of links.entries()) {
+      expectExactKeys(
+        PurchaseChargeLinkSchema,
+        link as object,
+        `GET /purchases/:id charges[].links[${String(i)}]`
+      );
+    }
   });
 });
 
@@ -403,8 +443,23 @@ describe('reconcile responses', () => {
       .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
       .expect(200);
     expectConforms(TransactionLinksSchema, derived.body, 'GET /reconcile/links (derived)');
-    const linked = derived.body.purchases as { charges: { charge: { id: string } }[] }[];
+    const linked = derived.body.purchases as {
+      charges: { charge: { id: string }; link: unknown }[];
+    }[];
     expect(linked.length).toBeGreaterThan(0);
+    // `purchase_charge_links.transaction_description` is evidence
+    // the reconcile engine keeps for itself, and `expectConforms`
+    // alone would not catch it leaking, since zod strips unknown keys
+    // before comparing.
+    for (const [i, purchase] of linked.entries()) {
+      for (const [j, charge] of purchase.charges.entries()) {
+        expectExactKeys(
+          PurchaseChargeLinkSchema,
+          charge.link as object,
+          `GET /reconcile/links (derived) purchases[${String(i)}].charges[${String(j)}].link`
+        );
+      }
+    }
 
     const chargeId = linked[0]?.charges[0]?.charge.id;
     await requestOn(app)
@@ -416,6 +471,18 @@ describe('reconcile responses', () => {
       .get(`/reconcile/links?transactionUri=${encodeURIComponent(derivedUri)}`)
       .expect(200);
     expectConforms(TransactionLinksSchema, confirmed.body, 'GET /reconcile/links (confirmed)');
+    const confirmedLinked = confirmed.body.purchases as {
+      charges: { link: unknown }[];
+    }[];
+    for (const [i, purchase] of confirmedLinked.entries()) {
+      for (const [j, charge] of purchase.charges.entries()) {
+        expectExactKeys(
+          PurchaseChargeLinkSchema,
+          charge.link as object,
+          `GET /reconcile/links (confirmed) purchases[${String(i)}].charges[${String(j)}].link`
+        );
+      }
+    }
 
     const empty = await requestOn(app)
       .get('/reconcile/links?transactionUri=pops%3A%2F%2Ffinance%2Ftransaction%2Fnothing')
