@@ -17,6 +17,8 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import { purchaseChargeLinks, purchaseCharges, purchases, purchaseSources } from '../schema.js';
 
+import type { SQL } from 'drizzle-orm';
+
 import type { LinkType } from '../../contract/constants.js';
 import type { PurchasesDb } from './internal.js';
 
@@ -92,10 +94,6 @@ export function listReconcileQueue(db: PurchasesDb, filter: QueueFilter = {}): Q
 
   for (const row of undecidedCharges(db, filter)) {
     const proposed = proposalsFor(db, row.chargeId);
-
-    if (filter.kind === 'proposed' && proposed.length === 0) continue;
-    if (filter.kind === 'unexplained' && proposed.length > 0) continue;
-
     const linked = proposed.reduce((sum, link) => sum + link.amountCents, 0);
     entries.push({
       chargeId: row.chargeId,
@@ -126,6 +124,42 @@ interface UndecidedCharge {
   currency: string;
   amountCents: number;
   position: number;
+}
+
+/**
+ * The predicate `undecidedCharges` filters on, narrowed by `kind`.
+ *
+ * A charge is undecided when it has an unconfirmed link, or no link at all.
+ * `kind` narrows to one side of that OR: `proposed` is exactly "has an
+ * unconfirmed link", and `unexplained` is exactly "has no link at all" — the
+ * two undecided branches are mutually exclusive, so ANDing the undecided OR
+ * with either branch collapses it to that branch alone. The OUTER
+ * PARENTHESES on the unfiltered form are load-bearing: `AND` binds tighter
+ * than `OR`, so without them this reads as `(everything AND EXISTS…) OR (NOT
+ * EXISTS…)` and every chargeless row matches regardless of the other filters
+ * ANDed alongside it.
+ */
+function undecidedKindPredicate(kind: QueueFilter['kind']): SQL {
+  if (kind === 'proposed') {
+    return sql`EXISTS (
+      SELECT 1 FROM purchase_charge_links l
+      WHERE l.charge_id = ${purchaseCharges.id} AND l.confirmed_at IS NULL
+    )`;
+  }
+  if (kind === 'unexplained') {
+    return sql`NOT EXISTS (
+      SELECT 1 FROM purchase_charge_links l WHERE l.charge_id = ${purchaseCharges.id}
+    )`;
+  }
+  return sql`(
+    EXISTS (
+      SELECT 1 FROM purchase_charge_links l
+      WHERE l.charge_id = ${purchaseCharges.id} AND l.confirmed_at IS NULL
+    )
+    OR NOT EXISTS (
+      SELECT 1 FROM purchase_charge_links l WHERE l.charge_id = ${purchaseCharges.id}
+    )
+  )`;
 }
 
 /** Charges with an unconfirmed link, or with no link at all. */
@@ -159,20 +193,7 @@ function undecidedCharges(db: PurchasesDb, filter: QueueFilter): UndecidedCharge
           ? undefined
           : sql`(${purchaseSources.autoLinkPolicy} IS NULL OR ${purchaseSources.autoLinkPolicy} <> 'auto')`,
         filter.source === undefined ? undefined : eq(purchases.source, filter.source),
-        // A charge is undecided when it has an unconfirmed link, or no link
-        // at all. The OUTER PARENTHESES are load-bearing: `AND` binds
-        // tighter than `OR`, so without them this reads as
-        // `(everything AND EXISTS…) OR (NOT EXISTS…)` and every chargeless
-        // row matches regardless of the source filter above it.
-        sql`(
-          EXISTS (
-            SELECT 1 FROM purchase_charge_links l
-            WHERE l.charge_id = ${purchaseCharges.id} AND l.confirmed_at IS NULL
-          )
-          OR NOT EXISTS (
-            SELECT 1 FROM purchase_charge_links l WHERE l.charge_id = ${purchaseCharges.id}
-          )
-        )`
+        undecidedKindPredicate(filter.kind)
       )
     )
     .orderBy(
