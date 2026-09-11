@@ -151,9 +151,13 @@ function periodPicker(): HTMLElement {
 }
 
 async function settled(): Promise<void> {
-  await waitFor(() => {
-    expect(screen.queryByRole('status')).toBeNull();
-  });
+  // Waits for the period-covered line every settled render draws (both the
+  // populated and the empty state), instead of the loading status's
+  // *absence* — a page that never finished loading would still satisfy that.
+  // The 5s budget (default is 1000ms) covers the file's first test, whose
+  // module import and first render can exceed the default under CPU
+  // contention (POPS-2325).
+  await screen.findByText(/^Covering /, {}, { timeout: 5000 });
 }
 
 beforeEach(() => {
