@@ -14,17 +14,62 @@
  * so the wire shape is byte-identical to the in-process adapter contract it
  * replaces. `data` is a permissive record because the adapter carries its own
  * domain-specific hit payload — the engine treats it as opaque.
+ *
+ * The filter is the one shape that is deliberately NARROWER than the shared
+ * one rather than a restatement of it: `@pops/types` types `field` and
+ * `operator` as free strings, and this pillar closes both, because a filter
+ * it cannot apply must be refusable rather than silently dropped — the same
+ * defect purchases and finance fixed in their own filter vocabularies.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { ErrorBodySchema } from './rest-schemas.js';
+
 const c = initContract();
 
-/** A structured filter for advanced query syntax. Mirrors `StructuredFilter` in `@pops/types`. */
+/**
+ * What a filter may narrow on.
+ *
+ * These are the same scope terms `GET /items` already takes
+ * (`room`/`type`/`condition`/`inUse`/`deductible`/`locationId`/`assetId`),
+ * because search narrows the same set of items and a second scope language
+ * would be a second thing to keep true.
+ *
+ * Closed rather than a free string. The field a caller may send is published
+ * in the OpenAPI projection and therefore in every generated client, so an
+ * unsupported one is a 400 from the contract itself rather than a 200 whose
+ * results quietly ignored it.
+ */
+export const SEARCH_FILTER_FIELDS = [
+  'room',
+  'type',
+  'condition',
+  'inUse',
+  'deductible',
+  'locationId',
+  'assetId',
+] as const;
+export type SearchFilterField = (typeof SEARCH_FILTER_FIELDS)[number];
+
+/**
+ * How a filter compares. Every field above is a single discrete value on the
+ * row, not a range, so equality is the only comparison any of them express.
+ */
+export const SEARCH_FILTER_OPERATORS = ['eq'] as const;
+export type SearchFilterOperator = (typeof SEARCH_FILTER_OPERATORS)[number];
+
+/**
+ * A structured filter for advanced query syntax.
+ *
+ * `StructuredFilter` in `@pops/types` narrowed to what this pillar can apply,
+ * not a restatement of it: a caller sending an arbitrary well-formed
+ * `StructuredFilter` is rejected here rather than accepted and ignored.
+ */
 export const StructuredFilterSchema = z.object({
-  field: z.string(),
-  operator: z.string(),
-  value: z.string(),
+  field: z.enum(SEARCH_FILTER_FIELDS),
+  operator: z.enum(SEARCH_FILTER_OPERATORS),
+  value: z.string().trim().min(1),
 });
 
 /** A user search query. Mirrors `Query` in `@pops/types`. */
@@ -75,6 +120,9 @@ export const inventorySearchContract = c.router({
     body: SearchBody,
     responses: {
       200: z.object({ hits: z.array(SearchHitSchema) }),
+      // A filter this pillar cannot apply. Declared, because the alternative
+      // a caller cannot detect is a 200 computed as though it were never sent.
+      400: ErrorBodySchema,
     },
     summary: "Search the inventory pillar's items for the unified search engine",
   },

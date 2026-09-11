@@ -74,10 +74,13 @@ interface DeleteAck {
 export interface ItemCreateBody {
   itemName: string;
   brand?: string | null;
+  room?: string | null;
   type?: string | null;
+  condition?: string | null;
   assetId?: string | null;
   inUse?: boolean;
   deductible?: boolean;
+  locationId?: string | null;
   replacementValue?: number | null;
   resaleValue?: number | null;
   purchasePrice?: number | null;

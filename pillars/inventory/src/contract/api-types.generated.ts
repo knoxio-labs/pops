@@ -3684,8 +3684,17 @@ export interface operations {
           };
           query: {
             filters?: {
-              field: string;
-              operator: string;
+              /** @enum {string} */
+              field:
+                | 'room'
+                | 'type'
+                | 'condition'
+                | 'inUse'
+                | 'deductible'
+                | 'locationId'
+                | 'assetId';
+              /** @enum {string} */
+              operator: 'eq';
               value: string;
             }[];
             text: string;
@@ -3711,6 +3720,19 @@ export interface operations {
               score: number;
               uri: string;
             }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
           };
         };
       };

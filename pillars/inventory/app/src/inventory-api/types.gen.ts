@@ -2453,8 +2453,8 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: string;
-        operator: string;
+        field: 'room' | 'type' | 'condition' | 'inUse' | 'deductible' | 'locationId' | 'assetId';
+        operator: 'eq';
         value: string;
       }>;
       text: string;
@@ -2464,6 +2464,19 @@ export type SearchSearchData = {
   query?: never;
   url: '/search';
 };
+
+export type SearchSearchErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SearchSearchError = SearchSearchErrors[keyof SearchSearchErrors];
 
 export type SearchSearchResponses = {
   /**

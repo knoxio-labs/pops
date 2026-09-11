@@ -6319,12 +6319,23 @@
                           "additionalProperties": false,
                           "properties": {
                             "field": {
+                              "enum": [
+                                "room",
+                                "type",
+                                "condition",
+                                "inUse",
+                                "deductible",
+                                "locationId",
+                                "assetId"
+                              ],
                               "type": "string"
                             },
                             "operator": {
+                              "enum": ["eq"],
                               "type": "string"
                             },
                             "value": {
+                              "minLength": 1,
                               "type": "string"
                             }
                           },
@@ -6389,6 +6400,29 @@
               }
             },
             "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
           }
         },
         "summary": "Search the inventory pillar's items for the unified search engine",
