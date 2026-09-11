@@ -187,6 +187,38 @@ export interface TagFacetOption {
 }
 
 /**
+ * The tags a staged rule would write that a closed axis does not hold.
+ *
+ * A closed facet (`venue`, `occasion`, …) is a fixed set: the commit refuses a
+ * value outside it, atomically, after every other step of the import is done
+ * (POPS-3106). This asks the same question at the point the rule is staged, so
+ * the answer arrives where the tag can still be changed.
+ *
+ * Mirrors the server's check. Only `closed` axes refuse; an `open` axis mints
+ * and a `marker` axis is never upserted, and a facet the taxonomy does not
+ * list is open by default. Known values compare trimmed and case-insensitive,
+ * as `normalizeTagForComparison` does. `vocabularyTags` must be the
+ * vocabulary alone: tags merely sitting on this import's rows are exactly what
+ * this is checking, so counting them as known would hide every refusal.
+ */
+export function closedValuesOutsideVocabulary(
+  tags: readonly string[],
+  facets: readonly TagFacetOption[],
+  vocabularyTags: readonly string[]
+): string[] {
+  const known = new Set(vocabularyTags.map((tag) => tag.trim().toLowerCase()));
+  const closed = new Set(facets.filter((o) => o.kind === 'closed').map((o) => o.facet));
+  const refused: string[] = [];
+  for (const tag of tags) {
+    const { facet } = parseTag(tag.trim());
+    if (facet === null || !closed.has(facet)) continue;
+    if (known.has(tag.trim().toLowerCase())) continue;
+    if (!refused.includes(tag)) refused.push(tag);
+  }
+  return refused;
+}
+
+/**
  * What typing `input` into a tag picker would create.
  *
  * A tag has to name an axis to be worth anything — an unfaceted `Cairns 2026`

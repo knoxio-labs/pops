@@ -22,6 +22,8 @@ export type { TagRuleLearnSignal, TagRuleProposalDialogProps };
 interface DialogFooterProps {
   busy: boolean;
   proposal: ProposeOutput | undefined;
+  /** True when the rule would write a closed-axis value the vocabulary lacks. */
+  refused: boolean;
   rejectOpen: boolean;
   setRejectOpen: (v: boolean) => void;
   onCancel: () => void;
@@ -55,7 +57,11 @@ function DialogActions(props: DialogFooterProps) {
           Confirm reject
         </Button>
       )}
-      <Button type="button" onClick={props.onApply} disabled={props.busy || !props.proposal}>
+      <Button
+        type="button"
+        onClick={props.onApply}
+        disabled={props.busy || !props.proposal || props.refused}
+      >
         {props.busy ? 'Saving…' : 'Save rule'}
       </Button>
     </DialogFooter>
@@ -67,7 +73,7 @@ interface BodyProps {
 }
 
 function DialogContentBody({ state }: BodyProps) {
-  const { form, proposal, proposeQuery, newTagNames } = state;
+  const { form, proposal, proposeQuery, newTagNames, refusedTags } = state;
   return (
     <div className="space-y-4 text-sm">
       <FormFields
@@ -81,6 +87,13 @@ function DialogContentBody({ state }: BodyProps) {
       {proposeQuery.isLoading && <p className="text-muted-foreground">Generating preview…</p>}
       {proposeQuery.isError && (
         <p className="text-destructive text-xs">{proposeQuery.error.message}</p>
+      )}
+      {refusedTags.length > 0 && (
+        <p role="alert" className="text-destructive text-xs">
+          {refusedTags.join(', ')} {refusedTags.length === 1 ? 'is not a value' : 'are not values'}{' '}
+          of a closed tag axis. Change {refusedTags.length === 1 ? 'it' : 'them'} to an existing
+          value before saving the rule.
+        </p>
       )}
       {proposal && (
         <>
@@ -103,7 +116,7 @@ function DialogContentBody({ state }: BodyProps) {
 
 export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
   const state = useTagRuleProposal(props);
-  const { form, proposal, busy, handleApply, handleReject } = state;
+  const { form, proposal, refusedTags, busy, handleApply, handleReject } = state;
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -118,6 +131,7 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
         <DialogActions
           busy={busy}
           proposal={proposal}
+          refused={refusedTags.length > 0}
           rejectOpen={form.rejectOpen}
           setRejectOpen={form.setRejectOpen}
           onCancel={() => props.onOpenChange(false)}

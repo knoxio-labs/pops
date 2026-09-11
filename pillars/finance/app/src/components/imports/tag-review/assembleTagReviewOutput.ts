@@ -11,6 +11,7 @@ interface AssembleOutputArgs {
   groups: ConfirmedGroup[];
   availableTags: string[];
   facets: TagFacetOption[];
+  vocabularyTags: readonly string[] | undefined;
   localTags: Record<string, string[]>;
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   tagActions: ReturnType<typeof useTagActions>;
@@ -23,8 +24,8 @@ interface AssembleOutputArgs {
 
 /** Shapes the step's public API out of the pieces `useTagReviewState` gathers. */
 export function assembleTagReviewOutput(args: AssembleOutputArgs): UseTagReviewStateOutput {
-  const { confirmedTransactions, groups, availableTags, facets, localTags, suggestedTagMeta } =
-    args;
+  const { confirmedTransactions, groups, availableTags, facets, vocabularyTags } = args;
+  const { localTags, suggestedTagMeta } = args;
   const {
     tagActions,
     handleContinue,
@@ -38,6 +39,7 @@ export function assembleTagReviewOutput(args: AssembleOutputArgs): UseTagReviewS
     groups,
     availableTags,
     facets,
+    vocabularyTags,
     localTags,
     suggestedTagMeta,
     ...tagActions,

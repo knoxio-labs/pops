@@ -1,8 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
-import { unwrap } from '../../../finance-api-helpers.js';
-import { tagRulesFacets, tagRulesVocabulary } from '../../../finance-api/index.js';
 import { useImportStore } from '../../../store/importStore';
 import { assembleTagReviewOutput } from './assembleTagReviewOutput';
 import { groupByEntity } from './tagReviewUtils';
@@ -10,10 +7,10 @@ import { usePreviewTransactions } from './usePreviewTransactions';
 import { useTagActions } from './useTagReviewActions';
 import { useTagRuleDialog } from './useTagRuleDialog';
 import { useTagRuleHandler } from './useTagRuleHandler';
+import { useAvailableTags, useTagFacets, useVocabularyTags } from './useTagTaxonomy';
 
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
-import type { TagFacetOption } from '../../../lib/tags';
 import type { ImportStore as ImportStoreType } from '../../../store/import-store-types';
 import type { UseTagReviewStateOutput } from './tagReviewStateTypes';
 
@@ -50,44 +47,6 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
   }
 
   return { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta };
-}
-
-/**
- * Every tag a picker may match or offer, staged tags included.
- *
- * Sourced from the tag vocabulary rather than the tags currently sitting on a
- * transaction (`transactions.availableTags`): a value can be registered —
- * `fee:atm` created via a tag rule, say — before any loaded transaction
- * carries it, and a picker built from usage alone would call that value
- * unrecognised and route it into "create a new one" on a closed facet that
- * refuses to let it be created at all.
- */
-function useAvailableTags(localTags: Record<string, string[]>): string[] {
-  const { data } = useQuery({
-    queryKey: ['finance', 'tagRules', 'vocabulary'],
-    queryFn: async () => unwrap(await tagRulesVocabulary()),
-  });
-  const serverTags = data?.tags;
-  return useMemo(() => {
-    const local = Object.values(localTags).flat();
-    return [...new Set([...(serverTags ?? []), ...local])].toSorted();
-  }, [serverTags, localTags]);
-}
-
-/**
- * The taxonomy the pickers offer to create tags on.
- *
- * Fetched rather than hard-coded so a facet added to the pillar reaches the UI
- * without a matching edit here; an unanswered query yields no axes, which the
- * pickers read as "nothing may be created yet" rather than falling back to a
- * guessed list.
- */
-function useTagFacets(): TagFacetOption[] {
-  const { data } = useQuery({
-    queryKey: ['finance', 'tagRules', 'facets'],
-    queryFn: async () => unwrap(await tagRulesFacets()),
-  });
-  return data?.facets ?? [];
 }
 
 interface TagRuleWorkflowDeps {
@@ -147,6 +106,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
   const groups = useMemo(() => groupByEntity(confirmedTransactions), [confirmedTransactions]);
   const availableTags = useAvailableTags(localTags);
   const facets = useTagFacets();
+  const vocabularyTags = useVocabularyTags();
 
   const tagActions = useTagActions({
     localTags,
@@ -173,6 +133,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     groups,
     availableTags,
     facets,
+    vocabularyTags,
     localTags,
     suggestedTagMeta,
     tagActions,

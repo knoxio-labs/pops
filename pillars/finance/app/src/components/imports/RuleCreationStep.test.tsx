@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNextStep = vi.fn();
@@ -12,12 +14,27 @@ let storeState: Record<string, unknown> = {
   addPendingTagRuleChangeSet: mockAddPendingTagRuleChangeSet,
 };
 
+const taxonomy: { facets: Array<{ facet: string; kind: string }>; tags: string[] } = {
+  facets: [],
+  tags: [],
+};
+
+vi.mock('../../finance-api/index.js', () => ({
+  tagRulesFacets: async () => ({ data: { facets: taxonomy.facets }, error: undefined }),
+  tagRulesVocabulary: async () => ({ data: { tags: taxonomy.tags }, error: undefined }),
+}));
+
 vi.mock('../../store/importStore', () => ({
   useImportStore: (selector?: (s: Record<string, unknown>) => unknown) =>
     selector ? selector(storeState) : storeState,
 }));
 
 import { RuleCreationStep } from './RuleCreationStep';
+
+function withQuery(ui: ReactElement): ReactElement {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
 
 function makeTxn(overrides: Record<string, unknown> = {}) {
   return {
@@ -36,6 +53,8 @@ function makeTxn(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  taxonomy.facets = [];
+  taxonomy.tags = [];
   storeState = {
     confirmedTransactions: [],
     nextStep: mockNextStep,
@@ -46,19 +65,19 @@ beforeEach(() => {
 
 describe('RuleCreationStep', () => {
   it('shows empty state when no tagged transactions', () => {
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
   });
 
   it('shows Skip button in empty state', () => {
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /skip/i }));
     expect(mockNextStep).toHaveBeenCalledOnce();
   });
 
   it('shows a proposal card for an entity with consistent tags', () => {
     storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     expect(screen.getByText('Woolworths')).toBeInTheDocument();
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.getByText(/2 transactions/i)).toBeInTheDocument();
@@ -66,21 +85,21 @@ describe('RuleCreationStep', () => {
 
   it('a proposal backed by only one transaction is not checked by default', () => {
     storeState.confirmedTransactions = [makeTxn()];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).not.toBeChecked();
   });
 
   it('a proposal backed by more than one transaction is checked by default', () => {
     storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
   });
 
   it('creates rules for checked proposals on confirm', () => {
     storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
     expect(mockNextStep).toHaveBeenCalledOnce();
@@ -92,7 +111,7 @@ describe('RuleCreationStep', () => {
 
   it('carries the proposal tags as acceptedNewTags, so they gain vocabulary standing', () => {
     storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
     expect(call.acceptedNewTags).toEqual(['Groceries']);
@@ -117,7 +136,7 @@ describe('RuleCreationStep', () => {
         checksum: 'x3',
       }),
     ];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     const checkboxes = screen.getAllByRole('checkbox');
     fireEvent.click(checkboxes[0]!);
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
@@ -128,7 +147,7 @@ describe('RuleCreationStep', () => {
 
   it('skip advances without creating rules', () => {
     storeState.confirmedTransactions = [makeTxn()];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /skip/i }));
     expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
     expect(mockNextStep).toHaveBeenCalledOnce();
@@ -136,12 +155,12 @@ describe('RuleCreationStep', () => {
 
   it('excludes transactions with no tags from proposals', () => {
     storeState.confirmedTransactions = [makeTxn({ tags: [] }), makeTxn({ tags: undefined })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
   });
 
   it('shows a Back button that calls prevStep, in the empty state', () => {
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
     expect(mockPrevStep).toHaveBeenCalledOnce();
     expect(mockNextStep).not.toHaveBeenCalled();
@@ -149,7 +168,7 @@ describe('RuleCreationStep', () => {
 
   it('shows a Back button that calls prevStep, with proposals present', () => {
     storeState.confirmedTransactions = [makeTxn()];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
     expect(mockPrevStep).toHaveBeenCalledOnce();
     expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
@@ -161,7 +180,7 @@ describe('RuleCreationStep', () => {
       makeTxn({ tags: ['Groceries'], checksum: 'x2' }),
       makeTxn({ tags: ['Groceries'], checksum: 'x3' }),
     ];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.queryByText('Organic')).not.toBeInTheDocument();
   });
@@ -170,7 +189,7 @@ describe('RuleCreationStep', () => {
 describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
   it('stages the checksums of exactly the rows the proposal was built from', () => {
     storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]?.[0];
@@ -186,7 +205,7 @@ describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
       makeTxn({ checksum: 'c-1', ...coles }),
       makeTxn({ checksum: 'c-2', ...coles }),
     ];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     const staged = new Map(
@@ -201,12 +220,56 @@ describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
 
   it('never stages a rule with no provenance, which reconciliation would drop whole', () => {
     storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
-    render(<RuleCreationStep />);
+    render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     expect(mockAddPendingTagRuleChangeSet.mock.calls.length).toBeGreaterThan(0);
     for (const [arg] of mockAddPendingTagRuleChangeSet.mock.calls) {
       expect(arg.sourceChecksums.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
+  function closedVenueImport() {
+    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
+    taxonomy.tags = ['venue:bar'];
+    storeState = {
+      ...storeState,
+      confirmedTransactions: [
+        makeTxn({ checksum: 'a', tags: ['venue:speakeasy'] }),
+        makeTxn({ checksum: 'b', tags: ['venue:speakeasy'] }),
+      ],
+    };
+  }
+
+  it('names a closed-axis value the vocabulary does not hold on its proposal', async () => {
+    closedVenueImport();
+    render(withQuery(<RuleCreationStep />));
+    expect((await screen.findByRole('alert')).textContent).toContain('venue:speakeasy');
+  });
+
+  it('does not stage a refused proposal, even though it was checked by default', async () => {
+    closedVenueImport();
+    render(withQuery(<RuleCreationStep />));
+    await screen.findByRole('alert');
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
+  });
+
+  it('stages a closed-axis value the vocabulary holds', async () => {
+    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
+    taxonomy.tags = ['venue:bar'];
+    storeState = {
+      ...storeState,
+      confirmedTransactions: [
+        makeTxn({ checksum: 'a', tags: ['venue:bar'] }),
+        makeTxn({ checksum: 'b', tags: ['venue:bar'] }),
+      ],
+    };
+    render(withQuery(<RuleCreationStep />));
+    fireEvent.click(await screen.findByRole('button', { name: /create 1 rule/i }));
+    expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

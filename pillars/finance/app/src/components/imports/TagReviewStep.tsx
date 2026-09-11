@@ -51,6 +51,8 @@ export function TagReviewStep() {
         signal={state.tagRuleDialog?.signal ?? null}
         previewTransactions={state.previewTransactions}
         onApplied={state.handleTagRuleApplied}
+        facets={state.facets}
+        vocabularyTags={state.vocabularyTags}
       />
     </div>
   );
