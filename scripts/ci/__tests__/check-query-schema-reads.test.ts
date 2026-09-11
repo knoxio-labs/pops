@@ -1,9 +1,10 @@
 /**
- * `check-query-schema-reads.mjs` (POPS-2379): every query field a purchases
- * route's contract advertises must be read by its handler, directly or
- * through a resolver it calls with the whole `query` object. These tests
- * exercise the unit-level building blocks plus the CLI entry point, including
- * the two historical shapes the guard exists to catch (POPS-1966,
+ * `check-query-schema-reads.mjs` (POPS-2379, extended beyond purchases by
+ * POPS-3484): every query field a route's contract advertises, across every
+ * pillar in `PILLARS`, must be read by its handler, directly or through a
+ * resolver it calls with the whole `query` object. These tests exercise the
+ * unit-level building blocks plus the CLI entry point, including the two
+ * historical purchases shapes the guard exists to catch (POPS-1966,
  * POPS-1849/PR #4183) reproduced from their actual pre-fix commits — see
  * `scripts/ci/check-query-schema-reads.mjs`'s own `--self-test`, which runs
  * the same two shapes as part of every guard invocation.
@@ -18,16 +19,20 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   ALLOWLIST,
+  BFM_ROUTES,
   blankNonStructural,
+  CEREBRUM_ROUTES,
   collectReachableTexts,
   collectViolations,
   extractHandlerEntryText,
   extractImportBindings,
   extractResolverFunctionText,
   fieldIsRead,
+  FINANCE_ROUTES,
   matchBalanced,
   OPENAPI_REL_PATH,
   parseResolverParam,
+  PILLARS,
   queryAnchorForRoute,
   queryFieldsForRoute,
   resolveRelativeImport,
@@ -102,6 +107,37 @@ describe('against the real repo', () => {
   it('returns null for a route the document does not have', () => {
     const doc = { paths: {} };
     expect(queryFieldsForRoute(doc, 'get', '/nope')).toBeNull();
+  });
+});
+
+describe('the other real pillars (POPS-3484)', () => {
+  it('PILLARS names exactly purchases, finance, cerebrum and bfm', () => {
+    expect(PILLARS.map((p) => p.name)).toEqual(['purchases', 'finance', 'cerebrum', 'bfm']);
+  });
+
+  it.each(PILLARS.map((p) => [p.name, p] as const))(
+    'reports %s clean today, at or above its own route floor',
+    (_name, pillar) => {
+      expect(pillar.routes.length).toBeGreaterThanOrEqual(pillar.minRoutesWithFields);
+      expect(
+        collectViolations(repoRoot, pillar.routes, pillar.allowlist, {
+          openapiRelPath: pillar.openapiRelPath,
+          minRoutesWithFields: pillar.minRoutesWithFields,
+        })
+      ).toEqual([]);
+    }
+  );
+
+  it('FINANCE_ROUTES names all 16 finance routes known to carry query fields', () => {
+    expect(FINANCE_ROUTES.length).toBe(16);
+  });
+
+  it('CEREBRUM_ROUTES names all 4 cerebrum routes known to carry query fields', () => {
+    expect(CEREBRUM_ROUTES.length).toBe(4);
+  });
+
+  it('BFM_ROUTES names both bfm mobile routes known to carry query fields', () => {
+    expect(BFM_ROUTES.length).toBe(2);
   });
 });
 
@@ -553,7 +589,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('passes against the real repo', () => {
     const stdout = execFileSync('node', [guardPath], { encoding: 'utf8' });
     expect(stdout).toContain('OK —');
-    expect(stdout).toContain('8 known purchases route(s)');
+    expect(stdout).toContain('purchases, finance, cerebrum, bfm');
   });
 
   it('its self-test passes, including both historical POPS-1966/POPS-1849 shapes', () => {
@@ -642,5 +678,106 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
 
     expect(threw).toBe(true);
     expect(stderr).toContain("field 'beforeId'");
+  });
+
+  /**
+   * The POPS-3484 adversarial proof for a newly-added pillar: sandbox its
+   * real `openapi/` + `src/api/rest/` (the only files its `PILLARS` entry
+   * reads), remove one real field read from one real handler, and confirm
+   * the guard flags exactly that field. Lighter than the purchases fixture
+   * above — no resolver chain to follow for any of these three, so only the
+   * `rest/` directory (not all of `src/`) needs to exist on disk.
+   */
+  function sandboxPillarRest(pillar: string): string {
+    const sandbox = fixtureRoot();
+    mkdirSync(join(sandbox, 'scripts', 'ci'), { recursive: true });
+    execFileSync('cp', ['-R', join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts')]);
+    mkdirSync(join(sandbox, 'pillars', pillar, 'src', 'api'), { recursive: true });
+    execFileSync('cp', [
+      '-R',
+      join(repoRoot, 'pillars', pillar, 'openapi'),
+      join(sandbox, 'pillars', pillar, 'openapi'),
+    ]);
+    execFileSync('cp', [
+      '-R',
+      join(repoRoot, 'pillars', pillar, 'src', 'api', 'rest'),
+      join(sandbox, 'pillars', pillar, 'src', 'api', 'rest'),
+    ]);
+    return sandbox;
+  }
+
+  function expectSandboxGuardToFlag(sandbox: string, fieldName: string): void {
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync('node', [join(sandbox, 'scripts', 'ci', 'check-query-schema-reads.mjs')], {
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      threw = true;
+      stderr = String((error as { stderr?: Buffer }).stderr ?? '');
+    }
+    expect(threw).toBe(true);
+    expect(stderr).toContain(`field '${fieldName}'`);
+  }
+
+  it('fails loudly for finance when GET /budgets regresses to dropping `active` (POPS-3484)', () => {
+    const sandbox = sandboxPillarRest('finance');
+    const handlerPath = join(
+      sandbox,
+      'pillars',
+      'finance',
+      'src',
+      'api',
+      'rest',
+      'budgets-handlers.ts'
+    );
+    const original = readFileSync(handlerPath, 'utf8');
+    const mutated = original.replace(
+      /let activeFilter: boolean \| undefined;\n\s*if \(query\.active === 'true'\) activeFilter = true;\n\s*else if \(query\.active === 'false'\) activeFilter = false;\n/u,
+      'let activeFilter: boolean | undefined;\n'
+    );
+    expect(mutated).not.toBe(original);
+    writeFileSync(handlerPath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'active');
+  });
+
+  it('fails loudly for cerebrum when GET /tags regresses to dropping `limit` (POPS-3484)', () => {
+    const sandbox = sandboxPillarRest('cerebrum');
+    const handlerPath = join(
+      sandbox,
+      'pillars',
+      'cerebrum',
+      'src',
+      'api',
+      'rest',
+      'tags-handlers.ts'
+    );
+    const original = readFileSync(handlerPath, 'utf8');
+    const mutated = original.replace('listTags(db, prefix, query.limit)', 'listTags(db, prefix)');
+    expect(mutated).not.toBe(original);
+    writeFileSync(handlerPath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'limit');
+  });
+
+  it('fails loudly for bfm when GET /mobile/finance/transactions regresses to dropping `accountId` (POPS-3484)', () => {
+    const sandbox = sandboxPillarRest('bfm');
+    const handlerPath = join(
+      sandbox,
+      'pillars',
+      'bfm',
+      'src',
+      'api',
+      'rest',
+      'mobile-finance-handlers.ts'
+    );
+    const original = readFileSync(handlerPath, 'utf8');
+    const mutated = original.replace('accountId: query.accountId ?? null,\n', '');
+    expect(mutated).not.toBe(original);
+    writeFileSync(handlerPath, mutated);
+
+    expectSandboxGuardToFlag(sandbox, 'accountId');
   });
 });
