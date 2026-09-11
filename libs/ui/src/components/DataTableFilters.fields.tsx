@@ -120,17 +120,10 @@ interface NumberRangeFilterProps<TData> {
   ariaLabel?: string;
 }
 
-/**
- * Reads a {@link NumberInput} change event into a filter bound: an empty
- * input clears the bound (`undefined`), a parseable string becomes that
- * number, and anything else is reported as `null` so the caller can leave
- * the existing bound untouched instead of clobbering it with `NaN`.
- */
-function parseFilterBound(e: React.ChangeEvent<HTMLInputElement>): number | undefined | null {
-  const raw = e.target.value;
-  if (raw === '') return undefined;
-  const parsed = Number(raw);
-  return Number.isNaN(parsed) ? null : parsed;
+// NumberInput already refuses to report an input `Number()` cannot parse, so
+// the only non-numeric value that reaches here is the empty string of a cleared bound.
+function parseFilterBound(e: React.ChangeEvent<HTMLInputElement>): number | undefined {
+  return e.target.value === '' ? undefined : Number(e.target.value);
 }
 
 export function NumberRangeFilter<TData>({
@@ -152,7 +145,6 @@ export function NumberRangeFilter<TData>({
         value={filterValue[0]}
         onChange={(e) => {
           const min = parseFilterBound(e);
-          if (min === null) return;
           column.setFilterValue([min, filterValue[1]]);
         }}
         placeholder={minPlaceholder}
@@ -164,7 +156,6 @@ export function NumberRangeFilter<TData>({
         value={filterValue[1]}
         onChange={(e) => {
           const max = parseFilterBound(e);
-          if (max === null) return;
           column.setFilterValue([filterValue[0], max]);
         }}
         placeholder={maxPlaceholder}

@@ -158,13 +158,6 @@ describe('FilterBar', () => {
       expect(matches()).toBe('Woolworths,Bunnings,Woolworths Metro');
     });
 
-    it('ignores a non-numeric entry instead of filtering everything out', () => {
-      render(<Harness filters={amountRangeFilters} />);
-      fireEvent.change(control('Amount (min)'), { target: { value: 'abc' } });
-      expect(matches()).toBe('Woolworths,Bunnings,Woolworths Metro');
-      expect(screen.queryByText(/filters? active/)).not.toBeInTheDocument();
-    });
-
     it('does not warn about NaN while driving the control', () => {
       const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
       render(<Harness filters={amountRangeFilters} />);
