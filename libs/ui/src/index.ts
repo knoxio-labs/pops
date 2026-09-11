@@ -133,10 +133,6 @@ export * from './components/EmptyState';
 export * from './components/QrCode';
 export * from './components/UriCard';
 export * from './components/FileUpload';
-// Exported separately from the barrel above so a consumer that only needs the
-// validation (no drop-zone rendering) can pull it in directly, without
-// touching `FileUpload.tsx`'s own re-export of the error types.
-export { describeFileValidationError, validateFiles } from './components/FileUpload.utils';
 export * from './components/ImageWithFallback';
 export * from './components/MediaCard';
 export * from './components/ImageGallery';

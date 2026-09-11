@@ -1,7 +1,11 @@
 import { getI18n } from 'react-i18next';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { describeFileValidationError, type FileValidationErrorReason } from '../index';
+import {
+  describeFileValidationError,
+  validateFiles,
+  type FileValidationErrorReason,
+} from '../index';
 
 function jpg(name: string, sizeBytes = 10): File {
   return new File([new Uint8Array(sizeBytes)], name, { type: 'image/jpeg' });
@@ -38,5 +42,36 @@ describe('describeFileValidationError — importable from the package entry poin
     const reason: FileValidationErrorReason = { type: 'too-many', maxFiles: 1, attempted: 3 };
 
     expect(describeFileValidationError(t, reason, 'en-AU')).toBe('You can upload at most 1 file');
+  });
+});
+
+describe('validateFiles — importable from the package entry point', () => {
+  it('drops files that fail the accept pattern and reports each refusal', () => {
+    const onError = vi.fn();
+    const accepted = jpg('photo.jpg');
+    const rejected = new File([new Uint8Array(10)], 'notes.txt', { type: 'text/plain' });
+
+    const result = validateFiles({
+      list: [accepted, rejected],
+      accept: 'image/*',
+      onError,
+    });
+
+    expect(result).toEqual([accepted]);
+    expect(onError).toHaveBeenCalledWith({
+      type: 'not-accepted',
+      file: rejected,
+      accept: 'image/*',
+    });
+  });
+
+  it('truncates to maxFiles and reports the full attempted count', () => {
+    const onError = vi.fn();
+    const files = [jpg('a.jpg'), jpg('b.jpg'), jpg('c.jpg')];
+
+    const result = validateFiles({ list: files, maxFiles: 1, onError });
+
+    expect(result).toEqual([files[0]]);
+    expect(onError).toHaveBeenCalledWith({ type: 'too-many', maxFiles: 1, attempted: 3 });
   });
 });
