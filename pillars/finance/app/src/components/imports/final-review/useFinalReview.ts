@@ -35,6 +35,7 @@ function useStoreSlice() {
     draftId: useImportStore((s) => s.draftId),
     draftSource: useImportStore((s) => s.draftSource),
     setDraftId: useImportStore((s) => s.setDraftId),
+    removePendingTagRuleChangeSet: useImportStore((s) => s.removePendingTagRuleChangeSet),
   };
 }
 
@@ -176,5 +177,6 @@ export function useFinalReview() {
     cancelConfirm,
     confirmCommit,
     prevStep: slice.prevStep,
+    removeTagRule: slice.removePendingTagRuleChangeSet,
   };
 }

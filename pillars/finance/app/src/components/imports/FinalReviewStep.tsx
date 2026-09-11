@@ -16,9 +16,9 @@ import {
   ClassificationRulesSection,
   EntitiesSection,
   TagAssignmentsSection,
-  TagRulesSection,
   TransactionsSection,
 } from './final-review/Sections';
+import { TagRulesSection } from './final-review/TagRulesSection';
 import { useFinalReview } from './final-review/useFinalReview';
 import { LiveCheckpointSection } from './live/LiveCheckpointSection';
 
@@ -108,6 +108,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
     tagAssignmentCount,
     taggedTxnCount,
     accountName,
+    removeTagRule,
   } = props;
   const isEmpty =
     pendingEntities.length === 0 &&
@@ -123,6 +124,7 @@ function ReviewBody(props: ReturnType<typeof useFinalReview>) {
         pendingTagRuleChangeSets={pendingTagRuleChangeSets}
         totalTagRuleOps={totalTagRuleOps}
         collisions={tagRuleAddCollisions}
+        onRemove={removeTagRule}
       />
       <TransactionsSection txnBreakdown={txnBreakdown} accountName={accountName} />
       <TagAssignmentsSection
