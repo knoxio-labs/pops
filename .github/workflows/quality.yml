@@ -608,6 +608,29 @@ jobs:
       - name: Every migration journal has unique timestamps and matches its SQL
         run: node scripts/ci/check-migration-journals.mjs
 
+  types-node-major:
+    name: '@types/node major agrees across the workspace'
+    # POPS-1926 pinned every workspace package's @types/node to the Node major
+    # the fleet runs (24). Nothing enforced it for a package added afterwards:
+    # libs/contract-openapi landed on ^25.9.3 (POPS-2057, PR #4088) and passed
+    # every check that existed at the time, surfacing only when a later merge
+    # from main collided the lockfile against a re-pinned manifest (POPS-2092).
+    # This guard reads every workspace package off pnpm-workspace.yaml's
+    # `packages:` globs — so a new package is covered the day it lands — and
+    # compares each one's @types/node major against the root package.json's.
+    # It reads JSON and a flat glob list by hand, no third-party parser, so it
+    # skips `pnpm install`. See scripts/ci/check-types-node-major.mjs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard's stated coverage — see the file header)
+        run: node scripts/ci/check-types-node-major.mjs --self-test
+      - name: Every workspace package agrees on @types/node's major
+        run: node scripts/ci/check-types-node-major.mjs
+
   manifest-payload-coverage:
     name: Manifest payload coverage (POPS-2585)
     # `bootstrapPillar` runs every pillar's manifest through the SDK's strict
