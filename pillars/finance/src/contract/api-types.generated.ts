@@ -8387,6 +8387,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -8463,6 +8464,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -8539,6 +8541,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -8615,6 +8618,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -8894,6 +8898,7 @@ export interface operations {
             pending?: boolean;
             rawRow: string;
             suggestedTags?: {
+              entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
               /** @enum {string} */
@@ -9273,6 +9278,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9349,6 +9355,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9425,6 +9432,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9501,6 +9509,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9749,6 +9758,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9825,6 +9835,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9901,6 +9912,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -9977,6 +9989,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -10219,6 +10232,7 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
                 /** @enum {string} */
@@ -10295,6 +10309,7 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
                 /** @enum {string} */
@@ -10371,6 +10386,7 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
                 /** @enum {string} */
@@ -10447,6 +10463,7 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
                 /** @enum {string} */
@@ -10552,6 +10569,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -10628,6 +10646,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -10704,6 +10723,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -10780,6 +10800,7 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
                   /** @enum {string} */
@@ -13208,6 +13229,7 @@ export interface operations {
         content: {
           'application/json': {
             tags: {
+              entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
               /** @enum {string} */

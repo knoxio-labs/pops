@@ -81,6 +81,12 @@ export const SuggestedTagSchema = z.object({
   source: z.enum(['ai', 'rule', 'entity']),
   pattern: z.string().optional(),
   isNew: z.boolean().optional(),
+  /**
+   * `true` when a `source: 'rule'` tag came from a tag rule scoped to a
+   * specific entity, so a client re-deriving suggestions after an entity
+   * reassignment can drop it as stale (POPS-2624).
+   */
+  entityScoped: z.boolean().optional(),
 });
 
 export const RuleProvenanceSchema = z.object({

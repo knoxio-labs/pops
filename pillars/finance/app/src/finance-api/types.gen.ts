@@ -5792,6 +5792,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -5859,6 +5860,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -5926,6 +5928,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -5993,6 +5996,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -6171,6 +6175,7 @@ export type ImportsCommitImportData = {
       pending?: boolean;
       rawRow: string;
       suggestedTags?: Array<{
+        entityScoped?: boolean;
         isNew?: boolean;
         pattern?: string;
         source: 'ai' | 'rule' | 'entity';
@@ -6523,6 +6528,7 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -6590,6 +6596,7 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -6657,6 +6664,7 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -6724,6 +6732,7 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -6942,6 +6951,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7009,6 +7019,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7076,6 +7087,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7143,6 +7155,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7306,6 +7319,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7373,6 +7387,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7440,6 +7455,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7507,6 +7523,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7632,6 +7649,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7699,6 +7717,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7766,6 +7785,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -7833,6 +7853,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
           source: 'ai' | 'rule' | 'entity';
@@ -9791,6 +9812,7 @@ export type TransactionsSuggestTagsResponses = {
    */
   200: {
     tags: Array<{
+      entityScoped?: boolean;
       isNew?: boolean;
       pattern?: string;
       source: 'ai' | 'rule' | 'entity';

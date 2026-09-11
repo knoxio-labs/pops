@@ -513,6 +513,43 @@ describe('tag-rule usage telemetry — read-only lookups never count as usage', 
   });
 });
 
+describe('GET /transactions/suggest-tags — entity-scope provenance (POPS-2624)', () => {
+  it("marks an entity-scoped rule's tag entityScoped, so a client can drop it on reassignment", async () => {
+    const c = client();
+    transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'FITNESS CO',
+      matchType: 'contains',
+      tags: ['Gym'],
+      entityId: 'ent-fitness-co',
+    });
+
+    const result = await c.transactions.suggestTags({
+      description: 'FITNESS CO MONTHLY DEBIT',
+      entityId: 'ent-fitness-co',
+    });
+
+    expect(result.tags).toEqual([
+      { tag: 'Gym', source: 'rule', pattern: 'FITNESS CO', entityScoped: true },
+    ]);
+  });
+
+  it("does not mark a global rule's tag entityScoped", async () => {
+    const c = client();
+    transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'WOOLWORTHS',
+      matchType: 'contains',
+      tags: ['Groceries'],
+    });
+
+    const result = await c.transactions.suggestTags({
+      description: 'WOOLWORTHS SYDNEY',
+      entityId: 'ent-fitness-co',
+    });
+
+    expect(result.tags).toEqual([{ tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS' }]);
+  });
+});
+
 describe('imports.getImportProgress', () => {
   it('returns null for an unknown session', async () => {
     const c = client();
