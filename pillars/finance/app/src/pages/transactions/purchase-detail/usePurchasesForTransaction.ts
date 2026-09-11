@@ -10,6 +10,41 @@ export function financeTransactionUri(id: string): string {
   return `pops://finance/transaction/${id}`;
 }
 
+/**
+ * The producer caps `GET /reconcile/links`' `limit` at 500, and
+ * `links-page-size.test.ts` holds this number against the `maximum` in the
+ * vendored snapshot rather than against a comment — the same pattern
+ * `TRANSACTION_URI_BATCH_SIZE` uses for the batch route. Requesting the
+ * producer's own maximum keeps a full settlement history to the fewest
+ * possible round trips; requesting past it is a 400 the schema enforces
+ * before the service ever clamps.
+ */
+export const LINKS_PAGE_SIZE = 500;
+
+/**
+ * Every order behind `transactionUri`, walking `limit`/`offset` pages until
+ * one comes back short.
+ *
+ * `GET /reconcile/links` pages orders, not raw charge rows, so a page
+ * boundary never splits a combined settlement's charges — a short last page
+ * is unambiguous. A transaction settling more than one page of orders is rare
+ * today but not impossible, and a caller that only read the first page would
+ * silently drop the rest with no signal that anything was missing.
+ */
+async function fetchAllLinkedPurchases(transactionUri: string): Promise<LinkedPurchase[]> {
+  const purchases: LinkedPurchase[] = [];
+  let offset = 0;
+  for (;;) {
+    const page = unwrap(
+      await reconcileLinks({ query: { transactionUri, limit: LINKS_PAGE_SIZE, offset } })
+    );
+    purchases.push(...page.purchases);
+    if (page.purchases.length < LINKS_PAGE_SIZE) break;
+    offset += LINKS_PAGE_SIZE;
+  }
+  return purchases;
+}
+
 export interface PurchasesForTransaction {
   entries: LinkedPurchase[];
   isLoading: boolean;
@@ -45,12 +80,9 @@ export function usePurchasesForTransaction(transactionId: string | null): Purcha
     queryFn:
       transactionId === null
         ? skipToken
-        : async () =>
-            unwrap(
-              await reconcileLinks({
-                query: { transactionUri: financeTransactionUri(transactionId) },
-              })
-            ),
+        : async () => ({
+            purchases: await fetchAllLinkedPurchases(financeTransactionUri(transactionId)),
+          }),
   });
 
   return {

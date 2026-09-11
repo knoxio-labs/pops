@@ -17,6 +17,7 @@ vi.mock('../../../purchases-api/index.js', () => ({
 }));
 
 import { PurchaseDetailDialog } from './PurchaseDetailDialog';
+import { LINKS_PAGE_SIZE } from './usePurchasesForTransaction';
 
 import type { Transaction } from '../types';
 import type { LinkedCharge, LinkedPurchase } from './types';
@@ -152,7 +153,11 @@ describe('PurchaseDetailDialog', () => {
 
     await waitFor(() => expect(reconcileLinksMock).toHaveBeenCalled());
     expect(reconcileLinksMock).toHaveBeenCalledWith({
-      query: { transactionUri: 'pops://finance/transaction/tx-1' },
+      query: {
+        transactionUri: 'pops://finance/transaction/tx-1',
+        limit: LINKS_PAGE_SIZE,
+        offset: 0,
+      },
     });
   });
 
