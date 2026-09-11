@@ -77,6 +77,7 @@ export function runPreview(args: RunPreviewArgs): RunPreviewResult {
   previewMutateAsync({
     changeSet,
     transactions: allTxns,
+    fullHistory: false,
     pendingChangeSets:
       pendingChangeSets.length > 0
         ? pendingChangeSets.map((pcs) => ({ changeSet: pcs.changeSet }))

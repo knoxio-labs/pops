@@ -3435,6 +3435,9 @@ export type CorrectionsPreviewChangeSetData = {
       reason?: string;
       source?: string;
     };
+    fullHistory: boolean;
+    limit?: number;
+    offset?: number;
     pendingChangeSets?: Array<{
       changeSet: {
         ops: Array<
@@ -3567,6 +3570,12 @@ export type CorrectionsPreviewChangeSetResponses = {
       checksum?: string;
       description: string;
     }>;
+    pagination?: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
     summary: {
       netMatchedDelta: number;
       newMatches: number;
@@ -8719,7 +8728,10 @@ export type TagRulesPreviewData = {
       reason?: string;
       source?: string;
     };
+    fullHistory: boolean;
+    limit?: number;
     maxPreviewItems: number;
+    offset?: number;
     transactions: Array<{
       description: string;
       entityId?: string | null;
@@ -8793,6 +8805,12 @@ export type TagRulesPreviewResponses = {
       suggestionChanges: number;
     };
     newTags: Array<string>;
+    pagination?: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
   };
 };
 
@@ -8921,6 +8939,12 @@ export type TagRulesProposeResponses = {
         suggestionChanges: number;
       };
       newTags: Array<string>;
+      pagination?: {
+        hasMore: boolean;
+        limit: number;
+        offset: number;
+        total: number;
+      };
     };
     rationale: string;
   };

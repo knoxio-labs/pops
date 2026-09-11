@@ -1,6 +1,7 @@
 import {
   tagVocabularyService,
   transactionCorrectionsService,
+  transactionsService,
   type FinanceDb,
 } from '../../../db/index.js';
 /**
@@ -47,6 +48,7 @@ import {
  * already served from `persisted`/`merged`, but nothing capped the
  * corrections side the same way (POPS-2634).
  */
+import { paginationMeta } from '../../shared/pagination.js';
 import { suggestTags } from '../tag-suggester/index.js';
 import { loadPersistedTagRules, mergeChangeSetOverRules } from './merged-rules.js';
 
@@ -57,6 +59,7 @@ import type {
   PreviewInputTransaction,
   TagRuleImpactItem,
   TagRulePreview,
+  TagRulePreviewPage,
   TagSuggestion,
 } from './types.js';
 
@@ -112,7 +115,7 @@ interface Accumulator {
   newTags: Set<string>;
 }
 
-function record(acc: Accumulator, item: TagRuleImpactItem, diff: RowDiff, cap: number): void {
+function record(acc: Accumulator, item: TagRuleImpactItem, diff: RowDiff): void {
   acc.affectedCount++;
   acc.suggestionChanges += diff.added.length + diff.removed.length;
   acc.removed += diff.removed.length;
@@ -124,26 +127,36 @@ function record(acc: Accumulator, item: TagRuleImpactItem, diff: RowDiff, cap: n
     acc.newTags.add(s.tag);
   }
 
-  if (acc.affected.length < cap) acc.affected.push(item);
+  acc.affected.push(item);
+}
+
+/** Every affected row, uncapped — {@link previewTagRuleChangeSet}'s and the full-history mode's shared core. */
+export interface TagRuleChangeSetDiff {
+  counts: TagRulePreview['counts'];
+  /** Every row whose suggestion set changed, in scan order — not yet paged. */
+  affectedAll: TagRuleImpactItem[];
+  newTags: string[];
 }
 
 /**
- * The suggestion impact of `changeSet` over `transactions`.
+ * The suggestion impact of `changeSet` over `transactions`, uncapped.
  *
  * Rows carrying `userTags` are excluded: a tag rule is a suggestion and never
  * overrides a row the user has decided, so it has no impact there. Presence,
  * not length, is the test — a row edited down to no tags is still a decision.
  * The caller is responsible for sending that field only for edited rows;
  * without it, hand-tagged rows are reported as rule impact.
+ *
+ * Shared by {@link previewTagRuleChangeSet} (caller-list mode, capped at
+ * `maxPreviewItems`) and the full-history scan mode (POPS-15, `limit`/`offset`
+ * paged) — both page this same uncapped `affectedAll`, so the two modes
+ * cannot disagree about which rows are affected, only about how much of the
+ * list each returns.
  */
-export function previewTagRuleChangeSet(
+export function diffTagRuleChangeSet(
   db: FinanceDb,
-  args: {
-    changeSet: TagRuleChangeSet;
-    transactions: PreviewInputTransaction[];
-    maxPreviewItems: number;
-  }
-): TagRulePreview {
+  args: { changeSet: TagRuleChangeSet; transactions: PreviewInputTransaction[] }
+): TagRuleChangeSetDiff {
   const knownTags = tagVocabularyService.loadKnownTagSet(db);
   const persisted = loadPersistedTagRules(db);
   const merged = mergeChangeSetOverRules(persisted, args.changeSet);
@@ -174,8 +187,7 @@ export function previewTagRuleChangeSet(
         before: { suggestedTags: before },
         after: { suggestedTags: after },
       },
-      diff,
-      args.maxPreviewItems
+      diff
     );
   }
 
@@ -186,7 +198,54 @@ export function previewTagRuleChangeSet(
       removed: acc.removed,
       newTagProposals: acc.newTagProposals,
     },
-    affected: acc.affected,
+    affectedAll: acc.affected,
     newTags: [...acc.newTags].toSorted((a, b) => a.localeCompare(b)),
+  };
+}
+
+export function previewTagRuleChangeSet(
+  db: FinanceDb,
+  args: {
+    changeSet: TagRuleChangeSet;
+    transactions: PreviewInputTransaction[];
+    maxPreviewItems: number;
+  }
+): TagRulePreview {
+  const { counts, affectedAll, newTags } = diffTagRuleChangeSet(db, args);
+  return { counts, affected: affectedAll.slice(0, args.maxPreviewItems), newTags };
+}
+
+/**
+ * {@link previewTagRuleChangeSet}'s full-history mode (POPS-15): the same
+ * diff, computed over every transaction in the finance DB rather than a
+ * caller-supplied batch, with `affected` a true `limit`/`offset` window
+ * instead of a from-the-top cap — mirroring `previewRuleMatchTransactions`'s
+ * full-DB scan and `totalCount`.
+ *
+ * There is no `userTags` short-circuit here: that field exists for a caller
+ * to say "I just edited this row and it should not be overwritten", which
+ * has no counterpart for a DB row nobody has touched in this request.
+ */
+export function previewTagRuleChangeSetFullHistory(
+  db: FinanceDb,
+  args: { changeSet: TagRuleChangeSet; limit: number; offset: number }
+): TagRulePreviewPage {
+  const rows = transactionsService.listAllTransactionsForChangeSetPreview(db);
+  const transactions: PreviewInputTransaction[] = rows.map((row) => ({
+    transactionId: row.id,
+    description: row.description,
+    entityId: row.entityId,
+  }));
+
+  const { counts, affectedAll, newTags } = diffTagRuleChangeSet(db, {
+    changeSet: args.changeSet,
+    transactions,
+  });
+
+  return {
+    counts,
+    affected: affectedAll.slice(args.offset, args.offset + args.limit),
+    newTags,
+    pagination: paginationMeta(affectedAll.length, args.limit, args.offset),
   };
 }

@@ -210,14 +210,36 @@ export const CALLER_SUPPLIED_TRANSACTIONS_MAX = 2000;
  */
 export const PENDING_CHANGE_SETS_MAX = 200;
 
-export const PreviewChangeSetBody = z.object({
-  changeSet: ChangeSetSchema,
-  transactions: z
-    .array(PreviewChangeSetTransactionSchema)
-    .min(1)
-    .max(CALLER_SUPPLIED_TRANSACTIONS_MAX),
-  pendingChangeSets: z.array(PendingChangeSetSchema).max(PENDING_CHANGE_SETS_MAX).optional(),
-});
+/**
+ * `transactions` is required unless `fullHistory` is set (POPS-15): the two
+ * modes are mutually exclusive callers, not a mix — a full-history request
+ * scans the whole finance DB itself and has no use for a caller-supplied
+ * batch.
+ */
+export const PreviewChangeSetBody = z
+  .object({
+    changeSet: ChangeSetSchema,
+    transactions: z
+      .array(PreviewChangeSetTransactionSchema)
+      .max(CALLER_SUPPLIED_TRANSACTIONS_MAX)
+      .optional()
+      .default([]),
+    pendingChangeSets: z.array(PendingChangeSetSchema).max(PENDING_CHANGE_SETS_MAX).optional(),
+    /** Scan every finance-DB transaction instead of `transactions` (POPS-15). */
+    fullHistory: z.boolean().optional().default(false),
+    /** Full-history mode only: pages the returned (changed-only) `diffs`. */
+    limit: z.number().int().positive().max(500).optional(),
+    offset: z.number().int().nonnegative().optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (!body.fullHistory && body.transactions.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'transactions must have at least 1 element(s) unless fullHistory is true',
+        path: ['transactions'],
+      });
+    }
+  });
 
 const CorrectionMatchSummarySchema = z.object({
   matched: z.boolean(),

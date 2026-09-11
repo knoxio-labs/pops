@@ -12,6 +12,7 @@ import { type FinanceDb, transactionCorrectionsService } from '../../db/index.js
 import {
   applyChangeSet as applyCorrectionChangeSet,
   classifyCorrectionMatch,
+  previewChangeSetFullHistory,
   previewChangeSetImpact,
 } from '../modules/corrections/index.js';
 import { applyCorrectionRuleToExistingTransactions } from '../modules/imports/reclassify-existing.js';
@@ -20,6 +21,8 @@ import { makeCorrectionsAiHandlers } from './corrections-ai-handlers.js';
 import {
   DEFAULT_LIMIT,
   DEFAULT_OFFSET,
+  CHANGESET_FULL_HISTORY_DEFAULT_LIMIT,
+  CHANGESET_FULL_HISTORY_HARD_LIMIT,
   mergedRules,
   previewMatches,
   ruleMatchPreview,
@@ -163,14 +166,32 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       }),
 
     previewChangeSet: ({ body }: Req['previewChangeSet']) =>
-      runHttp(() => ({
-        status: 200 as const,
-        body: previewChangeSetImpact({
-          rules: mergedRules(db, body.pendingChangeSets),
-          changeSet: body.changeSet,
-          transactions: body.transactions,
-        }),
-      })),
+      runHttp(() => {
+        const rules = mergedRules(db, body.pendingChangeSets);
+        if (body.fullHistory) {
+          const limit = Math.min(
+            body.limit ?? CHANGESET_FULL_HISTORY_DEFAULT_LIMIT,
+            CHANGESET_FULL_HISTORY_HARD_LIMIT
+          );
+          return {
+            status: 200 as const,
+            body: previewChangeSetFullHistory(db, {
+              rules,
+              changeSet: body.changeSet,
+              limit,
+              offset: body.offset ?? DEFAULT_OFFSET,
+            }),
+          };
+        }
+        return {
+          status: 200 as const,
+          body: previewChangeSetImpact({
+            rules,
+            changeSet: body.changeSet,
+            transactions: body.transactions,
+          }),
+        };
+      }),
 
     applyChangeSet: ({ body }: Req['applyChangeSet']) =>
       runHttp(() => ({

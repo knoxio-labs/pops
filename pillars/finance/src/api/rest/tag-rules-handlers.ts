@@ -18,12 +18,12 @@ import {
   tagVocabularyService,
   transactionCorrectionsService,
   transactionTagRulesService,
-  InvalidPatternError,
-  TransactionTagRuleNotFoundError,
-  UnmatchablePatternError,
 } from '../../db/index.js';
 import { TAG_FACETS } from '../../db/tag-facets.js';
-import { previewTagRuleChangeSet } from '../modules/tag-rules/preview.js';
+import {
+  previewTagRuleChangeSet,
+  previewTagRuleChangeSetFullHistory,
+} from '../modules/tag-rules/preview.js';
 import { applyTagRuleToExistingTransactions } from '../modules/tag-rules/retroactive-apply.js';
 import {
   applyTagRuleChangeSet,
@@ -31,63 +31,27 @@ import {
   recordTagRuleRejection,
   toTagRule,
 } from '../modules/tag-rules/service.js';
-import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 import { makeTagRuleCollisionHandlers } from './tag-rules-collision-handlers.js';
+import {
+  translateTagRuleError,
+  withLedgerMatchStatus,
+  withLedgerMatchStatusOne,
+} from './tag-rules-handlers-support.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { financeTagRulesContract } from '../../contract/rest-tag-rules.js';
-import type { TagRuleLedgerMatchStatus } from '../../db/index.js';
-import type { TagRule } from '../modules/tag-rules/service.js';
 
 type Req = ServerInferRequest<typeof financeTagRulesContract>;
-
-/** {@link TagRule} plus its ledger-match verdict (POPS-2941). */
-type TagRuleWithLedgerStatus = TagRule & { ledgerMatchStatus: TagRuleLedgerMatchStatus };
-
-/**
- * Annotate rules with whether their pattern matches anything in the ledger.
- *
- * One `loadTagRuleLedgerSnapshot` fetch for the whole call, reused across
- * every rule passed in — the cost the `list`/`get` handlers pay is one
- * `transactions` scan per request, not one per rule (POPS-2941).
- */
-function withLedgerMatchStatus(
-  db: FinanceDb,
-  rules: readonly TagRule[]
-): TagRuleWithLedgerStatus[] {
-  const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
-  return rules.map((rule) => ({
-    ...rule,
-    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
-  }));
-}
-
-/** {@link withLedgerMatchStatus} for the single-rule `get` response. */
-function withLedgerMatchStatusOne(db: FinanceDb, rule: TagRule): TagRuleWithLedgerStatus {
-  const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
-  return {
-    ...rule,
-    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
-  };
-}
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 const MATCH_PREVIEW_DEFAULT_LIMIT = 100;
 const MATCH_PREVIEW_HARD_LIMIT = 500;
-
-function translateTagRuleError(err: unknown, id?: string): never {
-  if (err instanceof TransactionTagRuleNotFoundError) {
-    throw new NotFoundError('TagRule', id ?? err.id);
-  }
-  if (err instanceof InvalidPatternError || err instanceof UnmatchablePatternError) {
-    throw new ValidationError(err.message, { pattern: err.pattern });
-  }
-  throw err;
-}
+const CHANGESET_FULL_HISTORY_DEFAULT_LIMIT = 100;
+const CHANGESET_FULL_HISTORY_HARD_LIMIT = 500;
 
 export function makeTagRulesHandlers(db: FinanceDb) {
   return {
@@ -205,14 +169,30 @@ export function makeTagRulesHandlers(db: FinanceDb) {
       })),
 
     preview: ({ body }: Req['preview']) =>
-      runHttp(() => ({
-        status: 200 as const,
-        body: previewTagRuleChangeSet(db, {
-          changeSet: body.changeSet,
-          transactions: body.transactions,
-          maxPreviewItems: body.maxPreviewItems,
-        }),
-      })),
+      runHttp(() => {
+        if (body.fullHistory) {
+          const limit = Math.min(
+            body.limit ?? CHANGESET_FULL_HISTORY_DEFAULT_LIMIT,
+            CHANGESET_FULL_HISTORY_HARD_LIMIT
+          );
+          return {
+            status: 200 as const,
+            body: previewTagRuleChangeSetFullHistory(db, {
+              changeSet: body.changeSet,
+              limit,
+              offset: body.offset ?? DEFAULT_OFFSET,
+            }),
+          };
+        }
+        return {
+          status: 200 as const,
+          body: previewTagRuleChangeSet(db, {
+            changeSet: body.changeSet,
+            transactions: body.transactions,
+            maxPreviewItems: body.maxPreviewItems,
+          }),
+        };
+      }),
 
     apply: ({ body }: Req['apply']) =>
       runHttp(() => {
