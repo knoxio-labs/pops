@@ -3942,6 +3942,75 @@
         "tags": ["purchase"]
       }
     },
+    "/purchases/{id}/capture/location": {
+      "delete": {
+        "operationId": "purchase.eraseCaptureLocation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Erase an order's stored capture location, keeping the order",
+        "tags": ["purchase"]
+      }
+    },
     "/purchases/{id}/documents": {
       "post": {
         "operationId": "purchase.attachDocument",

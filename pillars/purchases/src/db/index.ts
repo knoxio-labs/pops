@@ -130,6 +130,8 @@ export {
 
 export { attachDocument, type AttachDocumentInput } from './services/purchase-documents.js';
 
+export { eraseCaptureLocation } from './services/purchase-write-capture.js';
+
 export {
   createPurchase,
   type CreateChargeAllocationInput,
