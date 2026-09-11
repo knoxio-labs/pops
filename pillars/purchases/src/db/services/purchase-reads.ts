@@ -21,6 +21,7 @@ import {
 import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
 import { nowIso, type PurchasesDb } from './internal.js';
+import { blankMerchantLabel, nameLabelCondition } from './merchant-identity.js';
 import { orderedAtWindow } from './ordered-at.js';
 import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
@@ -160,9 +161,16 @@ function merchantConditions(merchant: MerchantFilter): readonly SQL[] {
     case 'entity':
       return [eq(purchases.merchantEntityId, merchant.entityId)];
     case 'name':
-      return [isNull(purchases.merchantEntityId), eq(purchases.merchantEntityName, merchant.name)];
+      return [
+        isNull(purchases.merchantEntityId),
+        nameLabelCondition(purchases.merchantEntityName, merchant.name),
+      ];
     case 'unattributed':
-      return [isNull(purchases.merchantEntityId), isNull(purchases.merchantEntityName)];
+      // A stored `''` or padding-only label names no merchant any more
+      // than `null` does (POPS-2342), so `blankMerchantLabel` matches both
+      // rather than leaving the empty-string rows in a group this filter
+      // can never spell.
+      return [isNull(purchases.merchantEntityId), blankMerchantLabel(purchases.merchantEntityName)];
   }
 }
 

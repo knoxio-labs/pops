@@ -18,6 +18,7 @@ import {
 } from '../errors.js';
 import { purchases, purchaseShipments, purchaseTags } from '../schema.js';
 import { expectRow, nowIso, type PurchasesDb } from './internal.js';
+import { normalizeMerchantLabel } from './merchant-identity.js';
 import { canonicalInstant, spelledOffsetMinutes } from './ordered-at.js';
 import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
@@ -145,7 +146,7 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       ...componentCents(input),
       totalCents: input.totalCents,
       merchantEntityId: input.merchantEntityId ?? null,
-      merchantEntityName: input.merchantEntityName ?? null,
+      merchantEntityName: normalizeMerchantLabel(input.merchantEntityName),
       settlementMode: input.settlementMode ?? 'unknown',
       paymentHint: input.paymentHint ?? null,
       rawRef: input.rawRef ?? null,
