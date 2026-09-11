@@ -256,17 +256,14 @@ jobs:
       - uses: actions/checkout@v7
         if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
 
-      - name: Stub secret files referenced by compose
-        if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
-        run: |
-          mkdir -p secrets
-          for f in notion_api_token up_bank_token up_webhook_secret claude_api_key \
-                   telegram_bot_token telegram_bot_token_dev finance_api_key pops_api_key \
-                   tmdb_api_key thetvdb_api_key \
-                   paperless_secret_key paperless_admin_password; do
-            : > "secrets/$f"
-          done
-
+      # `docker compose config` resolves `secrets:` file paths but never opens
+      # them — it does not fail when `secrets/` is absent entirely, checked
+      # against every secret this file currently declares, dev-only and
+      # profile-gated included. A hand-listed stub here would
+      # only be load-bearing for `docker compose up`, which this job never
+      # runs; keeping one invites a no-op edit on every PR that adds a secret,
+      # which is exactly what got flagged as a false CI-breaking omission on
+      # PR #3893.
       - name: Validate production compose
         if: github.event_name != 'pull_request' || needs.changes.outputs.compose == 'true'
         run: docker compose -f infra/docker-compose.yml config --quiet
