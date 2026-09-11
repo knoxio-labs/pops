@@ -73,6 +73,19 @@ describe('raw palette utilities are reported', () => {
     expect(texts(source)).toContain(expected);
   });
 
+  it.each([
+    // `white`/`black` carry no numeric shade, so they are invisible to the
+    // hue-and-shade matcher above unless a matcher looks for them by name.
+    ['a bare white text utility', '<p className="text-white" />', 'text-white'],
+    [
+      'a black background with an opacity modifier',
+      '<div className="bg-black/50" />',
+      'bg-black/50',
+    ],
+  ])('%s', (_label, source, expected) => {
+    expect(texts(source)).toContain(expected);
+  });
+
   it('reports a shared-prefix property once, not twice', () => {
     expect(texts('<p className="text-shadow-violet-500 ring-offset-indigo-500" />')).toEqual([
       'text-shadow-violet-500',
@@ -131,6 +144,7 @@ describe('token-only source is silent', () => {
     'text-[length:14px] shadow-[inset_0_1px_0_var(--border)]',
     'bg-red-5000 bg-red-500-foo',
     '--brand-red-500: oklch(0.6 0.2 25);',
+    'bg-overlay-scrim/50 text-on-media',
   ])('%s', (source) => {
     expect(findViolations('a.tsx', source)).toEqual([]);
   });

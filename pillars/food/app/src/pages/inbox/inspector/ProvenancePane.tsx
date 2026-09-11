@@ -85,7 +85,7 @@ function ProvenanceUrlInstagram({ source }: Props): ReactElement {
         controls
         preload="metadata"
         src={videoSrc}
-        className="w-full rounded border bg-black"
+        className="w-full rounded border bg-overlay-scrim"
         data-testid="inspector-provenance-video"
       >
         {t('inbox.inspector.provenance.videoUnsupported')}

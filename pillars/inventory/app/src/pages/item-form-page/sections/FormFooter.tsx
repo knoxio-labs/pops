@@ -14,7 +14,7 @@ export function FormFooter({ isEditMode, isMutating }: FormFooterProps) {
       <Button
         type="submit"
         size="lg"
-        className="flex-1 bg-app-accent hover:bg-app-accent/80 text-white font-bold transition-all shadow-md shadow-app-accent/20"
+        className="flex-1 bg-app-accent hover:bg-app-accent/80 text-app-accent-foreground font-bold transition-all shadow-md shadow-app-accent/20"
         loading={isMutating}
         loadingText={isEditMode ? 'Saving...' : 'Creating...'}
       >

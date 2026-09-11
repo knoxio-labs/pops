@@ -89,7 +89,7 @@ function CardActions({
           variant="ghost"
           size="icon"
           aria-label={`Drag to reorder ${title}`}
-          className="absolute top-2 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white rounded-md h-auto w-auto p-1 cursor-grab active:cursor-grabbing hover:bg-black/80"
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-overlay-scrim/60 text-on-media rounded-md h-auto w-auto p-1 cursor-grab active:cursor-grabbing hover:bg-overlay-scrim/80"
           onClick={(e) => {
             e.stopPropagation();
           }}

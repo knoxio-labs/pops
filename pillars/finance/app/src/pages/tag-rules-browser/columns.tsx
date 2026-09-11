@@ -100,7 +100,7 @@ const activeColumn: ColumnDef<TagRule> = {
   header: 'Status',
   cell: ({ row }) =>
     row.original.isActive ? (
-      <Badge className="border-transparent bg-success text-white">Active</Badge>
+      <Badge className="border-transparent bg-success text-success-foreground">Active</Badge>
     ) : (
       <Badge variant="outline">Disabled</Badge>
     ),

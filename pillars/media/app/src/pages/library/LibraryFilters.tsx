@@ -35,7 +35,7 @@ function TypeToggle({
           aria-pressed={typeFilter === opt.value}
           className={`text-xs font-semibold uppercase tracking-wider ${
             typeFilter === opt.value
-              ? 'bg-app-accent text-white shadow-sm hover:bg-app-accent/90'
+              ? 'bg-app-accent text-app-accent-foreground shadow-sm hover:bg-app-accent/90'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >

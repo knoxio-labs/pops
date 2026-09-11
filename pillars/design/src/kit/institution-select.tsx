@@ -88,8 +88,8 @@ export function InstitutionMark({ institution }: { institution: Institution }) {
   }
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white"
-      style={{ backgroundColor: institution.colour }}
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold"
+      style={{ backgroundColor: institution.colour, color: '#fff' }}
       aria-hidden
     >
       {initials(institution.name)}

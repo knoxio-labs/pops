@@ -22,7 +22,7 @@ export function NavRegion({ pageNavOpen, onClosePageNav }: NavRegionProps) {
       {pageNavOpen && (
         <div className="hidden md:block lg:hidden">
           <div
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-overlay-scrim/50 z-40"
             onClick={onClosePageNav}
             aria-hidden="true"
           />

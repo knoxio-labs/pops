@@ -59,7 +59,7 @@ export function DocumentUploadSection({
           <Button
             type="button"
             size="sm"
-            className="bg-destructive text-white hover:bg-destructive/80"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
             onClick={onConfirmDelete}
             loading={isDeleting}
             loadingText="Deleting..."

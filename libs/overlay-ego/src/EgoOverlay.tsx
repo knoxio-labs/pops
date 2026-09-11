@@ -76,7 +76,11 @@ export function EgoOverlay({ open, onClose }: EgoOverlayProps) {
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/40" aria-hidden="true" onClick={onClose} />
+        <div
+          className="fixed inset-0 z-40 bg-overlay-scrim/40"
+          aria-hidden="true"
+          onClick={onClose}
+        />
       )}
       <aside
         className={cn(

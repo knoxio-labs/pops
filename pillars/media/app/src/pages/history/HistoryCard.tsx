@@ -58,7 +58,7 @@ function CardOverlays({
       <Badge variant={isEpisode ? 'secondary' : 'default'} className="absolute top-2 left-2 z-10">
         {isEpisode ? 'Episode' : 'Movie'}
       </Badge>
-      <span className="absolute top-2 right-2 z-10 bg-black/60 text-white text-2xs font-medium px-1.5 py-0.5 rounded">
+      <span className="absolute top-2 right-2 z-10 bg-overlay-scrim/60 text-on-media text-2xs font-medium px-1.5 py-0.5 rounded">
         {formatShortDate(entry.watchedAt)}
       </span>
       <Button
@@ -70,7 +70,7 @@ function CardOverlays({
           e.stopPropagation();
           onDelete(entry.id);
         }}
-        className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1.5 h-auto w-auto rounded-md bg-black/60 hover:bg-destructive text-white"
+        className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1.5 h-auto w-auto rounded-md bg-overlay-scrim/60 hover:bg-destructive text-on-media"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </Button>

@@ -30,7 +30,7 @@ function CompactQueueButtons({
       <Button
         size="icon"
         variant="ghost"
-        className="h-7 w-7 text-white hover:bg-white/20"
+        className="h-7 w-7 text-on-media hover:bg-on-media/20"
         onClick={onAddToQueue}
         disabled={isAdding}
         title="Add to Rotation Queue"
@@ -46,7 +46,7 @@ function CompactQueueButtons({
         <Button
           size="icon"
           variant="ghost"
-          className="h-7 w-7 text-white hover:bg-white/20"
+          className="h-7 w-7 text-on-media hover:bg-on-media/20"
           onClick={() => setDownloadModalOpen(true)}
           title="Download Now"
           aria-label="Download Now"

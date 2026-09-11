@@ -26,8 +26,8 @@ export function WatchlistButton({
           disabled={pending}
           className={`relative p-1.5 rounded-full backdrop-blur-sm transition-colors before:absolute before:-inset-2 before:content-[''] ${
             isOnWatchlist
-              ? 'bg-app-accent/90 text-app-accent-foreground hover:bg-destructive/90 hover:text-white'
-              : 'bg-black/50 text-white/80 hover:text-white hover:bg-black/70'
+              ? 'bg-app-accent/90 text-app-accent-foreground hover:bg-destructive/90 hover:text-destructive-foreground'
+              : 'bg-overlay-scrim/50 text-on-media/80 hover:text-on-media hover:bg-overlay-scrim/70'
           }`}
           aria-label={
             isOnWatchlist
@@ -50,7 +50,9 @@ export function ScoreDeltaBadge({ movieId, scoreDelta }: { movieId: number; scor
   return (
     <div
       className={`px-2 py-1 rounded-full text-xs font-bold tabular-nums animate-bounce ${
-        scoreDelta > 0 ? 'bg-success/90 text-white' : 'bg-destructive/90 text-white'
+        scoreDelta > 0
+          ? 'bg-success/90 text-success-foreground'
+          : 'bg-destructive/90 text-destructive-foreground'
       }`}
       data-testid={`score-delta-${movieId}`}
     >
@@ -77,7 +79,7 @@ function ActionIconButton({
   tooltip: string;
   hoverDestructive?: boolean;
 }) {
-  const hoverColor = hoverDestructive ? 'hover:text-destructive/80' : 'hover:text-white';
+  const hoverColor = hoverDestructive ? 'hover:text-destructive/80' : 'hover:text-on-media';
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -87,7 +89,7 @@ function ActionIconButton({
             onClick();
           }}
           disabled={disabled}
-          className={`relative p-2 rounded-full bg-black/40 text-white/80 ${hoverColor} hover:bg-black/60 backdrop-blur-sm transition-colors before:absolute before:-inset-1.5 before:content-['']`}
+          className={`relative p-2 rounded-full bg-overlay-scrim/40 text-on-media/80 ${hoverColor} hover:bg-overlay-scrim/60 backdrop-blur-sm transition-colors before:absolute before:-inset-1.5 before:content-['']`}
           aria-label={ariaLabel}
           data-testid={testId}
         >

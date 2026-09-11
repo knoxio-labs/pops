@@ -25,7 +25,7 @@ export function ErrorAlert({ title, message, details, className }: ErrorAlertPro
             <summary className="cursor-pointer hover:underline font-medium text-sm">
               {t('errorAlert.showDetails')}
             </summary>
-            <code className="block mt-2 p-3 bg-black/10 dark:bg-black/20 rounded text-xs font-mono whitespace-pre-wrap break-all">
+            <code className="block mt-2 p-3 bg-muted rounded text-xs font-mono whitespace-pre-wrap break-all">
               {details}
             </code>
           </details>

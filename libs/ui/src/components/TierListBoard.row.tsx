@@ -70,8 +70,8 @@ export function TierRow<T>({
       )}
     >
       <div
-        className="flex w-20 shrink-0 items-center justify-center rounded-sm px-2 text-sm font-semibold text-white"
-        style={{ background: row.color ?? 'var(--muted)' }}
+        className="flex w-20 shrink-0 items-center justify-center rounded-sm px-2 text-sm font-semibold"
+        style={{ background: row.color ?? 'var(--muted)', color: '#fff' }}
       >
         {row.label}
       </div>
