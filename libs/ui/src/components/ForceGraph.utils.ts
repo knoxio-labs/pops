@@ -137,8 +137,23 @@ export function drawEdges(
   }
 }
 
+export type NodeDrawingContext = Pick<
+  CanvasRenderingContext2D,
+  | 'font'
+  | 'textAlign'
+  | 'textBaseline'
+  | 'fillStyle'
+  | 'strokeStyle'
+  | 'lineWidth'
+  | 'beginPath'
+  | 'arc'
+  | 'fill'
+  | 'stroke'
+  | 'fillText'
+>;
+
 export function drawNodes(
-  ctx: CanvasRenderingContext2D,
+  ctx: NodeDrawingContext,
   nodes: Iterable<InternalNode>,
   opts: { defaultNodeColor: string; labelColor: string; hoveredId: string | null }
 ) {

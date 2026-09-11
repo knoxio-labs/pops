@@ -1,25 +1,35 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it, vi } from 'vitest';
 
-import { GRAPH_COLORS } from '../theme/graph-colors';
-import { drawNodes, type InternalNode } from './ForceGraph.utils';
+import { drawNodes, type InternalNode, type NodeDrawingContext } from './ForceGraph.utils';
 
-function fakeCtx() {
+const { SENTINEL_BORDER_COLOR } = vi.hoisted(() => ({
+  SENTINEL_BORDER_COLOR: '#sentinel-current-border',
+}));
+
+vi.mock('../theme/graph-colors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../theme/graph-colors')>();
+  return {
+    GRAPH_COLORS: {
+      ...actual.GRAPH_COLORS,
+      node: { ...actual.GRAPH_COLORS.node, currentBorder: SENTINEL_BORDER_COLOR },
+    },
+  };
+});
+
+function fakeCtx(): NodeDrawingContext {
   return {
     strokeStyle: '',
     fillStyle: '',
     lineWidth: 0,
     font: '',
-    textAlign: '',
-    textBaseline: '',
+    textAlign: 'start',
+    textBaseline: 'alphabetic',
     beginPath: vi.fn(),
     arc: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     fillText: vi.fn(),
-  } as unknown as CanvasRenderingContext2D;
+  };
 }
 
 function node(id: string): InternalNode {
@@ -27,7 +37,7 @@ function node(id: string): InternalNode {
 }
 
 describe('drawNodes hover border', () => {
-  it('paints the hovered node border with GRAPH_COLORS.node.currentBorder', () => {
+  it('paints the hovered node border with the mocked GRAPH_COLORS.node.currentBorder token', () => {
     const ctx = fakeCtx();
     drawNodes(ctx, [node('n1')], {
       defaultNodeColor: '#000',
@@ -35,7 +45,7 @@ describe('drawNodes hover border', () => {
       hoveredId: 'n1',
     });
 
-    expect(ctx.strokeStyle).toBe(GRAPH_COLORS.node.currentBorder);
+    expect(ctx.strokeStyle).toBe(SENTINEL_BORDER_COLOR);
   });
 
   it('leaves strokeStyle untouched for a non-hovered node', () => {
@@ -47,15 +57,5 @@ describe('drawNodes hover border', () => {
     });
 
     expect(ctx.strokeStyle).toBe('');
-  });
-
-  it('references GRAPH_COLORS.node.currentBorder in source rather than a coincidentally-equal hex literal', () => {
-    // GRAPH_COLORS.node.currentBorder happens to equal '#1d4ed8' today, so a
-    // runtime-value assertion alone can't tell "imports the token" apart from
-    // "still hardcodes the same hex" — check the source text directly.
-    const path = join(process.cwd(), 'src/components/ForceGraph.utils.ts');
-    const source = readFileSync(path, 'utf8');
-    expect(source).not.toMatch(/#1d4ed8/i);
-    expect(source).toMatch(/GRAPH_COLORS\.node\.currentBorder/);
   });
 });
