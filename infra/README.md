@@ -91,14 +91,19 @@ Eleven configs — `ai`, `bfm`, `cerebrum`, `contacts`, `finance`, `food`,
 `inventory`, `lists`, `media`, `purchases`, `registry` — each mounted
 read-only at `/etc/litestream.yml` into the matching `<id>-litestream`
 sidecar. `check-litestream-sidecar-parity.mjs` (wired into `Infra Lint`)
-fails the build if a config ever loses its sidecar or a sidecar its config; it
-matches ids only, and does not check which file a sidecar mounts. Every config
-replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`, `retention: 24h`,
-`snapshot-interval: 1h`, `validation-interval: 12h`, and interpolates one
-`<ID>_LITESTREAM_REPLICA_URL` — except that `registry-litestream` passes
-`CORE_LITESTREAM_REPLICA_URL` while `registry.yml` reads
-`REGISTRY_LITESTREAM_REPLICA_URL`, so the reference wiring for `registry` does
-not work as written until one side is renamed to match the other (POPS-1778).
+fails the build if a config ever loses its sidecar or a sidecar its config,
+and also opens each matched sidecar to check that it mounts its own config
+and its own `pops-<id>-data` volume rather than another pillar's — matching
+ids alone would let a sidecar point at the wrong file and still pass. Every
+config replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`,
+`retention: 24h`, `snapshot-interval: 1h`, `validation-interval: 12h`, and
+interpolates one `<ID>_LITESTREAM_REPLICA_URL` — except that
+`registry-litestream` passes `CORE_LITESTREAM_REPLICA_URL` while
+`registry.yml` reads `REGISTRY_LITESTREAM_REPLICA_URL`, so the reference
+wiring for `registry` does not work as written until one side is renamed to
+match the other (POPS-1778). The guard carves this one out by name — it is
+the only id allowed to read a differently-named replica-URL variable — rather
+than skip the env-var check for every sidecar.
 
 Each sidecar mounts `pops-<id>-data:/data/sqlite:ro`. Only `bfm` has an API
 container writing to that volume; the other ten pillars still write to

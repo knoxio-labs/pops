@@ -5,8 +5,13 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  checkSidecarWiring,
   discoverConfigIds,
+  ENV_VAR_EXCEPTIONS,
+  extractEnvVarName,
+  extractSidecarBlocks,
   extractSidecarIds,
+  extractVolumeMounts,
   findDrift,
   parseArgs,
 } from '../check-litestream-sidecar-parity.mjs';
@@ -129,6 +134,186 @@ describe('parseArgs', () => {
   });
 });
 
+describe('extractVolumeMounts', () => {
+  it('reads short-form `source:target:mode` entries', () => {
+    const lines = [
+      '    volumes:',
+      '      - pops-finance-data:/data/sqlite:ro',
+      '      - ./litestream/finance.yml:/etc/litestream.yml:ro',
+      '    environment:',
+      '      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}',
+    ];
+    expect(extractVolumeMounts(lines)).toEqual([
+      { source: 'pops-finance-data', target: '/data/sqlite' },
+      { source: './litestream/finance.yml', target: '/etc/litestream.yml' },
+    ]);
+  });
+
+  it('reads short-form entries with no mode suffix', () => {
+    expect(extractVolumeMounts(['    volumes:', '      - pops-finance-data:/data/sqlite'])).toEqual(
+      [{ source: 'pops-finance-data', target: '/data/sqlite' }]
+    );
+  });
+
+  it('reads long-form `type`/`source`/`target` entries', () => {
+    const lines = [
+      '    volumes:',
+      '      - type: volume',
+      '        source: pops-finance-data',
+      '        target: /data/sqlite',
+      '        read_only: true',
+      '      - type: bind',
+      '        source: ./litestream/finance.yml',
+      '        target: /etc/litestream.yml',
+      '        read_only: true',
+    ];
+    expect(extractVolumeMounts(lines)).toEqual([
+      { source: 'pops-finance-data', target: '/data/sqlite' },
+      { source: './litestream/finance.yml', target: '/etc/litestream.yml' },
+    ]);
+  });
+
+  it('stops at the next 4-space key, ignoring a look-alike list after it', () => {
+    const lines = [
+      '    volumes:',
+      '      - pops-finance-data:/data/sqlite:ro',
+      '    environment:',
+      '      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}',
+      '    labels:',
+      '      - pops-ghost-data:/should/not/be/read:ro',
+    ];
+    expect(extractVolumeMounts(lines)).toEqual([
+      { source: 'pops-finance-data', target: '/data/sqlite' },
+    ]);
+  });
+});
+
+describe('extractEnvVarName', () => {
+  it('reads the first key under `environment:`', () => {
+    const lines = [
+      '    environment:',
+      '      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}',
+    ];
+    expect(extractEnvVarName(lines)).toBe('FINANCE_LITESTREAM_REPLICA_URL');
+  });
+
+  it('returns undefined when the service has no environment block', () => {
+    expect(
+      extractEnvVarName(['    volumes:', '      - pops-finance-data:/data/sqlite:ro'])
+    ).toBeUndefined();
+  });
+});
+
+describe('checkSidecarWiring', () => {
+  const bodyOf = (id: string, source: string) =>
+    extractSidecarBlocks(source).find((block) => block.id === id)!.lines;
+
+  it('passes a sidecar mounting its own config and volume with its own env var', () => {
+    const lines = bodyOf(
+      'finance',
+      [
+        'services:',
+        '  finance-litestream:',
+        '    volumes:',
+        '      - pops-finance-data:/data/sqlite:ro',
+        '      - ./litestream/finance.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        '      FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}',
+      ].join('\n')
+    );
+    expect(checkSidecarWiring('finance', lines)).toEqual([]);
+  });
+
+  it("flags a sidecar mounting a different pillar's config — the deceptive case from the ticket", () => {
+    const lines = bodyOf(
+      'purchases',
+      [
+        'services:',
+        '  purchases-litestream:',
+        '    volumes:',
+        '      - pops-purchases-data:/data/sqlite:ro',
+        '      - ./litestream/finance.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        '      PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}',
+      ].join('\n')
+    );
+    const violations = checkSidecarWiring('purchases', lines);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatch(
+      /\.\/litestream\/finance\.yml.*expected \.\/litestream\/purchases\.yml/
+    );
+  });
+
+  it("flags a sidecar mounting a different pillar's data volume", () => {
+    const lines = bodyOf(
+      'purchases',
+      [
+        'services:',
+        '  purchases-litestream:',
+        '    volumes:',
+        '      - pops-finance-data:/data/sqlite:ro',
+        '      - ./litestream/purchases.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        '      PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}',
+      ].join('\n')
+    );
+    const violations = checkSidecarWiring('purchases', lines);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatch(/pops-finance-data.*expected pops-purchases-data/);
+  });
+
+  it('flags a sidecar missing the data-volume mount entirely', () => {
+    const lines = bodyOf(
+      'purchases',
+      [
+        'services:',
+        '  purchases-litestream:',
+        '    volumes:',
+        '      - ./litestream/purchases.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        '      PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}',
+      ].join('\n')
+    );
+    const violations = checkSidecarWiring('purchases', lines);
+    expect(violations).toContainEqual(
+      expect.stringContaining('missing a volume mounting /data/sqlite')
+    );
+  });
+
+  it('honours the documented registry env-var exception', () => {
+    const lines = bodyOf(
+      'registry',
+      [
+        'services:',
+        '  registry-litestream:',
+        '    volumes:',
+        '      - pops-registry-data:/data/sqlite:ro',
+        '      - ./litestream/registry.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        `      ${ENV_VAR_EXCEPTIONS.get('registry')}: \${${ENV_VAR_EXCEPTIONS.get('registry')}:-}`,
+      ].join('\n')
+    );
+    expect(checkSidecarWiring('registry', lines)).toEqual([]);
+  });
+
+  it('still fails an unlisted id passing the exact same env var shape registry is excused for', () => {
+    const lines = bodyOf(
+      'unlisted',
+      [
+        'services:',
+        '  unlisted-litestream:',
+        '    volumes:',
+        '      - pops-unlisted-data:/data/sqlite:ro',
+        '      - ./litestream/unlisted.yml:/etc/litestream.yml:ro',
+        '    environment:',
+        `      ${ENV_VAR_EXCEPTIONS.get('registry')}: \${${ENV_VAR_EXCEPTIONS.get('registry')}:-}`,
+      ].join('\n')
+    );
+    const violations = checkSidecarWiring('unlisted', lines);
+    expect(violations).toContainEqual(expect.stringContaining('UNLISTED_LITESTREAM_REPLICA_URL'));
+  });
+});
+
 describe('against the live repo', () => {
   it('every infra/litestream/<id>.yml has a matching <id>-litestream service, and vice versa', async () => {
     const { readFileSync } = await import('node:fs');
@@ -144,5 +329,25 @@ describe('against the live repo', () => {
     const sidecarIds = extractSidecarIds(readFileSync(composePath, 'utf8'));
 
     expect(findDrift(configIds, sidecarIds)).toEqual({ missingSidecar: [], orphanSidecar: [] });
+  });
+
+  it('every matched sidecar mounts its own config and data volume', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { dirname, resolve } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+
+    const here = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = resolve(here, '..', '..', '..');
+    const composePath = resolve(repoRoot, 'infra', 'docker-compose.yml');
+
+    const blocks = extractSidecarBlocks(readFileSync(composePath, 'utf8'));
+    expect(blocks.length).toBeGreaterThan(0);
+
+    const violationsById = Object.fromEntries(
+      blocks
+        .map((block) => [block.id, checkSidecarWiring(block.id, block.lines)] as const)
+        .filter(([, violations]) => violations.length > 0)
+    );
+    expect(violationsById).toEqual({});
   });
 });
