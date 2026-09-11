@@ -764,3 +764,28 @@ export async function waitForImportCompletion<T>(
   }
   throw new Error('Timeout waiting for import to complete');
 }
+
+/**
+ * `count` unsaved ChangeSets, each adding one rule whose pattern matches no
+ * fixture row, for exercising the `pendingChangeSets` cap rather than what
+ * the rules do.
+ */
+export function inertPendingChangeSets(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    changeSet: {
+      ops: [
+        {
+          op: 'add' as const,
+          data: {
+            descriptionPattern: `NO FIXTURE ROW ${i}`,
+            matchType: 'contains' as const,
+            entityId: 'inert-id',
+            entityName: 'Inert',
+            tags: [],
+            confidence: 0.95,
+          },
+        },
+      ],
+    },
+  }));
+}
