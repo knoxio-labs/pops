@@ -93,25 +93,39 @@ if (process.env['POPS_REGISTRY_ENABLED'] === 'true') {
 // A rotation cycle mid-flight is deleting from and adding to Radarr; cutting
 // the process off leaves that half-applied. Disarm the timer, then give the
 // in-flight cycle a bounded window to settle before the server closes.
-const ROTATION_DRAIN_TIMEOUT_MS = 30_000;
+/**
+ * One bound for both scheduler drains. They are independent, and
+ * `shutdownPillar` runs its steps in order, so they run together inside a
+ * single step: a slow Plex tick must not delay the start of the rotation
+ * drain, or the worst-case shutdown doubles.
+ */
+const SCHEDULER_DRAIN_TIMEOUT_MS = 30_000;
 
 let shuttingDown = false;
 function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[media-api] Shutting down (${signal})`);
-  plexScheduler.stop();
+  plexScheduler.stopForShutdown();
   rotationScheduler.stopForShutdown();
   void shutdownPillar({
     label: 'media-api',
     steps: [
       {
-        name: 'rotation-drain',
+        name: 'scheduler-drain',
         run: async () => {
-          const drained = await rotationScheduler.waitForCycleEnd(ROTATION_DRAIN_TIMEOUT_MS);
-          if (!drained) {
+          const [plexDrained, rotationDrained] = await Promise.all([
+            plexScheduler.waitForCycleEnd(SCHEDULER_DRAIN_TIMEOUT_MS),
+            rotationScheduler.waitForCycleEnd(SCHEDULER_DRAIN_TIMEOUT_MS),
+          ]);
+          if (!plexDrained) {
             console.warn(
-              `[media-api] rotation cycle did not settle within ${ROTATION_DRAIN_TIMEOUT_MS}ms; closing anyway`
+              `[media-api] plex sync tick did not settle within ${SCHEDULER_DRAIN_TIMEOUT_MS}ms; closing anyway`
+            );
+          }
+          if (!rotationDrained) {
+            console.warn(
+              `[media-api] rotation cycle did not settle within ${SCHEDULER_DRAIN_TIMEOUT_MS}ms; closing anyway`
             );
           }
         },

@@ -22,6 +22,7 @@ import { getRotationCyclePolicy } from '../modules/rotation-cycle-policy.js';
 import { emptyResult } from '../modules/rotation-cycle-types.js';
 import { executeRotationCycle } from '../modules/rotation-cycle.js';
 import { resolveArmDelayMs, type ScheduledRun, scheduleAt } from './cron-timer.js';
+import { waitForSettled } from './drain.js';
 
 const ENABLED_KEY = 'rotation_enabled';
 const CRON_KEY = 'rotation_cron_expression';
@@ -208,18 +209,7 @@ export const rotationScheduler = {
    * caller decides whether to proceed with a partial Radarr mutation in flight.
    */
   async waitForCycleEnd(timeoutMs: number = DEFAULT_DRAIN_TIMEOUT_MS): Promise<boolean> {
-    const inflight = currentCycle;
-    if (inflight === null) return true;
-    let timer: NodeJS.Timeout | undefined;
-    const expiry = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(false), timeoutMs);
-      timer.unref();
-    });
-    try {
-      return await Promise.race([inflight.then(() => true), expiry]);
-    } finally {
-      if (timer !== undefined) clearTimeout(timer);
-    }
+    return waitForSettled(currentCycle, timeoutMs);
   },
 
   /** Start with the persisted cron if `rotation_enabled` is `'true'`. */

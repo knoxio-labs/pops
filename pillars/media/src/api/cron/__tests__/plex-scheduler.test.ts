@@ -152,6 +152,67 @@ describe('plexScheduler controller', () => {
   });
 });
 
+describe('plexScheduler — shutdown (POPS-2583)', () => {
+  /** A tick that stays in flight until the returned `release` is called. */
+  function gateTick(): () => void {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    runTickMock.mockImplementationOnce(() => gate);
+    return release;
+  }
+
+  it('stopForShutdown disarms the timer without persisting the scheduler as disabled', async () => {
+    vi.useFakeTimers();
+    try {
+      plexScheduler.start({ db: opened.db, intervalMs: 1_000 });
+      await vi.runOnlyPendingTimersAsync();
+
+      plexScheduler.stopForShutdown();
+
+      expect(plexScheduler.status(opened.db).isRunning).toBe(false);
+      expect(plexSettingsService.getSetting(opened.db, PLEX_KEYS.schedulerEnabled)).toBe('true');
+      const callsAfterStop = runTickMock.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(runTickMock.mock.calls.length).toBe(callsAfterStop);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('resolves true immediately when no tick is in flight', async () => {
+    await expect(plexScheduler.waitForCycleEnd(50)).resolves.toBe(true);
+  });
+
+  it('waits for the in-flight tick before resolving true', async () => {
+    const release = gateTick();
+    const tick = plexScheduler.runOnce(opened.db);
+    let resolved = false;
+    const drain = plexScheduler.waitForCycleEnd(5_000).then((drained) => {
+      resolved = true;
+      return drained;
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(resolved).toBe(false);
+
+    release();
+    await expect(drain).resolves.toBe(true);
+    await tick;
+  });
+
+  it('resolves false when the tick outlives the bound', async () => {
+    const release = gateTick();
+    const tick = plexScheduler.runOnce(opened.db);
+
+    await expect(plexScheduler.waitForCycleEnd(10)).resolves.toBe(false);
+
+    release();
+    await tick;
+  });
+});
+
 describe('plex scheduler — REST', () => {
   it('GET /plex/scheduler/sync-logs returns rows newest-first', async () => {
     seedLog({ syncedAt: '2026-01-01T00:00:00.000Z', moviesSynced: 1, tvShowsSynced: 0 });
