@@ -142,7 +142,11 @@ description = "Run every unit's test suite plus the root-owned scripts/ suite (f
 # hook only runs `test:scripts` when the push touches `scripts/`, which is
 # right for the hook and wrong as the only safety net — a change elsewhere
 # can falsify what a `scripts/` guard observes. It costs ~7 seconds.
-depends = ["test:scripts"]
+#
+# Also depends on `build`: a unit's `test` task refuses to run against a
+# missing sibling `dist/` rather than building it, so the fan-out needs the
+# graph built first.
+depends = ["test:scripts", "build"]
 run = "mise run run-all test"
 
 [tasks."test:coverage"]
