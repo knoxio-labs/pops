@@ -24,7 +24,6 @@ import {
 import {
   classifyError,
   classifyResult,
-  parseSoftUri,
   runReconciliation,
   startCrossPillarReconciliationWorker,
   type FinanceReconcileClient,
@@ -109,31 +108,6 @@ function makeFinanceProxy(byId: Record<string, FakeFinanceCall>): FinanceReconci
     ),
   };
 }
-
-describe('parseSoftUri', () => {
-  it('parses a well-formed soft URI', () => {
-    expect(parseSoftUri('pops://finance/transaction/abc-123')).toEqual({
-      pillar: 'finance',
-      type: 'transaction',
-      id: 'abc-123',
-    });
-  });
-
-  it('returns null for malformed URIs', () => {
-    expect(parseSoftUri('http://finance/transaction/x')).toBeNull();
-    expect(parseSoftUri('pops://finance/transaction/')).toBeNull();
-    expect(parseSoftUri('pops://finance')).toBeNull();
-    expect(parseSoftUri('not a uri at all')).toBeNull();
-  });
-
-  it('preserves slashes in the id segment (urn-style)', () => {
-    expect(parseSoftUri('pops://finance/transaction/a/b')).toEqual({
-      pillar: 'finance',
-      type: 'transaction',
-      id: 'a/b',
-    });
-  });
-});
 
 /**
  * One row per `CallResult` kind, keyed on the union's own discriminant list

@@ -11,6 +11,8 @@
  * companion flag. Two of them today; a third cross-pillar reference would
  * be a row in {@link LEGS} rather than a second loop.
  */
+import { parseSoftUri, type ParsedUri } from '@pops/pillar-sdk';
+
 import {
   clearDocumentUriStale,
   clearInventoryItemUriStale,
@@ -99,24 +101,6 @@ export interface ReconcileLegStats extends ReconcileCounts {
 /** Totals across every leg of one tick, plus each leg's own line. */
 export interface ReconcileTickStats extends ReconcileCounts {
   legs: ReconcileLegStats[];
-}
-
-export interface ParsedUri {
-  pillar: string;
-  type: string;
-  id: string;
-}
-
-/**
- * Parse `pops://<pillar>/<type>/<id>`. `null` for any shape that is not a
- * well-formed soft reference; the caller treats those as bad URIs.
- */
-export function parseSoftUri(uri: string): ParsedUri | null {
-  const match = /^pops:\/\/([^/]+)\/([^/]+)\/(.+)$/.exec(uri);
-  if (!match) return null;
-  const [, pillar, type, id] = match;
-  if (!pillar || !type || !id) return null;
-  return { pillar, type, id };
 }
 
 /** One column's worth of reconciliation. Constructed only as a row in {@link LEGS}. */

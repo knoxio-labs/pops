@@ -6,6 +6,7 @@ export {
   type RegistryPathKey,
 } from './registry-paths.js';
 export { createPathResolver, type RegistryPathResolver } from './registry-path-resolver.js';
+export { parseSoftUri, type ParsedUri } from './soft-uri.js';
 export * from './bootstrap/index.js';
 export * from './discovery/index.js';
 export * from './capabilities/index.js';
