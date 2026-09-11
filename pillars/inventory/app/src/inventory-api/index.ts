@@ -272,6 +272,8 @@ export type {
   ReportsWarrantiesResponse,
   ReportsWarrantiesResponses,
   SearchSearchData,
+  SearchSearchError,
+  SearchSearchErrors,
   SearchSearchResponse,
   SearchSearchResponses,
   SettingsEnsureData,
