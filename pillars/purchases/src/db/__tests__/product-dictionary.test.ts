@@ -265,6 +265,50 @@ describe('what the proposal pass learns', () => {
   });
 });
 
+describe('progress, so a long run is watchable', () => {
+  it('reports progress per batch of minted proposals, ending at done === total', () => {
+    createPurchase(
+      opened.db,
+      order({
+        checksum: 'shop',
+        items: [
+          line({ name: 'A' }),
+          line({ name: 'B' }),
+          line({ name: 'C' }),
+          line({ name: 'D' }),
+          line({ name: 'E' }),
+        ],
+      })
+    );
+    const seen: [number, number][] = [];
+
+    proposeProducts(opened.db, {
+      batchSize: 2,
+      onBatch: (done, total) => seen.push([done, total]),
+    });
+
+    expect(seen).toEqual([
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ]);
+  });
+
+  it('runs fine, and calls nothing, when no callback is given', () => {
+    createPurchase(opened.db, order({ checksum: 'shop', items: [line({ name: 'A' })] }));
+
+    expect(() => proposeProducts(opened.db)).not.toThrow();
+  });
+
+  it('never calls the callback when there is nothing to mint, matching propose:kinds', () => {
+    const seen: [number, number][] = [];
+
+    proposeProducts(opened.db, { onBatch: (done, total) => seen.push([done, total]) });
+
+    expect(seen).toEqual([]);
+  });
+});
+
 describe('what the dictionary refuses to merge on its own', () => {
   it('keeps two shops printing one abbreviation apart under a source that names many', () => {
     createPurchase(

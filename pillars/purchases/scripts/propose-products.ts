@@ -143,10 +143,13 @@ function difference<T>(from: ReadonlyMap<string, T>, to: ReadonlyMap<string, T>)
  * an operator can check: "would retire 41" says nothing about whether those
  * 41 are wordings that genuinely stopped being printed.
  */
-function runAndCapture(db: PurchasesDb): PassReport {
+function runAndCapture(
+  db: PurchasesDb,
+  onBatch?: (done: number, total: number) => void
+): PassReport {
   const entriesBefore = snapshotEntries(db);
   const productsBefore = snapshotProducts(db);
-  const outcome = proposeProducts(db);
+  const outcome = proposeProducts(db, { onBatch });
   const entriesAfter = snapshotEntries(db);
   const productsAfter = snapshotProducts(db);
   return {
@@ -170,11 +173,15 @@ function runAndCapture(db: PurchasesDb): PassReport {
  * `proposeProducts` opens a transaction of its own, which nests as a
  * savepoint inside this one.
  */
-export function runProposalPass(db: PurchasesDb, options: PassOptions): PassReport {
+export function runProposalPass(
+  db: PurchasesDb,
+  options: PassOptions,
+  onBatch?: (done: number, total: number) => void
+): PassReport {
   let report: PassReport | undefined;
   try {
     db.transaction((tx) => {
-      report = runAndCapture(tx);
+      report = runAndCapture(tx, onBatch);
       if (!options.write) throw new PreviewRollback();
     });
   } catch (error) {
@@ -247,7 +254,10 @@ export function main(argv: readonly string[] = process.argv.slice(2)): void {
   console.warn(describePassTarget(context));
   const opened = openPurchasesDb(path);
   try {
-    console.warn(describePassReport(runProposalPass(opened.db, options), context));
+    const report = runProposalPass(opened.db, options, (done, total) => {
+      console.warn(`batch ${String(done)}/${String(total)}`);
+    });
+    console.warn(describePassReport(report, context));
   } finally {
     opened.raw.close();
   }

@@ -29,6 +29,7 @@
  */
 import { eq, inArray, isNotNull } from 'drizzle-orm';
 
+import { intoBatches } from '../../classify/batch.js';
 import { purchaseItems, purchaseProductAliases, purchaseProducts, purchases } from '../schema.js';
 import { expectRow } from './internal.js';
 import { isNewer, orderRank } from './order-rank.js';
@@ -39,6 +40,16 @@ import type { SkuScheme } from '../../contract/constants.js';
 import type { PurchaseProductAliasRow } from '../schema.js';
 import type { PurchasesDb } from './internal.js';
 import type { OrderRank } from './order-rank.js';
+
+/** How many proposals are minted between progress reports. */
+const DEFAULT_BATCH_SIZE = 200;
+
+export interface ProposeProductsOptions {
+  /** Proposals minted per progress report. */
+  readonly batchSize?: number;
+  /** Called after each batch of proposals is minted, so a long run can report progress. */
+  readonly onBatch?: (done: number, total: number) => void;
+}
 
 /** What one run of the pass changed. */
 export interface ProposalOutcome {
@@ -84,7 +95,10 @@ interface ScannedLine {
  * what it used to say. The scan is inside it too, so the lines the entries
  * are derived from cannot change under the pass.
  */
-export function proposeProducts(db: PurchasesDb): ProposalOutcome {
+export function proposeProducts(
+  db: PurchasesDb,
+  options: ProposeProductsOptions = {}
+): ProposalOutcome {
   return db.transaction((tx) => {
     const lines = scanLines(tx);
     const observed = observeWordings(lines);
@@ -97,11 +111,18 @@ export function proposeProducts(db: PurchasesDb): ProposalOutcome {
         .map((alias) => productLookupKey(alias.scopeKey, alias.normalisedName))
     );
 
+    const toMint = [...observed.entries()]
+      .filter(([key]) => !held.has(key))
+      .map(([, wording]) => wording);
+    const batches = intoBatches(toMint, options.batchSize ?? DEFAULT_BATCH_SIZE);
+
     let proposed = 0;
-    for (const [key, wording] of observed) {
-      if (held.has(key)) continue;
-      mintProposal(tx, wording);
-      proposed += 1;
+    for (const [index, batch] of batches.entries()) {
+      for (const wording of batch) {
+        mintProposal(tx, wording);
+        proposed += 1;
+      }
+      options.onBatch?.(index + 1, batches.length);
     }
 
     return {
