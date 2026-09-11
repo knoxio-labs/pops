@@ -119,3 +119,48 @@ describe('cache — one settings round trip per cached read', () => {
     expect(getBulkSpy).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('cache — keyed by database handle (POPS-2589)', () => {
+  it('two FinanceDb handles in the same process resolve their own stored setting', () => {
+    const otherTmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-settings-resolver-test-other-'));
+    const otherOpened = openFinanceDb(join(otherTmpDir, 'finance.db'));
+    try {
+      setBulk(db, [{ key: SETTING_KEY, value: 'model-for-db-one' }]);
+      setBulk(otherOpened.db, [{ key: SETTING_KEY, value: 'model-for-db-two' }]);
+      invalidateAiSettingsCache();
+
+      expect(resolveAiString(db, SETTING_KEY, undefined, 'compiled-default')).toBe(
+        'model-for-db-one'
+      );
+      expect(resolveAiString(otherOpened.db, SETTING_KEY, undefined, 'compiled-default')).toBe(
+        'model-for-db-two'
+      );
+    } finally {
+      otherOpened.raw.close();
+      rmSync(otherTmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('invalidateAiSettingsCache still clears every handle, so a save on one is visible', () => {
+    const otherTmpDir = mkdtempSync(join(tmpdir(), 'finance-ai-settings-resolver-test-other-'));
+    const otherOpened = openFinanceDb(join(otherTmpDir, 'finance.db'));
+    try {
+      expect(resolveAiString(db, SETTING_KEY, undefined, 'compiled-default')).toBe(
+        'compiled-default'
+      );
+      expect(resolveAiString(otherOpened.db, SETTING_KEY, undefined, 'compiled-default')).toBe(
+        'compiled-default'
+      );
+
+      setBulk(otherOpened.db, [{ key: SETTING_KEY, value: 'updated-on-db-two' }]);
+      invalidateAiSettingsCache();
+
+      expect(resolveAiString(otherOpened.db, SETTING_KEY, undefined, 'compiled-default')).toBe(
+        'updated-on-db-two'
+      );
+    } finally {
+      otherOpened.raw.close();
+      rmSync(otherTmpDir, { recursive: true, force: true });
+    }
+  });
+});

@@ -5,11 +5,13 @@
  * site's existing env var (where one exists), then the site's own default.
  *
  * The whole four-key group is read in a single `getBulk` and cached
- * in-process; `invalidateAiSettingsCache` is called from the settings write
- * handlers (`api/rest/settings-handlers.ts`) so a save takes effect on the
- * next read with no restart. That cache is what keeps the per-row
- * categorizer path from paying a settings round trip per imported row — one
- * import run of any size shares the single cached read.
+ * in-process, keyed per `FinanceDb` handle so two handles open in the same
+ * process (every test suite opens its own) never read each other's settings;
+ * `invalidateAiSettingsCache` is called from the settings write handlers
+ * (`api/rest/settings-handlers.ts`) so a save takes effect on the next read
+ * with no restart. That cache is what keeps the per-row categorizer path
+ * from paying a settings round trip per imported row — one import run of any
+ * size shares the single cached read for its own handle.
  *
  * A stored value of `''` is treated the same as "not set" (falls through to
  * the env var / default) rather than resolving to an empty model id or a
@@ -34,20 +36,36 @@ const AI_SETTINGS_KEYS = [
   RULE_GEN_MAX_TOKENS_KEY,
 ] as const;
 
-let cached: Record<string, string> | undefined;
+let cached = new WeakMap<FinanceDb, Record<string, string>>();
 
 function readStore(db: FinanceDb): Record<string, string> {
-  cached ??= getBulk(db, AI_SETTINGS_KEYS);
-  return cached;
+  let forDb = cached.get(db);
+  if (forDb === undefined) {
+    forDb = getBulk(db, AI_SETTINGS_KEYS);
+    cached.set(db, forDb);
+  }
+  return forDb;
 }
 
 /**
  * Drop the cached read. Called on every settings write (set/setMany/
  * resetKey/reset) so a save is observed by the next resolve instead of
  * requiring a process restart.
+ *
+ * Keyed per `FinanceDb` handle (a `WeakMap`, not one module-global value) —
+ * two handles can be open in the same process (every corrections/settings
+ * test suite opens its own), and without this a second handle's first read
+ * would be served the first handle's cached settings. Pass `db` to drop only
+ * that handle's entry; omit it to drop every handle's cache at once, which is
+ * what the settings write handlers do since they don't know which other
+ * handles might be live.
  */
-export function invalidateAiSettingsCache(): void {
-  cached = undefined;
+export function invalidateAiSettingsCache(db?: FinanceDb): void {
+  if (db) {
+    cached.delete(db);
+  } else {
+    cached = new WeakMap();
+  }
 }
 
 function storedOverride(db: FinanceDb, key: string): string | undefined {

@@ -15,18 +15,26 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { setBulk } from '@pops/pillar-settings/service';
+
 import {
   describeForMatching,
   patternMatchesDescription,
 } from '../../../../contract/pattern-match.js';
+import {
+  RULE_GEN_MAX_TOKENS_KEY,
+  RULE_GEN_MODEL_KEY,
+} from '../../../../contract/settings/ai-settings-keys.js';
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactionCorrections } from '../../../../db/schema/corrections.js';
+import { invalidateAiSettingsCache } from '../../ai-settings-resolver.js';
 import { buildRevisePrompt, reviseChangeSet, type ReviseArgs } from '../ai-revise.js';
-import { __setClaudeCompleterForTests } from '../ai-runtime.js';
+import { __setClaudeCompleterForTests, CORRECTIONS_DEFAULT_MODEL } from '../ai-runtime.js';
 import { applyChangeSet } from '../service.js';
 
 import type { ChangeSet } from '../../../../contract/rest-corrections.js';
 import type { FinanceDb } from '../../../../db/services/internal.js';
+import type { ClaudeRequest } from '../ai-runtime.js';
 import type { CorrectionSignal } from '../ai-types.js';
 
 const DESCRIPTOR = 'AMAZON MKTP 1234-5678 SYDNEY';
@@ -154,5 +162,73 @@ describe('reviseChangeSet — a revised add op must be able to fire', () => {
     });
 
     expect(result.changeSet.ops).toHaveLength(1);
+  });
+});
+
+describe('reviseChangeSet — model/max-tokens resolution (POPS-2589)', () => {
+  let db: FinanceDb;
+  let captured: ClaudeRequest | null;
+
+  function stubCompleterCapturing(changeSet: ChangeSet): void {
+    captured = null;
+    __setClaudeCompleterForTests((req) => {
+      captured = req;
+      return Promise.resolve(JSON.stringify({ changeSet, rationale: 'revised' }));
+    });
+  }
+
+  beforeEach(() => {
+    invalidateAiSettingsCache();
+    db = freshMigratedFinanceDb().db;
+  });
+
+  afterEach(() => {
+    __setClaudeCompleterForTests(null);
+    delete process.env['FINANCE_CORRECTIONS_AI_MODEL'];
+  });
+
+  it('uses the compiled defaults when neither a setting nor an env var is present', async () => {
+    const signal = regexSignal();
+    stubCompleterCapturing(changeSetWithPattern(signal.descriptionPattern, 'regex'));
+
+    await reviseChangeSet(
+      db,
+      reviseArgs(signal, changeSetWithPattern(signal.descriptionPattern, 'regex'))
+    );
+
+    expect(captured?.model).toBe(CORRECTIONS_DEFAULT_MODEL);
+    expect(captured?.maxTokens).toBe(2000);
+  });
+
+  it('prefers the env var over the compiled default when only the env var is set', async () => {
+    process.env['FINANCE_CORRECTIONS_AI_MODEL'] = 'env-model';
+    const signal = regexSignal();
+    stubCompleterCapturing(changeSetWithPattern(signal.descriptionPattern, 'regex'));
+
+    await reviseChangeSet(
+      db,
+      reviseArgs(signal, changeSetWithPattern(signal.descriptionPattern, 'regex'))
+    );
+
+    expect(captured?.model).toBe('env-model');
+  });
+
+  it('prefers the stored setting over both the env var and the compiled default', async () => {
+    process.env['FINANCE_CORRECTIONS_AI_MODEL'] = 'env-model';
+    setBulk(db, [
+      { key: RULE_GEN_MODEL_KEY, value: 'setting-model' },
+      { key: RULE_GEN_MAX_TOKENS_KEY, value: '512' },
+    ]);
+    invalidateAiSettingsCache();
+    const signal = regexSignal();
+    stubCompleterCapturing(changeSetWithPattern(signal.descriptionPattern, 'regex'));
+
+    await reviseChangeSet(
+      db,
+      reviseArgs(signal, changeSetWithPattern(signal.descriptionPattern, 'regex'))
+    );
+
+    expect(captured?.model).toBe('setting-model');
+    expect(captured?.maxTokens).toBe(512);
   });
 });
