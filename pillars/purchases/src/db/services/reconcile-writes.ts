@@ -6,7 +6,7 @@
  * every order in its window looking unpaid, which is worse than not having
  * swept at all.
  */
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import {
   purchaseChargeLinks,
@@ -67,16 +67,42 @@ export function tearDownUnconfirmedLinks(db: PurchasesDb, chargeIds: readonly st
  * is money that came back, which `computeAccounting` keeps out of the
  * residual identity entirely, so netting it off here would understate what
  * was paid and leave the difference unexplained forever.
+ *
+ * `position` is one past the order's current maximum (or `0` on an order
+ * with no charges yet), never a fixed `0`. A refund that arrived as the
+ * order's only stated charge already holds position `0`, and inserting the
+ * derived capture at the same position would tie — `selectChargeDetails`
+ * would then fall through to `id ASC`, a random UUID, and the refund and
+ * its capture would swap places at random across re-ingests (POPS-1775).
+ * Reading the max here rather than caching a running counter keeps this
+ * correct even when a charge was deleted or renumbered by some other path:
+ * the position always reflects what is actually on the order right now.
+ * Callers run this inside the sweep's own transaction (see `sweep.ts`), so
+ * two mints for the same order never race over the same max.
  */
 export function mintDerivedCharge(
   db: PurchasesDb,
   order: { id: string; totalCents: number; currency: string }
 ): string {
+  // MAX() with no rows still returns one row (NULL), never zero — this is
+  // a scalar aggregate with no GROUP BY — so `expectRow` here documents an
+  // invariant of the query rather than guarding a real empty case.
+  const { nextPosition } = expectRow(
+    db
+      .select({
+        nextPosition: sql<number>`COALESCE(MAX(${purchaseCharges.position}), -1) + 1`,
+      })
+      .from(purchaseCharges)
+      .where(eq(purchaseCharges.purchaseId, order.id))
+      .all(),
+    'mintDerivedCharge.nextPosition'
+  );
+
   const rows = db
     .insert(purchaseCharges)
     .values({
       purchaseId: order.id,
-      position: 0,
+      position: nextPosition,
       // Settlement and order currency are the same here by construction:
       // the figure comes from the order itself, not from a statement, so
       // there is no FX leg to represent.
