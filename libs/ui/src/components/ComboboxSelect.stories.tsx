@@ -5,7 +5,7 @@ import { ComboboxSelect } from './ComboboxSelect';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
 const meta: Meta<typeof ComboboxSelect> = {
-  title: 'Inputs/Select',
+  title: 'Inputs/ComboboxSelect',
   component: ComboboxSelect,
   parameters: {
     layout: 'centered',
