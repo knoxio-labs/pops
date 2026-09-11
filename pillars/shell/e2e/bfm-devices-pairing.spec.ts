@@ -6,10 +6,12 @@
  * for a code, renders what came back, lists what is paired, and cuts a device
  * off only after the operator confirms.
  */
-import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { assertMatchesContract, json, stubShellBoot } from './helpers/pillar-rest';
+
+import type { Page } from '@playwright/test';
 
 const PAIRING_CODE = '7QK4-9M2X-P3ND';
 const PAIRING_URL = `https://bfm.example.test/devices/pair?code=${PAIRING_CODE}`;

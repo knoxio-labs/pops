@@ -12,8 +12,7 @@
  * survive its own pillar returning nothing is a page that cannot survive a
  * cold deploy either.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 /**
@@ -34,6 +33,14 @@ const RAIL_TARGETS = [
 const FINANCE_HEADING = 'Dashboard';
 
 test.describe('Shell — app-rail navigation', () => {
+  test.use({
+    allowUnroutedPillarRest:
+      "the file header states the design: 'the pillars answer nothing here " +
+      "beyond the registry' — every page's own data fetch is deliberately " +
+      'left unstubbed so this suite proves a page survives an empty backend, ' +
+      'not that it renders real data',
+  });
+
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {
