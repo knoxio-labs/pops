@@ -775,7 +775,6 @@ function main() {
 
   /** @type {string | null} */
   let mergeRoot = null;
-  let exitCode = 0;
 
   try {
     let root = repoRoot;
@@ -789,7 +788,7 @@ function main() {
       });
       if ((install.status ?? 1) !== 0) {
         console.error('FAIL — pnpm install --frozen-lockfile failed in the merge worktree.');
-        exitCode = 1;
+        process.exitCode = 1;
         return;
       }
       root = mergeRoot;
@@ -804,7 +803,7 @@ function main() {
           'EXPECTED_TARGETS (scripts/ci/check-generated-clients.mjs):'
       );
       for (const message of expectedSetViolations) console.error(`  ${message}`);
-      exitCode = 1;
+      process.exitCode = 1;
       return;
     }
 
@@ -820,7 +819,7 @@ function main() {
         `FAIL — discovered zero generate:* Hey API client scripts ${scope}. ` +
           'Discovery is broken, or the filter matched nothing.'
       );
-      exitCode = 1;
+      process.exitCode = 1;
       return;
     }
 
@@ -837,7 +836,7 @@ function main() {
       console.error(`FAIL — ${violations.length} generated-client problem(s):`);
       for (const violation of violations)
         console.error(`  [${violation.kind}] ${violation.message}`);
-      exitCode = 1;
+      process.exitCode = 1;
       return;
     }
 
@@ -847,8 +846,6 @@ function main() {
   } finally {
     if (mergeRoot !== null) cleanupMergeRoot(repoRoot, mergeRoot);
   }
-
-  process.exit(exitCode);
 }
 
 if (import.meta.main) {
