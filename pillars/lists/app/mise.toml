@@ -1,12 +1,17 @@
-# The app imports `@pops/lists` through its built `dist`, not its `src` — so a
-# change to `pillars/lists/src` is invisible to `tsc`/vitest here until the
-# pillar is rebuilt (POPS-2631). Build it first rather than trusting whatever
-# `dist` happens to be on disk.
+# The app imports `@pops/lists` through its built `dist`, not its `src`. It
+# used to build the pillar first (`mise run -C .. build`, POPS-2631), but
+# mise's and tsc's incremental caches both key off *source* hashes, not
+# whether `dist` is actually still on disk — a `dist` removed (or gone stale)
+# out of band from those caches can leave that build step reporting "up to
+# date" while emitting nothing (POPS-2466, POPS-3488). require-built-graph.mjs
+# does a real filesystem check with no cache to lie to it, so run it first and
+# refuse with a clear message naming the unbuilt package, rather than let a
+# cold or stale pillar surface as a confusing failure deep in a test file.
 [tasks.typecheck]
-run = ["mise run -C .. build", "tsc --noEmit"]
+run = ["node ../../../scripts/require-built-graph.mjs", "tsc --noEmit"]
 
 [tasks.test]
-run = ["mise run -C .. build", "vitest run"]
+run = ["node ../../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

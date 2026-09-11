@@ -10,7 +10,7 @@ run = ["tsc --noEmit", "tsc --noEmit -p scripts/tsconfig.json"]
 
 [tasks.test]
 depends = ["build"]
-run = "vitest run"
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

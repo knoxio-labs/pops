@@ -26,8 +26,8 @@
     "dev": "tsx watch --clear-screen=false src/api/server.ts",
     "generate:openapi": "tsx scripts/generate-openapi.ts",
     "start": "node dist/api/server.js",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:live-seam": "vitest run --config vitest.live-seam.config.ts",
     "test:watch": "vitest",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"

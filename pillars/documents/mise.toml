@@ -8,7 +8,7 @@ outputs = ["dist/**", "openapi/*.json"]
 run = "tsc --noEmit"
 
 [tasks.test]
-run = "vitest run"
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

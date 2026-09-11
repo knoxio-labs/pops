@@ -18,8 +18,8 @@
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest"
   },
   "dependencies": {

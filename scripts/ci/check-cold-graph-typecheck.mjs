@@ -1,33 +1,40 @@
 #!/usr/bin/env node
 /**
- * A unit's own `typecheck` may not silently need the compiled graph.
+ * A unit's own `typecheck`/`test`/`test:coverage` may not silently need the
+ * compiled graph.
  *
  * A unit that imports an `@pops/*` package whose `exports[...].types` resolves
- * into that package's `dist/` can only type-check once the graph has been
- * emitted. `mise run typecheck` emits it — `tsc -b tsconfig.build.json` first,
- * then the fan-out to each unit's own script. The per-unit script is a bare
- * `tsc --noEmit` almost everywhere, so run on its own it is correct only when
- * the graph happens to be warm.
+ * into that package's `dist/` can only type-check or run its tests once the
+ * graph has been emitted. `mise run typecheck` and CI's `unit-quality.yml`
+ * emit it first — but a script run on its own (a bare `tsc --noEmit`, or a
+ * bare `vitest run`) is correct only when the graph happens to be warm.
  *
- * On a fresh clone or worktree it is not warm, and the unit reports
- * `TS2307: Cannot find module '@pops/<x>'` against its own files. That reads
- * as a broken package rather than a missing prerequisite, and it has cost a
- * whole agent run and a ticket filed against the wrong subsystem (POPS-3072:
- * 93 `TS2307`s from `pnpm --filter @pops/app-finance typecheck`; the graph was
- * fine; moving that pillar's own emitted output aside reproduced it, and
- * restoring it fixed it).
+ * On a fresh clone or worktree it is not warm, and the unit reports either
+ * `TS2307: Cannot find module '@pops/<x>'` (typecheck) or an error that looks
+ * like a broken package rather than a missing prerequisite — e.g.
+ * `TypeError: AiUsageRecordRefusedError is not a constructor` (POPS-2466) or
+ * `Failed to resolve entry for package "@pops/…"`. It has cost a whole agent
+ * run and a ticket filed against the wrong subsystem (POPS-3072: 93 `TS2307`s
+ * from `pnpm --filter @pops/app-finance typecheck`; the graph was fine; moving
+ * that pillar's own emitted output aside reproduced it, and restoring it fixed
+ * it).
+ *
+ * POPS-3072 fixed `typecheck` for two units; POPS-2466 (#4732) then fixed
+ * `test`/`test:coverage` for `pillars/purchases` the same way. POPS-3488 is
+ * every other unit's turn: this guard now checks all three script kinds
+ * rather than `typecheck` alone.
  *
  * ## The remedy this guard demands
  *
  * A legible refusal, not a build. POPS-3072 chose it for the two units it
- * fixed, and at this scale it is the only one that stays readable: **30** of
- * the repo's 38 units have such a dependency, several on half a dozen packages
+ * fixed, and at this scale it is the only one that stays readable: most of
+ * the repo's units have such a dependency, several on half a dozen packages
  * each. A per-unit `test -e ... || echo ...` line for every one of them would
  * be six copies of the same sentence in a `package.json` string.
  *
  * So the demanded shape is one call to `scripts/require-built-graph.mjs`
- * before `tsc`, which computes the same answer from the same module this guard
- * uses and names whichever packages are actually missing.
+ * before `tsc`/`vitest`, which computes the same answer from the same module
+ * this guard uses and names whichever packages are actually missing.
  *
  * ## What it does not check
  *
@@ -59,6 +66,26 @@ export function guardsItsOwnGraph(/** @type {string} */ script) {
 }
 
 /**
+ * Whether a unit's `test`/`test:coverage` script guarantees the graph before
+ * `vitest` runs.
+ *
+ * Unlike `guardsItsOwnGraph`, there is no `tsc -b`-style self-satisfying
+ * alternative here: `vitest` never builds the referenced graph on its own, so
+ * the only thing that can satisfy this is the helper itself, called first.
+ */
+export function guardsItsOwnTests(/** @type {string} */ script) {
+  const beforeVitest = script.split(/\bvitest\b/u)[0] ?? '';
+  return beforeVitest.includes(REQUIRE_HELPER);
+}
+
+/** The `package.json` script keys this guard checks, and how each is satisfied. */
+const CHECKED_SCRIPTS = /** @type {const} */ ([
+  { key: 'typecheck', guarded: guardsItsOwnGraph },
+  { key: 'test', guarded: guardsItsOwnTests },
+  { key: 'test:coverage', guarded: guardsItsOwnTests },
+]);
+
+/**
  * Scan the tree.
  *
  * @param {string} [root]
@@ -71,16 +98,21 @@ export function scanRepo(root = repoRoot) {
   let needing = 0;
   for (const unit of units.values()) {
     const scripts = unit.pkg.scripts;
-    const script =
+    const scriptsObj =
       typeof scripts === 'object' && scripts !== null
-        ? /** @type {Record<string, unknown>} */ (scripts).typecheck
-        : undefined;
-    if (typeof script !== 'string') continue;
+        ? /** @type {Record<string, unknown>} */ (scripts)
+        : {};
     const cold = coldGraphDependencies(unit.dir, units);
     if (cold.length === 0) continue;
-    needing += 1;
-    if (guardsItsOwnGraph(script)) continue;
-    failures.push(`${relative(root, unit.dir)} — imports ${cold.join(', ')}`);
+    let unitNeeds = false;
+    for (const { key, guarded } of CHECKED_SCRIPTS) {
+      const script = scriptsObj[key];
+      if (typeof script !== 'string') continue;
+      unitNeeds = true;
+      if (guarded(script)) continue;
+      failures.push(`${relative(root, unit.dir)} (${key}) — imports ${cold.join(', ')}`);
+    }
+    if (unitNeeds) needing += 1;
   }
   return { unitCount: units.size, needing, failures };
 }
@@ -88,10 +120,10 @@ export function scanRepo(root = repoRoot) {
 /**
  * Prove the guard reports, one mutation at a time.
  *
- * The planted cases are on `guardsItsOwnGraph` and on the two resolution
- * questions underneath it, because those are where a wrong answer is silent:
- * a `types` entry read as source when it is emitted output removes a unit from
- * the scan without removing it from the tree.
+ * The planted cases are on `guardsItsOwnGraph`/`guardsItsOwnTests` and on the
+ * two resolution questions underneath them, because those are where a wrong
+ * answer is silent: a `types` entry read as source when it is emitted output
+ * removes a unit from the scan without removing it from the tree.
  */
 function selfTest() {
   /** @type {[name: string, actual: () => unknown, expected: unknown][]} */
@@ -117,6 +149,34 @@ function selfTest() {
       () =>
         guardsItsOwnGraph(
           'node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json'
+        ),
+      true,
+    ],
+    [
+      'a bare vitest run does not guarantee the graph',
+      () => guardsItsOwnTests('vitest run'),
+      false,
+    ],
+    [
+      'the helper called before vitest does',
+      () => guardsItsOwnTests('node ../../scripts/require-built-graph.mjs && vitest run'),
+      true,
+    ],
+    [
+      'the helper called AFTER vitest does not — vitest has already blamed the unit',
+      () => guardsItsOwnTests('vitest run && node ../../scripts/require-built-graph.mjs'),
+      false,
+    ],
+    [
+      'unlike typecheck, there is no self-satisfying vitest flag',
+      () => guardsItsOwnTests('vitest run --coverage'),
+      false,
+    ],
+    [
+      'a trailing command appended after the guarded vitest stays satisfied',
+      () =>
+        guardsItsOwnTests(
+          'node ../../scripts/require-built-graph.mjs && vitest run --coverage && node scripts/check-storybook-coverage.mjs'
         ),
       true,
     ],
@@ -173,7 +233,8 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-cold-graph-typecheck.mjs [--self-test]\n' +
-        "Fails when a unit's typecheck script needs the compiled graph and does not say so."
+        "Fails when a unit's typecheck/test/test:coverage script needs the compiled graph and " +
+        'does not say so.'
     );
     process.exit(2);
   }
@@ -189,15 +250,15 @@ function main() {
     process.exit(0);
   }
   console.error(
-    "FAIL — these units' own `typecheck` scripts only work when the compiled graph happens " +
-      "to be warm. On a fresh clone they report TS2307 against the unit's own files, which " +
-      'reads as a broken package rather than a missing prerequisite (POPS-3072):'
+    "FAIL — these units' own scripts only work when the compiled graph happens to be warm. " +
+      "On a fresh clone they report TS2307, or a runtime error against the unit's own files, " +
+      'which reads as a broken package rather than a missing prerequisite (POPS-3072, POPS-2466):'
   );
   for (const failure of failures) console.error(`  ${failure}`);
   console.error(
-    'Put `node <relative path to>/scripts/require-built-graph.mjs && ` in front of `tsc` in ' +
-      "that unit's typecheck script. It names whichever packages are actually missing, and " +
-      'exits 0 when the graph is warm.'
+    'Put `node <relative path to>/scripts/require-built-graph.mjs && ` in front of `tsc`/`vitest` ' +
+      "in that unit's script. It names whichever packages are actually missing, and exits 0 when " +
+      'the graph is warm.'
   );
   process.exit(1);
 }

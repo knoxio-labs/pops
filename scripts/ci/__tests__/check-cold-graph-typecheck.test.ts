@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { guardsItsOwnGraph, scanRepo } from '../check-cold-graph-typecheck.mjs';
+import { guardsItsOwnGraph, guardsItsOwnTests, scanRepo } from '../check-cold-graph-typecheck.mjs';
 import {
   coldGraphDependencies,
   readUnits,
@@ -52,6 +52,10 @@ interface PlantOptions {
   readonly types: string;
   /** The importing unit's `typecheck` script. */
   readonly typecheck: string;
+  /** The importing unit's `test` script, when it declares one. */
+  readonly test?: string;
+  /** The importing unit's `test:coverage` script, when it declares one. */
+  readonly testCoverage?: string;
   /** Whether the dependency's `.` types file exists on disk. */
   readonly built?: boolean;
   /** A second export the dependency publishes, and whether it is on disk. */
@@ -72,6 +76,8 @@ interface PlantOptions {
 function plantWorkspace({
   types,
   typecheck,
+  test,
+  testCoverage,
   built = false,
   subpath,
   imports = '@pops/widget',
@@ -98,9 +104,12 @@ function plantWorkspace({
 
   const host = join(root, 'pillars', 'host');
   mkdirSync(join(host, 'src'), { recursive: true });
+  const scripts: Record<string, string> = { typecheck };
+  if (test !== undefined) scripts.test = test;
+  if (testCoverage !== undefined) scripts['test:coverage'] = testCoverage;
   writeFileSync(
     join(host, 'package.json'),
-    `${JSON.stringify({ name: '@pops/host', scripts: { typecheck } }, null, 2)}\n`
+    `${JSON.stringify({ name: '@pops/host', scripts }, null, 2)}\n`
   );
   writeFileSync(join(host, 'src', 'index.ts'), `import { thing } from '${imports}';\n`);
   return root;
@@ -123,7 +132,7 @@ describe('a planted unit that needs the graph', () => {
     const { needing, failures } = scanRepo(root);
 
     expect(needing).toBe(1);
-    expect(failures).toEqual(['pillars/host — imports @pops/widget']);
+    expect(failures).toEqual(['pillars/host (typecheck) — imports @pops/widget']);
   });
 
   it('is not reported once the script says what it needs', () => {
@@ -152,6 +161,70 @@ describe('a planted unit that needs the graph', () => {
     writeFileSync(join(host, 'package.json'), `${JSON.stringify({ name: '@pops/host' })}\n`);
 
     expect(scanRepo(root).failures).toEqual([]);
+  });
+
+  it('is reported on `test` when it is a bare vitest run — POPS-3488', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'vitest run',
+    });
+    const { needing, failures } = scanRepo(root);
+
+    expect(needing).toBe(1);
+    expect(failures).toEqual(['pillars/host (test) — imports @pops/widget']);
+  });
+
+  it('is not reported on `test` once it calls the helper first', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'node ../../scripts/require-built-graph.mjs && vitest run',
+    });
+
+    expect(scanRepo(root).failures).toEqual([]);
+  });
+
+  it('is reported on `test:coverage` independently of `test`', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'node ../../scripts/require-built-graph.mjs && vitest run',
+      testCoverage: 'vitest run --coverage',
+    });
+    const { needing, failures } = scanRepo(root);
+
+    // The unit is counted once even though only one of its two guardable
+    // scripts is missing the call — `needing` tracks units, not scripts.
+    expect(needing).toBe(1);
+    expect(failures).toEqual(['pillars/host (test:coverage) — imports @pops/widget']);
+  });
+
+  it('reports every unguarded script kind on a unit that guards none of them', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'tsc --noEmit',
+      test: 'vitest run',
+      testCoverage: 'vitest run --coverage',
+    });
+    const { needing, failures } = scanRepo(root);
+
+    expect(needing).toBe(1);
+    expect(failures).toEqual([
+      'pillars/host (typecheck) — imports @pops/widget',
+      'pillars/host (test) — imports @pops/widget',
+      'pillars/host (test:coverage) — imports @pops/widget',
+    ]);
+  });
+
+  it('does not let a guarded typecheck excuse an unguarded test — POPS-3488 was exactly this gap', () => {
+    const root = plantWorkspace({
+      types: './dist/index.d.ts',
+      typecheck: 'node ../../scripts/require-built-graph.mjs && tsc --noEmit',
+      test: 'vitest run',
+    });
+
+    expect(scanRepo(root).failures).toEqual(['pillars/host (test) — imports @pops/widget']);
   });
 });
 
@@ -256,6 +329,22 @@ describe('guardsItsOwnGraph', () => {
     ['node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p x.json', true],
   ])('%s → %s', (script, expected) => {
     expect(guardsItsOwnGraph(script)).toBe(expected);
+  });
+});
+
+describe('guardsItsOwnTests', () => {
+  it.each([
+    ['vitest run', false],
+    ['vitest run --coverage', false],
+    ['node ../../scripts/require-built-graph.mjs && vitest run', true],
+    ['node ../../scripts/require-built-graph.mjs && vitest run --coverage', true],
+    ['vitest run && node ../../scripts/require-built-graph.mjs', false],
+    [
+      'node ../../scripts/require-built-graph.mjs && vitest run && node scripts/check-storybook-coverage.mjs',
+      true,
+    ],
+  ])('%s → %s', (script, expected) => {
+    expect(guardsItsOwnTests(script)).toBe(expected);
   });
 });
 

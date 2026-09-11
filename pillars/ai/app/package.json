@@ -12,8 +12,8 @@
     "build": "pnpm run build:remote",
     "build:remote": "tsx scripts/build-remote.ts",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "generate:api": "openapi-ts && oxfmt --write src/ai-api"
   },
