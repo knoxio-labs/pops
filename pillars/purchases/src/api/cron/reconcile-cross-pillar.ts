@@ -45,7 +45,6 @@ import type {
 } from './reconcile-legs.js';
 
 export {
-  parseSoftUri,
   type ReconcileCounts,
   type ReconcileLegStats,
   type ReconcileLookupFn,

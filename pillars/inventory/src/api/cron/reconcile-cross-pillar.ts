@@ -1,3 +1,4 @@
+import { parseSoftUri } from '@pops/pillar-sdk';
 import {
   pillar as serverPillar,
   PillarCallError,
@@ -79,25 +80,6 @@ export interface ReconcileCounters {
   unavailable: number;
   badUri: number;
   misconfigured: number;
-}
-
-interface ParsedUri {
-  pillar: string;
-  type: string;
-  id: string;
-}
-
-/**
- * Parse `pops://<pillar>/<type>/<id>`. Returns `null` for any shape that
- * isn't a well-formed soft reference — the caller treats those as bad URIs
- * (ops-visible warning, row preserved).
- */
-export function parseSoftUri(uri: string): ParsedUri | null {
-  const match = /^pops:\/\/([^/]+)\/([^/]+)\/(.+)$/.exec(uri);
-  if (!match) return null;
-  const [, pillar, type, id] = match;
-  if (!pillar || !type || !id) return null;
-  return { pillar, type, id };
 }
 
 function isCallResult(value: unknown): value is CallResult<unknown> {

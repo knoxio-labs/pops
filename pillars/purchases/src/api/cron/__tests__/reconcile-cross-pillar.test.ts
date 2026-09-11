@@ -19,7 +19,6 @@ import {
   purchaseItemUnits,
 } from '../../../db/index.js';
 import {
-  parseSoftUri,
   startReconcileCrossPillarWorker,
   type ReconcileLegStats,
   type ReconcileLookupFn,
@@ -160,23 +159,6 @@ function legStats(stats: ReconcileTickStats, label: string): ReconcileLegStats {
   if (found === undefined) throw new Error(`tick reported no '${label}' leg`);
   return found;
 }
-
-describe('parseSoftUri', () => {
-  it('splits a well-formed reference', () => {
-    expect(parseSoftUri(ITEM_URI)).toEqual({ pillar: 'inventory', type: 'item', id: 'abc' });
-  });
-
-  it('keeps an id containing slashes whole', () => {
-    expect(parseSoftUri('pops://documents/document/a/b')?.id).toBe('a/b');
-  });
-
-  it.each(['', 'not-a-uri', 'pops://inventory/item', 'pops://inventory//1', 'http://x/y/z'])(
-    'rejects %o',
-    (uri) => {
-      expect(parseSoftUri(uri)).toBeNull();
-    }
-  );
-});
 
 describe('the inventory leg', () => {
   it('leaves a resolving reference clear', async () => {
