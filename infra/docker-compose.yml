@@ -209,6 +209,8 @@ services:
       - sqlite-data:/data/sqlite
     secrets:
       - pops_finance_api_key
+      - up_bank_token
+      - up_webhook_secret
     environment:
       NODE_ENV: production
       PORT: '3004'
@@ -227,6 +229,15 @@ services:
       # `no-credential` (POPS-2689). Provisioning:
       # infra/secrets.example/finance/README.md.
       POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_finance_api_key
+      # Up Bank's personal access token. An API-fed account stores the secret's
+      # NAME, `UP_BANK_TOKEN`, in `account_import_config.secret_ref`, and the
+      # pillar resolves `<name>_FILE` before `<name>`
+      # (pillars/finance/src/api/secrets.ts), so this path is what a sync reads.
+      UP_BANK_TOKEN_FILE: /run/secrets/up_bank_token
+      # The HMAC secret Up signs webhook deliveries with. Without it the webhook
+      # route refuses every delivery. The pillar also accepts it inline as
+      # UP_WEBHOOK_SECRET, which is how capivara supplies it today.
+      UP_WEBHOOK_SECRET_FILE: /run/secrets/up_webhook_secret
     expose:
       - '3004'
     depends_on:

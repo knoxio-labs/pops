@@ -42,10 +42,10 @@ gitignored repo-root `secrets/`): `bfm_jwt_signing_key`, `claude_api_key`,
 `paperless_admin_password`, `paperless_secret_key`, `pops_api_internal_token`,
 `pops_api_key`, `pops_bfm_api_key`, `pops_finance_api_key`,
 `pops_purchases_api_key`, `telegram_bot_token`, `thetvdb_api_key`,
-`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 11 are mounted into a
+`tmdb_api_key`, `up_bank_token`, `up_webhook_secret`. Only 13 are mounted into a
 service (`pops-worker-food`, `paperless-ngx`, `pops-mcp`, `moltbot`,
 `moltbot-validator`, `bfm-api`, `purchases-api`, `finance-api`,
-`cerebrum-api`); the other 6 are declared and mounted nowhere.
+`cerebrum-api`); the other 4 are declared and mounted nowhere.
 A declared secret is inert — compose materialises one only for services that
 reference it — which is what lets a value be provisioned on the host before the
 release that starts reading it.

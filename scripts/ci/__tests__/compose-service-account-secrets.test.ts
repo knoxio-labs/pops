@@ -30,6 +30,8 @@ const FILE_SECRETS = [
     variable: 'POPS_INTERNAL_API_KEY_FILE',
     secret: 'pops_finance_api_key',
   },
+  { service: 'finance-api', variable: 'UP_BANK_TOKEN_FILE', secret: 'up_bank_token' },
+  { service: 'finance-api', variable: 'UP_WEBHOOK_SECRET_FILE', secret: 'up_webhook_secret' },
   {
     service: 'purchases-api',
     variable: 'POPS_INTERNAL_API_KEY_FILE',
