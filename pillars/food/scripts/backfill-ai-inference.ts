@@ -1,5 +1,3 @@
-import Database from 'better-sqlite3';
-
 /**
  * One-shot, idempotent backfill of food's historical `ai_inference_log` rows
  * into the ai pillar's cross-pillar telemetry store.
@@ -29,6 +27,8 @@ import Database from 'better-sqlite3';
  * `POPS_INTERNAL_CREDENTIAL` (`ops-backfill.<secret>`). Reads food's DB at
  * `FOOD_SQLITE_PATH` / `SQLITE_PATH` (same resolver food-api uses).
  */
+import Database from 'better-sqlite3';
+
 import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { resolveFoodSqlitePath } from '../src/api/food-sqlite-path.js';
