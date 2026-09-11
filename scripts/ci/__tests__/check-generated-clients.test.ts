@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -17,6 +18,10 @@ import {
   isAppMatrixDir,
   runTarget,
 } from '../check-generated-clients.mjs';
+import { gitEnv } from '../resolve-report-base.mjs';
+import { commit, fixtureRepo, write } from './git-fixture.js';
+
+const REAL_SUBPROCESS_TIMEOUT_MS = 180_000;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
@@ -459,5 +464,184 @@ describe('findExpectedTargetSetViolations', () => {
           message.includes(firstFullTarget.pkgDir)
       )
     ).toBe(true);
+  });
+});
+
+/**
+ * The bug this guards against: every failure branch in `main()` used a bare
+ * `return` inside `try { ... } finally { cleanupMergeRoot }`, which runs the
+ * `finally` and returns from the function without ever reaching the
+ * `process.exit(exitCode)` that followed the try/finally. `check-generated-clients.mjs`
+ * printed `FAIL` and exited 0 regardless — CI invokes it directly
+ * (`quality.yml`, `app-quality.yml`), so real drift passed. A test that only
+ * inspects stdout, like the ones above, cannot see this: it has to spawn the
+ * real binary and read its exit code.
+ *
+ * The exit-code cases below spawn the real `check-generated-clients.mjs` —
+ * not a reimplementation of it — but never against this repo's own working
+ * tree: `main()` derives its `repoRoot` from its own file location
+ * (`import.meta.url`), not from `cwd`, so a fixture is built by copying the
+ * real script next to one throwaway generated-client package, inside a
+ * `git init` fixture (see `git-fixture.ts`, shared with
+ * `check-generated-clients-merge-ref.test.ts`), and pointing `PATH` at a fake
+ * `pnpm` that stands in for the real generator. The real drift case used to
+ * mutate this repo's own checked-in registry OpenAPI spec and regenerate the
+ * shell's real client in place — at least 15 other test files read one or
+ * the other of those, so a parallel `mise run test` fan-out or an
+ * interrupted run could observe, or leave behind, a mutated tracked file.
+ * Nothing under `scripts/ci` may write to a tracked file in this repo's own
+ * working tree; the fixture makes that unnecessary.
+ */
+describe('the real CLI, spawned as a subprocess', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
+  const script = join(repoRoot, 'scripts', 'ci', 'check-generated-clients.mjs');
+
+  /** `pkgName`/`scriptName` the fixture's own `EXPECTED_TARGETS` patch pins. */
+  const FIXTURE_PKG_NAME = '@pops/fixture';
+  const FIXTURE_SCRIPT_NAME = 'generate:fixture-client';
+
+  function runCli(args: string[]): { status: number | null; output: string } {
+    const result = spawnSync('node', [script, ...args], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: gitEnv(),
+    });
+    return { status: result.status, output: `${result.stdout}${result.stderr}` };
+  }
+
+  function countWorktrees(): number {
+    return execFileSync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: gitEnv(),
+    })
+      .split('\n')
+      .filter((line) => line.startsWith('worktree ')).length;
+  }
+
+  /**
+   * A `git init` fixture that carries its own copy of the real
+   * `check-generated-clients.mjs` (so `main()`'s `import.meta.url`-derived
+   * `repoRoot` resolves to the fixture, never to this repo), one throwaway
+   * unit whose `generate:*` script matches `invokesHeyApiGenerator`, and a
+   * fake `pnpm` on `PATH` that regenerates that unit's declared output file
+   * from a `source.txt` — standing in for `openapi-ts` the same way
+   * `check-generated-clients-merge-ref.test.ts`'s `fakeGenerate` does, just
+   * reached through the real spawned binary instead of an injected `Runner`.
+   * `EXPECTED_TARGETS` is patched to the fixture's own single target — the
+   * real, 14-entry pinned list is a repo-wide invariant this fixture cannot
+   * and should not satisfy.
+   */
+  function buildRealCliFixture(): { root: string; fakeBinDir: string } {
+    const root = fixtureRepo();
+    created.push(root);
+
+    const fakeBinDir = join(root, 'fake-bin');
+    mkdirSync(fakeBinDir, { recursive: true });
+    const fakePnpm = join(fakeBinDir, 'pnpm');
+    writeFileSync(
+      fakePnpm,
+      [
+        '#!/usr/bin/env node',
+        "const { readFileSync, writeFileSync, mkdirSync } = require('node:fs');",
+        "const { dirname, join } = require('node:path');",
+        'const args = process.argv.slice(2);',
+        "const filterIndex = args.indexOf('--filter');",
+        `if (filterIndex !== -1 && args[filterIndex + 2] === ${JSON.stringify(FIXTURE_SCRIPT_NAME)}) {`,
+        "  const source = readFileSync(join(process.cwd(), 'source.txt'), 'utf8').trim();",
+        "  const outPath = join(process.cwd(), 'pillars', 'fixture', 'gen', 'output.txt');",
+        '  mkdirSync(dirname(outPath), { recursive: true });',
+        '  writeFileSync(outPath, `gen(${source})`);',
+        '}',
+        'process.exit(0);',
+        '',
+      ].join('\n')
+    );
+    chmodSync(fakePnpm, 0o755);
+
+    write(
+      root,
+      'pillars/fixture/package.json',
+      JSON.stringify({
+        name: FIXTURE_PKG_NAME,
+        scripts: { [FIXTURE_SCRIPT_NAME]: 'openapi-ts && oxfmt --write gen' },
+      })
+    );
+    write(root, 'source.txt', 'A');
+    write(root, 'pillars/fixture/gen/output.txt', 'gen(A)');
+    commit(root, 'fixture: clean baseline — source=A, gen=gen(A)');
+
+    const realSource = readFileSync(script, 'utf8');
+    const fixtureExpectedTargets = [
+      { pkgName: FIXTURE_PKG_NAME, scriptName: FIXTURE_SCRIPT_NAME, inAppMatrix: false },
+    ];
+    const patched = realSource.replace(
+      /export const EXPECTED_TARGETS = \[[\s\S]*?\n\];/,
+      `export const EXPECTED_TARGETS = ${JSON.stringify(fixtureExpectedTargets)};`
+    );
+    if (patched === realSource) {
+      throw new Error(
+        'could not find EXPECTED_TARGETS in check-generated-clients.mjs to patch for the fixture ' +
+          "— the real file's shape changed."
+      );
+    }
+    write(root, 'scripts/ci/check-generated-clients.mjs', patched);
+
+    return { root, fakeBinDir };
+  }
+
+  function runFixtureCli(
+    root: string,
+    fakeBinDir: string,
+    args: string[]
+  ): { status: number | null; output: string } {
+    const result = spawnSync(
+      'node',
+      [join(root, 'scripts', 'ci', 'check-generated-clients.mjs'), ...args],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: gitEnv({ PATH: `${fakeBinDir}${delimiter}${process.env.PATH ?? ''}` }),
+      }
+    );
+    return { status: result.status, output: `${result.stdout}${result.stderr}` };
+  }
+
+  it('exits 0 on a clean run — the success path is not accidentally broken by the fix', () => {
+    const { root, fakeBinDir } = buildRealCliFixture();
+
+    const { status, output } = runFixtureCli(root, fakeBinDir, ['--exclude-app-matrix']);
+
+    expect(output).toContain('OK —');
+    expect(status).toBe(0);
+  });
+
+  it('exits 1, not 0, when discovery matches nothing for --pkg — the empty-target-set failure branch', () => {
+    const { status, output } = runCli(['--pkg', 'does-not-exist-anywhere']);
+    expect(output).toContain('FAIL —');
+    expect(status).toBe(1);
+  });
+
+  it('exits 1, not 0, on real drift against a checked-in client', () => {
+    const { root, fakeBinDir } = buildRealCliFixture();
+    // Mutate the "spec" without regenerating the checked-in "client" —
+    // the same shape as the original bug: a contract changes, the generated
+    // output does not, and the guard must still catch it.
+    write(root, 'source.txt', 'B');
+
+    const { status, output } = runFixtureCli(root, fakeBinDir, ['--pkg', FIXTURE_PKG_NAME]);
+
+    expect(output).toContain('FAIL —');
+    expect(output).toContain('drift');
+    expect(status).toBe(1);
+  });
+
+  it('with --base, removes the disposable merge worktree even after a failing run', () => {
+    const before = countWorktrees();
+
+    const { status, output } = runCli(['--base', 'HEAD', '--pkg', 'does-not-exist-anywhere']);
+
+    expect(output).toContain('FAIL —');
+    expect(status).toBe(1);
+    expect(countWorktrees()).toBe(before);
   });
 });
