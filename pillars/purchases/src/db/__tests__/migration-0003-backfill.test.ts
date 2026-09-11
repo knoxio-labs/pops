@@ -8,24 +8,21 @@
  * pass all of them and only be discovered against the live file, where the
  * original tag rows have already been deleted.
  *
- * The database is brought up to 0002 from a copy of the journal truncated
- * at that point, seeded with raw SQL, closed, then reopened against the
- * real migrations folder — which applies every entry after 0002 and none
- * before, because drizzle's migrator only runs entries newer than the last
- * one recorded.
+ * The database is brought up to 0002 from a journal truncated at that
+ * point, seeded with raw SQL, closed, then reopened against the real
+ * migrations folder — drizzle's migrator runs only the entries newer than
+ * the last one recorded.
  */
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { openPurchasesDb } from '../open-purchases-db.js';
+import { openSeededAtMigration } from './migration-harness.js';
+
+import type Database from 'better-sqlite3';
 
 import type { OpenedPurchasesDb } from '../index.js';
 
@@ -37,11 +34,8 @@ const MIGRATIONS_DIR = join(
   'migrations'
 );
 
-const THROUGH_0002 = [
-  { idx: 0, version: '6', when: 1785686400000, tag: '0000_purchases_init', breakpoints: true },
-  { idx: 1, version: '6', when: 1786100000000, tag: '0001_purchase_tags', breakpoints: true },
-  { idx: 2, version: '6', when: 1786200000000, tag: '0002_purchase_surcharge', breakpoints: true },
-];
+/** The last entry before 0003 adds the tag/note split. */
+const BEFORE_TAG_SPLIT = '0002_purchase_surcharge';
 
 /**
  * Read rather than hard-coded: every migration added after this file was
@@ -54,23 +48,6 @@ function journalEntryCount(): number {
   );
   const { entries } = z.object({ entries: z.array(z.unknown()) }).parse(journal);
   return entries.length;
-}
-
-let dir: string;
-let dbPath: string;
-
-/** A migrations folder holding only the entries that existed before 0003. */
-function stageMigrationsThrough0002(): string {
-  const staged = join(dir, 'migrations');
-  mkdirSync(join(staged, 'meta'), { recursive: true });
-  for (const entry of THROUGH_0002) {
-    cpSync(join(MIGRATIONS_DIR, `${entry.tag}.sql`), join(staged, `${entry.tag}.sql`));
-  }
-  writeFileSync(
-    join(staged, 'meta', '_journal.json'),
-    JSON.stringify({ version: '7', dialect: 'sqlite', entries: THROUGH_0002 })
-  );
-  return staged;
 }
 
 interface SeededItem {
@@ -129,12 +106,7 @@ const SEED: readonly SeededItem[] = [
   { id: 'w-slug-prose', source: 'woolworths', tags: ['special'] },
 ];
 
-function seedThrough0002(): void {
-  const staged = stageMigrationsThrough0002();
-  const raw = new Database(dbPath);
-  raw.pragma('foreign_keys = ON');
-  migrate(drizzle(raw), { migrationsFolder: staged });
-
+function seedThrough0002(raw: Database.Database): void {
   const sources = [...new Set(SEED.map((item) => item.source))];
   for (const source of sources) {
     raw.prepare(`INSERT INTO purchase_sources (id, label) VALUES (?, ?)`).run(source, source);
@@ -159,21 +131,21 @@ function seedThrough0002(): void {
         .run(item.id, tag, TAG_WRITTEN_AT);
     }
   }
-  raw.close();
 }
 
 let opened: OpenedPurchasesDb;
+let cleanup: () => void;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'purchases-migration-'));
-  dbPath = join(dir, 'purchases.db');
-  seedThrough0002();
-  opened = openPurchasesDb(dbPath);
+  ({ opened, cleanup } = openSeededAtMigration({
+    through: BEFORE_TAG_SPLIT,
+    prefix: 'purchases-migration-0003-',
+    seed: seedThrough0002,
+  }));
 });
 
 afterEach(() => {
-  opened.raw.close();
-  rmSync(dir, { recursive: true, force: true });
+  cleanup();
 });
 
 function notesOf(itemId: string): string[] {
