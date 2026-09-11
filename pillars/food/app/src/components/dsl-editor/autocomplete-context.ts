@@ -33,8 +33,7 @@ export type CursorContext =
   /** Inside a `@step("...")` body after `@` — step refs (index OR slug). */
   | { kind: 'step-ref'; from: number; query: string; bodyStart: number };
 
-/** Identifier characters per the DSL grammar
- *  (pillars/food/docs/prds/dsl-parser): lowercase + digits + hyphen.
+/** Identifier characters per the DSL grammar: lowercase + digits + hyphen.
  *  Numbers also need to be recognised at the start (for `@N` step refs
  *  and `qty:` values). */
 const IDENT_RE = /^[a-z0-9-]+$/;

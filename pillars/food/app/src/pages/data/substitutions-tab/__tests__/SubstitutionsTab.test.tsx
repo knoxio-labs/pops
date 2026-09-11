@@ -94,7 +94,7 @@ beforeEach(() => {
   substitutionsDeleteMock.mockResolvedValue({ data: { ok: true } });
 });
 
-describe('pillars/food/docs/prds/substitution-model — SubstitutionsTab', () => {
+describe('SubstitutionsTab', () => {
   it('renders rows for each substitution returned by listHydrated', async () => {
     seedList([
       row({ id: 1, ratio: 1.25, contextTags: ['baking'] }),

@@ -5,8 +5,6 @@ import { Plus } from 'lucide-react';
  * reordered but not renamed or deleted; custom slots support inline rename
  * and delete (when not in use). The "+ Add slot" form validates the slug
  * grammar client-side before calling the API.
- *
- * Spec: pillars/food/docs/prds/plan-entry-model
  */
 import { useState, type ReactElement } from 'react';
 

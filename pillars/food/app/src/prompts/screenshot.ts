@@ -1,9 +1,9 @@
 /**
- * Screenshot ingest prompt (see pillars/food/docs/prds/screenshot-ingest).
+ * Screenshot ingest prompt.
  *
- * Single image → Claude vision. Registered with the food prompt viewer
- * (pillars/food/docs/prds/ai-usage-prompts). Bump the version constant on
- * every template edit so logged rows stay reproducible.
+ * Single image → Claude vision. Registered with the food prompt viewer.
+ * Bump the version constant on every template edit so logged rows stay
+ * reproducible.
  */
 export const PROMPT_VERSION_SCREENSHOT = 'screenshot-v0.1';
 

@@ -2,10 +2,9 @@
  * Cursor-context classifier — unit suite.
  *
  * The classifier is the single brain that decides which autocomplete
- * source to fire for a given (document, cursor) pair. The cursor-position
- * → source matrix lives in pillars/food/docs/prds/dsl-editor; this suite
- * has one `it` per row, plus negatives (cursor in a position that should
- * NOT surface a popup).
+ * source to fire for a given (document, cursor) pair. This suite has one
+ * `it` per cursor-position → source row, plus negatives (cursor in a
+ * position that should NOT surface a popup).
  */
 import { describe, expect, it } from 'vitest';
 

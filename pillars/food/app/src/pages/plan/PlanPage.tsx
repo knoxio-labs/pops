@@ -4,8 +4,6 @@
  * renders the grid plus the add modal, edit sheet, and slot drawer. At
  * narrow viewports (via `useIsMobile`) the week grid swaps for a
  * day-at-a-time swiper.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { useCallback, useState, type ReactElement } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -131,10 +129,7 @@ interface HeaderProps {
   onToday: () => void;
   onDatePick: (date: string) => void;
   onManageSlots: () => void;
-  /**
-   * Navigates to `/food/shopping/from-plan` with the current week pre-filled.
-   * Spec: pillars/food/docs/prds/plan-shopping-generator
-   */
+  /** Navigates to `/food/shopping/from-plan` with the current week pre-filled. */
   onMakeShoppingList: () => void;
 }
 

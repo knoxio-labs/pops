@@ -1,5 +1,5 @@
 /**
- * Text ingest prompt (see pillars/food/docs/prds/text-ingest).
+ * Text ingest prompt.
  *
  * Supports two modes:
  *
@@ -8,8 +8,7 @@
  *     and wants Claude to flesh it out into a usable starter.
  *
  * Both modes share one prompt — the model decides based on the input
- * shape. Registered with the food prompt viewer
- * (pillars/food/docs/prds/ai-usage-prompts).
+ * shape. Registered with the food prompt viewer.
  */
 export const PROMPT_VERSION_TEXT = 'text-v0.1';
 

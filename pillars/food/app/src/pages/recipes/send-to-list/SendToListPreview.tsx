@@ -1,6 +1,5 @@
 /**
- * Preview pane for the send-to-list modal
- * (pillars/food/docs/prds/send-to-list).
+ * Preview pane for the send-to-list modal.
  *
  * Shows canonical items (post-aggregation, post-scale) and unconverted items
  * in two grouped lists with a `…N more` collapser that expands inline. The

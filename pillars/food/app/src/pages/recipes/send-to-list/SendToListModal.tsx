@@ -1,5 +1,5 @@
 /**
- * Send-to-list modal (pillars/food/docs/prds/send-to-list).
+ * Send-to-list modal.
  *
  * The detail page mounts this under `RecipeScaleProvider` so the scale
  * factor flows in via `useRecipeScale()`. Behaviour:

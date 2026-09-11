@@ -2,8 +2,6 @@
  * One row per plan entry inside a cell: a servings badge, a status chip when
  * cooked, and a drag handle that greys out when the entry is locked by a
  * cook. Clicking the row body opens `PlanEntryEditSheet`.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';

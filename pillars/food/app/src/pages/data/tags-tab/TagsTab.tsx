@@ -1,6 +1,5 @@
 /**
- * Read-only Tags vocabulary tab at `/food/data/tags`
- * (pillars/food/docs/prds/store-section-taxonomy).
+ * Read-only Tags vocabulary tab at `/food/data/tags`.
  *
  * Groups every distinct tag in the database by namespace (`store-section`,
  * `diet`, `allergen`, …) and tags without a `:` segment under

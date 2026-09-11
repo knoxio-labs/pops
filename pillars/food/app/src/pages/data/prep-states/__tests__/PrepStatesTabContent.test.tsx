@@ -1,6 +1,6 @@
 /**
  * RTL coverage for `/food/data/prep-states`, the read-only-beyond-Add Prep
- * states tab. Spec: pillars/food/docs/prds/data-page.
+ * states tab.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';

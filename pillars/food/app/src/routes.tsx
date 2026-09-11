@@ -137,7 +137,6 @@ export const routes: RouteObject[] = [
       // Declared as a sibling under `data` (not nested under `substitutions`)
       // so the active-tab resolver in FoodDataLayout still highlights the
       // Substitutions tab while the graph subroute is open.
-      // (pillars/food/docs/prds/substitution-graph-explorer)
       { path: 'substitutions/graph', element: <SubGraphPage /> },
       { path: 'conversions', element: <ConversionsTab /> },
       // Read-only vocabulary view; the per-ingredient chip editor lives inside

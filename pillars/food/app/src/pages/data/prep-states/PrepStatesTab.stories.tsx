@@ -1,6 +1,5 @@
 /**
- * Storybook stories for the Prep states tab's `AddPrepStateDialog`
- * (pillars/food/docs/prds/data-page).
+ * Storybook stories for the Prep states tab's `AddPrepStateDialog`.
  *
  * The dialog is a pure-presentation component (slug + name inputs +
  * submit/cancel) that takes all data via props, so no network mocking is

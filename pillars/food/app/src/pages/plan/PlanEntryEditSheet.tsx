@@ -11,11 +11,8 @@ import { useIsMobile } from './useIsMobile.js';
 /**
  * Plan entry edit sheet: a right-side drawer on desktop, a bottom-sheet at
  * narrow viewports (via `useIsMobile`). Surfaces servings, notes, a "Mark
- * cooked" CTA that links into the cook flow
- * (pillars/food/docs/prds/cook-event-recording), and delete. When the entry
+ * cooked" CTA that links into the cook flow, and delete. When the entry
  * has a non-null `recipeRunId` the form is read-only and shows "Cooked on".
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import type { ReactElement } from 'react';
 

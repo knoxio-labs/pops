@@ -1,6 +1,5 @@
 /**
- * RTL coverage for the `/food/data/aliases` tab
- * (spec: pillars/food/docs/prds/data-page).
+ * RTL coverage for the `/food/data/aliases` tab.
  *
  * The food SDK is mocked at the top level so vitest can hoist it. Each
  * SDK fn reads + records against the module-scoped `state` object so

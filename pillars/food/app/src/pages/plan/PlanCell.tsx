@@ -3,8 +3,6 @@
  * entries inside it, and the `[+]` Add button. Shared between the desktop
  * week grid and the mobile day swiper so drag-and-drop behaviour stays
  * identical across viewports.
- *
- * Spec: pillars/food/docs/prds/planning-page
  */
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';

@@ -1,5 +1,5 @@
 /**
- * SubGraphPage RTL suite (pillars/food/docs/prds/substitution-graph-explorer).
+ * SubGraphPage RTL suite.
  *
  * Drives the page through `createMemoryRouter` so the `useSearchParams`
  * + URL-state machinery exercises React Router's real resolution path.

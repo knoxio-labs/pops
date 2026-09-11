@@ -3,8 +3,8 @@
  *
  * Pre-fills the date range from `?start=YYYY-MM-DD&end=YYYY-MM-DD` query
  * parameters when present (linked from the planning page's plan-header
- * button — see pillars/food/docs/prds/planning-page), otherwise defaults
- * to today + 6 days. Drives a server-side preview and gates a Generate
+ * button), otherwise defaults to today + 6 days. Drives a server-side
+ * preview and gates a Generate
  * mutation that writes a new shopping list + navigates to `/lists/:id` on
  * success.
  */

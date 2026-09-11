@@ -2,8 +2,7 @@
  * Tab strip + page header for `/food/inbox` (Drafts / Rejected / Failed).
  *
  * The sidebar pending-count badge is not rendered here: the navigation rail
- * is owned by the shell and has no badge surface, so that part is deferred
- * (see pillars/food/docs/prds/review-queue-page). The count itself comes
+ * is owned by the shell and has no badge surface. The count itself comes
  * from the `inboxPendingCount` endpoint, surfaced as the header subtitle.
  */
 import { type ReactElement, type ReactNode } from 'react';

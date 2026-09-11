@@ -1,6 +1,5 @@
 /**
  * RTL coverage for the per-draft inspector page.
- * Spec: pillars/food/docs/prds/draft-inspector
  *
  * Mocks the food API client so the page renders against a synthetic
  * `inboxGetForReview` payload.

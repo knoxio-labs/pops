@@ -1,6 +1,5 @@
 /**
- * Target-picker section for the send-to-list modal
- * (pillars/food/docs/prds/send-to-list).
+ * Target-picker section for the send-to-list modal.
  *
  * Two radio choices, each owning the controls it governs: "Add to existing"
  * wraps a scrollable list of shopping lists, "Create new" wraps a name input

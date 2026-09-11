@@ -1,5 +1,5 @@
 /**
- * RTL coverage for FridgePage (pillars/food/docs/prds/fridge-view).
+ * RTL coverage for FridgePage.
  *
  * Heavier behavioural coverage (mutation flows, modal validation) lives
  * in the per-modal tests and the API integration tests.
