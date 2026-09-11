@@ -178,7 +178,6 @@ export {
 } from './services/reconcile-queue.js';
 
 export {
-  chargeIdsForPurchases,
   confirmLink,
   rejectLink,
   unlinkCharge,
