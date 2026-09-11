@@ -15,6 +15,7 @@ import {
   purchaseSources,
 } from '../schema.js';
 import { orderedAtWindow } from './ordered-at.js';
+import { queryChunked } from './sqlite-chunk.js';
 
 import type { ConfirmedLink, RejectedPairing, SolvableCharge } from '../../reconcile/types.js';
 import type { PurchasesDb } from './internal.js';
@@ -179,18 +180,26 @@ export function listConfirmedLinks(db: PurchasesDb): ConfirmedLink[] {
  * sweep blind to it would re-link that transaction elsewhere. A rejection
  * owns nothing — it only says two rows are not a pair — so one for a charge
  * outside the window cannot affect anything inside it.
+ *
+ * `chargeIds` is chunked before it reaches `inArray`: it is the sweep's
+ * full solvable-charge list, which scales with order history rather than
+ * with a page. Row order is unspecified across chunks — the only consumer,
+ * `solve`, groups this into a per-charge set and never reads it
+ * positionally.
  */
 export function listRejectedPairings(
   db: PurchasesDb,
   chargeIds: readonly string[]
 ): RejectedPairing[] {
   if (chargeIds.length === 0) return [];
-  return db
-    .select({
-      chargeId: purchaseLinkRejections.chargeId,
-      transactionUri: purchaseLinkRejections.transactionUri,
-    })
-    .from(purchaseLinkRejections)
-    .where(inArray(purchaseLinkRejections.chargeId, [...chargeIds]))
-    .all();
+  return queryChunked(chargeIds, (chunk) =>
+    db
+      .select({
+        chargeId: purchaseLinkRejections.chargeId,
+        transactionUri: purchaseLinkRejections.transactionUri,
+      })
+      .from(purchaseLinkRejections)
+      .where(inArray(purchaseLinkRejections.chargeId, [...chunk]))
+      .all()
+  );
 }
