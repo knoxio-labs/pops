@@ -32,6 +32,10 @@ import {
   toTagRule,
 } from '../modules/tag-rules/service.js';
 import { paginationMeta } from '../shared/pagination.js';
+import {
+  CHANGESET_FULL_HISTORY_DEFAULT_LIMIT,
+  CHANGESET_FULL_HISTORY_HARD_LIMIT,
+} from './corrections-handlers-support.js';
 import { runHttp } from './error-mapping.js';
 import { makeTagRuleCollisionHandlers } from './tag-rules-collision-handlers.js';
 import {
@@ -50,8 +54,6 @@ const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 const MATCH_PREVIEW_DEFAULT_LIMIT = 100;
 const MATCH_PREVIEW_HARD_LIMIT = 500;
-const CHANGESET_FULL_HISTORY_DEFAULT_LIMIT = 100;
-const CHANGESET_FULL_HISTORY_HARD_LIMIT = 500;
 
 export function makeTagRulesHandlers(db: FinanceDb) {
   return {
