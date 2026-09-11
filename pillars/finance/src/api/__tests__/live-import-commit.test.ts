@@ -1,23 +1,27 @@
 /**
- * POPS-3366: an API-tier integration test that committing a live (Up) import
- * draft writes the ledger rows and mints the reported-balance checkpoint —
- * split out of POPS-3361 because the browser E2E suite has no backend and
- * can only assert the commit *request* the wizard builds, never its DB
- * outcome (see `pillars/shell/e2e/import-wizard-live-draft.spec.ts`).
+ * Committing a live Up draft, asserted against the database. The browser E2E
+ * suite has no backend, so it can only see the commit request the wizard
+ * builds; the ledger rows and the minted checkpoint are only observable here.
  *
- * The draft is minted the way production mints it — `syncUpAccount` against
- * a stubbed `UpBankClient` (the external boundary; nothing below it is
- * faked) — rather than inserted by hand, so this exercises the same
- * `stageMappedRows` path a real sync runs.
+ * The draft is staged through `syncUpAccount` against a fake `UpBankClient`,
+ * the external boundary, so it is minted by the same `stageMappedRows` path a
+ * real sync runs rather than inserted by hand.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { asc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import {
+  accountCheckpoints,
+  importBatches,
+  transactions,
+  transactionTagRules,
+} from '../../db/schema.js';
 import { upsertImportConfig } from '../../db/services/account-import-config.js';
 import { getImportDraft } from '../../db/services/import-drafts.js';
 import { createFinanceApiApp } from '../app.js';
@@ -35,13 +39,13 @@ import type {
   UpTransactionRange,
 } from '../modules/up-bank/up-api.js';
 
+const REPORTED_BALANCE_CENTS = 48_800;
+
 let tmpDir: string;
 let financeDb: OpenedFinanceDb;
 
 beforeEach(() => {
-  // Mirrors imports.test.ts: pin the categorizer off so `syncUpAccount`'s
-  // classification pass (run while staging) never reaches out for a real
-  // AI call off an ambient env var.
+  // Staging classifies rows; an ambient env var must not turn that into a real AI call.
   delete process.env['FINANCE_AI_CATEGORIZER_ENABLED'];
   tmpDir = mkdtempSync(join(tmpdir(), 'finance-api-live-import-commit-test-'));
   financeDb = openFinanceDb(join(tmpDir, 'finance.db'));
@@ -63,8 +67,7 @@ function client() {
   );
 }
 
-/** In-memory Up: one account, whatever rows the test seeds. */
-function fakeUp(rows: UpTransaction[], account: UpAccount = upAccount()): UpBankClient {
+function fakeUp(rows: UpTransaction[], account: UpAccount): UpBankClient {
   return {
     ping: async () => ({ customerId: 'cust-1' }),
     listAccounts: async () => [account],
@@ -81,105 +84,94 @@ function fakeUp(rows: UpTransaction[], account: UpAccount = upAccount()): UpBank
   };
 }
 
-function transactionRows(accountId: string) {
-  return financeDb.raw
-    .prepare(
-      'SELECT id, account_id AS accountId, date, tags FROM transactions WHERE account_id = ? ORDER BY date'
-    )
-    .all(accountId) as { id: string; accountId: string; date: string; tags: string }[];
+function requireDraft(draftId: string) {
+  const draft = getImportDraft(financeDb.db, draftId);
+  if (!draft) throw new Error(`expected import draft ${draftId} to exist`);
+  return draft;
 }
 
-function checkpointRows() {
-  return financeDb.raw
-    .prepare(
-      'SELECT account_id AS accountId, balance_cents AS balanceCents, as_of AS asOf, source, source_ref AS sourceRef FROM account_checkpoints'
-    )
-    .all() as {
-    accountId: string;
-    balanceCents: number;
-    asOf: string;
-    source: string;
-    sourceRef: string | null;
-  }[];
+/**
+ * Two rows dated apart, so a checkpoint anchored to the oldest row or to
+ * insertion order cannot pass for one anchored to the newest.
+ */
+async function stageLiveDraft() {
+  const account = await client().accounts.create({
+    name: 'Up Everyday',
+    kind: 'savings',
+    currency: 'AUD',
+  });
+  const accountId = account.data.id;
+  upsertImportConfig(financeDb.db, {
+    accountId,
+    sourceKind: 'api',
+    provider: 'up',
+    externalAccountRef: 'up-acc-1',
+    secretRef: 'UP_TOKEN',
+  });
+
+  const upClient = fakeUp(
+    [
+      upTransaction({
+        id: 'a',
+        description: 'COLES',
+        cents: -1_200,
+        createdAt: '2026-09-02T09:00:00+10:00',
+      }),
+      upTransaction({
+        id: 'b',
+        description: 'BUNNINGS',
+        cents: -3_400,
+        createdAt: '2026-09-04T09:00:00+10:00',
+      }),
+    ],
+    upAccount({
+      balance: { currencyCode: 'AUD', value: '488.00', valueInBaseUnits: REPORTED_BALANCE_CENTS },
+    })
+  );
+
+  const sync = await syncUpAccount(financeDb.db, makeContactsFake(), {
+    accountId,
+    client: upClient,
+    from: '2026-09-01',
+    to: '2026-09-05',
+    syncedAt: new Date('2026-09-06T00:00:00.000Z'),
+  });
+  expect(sync.staged).toBe(2);
+  if (sync.draftId === null) throw new Error('expected syncUpAccount to stage a live draft');
+
+  return { accountId, draftId: sync.draftId };
 }
 
-function batchRows() {
-  return financeDb.raw
-    .prepare(
-      'SELECT account_id AS accountId, source_kind AS sourceKind, source_ref AS sourceRef FROM import_batches'
-    )
-    .all() as { accountId: string; sourceKind: string; sourceRef: string | null }[];
+function ledgerRowsFor(accountId: string) {
+  return financeDb.db
+    .select({ accountId: transactions.accountId, date: transactions.date, tags: transactions.tags })
+    .from(transactions)
+    .where(eq(transactions.accountId, accountId))
+    .orderBy(asc(transactions.date))
+    .all();
 }
 
-describe('committing a live Up import draft (POPS-3366)', () => {
+describe('committing a live Up import draft', () => {
   it('writes one ledger row per staged transaction and mints the reported-balance checkpoint', async () => {
-    const account = await client().accounts.create({
-      name: 'Up Everyday',
-      kind: 'savings',
-      currency: 'AUD',
-    });
-    const accountId = account.data.id;
-    upsertImportConfig(financeDb.db, {
-      accountId,
-      sourceKind: 'api',
-      provider: 'up',
-      externalAccountRef: 'up-acc-1',
-      secretRef: 'UP_TOKEN',
-    });
+    const { accountId, draftId } = await stageLiveDraft();
 
-    const upClient = fakeUp(
-      [
-        upTransaction({
-          id: 'a',
-          description: 'COLES',
-          cents: -1_200,
-          createdAt: '2026-09-02T09:00:00+10:00',
-        }),
-        upTransaction({
-          id: 'b',
-          description: 'BUNNINGS',
-          cents: -3_400,
-          createdAt: '2026-09-04T09:00:00+10:00',
-        }),
-      ],
-      upAccount({ balance: { currencyCode: 'AUD', value: '488.00', valueInBaseUnits: 48_800 } })
-    );
-
-    const sync = await syncUpAccount(financeDb.db, makeContactsFake(), {
-      accountId,
-      client: upClient,
-      from: '2026-09-01',
-      to: '2026-09-05',
-      syncedAt: new Date('2026-09-06T00:00:00.000Z'),
-    });
-    expect(sync.staged).toBe(2);
-    const draftId = sync.draftId;
-    if (draftId === null) throw new Error('expected syncUpAccount to stage a live draft');
-
-    // 2. The draft was minted the way production mints it, not inserted by
-    // hand: `sourceKind`/`state` say it is the account's live collecting
-    // draft, `processSessionId` is unset (nobody has opened the wizard on
-    // it yet), and it carries the balance Up reported alongside the rows.
-    const stagedDraft = getImportDraft(financeDb.db, draftId);
+    const stagedDraft = requireDraft(draftId);
     expect(stagedDraft).toMatchObject({
       sourceKind: 'live',
       state: 'live',
       processSessionId: null,
-      balanceReportedCents: 48_800,
+      balanceReportedCents: REPORTED_BALANCE_CENTS,
     });
-
-    const parsed = readLiveDraftPayload(stagedDraft!).parsedTransactions;
+    const parsed = readLiveDraftPayload(stagedDraft).parsedTransactions;
     expect(parsed).toHaveLength(2);
 
-    // 3. Commit it through `commitImport` with a tag-rule ChangeSet staged,
-    // the way the wizard does: the rule is staged alongside the commit and
-    // the affected row already carries the tag the rule resolved to (the
-    // wizard applies its own rules client-side before Approve & Commit).
-    const commitKey = randomUUID();
-    const transactions: ConfirmedTransaction[] = parsed.map((row) => ({
+    // The wizard resolves its staged rules client-side, so the row arrives
+    // already tagged; the commit persists the rule, it does not re-apply it.
+    const confirmed: ConfirmedTransaction[] = parsed.map((row) => ({
       ...row,
       tags: row.description === 'COLES' ? ['GroceriesRule'] : [],
     }));
+    const commitKey = randomUUID();
 
     const commitRes = await client().imports.commitImport({
       draftId,
@@ -202,44 +194,66 @@ describe('committing a live Up import draft (POPS-3366)', () => {
           acceptedNewTags: ['GroceriesRule'],
         },
       ],
-      transactions,
+      transactions: confirmed,
     });
 
-    expect(commitRes.data.transactionsImported).toBe(2);
-    expect(commitRes.data.transactionsFailed).toBe(0);
-    expect(commitRes.data.tagRulesApplied).toBe(1);
-
-    // 4a. One `transactions` row per staged transaction, on the right account,
-    // carrying the staged ChangeSet's effect (the COLES row's tag).
-    const ledgerRows = transactionRows(accountId);
-    expect(ledgerRows).toHaveLength(2);
-    expect(ledgerRows.map((r) => r.accountId)).toEqual([accountId, accountId]);
-    expect(ledgerRows.map((r) => r.date)).toEqual(['2026-09-02', '2026-09-04']);
-    expect(JSON.parse(ledgerRows[0]!.tags)).toEqual(['GroceriesRule']);
-    expect(JSON.parse(ledgerRows[1]!.tags)).toEqual([]);
-
-    // 4b. Exactly one `account_checkpoints` row: `import`-sourced, the
-    // draft's reported balance, dated to the NEWEST inserted row (not the
-    // oldest, and not insertion order — the two staged rows above are
-    // deliberately dated apart so a wrong-anchor mint fails this), and
-    // `sourceRef` naming the commit key.
-    const checkpoints = checkpointRows();
-    expect(checkpoints).toHaveLength(1);
-    expect(checkpoints[0]).toMatchObject({
-      accountId,
-      balanceCents: 48_800,
-      asOf: '2026-09-04',
-      source: 'import',
-      sourceRef: commitKey,
+    expect(commitRes.data).toMatchObject({
+      transactionsImported: 2,
+      transactionsFailed: 0,
+      tagRulesApplied: 1,
     });
 
-    // 4c. The `import_batches` row's source recorded as `{ kind: 'api',
-    // provider: 'up' }`.
-    const batches = batchRows();
-    expect(batches).toHaveLength(1);
-    expect(batches[0]).toMatchObject({ accountId, sourceKind: 'api', sourceRef: 'up' });
+    expect(ledgerRowsFor(accountId)).toEqual([
+      { accountId, date: '2026-09-02', tags: JSON.stringify(['GroceriesRule']) },
+      { accountId, date: '2026-09-04', tags: JSON.stringify([]) },
+    ]);
 
-    // 4d. The draft is gone — deleted in the same transaction as the write.
+    expect(financeDb.db.select().from(transactionTagRules).all()).toEqual([
+      expect.objectContaining({
+        descriptionPattern: 'COLES',
+        matchType: 'contains',
+        tags: JSON.stringify(['GroceriesRule']),
+      }),
+    ]);
+
+    expect(financeDb.db.select().from(accountCheckpoints).all()).toEqual([
+      expect.objectContaining({
+        accountId,
+        balanceCents: REPORTED_BALANCE_CENTS,
+        asOf: '2026-09-04',
+        source: 'import',
+        sourceRef: commitKey,
+      }),
+    ]);
+
+    expect(financeDb.db.select().from(importBatches).all()).toEqual([
+      expect.objectContaining({ accountId, sourceKind: 'api', sourceRef: 'up', commitKey }),
+    ]);
+
     expect(getImportDraft(financeDb.db, draftId)).toBeUndefined();
+  });
+
+  // Discarding the draft is the last statement of the commit transaction, so
+  // nothing can fail after it. What is observable is the other half: a commit
+  // that fails partway leaves the draft, the ledger and the checkpoint as they were.
+  it('leaves the draft, ledger and checkpoints untouched when the commit fails partway', async () => {
+    const { accountId, draftId } = await stageLiveDraft();
+    const parsed = readLiveDraftPayload(requireDraft(draftId)).parsedTransactions;
+
+    await expect(
+      client().imports.commitImport({
+        draftId,
+        commitKey: randomUUID(),
+        changeSets: [
+          { ops: [{ op: 'edit', id: 'non-existent-rule-id', data: { confidence: 0.9 } }] },
+        ],
+        transactions: parsed.map((row) => ({ ...row, tags: [] })),
+      })
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(requireDraft(draftId)).toMatchObject({ state: 'live' });
+    expect(ledgerRowsFor(accountId)).toEqual([]);
+    expect(financeDb.db.select().from(accountCheckpoints).all()).toEqual([]);
+    expect(financeDb.db.select().from(importBatches).all()).toEqual([]);
   });
 });
