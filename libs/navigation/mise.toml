@@ -1,12 +1,9 @@
-# This lib imports `@pops/module-registry` and `@pops/pillar-sdk` through
-# their built `dist`, not their `src` — so a change to either lib's `src` is
-# invisible to `tsc`/vitest here until that lib is rebuilt (POPS-2671). Build
-# them first rather than trusting whatever `dist` happens to be on disk.
+# require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
 [tasks.typecheck]
-run = ["mise run -C ../module-registry build", "mise run -C ../sdk build", "tsc --noEmit"]
+run = ["node ../../scripts/require-built-graph.mjs", "tsc --noEmit"]
 
 [tasks.test]
-run = ["mise run -C ../module-registry build", "mise run -C ../sdk build", "vitest run"]
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

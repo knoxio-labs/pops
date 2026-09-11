@@ -1,12 +1,15 @@
-# This lib imports `@pops/types` through its built `dist`, not its `src` — so
-# a change to `libs/types/src` is invisible to `tsc`/vitest here until that
-# lib is rebuilt (POPS-2671). Build it first rather than trusting whatever
-# `dist` happens to be on disk.
+# require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
 [tasks.typecheck]
-run = ["mise run -C ../types build", "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"]
+run = [
+  "node ../../scripts/require-built-graph.mjs",
+  "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
+]
 
 [tasks.test]
-run = ["mise run -C ../types build", "vitest run && node scripts/check-storybook-coverage.mjs"]
+run = [
+  "node ../../scripts/require-built-graph.mjs",
+  "vitest run && node scripts/check-storybook-coverage.mjs",
+]
 
 [tasks.lint]
 run = "oxlint src scripts && oxfmt --check ."

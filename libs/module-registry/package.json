@@ -19,8 +19,8 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "registry:build": "tsx scripts/build.ts"
   },

@@ -14,8 +14,8 @@
     "dev:standalone": "vite --config vite.standalone.config.ts",
     "build:standalone": "vite build --config vite.standalone.config.ts",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "generate:purchases-client": "openapi-ts && oxfmt --write src/purchases-api"
   },

@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "start": "node dist/api/server.js",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

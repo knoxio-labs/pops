@@ -11,8 +11,8 @@
   "scripts": {
     "build": "pnpm run build:remote",
     "build:remote": "tsx scripts/build-remote.ts",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
     "generate:media-client": "openapi-ts && oxfmt --write src/media-api"

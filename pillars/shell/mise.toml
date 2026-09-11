@@ -9,7 +9,7 @@ run = "vite"
 run = "tsc --noEmit"
 
 [tasks.test]
-run = "vitest run"
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks."test:e2e"]
 run = "playwright test"

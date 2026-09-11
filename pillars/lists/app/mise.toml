@@ -1,12 +1,9 @@
-# The app imports `@pops/lists` through its built `dist`, not its `src` — so a
-# change to `pillars/lists/src` is invisible to `tsc`/vitest here until the
-# pillar is rebuilt (POPS-2631). Build it first rather than trusting whatever
-# `dist` happens to be on disk.
+# require-built-graph.mjs refuses a missing sibling dist; an incremental build can no-op when only .tsbuildinfo survives.
 [tasks.typecheck]
-run = ["mise run -C .. build", "tsc --noEmit"]
+run = ["node ../../../scripts/require-built-graph.mjs", "tsc --noEmit"]
 
 [tasks.test]
-run = ["mise run -C .. build", "vitest run"]
+run = ["node ../../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

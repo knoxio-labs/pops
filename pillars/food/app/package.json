@@ -12,8 +12,8 @@
     "build": "pnpm run build:remote",
     "build:remote": "tsx scripts/build-remote.ts",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "generate:food-client": "openapi-ts && oxfmt --write src/food-api",
     "generate:lists-client": "openapi-ts -f openapi-ts.lists.config.ts && oxfmt --write src/lists-api"

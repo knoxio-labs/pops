@@ -18,8 +18,8 @@
   "scripts": {
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test": "vitest run && node scripts/check-storybook-coverage.mjs",
-    "test:coverage": "vitest run --coverage && node scripts/check-storybook-coverage.mjs",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run && node scripts/check-storybook-coverage.mjs",
+    "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage && node scripts/check-storybook-coverage.mjs",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
