@@ -23,7 +23,7 @@ export const plexManifest: SettingsManifest = {
       id: 'connection',
       title: 'Connection',
       fields: [
-        { key: 'plex_url', label: 'Plex URL', type: 'url' },
+        { key: 'plex_url', label: 'Plex URL', type: 'url', envFallback: 'PLEX_URL' },
         {
           key: 'plex_token',
           label: 'Plex Token',
@@ -43,12 +43,14 @@ export const plexManifest: SettingsManifest = {
           label: 'Movie Library Section',
           type: 'text',
           description: 'Enter the Plex movie library section ID.',
+          envFallback: 'PLEX_MOVIE_SECTION_ID',
         },
         {
           key: 'plex_tv_section_id',
           label: 'TV Library Section',
           type: 'text',
           description: 'Enter the Plex TV library section ID.',
+          envFallback: 'PLEX_TV_SECTION_ID',
         },
       ],
     },
