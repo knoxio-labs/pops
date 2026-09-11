@@ -18,3 +18,10 @@ export {
   type ReportSinkConfig,
 } from './report-sink.js';
 export { httpLookupPricing } from './pricing-http.js';
+export {
+  ledgerReportFailedMessage,
+  resolveLedgerCredential,
+  resolveSecret,
+  type LedgerCredentialConfig,
+  type SecretSource,
+} from './ledger-credential.js';
