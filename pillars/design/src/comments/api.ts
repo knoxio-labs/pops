@@ -6,7 +6,8 @@
  * to a deployed one with an Access service token attached server-side (see
  * `vite.config.ts`). A failed call resolves to `null` rather than throwing:
  * the overlay's answer to "the API is not reachable" is to hide itself, not
- * to break the canvas.
+ * to break the canvas. The identity call is the one exception: it reports a
+ * refusal separately from a failure, so the overlay can tell a reviewer why.
  */
 import type { Anchor } from './anchors-types';
 
@@ -53,13 +54,39 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Who the API thinks is calling, or `null` when it cannot say, which is also
- * what an unreachable API looks like, and the signal the overlay hides on.
+ * What the identity call said about this caller.
+ *
+ * - `ok` — the API vouched for the caller.
+ * - `refused` — the API answered, and answered 403: it is up, but nothing
+ *   vouched for this request. On the deployed host that is a browser arriving
+ *   over the LAN or tailscale, which carries no Access assertion.
+ * - `unreachable` — no answer the overlay can use: the request failed, or any
+ *   other status came back (a proxy 502 is the API being down, not a verdict
+ *   on the caller).
  */
-export async function fetchIdentity(): Promise<{ email: string | null } | null> {
-  const parsed = record(await call('/me'));
-  if (!parsed) return null;
-  return { email: typeof parsed['email'] === 'string' ? parsed['email'] : null };
+export type IdentityResult =
+  | { kind: 'ok'; email: string | null }
+  | { kind: 'refused' }
+  | { kind: 'unreachable' };
+
+/** Who the API thinks is calling, told apart from why it cannot say. */
+export async function fetchIdentity(): Promise<IdentityResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/me`);
+  } catch {
+    return { kind: 'unreachable' };
+  }
+  if (response.status === 403) return { kind: 'refused' };
+  if (!response.ok) return { kind: 'unreachable' };
+  let parsed: Record<string, unknown> | null;
+  try {
+    parsed = record((await response.json()) as unknown);
+  } catch {
+    return { kind: 'unreachable' };
+  }
+  if (!parsed) return { kind: 'unreachable' };
+  return { kind: 'ok', email: typeof parsed['email'] === 'string' ? parsed['email'] : null };
 }
 
 export async function fetchThreads(route?: string): Promise<Thread[] | null> {

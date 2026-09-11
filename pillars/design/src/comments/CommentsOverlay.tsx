@@ -7,11 +7,14 @@
  * `src/shell/viewport.ts`.
  *
  * The whole overlay is absent when the API is unreachable, which is the
- * normal state of a local checkout with no service token.
+ * normal state of a local checkout with no service token. When the API is up
+ * but refuses this caller — the deployed host reached over the LAN or
+ * tailscale, carrying no Access assertion — it says so in one line instead,
+ * because hiding on that looks identical to the local case and names nothing.
  */
 import { useCallback, useEffect, useState } from 'react';
 
-import { findTarget } from './anchors';
+import { findTarget, OVERLAY_MARKER } from './anchors';
 import { createThread, replyToThread, setThreadStatus, type Thread } from './api';
 import { Composer } from './Composer';
 import { HoverHighlight } from './HoverHighlight';
@@ -96,6 +99,23 @@ function Pins({
   );
 }
 
+/**
+ * Comment mode switched on where the API refuses this caller. Marked as
+ * overlay chrome, so the pin hit test can never find it under the pointer.
+ */
+function RefusedNotice() {
+  return (
+    <div
+      {...{ [OVERLAY_MARKER]: '' }}
+      role="status"
+      className="fixed bottom-4 left-1/2 z-[60] w-max max-w-md -translate-x-1/2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground shadow-lg"
+    >
+      Comments are unavailable here: the comment API refused this address because it did not arrive
+      through Cloudflare Access. Open the playground through its Access hostname to comment.
+    </div>
+  );
+}
+
 interface CommentsOverlayProps {
   active: boolean;
   route: string;
@@ -116,6 +136,20 @@ function useOpenCountReport(
   }, [available, onOpenCountChange, openCount]);
 }
 
+/**
+ * Clear transient state the moment `active` goes false, during render rather
+ * than via an effect: the overlay stays mounted (returning null) while
+ * inactive, so a stale composer from a previous session would otherwise
+ * reappear on the next activation.
+ */
+function useClearOnDeactivate(active: boolean, clear: () => void): void {
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (!active) clear();
+  }
+}
+
 export function CommentsOverlay({
   active,
   route,
@@ -123,7 +157,7 @@ export function CommentsOverlay({
   onOpenCountChange,
   onExit,
 }: CommentsOverlayProps) {
-  const { threads, available, refresh } = useThreads(route);
+  const { threads, available, unavailableReason, refresh } = useThreads(route);
   const [pending, setPending] = useState<Pending | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const reflow = useReflow();
@@ -133,14 +167,8 @@ export function CommentsOverlay({
   usePinning(enabled, setPending);
   const hover = useHoverTarget(enabled && pending === null);
 
-  // Cleared the moment `active` goes false, not via an effect: this component
-  // stays mounted (returning null below) while inactive, so a stale composer
-  // from a previous session would otherwise reappear on the next activation.
-  const [wasActive, setWasActive] = useState(active);
-  if (wasActive !== active) {
-    setWasActive(active);
-    if (!active) setPending(null);
-  }
+  useClearOnDeactivate(active, () => setPending(null));
+  if (active && unavailableReason === 'refused') return <RefusedNotice />;
   if (!enabled) return null;
 
   const write = async (action: Promise<unknown>): Promise<void> => {

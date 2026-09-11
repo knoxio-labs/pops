@@ -6,10 +6,16 @@
  *
  *   1. non-production → dev user (`dev@example.com`).
  *   2. no `CLOUDFLARE_ACCESS_TEAM_NAME` → tunnel user
- *      (`tunnel-authenticated@pops.local`). This pillar is only ever reached
- *      through the shell's Access-protected tunnel, so an unconfigured team
- *      means "trust the tunnel" here, not "refuse": the bfm divergence does
- *      not apply, because no hostname bypasses Access to reach this service.
+ *      (`tunnel-authenticated@pops.local`). An unconfigured team means "trust
+ *      the tunnel" here, not bfm's "refuse", for a deployment that has not
+ *      set up Access at all.
+ *
+ *      That is NOT a claim that every request arrives through Access. The
+ *      deployed host sets a team, and it is also reachable directly over the
+ *      LAN and tailscale: such a browser carries no `cf-access-jwt-assertion`,
+ *      so it falls to step 4 and `requireIdentity` answers 403. That refusal
+ *      is correct — the request was never authenticated — and the overlay
+ *      says so on screen rather than hiding as if the API were down.
  *   3. `cf-access-jwt-assertion` → a verified principal, which is either a
  *      human session or a SERVICE TOKEN. The service half is the addition:
  *      the local dev proxy and the feedback MCP server authenticate with a
