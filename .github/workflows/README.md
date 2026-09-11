@@ -312,3 +312,10 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 `publish-images.yml`'s `discover` job filters on `pillars/<x>/Dockerfile`
 existing. `shell`, `mcp`, `orchestrator` and `docs` all have one, so the four
 images in the static `apps` matrix are also built by the `pillars` job.
+
+What stops an image that fails Docker Build reaching GHCR is the merge queue, and only the merge queue — `publish-images.yml` has no `needs`, no `workflow_run` and no check of its own, so on a push to `main` it runs alongside everything else rather than after it. The coupling is the ruleset: `main` accepts nothing except through the merge queue, the queue requires `CI Gate`, and `ci-gate.yml` gates `Docker Build`, so a commit whose Docker Build fails in its merge group never becomes a push to `main` and never publishes. Three consequences follow, and all three are deliberate rather than overlooked (POPS-2677):
+
+- **The queue's Docker Build is path-scoped.** It builds and smoke-probes (`scripts/ci/smoke-image.mjs`) only when the merge group touches its filter — Dockerfiles, `infra/docker*`, the compose files, pillar nginx config, `pnpm-lock.yaml`/`pnpm-workspace.yaml`, `tsconfig.base.json`, its own workflow, `.github/actions/**`, or the smoke script. `publish-images.yml` rebuilds every image on every push regardless. So a change outside that filter that breaks an image's *build* fails that image's publish job and pushes nothing for it, but one that builds and then fails to boot is published without the smoke probe ever having run on it.
+- **`workflow_dispatch` is ungated.** It builds whatever ref it is dispatched on.
+- **A `v*` tag is gated only by where it points.** `release.yml` tags `HEAD` of `main`, which the queue already admitted, and then dispatches this workflow at that tag. A tag pushed by hand onto a commit that never went through the queue publishes with no gate at all.
+

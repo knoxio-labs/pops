@@ -17,6 +17,20 @@ The semver tags exist so a deployer can **pin** to a stable point instead of tra
 
 The full changelog history lives in [GitHub Releases](https://github.com/knoxio-labs/pops/releases) — there's no in-repo `CHANGELOG.md`. The repo ruleset forbids direct pushes to `main`, so the release flow is tag-only by design.
 
+## What stops a bad image shipping
+
+Only the merge queue. Nothing in [`publish-images.yml`](../../.github/workflows/publish-images.yml) waits on another workflow or reads a check before it builds and pushes, and that is a deliberate call rather than a gap nobody noticed (POPS-2677).
+
+It holds because `main` takes nothing except through the queue, the queue requires `CI Gate`, and [`ci-gate.yml`](../../.github/workflows/ci-gate.yml) gates `Docker Build`. A commit whose Docker Build goes red in its merge group is ejected, never becomes a push to `main`, and so never publishes.
+
+What that does **not** cover, so nobody has to rediscover it:
+
+- **Docker Build is path-scoped in the queue.** It builds and smoke-probes images only when the change touches its filter (Dockerfiles, `infra/docker*`, the compose files, pillar nginx config, the lockfile or workspace file, `tsconfig.base.json`, its own workflow, `.github/actions/**`, `scripts/ci/smoke-image.mjs`). The publish rebuilds the whole fleet on every push regardless. A change outside the filter that breaks an image's build fails that image's publish and pushes nothing for it; one that builds but then fails to boot is published with no smoke probe having run on it, and Watchtower rolls it.
+- **A manual `workflow_dispatch` of `publish-images.yml` is ungated** — it builds whatever ref you dispatch it on.
+- **A `v*` tag is only as gated as the commit it points at.** The tag `release.yml` pushes sits on `main`'s `HEAD`, already through the queue. A tag you push by hand onto any other commit publishes that commit with no gate.
+
+If any of these needs to become a hard gate, it has to be a check the publish workflow reads and fails closed on, and it has to be observed blocking a real publish once before it is trusted ([ADR-045](../architecture/adr-045-guards-must-prove-they-report.md)).
+
 ## What gets published
 
 `publish-images.yml` builds two sets of images, each tagged `main` (on the default branch), `sha-<short>`, and the six semver variants on a `v*` tag:
