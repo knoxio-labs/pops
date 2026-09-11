@@ -17,7 +17,7 @@
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +30,7 @@ import {
   scalarText,
   walkMappings,
 } from '../config-parse.mjs';
+import { GIT_LOCATION_VARS, gitEnv } from '../resolve-report-base.mjs';
 import { passingProofStdout } from './real-tree-proofs.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -101,5 +102,62 @@ describe('quality.yml’s contract-consumers job', () => {
     expect(isMapping(env) ? env.BASE_REF : undefined).toBe(
       "${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}"
     );
+  });
+});
+
+describe('one git-location list (POPS-3426)', () => {
+  it('strips every location variable, keeps everything else, and cannot be handed one back', () => {
+    const leaked = Object.fromEntries(GIT_LOCATION_VARS.map((name) => [name, '/elsewhere']));
+    const env = gitEnv({ ...leaked, GIT_SSH_COMMAND: 'ssh -i key' });
+
+    for (const name of GIT_LOCATION_VARS) expect(env[name]).toBeUndefined();
+    // Transport variables are deliberately not location variables: a fetch needs them.
+    expect(env.GIT_SSH_COMMAND).toBe('ssh -i key');
+  });
+
+  it('names the nine variables a git hook exports for the repository being pushed', () => {
+    // Pinned so a quiet removal from the list fails here, not first inside a hook.
+    expect([...GIT_LOCATION_VARS].toSorted()).toEqual(
+      [
+        'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+        'GIT_COMMON_DIR',
+        'GIT_DIR',
+        'GIT_INDEX_FILE',
+        'GIT_NAMESPACE',
+        'GIT_OBJECT_DIRECTORY',
+        'GIT_PREFIX',
+        'GIT_QUARANTINE_PATH',
+        'GIT_WORK_TREE',
+      ].toSorted()
+    );
+  });
+
+  it('has no private copy anywhere under scripts/', () => {
+    // A copy is how this went wrong: a four-entry list in one suite forgot
+    // GIT_COMMON_DIR. The most distinctive entry marks a hand-written list.
+    const marker = `'${'GIT_QUARANTINE'}_PATH'`;
+    const scriptsDir = join(repoRoot, 'scripts');
+    const holders: string[] = [];
+    let scanned = 0;
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(?:mjs|ts)$/u.test(entry.name)) {
+          // This file pins the list above, so it names every entry on purpose.
+          if (full === fileURLToPath(import.meta.url)) continue;
+          scanned += 1;
+          if (readFileSync(full, 'utf8').includes(marker))
+            holders.push(full.slice(repoRoot.length + 1));
+        }
+      }
+    };
+    walk(scriptsDir);
+
+    // Discovery floor: a scan that read nothing, or missed the real list,
+    // would pass hardest at the moment it stopped seeing copies.
+    expect(scanned).toBeGreaterThan(100);
+    expect(holders).toEqual(['scripts/ci/resolve-report-base.mjs']);
   });
 });

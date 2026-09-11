@@ -77,6 +77,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { isMapping, parseYaml, requireScalar } from './config-parse.mjs';
+import { GIT_LOCATION_VARS, gitEnv } from './resolve-report-base.mjs';
 
 /** @typedef {import('./config-parse.mjs').ConfigParseError} ConfigParseError */
 
@@ -228,45 +229,6 @@ export function pullRequestPaths(source, label) {
     }
     return pattern;
   });
-}
-
-/**
- * The environment variables git uses to point itself at a repository OTHER than
- * the one in `cwd`.
- *
- * Every one of these is exported into the environment of a git hook. A
- * `.husky/pre-push` that runs this script's Vitest suite therefore hands it a
- * `GIT_INDEX_FILE`, a `GIT_DIR` and friends belonging to the repo being pushed,
- * and the self-test's throwaway fixture repos inherit them: `git init` in a
- * temp directory fails outright, or worse, succeeds against somebody else's
- * index. Found exactly that way — the suite passed standalone and failed in the
- * hook. Credential and transport variables (`GIT_ASKPASS`, `GIT_SSH_COMMAND`,
- * `GIT_TERMINAL_PROMPT`, …) are deliberately NOT in this list: the fetch
- * fallback needs them.
- */
-const GIT_LOCATION_VARS = [
-  'GIT_DIR',
-  'GIT_WORK_TREE',
-  'GIT_INDEX_FILE',
-  'GIT_COMMON_DIR',
-  'GIT_OBJECT_DIRECTORY',
-  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-  'GIT_PREFIX',
-  'GIT_QUARANTINE_PATH',
-  'GIT_NAMESPACE',
-];
-
-/**
- * `process.env` with the repository-location overrides removed, so every git
- * invocation here is about the directory it is run in and nothing else.
- *
- * @param {Record<string, string | undefined>} [extra]
- * @returns {Record<string, string | undefined>}
- */
-function gitEnv(extra = {}) {
-  const env = { ...process.env, ...extra };
-  for (const name of GIT_LOCATION_VARS) delete env[name];
-  return env;
 }
 
 /**
@@ -489,7 +451,7 @@ function gitIn(dir, args) {
     stdio: 'pipe',
     // Identity is supplied rather than read from the machine's git config, so
     // the fixtures commit on a runner that has none. The location vars are
-    // stripped by `gitEnv` — see the comment on `GIT_LOCATION_VARS`.
+    // stripped by `gitEnv` — see `GIT_LOCATION_VARS` in `resolve-report-base.mjs`.
     env: gitEnv({
       GIT_AUTHOR_NAME: 'scope',
       GIT_AUTHOR_EMAIL: 'scope@example.invalid',
@@ -644,7 +606,7 @@ export function selfTest() {
   cases.push({
     name: 'answers the same inside a git hook’s environment',
     run: () => {
-      // The regression that put `GIT_LOCATION_VARS` in this file. A hook
+      // The regression that first put the git-location list in this file. A hook
       // exports GIT_DIR / GIT_INDEX_FILE / GIT_WORK_TREE, and every git call
       // here inherited them: the suite passed standalone and failed under
       // `.husky/pre-push`, which is the worst possible place to learn it. The
