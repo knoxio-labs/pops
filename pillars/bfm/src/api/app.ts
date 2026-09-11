@@ -38,6 +38,7 @@ import {
   REFRESH_PATH,
 } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
+import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
@@ -168,6 +169,13 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   app.use(MOBILE_RECEIPT_UPLOAD_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
 
   app.use(express.json());
+
+  // Directly after BOTH parsers above, so a parse failure from either one
+  // reaches it. `express.json()` throws before any route matches, so its
+  // refusal reaches an error handler rather than a handler — and left to
+  // Express's default that is a `400` with an empty body, not the
+  // `invalid_request` these routes declare.
+  app.use(createJsonBodyErrorHandler());
 
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
