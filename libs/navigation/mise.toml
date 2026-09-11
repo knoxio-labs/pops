@@ -1,8 +1,12 @@
+# This lib imports `@pops/module-registry` and `@pops/pillar-sdk` through
+# their built `dist`, not their `src` — so a change to either lib's `src` is
+# invisible to `tsc`/vitest here until that lib is rebuilt (POPS-2671). Build
+# them first rather than trusting whatever `dist` happens to be on disk.
 [tasks.typecheck]
-run = "tsc --noEmit"
+run = ["mise run -C ../module-registry build", "mise run -C ../sdk build", "tsc --noEmit"]
 
 [tasks.test]
-run = "vitest run"
+run = ["mise run -C ../module-registry build", "mise run -C ../sdk build", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."
