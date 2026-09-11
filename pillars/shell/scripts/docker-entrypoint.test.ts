@@ -12,6 +12,14 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ENTRYPOINT = resolve(SCRIPT_DIR, '..', 'docker-entrypoint.sh');
 
 /**
+ * shellcheck finishes in ~20ms on an idle machine, but it is an external
+ * process: under merge-group runner contention its spawn alone has exceeded
+ * vitest's 5000ms default and failed the whole group (POPS-2368). The budget
+ * bounds a hung binary without letting a starved runner decide the result.
+ */
+const SHELLCHECK_TIMEOUT_MS = 30_000;
+
+/**
  * The boot entrypoint renders the registry-driven nginx conf (ADR-038) at
  * container start, so it is the only thing standing between a registry
  * outage and a dead shell. These guards pin the load-bearing invariants so
@@ -68,15 +76,19 @@ describe('docker-entrypoint.sh', () => {
     expect(src).toMatch(/terminate\n {2}exit 1/);
   });
 
-  it('passes shellcheck in POSIX sh mode when shellcheck is available', async () => {
-    try {
-      await execFileAsync('shellcheck', ['-s', 'sh', ENTRYPOINT]);
-    } catch (err: unknown) {
-      if (isCommandNotFound(err)) return;
-      const detail = err instanceof Error ? err.message : String(err);
-      throw new Error(`shellcheck reported issues:\n${detail}`, { cause: err });
-    }
-  });
+  it(
+    'passes shellcheck in POSIX sh mode when shellcheck is available',
+    async () => {
+      try {
+        await execFileAsync('shellcheck', ['-s', 'sh', ENTRYPOINT]);
+      } catch (err: unknown) {
+        if (isCommandNotFound(err)) return;
+        const detail = err instanceof Error ? err.message : String(err);
+        throw new Error(`shellcheck reported issues:\n${detail}`, { cause: err });
+      }
+    },
+    SHELLCHECK_TIMEOUT_MS
+  );
 });
 
 function isCommandNotFound(err: unknown): boolean {
