@@ -4,18 +4,20 @@ import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import enAUInventory from '@pops/locales/en-AU/inventory.json';
+import enAUUi from '@pops/locales/en-AU/ui.json';
 
 const i18n = createInstance();
 
 void i18n.use(initReactI18next).init({
   lng: 'en-AU',
   fallbackLng: 'en-AU',
-  ns: ['inventory'],
+  ns: ['inventory', 'ui'],
   defaultNS: 'inventory',
   interpolation: { escapeValue: false },
   resources: {
     'en-AU': {
       inventory: enAUInventory,
+      ui: enAUUi,
     },
   },
 });

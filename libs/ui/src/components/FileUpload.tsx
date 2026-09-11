@@ -25,7 +25,7 @@ import {
   type FileValidationError,
 } from './FileUpload.utils';
 
-export { describeFileValidationError } from './FileUpload.utils';
+export { describeFileValidationError, validateFiles } from './FileUpload.utils';
 export type { FileValidationError, FileValidationErrorReason } from './FileUpload.utils';
 
 export interface FileUploadProps {

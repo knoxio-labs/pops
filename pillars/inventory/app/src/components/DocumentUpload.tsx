@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useRef } from 'react';
 
+import { useValidatedFileSelection } from '../hooks/useValidatedFileSelection';
 import { cn } from '../lib/utils';
 import { PendingDocumentRow } from './document-upload/PendingDocumentRow';
 import { DropZone } from './photo-upload/DropZone';
@@ -38,57 +39,11 @@ interface DocumentUploadProps {
 }
 
 const DEFAULT_MAX_SIZE_MB = 10;
+// Wildcards (`image/*`, `text/*`) match any MIME subtype the browser reports;
+// the extensions alongside them cover browsers that report an empty `type`
+// for these files instead.
 const DEFAULT_ACCEPT =
-  'application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,text/plain,text/markdown,text/csv,.pdf,.txt,.md,.csv';
-
-const ALLOWED_PREFIXES = ['application/pdf', 'image/', 'text/'];
-const ALLOWED_EXTENSIONS = /\.(pdf|jpe?g|png|webp|heic|heif|gif|txt|md|csv)$/i;
-
-function isAllowedType(file: File): boolean {
-  if (
-    file.type &&
-    ALLOWED_PREFIXES.some((p) => (p.endsWith('/') ? file.type.startsWith(p) : file.type === p))
-  ) {
-    return true;
-  }
-  // Some browsers report empty `type` for text uploads; fall back to extension.
-  return ALLOWED_EXTENSIONS.test(file.name);
-}
-
-function validateFiles(fileList: File[], maxSizeMb: number): { valid: File[]; errors: string[] } {
-  const maxBytes = maxSizeMb * 1024 * 1024;
-  const valid: File[] = [];
-  const errors: string[] = [];
-
-  for (const file of fileList) {
-    if (!isAllowedType(file)) {
-      errors.push(`${file.name}: unsupported file type`);
-      continue;
-    }
-    if (file.size > maxBytes) {
-      errors.push(`${file.name}: exceeds ${maxSizeMb}MB limit`);
-      continue;
-    }
-    valid.push(file);
-  }
-  return { valid, errors };
-}
-
-function useFileHandling(maxSizeMb: number, onFilesSelected: (files: File[]) => void) {
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  const handleFiles = useCallback(
-    (fileList: FileList | null) => {
-      if (!fileList || fileList.length === 0) return;
-      const { valid, errors } = validateFiles(Array.from(fileList), maxSizeMb);
-      setValidationError(errors.length > 0 ? errors.join(', ') : null);
-      if (valid.length > 0) onFilesSelected(valid);
-    },
-    [maxSizeMb, onFilesSelected]
-  );
-
-  return { handleFiles, validationError };
-}
+  'application/pdf,image/*,text/*,.pdf,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.txt,.md,.csv';
 
 export function DocumentUpload({
   onFilesSelected,
@@ -100,7 +55,11 @@ export function DocumentUpload({
   className,
 }: DocumentUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { handleFiles, validationError } = useFileHandling(maxSizeMb, onFilesSelected);
+  const { handleFiles, validationError } = useValidatedFileSelection(
+    accept,
+    maxSizeMb,
+    onFilesSelected
+  );
 
   return (
     <div className={cn('space-y-3', className)}>

@@ -78,7 +78,6 @@ export function PhotoUploadSection({
         files={uploadFiles}
         onRemove={onRemoveUpload}
         disabled={imageProcessing}
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
       />
     </section>
   );
