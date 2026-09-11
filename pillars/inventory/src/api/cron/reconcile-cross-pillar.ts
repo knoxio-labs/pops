@@ -95,27 +95,61 @@ function isCallResult(value: unknown): value is CallResult<unknown> {
   );
 }
 
-type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request';
+export type ReconcileOutcome = 'ok' | 'not-found' | 'unavailable' | 'bad-request';
 
-function classifyResult(value: unknown): ReconcileOutcome {
-  if (isCallResult(value)) {
-    if (value.kind === 'ok') return 'ok';
-    if (value.kind === 'not-found') return 'not-found';
+/**
+ * TRANSIENT (`unavailable`) vs the other buckets, for every `CallResult`
+ * kind — a total switch with no default arm, matching `toGatewayFailure` and
+ * `entity-fetch.ts`'s `classifyContactsFailureKind`: a kind added to
+ * `CallResult` that isn't listed in one of these arms fails the build here
+ * instead of being silently folded into `unavailable` by a catch-all.
+ *
+ * `degraded`, `contract-mismatch`, `conflict`, `unauthorized` and
+ * `rate-limited` are not distinguished from `unavailable` today — they were
+ * reached only through the if-chain's catch-all before this switch existed,
+ * and nothing here has decided they deserve their own bucket. Keeping them
+ * explicit (rather than re-introducing a catch-all) preserves that behaviour
+ * while making the next kind's omission a compile error rather than a silent
+ * default.
+ */
+export function classifyResult(value: unknown): ReconcileOutcome {
+  if (!isCallResult(value)) return 'ok';
+  switch (value.kind) {
+    case 'ok':
+      return 'ok';
+    case 'not-found':
+      return 'not-found';
     // `refused` (e.g. a producer's own 413/422) is the same "the request as
     // sent will never succeed" fact `bad-request` already reports here.
-    if (value.kind === 'bad-request' || value.kind === 'refused') return 'bad-request';
-    return 'unavailable';
+    case 'bad-request':
+    case 'refused':
+      return 'bad-request';
+    case 'unavailable':
+    case 'degraded':
+    case 'contract-mismatch':
+    case 'conflict':
+    case 'unauthorized':
+    case 'rate-limited':
+      return 'unavailable';
   }
-  return 'ok';
 }
 
-function classifyError(err: unknown): ReconcileOutcome {
-  if (err instanceof PillarCallError) {
-    if (err.result.kind === 'not-found') return 'not-found';
-    if (err.result.kind === 'bad-request' || err.result.kind === 'refused') return 'bad-request';
-    return 'unavailable';
+export function classifyError(err: unknown): ReconcileOutcome {
+  if (!(err instanceof PillarCallError)) return 'unavailable';
+  switch (err.result.kind) {
+    case 'not-found':
+      return 'not-found';
+    case 'bad-request':
+    case 'refused':
+      return 'bad-request';
+    case 'unavailable':
+    case 'degraded':
+    case 'contract-mismatch':
+    case 'conflict':
+    case 'unauthorized':
+    case 'rate-limited':
+      return 'unavailable';
   }
-  return 'unavailable';
 }
 
 async function safeCall<T>(fn: () => Promise<CallResult<T>>): Promise<ReconcileOutcome> {
