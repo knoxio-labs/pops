@@ -28,6 +28,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
+
 import {
   AMAZON_SOURCE_ID,
   REFUND_DETAILS_BUNDLE_PATH,
@@ -48,7 +50,6 @@ import {
 } from './amazon-invoices.js';
 import {
   createIngestClient,
-  isCliEntrypoint,
   postPurchases,
   readBundlePath,
   reportOutcome,

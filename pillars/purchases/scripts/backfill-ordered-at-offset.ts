@@ -37,6 +37,8 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
+
 import { resolvePurchasesSqlitePath } from '../src/api/purchases-sqlite-path.js';
 import { openPurchasesDb, purchaseCapture, purchases, type PurchasesDb } from '../src/db/index.js';
 import {
@@ -44,7 +46,7 @@ import {
   isPlausibleUtcOffsetMinutes,
   utcOffsetMinutesAt,
 } from '../src/ingest/local-time.js';
-import { isCliEntrypoint, runCli } from './backfill.js';
+import { runCli } from './backfill.js';
 
 /** Where a recovered offset came from, or why there is none. */
 export type OffsetEvidence =

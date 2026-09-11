@@ -15,9 +15,10 @@
  * Exits non-zero on any hard failure so a deploy pipeline can halt.
  */
 import { existsSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 
 import Database from 'better-sqlite3';
+
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import { openFinanceDb } from '../src/db/index.js';
@@ -164,13 +165,7 @@ function main(): void {
 
 export { classifyCorePath, resolveCoreSqlitePath };
 
-function isDirectRun(): boolean {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  return import.meta.url === pathToFileURL(entry).href;
-}
-
-if (isDirectRun()) {
+if (isCliEntrypoint(import.meta.url)) {
   try {
     main();
   } catch (err: unknown) {

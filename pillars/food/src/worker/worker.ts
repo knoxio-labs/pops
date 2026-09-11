@@ -22,11 +22,10 @@
  * state check returns `'unknown'`, and the handler short-circuits with
  * `errorCode='Cancelled'`.
  */
-import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-
 import { Worker } from 'bullmq';
 import pino from 'pino';
+
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { FOOD_INGEST_QUEUE_NAME } from '../contract/queue/index.js';
 import { createApiClient, postWorkerComplete } from './api-client.js';
@@ -195,9 +194,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', onSignal);
 }
 
-const entryPath = process.argv[1];
-
-if (entryPath !== undefined && import.meta.url === pathToFileURL(resolve(entryPath)).href) {
+if (isCliEntrypoint(import.meta.url)) {
   main().catch((err: unknown) => {
     logger.error({ err }, 'worker bootstrap failed');
     process.exit(1);

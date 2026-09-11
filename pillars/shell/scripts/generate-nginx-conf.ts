@@ -52,6 +52,7 @@ import {
   type DiscoveredPillar,
   type DiscoveryTransport,
 } from '@pops/pillar-sdk/client';
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { parseCliArgs, type CliOptions } from './nginx-cli-args.js';
 import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.js';
@@ -311,10 +312,7 @@ async function main(): Promise<void> {
   });
 }
 
-const invokedAsScript =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (invokedAsScript) {
+if (isCliEntrypoint(import.meta.url)) {
   main().catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
     process.stderr.write(`generate-nginx-conf failed: ${message}\n`);

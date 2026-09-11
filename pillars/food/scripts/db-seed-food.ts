@@ -21,12 +21,13 @@
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 import BetterSqlite3 from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import { assertDestructiveCommandAllowed, type SqliteConnection } from '@pops/pillar-sdk/db';
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { resolveFoodSqlitePath } from '../src/api/food-sqlite-path.js';
 import { compileRecipeVersion } from '../src/dsl/compile.js';
@@ -181,6 +182,6 @@ function main(): void {
   db.close();
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (isCliEntrypoint(import.meta.url)) {
   main();
 }

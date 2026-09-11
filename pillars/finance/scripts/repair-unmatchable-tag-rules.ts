@@ -26,9 +26,9 @@
  *
  * Exits 0 whether or not anything is found; this reports, it does not gate.
  */
-import { pathToFileURL } from 'node:url';
-
 import { eq } from 'drizzle-orm';
+
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import {
@@ -297,14 +297,7 @@ function main(): void {
   }
 }
 
-/** True only when this file is the process entry point, not when a test imports it. */
-function isDirectRun(): boolean {
-  const entry = process.argv[1];
-  if (!entry) return false;
-  return import.meta.url === pathToFileURL(entry).href;
-}
-
-if (isDirectRun()) {
+if (isCliEntrypoint(import.meta.url)) {
   try {
     main();
   } catch (err: unknown) {

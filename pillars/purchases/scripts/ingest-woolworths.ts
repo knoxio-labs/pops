@@ -15,10 +15,11 @@
  */
 import { readFileSync } from 'node:fs';
 
+import { isCliEntrypoint } from '@pops/pillar-sdk/node';
+
 import { parseWoolworthsExport, WOOLWORTHS_SOURCE_ID } from '../src/ingest/woolworths/index.js';
 import {
   createIngestClient,
-  isCliEntrypoint,
   postPurchases,
   reportOutcome,
   runCli,
