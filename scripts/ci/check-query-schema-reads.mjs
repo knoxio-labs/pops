@@ -58,15 +58,43 @@
  *
  * WHAT IT DOES NOT SEE.
  *
- *   - Scope: `pillars/purchases` only. Every other pillar with ts-rest query
- *     schemas uses its own handler-module layout (some route query params
- *     straight in a single `handlers.ts`, some split per HTTP verb), so the
- *     `{ handlerFile, handlerKey }` mapping this guard hand-curates in
- *     {@link ROUTES} does not generalise without inventing a convention
- *     those pillars do not already follow. Extending this guard to another
- *     pillar means adding that pillar's own `ROUTES` entries once its handler
- *     layout is confirmed to fit this same shape — not inferring the mapping
- *     from naming.
+ *   - Scope (POPS-3484): {@link PILLARS} lists every pillar this guard
+ *     currently enforces — purchases, finance, cerebrum, bfm. Each pillar
+ *     declares its own openapi file, its own hand-curated `{ handlerFile,
+ *     handlerKey }` routes (the traversal algorithm below is shared and
+ *     pillar-agnostic; only these roots differ), its own allowlist, and its
+ *     own discovery floor. Every pillar surveyed for POPS-3484 that also
+ *     publishes ts-rest query schemas is accounted for, in or out:
+ *       - media, food and lists are NOT here. Most of their routes read
+ *         fields directly, exactly like purchases, but a real minority
+ *         delegate the WHOLE query object to a shared db-service function
+ *         called as `someService.method(db, query)` — `query` as one of
+ *         SEVERAL positional arguments, through a property access on an
+ *         imported namespace object, not the sole-argument bare-identifier
+ *         call this guard's resolver-following recognises (see the next
+ *         bullet). Every field reached only that way reports as unread
+ *         whether or not the service function actually reads it — confirmed
+ *         by hand for `GET /library` (media), which does read every field it
+ *         was flagged for. Adding these pillars today would mean either
+ *         allowlisting fields that are NOT deliberately unread (misusing
+ *         {@link AllowlistEntry} to paper over a guard gap, not to record a
+ *         real omission) or extending resolver-following to multi-argument,
+ *         namespace-qualified calls — a change to the shared traversal
+ *         algorithm every pillar depends on, wide enough to need its own
+ *         review rather than riding in on a scope-extension PR.
+ *       - inventory is NOT here either, for a different reason: it is
+ *         otherwise fully compatible (every OTHER route reads its fields
+ *         directly, same as purchases), but `POST /search` genuinely never
+ *         reads `body.query.filters` at all — confirmed by reading the
+ *         handler, not a guard artefact. That is a real product gap, not
+ *         something this guard should paper over with a reasonless-in-spirit
+ *         allowlist entry; it needs a real fix (structured-filter support in
+ *         `pillars/inventory/src/api/rest/search-handlers.ts`) before this
+ *         pillar can report clean.
+ *       - contacts publishes no ts-rest contract at all (Rust, a different
+ *         wire-schema mechanism entirely) — out of scope on its face.
+ *       - ai, registry and documents were not part of POPS-3484's named
+ *         starting list and were not surveyed here.
  *   - A field is only "seen read" through a resolver call shaped exactly
  *     `identifierBoundToAnImport(query)` — a bare identifier literally named
  *     `query`, passed as the sole argument. A handler that destructures
@@ -220,6 +248,261 @@ export const ROUTES = [
  * @type {AllowlistEntry[]}
  */
 export const ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the finance contract. */
+export const FINANCE_OPENAPI_REL_PATH = 'pillars/finance/openapi/finance.openapi.json';
+
+/** Today's real count of finance routes carrying query fields is 16. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const FINANCE_MIN_ROUTES_WITH_FIELDS = 12;
+
+/**
+ * Finance's handler layout matches purchases': one `make*Handlers` factory
+ * per file (`loan-handlers.ts` composes its export from two PRIVATE ones in
+ * the same file, which {@link extractHandlerEntryText} tries in turn), every
+ * query field read directly off `query` (or `body.query` for `POST /search`)
+ * in the handler's own body or a resolver it calls with the whole object.
+ * Confirmed clean today: every field on every route below is read.
+ *
+ * @type {RouteSpec[]}
+ */
+export const FINANCE_ROUTES = [
+  {
+    method: 'get',
+    path: '/accounts',
+    handlerFile: 'pillars/finance/src/api/rest/accounts-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/accounts/{id}/balance',
+    handlerFile: 'pillars/finance/src/api/rest/checkpoints-handlers.ts',
+    handlerKey: 'balance',
+  },
+  {
+    method: 'get',
+    path: '/accounts/{id}/balance-history',
+    handlerFile: 'pillars/finance/src/api/rest/checkpoints-handlers.ts',
+    handlerKey: 'history',
+  },
+  {
+    method: 'get',
+    path: '/accounts/{id}/imports',
+    handlerFile: 'pillars/finance/src/api/rest/account-imports-handlers.ts',
+    handlerKey: 'listBatches',
+  },
+  {
+    method: 'get',
+    path: '/accounts/{id}/loan-offset-links',
+    handlerFile: 'pillars/finance/src/api/rest/loan-handlers.ts',
+    handlerKey: 'listOffsetLinks',
+  },
+  {
+    method: 'get',
+    path: '/budgets',
+    handlerFile: 'pillars/finance/src/api/rest/budgets-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/corrections',
+    handlerFile: 'pillars/finance/src/api/rest/corrections-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/entity-usage',
+    handlerFile: 'pillars/finance/src/api/rest/entity-usage-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/import-drafts',
+    handlerFile: 'pillars/finance/src/api/rest/import-drafts-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/imports/progress',
+    handlerFile: 'pillars/finance/src/api/rest/imports-handlers.ts',
+    handlerKey: 'getImportProgress',
+  },
+  {
+    method: 'post',
+    path: '/search',
+    handlerFile: 'pillars/finance/src/api/rest/search-handlers.ts',
+    handlerKey: 'search',
+  },
+  {
+    method: 'get',
+    path: '/tag-rules',
+    handlerFile: 'pillars/finance/src/api/rest/tag-rules-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/transactions',
+    handlerFile: 'pillars/finance/src/api/rest/transactions-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/transactions/descriptions-preview',
+    handlerFile: 'pillars/finance/src/api/rest/transactions-handlers.ts',
+    handlerKey: 'descriptionsForPreview',
+  },
+  {
+    method: 'get',
+    path: '/transactions/suggest-tags',
+    handlerFile: 'pillars/finance/src/api/rest/transactions-handlers.ts',
+    handlerKey: 'suggestTags',
+  },
+  {
+    method: 'get',
+    path: '/wishlist',
+    handlerFile: 'pillars/finance/src/api/rest/wishlist-handlers.ts',
+    handlerKey: 'list',
+  },
+];
+
+/** Empty today: every field on every known finance route is read. @type {AllowlistEntry[]} */
+export const FINANCE_ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the cerebrum contract. */
+export const CEREBRUM_OPENAPI_REL_PATH = 'pillars/cerebrum/openapi/cerebrum.openapi.json';
+
+/** Today's real count of cerebrum routes carrying query fields is 4. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const CEREBRUM_MIN_ROUTES_WITH_FIELDS = 3;
+
+/**
+ * Cerebrum's leaf handler factories call `initServer().router(contract, { …
+ * })` themselves — every OTHER surveyed pillar does that composition only
+ * once, in its own top-level `handlers.ts` — so a factory's own handler map
+ * is the LAST top-level object-literal argument of that call rather than a
+ * bare `return { … }` (see {@link locateReturnedHandlersObject}). Otherwise
+ * matches purchases' shape: fields read directly off `query` in the handler
+ * body. Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const CEREBRUM_ROUTES = [
+  {
+    method: 'get',
+    path: '/glia/orphans',
+    handlerFile: 'pillars/cerebrum/src/api/rest/workers-handlers.ts',
+    handlerKey: 'getOrphans',
+  },
+  {
+    method: 'get',
+    path: '/reflex',
+    handlerFile: 'pillars/cerebrum/src/api/rest/reflex-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/scopes',
+    handlerFile: 'pillars/cerebrum/src/api/rest/scopes-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/tags',
+    handlerFile: 'pillars/cerebrum/src/api/rest/tags-handlers.ts',
+    handlerKey: 'list',
+  },
+];
+
+/** Empty today: every field on every known cerebrum route is read. @type {AllowlistEntry[]} */
+export const CEREBRUM_ALLOWLIST = [];
+
+/** Repo-relative, posix. The committed OpenAPI projection of the bfm contract. */
+export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
+
+/**
+ * Only 2 routes carry query fields today — below every other pillar's floor,
+ * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
+ * passthrough onto finance/purchases, not a domain of its own. The floor
+ * still catches a collapse to 0.
+ */
+const BFM_MIN_ROUTES_WITH_FIELDS = 2;
+
+/**
+ * bfm's two mobile handler files each hold one `make*Handlers` factory
+ * returning a flat, literal-keyed object — matches purchases' shape exactly,
+ * fields read directly off `query`. Confirmed clean today.
+ *
+ * @type {RouteSpec[]}
+ */
+export const BFM_ROUTES = [
+  {
+    method: 'get',
+    path: '/mobile/finance/transactions',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-finance-handlers.ts',
+    handlerKey: 'listTransactions',
+  },
+  {
+    method: 'get',
+    path: '/mobile/purchases',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
+    handlerKey: 'listPurchases',
+  },
+];
+
+/** Empty today: every field on every known bfm route is read. @type {AllowlistEntry[]} */
+export const BFM_ALLOWLIST = [];
+
+/**
+ * @typedef {object} PillarSpec
+ * @property {string} name
+ * @property {string} openapiRelPath
+ * @property {readonly RouteSpec[]} routes
+ * @property {readonly AllowlistEntry[]} allowlist
+ * @property {number} minRoutesWithFields
+ */
+
+/**
+ * Every pillar this guard currently enforces. Declared as a list of roots
+ * (openapi file + routes + allowlist + floor) rather than one hand-rolled
+ * `collectViolations` call per pillar — the traversal algorithm itself
+ * (`extractHandlerEntryText`, `collectReachableTexts`, `fieldIsRead`, …) is
+ * shared and pillar-agnostic; only these roots differ.
+ *
+ * media, food, inventory and lists were surveyed (all publish ts-rest query
+ * schemas, per POPS-3484) and are deliberately NOT here yet — see the header's
+ * "WHAT IT DOES NOT SEE" for why each is excluded rather than force-added
+ * allowlisted or forked with special-case logic.
+ *
+ * @type {PillarSpec[]}
+ */
+export const PILLARS = [
+  {
+    name: 'purchases',
+    openapiRelPath: OPENAPI_REL_PATH,
+    routes: ROUTES,
+    allowlist: ALLOWLIST,
+    minRoutesWithFields: MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'finance',
+    openapiRelPath: FINANCE_OPENAPI_REL_PATH,
+    routes: FINANCE_ROUTES,
+    allowlist: FINANCE_ALLOWLIST,
+    minRoutesWithFields: FINANCE_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'cerebrum',
+    openapiRelPath: CEREBRUM_OPENAPI_REL_PATH,
+    routes: CEREBRUM_ROUTES,
+    allowlist: CEREBRUM_ALLOWLIST,
+    minRoutesWithFields: CEREBRUM_MIN_ROUTES_WITH_FIELDS,
+  },
+  {
+    name: 'bfm',
+    openapiRelPath: BFM_OPENAPI_REL_PATH,
+    routes: BFM_ROUTES,
+    allowlist: BFM_ALLOWLIST,
+    minRoutesWithFields: BFM_MIN_ROUTES_WITH_FIELDS,
+  },
+];
 
 /** @param {string} s */
 function escapeRegExp(s) {
@@ -510,14 +793,111 @@ export function matchBalanced(structural, openIndex, openChar, closeChar) {
 }
 
 /**
+ * The offset of `handlerKey` as a TOP-LEVEL key of `objectBody` (an object
+ * literal's inner text, depth 0 relative to its own outer braces) — never a
+ * same-named key nested inside another entry's own returned object. Several
+ * pillars' handlers return `{ status: 200 as const, body: … }` as their OWN
+ * result, and a handler literally named `status` (media's
+ * `GET /watchlist/status`) would otherwise match that nested `status:` key —
+ * whichever one happens to appear first in the source — well before its own.
+ *
+ * @param {string} objectBody Already `blankNonStructural`-processed.
+ * @param {string} handlerKey
+ * @returns {number} `-1` when no top-level key matches.
+ */
+function findTopLevelKeyIndex(objectBody, handlerKey) {
+  const startsHere = new RegExp(`^${escapeRegExp(handlerKey)}\\s*:`, 'u');
+  let depth = 0;
+  for (let i = 0; i < objectBody.length; i += 1) {
+    const ch = objectBody[i];
+    if (depth === 0 && /[A-Za-z_$]/u.test(ch ?? '')) {
+      const prev = i === 0 ? '' : objectBody[i - 1];
+      const boundary = prev === '' || prev === '{' || prev === ',' || /\s/u.test(prev ?? '');
+      if (boundary && startsHere.test(objectBody.slice(i))) return i;
+    }
+    if (ch === '{' || ch === '(' || ch === '[') depth += 1;
+    else if (ch === '}' || ch === ')' || ch === ']') depth -= 1;
+  }
+  return -1;
+}
+
+/**
+ * The `{ … }` a factory's own `return` statement hands back as its handler
+ * map — either a bare object literal (`return { … }`, purchases' shape) or
+ * the LAST top-level argument of a call the return expression makes directly
+ * (`return server.router(cerebrumXContract, { … })`, cerebrum's shape: every
+ * leaf handler factory there calls `initServer().router` itself rather than
+ * only the pillar's top-level composer doing so). The call-chain name is not
+ * hard-coded — `server.router`, or any other `identifier(.identifier)*(…)` —
+ * since what identifies the handler map is its POSITION (the call's own last
+ * object-literal argument), not the name of whatever wraps it.
+ *
+ * @param {string} structural `blankNonStructural`-processed file text.
+ * @param {number} from Search start (a factory's own body start).
+ * @param {number} to Search end (that factory's own body end).
+ * @returns {{ objStart: number; objEnd: number } | null} Bounds INCLUDE the
+ *   object literal's own `{`/`}`, matching {@link matchBalanced}'s contract.
+ */
+function locateReturnedHandlersObject(structural, from, to) {
+  const returnMatch = /\breturn\b/u.exec(structural.slice(from, to));
+  if (returnMatch === null) return null;
+  let cursor = from + returnMatch.index + returnMatch[0].length;
+  while (cursor < to && /\s/u.test(structural[cursor] ?? '')) cursor += 1;
+
+  if (structural[cursor] === '{') {
+    const objEnd = matchBalanced(structural, cursor, '{', '}');
+    if (objEnd === -1 || objEnd > to) return null;
+    return { objStart: cursor, objEnd };
+  }
+
+  const callChainMatch = /^[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*\s*\(/u.exec(
+    structural.slice(cursor, to)
+  );
+  if (callChainMatch === null) return null;
+  const parenStart = cursor + callChainMatch[0].length - 1; // at '('
+  const parenEnd = matchBalanced(structural, parenStart, '(', ')');
+  if (parenEnd === -1 || parenEnd > to) return null;
+
+  let depth = 0;
+  let objStart = -1;
+  for (let i = parenStart + 1; i < parenEnd - 1; i += 1) {
+    const ch = structural[i];
+    if (ch === '{' && depth === 0) objStart = i;
+    if (ch === '{' || ch === '(' || ch === '[') depth += 1;
+    else if (ch === '}' || ch === ')' || ch === ']') depth -= 1;
+  }
+  if (objStart === -1) return null;
+  const objEnd = matchBalanced(structural, objStart, '{', '}');
+  if (objEnd === -1 || objEnd > parenEnd) return null;
+  return { objStart, objEnd };
+}
+
+/**
  * The source text of one route's handler entry — from its property key
  * through the end of its arrow function — inside a `make*Handlers` factory's
  * `return { … }` object literal.
  *
- * Handles both bodies this codebase writes: a block (`=> { … }`) and an
- * implicit-return parenthesised expression (`=> ({ … })`). Anything else
- * (a bare expression with neither) is reported as unparseable by the caller
- * rather than guessed at.
+ * Handles every body shape this codebase writes: a block (`=> { … }`), an
+ * implicit-return parenthesised expression (`=> ({ … })`), and — the shape
+ * finance/media/inventory/food/cerebrum wrap every handler in — a bare call
+ * expression (`=> runHttp(async () => { … })`), captured through the end of
+ * the call's own argument list so a query read inside the wrapped callback is
+ * still inside the returned text. The wrapper name is not hard-coded: any
+ * `identifier(…)` call counts, since the field-read scan that follows only
+ * cares about the query anchor, never about what wraps it. Anything else (a
+ * bare expression with none of these) is reported as unparseable by the
+ * caller rather than guessed at.
+ *
+ * A file MAY define more than one `make*Handlers` factory — finance's
+ * `loan-handlers.ts` composes `makeLoanHandlers`'s export from two private
+ * ones (`makeLoanTermsHandlers`, `makeLoanOffsetLinkHandlers`) spread
+ * together, each with its own literal-keyed handler object. Every factory in
+ * the file is tried in turn (see {@link locateReturnedHandlersObject} for the
+ * two shapes a factory's own `return` may hand back), and the first whose OWN
+ * handler object literally names `handlerKey` at its top level wins — a
+ * factory whose return object is built only from spreads (no literal key
+ * matches at all) is silently passed over rather than treated as a parse
+ * failure.
  *
  * @param {string} fileText
  * @param {string} handlerKey
@@ -525,70 +905,98 @@ export function matchBalanced(structural, openIndex, openChar, closeChar) {
  */
 export function extractHandlerEntryText(fileText, handlerKey) {
   const structural = blankNonStructural(fileText);
+  const factoryRe = /function\s+make\w*Handlers\s*\(/gu;
 
-  // Anchor to the `make*Handlers` factory's OWN body first. Several of these
-  // files define plain helper functions (`notFound`, `itemNotFound`, …) ahead
-  // of the factory, and those helpers have their own `return { … }` object
-  // literals — searching the whole file for the first `return {` found one
-  // of those instead of the factory's, in every file with a helper function
-  // before it.
-  const factoryMatch = /function\s+make\w*Handlers\s*\(/u.exec(structural);
-  if (factoryMatch === null) return null;
-  const factoryParamsStart = factoryMatch.index + factoryMatch[0].length - 1; // at '('
-  const factoryParamsEnd = matchBalanced(structural, factoryParamsStart, '(', ')');
-  if (factoryParamsEnd === -1) return null;
-  let factoryBodyStart = factoryParamsEnd;
-  while (factoryBodyStart < structural.length && /\s/u.test(structural[factoryBodyStart] ?? '')) {
-    factoryBodyStart += 1;
+  for (const factoryMatch of structural.matchAll(factoryRe)) {
+    const factoryParamsStart = factoryMatch.index + factoryMatch[0].length - 1; // at '('
+    const factoryParamsEnd = matchBalanced(structural, factoryParamsStart, '(', ')');
+    if (factoryParamsEnd === -1) continue;
+    let factoryBodyStart = factoryParamsEnd;
+    while (factoryBodyStart < structural.length && /\s/u.test(structural[factoryBodyStart] ?? '')) {
+      factoryBodyStart += 1;
+    }
+    // Skip an explicit return-type annotation before the body — cerebrum's
+    // factories spell theirs `): ReturnType<typeof server.router<typeof
+    // XContract>> {`. Tracked only for `<>`/`()` nesting depth, which is
+    // everything a type expression needs here; the body's own opening `{` is
+    // the first one reached once both are back to 0.
+    if (structural[factoryBodyStart] === ':') {
+      let i = factoryBodyStart + 1;
+      let angleDepth = 0;
+      let parenDepth = 0;
+      while (i < structural.length) {
+        const ch = structural[i];
+        if (ch === '<') angleDepth += 1;
+        else if (ch === '>') angleDepth = Math.max(0, angleDepth - 1);
+        else if (ch === '(') parenDepth += 1;
+        else if (ch === ')') parenDepth -= 1;
+        else if (ch === '{' && angleDepth === 0 && parenDepth === 0) break;
+        i += 1;
+      }
+      factoryBodyStart = i;
+    }
+    if (structural[factoryBodyStart] !== '{') continue;
+    const factoryBodyEnd = matchBalanced(structural, factoryBodyStart, '{', '}');
+    if (factoryBodyEnd === -1) continue;
+
+    const located = locateReturnedHandlersObject(structural, factoryBodyStart, factoryBodyEnd);
+    if (located === null) continue;
+    const { objStart, objEnd } = located;
+
+    // Sliced from just INSIDE the object literal's own braces — `objStart`/
+    // `objEnd` bound the `{ … }` delimiters themselves, and depth 0 in
+    // `findTopLevelKeyIndex` must mean "a direct property of this object",
+    // not "having just stepped past its own opening brace".
+    const objectBody = structural.slice(objStart + 1, objEnd - 1);
+    const localIndex = findTopLevelKeyIndex(objectBody, handlerKey);
+    if (localIndex === -1) continue;
+    const keyIndex = objStart + 1 + localIndex;
+
+    const colonIdx = structural.indexOf(':', keyIndex);
+    if (colonIdx === -1 || colonIdx >= objEnd) continue;
+    let cursor = colonIdx + 1;
+
+    const asyncMatch = /^\s*async\b/u.exec(structural.slice(cursor));
+    if (asyncMatch) cursor += asyncMatch[0].length;
+    while (cursor < structural.length && /\s/u.test(structural[cursor] ?? '')) cursor += 1;
+    if (structural[cursor] !== '(') continue;
+
+    const paramEnd = matchBalanced(structural, cursor, '(', ')');
+    if (paramEnd === -1) continue;
+
+    let bodyCursor = paramEnd;
+    while (bodyCursor < structural.length && /\s/u.test(structural[bodyCursor] ?? ''))
+      bodyCursor += 1;
+    if (structural.slice(bodyCursor, bodyCursor + 2) !== '=>') continue;
+    bodyCursor += 2;
+    while (bodyCursor < structural.length && /\s/u.test(structural[bodyCursor] ?? ''))
+      bodyCursor += 1;
+
+    /** @type {number} */
+    let bodyEnd;
+    if (structural[bodyCursor] === '{') {
+      bodyEnd = matchBalanced(structural, bodyCursor, '{', '}');
+    } else if (structural[bodyCursor] === '(') {
+      bodyEnd = matchBalanced(structural, bodyCursor, '(', ')');
+    } else {
+      const wrapperMatch = /^[A-Za-z_$][\w$]*/u.exec(structural.slice(bodyCursor));
+      if (wrapperMatch === null) continue;
+      let afterWrapperName = bodyCursor + wrapperMatch[0].length;
+      while (
+        afterWrapperName < structural.length &&
+        /\s/u.test(structural[afterWrapperName] ?? '')
+      ) {
+        afterWrapperName += 1;
+      }
+      if (structural[afterWrapperName] !== '(') continue;
+      bodyEnd = matchBalanced(structural, afterWrapperName, '(', ')');
+    }
+    if (bodyEnd === -1) continue;
+
+    return fileText.slice(keyIndex, bodyEnd);
   }
-  if (structural[factoryBodyStart] !== '{') return null;
-  const factoryBodyEnd = matchBalanced(structural, factoryBodyStart, '{', '}');
-  if (factoryBodyEnd === -1) return null;
 
-  const returnIdx = structural.indexOf('return {', factoryBodyStart);
-  if (returnIdx === -1 || returnIdx >= factoryBodyEnd) return null;
-  const objStart = returnIdx + 'return '.length;
-  const objEnd = matchBalanced(structural, objStart, '{', '}');
-  if (objEnd === -1 || objEnd > factoryBodyEnd) return null;
-
-  const keyRe = new RegExp(`(^|[{,\\s])(${escapeRegExp(handlerKey)})\\s*:`, 'u');
-  const objectBody = structural.slice(objStart, objEnd);
-  const localMatch = keyRe.exec(objectBody);
-  if (localMatch?.[1] === undefined) return null;
-  const keyIndex = objStart + localMatch.index + localMatch[1].length;
-
-  const colonIdx = structural.indexOf(':', keyIndex);
-  if (colonIdx === -1 || colonIdx >= objEnd) return null;
-  let cursor = colonIdx + 1;
-
-  const asyncMatch = /^\s*async\b/u.exec(structural.slice(cursor));
-  if (asyncMatch) cursor += asyncMatch[0].length;
-  while (cursor < structural.length && /\s/u.test(structural[cursor] ?? '')) cursor += 1;
-  if (structural[cursor] !== '(') return null;
-
-  const paramEnd = matchBalanced(structural, cursor, '(', ')');
-  if (paramEnd === -1) return null;
-
-  let bodyCursor = paramEnd;
-  while (bodyCursor < structural.length && /\s/u.test(structural[bodyCursor] ?? ''))
-    bodyCursor += 1;
-  if (structural.slice(bodyCursor, bodyCursor + 2) !== '=>') return null;
-  bodyCursor += 2;
-  while (bodyCursor < structural.length && /\s/u.test(structural[bodyCursor] ?? ''))
-    bodyCursor += 1;
-
-  /** @type {number} */
-  let bodyEnd;
-  if (structural[bodyCursor] === '{') {
-    bodyEnd = matchBalanced(structural, bodyCursor, '{', '}');
-  } else if (structural[bodyCursor] === '(') {
-    bodyEnd = matchBalanced(structural, bodyCursor, '(', ')');
-  } else {
-    return null;
-  }
-  if (bodyEnd === -1) return null;
-
-  return fileText.slice(keyIndex, bodyEnd);
+  return null;
 }
 
 /**
@@ -932,26 +1340,42 @@ function validateAllowlist(allowlist) {
 }
 
 /**
- * Check every route in `routes` against the OpenAPI document at `root`, plus
- * the two discovery-floor checks that keep this guard from reporting a clean
- * tree because its own inputs moved out from under it.
+ * @typedef {object} CollectViolationsOptions
+ * @property {string} [openapiRelPath]
+ * @property {number} [minRoutesWithFields]
+ */
+
+/**
+ * Check every route in `routes` against the OpenAPI document at
+ * `<root>/<options.openapiRelPath>`, plus the two discovery-floor checks that
+ * keep this guard from reporting a clean tree because its own inputs moved
+ * out from under it.
+ *
+ * Defaults to purchases' own `OPENAPI_REL_PATH` / `MIN_ROUTES_WITH_FIELDS` so
+ * every existing call site — this guard's own `main()` before {@link PILLARS}
+ * existed, and every purchases-only test that only ever passed `routes` and
+ * `allowlist` — keeps working unchanged; a caller checking a different pillar
+ * passes its own values in `options`.
  *
  * @param {string} root
  * @param {readonly RouteSpec[]} [routes]
  * @param {readonly AllowlistEntry[]} [allowlist]
+ * @param {CollectViolationsOptions} [options]
  * @returns {string[]}
  */
-export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) {
+export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST, options = {}) {
+  const { openapiRelPath = OPENAPI_REL_PATH, minRoutesWithFields = MIN_ROUTES_WITH_FIELDS } =
+    options;
   /** @type {string[]} */
   const violations = [];
 
   const { index: allowlistIndex, violations: allowlistViolations } = validateAllowlist(allowlist);
   violations.push(...allowlistViolations);
 
-  const openapiPath = join(root, OPENAPI_REL_PATH);
+  const openapiPath = join(root, openapiRelPath);
   const openapiText = readFileOrNull(openapiPath);
   if (openapiText === null) {
-    violations.push(`could not read ${OPENAPI_REL_PATH}`);
+    violations.push(`could not read ${openapiRelPath}`);
     return violations;
   }
   /** @type {unknown} */
@@ -959,7 +1383,7 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
   try {
     doc = JSON.parse(openapiText);
   } catch (err) {
-    violations.push(`could not parse ${OPENAPI_REL_PATH}: ${String(err)}`);
+    violations.push(`could not parse ${openapiRelPath}: ${String(err)}`);
     return violations;
   }
 
@@ -975,10 +1399,10 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
     }
   }
 
-  if (discoveredRoutesWithFields.length < MIN_ROUTES_WITH_FIELDS) {
+  if (discoveredRoutesWithFields.length < minRoutesWithFields) {
     violations.push(
       `only ${String(discoveredRoutesWithFields.length)} route(s) with query fields were found in ` +
-        `${OPENAPI_REL_PATH}, under this guard's floor of ${String(MIN_ROUTES_WITH_FIELDS)}. Either ` +
+        `${openapiRelPath}, under this guard's floor of ${String(minRoutesWithFields)}. Either ` +
         "the OpenAPI file moved or went stale, or this guard's field derivation broke."
     );
   }
@@ -988,7 +1412,7 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
     if (!known) {
       violations.push(
         `${method.toUpperCase()} ${path} advertises a query schema with fields (see ` +
-          `${OPENAPI_REL_PATH}) but is not listed in ROUTES in this guard. Add a ` +
+          `${openapiRelPath}) but is not listed in ROUTES in this guard. Add a ` +
           '{ method, path, handlerFile, handlerKey } entry for it.'
       );
     }
@@ -999,7 +1423,7 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
     if (fields === null) {
       violations.push(
         `ROUTES entry ${route.method.toUpperCase()} ${route.path} no longer exists in ` +
-          `${OPENAPI_REL_PATH}. Update or remove it.`
+          `${openapiRelPath}. Update or remove it.`
       );
       continue;
     }
@@ -1038,7 +1462,7 @@ export function collectViolations(root, routes = ROUTES, allowlist = ALLOWLIST) 
       if (reason !== undefined) continue;
       violations.push(
         `${route.method.toUpperCase()} ${route.path} advertises query field '${field}' (see ` +
-          `${OPENAPI_REL_PATH}) but ${route.handlerFile} -> ${route.handlerKey} never reads it, ` +
+          `${openapiRelPath}) but ${route.handlerFile} -> ${route.handlerKey} never reads it, ` +
           'directly or through a resolver it calls with the whole `query` object. Read it, or add ' +
           'an ALLOWLIST entry recording why it is deliberately unread.'
       );
@@ -1951,15 +2375,27 @@ function main() {
     process.exit(runSelfTest() ? 0 : 1);
   }
 
-  const violations = collectViolations(repoRoot);
+  /** @type {string[]} */
+  const violations = [];
+  let totalRoutes = 0;
+  for (const pillar of PILLARS) {
+    const pillarViolations = collectViolations(repoRoot, pillar.routes, pillar.allowlist, {
+      openapiRelPath: pillar.openapiRelPath,
+      minRoutesWithFields: pillar.minRoutesWithFields,
+    });
+    violations.push(...pillarViolations.map((v) => `[${pillar.name}] ${v}`));
+    totalRoutes += pillar.routes.length;
+  }
+
   if (violations.length > 0) {
     console.error('unread query-schema fields — violations:\n');
     for (const violation of violations) console.error(`  - ${violation}`);
-    console.error(`\n${String(violations.length)} violation(s). See POPS-2379.`);
+    console.error(`\n${String(violations.length)} violation(s). See POPS-2379 / POPS-3484.`);
     process.exit(1);
   }
   console.log(
-    `OK — every query field on ${String(ROUTES.length)} known purchases route(s) is read or allowlisted.`
+    `OK — every query field on ${String(totalRoutes)} known route(s) across ${String(PILLARS.length)} ` +
+      `pillar(s) (${PILLARS.map((p) => p.name).join(', ')}) is read or allowlisted.`
   );
 }
 
