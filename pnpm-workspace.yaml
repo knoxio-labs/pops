@@ -56,6 +56,17 @@ overrides:
 # install time, which is stronger and already enforced everywhere.
 verifyDepsBeforeRun: false
 
+# pdfjs-dist (pillars/finance/app) declares `@napi-rs/canvas` as optional, an
+# ~26 MB native binary pnpm installs across eleven platform variants. It is
+# needed only to render a PDF page to a canvas under Node; the only consumer
+# (`extract-pdf-text.ts`) runs in the browser and calls `getTextContent()`,
+# never `page.render()` or a canvas context (POPS-2542). pdf.js's Node path
+# guards the `require("@napi-rs/canvas")` it attempts at import time in a
+# try/catch and only warns when it is missing, so excluding it does not change
+# behaviour for text extraction.
+ignoredOptionalDependencies:
+  - '@napi-rs/canvas'
+
 # Turns the root manifest's `engines.node` from advice into a refusal, so a
 # shell whose PATH resolves an unpinned Node cannot run a workspace script and
 # report a result that CI would not reproduce.
