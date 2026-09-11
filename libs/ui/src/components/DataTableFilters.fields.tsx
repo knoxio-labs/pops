@@ -120,13 +120,29 @@ interface NumberRangeFilterProps<TData> {
   ariaLabel?: string;
 }
 
+/**
+ * Reads a {@link NumberInput} change event into a filter bound: an empty
+ * input clears the bound (`undefined`), a parseable string becomes that
+ * number, and anything else is reported as `null` so the caller can leave
+ * the existing bound untouched instead of clobbering it with `NaN`.
+ */
+function parseFilterBound(e: React.ChangeEvent<HTMLInputElement>): number | undefined | null {
+  const raw = e.target.value;
+  if (raw === '') return undefined;
+  const parsed = Number(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 export function NumberRangeFilter<TData>({
   column,
   minPlaceholder = 'Min',
   maxPlaceholder = 'Max',
   ariaLabel,
 }: NumberRangeFilterProps<TData>) {
-  const filterValue = (column.getFilterValue() as [number, number]) ?? [undefined, undefined];
+  const filterValue = (column.getFilterValue() as [number | undefined, number | undefined]) ?? [
+    undefined,
+    undefined,
+  ];
   const minLabel = ariaLabel ? `${ariaLabel} (min)` : minPlaceholder;
   const maxLabel = ariaLabel ? `${ariaLabel} (max)` : maxPlaceholder;
 
@@ -134,7 +150,11 @@ export function NumberRangeFilter<TData>({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <NumberInput
         value={filterValue[0]}
-        onChange={(value) => column.setFilterValue([value, filterValue[1]])}
+        onChange={(e) => {
+          const min = parseFilterBound(e);
+          if (min === null) return;
+          column.setFilterValue([min, filterValue[1]]);
+        }}
         placeholder={minPlaceholder}
         className="w-full sm:w-25"
         aria-label={minLabel}
@@ -142,7 +162,11 @@ export function NumberRangeFilter<TData>({
       <span className="hidden text-muted-foreground sm:block">to</span>
       <NumberInput
         value={filterValue[1]}
-        onChange={(value) => column.setFilterValue([filterValue[0], value])}
+        onChange={(e) => {
+          const max = parseFilterBound(e);
+          if (max === null) return;
+          column.setFilterValue([filterValue[0], max]);
+        }}
         placeholder={maxPlaceholder}
         className="w-full sm:w-25"
         aria-label={maxLabel}
