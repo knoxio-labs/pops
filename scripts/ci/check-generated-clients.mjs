@@ -53,11 +53,29 @@
  * violation rather than something quietly skipped.
  *
  * Usage:
- *   node scripts/ci/check-generated-clients.mjs [--pkg <name>] [--exclude-app-matrix]
+ *   node scripts/ci/check-generated-clients.mjs [--pkg <name>] [--exclude-app-matrix] [--base <ref>]
  *   node scripts/ci/check-generated-clients.mjs --self-test
  *
  * Exit 0 = every discovered client is up to date. Exit 1 = a violation, or
  * discovery/filtering matched nothing. Exit 2 = usage error.
+ *
+ * `--base <ref>` (POPS-1874) is what makes a local run predict CI instead of
+ * only describing the branch. `app-quality.yml`'s `pull_request`/`merge_group`
+ * triggers judge the MERGE REF — this branch's commits landed on top of
+ * whatever `origin/main` (or the merge-group's base) is at CI-run time — via
+ * `actions/checkout@v7`'s default `pull_request` behaviour. Run with no
+ * `--base`, this script diffs the checked-out branch as-is, which is a
+ * different tree whenever `<ref>` has moved since the branch was last rebased:
+ * a sibling PR can change a pillar's committed OpenAPI snapshot, and a
+ * locally-green branch goes red in CI having changed nothing itself (see
+ * POPS-1874's PR #4031 case: a `shipping` field added to `main` between this
+ * script's last clean local run and the eventual CI run on the same commit).
+ * `--base <ref>` closes that gap by building the actual merge of `HEAD` onto
+ * `<ref>` in a disposable `git worktree` — never touching the caller's
+ * checked-out branch or index — installing dependencies there, and running
+ * the same discovery and regenerate-and-diff this file always runs, just
+ * rooted at the merged tree instead of the working tree. The worktree is
+ * removed before this process exits, success or failure.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -414,6 +432,86 @@ export const realRunner = {
 };
 
 /**
+ * Build the merge of `headRef` onto `baseRef` in a brand-new `git worktree`
+ * under the OS temp dir, and return its path. This is the tree CI's
+ * `pull_request`/`merge_group` triggers judge — `actions/checkout@v7`
+ * defaults to the PR's merge-commit ref, not the branch tip — so running the
+ * drift check rooted here answers the question a plain local run cannot.
+ *
+ * Never touches `repoRoot`'s working tree, index, or current branch: the
+ * worktree is `--detach`ed at `baseRef`'s commit, and the merge happens
+ * inside the worktree, not the caller's checkout. A merge conflict is
+ * reported and the worktree cleaned up, same as any other failure mode here
+ * — a branch that cannot merge cleanly has no merge ref for CI to judge
+ * either, so this is a real answer, not a limitation of the check.
+ *
+ * @param {string} repoRoot
+ * @param {string} baseRef
+ * @param {string} [headRef]
+ * @returns {string} Absolute path to the merge worktree.
+ */
+export function resolveMergeRoot(repoRoot, baseRef, headRef = 'HEAD') {
+  const baseSha = execFileSync('git', ['rev-parse', baseRef], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  }).trim();
+  const headSha = execFileSync('git', ['rev-parse', headRef], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  }).trim();
+  const mergeRoot = mkdtempSync(join(tmpdir(), 'codegen-drift-merge-'));
+  execFileSync('git', ['worktree', 'add', '--detach', mergeRoot, baseSha], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
+  try {
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.email=codegen-drift@localhost',
+        '-c',
+        'user.name=codegen-drift',
+        'merge',
+        '--no-edit',
+        headSha,
+      ],
+      {
+        cwd: mergeRoot,
+        stdio: 'inherit',
+      }
+    );
+  } catch (error) {
+    cleanupMergeRoot(repoRoot, mergeRoot);
+    throw new Error(
+      `could not merge ${headRef} (${headSha}) onto ${baseRef} (${baseSha}) — resolve the ` +
+        'conflict the same way the PR page would before trusting this check.',
+      { cause: error }
+    );
+  }
+  return mergeRoot;
+}
+
+/**
+ * Remove a worktree created by {@link resolveMergeRoot}, always — called from
+ * a `finally`, so a violation, a thrown error, or a clean pass all leave no
+ * worktree behind.
+ *
+ * @param {string} repoRoot
+ * @param {string} mergeRoot
+ */
+export function cleanupMergeRoot(repoRoot, mergeRoot) {
+  try {
+    execFileSync('git', ['worktree', 'remove', '--force', mergeRoot], {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
+  } finally {
+    if (existsSync(mergeRoot)) rmSync(mergeRoot, { recursive: true, force: true });
+  }
+}
+
+/**
  * Regenerate one target and classify the outcome. Pure orchestration over an
  * injectable `Runner`, so tests can simulate a generator that errors, writes
  * nothing, or writes something git already has — without a real pnpm/git
@@ -649,11 +747,14 @@ function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
-      'Usage: node scripts/ci/check-generated-clients.mjs [--pkg <name>] [--exclude-app-matrix]\n' +
+      'Usage: node scripts/ci/check-generated-clients.mjs ' +
+        '[--pkg <name>] [--exclude-app-matrix] [--base <ref>]\n' +
         '       node scripts/ci/check-generated-clients.mjs --self-test\n\n' +
         'Regenerates every generate:* Hey API client script found in the workspace and fails\n' +
         'on drift, a missing/empty output directory, a generator error, or a script with no\n' +
-        'parseable --write target.'
+        'parseable --write target.\n\n' +
+        '--base <ref> checks the merge of HEAD onto <ref> (e.g. origin/main) instead of the\n' +
+        'checked-out branch — what app-quality.yml actually judges on pull_request/merge_group.'
     );
     process.exit(2);
   }
@@ -665,50 +766,89 @@ function main() {
   const pkgFilter = pkgFlagIndex === -1 ? null : (args[pkgFlagIndex + 1] ?? null);
   const excludeAppMatrix = args.includes('--exclude-app-matrix');
 
-  const allTargets = discoverGeneratedClientTargets(repoRoot);
+  const baseFlagIndex = args.indexOf('--base');
+  const baseRef = baseFlagIndex === -1 ? null : (args[baseFlagIndex + 1] ?? null);
+  if (baseFlagIndex !== -1 && baseRef === null) {
+    console.error('FAIL — --base requires a ref, e.g. --base origin/main.');
+    process.exit(2);
+  }
 
-  const expectedSetViolations = findExpectedTargetSetViolations(allTargets);
-  if (expectedSetViolations.length > 0) {
-    console.error(
-      `FAIL — discovered target set does not match the ${EXPECTED_TARGETS.length} pinned in ` +
-        'EXPECTED_TARGETS (scripts/ci/check-generated-clients.mjs):'
+  /** @type {string | null} */
+  let mergeRoot = null;
+  let exitCode = 0;
+
+  try {
+    let root = repoRoot;
+    if (baseRef !== null) {
+      console.log(`Building the merge of HEAD onto ${baseRef} in a disposable worktree...`);
+      mergeRoot = resolveMergeRoot(repoRoot, baseRef);
+      console.log('Installing dependencies in the merge worktree...');
+      const install = spawnSync('pnpm', ['install', '--frozen-lockfile'], {
+        cwd: mergeRoot,
+        stdio: 'inherit',
+      });
+      if ((install.status ?? 1) !== 0) {
+        console.error('FAIL — pnpm install --frozen-lockfile failed in the merge worktree.');
+        exitCode = 1;
+        return;
+      }
+      root = mergeRoot;
+    }
+
+    const allTargets = discoverGeneratedClientTargets(root);
+
+    const expectedSetViolations = findExpectedTargetSetViolations(allTargets);
+    if (expectedSetViolations.length > 0) {
+      console.error(
+        `FAIL — discovered target set does not match the ${EXPECTED_TARGETS.length} pinned in ` +
+          'EXPECTED_TARGETS (scripts/ci/check-generated-clients.mjs):'
+      );
+      for (const message of expectedSetViolations) console.error(`  ${message}`);
+      exitCode = 1;
+      return;
+    }
+
+    let targets = allTargets;
+    if (pkgFilter !== null) targets = targets.filter((t) => t.pkgName === pkgFilter);
+    if (excludeAppMatrix) targets = targets.filter((t) => !t.inAppMatrix);
+
+    if (targets.length === 0) {
+      let scope = '';
+      if (pkgFilter !== null) scope = `for --pkg ${pkgFilter}`;
+      else if (excludeAppMatrix) scope = 'outside the app matrix';
+      console.error(
+        `FAIL — discovered zero generate:* Hey API client scripts ${scope}. ` +
+          'Discovery is broken, or the filter matched nothing.'
+      );
+      exitCode = 1;
+      return;
+    }
+
+    /** @type {Violation[]} */
+    const violations = [];
+    for (const target of targets) {
+      console.log(`::group::${target.pkgName} ${target.scriptName}`);
+      const violation = runTarget(target, root, realRunner);
+      if (violation) violations.push(violation);
+      console.log('::endgroup::');
+    }
+
+    if (violations.length > 0) {
+      console.error(`FAIL — ${violations.length} generated-client problem(s):`);
+      for (const violation of violations)
+        console.error(`  [${violation.kind}] ${violation.message}`);
+      exitCode = 1;
+      return;
+    }
+
+    console.log(
+      `OK — ${targets.length} generated Hey API client(s) match their contract, no drift.`
     );
-    for (const message of expectedSetViolations) console.error(`  ${message}`);
-    process.exit(1);
+  } finally {
+    if (mergeRoot !== null) cleanupMergeRoot(repoRoot, mergeRoot);
   }
 
-  let targets = allTargets;
-  if (pkgFilter !== null) targets = targets.filter((t) => t.pkgName === pkgFilter);
-  if (excludeAppMatrix) targets = targets.filter((t) => !t.inAppMatrix);
-
-  if (targets.length === 0) {
-    let scope = '';
-    if (pkgFilter !== null) scope = `for --pkg ${pkgFilter}`;
-    else if (excludeAppMatrix) scope = 'outside the app matrix';
-    console.error(
-      `FAIL — discovered zero generate:* Hey API client scripts ${scope}. ` +
-        'Discovery is broken, or the filter matched nothing.'
-    );
-    process.exit(1);
-  }
-
-  /** @type {Violation[]} */
-  const violations = [];
-  for (const target of targets) {
-    console.log(`::group::${target.pkgName} ${target.scriptName}`);
-    const violation = runTarget(target, repoRoot, realRunner);
-    if (violation) violations.push(violation);
-    console.log('::endgroup::');
-  }
-
-  if (violations.length > 0) {
-    console.error(`FAIL — ${violations.length} generated-client problem(s):`);
-    for (const violation of violations) console.error(`  [${violation.kind}] ${violation.message}`);
-    process.exit(1);
-  }
-
-  console.log(`OK — ${targets.length} generated Hey API client(s) match their contract, no drift.`);
-  process.exit(0);
+  process.exit(exitCode);
 }
 
 if (import.meta.main) {
