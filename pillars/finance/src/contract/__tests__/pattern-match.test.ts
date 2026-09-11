@@ -108,6 +108,31 @@ describe('patternMatchesDescription', () => {
       ).toBe(false);
     });
 
+    // POPS-2664: the guards below were killed by no test. An empty `exact` or
+    // `contains` pattern must match nothing, and so must one that normalises to
+    // nothing: `''.includes` is true of every string, so without the second
+    // guard a pattern of only `&` or `.` would be a rule on every transaction.
+    it.each(['exact', 'contains'] as const)('matches nothing with an empty %s pattern', (type) => {
+      expect(patternMatchesDescription('', type, describeForMatching('ANYTHING AT ALL'))).toBe(
+        false
+      );
+    });
+
+    it.each(['exact', 'contains'] as const)(
+      'matches nothing with a %s pattern that normalises to empty',
+      (type) => {
+        expect(patternMatchesDescription('&.', type, describeForMatching('ANYTHING AT ALL'))).toBe(
+          false
+        );
+      }
+    );
+
+    it('keeps `exact` and `contains` apart on a description that merely contains the pattern', () => {
+      const description = describeForMatching('NETFLIX AUSTRALIA');
+      expect(patternMatchesDescription('NETFLIX', 'contains', description)).toBe(true);
+      expect(patternMatchesDescription('NETFLIX', 'exact', description)).toBe(false);
+    });
+
     it('matches a numeric-only pattern', () => {
       expect(patternMatchesDescription('1234', 'contains', describeForMatching('CARD 1234'))).toBe(
         true
