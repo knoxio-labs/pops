@@ -77,15 +77,18 @@ TriggerContent.displayName = 'TagEditorTriggerContent';
  * TagEditor — inline popover for editing transaction tags.
  */
 export function TagEditor(props: TagEditorProps) {
-  const { disabled = false, tagMeta } = props;
-  const { open, setOpen, tags, handlers } = useTagEditorState(props);
+  const { disabled = false, tagMeta: externalTagMeta } = props;
+  const { open, setOpen, tags, tagMeta: suggestedTagMeta, handlers } = useTagEditorState(props);
+  // A caller that already knows each tag's provenance (Tag Review) takes
+  // precedence; otherwise this editor's own Suggest merges are the source.
+  const tagMeta = externalTagMeta ?? suggestedTagMeta;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <TriggerContent tags={tags} disabled={disabled} tagMeta={tagMeta} />
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="start">
-        <TagEditorPanel {...handlers} />
+        <TagEditorPanel {...handlers} tagMeta={tagMeta} />
       </PopoverContent>
     </Popover>
   );

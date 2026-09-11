@@ -296,8 +296,6 @@
   "tag.saving": "Salvando…",
   "tag.editTags": "Editar tags",
   "tag.addPlaceholder": "Digite para adicionar uma tag…",
-  "tag.suggestedTags": "Tags sugeridas",
-  "tag.suggestAdd": "Adicionar {{label}}",
   "tag.source.rule": "Regra",
   "tag.source.ai": "IA",
   "tag.source.entity": "Entidade",
