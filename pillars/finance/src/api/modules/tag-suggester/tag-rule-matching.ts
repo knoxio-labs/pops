@@ -49,6 +49,7 @@ export interface TagRuleRow {
   id: string;
   tags: string;
   descriptionPattern: string;
+  entityId: string | null;
 }
 
 /** The fields {@link matchTagRules} needs to decide whether a rule fires, and in what order. */
@@ -129,10 +130,11 @@ export function findMatchingTagRules(
     .all();
 
   return matchTagRules(candidates, description, entityId).map(
-    ({ id, tags, descriptionPattern }) => ({
+    ({ id, tags, descriptionPattern, entityId: ruleEntityId }) => ({
       id,
       tags,
       descriptionPattern,
+      entityId: ruleEntityId,
     })
   );
 }

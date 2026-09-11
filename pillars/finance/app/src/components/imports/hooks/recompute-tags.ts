@@ -58,16 +58,18 @@ function dedupeByTag(tags: readonly SuggestedTag[]): SuggestedTag[] {
  * - `source: 'entity'` suggestions already on the row are dropped: they are the
  *   *previous* entity's defaults, and a row cannot legitimately carry two
  *   merchants' defaults at once;
+ * - a `source: 'rule'` suggestion already on the row is dropped when it is
+ *   `entityScoped`: it came from a tag rule scoped to the *previous* entity,
+ *   which is now stale (POPS-2624);
  * - everything else on the row survives — the AI pass (entity-independent),
- *   anything the user typed by hand, and rule tags the endpoint cannot
- *   reproduce because they came from a correction ChangeSet still pending
- *   client-side.
+ *   anything the user typed by hand, a global rule tag, and a rule tag the
+ *   endpoint cannot reproduce because it came from a correction ChangeSet
+ *   still pending client-side (which never carries `entityScoped`).
  *
- * Rule tags are deliberately *not* stripped wholesale. The prose case for it —
- * that a rule scoped to the old entity is now stale — is real, but the client
- * has no way to tell an entity-scoped rule's pattern from a global one, and
- * dropping every rule tag to catch it would also discard the pending-ChangeSet
- * tags above. Over-keeping a tag the user can remove beats silently losing one.
+ * `entityScoped` is what makes this precise: before it existed, the client
+ * could not tell an entity-scoped rule's tag from a global one, so stripping
+ * every rule tag to catch the stale ones would also have discarded the
+ * pending-ChangeSet tags above.
  *
  * Ordering reproduces the server's own priority (rule > ai > entity) so a
  * recomputed row reads the same as one the matcher resolved itself.
@@ -76,7 +78,9 @@ export function mergeRecomputedTags(
   existing: readonly SuggestedTag[] | undefined,
   fresh: readonly SuggestedTag[]
 ): SuggestedTag[] {
-  const kept = (existing ?? []).filter((s) => s.source !== 'entity');
+  const kept = (existing ?? []).filter(
+    (s) => s.source !== 'entity' && !(s.source === 'rule' && s.entityScoped === true)
+  );
   const freshNonEntity = fresh.filter((s) => s.source !== 'entity');
   const freshEntity = fresh.filter((s) => s.source === 'entity');
   return dedupeByTag([...freshNonEntity, ...kept, ...freshEntity]);

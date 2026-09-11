@@ -100,6 +100,34 @@ describe('mergeRecomputedTags', () => {
     expect(merged).toEqual([{ tag: 'wellness', source: 'ai' }]);
   });
 
+  // POPS-2624: a rule scoped to the previous entity is now stale, same as an
+  // entity default — but only when the client can actually tell it apart from
+  // a global rule's tag.
+  it('drops a stale entity-scoped rule tag on reassignment', () => {
+    const merged = mergeRecomputedTags(
+      [{ tag: 'gym', source: 'rule', pattern: 'FITNESS CO', entityScoped: true }],
+      [{ tag: 'wellness', source: 'entity' }]
+    );
+    expect(tags(merged)).toEqual(['wellness']);
+    expect(merged.some((s) => s.tag === 'gym')).toBe(false);
+  });
+
+  it('keeps a global rule tag on reassignment', () => {
+    const merged = mergeRecomputedTags(
+      [{ tag: 'groceries', source: 'rule', pattern: 'WOOLWORTHS' }],
+      [{ tag: 'wellness', source: 'entity' }]
+    );
+    expect(tags(merged)).toEqual(['groceries', 'wellness']);
+  });
+
+  it('keeps a pending-ChangeSet rule tag, which carries no entityScoped flag', () => {
+    const merged = mergeRecomputedTags(
+      [{ tag: 'pending-rule-tag', source: 'rule', pattern: 'SAUNA' }],
+      [{ tag: 'wellness', source: 'entity' }]
+    );
+    expect(tags(merged)).toEqual(['pending-rule-tag', 'wellness']);
+  });
+
   // The pending-entity path: nothing to look up, but the previous merchant's
   // defaults still have to go.
   it('strips entity defaults when there is nothing fresh to merge', () => {

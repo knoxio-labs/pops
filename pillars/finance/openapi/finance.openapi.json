@@ -16048,6 +16048,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -16286,6 +16289,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -16524,6 +16530,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -16762,6 +16771,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -17502,6 +17514,9 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
+                              "entityScoped": {
+                                "type": "boolean"
+                              },
                               "isNew": {
                                 "type": "boolean"
                               },
@@ -18480,6 +18495,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -18718,6 +18736,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -18956,6 +18977,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -19194,6 +19218,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -19862,6 +19889,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -20100,6 +20130,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -20338,6 +20371,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -20576,6 +20612,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -21220,6 +21259,9 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "entityScoped": {
+                                    "type": "boolean"
+                                  },
                                   "isNew": {
                                     "type": "boolean"
                                   },
@@ -21458,6 +21500,9 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "entityScoped": {
+                                    "type": "boolean"
+                                  },
                                   "isNew": {
                                     "type": "boolean"
                                   },
@@ -21696,6 +21741,9 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "entityScoped": {
+                                    "type": "boolean"
+                                  },
                                   "isNew": {
                                     "type": "boolean"
                                   },
@@ -21934,6 +21982,9 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "entityScoped": {
+                                    "type": "boolean"
+                                  },
                                   "isNew": {
                                     "type": "boolean"
                                   },
@@ -22258,6 +22309,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -22496,6 +22550,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -22734,6 +22791,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -22972,6 +23032,9 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "entityScoped": {
+                                      "type": "boolean"
+                                    },
                                     "isNew": {
                                       "type": "boolean"
                                     },
@@ -28277,6 +28340,9 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "entityScoped": {
+                            "type": "boolean"
+                          },
                           "isNew": {
                             "type": "boolean"
                           },

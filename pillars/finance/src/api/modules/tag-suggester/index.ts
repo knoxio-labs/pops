@@ -35,6 +35,14 @@ export interface SuggestedTag {
   source: TagSuggestionSource;
   pattern?: string;
   isNew?: boolean;
+  /**
+   * `true` when a `source: 'rule'` tag came from a tag rule scoped to a
+   * specific entity, rather than a global one. Absent for every other tag,
+   * including a global rule's — the client needs to tell the two `'rule'`
+   * cases apart to drop only the stale one on an entity reassignment
+   * (POPS-2624).
+   */
+  entityScoped?: boolean;
 }
 
 export interface SuggestTagsOptions {
@@ -160,10 +168,15 @@ function addCorrectionTags(
   }
 }
 
-function pushRuleTags(pass: TagPass, tags: string[], pattern: string): void {
+function pushRuleTags(pass: TagPass, tags: string[], pattern: string, entityScoped: boolean): void {
   for (const tag of tags) {
     if (!remember(pass.seen, tag)) continue;
-    pass.result.push({ tag, source: 'rule', pattern });
+    pass.result.push({
+      tag,
+      source: 'rule',
+      pattern,
+      ...(entityScoped ? { entityScoped: true } : {}),
+    });
   }
 }
 
@@ -186,7 +199,7 @@ function addTagRuleTags(pass: TagPass): void {
   const { db, description, entityId, recordTagRuleUsage, tagRules } = pass;
   if (tagRules) {
     for (const rule of matchTagRules(tagRules, description, entityId)) {
-      pushRuleTags(pass, rule.tags, rule.descriptionPattern);
+      pushRuleTags(pass, rule.tags, rule.descriptionPattern, rule.entityId !== null);
     }
     return;
   }
@@ -195,7 +208,7 @@ function addTagRuleTags(pass: TagPass): void {
   pass.onTagRulesMatched?.(matchedIds);
   if (recordTagRuleUsage) creditTagRuleUsage(db, matchedIds);
   for (const rule of matching) {
-    pushRuleTags(pass, parseStoredTags(rule.tags), rule.descriptionPattern);
+    pushRuleTags(pass, parseStoredTags(rule.tags), rule.descriptionPattern, rule.entityId !== null);
   }
 }
 
