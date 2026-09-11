@@ -1,3 +1,18 @@
+-- `condition`'s default was corrected from 'good' to 'Good' by editing this
+-- baseline in place after it had already been applied. Drizzle never compares
+-- a migration's hash, so the edit is accepted — but it only reaches a database
+-- that has yet to apply this file. Hosts that applied it earlier (capivara's
+-- inventory database, among them) still declare DEFAULT 'good'.
+--
+-- That divergence is deliberate and harmless while drizzle is the only writer:
+-- drizzle applies the column's `.default('Good')` client-side rather than
+-- leaving it to SQLite, so no API write ever reads this DDL default. It matters
+-- only to a writer that is not drizzle — a raw INSERT from a script or a repair
+-- query — which must set `condition` explicitly.
+--
+-- Rebuilding `home_inventory` (27 columns, a foreign key to `locations`, eight
+-- indexes) to realign one default nothing currently reads was judged more risk
+-- than it removes.
 CREATE TABLE `home_inventory` (
 	`id` text PRIMARY KEY NOT NULL,
 	`notion_id` text,
