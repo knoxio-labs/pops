@@ -1,23 +1,26 @@
 import AppCore
 
-/// What the result screen is showing, as one value the view switches on.
+/// What the result screen is showing, as one value the view switches on
+/// (POPS-2454).
 ///
-/// ``ReceiptOutcome`` already carries the tri-state the purchases pillar
-/// answers with; this adds the two states around it — the call in flight, and
-/// the call never getting an answer at all. Keeping the gateway failure out of
-/// ``ReceiptOutcome`` itself is deliberate: a transport failure is not a fourth
-/// reading of the receipt, it is the read never happening, and collapsing the
-/// two would make "the BFM is down" and "the receipt was unreadable" say the
-/// same thing to somebody standing in a checkout line.
+/// Extraction and persistence are two different calls now, and this enum
+/// says which half of that is in progress or done. ``draft(_:)`` is not
+/// terminal the way ``ReceiptOutcome/created`` used to be: a reader edits it,
+/// and only ``saved(_:)`` — reached through
+/// ``ReceiptResultViewModel/save(_:)`` — means anything was written.
 public enum ReceiptResultState: Hashable, Sendable {
-    /// The parts are in flight to the repository. Also what a retry after
-    /// ``failed(_:)`` returns to — the receipt has not been read yet, either
-    /// way.
-    case submitting
-    /// One of the three outcomes the pillar's gate answered with.
-    case outcome(ReceiptOutcome)
-    /// The call never got far enough to answer with an outcome at all.
-    /// Carries a retry — the same bytes, tried again — because nothing about
-    /// this receipt is known to be wrong.
-    case failed(RepositoryError)
+    /// The parts are in flight to `extract`. Also what a retry after
+    /// ``extractionFailed(_:)`` returns to — the receipt has not been read
+    /// yet, either way.
+    case extracting
+    /// A usable reading, reconciled or not — see ``ReceiptDraftReading``.
+    case draft(ReceiptDraftReading)
+    /// Nothing usable came back. Terminal: there is nothing to edit.
+    case unreadable(receiptCount: Int, reason: String)
+    /// The extract call never got far enough to answer at all. Carries a
+    /// retry — the same bytes, tried again — because nothing about this
+    /// receipt is known to be wrong.
+    case extractionFailed(RepositoryError)
+    /// The draft was saved. What ``ReceiptPurchase`` this became.
+    case saved(ReceiptPurchase)
 }

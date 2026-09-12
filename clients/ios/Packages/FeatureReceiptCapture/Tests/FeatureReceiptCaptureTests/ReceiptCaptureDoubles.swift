@@ -17,14 +17,14 @@ internal actor ScriptedReceiptCaptureRepository: ReceiptCaptureRepository {
     /// Every call's parts, in call order.
     internal private(set) var received: [[ReceiptPart]] = []
 
-    private let script: [Result<ReceiptOutcome, any Error>]
+    private let script: [Result<ReceiptExtraction, any Error>]
     private var gate: CallGate
 
     /// - Parameters:
     ///   - script: the answer to the first call, the second, and so on.
     ///   - gating: 1-based call numbers to park inside until ``release()``.
     internal init(
-        script: [Result<ReceiptOutcome, any Error>] = [],
+        script: [Result<ReceiptExtraction, any Error>] = [],
         gating gatedCalls: Set<Int> = []
     ) {
         self.script = script
@@ -33,7 +33,7 @@ internal actor ScriptedReceiptCaptureRepository: ReceiptCaptureRepository {
 
     internal var callCount: Int { received.count }
 
-    internal func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
+    internal func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
         received.append(parts)
         let call = received.count
 
@@ -46,6 +46,16 @@ internal actor ScriptedReceiptCaptureRepository: ReceiptCaptureRepository {
             throw RepositoryError.transport("script exhausted")
         }
         return try script[call - 1].get()
+    }
+
+    internal func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
+        throw RepositoryError.transport("saveDraft is not scripted on this double")
+    }
+
+    internal func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
+        -> ReceiptPurchase
+    {
+        throw RepositoryError.transport("createManualPurchase is not scripted on this double")
     }
 
     /// Lets every parked call go.
@@ -94,8 +104,8 @@ internal struct CallGate {
     }
 }
 
-extension Result where Success == ReceiptOutcome, Failure == any Error {
-    internal static func outcome(_ outcome: ReceiptOutcome) -> Self { .success(outcome) }
+extension Result where Success == ReceiptExtraction, Failure == any Error {
+    internal static func outcome(_ outcome: ReceiptExtraction) -> Self { .success(outcome) }
 
     internal static func failing(_ error: any Error) -> Self { .failure(error) }
 }

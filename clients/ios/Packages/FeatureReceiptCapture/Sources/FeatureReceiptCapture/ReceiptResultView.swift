@@ -1,28 +1,36 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
-/// What a receipt upload resolved to.
+/// What a receipt extraction resolved to (POPS-2454).
 ///
-/// It renders and it retries; every decision — whether an outcome has
-/// landed, whether the call ever got far enough to answer with one — is
+/// It renders and it retries; every decision — whether a reading has landed,
+/// whether the call ever got far enough to answer with one — is
 /// ``ReceiptResultViewModel``'s. Same split as `TransactionDetailView`.
 ///
 /// The screen draws no navigation chrome of its own: whoever embeds it — the
 /// capture flow — owns where it sits and what the bar says.
 ///
+/// ## Every usable reading reaches the same form
+///
+/// `.draft` is not a terminal card the way `created` used to be: it is
+/// ``ReceiptDraftView``, pre-filled from ``ReceiptDraftPresentation`` and
+/// wired straight to ``ReceiptResultViewModel/save(_:)``. Reconciled or not,
+/// the reader sees the same editable fields — the distinction lives in the
+/// status header above them, not in whether the form exists at all.
+///
 /// ## The paper is above every state, including the ones that failed
 ///
-/// ``ReceiptPagesView`` sits over all four states rather than inside the
-/// outcomes. While the call is in flight it is what makes the wait look like
-/// something happening to a specific receipt rather than a spinner on an
-/// empty screen; on `unreadable` it is the evidence — a reader told the photo
-/// could not be read wants to see the photo. Only a state with no submission
-/// behind it would draw without it, and there is no such state: this screen
-/// is constructed from parts.
+/// ``ReceiptPagesView`` sits over every arm rather than inside the outcomes.
+/// While the call is in flight it is what makes the wait look like something
+/// happening to a specific receipt rather than a spinner on an empty screen;
+/// on `unreadable` it is the evidence — a reader told the photo could not be
+/// read wants to see the photo.
 public struct ReceiptResultView: View {
     @State private var model: ReceiptResultViewModel
 
     private let presentation = ReceiptResultPresentation()
+    private let draftPresentation = ReceiptDraftPresentation()
 
     public init(model: ReceiptResultViewModel) {
         _model = State(wrappedValue: model)
@@ -38,33 +46,88 @@ public struct ReceiptResultView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .task { await model.submit() }
+        .task { await model.extract() }
+        .alert(
+            ReceiptResultCopy.saveFailedTitle,
+            isPresented: saveErrorPresented,
+            presenting: model.saveError
+        ) { _ in
+            Button(ReceiptDraftCopy.dismissSaveError) { model.dismissSaveError() }
+        } message: { error in
+            Text(ReceiptResultCopy.message(for: error))
+        }
+        .alert(
+            ReceiptResultCopy.saveFailedTitle,
+            isPresented: saveValidationErrorPresented,
+            presenting: model.saveValidationError
+        ) { _ in
+            Button(ReceiptDraftCopy.dismissSaveError) { model.dismissSaveValidationError() }
+        } message: { error in
+            Text(ReceiptDraftCopy.message(for: error))
+        }
     }
 
     /// `internal` rather than `private` so a test can render one state at a
     /// time without going through `body`'s `.task` — the same reason
     /// `ReceiptCapturePrompt` was split out as its own type instead of a
     /// private computed property.
-    ///
-    /// The scrolling is `body`'s now rather than each state's: a `ScrollView`
-    /// per outcome would have meant the pages above scrolled separately from
-    /// the reading below them, which on a long `needsReview` is two things
-    /// moving when the reader meant one.
     @ViewBuilder internal var content: some View {
         switch model.state {
-        case .submitting:
+        case .extracting:
             LoadingStateView(message: ReceiptResultCopy.submitting)
                 .accessibilityIdentifier(ReceiptResultAccessibility.submitting)
-        case .failed(let error):
+        case .extractionFailed(let error):
             ErrorStateView(
                 message: ReceiptResultCopy.message(for: error),
                 retryTitle: ReceiptResultCopy.retry,
                 retryAccessibilityIdentifier: ReceiptResultAccessibility.retryButton
             ) {
-                Task { await model.submit() }
+                Task { await model.extract() }
             }
-        case .outcome(let outcome):
-            ReceiptResultCard(content: presentation.content(outcome))
+        case .unreadable(let receiptCount, let reason):
+            ReceiptResultCard(
+                content: presentation.content(.unreadable(receiptCount: receiptCount, reason: reason))
+            )
+            .accessibilityIdentifier(ReceiptResultAccessibility.unreadable)
+        case .draft(let reading):
+            draftView(for: reading)
+        case .saved(let purchase):
+            ReceiptResultCard(
+                content: presentation.content(.created(purchase: purchase, alreadyStored: false))
+            )
+            .accessibilityIdentifier(ReceiptResultAccessibility.created)
         }
+    }
+
+    private func draftView(for reading: ReceiptDraftReading) -> some View {
+        ReceiptDraftView(
+            draft: draftPresentation.draft(extracted: reading.extracted, failures: reading.failures),
+            title: ReceiptDraftCopy.title,
+            subtitle: ReceiptDraftCopy.subtitle,
+            status: reading.reconciled ? nil : draftStatus,
+            save: { draft in Task { await model.save(draft) } }
+        )
+    }
+
+    private var draftStatus: ReceiptDraftView.Status {
+        ReceiptDraftView.Status(
+            tone: .warning,
+            heading: ReceiptDraftCopy.unreconciledHeading,
+            message: ReceiptDraftCopy.unreconciledMessage
+        )
+    }
+
+    private var saveErrorPresented: Binding<Bool> {
+        Binding(
+            get: { model.saveError != nil },
+            set: { presented in if !presented { model.dismissSaveError() } }
+        )
+    }
+
+    private var saveValidationErrorPresented: Binding<Bool> {
+        Binding(
+            get: { model.saveValidationError != nil },
+            set: { presented in if !presented { model.dismissSaveValidationError() } }
+        )
     }
 }

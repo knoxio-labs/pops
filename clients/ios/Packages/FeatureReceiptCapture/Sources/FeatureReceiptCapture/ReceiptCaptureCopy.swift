@@ -317,4 +317,11 @@ internal enum ReceiptResultCopy {
             return "Pops is not set up correctly on this device."
         }
     }
+
+    // MARK: save
+
+    /// The alert title for a `saveDraft` or `createManualPurchase` failure —
+    /// shared by the gateway-failure banner and the field-validation one, so
+    /// the two read as the same kind of interruption to the same form.
+    internal static let saveFailedTitle = "Couldn't save"
 }

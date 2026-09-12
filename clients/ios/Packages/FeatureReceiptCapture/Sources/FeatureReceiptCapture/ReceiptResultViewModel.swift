@@ -1,7 +1,8 @@
 import AppCore
+import Foundation
 import Observation
 
-/// The result screen's whole decision surface.
+/// The result screen's whole decision surface (POPS-2454).
 ///
 /// The view reads ``state`` and renders; it decides nothing — same split as
 /// `TransactionDetailViewModel`. No networking type appears here either: this
@@ -9,15 +10,31 @@ import Observation
 /// HTTP call happened, let alone that the thing behind it attaches a device
 /// token and speaks to a BFM.
 ///
-/// Unlike the transaction screens, this model does not seed on content the
-/// caller already has — there is nothing to seed with. A receipt's outcome
-/// does not exist until the parts have actually been sent, so the screen
-/// opens on ``ReceiptResultState/submitting`` every time.
+/// Extraction and saving are two calls now, and this model owns both: it
+/// asks `extract`, holds whatever draft came back, and asks `saveDraft` with
+/// whatever the reader edited. The draft itself — the editable form state —
+/// lives in ``ReceiptDraftView``'s own `@State`, not here; this model only
+/// ever sees the ``ReceiptDraft`` a save closure hands it, once, at the
+/// moment Save is pressed.
 @MainActor
 @Observable
 public final class ReceiptResultViewModel {
     /// What the screen shows.
-    public private(set) var state: ReceiptResultState = .submitting
+    public private(set) var state: ReceiptResultState = .extracting
+
+    /// Set the moment a `saveDraft` call fails and cleared the moment another
+    /// is attempted. Separate from ``state`` because a failed save must not
+    /// discard the reader's edits — the form ``ReceiptDraftView`` is showing
+    /// stays exactly where it is; only a banner appears over it.
+    public private(set) var saveError: RepositoryError?
+
+    /// Set when a field could not be parsed into what the BFM needs — an
+    /// amount that is not a number, a date the printed-looking field does not
+    /// hold in a shape this can turn into an instant. Kept apart from
+    /// ``saveError``: that is a fact about the network, this is a fact about
+    /// what the reader typed, and `RepositoryError.transport`'s own payload
+    /// is documented as a diagnostic rather than something to show.
+    internal private(set) var saveValidationError: ReceiptDraftSaveError?
 
     /// The pages this screen is about, kept after they are sent because the
     /// screen goes on drawing them: the reading underneath is only checkable
@@ -29,48 +46,107 @@ public final class ReceiptResultViewModel {
     internal let parts: [ReceiptPart]
 
     private let repository: any ReceiptCaptureRepository
+    private let makeIdempotencyKey: @Sendable () -> String
 
     /// Re-entrancy protection. `.task` fires on appearance and a retry is a
     /// button; both can run before the first has answered.
-    private var isSubmitting = false
+    private var isExtracting = false
+    private var isSaving = false
 
     /// - Parameters:
     ///   - parts: the receipt to submit — one call's worth, in the order
     ///     ``ReceiptPart`` documents. Captured once; a different receipt is a
-    ///     different screen, not a new call to ``submit()``.
+    ///     different screen, not a new call to ``extract()``.
     ///   - dependencies: read for ``ReceiptCaptureRepository`` and nothing
     ///     else.
-    public init(parts: [ReceiptPart], dependencies: AppDependencies) {
+    public convenience init(parts: [ReceiptPart], dependencies: AppDependencies) {
+        self.init(
+            parts: parts, repository: dependencies.receiptCapture,
+            makeIdempotencyKey: { UUID().uuidString })
+    }
+
+    internal init(
+        parts: [ReceiptPart],
+        repository: any ReceiptCaptureRepository,
+        makeIdempotencyKey: @escaping @Sendable () -> String = { UUID().uuidString }
+    ) {
         self.parts = parts
-        repository = dependencies.receiptCapture
+        self.repository = repository
+        self.makeIdempotencyKey = makeIdempotencyKey
     }
 }
 
 extension ReceiptResultViewModel {
-    /// Sends the receipt and records what came back.
+    /// Reads the receipt and records what came back.
     ///
     /// Safe to call on every appearance and from a retry button alike: it
-    /// does nothing once an outcome has landed — an outcome is real money (or
-    /// a real absence of it), and resubmitting the same bytes because a view
-    /// reappeared would risk asking the pillar to read a receipt twice for a
-    /// reason that has nothing to do with the receipt. A failure that never
-    /// reached an outcome carries no such risk, so it is the one state a
-    /// second call is allowed to replace.
-    public func submit() async {
-        guard !isSubmitting else { return }
-        if case .outcome = state { return }
+    /// does nothing once a reading has landed. Unlike the old single-call
+    /// upload, re-extracting after a draft is already showing would ask the
+    /// pillar to read the same receipt a second time for no reason — the
+    /// bytes have not changed, and nothing about a reading depends on when it
+    /// is asked for.
+    public func extract() async {
+        guard !isExtracting else { return }
+        switch state {
+        case .draft, .saved, .unreadable: return
+        case .extracting, .extractionFailed: break
+        }
 
-        isSubmitting = true
-        state = .submitting
-        defer { isSubmitting = false }
+        isExtracting = true
+        state = .extracting
+        defer { isExtracting = false }
 
         do {
-            let outcome = try await repository.capture(parts)
-            state = .outcome(outcome)
+            switch try await repository.extract(parts) {
+            case .draft(let reading):
+                state = .draft(reading)
+            case .unreadable(let receiptCount, let reason):
+                state = .unreadable(receiptCount: receiptCount, reason: reason)
+            }
         } catch let error where error.isCancellation {
             return
         } catch {
-            state = .failed(RepositoryError.describing(error))
+            state = .extractionFailed(RepositoryError.describing(error))
         }
+    }
+
+    /// Persists `draft` as a purchase, from whatever the reader confirmed or
+    /// corrected.
+    ///
+    /// Only meaningful while ``state`` is ``ReceiptResultState/draft(_:)`` —
+    /// the reading the save is derived from. A stray call from any other
+    /// state does nothing, which cannot happen from ``ReceiptDraftView``
+    /// itself since it only exists on screen while that is the state.
+    public func save(_ draft: ReceiptDraft) async {
+        guard case .draft(let reading) = state else { return }
+        guard !isSaving else { return }
+        isSaving = true
+        saveError = nil
+        saveValidationError = nil
+        defer { isSaving = false }
+
+        do {
+            let payload = try draft.toSavePayload(
+                reading: reading, idempotencyKey: makeIdempotencyKey())
+            let purchase = try await repository.saveDraft(payload)
+            state = .saved(purchase)
+        } catch let error where error.isCancellation {
+            return
+        } catch let error as ReceiptDraftSaveError {
+            saveValidationError = error
+        } catch {
+            saveError = RepositoryError.describing(error)
+        }
+    }
+
+    /// Clears a reported save failure. The draft underneath is untouched —
+    /// this only dismisses the banner, so the reader's edits are exactly
+    /// where they left them.
+    internal func dismissSaveError() {
+        saveError = nil
+    }
+
+    internal func dismissSaveValidationError() {
+        saveValidationError = nil
     }
 }

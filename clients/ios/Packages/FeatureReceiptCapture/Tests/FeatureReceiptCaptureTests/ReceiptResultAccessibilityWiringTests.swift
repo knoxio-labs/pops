@@ -143,11 +143,11 @@ internal struct ReceiptResultAccessibilityWiringTests {
         "each screen-level state applies its identifier inside its own branch",
         arguments: [
             (
-                "submitting", "submitting",
+                "extracting", "submitting",
                 ".accessibilityIdentifier(ReceiptResultAccessibility.submitting)"
             ),
             (
-                "failed", "retryButton",
+                "extractionFailed", "retryButton",
                 "retryAccessibilityIdentifier: ReceiptResultAccessibility.retryButton"
             ),
         ])

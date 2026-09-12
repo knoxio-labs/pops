@@ -124,11 +124,11 @@ internal struct ReceiptCaptureFlowTests {
         // Through the result model this screen builds, rather than through the
         // repository directly — the handoff is the half a wrong wiring would
         // break while every assertion above still passed.
-        await model.result(for: submission).submit()
+        await model.result(for: submission).extract()
 
-        let received = await repository.received
+        let received = await repository.extracted
         #expect(received == [pages], "the pages did not reach the repository as one ordered call")
-        #expect(await repository.callCount == 1)
+        #expect(await repository.extractCallCount == 1)
     }
 
     @Test("a single-page scan is still a receipt")
