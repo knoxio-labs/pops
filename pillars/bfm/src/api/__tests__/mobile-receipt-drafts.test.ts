@@ -254,6 +254,32 @@ describe('saveReceiptDraft', () => {
     expect(fake.saved).toHaveLength(1);
   });
 
+  it('carries the offset both ways, so a morning shop keeps its own day', async () => {
+    // The instant and the local day disagree: 08:15 on the 13th in Sydney is
+    // 22:15 UTC on the 12th. Drop the offset anywhere along this path and the
+    // purchase is filed a day early — POPS-2530, through a newer route. A
+    // null offset cannot catch that, because a mapping that drops the field
+    // and one that carries it both answer null.
+    const { app, token, fake } = openWith(
+      purchasesDraft(),
+      purchasesPurchaseDetail({ id: 'pur-9' })
+    );
+
+    const read = await post(app, token, EXTRACT_PATH, { parts: ONE_PART });
+
+    expect(read.status).toBe(200);
+    expect(read.body.draft.orderedAtOffsetMinutes).toBe(600);
+
+    const saved = await post(app, token, SAVE_DRAFT_PATH, {
+      ...SAVE_BODY,
+      orderedAtOffsetMinutes: 600,
+    });
+
+    expect(saved.status).toBe(200);
+    expect(fake.saved).toHaveLength(1);
+    expect(fake.saved[0]).toMatchObject({ orderedAtOffsetMinutes: 600 });
+  });
+
   it('reports a producer conflict as the code the app can switch on', async () => {
     const conflict: CallResult<unknown> = {
       kind: 'conflict',

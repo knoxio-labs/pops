@@ -6,6 +6,8 @@
  */
 import { ORDERED_AT } from './order';
 
+import type { ReceiptExtractResponses } from '../../purchases-api/types.gen';
+
 /**
  * What extracting a receipt answers, before anything is saved.
  *
@@ -16,7 +18,7 @@ import { ORDERED_AT } from './order';
  * the instant and the local day disagree, and dropping the offset dates a
  * morning shop to the day before.
  */
-export const RECEIPT_DRAFT = {
+export const RECEIPT_DRAFT: Extract<ReceiptExtractResponses[200], { kind: 'draft' }>['draft'] = {
   merchantEntityName: 'Hardware Barn',
   orderedAt: ORDERED_AT,
   orderedAtOffsetMinutes: 600,

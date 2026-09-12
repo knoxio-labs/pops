@@ -80,6 +80,9 @@ export function purchasesDraft(
       draft: {
         merchantEntityName: 'Bunnings Warehouse',
         orderedAt: '2026-08-01T14:32:00+10:00',
+        // A real offset by default: a null one cannot tell a mapping that
+        // carries the field from one that drops it (POPS-2530).
+        orderedAtOffsetMinutes: 600,
         currency: 'AUD',
         totalCents: 2750,
         subtotalCents: 2750,
