@@ -2,24 +2,6 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// One file a person picked, before anything has read it.
-internal struct StagedPage: Identifiable, Hashable {
-    internal let id: String
-    /// What the file is called where it came from. Shown small and below the
-    /// picture, because at this point it is the least useful fact about the
-    /// file — but it is the only one that tells two photographs of two till
-    /// receipts apart when both look like paper.
-    internal let label: String
-    internal let media: ReceiptMediaType
-    internal let bytes: Data?
-}
-
-/// Pages that will be sent as one receipt and one call.
-internal struct StagedReceipt: Identifiable, Hashable {
-    internal let id: String
-    internal var pages: [StagedPage]
-}
-
 /// What was picked, as the files themselves.
 ///
 /// A list was the wrong shape here and the reason is worth keeping: at this
@@ -44,11 +26,24 @@ internal struct StagedReceipt: Identifiable, Hashable {
 /// drop target that ungroups, and a target you cannot see is a gesture with no
 /// way back.
 internal struct PurchaseStagingGrid: View {
-    @State private var receipts: [StagedReceipt]
+    @State private var staged: StagedReceipts
     @State private var viewing: StagedPage?
+    /// Which drop target the drag is currently over, if any. One value rather
+    /// than a flag per tile: a drag is over exactly one thing at a time, and
+    /// two tiles both believing they are the target is a state that can only
+    /// be wrong.
+    @State private var targeted: DropTarget?
 
     internal init(receipts: [StagedReceipt]) {
-        _receipts = State(initialValue: receipts)
+        _staged = State(initialValue: StagedReceipts(receipts))
+    }
+
+    /// What a drag can be let go of. `loose` is the area that ungroups, which
+    /// is a target in its own right rather than the absence of one.
+    private enum DropTarget: Hashable {
+        case page(String)
+        case receipt(String)
+        case loose
     }
 
     private let columns = [
@@ -59,10 +54,10 @@ internal struct PurchaseStagingGrid: View {
     private let tileWidth: CGFloat = 96
     private let groupTile: CGFloat = 64
     private let ratio: CGFloat = PopsSize.pageHeight / PopsSize.pageWidth
+    private let targetScale: CGFloat = 1.12
 
-    private var groups: [StagedReceipt] { receipts.filter { $0.pages.count > 1 } }
-    private var loose: [StagedPage] { receipts.filter { $0.pages.count == 1 }.flatMap(\.pages) }
-    private var everyPage: [StagedPage] { receipts.flatMap(\.pages) }
+    private var groups: [StagedReceipt] { staged.groups }
+    private var loose: [StagedPage] { staged.loose }
 
     internal var body: some View {
         ScrollView {
@@ -78,9 +73,12 @@ internal struct PurchaseStagingGrid: View {
         .safeAreaInset(edge: .bottom) { actions }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
-                pages: everyPage,
+                pages: staged.everyPage,
                 showing: page,
-                onDelete: { delete($0) }
+                onDelete: {
+                    staged.delete($0.id)
+                    viewing = nil
+                }
             )
         }
     }
@@ -109,9 +107,36 @@ internal struct PurchaseStagingGrid: View {
             RoundedRectangle(cornerRadius: PopsRadius.card)
                 .strokeBorder(Color.popsSeparator, lineWidth: PopsBorder.hairline)
         )
+        .scaleEffect(targeted == .receipt(group.id) ? targetScale : 1)
+        .overlay(highlight(when: targeted == .receipt(group.id)))
+        .animation(.snappy(duration: 0.18), value: targeted)
         .dropDestination(for: String.self) { ids, _ in
-            move(ids, into: group.id)
+            staged.move(ids, into: group.id)
+            targeted = nil
             return true
+        } isTargeted: { over in
+            note(over, as: .receipt(group.id))
+        }
+    }
+
+    /// The ring the home screen puts around the icon you are hovering over.
+    /// On the *target*, not on the thing in your hand: the dragged item is
+    /// under a finger and mostly hidden, and what a person needs to know is
+    /// where it will land.
+    private func highlight(when active: Bool) -> some View {
+        RoundedRectangle(cornerRadius: PopsRadius.card)
+            .strokeBorder(Color.popsAccent, lineWidth: PopsBorder.emphasis)
+            .opacity(active ? 1 : 0)
+    }
+
+    /// Only ever clears the target it was told about, so a `false` arriving
+    /// late from the tile a drag has already left cannot blank the highlight
+    /// on the one it has moved onto.
+    private func note(_ over: Bool, as target: DropTarget) {
+        if over {
+            targeted = target
+        } else if targeted == target {
+            targeted = nil
         }
     }
 
@@ -130,12 +155,28 @@ internal struct PurchaseStagingGrid: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: looseMinHeight, alignment: .topLeading)
+        .padding(PopsSpacing.sm)
+        // Without a shape the drop region is whatever the tiles happen to
+        // cover, so the empty half of a part-filled row rejects the drag —
+        // which is exactly where a page being taken out of a receipt is aimed.
+        .contentShape(.rect)
+        .background(
+            RoundedRectangle(cornerRadius: PopsRadius.card)
+                .fill(Color.popsAccent.opacity(targeted == .loose ? 0.12 : 0))
+        )
+        .overlay(highlight(when: targeted == .loose))
+        .animation(.snappy(duration: 0.18), value: targeted)
         .dropDestination(for: String.self) { ids, _ in
-            separate(ids)
+            staged.separate(ids)
+            targeted = nil
             return true
+        } isTargeted: { over in
+            note(over, as: .loose)
         }
     }
+
+    private let looseMinHeight: CGFloat = 140
 
     private var looseTitle: String {
         switch loose.count {
@@ -174,14 +215,20 @@ internal struct PurchaseStagingGrid: View {
                 .frame(width: width)
         }
         .contentShape(.rect)
+        .scaleEffect(targeted == .page(page.id) ? targetScale : 1)
+        .overlay(highlight(when: targeted == .page(page.id)))
+        .animation(.snappy(duration: 0.18), value: targeted)
         .onTapGesture { viewing = page }
         .draggable(page.id) {
             PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
                 .frame(width: width, height: width * ratio)
         }
         .dropDestination(for: String.self) { ids, _ in
-            combine(ids, with: page.id)
+            staged.combine(ids, with: page.id)
+            targeted = nil
             return true
+        } isTargeted: { over in
+            note(over, as: .page(page.id))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
@@ -196,70 +243,14 @@ internal struct PurchaseStagingGrid: View {
         }
     }
 
-    /// Pulls `ids` out of whatever receipts hold them, dropping any receipt
-    /// left with nothing. Every rearrangement below is this plus a decision
-    /// about where the pages land.
-    private func takePages(_ ids: Set<String>) -> [StagedPage] {
-        var taken: [StagedPage] = []
-        var remaining: [StagedReceipt] = []
-        for receipt in receipts {
-            let moving = receipt.pages.filter { ids.contains($0.id) }
-            let staying = receipt.pages.filter { !ids.contains($0.id) }
-            taken.append(contentsOf: moving)
-            if !staying.isEmpty {
-                remaining.append(StagedReceipt(id: receipt.id, pages: staying))
-            }
-        }
-        receipts = remaining
-        return taken
-    }
-
-    /// Dropped onto another page: the two become one receipt, the target's
-    /// order first.
-    private func combine(_ ids: [String], with targetID: String) {
-        let moving = Set(ids).subtracting([targetID])
-        guard !moving.isEmpty,
-            let target = receipts.first(where: { $0.pages.contains { $0.id == targetID } })
-        else { return }
-        let taken = takePages(moving)
-        guard !taken.isEmpty else { return }
-        if let index = receipts.firstIndex(where: { $0.id == target.id }) {
-            receipts[index].pages.append(contentsOf: taken)
-        }
-    }
-
-    /// Dropped onto a receipt card: the pages join it. The card can have been
-    /// emptied by the take — dragging a two-page receipt's pages onto itself —
-    /// so it is rebuilt rather than assumed to still be there.
-    private func move(_ ids: [String], into receiptID: String) {
-        let taken = takePages(Set(ids))
-        guard !taken.isEmpty else { return }
-        if let index = receipts.firstIndex(where: { $0.id == receiptID }) {
-            receipts[index].pages.append(contentsOf: taken)
-        } else {
-            receipts.append(StagedReceipt(id: receiptID, pages: taken))
-        }
-    }
-
-    /// Dropped on the loose area: each page becomes a receipt of its own.
-    private func separate(_ ids: [String]) {
-        let taken = takePages(Set(ids))
-        receipts.append(contentsOf: taken.map { StagedReceipt(id: "r-\($0.id)", pages: [$0]) })
-    }
-
-    private func delete(_ page: StagedPage) {
-        _ = takePages([page.id])
-        viewing = nil
-    }
-
     private var actions: some View {
         PopsActionBar {
             PopsButton(readTitle, prominence: .prominent) {}
-                .disabled(receipts.isEmpty)
+                .disabled(staged.isEmpty)
         }
     }
 
     private var readTitle: String {
-        receipts.count == 1 ? "Read this receipt" : "Read \(receipts.count) receipts"
+        staged.count == 1 ? "Read this receipt" : "Read \(staged.count) receipts"
     }
 }
