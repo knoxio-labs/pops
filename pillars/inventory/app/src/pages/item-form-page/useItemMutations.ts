@@ -17,33 +17,44 @@ interface ConnectMutation {
   mutateAsync: (input: ConnectInput) => Promise<unknown>;
 }
 
-async function applyConnections(
+export interface ConnectionOutcome {
+  connected: number;
+  failed: number;
+}
+
+export async function applyConnections(
   newItemId: string,
   pendingConnections: PendingConnection[],
   connectMutation: ConnectMutation
-): Promise<number> {
+): Promise<ConnectionOutcome> {
   let connected = 0;
+  let failed = 0;
   for (const conn of pendingConnections) {
     try {
       await connectMutation.mutateAsync({ itemAId: newItemId, itemBId: conn.id });
       connected++;
     } catch {
-      /* skip */
+      failed++;
     }
   }
-  return connected;
+  return { connected, failed };
 }
 
-function reportCreateSuccess(connected: number, hasPending: boolean): void {
-  if (hasPending) {
+export function reportCreateSuccess({ connected, failed }: ConnectionOutcome): void {
+  if (failed === 0) {
     toast.success(
       connected > 0
         ? `Item created with ${connected} connection${connected > 1 ? 's' : ''}`
         : 'Item created'
     );
-  } else {
-    toast.success('Item created');
+    return;
   }
+  const failedText = `${failed} connection${failed > 1 ? 's' : ''} failed`;
+  toast.error(
+    connected > 0
+      ? `Item created with ${connected} connected; ${failedText}`
+      : `Item created; ${failedText}`
+  );
 }
 
 function parseNumber(v: string): number | null {
@@ -116,8 +127,8 @@ export function useItemMutations({ id, isEditMode, pendingConnections }: UseItem
     mutationFn: async (payload: ItemPayload) => unwrap(await itemsCreate({ body: payload })),
     onSuccess: async (result) => {
       const newItemId = result.data.id;
-      const connected = await applyConnections(newItemId, pendingConnections, connectMutation);
-      reportCreateSuccess(connected, pendingConnections.length > 0);
+      const outcome = await applyConnections(newItemId, pendingConnections, connectMutation);
+      reportCreateSuccess(outcome);
       // Navigate BEFORE invalidations to avoid a race where the cache invalidation
       // triggers a refetch + re-render of the current page that drops the
       // navigate call (observed in React 19; see issue #2157). The detail page
