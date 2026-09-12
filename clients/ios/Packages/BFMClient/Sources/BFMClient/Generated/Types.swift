@@ -8411,6 +8411,8 @@ internal enum Operations {
                     internal var merchantName: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/orderedAt`.
                     internal var orderedAt: Swift.String
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/orderedAtOffsetMinutes`.
+                    internal var orderedAtOffsetMinutes: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/shippingCents`.
                     internal var shippingCents: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/surchargeCents`.
@@ -8429,6 +8431,7 @@ internal enum Operations {
                     ///   - items:
                     ///   - merchantName:
                     ///   - orderedAt:
+                    ///   - orderedAtOffsetMinutes:
                     ///   - shippingCents:
                     ///   - surchargeCents:
                     ///   - taxCents:
@@ -8441,6 +8444,7 @@ internal enum Operations {
                         items: Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayload,
                         merchantName: Swift.String? = nil,
                         orderedAt: Swift.String,
+                        orderedAtOffsetMinutes: Swift.Int? = nil,
                         shippingCents: Swift.Int? = nil,
                         surchargeCents: Swift.Int? = nil,
                         taxCents: Swift.Int? = nil,
@@ -8453,6 +8457,7 @@ internal enum Operations {
                         self.items = items
                         self.merchantName = merchantName
                         self.orderedAt = orderedAt
+                        self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                         self.shippingCents = shippingCents
                         self.surchargeCents = surchargeCents
                         self.taxCents = taxCents
@@ -8466,6 +8471,7 @@ internal enum Operations {
                         case items
                         case merchantName
                         case orderedAt
+                        case orderedAtOffsetMinutes
                         case shippingCents
                         case surchargeCents
                         case taxCents
@@ -8501,6 +8507,10 @@ internal enum Operations {
                             Swift.String.self,
                             forKey: .orderedAt
                         )
+                        self.orderedAtOffsetMinutes = try container.decodeIfPresent(
+                            Swift.Int.self,
+                            forKey: .orderedAtOffsetMinutes
+                        )
                         self.shippingCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .shippingCents
@@ -8525,6 +8535,7 @@ internal enum Operations {
                             "items",
                             "merchantName",
                             "orderedAt",
+                            "orderedAtOffsetMinutes",
                             "shippingCents",
                             "surchargeCents",
                             "taxCents",
@@ -9863,6 +9874,8 @@ internal enum Operations {
                     internal var merchantName: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/orderedAt`.
                     internal var orderedAt: Swift.String
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/orderedAtOffsetMinutes`.
+                    internal var orderedAtOffsetMinutes: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/shippingCents`.
                     internal var shippingCents: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/surchargeCents`.
@@ -9882,6 +9895,7 @@ internal enum Operations {
                     ///   - items:
                     ///   - merchantName:
                     ///   - orderedAt:
+                    ///   - orderedAtOffsetMinutes:
                     ///   - shippingCents:
                     ///   - surchargeCents:
                     ///   - taxCents:
@@ -9895,6 +9909,7 @@ internal enum Operations {
                         items: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayload,
                         merchantName: Swift.String? = nil,
                         orderedAt: Swift.String,
+                        orderedAtOffsetMinutes: Swift.Int? = nil,
                         shippingCents: Swift.Int? = nil,
                         surchargeCents: Swift.Int? = nil,
                         taxCents: Swift.Int? = nil,
@@ -9908,6 +9923,7 @@ internal enum Operations {
                         self.items = items
                         self.merchantName = merchantName
                         self.orderedAt = orderedAt
+                        self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                         self.shippingCents = shippingCents
                         self.surchargeCents = surchargeCents
                         self.taxCents = taxCents
@@ -9922,6 +9938,7 @@ internal enum Operations {
                         case items
                         case merchantName
                         case orderedAt
+                        case orderedAtOffsetMinutes
                         case shippingCents
                         case surchargeCents
                         case taxCents
@@ -9961,6 +9978,10 @@ internal enum Operations {
                             Swift.String.self,
                             forKey: .orderedAt
                         )
+                        self.orderedAtOffsetMinutes = try container.decodeIfPresent(
+                            Swift.Int.self,
+                            forKey: .orderedAtOffsetMinutes
+                        )
                         self.shippingCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .shippingCents
@@ -9986,6 +10007,7 @@ internal enum Operations {
                             "items",
                             "merchantName",
                             "orderedAt",
+                            "orderedAtOffsetMinutes",
                             "shippingCents",
                             "surchargeCents",
                             "taxCents",
@@ -11521,6 +11543,8 @@ internal enum Operations {
                                 internal var merchantName: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/orderedAt`.
                                 internal var orderedAt: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/orderedAtOffsetMinutes`.
+                                internal var orderedAtOffsetMinutes: Swift.Int?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/shippingCents`.
                                 internal var shippingCents: Swift.Int
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/subtotalCents`.
@@ -11541,6 +11565,7 @@ internal enum Operations {
                                 ///   - items:
                                 ///   - merchantName:
                                 ///   - orderedAt:
+                                ///   - orderedAtOffsetMinutes:
                                 ///   - shippingCents:
                                 ///   - subtotalCents:
                                 ///   - surchargeCents:
@@ -11554,6 +11579,7 @@ internal enum Operations {
                                     items: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayload,
                                     merchantName: Swift.String? = nil,
                                     orderedAt: Swift.String,
+                                    orderedAtOffsetMinutes: Swift.Int? = nil,
                                     shippingCents: Swift.Int,
                                     subtotalCents: Swift.Int,
                                     surchargeCents: Swift.Int,
@@ -11567,6 +11593,7 @@ internal enum Operations {
                                     self.items = items
                                     self.merchantName = merchantName
                                     self.orderedAt = orderedAt
+                                    self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                                     self.shippingCents = shippingCents
                                     self.subtotalCents = subtotalCents
                                     self.surchargeCents = surchargeCents
@@ -11581,6 +11608,7 @@ internal enum Operations {
                                     case items
                                     case merchantName
                                     case orderedAt
+                                    case orderedAtOffsetMinutes
                                     case shippingCents
                                     case subtotalCents
                                     case surchargeCents
@@ -11617,6 +11645,10 @@ internal enum Operations {
                                         Swift.String.self,
                                         forKey: .orderedAt
                                     )
+                                    self.orderedAtOffsetMinutes = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .orderedAtOffsetMinutes
+                                    )
                                     self.shippingCents = try container.decode(
                                         Swift.Int.self,
                                         forKey: .shippingCents
@@ -11645,6 +11677,7 @@ internal enum Operations {
                                         "items",
                                         "merchantName",
                                         "orderedAt",
+                                        "orderedAtOffsetMinutes",
                                         "shippingCents",
                                         "subtotalCents",
                                         "surchargeCents",

@@ -2248,6 +2248,12 @@
                   "orderedAt": {
                     "type": "string"
                   },
+                  "orderedAtOffsetMinutes": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "shippingCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
@@ -2723,6 +2729,12 @@
                   },
                   "orderedAt": {
                     "type": "string"
+                  },
+                  "orderedAtOffsetMinutes": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "nullable": true,
+                    "type": "integer"
                   },
                   "shippingCents": {
                     "maximum": 9007199254740991,
@@ -3279,6 +3291,12 @@
                             "orderedAt": {
                               "type": "string"
                             },
+                            "orderedAtOffsetMinutes": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "nullable": true,
+                              "type": "integer"
+                            },
                             "shippingCents": {
                               "maximum": 9007199254740991,
                               "minimum": -9007199254740991,
@@ -3308,6 +3326,7 @@
                           "required": [
                             "merchantName",
                             "orderedAt",
+                            "orderedAtOffsetMinutes",
                             "currency",
                             "totalCents",
                             "subtotalCents",

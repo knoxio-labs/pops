@@ -42,6 +42,7 @@ const PurchasesDraftDocumentSchema = z.object({
 const PurchasesReceiptDraftSchema = z.object({
   merchantEntityName: z.string().nullable().optional(),
   orderedAt: z.string(),
+  orderedAtOffsetMinutes: z.number().int().nullable().optional(),
   currency: z.string(),
   totalCents: z.number().int(),
   subtotalCents: z.number().int().optional(),
@@ -118,6 +119,7 @@ export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): Mobile
     draft: {
       merchantName: draft.merchantEntityName ?? null,
       orderedAt: draft.orderedAt,
+      orderedAtOffsetMinutes: draft.orderedAtOffsetMinutes ?? null,
       currency: draft.currency,
       totalCents: draft.totalCents,
       subtotalCents: draft.subtotalCents ?? 0,

@@ -63,6 +63,7 @@ interface DraftWireItem {
 interface DraftWireBody {
   readonly merchantEntityName: string | null;
   readonly orderedAt: string;
+  readonly orderedAtOffsetMinutes: number | null | undefined;
   readonly currency: string;
   readonly totalCents: number;
   readonly taxCents: number | undefined;
@@ -80,6 +81,7 @@ function toDraftWireBody(
   return {
     merchantEntityName: body.merchantName,
     orderedAt: body.orderedAt,
+    orderedAtOffsetMinutes: body.orderedAtOffsetMinutes,
     currency: body.currency,
     totalCents: body.totalCents,
     taxCents: body.taxCents,

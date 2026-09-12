@@ -839,7 +839,299 @@ export type MobilePurchasesListPurchasesResponses = {
 export type MobilePurchasesListPurchasesResponse =
   MobilePurchasesListPurchasesResponses[keyof MobilePurchasesListPurchasesResponses];
 
-export type MobilePurchasesUploadReceiptData = {
+export type MobilePurchasesCreateManualPurchaseData = {
+  /**
+   * Body
+   */
+  body?: {
+    capture?: {
+      capturedAt: string | null;
+      capturedAtSource: 'client' | 'exif' | null;
+      declaredTimeZone: string | null;
+      latitude: number | null;
+      locationSource: 'client' | 'exif' | null;
+      longitude: number | null;
+      utcOffsetMinutes: number | null;
+    } | null;
+    currency: string;
+    discountCents?: number;
+    idempotencyKey: string;
+    items: Array<{
+      lineTotalCents: number;
+      name: string;
+      notes: Array<string>;
+      quantity: number | null;
+      unitPriceCents: number;
+    }>;
+    merchantName: string | null;
+    orderedAt: string;
+    orderedAtOffsetMinutes?: number | null;
+    shippingCents?: number;
+    surchargeCents?: number;
+    taxCents?: number;
+    totalCents: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/purchases/manual';
+};
+
+export type MobilePurchasesCreateManualPurchaseErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesCreateManualPurchaseError =
+  MobilePurchasesCreateManualPurchaseErrors[keyof MobilePurchasesCreateManualPurchaseErrors];
+
+export type MobilePurchasesCreateManualPurchaseResponses = {
+  /**
+   * 200
+   */
+  200: {
+    currency: string;
+    discountCents: number;
+    id: string;
+    itemCount: number;
+    items: Array<{
+      id: string;
+      lineTotalCents: number;
+      name: string;
+      quantity: number;
+    }>;
+    merchantName: string | null;
+    orderedAt: string;
+    orderedOn: string;
+    receiptUri: string | null;
+    shippingCents: number;
+    source: string;
+    status: string;
+    subtotalCents: number;
+    surchargeCents: number;
+    taxCents: number;
+    totalCents: number;
+  };
+};
+
+export type MobilePurchasesCreateManualPurchaseResponse =
+  MobilePurchasesCreateManualPurchaseResponses[keyof MobilePurchasesCreateManualPurchaseResponses];
+
+export type MobilePurchasesSaveReceiptDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    capture?: {
+      capturedAt: string | null;
+      capturedAtSource: 'client' | 'exif' | null;
+      declaredTimeZone: string | null;
+      latitude: number | null;
+      locationSource: 'client' | 'exif' | null;
+      longitude: number | null;
+      utcOffsetMinutes: number | null;
+    } | null;
+    currency: string;
+    discountCents?: number;
+    documents: Array<{
+      documentUri: string;
+      kind: 'receipt';
+    }>;
+    idempotencyKey: string;
+    items: Array<{
+      lineTotalCents: number;
+      name: string;
+      notes: Array<string>;
+      quantity: number | null;
+      unitPriceCents: number;
+    }>;
+    merchantName: string | null;
+    orderedAt: string;
+    orderedAtOffsetMinutes?: number | null;
+    shippingCents?: number;
+    surchargeCents?: number;
+    taxCents?: number;
+    totalCents: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/purchases/receipts';
+};
+
+export type MobilePurchasesSaveReceiptDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesSaveReceiptDraftError =
+  MobilePurchasesSaveReceiptDraftErrors[keyof MobilePurchasesSaveReceiptDraftErrors];
+
+export type MobilePurchasesSaveReceiptDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    currency: string;
+    discountCents: number;
+    id: string;
+    itemCount: number;
+    items: Array<{
+      id: string;
+      lineTotalCents: number;
+      name: string;
+      quantity: number;
+    }>;
+    merchantName: string | null;
+    orderedAt: string;
+    orderedOn: string;
+    receiptUri: string | null;
+    shippingCents: number;
+    source: string;
+    status: string;
+    subtotalCents: number;
+    surchargeCents: number;
+    taxCents: number;
+    totalCents: number;
+  };
+};
+
+export type MobilePurchasesSaveReceiptDraftResponse =
+  MobilePurchasesSaveReceiptDraftResponses[keyof MobilePurchasesSaveReceiptDraftResponses];
+
+export type MobilePurchasesExtractReceiptData = {
   /**
    * Body
    */
@@ -865,10 +1157,10 @@ export type MobilePurchasesUploadReceiptData = {
   };
   path?: never;
   query?: never;
-  url: '/mobile/purchases/receipts';
+  url: '/mobile/purchases/receipts/extract';
 };
 
-export type MobilePurchasesUploadReceiptErrors = {
+export type MobilePurchasesExtractReceiptErrors = {
   /**
    * 400
    */
@@ -948,63 +1240,65 @@ export type MobilePurchasesUploadReceiptErrors = {
   };
 };
 
-export type MobilePurchasesUploadReceiptError =
-  MobilePurchasesUploadReceiptErrors[keyof MobilePurchasesUploadReceiptErrors];
+export type MobilePurchasesExtractReceiptError =
+  MobilePurchasesExtractReceiptErrors[keyof MobilePurchasesExtractReceiptErrors];
 
-export type MobilePurchasesUploadReceiptResponses = {
+export type MobilePurchasesExtractReceiptResponses = {
   /**
    * 200
    */
   200:
     | {
-        alreadyStored: boolean;
-        kind: 'created';
-        purchase: {
+        draft: {
+          capture: {
+            capturedAt: string | null;
+            capturedAtSource: 'client' | 'exif' | null;
+            declaredTimeZone: string | null;
+            latitude: number | null;
+            locationSource: 'client' | 'exif' | null;
+            longitude: number | null;
+            utcOffsetMinutes: number | null;
+          } | null;
           currency: string;
-          id: string;
-          itemCount: number;
-          merchantName: string | null;
-          orderedAt: string;
-          totalCents: number;
-        };
-      }
-    | {
-        extracted: {
-          address: string | null;
-          currency: string | null;
-          discounts: Array<string>;
-          lines: Array<{
-            amount: string;
-            description: string;
+          discountCents: number;
+          documents: Array<{
+            documentUri: string;
+            kind: 'receipt';
+          }>;
+          items: Array<{
+            lineTotalCents: number;
+            name: string;
+            notes: Array<string>;
             quantity: number | null;
-            unitNote: string | null;
+            unitPriceCents: number;
           }>;
           merchantName: string | null;
-          purchasedAt: string | null;
-          purchasedOn: string | null;
-          shipping: string | null;
-          surcharges: Array<string>;
-          tax: string | null;
-          total: string;
-          unreadableNotes: Array<string>;
+          orderedAt: string;
+          orderedAtOffsetMinutes: number | null;
+          shippingCents: number;
+          subtotalCents: number;
+          surchargeCents: number;
+          taxCents: number;
+          totalCents: number;
         };
-        kind: 'needs-review';
-        problems: Array<{
+        failures: Array<{
           code: string;
           deltaCents: number | null;
           detail: string;
         }>;
-        receiptCount: number;
+        kind: 'draft';
+        receiptUris: Array<string>;
+        reconciled: boolean;
       }
     | {
         kind: 'unreadable';
         reason: string;
-        receiptCount: number;
+        receiptUris: Array<string>;
       };
 };
 
-export type MobilePurchasesUploadReceiptResponse =
-  MobilePurchasesUploadReceiptResponses[keyof MobilePurchasesUploadReceiptResponses];
+export type MobilePurchasesExtractReceiptResponse =
+  MobilePurchasesExtractReceiptResponses[keyof MobilePurchasesExtractReceiptResponses];
 
 export type MobilePurchasesGetReceiptData = {
   body?: never;

@@ -71,6 +71,14 @@ const MobileDraftPurchaseFieldsSchema = z.object({
   merchantName: z.string().nullable(),
   /** ISO-8601 with an offset — the date and time the reviewer confirmed. */
   orderedAt: z.string(),
+  /**
+   * The offset `orderedAt` was resolved against, when one is known.
+   *
+   * Carried apart from the instant because the two name DIFFERENT dates: a
+   * receipt printed 08:15 on the 13th in Sydney is 22:15 UTC on the 12th,
+   * and a save that drops this dates the shop to the day before (POPS-2530).
+   */
+  orderedAtOffsetMinutes: z.number().int().nullable().optional(),
   currency: z.string(),
   totalCents: z.number().int(),
   taxCents: z.number().int().optional(),
@@ -102,6 +110,8 @@ export type MobileSaveReceiptDraftBody = z.infer<typeof MobileSaveReceiptDraftBo
 export const MobileReceiptDraftSchema = z.object({
   merchantName: z.string().nullable(),
   orderedAt: z.string(),
+  /** The offset the instant above was resolved against. See the save body. */
+  orderedAtOffsetMinutes: z.number().int().nullable(),
   currency: z.string(),
   totalCents: z.number().int(),
   subtotalCents: z.number().int(),
