@@ -11,7 +11,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { inventoryItemUri } from '../../../contract/inventory-proposals.js';
 import { calendarDateInZone } from '../../../ingest/local-time.js';
-import { financeTransactionId, provenanceNote, toInventoryItemCreateBody } from '../asset.js';
+import {
+  financeTransactionId,
+  provenanceNote,
+  sourceRefFor,
+  toInventoryItemCreateBody,
+} from '../asset.js';
 
 import type { InventoryProposal } from '../../../db/index.js';
 
@@ -96,6 +101,54 @@ describe('the row says where it came from', () => {
 
   it('says nothing about a serial number the source never stated', () => {
     expect(provenanceNote(offer())).not.toContain('Serial');
+  });
+});
+
+describe('sourceRefFor — the idempotency key (POPS-2433)', () => {
+  it('is deterministic: the same offer always computes the same key', () => {
+    expect(sourceRefFor(offer())).toBe(sourceRefFor(offer()));
+  });
+
+  it('names the order, the line and the slot for a unit with no row yet', () => {
+    expect(sourceRefFor(offer({ purchaseId: 'p-1', itemId: 'i-1', unitId: null, slot: 0 }))).toBe(
+      'pops://purchases/order/p-1/item/i-1/slot/0'
+    );
+  });
+
+  it('also names the unit when the offer already has a unit row', () => {
+    expect(sourceRefFor(offer({ purchaseId: 'p-1', itemId: 'i-1', unitId: 'u-9' }))).toBe(
+      'pops://purchases/order/p-1/item/i-1/unit/u-9'
+    );
+  });
+
+  it('differs for two different lines on the same order', () => {
+    expect(sourceRefFor(offer({ itemId: 'i-1' }))).not.toBe(sourceRefFor(offer({ itemId: 'i-2' })));
+  });
+
+  it('differs for two different units on the same line', () => {
+    expect(sourceRefFor(offer({ unitId: 'u-1' }))).not.toBe(sourceRefFor(offer({ unitId: 'u-2' })));
+  });
+
+  it('differs for two different unnamed slots on the same line (POPS-2433 review finding)', () => {
+    // A quantity>1 durable line with no unit rows yet offers one proposal
+    // per remaining physical unit, all with unitId: null but a distinct
+    // slot. Keying on itemId alone would collide them: accepting the
+    // second physical unit would silently return the first's asset.
+    expect(sourceRefFor(offer({ unitId: null, slot: 0 }))).not.toBe(
+      sourceRefFor(offer({ unitId: null, slot: 1 }))
+    );
+  });
+
+  it('ignores slot once a unitId names the offer', () => {
+    // Once a unit row exists, unitId is the stronger identity and slot is
+    // just that same unit's position — no need to double-key on both.
+    expect(sourceRefFor(offer({ unitId: 'u-1', slot: 0 }))).toBe(
+      sourceRefFor(offer({ unitId: 'u-1', slot: 5 }))
+    );
+  });
+
+  it('is what toInventoryItemCreateBody sends as sourceRef', () => {
+    expect(toInventoryItemCreateBody(offer()).sourceRef).toBe(sourceRefFor(offer()));
   });
 });
 

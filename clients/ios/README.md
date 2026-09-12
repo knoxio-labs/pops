@@ -149,6 +149,19 @@ Two consequences follow, and both bite:
 - **Adding or removing a source file means regenerating.** Sources are explicit file references in the generated project, so a new `.swift` file is invisible to `xcodebuild` until `xcodegen generate` runs again — it does not fail, it silently does not compile the file.
 - **Xcode settings changed through the GUI do not survive.** Change `project.yml` instead; anything else is erased on the next generate.
 
+## The app icon is one layer on purpose
+
+`App/AppIcon.icon` is an Icon Composer source, not an exported `AppIcon.appiconset`: one `icon.json` naming a gradient background and a single image layer, with the dark, tinted and clear variants derived by the system rather than checked in as a hundred and fifty PNGs. The artwork is a three-by-three weave of six cords, one per member of `NAV_COLOR` in [`libs/sdk/src/manifest-schema/ui.ts`](../../libs/sdk/src/manifest-schema/ui.ts) — that enum is closed and has exactly six members, which is where the thread count comes from.
+
+**A weave needs the warp drawn twice** — once beneath the weft, and again on top at the crossings where it passes over — so the obvious construction is three groups: warp, weft, over. It was built that way first and it was wrong on a device in two ways a preview cannot show:
+
+- **Groups composite top-first.** Index `0` in `groups` is the topmost layer, the way a layer list reads in a drawing tool rather than the way a painter's algorithm runs. Written bottom-up, the warp lands above the weft and the over-crossings end up buried beneath both, invisible — and the mark renders as a stack rather than a weave.
+- **Each group gets a specular rim along its own alpha edge.** That is the real reason this is one layer. Every additional group draws a bright outline around its own silhouette, so a full-length weft cord picks up a rim that runs straight across the warp beneath it. Outlines nothing in the artwork asked for, in the middle of the mark.
+
+So the interlace is composited into a single image and the system rims only the outline of the mark. Depth comes from shading in the artwork, which is authored; not from per-layer glass, which is not. **Splitting this into more groups to get more depth will make it worse** — check it on a device before believing otherwise.
+
+`translucency` is off for the same class of reason: it is for layers meant to read as glass, and on solid artwork it makes the cords semi-transparent and lets the layer beneath show through.
+
 ## Module boundaries
 
 `App/` is the entry point and the composition root, and the only place that knows every module exists. Everything else is a local SPM package under `Packages/`, one per concern.

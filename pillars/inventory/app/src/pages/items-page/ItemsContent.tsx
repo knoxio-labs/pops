@@ -38,7 +38,15 @@ function EmptyState({ hasSearchOrFilters }: { hasSearchOrFilters: boolean }) {
   );
 }
 
-function GridView({ items, onOpen }: { items: InventoryItem[]; onOpen: (id: string) => void }) {
+function GridView({
+  items,
+  locationPathMap,
+  onOpen,
+}: {
+  items: InventoryItem[];
+  locationPathMap: ReadonlyMap<string, LocationSegment[]>;
+  onOpen: (id: string) => void;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {items.map((item) => (
@@ -49,6 +57,7 @@ function GridView({ items, onOpen }: { items: InventoryItem[]; onOpen: (id: stri
           assetId={item.assetId}
           type={item.type}
           condition={item.condition as Condition | null}
+          locationSegments={item.locationId ? locationPathMap.get(item.locationId) : undefined}
           locationName={item.location}
           layout="vertical"
           onClick={() => onOpen(item.id)}
@@ -93,5 +102,5 @@ export function ItemsContent({
       />
     );
   }
-  return <GridView items={items} onOpen={onOpen} />;
+  return <GridView items={items} locationPathMap={locationPathMap} onOpen={onOpen} />;
 }

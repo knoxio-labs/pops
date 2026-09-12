@@ -34,6 +34,7 @@ const CREATE_NULLABLE_STRING_KEYS = [
   'notes',
   'locationId',
   'containerId',
+  'sourceRef',
 ] as const satisfies ReadonlyArray<NullableColumnKeys<CreateInventoryItemInput, string>>;
 
 const CREATE_NULLABLE_NUMBER_KEYS = [

@@ -91,6 +91,7 @@ export interface ItemCreateBody {
   resaleValue?: number | null;
   purchasePrice?: number | null;
   purchaseTransactionId?: string | null;
+  sourceRef?: string | null;
 }
 
 export interface ItemListQuery {

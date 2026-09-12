@@ -200,6 +200,45 @@ describe('items REST — CRUD happy paths', () => {
   });
 });
 
+describe('items REST — idempotent create via sourceRef (POPS-2433)', () => {
+  it('returns the first row rather than minting a second one for a repeated sourceRef', async () => {
+    const api = client();
+    const sourceRef = 'pops://purchases/order/p-1/item/i-1';
+
+    const first = await api.items.create({ itemName: 'Cordless Drill', sourceRef });
+    const second = await api.items.create({ itemName: 'Cordless Drill', sourceRef });
+
+    expect(second.data.id).toBe(first.data.id);
+
+    const list = await api.items.list();
+    expect(list.data).toHaveLength(1);
+  });
+
+  it('lets two different sourceRefs each mint their own row', async () => {
+    const api = client();
+
+    const first = await api.items.create({
+      itemName: 'Drill',
+      sourceRef: 'pops://purchases/order/p-1/item/i-1',
+    });
+    const second = await api.items.create({
+      itemName: 'Sander',
+      sourceRef: 'pops://purchases/order/p-1/item/i-2',
+    });
+
+    expect(second.data.id).not.toBe(first.data.id);
+  });
+
+  it('does not dedupe creates that carry no sourceRef at all', async () => {
+    const api = client();
+
+    const first = await api.items.create({ itemName: 'Hand-typed item' });
+    const second = await api.items.create({ itemName: 'Hand-typed item' });
+
+    expect(second.data.id).not.toBe(first.data.id);
+  });
+});
+
 describe('items REST — cross-pillar soft URI derivation', () => {
   it('gives the reconciliation cron a work set for an item created with a transaction id', async () => {
     const created = await client().items.create({

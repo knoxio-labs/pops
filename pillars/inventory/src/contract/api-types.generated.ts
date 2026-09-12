@@ -2208,6 +2208,7 @@ export interface operations {
           replacementValue?: number | null;
           resaleValue?: number | null;
           room?: string | null;
+          sourceRef?: string | null;
           type?: string | null;
           warrantyExpires?: string | null;
         };

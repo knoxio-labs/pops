@@ -53,6 +53,7 @@ export { listInventoryProposals, type InventoryProposal } from './services/inven
 
 export {
   decideInventoryProposal,
+  findUnitByInventoryItemUri,
   type InventoryProposalDecision,
 } from './services/inventory-proposal-decisions.js';
 

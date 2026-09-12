@@ -3006,6 +3006,10 @@
                     "nullable": true,
                     "type": "string"
                   },
+                  "sourceRef": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "type": {
                     "nullable": true,
                     "type": "string"
