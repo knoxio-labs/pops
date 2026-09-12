@@ -1,0 +1,64 @@
+appId: com.knoxiolabs.pops
+name: A hand-entered purchase reaches the editable form and comes back saved
+---
+# The camera-free half of POPS-2454's reachability requirement:
+# `receipt-capture-says-there-is-no-camera.yaml` proves the tab and stops at
+# the refusal, because the Simulator has no camera. This flow proves the rest
+# of the screen — the form, the save, and the result — by the one path that
+# needs no camera at all: manual entry.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason `receipt-capture-says-there-is-no-camera.yaml`
+# gives: `AppShellModel.loadBootstrap()` fires the moment pairing lands a
+# paired device, so the switch has to be thrown before that request exists.
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- assertVisible:
+    id: 'transactions-list'
+
+- tapOn: 'Receipts'
+
+# The manual-entry action sits in the action bar regardless of the camera
+# decision — `ReceiptCaptureView.promptActions` — so it is reachable straight
+# off `.ready` with no camera-refusal card to wait behind.
+- assertVisible:
+    id: 'receipt-capture-manual-entry'
+- tapOn:
+    id: 'receipt-capture-manual-entry'
+
+# `ReceiptResultViewModel(enteringManuallyWith:)`'s state, drawn through the
+# same `ReceiptDraftView` a corrected reading uses — `blankDraft`, one empty
+# line, no status header.
+- assertVisible:
+    id: 'receipt-draft-form'
+
+- runFlow: subflows/enter-a-manual-purchase.yaml
+
+# `createManualPurchase` reaching a real HTTP round trip: the bfm calls the
+# purchases pillar, which in this harness is `scripts/ios-e2e/purchases-stub.mjs`
+# answering `POST /purchases/manual` for real rather than refusing it — the one
+# write the Simulator can drive without a camera.
+- assertVisible:
+    id: 'receipt-result-created'
+- assertVisible: 'Corner Store'
+
+- tapOn:
+    id: 'receipt-capture-manual-entry-done'
+- assertVisible:
+    id: 'receipt-capture-manual-entry'
+
+- tapOn: 'Transactions'
+- assertVisible:
+    id: 'transactions-list'
