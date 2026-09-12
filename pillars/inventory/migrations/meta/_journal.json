@@ -36,6 +36,13 @@
       "when": 1781650200003,
       "tag": "0009_settings_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781650200004,
+      "tag": "0010_inventory_containers",
+      "breakpoints": true
     }
   ]
 }

@@ -59,6 +59,7 @@ function buildItem(overrides: Partial<ListItem> = {}): ListItem {
     lastEditedTime: '2026-06-09T00:00:00Z',
     location: null,
     locationId: null,
+    containerId: null,
     notes: null,
     purchaseDate: null,
     purchasePrice: null,

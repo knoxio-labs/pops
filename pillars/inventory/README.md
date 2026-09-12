@@ -1,6 +1,7 @@
 # @pops/inventory
 
-The **inventory** pillar — items, locations, warranties, and insurance. A
+The **inventory** pillar — items, locations, containers, warranties, and
+insurance. A
 standalone REST service that owns its own SQLite DB, serves a
 [ts-rest](https://ts-rest.com) contract built from zod, exports a `./manifest`,
 and self-registers with the `registry` pillar on boot. Port **3002**.

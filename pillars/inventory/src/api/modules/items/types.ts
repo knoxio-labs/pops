@@ -31,6 +31,7 @@ export interface InventoryItem {
   assetId: string | null;
   notes: string | null;
   locationId: string | null;
+  containerId: string | null;
   lastEditedTime: string;
 }
 
@@ -59,6 +60,7 @@ export function toInventoryItem(row: InventoryRow): InventoryItem {
     assetId: row.assetId,
     notes: row.notes,
     locationId: row.locationId,
+    containerId: row.containerId,
     lastEditedTime: row.lastEditedTime,
   };
 }
@@ -87,6 +89,7 @@ export const InventoryItemSchema = z.object({
   assetId: z.string().nullable(),
   notes: z.string().nullable(),
   locationId: z.string().nullable(),
+  containerId: z.string().nullable(),
   lastEditedTime: z.string(),
 });
 
@@ -113,6 +116,7 @@ export const CreateInventoryItemSchema = z.object({
   assetId: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>;
 
@@ -139,6 +143,7 @@ export const UpdateInventoryItemSchema = z.object({
   assetId: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 export type UpdateInventoryItemInput = z.infer<typeof UpdateInventoryItemSchema>;
 
@@ -152,6 +157,7 @@ export const InventoryQuerySchema = z.object({
   deductible: z.enum(['true', 'false']).optional(),
   locationId: z.string().optional(),
   includeChildren: z.boolean().optional().default(false),
+  containerId: z.string().optional(),
   assetId: z.string().optional(),
   limit: z.coerce.number().positive().optional(),
   offset: z.coerce.number().nonnegative().optional(),

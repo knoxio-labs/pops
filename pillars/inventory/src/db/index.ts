@@ -13,6 +13,7 @@ export type { InventoryDb } from './services/internal.js';
 
 export { openInventoryDb, type OpenedInventoryDb } from './open-inventory-db.js';
 
+export * as containersService from './services/containers.js';
 export * as locationsService from './services/locations.js';
 export * as connectionsService from './services/connections.js';
 export * as documentsService from './services/documents.js';
@@ -29,6 +30,18 @@ export type {
 } from './services/locations.js';
 
 export { toLocation } from './services/locations.js';
+
+export type {
+  Container,
+  ContainerItemsResult,
+  ContainerListResult,
+  ContainerState,
+  CreateContainerInput,
+  ListContainersOptions,
+  UpdateContainerInput,
+} from './services/containers.js';
+
+export { getContainerCurrentLocationId, toContainer } from './services/containers.js';
 
 export type {
   Connection,

@@ -10,7 +10,12 @@ import crypto from 'crypto';
 
 import { and, count, eq, inArray, isNotNull, like, sql, sum, type SQL } from 'drizzle-orm';
 
-import { homeInventory, type InventoryDb, locationsService } from '../../../db/index.js';
+import {
+  containersService,
+  homeInventory,
+  type InventoryDb,
+  locationsService,
+} from '../../../db/index.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { buildCreateValues } from './create-builder.js';
 import { buildInventoryUpdate } from './update-builder.js';
@@ -36,6 +41,7 @@ export interface ListInventoryItemsOptions {
   limit: number;
   offset: number;
   locationId?: string;
+  containerId?: string;
   assetId?: string;
   includeChildren?: boolean;
 }
@@ -54,6 +60,7 @@ function buildInventoryConditions(db: InventoryDb, opts: ListInventoryItemsOptio
   }
   if (opts.locationId)
     conditions.push(buildLocationCondition(db, opts.locationId, opts.includeChildren));
+  if (opts.containerId) conditions.push(eq(homeInventory.containerId, opts.containerId));
   if (opts.assetId) conditions.push(eq(homeInventory.assetId, opts.assetId));
   return conditions;
 }
@@ -153,6 +160,19 @@ export function getInventoryItem(db: InventoryDb, id: string): InventoryRow {
 }
 
 /**
+ * Where an item assigned to a container currently sits — the container is
+ * authoritative over the item's own `locationId` while it holds it, per
+ * POPS-3581: "a container sits somewhere, and its contents inherit that".
+ * Throws `NotFoundError` rather than letting a bad id fall through to the
+ * `container_id` foreign key and surface as an unmapped constraint error.
+ */
+function resolveContainerLocationId(db: InventoryDb, containerId: string): string | null {
+  const container = containersService.findContainer(db, containerId);
+  if (!container) throw new NotFoundError('Container', containerId);
+  return containersService.getContainerCurrentLocationId(container);
+}
+
+/**
  * Create a new inventory item. Returns the created row.
  * Generates a local UUID and inserts directly into SQLite.
  */
@@ -163,9 +183,12 @@ export function createInventoryItem(
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  db.insert(homeInventory)
-    .values(buildCreateValues(id, now, input))
-    .run();
+  const values = buildCreateValues(id, now, input);
+  if (input.containerId) {
+    values.locationId = resolveContainerLocationId(db, input.containerId);
+  }
+
+  db.insert(homeInventory).values(values).run();
 
   return getInventoryItem(db, id);
 }
@@ -182,6 +205,9 @@ export function updateInventoryItem(
 
   const updates = buildInventoryUpdate(input);
   if (updates) {
+    if (input.containerId !== undefined && input.containerId !== null) {
+      updates.locationId = resolveContainerLocationId(db, input.containerId);
+    }
     db.update(homeInventory).set(updates).where(eq(homeInventory.id, id)).run();
   }
 

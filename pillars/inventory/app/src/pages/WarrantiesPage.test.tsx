@@ -42,6 +42,7 @@ function makeItem(overrides: Partial<WarrantyApiItem> = {}): WarrantyApiItem {
     lastEditedTime: '2026-01-01T00:00:00Z',
     location: null,
     locationId: null,
+    containerId: null,
     notes: null,
     purchaseDate: null,
     purchasePrice: null,

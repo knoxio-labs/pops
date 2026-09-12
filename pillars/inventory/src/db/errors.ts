@@ -46,3 +46,33 @@ export class LocationCycleError extends Error {
     this.newParentId = newParentId;
   }
 }
+
+export class ContainerNotFoundError extends Error {
+  override readonly name = 'ContainerNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Container '${id}' not found`);
+    this.id = id;
+  }
+}
+
+export class ContainerOriginLocationNotFoundError extends Error {
+  override readonly name = 'ContainerOriginLocationNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Origin location '${id}' not found`);
+    this.id = id;
+  }
+}
+
+export class ContainerDestinationLocationNotFoundError extends Error {
+  override readonly name = 'ContainerDestinationLocationNotFoundError' as const;
+  readonly id: string;
+
+  constructor(id: string) {
+    super(`Destination location '${id}' not found`);
+    this.id = id;
+  }
+}

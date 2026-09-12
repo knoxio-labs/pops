@@ -43,6 +43,7 @@ export const InventoryItemSchema = z.object({
   assetId: z.string().nullable(),
   notes: z.string().nullable(),
   locationId: z.string().nullable(),
+  containerId: z.string().nullable(),
   lastEditedTime: z.string(),
 });
 
@@ -68,6 +69,7 @@ const CreateItemBody = z.object({
   assetId: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 
 const UpdateItemBody = z.object({
@@ -92,6 +94,7 @@ const UpdateItemBody = z.object({
   assetId: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 
 const ListQuery = z.object({
@@ -103,6 +106,7 @@ const ListQuery = z.object({
   deductible: z.enum(['true', 'false']).optional(),
   locationId: z.string().optional(),
   includeChildren: QueryBool.optional(),
+  containerId: z.string().optional(),
   assetId: z.string().optional(),
   limit: z.coerce.number().positive().optional(),
   offset: z.coerce.number().nonnegative().optional(),

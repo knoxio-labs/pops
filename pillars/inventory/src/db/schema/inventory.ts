@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+import { containers } from './containers.js';
 import { locations } from './locations.js';
 
 export const homeInventory = sqliteTable(
@@ -61,6 +62,13 @@ export const homeInventory = sqliteTable(
     locationId: text('location_id').references(() => locations.id, {
       onDelete: 'set null',
     }),
+    /**
+     * `set null` on delete, not `cascade`: deleting a container empties it
+     * rather than deleting what was inside — see POPS-3581.
+     */
+    containerId: text('container_id').references(() => containers.id, {
+      onDelete: 'set null',
+    }),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),
@@ -73,6 +81,7 @@ export const homeInventory = sqliteTable(
     uniqueIndex('idx_inventory_asset_id').on(table.assetId),
     index('idx_inventory_name').on(table.itemName),
     index('idx_inventory_location').on(table.locationId),
+    index('idx_inventory_container').on(table.containerId),
     index('idx_inventory_type').on(table.type),
     index('idx_inventory_warranty').on(table.warrantyExpires),
     index('idx_inventory_purchase_transaction_uri').on(table.purchaseTransactionUri),
