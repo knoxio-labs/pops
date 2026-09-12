@@ -694,3 +694,78 @@ describe('TagReviewStep — handleTagRuleApplied live re-suggestion (US-03)', ()
     expect(mockUpdateTransactionTags).toHaveBeenCalledWith(CHECKSUM_A, ['Groceries']);
   });
 });
+
+describe('TagReviewStep — group rule pattern (POPS-255)', () => {
+  const saunaTx1 = makeTransaction({
+    description: 'SQ *MCLUU DARLINGHURST',
+    amount: -32.0,
+    entityName: 'Sauna X by 357',
+    entityId: 'sauna-id',
+    tags: ['Subscriptions'],
+  });
+
+  const saunaTx2 = makeTransaction({
+    description: 'MCLUU DARLINGHURST NSW',
+    amount: -32.0,
+    entityName: 'Sauna X by 357',
+    entityId: 'sauna-id',
+    tags: ['Subscriptions'],
+  });
+
+  async function openGroupDialog(entityName: string) {
+    renderTagReviewStep();
+    fireEvent.click(screen.getByLabelText(`Save tag rule for ${entityName}`));
+    await waitFor(() => {
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    });
+  }
+
+  it('seeds the pattern from what the group’s descriptors share, not from the entity name', async () => {
+    seedTransactions([saunaTx1, saunaTx2]);
+    await openGroupDialog('Sauna X by 357');
+
+    expect(mockDialogCapture.signal).toMatchObject({
+      descriptionPattern: 'MCLUU DARLINGHURST',
+      matchType: 'contains',
+      entityId: 'sauna-id',
+      tags: ['Subscriptions'],
+    });
+    expect(mockDialogCapture.signal).not.toMatchObject({ noCommonDescriptor: true });
+  });
+
+  it('opens with an empty, flagged pattern when the descriptors share nothing specific', async () => {
+    seedTransactions([
+      saunaTx1,
+      makeTransaction({
+        description: 'SAUNA X PTY LTD',
+        amount: -40.0,
+        entityName: 'Sauna X by 357',
+        entityId: 'sauna-id',
+        tags: ['Subscriptions'],
+      }),
+    ]);
+    await openGroupDialog('Sauna X by 357');
+
+    expect(mockDialogCapture.signal).toMatchObject({
+      descriptionPattern: '',
+      noCommonDescriptor: true,
+      entityId: 'sauna-id',
+    });
+    expect(mockToastInfo).not.toHaveBeenCalled();
+  });
+  it('derives over every row in the group, including rows with no tags yet', async () => {
+    seedTransactions([
+      saunaTx1,
+      saunaTx2,
+      makeTransaction({
+        description: 'MCLUU DARLING',
+        amount: -32.0,
+        entityName: 'Sauna X by 357',
+        entityId: 'sauna-id',
+      }),
+    ]);
+    await openGroupDialog('Sauna X by 357');
+
+    expect(mockDialogCapture.signal).toMatchObject({ descriptionPattern: 'MCLUU DARLING' });
+  });
+});
