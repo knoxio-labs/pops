@@ -31,12 +31,12 @@ import SwiftUI
 public struct ReceiptDraftView: View {
     @State private var draft: ReceiptDraft
 
-    private let title: String
-    private let subtitle: String
+    private let title: String?
+    private let subtitle: String?
     private let status: Status?
     private let parts: [ReceiptPart]
     private let secondaryAction: SecondaryAction?
-    private let save: (ReceiptDraft) -> Void
+    private let save: ((ReceiptDraft) -> Void)?
 
     /// - Parameters:
     ///   - draft: pre-filled, and live from the first frame. There is no
@@ -51,14 +51,22 @@ public struct ReceiptDraftView: View {
     ///   - secondaryAction: the other thing that can be done here, at the
     ///     standard weight beside the prominent Save.
     ///   - save: called with the draft as it stands.
+    /// - Parameters:
+    ///   - title: the screen's own name, and `nil` when it has none. A form
+    ///     embedded in a flow that already says where you are — the review
+    ///     step's `2 of 3` — would otherwise carry a second heading under the
+    ///     first, saying less.
+    ///   - save: `nil` omits the action bar entirely, for the same reason: a
+    ///     form inside a batch is not the thing that saves, and two Save
+    ///     buttons on one screen is one of them lying about what it does.
     public init(
         draft: ReceiptDraft,
-        title: String,
-        subtitle: String,
+        title: String? = nil,
+        subtitle: String? = nil,
         status: Status? = nil,
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
-        save: @escaping (ReceiptDraft) -> Void
+        save: ((ReceiptDraft) -> Void)? = nil
     ) {
         _draft = State(wrappedValue: draft)
         self.title = title
@@ -104,7 +112,11 @@ public struct ReceiptDraftView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { actions }
+        .safeAreaInset(edge: .bottom) { if save != nil { actions } }
+        // A tap outside a field puts the keyboard away, which it did not do
+        // before: a form this long is mostly scrolling, and a keyboard that
+        // only closes on Return is a keyboard covering half the receipt.
+        .scrollDismissesKeyboard(.interactively)
         .accessibilityIdentifier(ReceiptDraftAccessibility.form)
     }
 
@@ -119,7 +131,7 @@ public struct ReceiptDraftView: View {
                     tone: status.tone, title: status.heading, message: status.message,
                     caption: status.caption)
             }
-            heading
+            if title != nil || subtitle != nil { heading }
             ReceiptDraftForm(draft: $draft)
         }
     }
@@ -132,12 +144,16 @@ public struct ReceiptDraftView: View {
     /// for an Edit button that does not exist.
     private var heading: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            Text(title)
-                .font(.popsLargeTitle)
-                .foregroundStyle(Color.popsForeground)
-            Text(subtitle)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
+            if let title {
+                Text(title)
+                    .font(.popsLargeTitle)
+                    .foregroundStyle(Color.popsForeground)
+            }
+            if let subtitle {
+                Text(subtitle)
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -148,7 +164,7 @@ public struct ReceiptDraftView: View {
     /// "Photograph another" stops being what the screen is for.
     private var actions: some View {
         PopsActionBar {
-            PopsButton(ReceiptDraftCopy.save, prominence: .prominent) { save(draft) }
+            PopsButton(ReceiptDraftCopy.save, prominence: .prominent) { save?(draft) }
                 .disabled(!draft.isSaveable)
                 .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
             if let secondaryAction {

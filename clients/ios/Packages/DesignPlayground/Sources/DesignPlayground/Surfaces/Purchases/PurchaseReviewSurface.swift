@@ -87,13 +87,17 @@ internal struct PurchaseReviewSurface: View {
     private func form(for entry: ReviewEntry) -> some View {
         ReceiptDraftView(
             draft: entry.draft,
-            title: entry.wasUnreadable ? "Nothing could be read" : "Check this purchase",
+            // No heading. The bar already says `2 of 3`, the status banner
+            // says whether anything is wrong with this one, and a third line
+            // saying "Check this purchase" over a screen whose whole job is
+            // checking the purchase is words where the receipt should be. An
+            // unreadable one still needs its sentence, because an empty form
+            // with no explanation reads as a form that failed to load.
             subtitle: entry.wasUnreadable
-                ? "The paper is stored, so nothing is lost. Fill in what it says."
-                : "Change anything that does not match the paper.",
+                ? "Nothing could be read off this one. The paper is stored, so fill in what it says."
+                : nil,
             status: entry.status,
-            parts: entry.parts,
-            save: { _ in }
+            parts: entry.parts
         )
         .id(entry.id)
     }
