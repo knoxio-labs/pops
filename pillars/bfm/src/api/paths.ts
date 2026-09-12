@@ -26,7 +26,7 @@ export const MOBILE_PATH_PREFIX = '/mobile';
  * matching would leave the upload on Express's 100kb default and turn every
  * real receipt into a refusal.
  */
-export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.uploadReceipt.path;
+export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.saveReceiptDraft.path;
 
 /**
  * The pairing exchange's path, needed as a string because its budget is

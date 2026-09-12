@@ -14,6 +14,7 @@
  */
 import { isGatewayOk } from '../pillars/gateway.js';
 import { decodePurchasesCursor } from '../purchases/list-cursor.js';
+import { makeMobilePurchasesDraftHandlers } from './mobile-purchases-draft-handlers.js';
 import {
   toCollectionUpstreamErrorResponse,
   toReceiptBytesErrorResponse,
@@ -73,16 +74,7 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
       return { status: 200 as const, body: outcome.value };
     },
 
-    uploadReceipt: async ({ body }: Req['uploadReceipt']) => {
-      const outcome = await deps.purchases.uploadReceipt(body.parts, body.capture);
-
-      // The collection variant: this route declares no 404, and a 404 from
-      // purchases means bfm asked for a path that pillar does not serve — a
-      // contract fault, not a fact about the upload.
-      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
-
-      return { status: 200 as const, body: outcome.value };
-    },
+    ...makeMobilePurchasesDraftHandlers(deps.purchases),
 
     getReceipt: async ({ params }: Req['getReceipt']) => {
       const outcome = await deps.purchases.getReceipt(params.sha256);

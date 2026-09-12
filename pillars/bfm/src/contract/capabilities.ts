@@ -66,6 +66,17 @@ export const MOBILE_CAPABILITIES = [
    */
   'purchases.receipts.read',
   'purchases.receipts.write',
+  /**
+   * Create a purchase directly — a corrected receipt-derived draft, or one
+   * typed by hand with no photograph at all (POPS-2454). Deliberately its
+   * own entry rather than folded into `purchases.receipts.write`: that
+   * capability buys handing a photograph to the vision model, and this one
+   * buys writing a purchase row, which a manual entry does with no receipt
+   * involved at all. `purchases.receipts.write` does not imply this, and
+   * this does not imply `purchases.receipts.write` — a device could in
+   * principle hold either alone.
+   */
+  'purchases.write',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -103,6 +114,15 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string 
    */
   'purchases.receipts.read': 'purchases.receipt',
   'purchases.receipts.write': 'purchases.receipt',
+  /**
+   * The `purchase.*` module, not `receipt.*`: `receipt.saveDraft` and
+   * `purchase.createManual` are both, ultimately, `createPurchase` calls,
+   * and `purchases.purchase` is the scope bfm's account already carries for
+   * reading orders (`purchases.purchase.list`, `.get`) — a write under the
+   * same module widens nothing new to audit, only what that prefix already
+   * covers.
+   */
+  'purchases.write': 'purchases.purchase',
 };
 
 /**

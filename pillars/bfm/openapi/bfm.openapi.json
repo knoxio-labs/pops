@@ -2132,9 +2132,944 @@
         "tags": ["mobilePurchases"]
       }
     },
+    "/mobile/purchases/manual": {
+      "post": {
+        "operationId": "mobilePurchases.createManualPurchase",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "capture": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "capturedAt": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "capturedAtSource": {
+                        "enum": ["client", "exif", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "declaredTimeZone": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "latitude": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "locationSource": {
+                        "enum": ["client", "exif", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "longitude": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "utcOffsetMinutes": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "nullable": true,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "capturedAt",
+                      "capturedAtSource",
+                      "utcOffsetMinutes",
+                      "declaredTimeZone",
+                      "latitude",
+                      "longitude",
+                      "locationSource"
+                    ],
+                    "type": "object"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "discountCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "idempotencyKey": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "items": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "lineTotalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "name": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "notes": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "quantity": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unitPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["name", "quantity", "unitPriceCents", "lineTotalCents", "notes"],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "merchantName": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "orderedAt": {
+                    "type": "string"
+                  },
+                  "shippingCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "surchargeCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "taxCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "totalCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "merchantName",
+                  "orderedAt",
+                  "currency",
+                  "totalCents",
+                  "items",
+                  "idempotencyKey"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "discountCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "itemCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "lineTotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["id", "name", "quantity", "lineTotalCents"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "merchantName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "orderedAt": {
+                      "type": "string"
+                    },
+                    "orderedOn": {
+                      "type": "string"
+                    },
+                    "receiptUri": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "shippingCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "subtotalCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "surchargeCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "merchantName",
+                    "totalCents",
+                    "currency",
+                    "orderedOn",
+                    "itemCount",
+                    "status",
+                    "receiptUri",
+                    "orderedAt",
+                    "subtotalCents",
+                    "taxCents",
+                    "shippingCents",
+                    "discountCents",
+                    "surchargeCents",
+                    "source",
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Create a purchase typed by hand, with no receipt",
+        "tags": ["mobilePurchases"]
+      }
+    },
     "/mobile/purchases/receipts": {
       "post": {
-        "operationId": "mobilePurchases.uploadReceipt",
+        "operationId": "mobilePurchases.saveReceiptDraft",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "capture": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "capturedAt": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "capturedAtSource": {
+                        "enum": ["client", "exif", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "declaredTimeZone": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "latitude": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "locationSource": {
+                        "enum": ["client", "exif", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "longitude": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "utcOffsetMinutes": {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "nullable": true,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "capturedAt",
+                      "capturedAtSource",
+                      "utcOffsetMinutes",
+                      "declaredTimeZone",
+                      "latitude",
+                      "longitude",
+                      "locationSource"
+                    ],
+                    "type": "object"
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "discountCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "documents": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "documentUri": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": ["receipt"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["documentUri", "kind"],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "idempotencyKey": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "items": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "lineTotalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "name": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "notes": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "quantity": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "unitPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["name", "quantity", "unitPriceCents", "lineTotalCents", "notes"],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "merchantName": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "orderedAt": {
+                    "type": "string"
+                  },
+                  "shippingCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "surchargeCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "taxCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  "totalCents": {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "merchantName",
+                  "orderedAt",
+                  "currency",
+                  "totalCents",
+                  "items",
+                  "idempotencyKey",
+                  "documents"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "discountCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "itemCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "lineTotalCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["id", "name", "quantity", "lineTotalCents"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "merchantName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "orderedAt": {
+                      "type": "string"
+                    },
+                    "orderedOn": {
+                      "type": "string"
+                    },
+                    "receiptUri": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "shippingCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "subtotalCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "surchargeCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "taxCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "totalCents": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "merchantName",
+                    "totalCents",
+                    "currency",
+                    "orderedOn",
+                    "itemCount",
+                    "status",
+                    "receiptUri",
+                    "orderedAt",
+                    "subtotalCents",
+                    "taxCents",
+                    "shippingCents",
+                    "discountCents",
+                    "surchargeCents",
+                    "source",
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Save a reviewed, possibly corrected receipt-derived draft as a purchase",
+        "tags": ["mobilePurchases"]
+      }
+    },
+    "/mobile/purchases/receipts/extract": {
+      "post": {
+        "operationId": "mobilePurchases.extractReceipt",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -2218,83 +3153,100 @@
                     {
                       "additionalProperties": false,
                       "properties": {
-                        "alreadyStored": {
-                          "type": "boolean"
-                        },
-                        "kind": {
-                          "enum": ["created"],
-                          "type": "string"
-                        },
-                        "purchase": {
+                        "draft": {
                           "additionalProperties": false,
                           "properties": {
+                            "capture": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "capturedAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "capturedAtSource": {
+                                  "enum": ["client", "exif", null],
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "declaredTimeZone": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "latitude": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "locationSource": {
+                                  "enum": ["client", "exif", null],
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "longitude": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "utcOffsetMinutes": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "nullable": true,
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "capturedAt",
+                                "capturedAtSource",
+                                "utcOffsetMinutes",
+                                "declaredTimeZone",
+                                "latitude",
+                                "longitude",
+                                "locationSource"
+                              ],
+                              "type": "object"
+                            },
                             "currency": {
                               "type": "string"
                             },
-                            "id": {
-                              "type": "string"
-                            },
-                            "itemCount": {
-                              "maximum": 9007199254740991,
-                              "minimum": 0,
-                              "type": "integer"
-                            },
-                            "merchantName": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "orderedAt": {
-                              "type": "string"
-                            },
-                            "totalCents": {
+                            "discountCents": {
                               "maximum": 9007199254740991,
                               "minimum": -9007199254740991,
                               "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "merchantName",
-                            "totalCents",
-                            "currency",
-                            "orderedAt",
-                            "itemCount"
-                          ],
-                          "type": "object"
-                        }
-                      },
-                      "required": ["kind", "purchase", "alreadyStored"],
-                      "type": "object"
-                    },
-                    {
-                      "additionalProperties": false,
-                      "properties": {
-                        "extracted": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "address": {
-                              "nullable": true,
-                              "type": "string"
                             },
-                            "currency": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "discounts": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
-                            },
-                            "lines": {
+                            "documents": {
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
-                                  "amount": {
+                                  "documentUri": {
                                     "type": "string"
                                   },
-                                  "description": {
+                                  "kind": {
+                                    "enum": ["receipt"],
                                     "type": "string"
+                                  }
+                                },
+                                "required": ["documentUri", "kind"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "items": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "lineTotalCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "name": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "notes": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
                                   },
                                   "quantity": {
                                     "exclusiveMinimum": true,
@@ -2303,12 +3255,19 @@
                                     "nullable": true,
                                     "type": "integer"
                                   },
-                                  "unitNote": {
-                                    "nullable": true,
-                                    "type": "string"
+                                  "unitPriceCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
                                   }
                                 },
-                                "required": ["description", "amount", "quantity", "unitNote"],
+                                "required": [
+                                  "name",
+                                  "quantity",
+                                  "unitPriceCents",
+                                  "lineTotalCents",
+                                  "notes"
+                                ],
                                 "type": "object"
                               },
                               "type": "array"
@@ -2317,59 +3276,52 @@
                               "nullable": true,
                               "type": "string"
                             },
-                            "purchasedAt": {
-                              "nullable": true,
+                            "orderedAt": {
                               "type": "string"
                             },
-                            "purchasedOn": {
-                              "nullable": true,
-                              "type": "string"
+                            "shippingCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
                             },
-                            "shipping": {
-                              "nullable": true,
-                              "type": "string"
+                            "subtotalCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
                             },
-                            "surcharges": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
+                            "surchargeCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
                             },
-                            "tax": {
-                              "nullable": true,
-                              "type": "string"
+                            "taxCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
                             },
-                            "total": {
-                              "type": "string"
-                            },
-                            "unreadableNotes": {
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array"
+                            "totalCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
                             }
                           },
                           "required": [
                             "merchantName",
-                            "address",
-                            "purchasedOn",
-                            "purchasedAt",
+                            "orderedAt",
                             "currency",
-                            "total",
-                            "tax",
-                            "discounts",
-                            "surcharges",
-                            "shipping",
-                            "lines",
-                            "unreadableNotes"
+                            "totalCents",
+                            "subtotalCents",
+                            "taxCents",
+                            "surchargeCents",
+                            "shippingCents",
+                            "discountCents",
+                            "items",
+                            "documents",
+                            "capture"
                           ],
                           "type": "object"
                         },
-                        "kind": {
-                          "enum": ["needs-review"],
-                          "type": "string"
-                        },
-                        "problems": {
+                        "failures": {
                           "items": {
                             "additionalProperties": false,
                             "properties": {
@@ -2391,14 +3343,22 @@
                           },
                           "type": "array"
                         },
-                        "receiptCount": {
-                          "exclusiveMinimum": true,
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
+                        "kind": {
+                          "enum": ["draft"],
+                          "type": "string"
+                        },
+                        "receiptUris": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "reconciled": {
+                          "type": "boolean"
                         }
                       },
-                      "required": ["kind", "receiptCount", "problems", "extracted"],
+                      "required": ["kind", "receiptUris", "reconciled", "failures", "draft"],
                       "type": "object"
                     },
                     {
@@ -2411,14 +3371,15 @@
                         "reason": {
                           "type": "string"
                         },
-                        "receiptCount": {
-                          "exclusiveMinimum": true,
-                          "maximum": 9007199254740991,
-                          "minimum": 0,
-                          "type": "integer"
+                        "receiptUris": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "type": "array"
                         }
                       },
-                      "required": ["kind", "receiptCount", "reason"],
+                      "required": ["kind", "receiptUris", "reason"],
                       "type": "object"
                     }
                   ]
@@ -2638,7 +3599,7 @@
             "description": "503"
           }
         },
-        "summary": "Hand a photographed, scanned or pasted receipt to the purchases pillar",
+        "summary": "Read a photographed, scanned or pasted receipt into an editable draft",
         "tags": ["mobilePurchases"]
       }
     },

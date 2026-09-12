@@ -1,26 +1,25 @@
 /**
- * bfm's purchases leg: the receipt a handset photographed, expressed as a call
- * to the purchases pillar.
+ * bfm's purchases leg: orders a handset can read, and — since POPS-2454 —
+ * purchases it can write, expressed as calls to the purchases pillar.
  *
- * The first write bfm makes on the phone's behalf, and it is a proxy of content
- * rather than a command: the bytes are the device's, and everything downstream
- * of accepting them — reading them, gating the reading against the receipt's
- * own total, deduping the file, creating the purchase — belongs to `purchases`.
- * bfm adds no idempotency key for that reason (ADR-046); the producer
- * content-addresses the bytes, so a retry is the same photograph and the same
- * purchase. The capture metadata beside them is proxied on the same terms:
- * forwarded whole, judged nowhere — see `../../contract/rest-schemas.ts` and
- * ADR-047.
+ * The reads are pure proxies of the producer's own record. The writes
+ * (`extractReceipt`, `saveReceiptDraft`, `createManualPurchase`, defined in
+ * `draft-client.ts` and merged into {@link MobilePurchasesClient} here) are
+ * proxies of content the DEVICE decided, never of a judgement bfm makes:
+ * extraction persists nothing, and a save or a manual entry carries the
+ * idempotency key the reviewer's own device chose, so a retry is refused as
+ * a repeat rather than becoming a second purchase.
  *
  * Like the finance leg, every call goes through the {@link PillarGateway}, so a
  * half-broken federation arrives as a value with a kind rather than an
  * exception, and leaves the same way. Nothing here throws, catches, or turns a
- * failed upload into a plausible-looking outcome: "purchases could not be
- * reached" and "purchases could not read the receipt" are different facts and
- * the phone draws them differently.
+ * failed write into a plausible-looking outcome: "purchases could not be
+ * reached" and "purchases refused the write" are different facts and the
+ * phone draws them differently.
  */
 import { type GatewayOutcome, type PillarGateway, isGatewayOk } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { createManualPurchase, extractReceipt, saveReceiptDraft } from './draft-client.js';
 import { encodePurchasesCursor, type PurchasesPageCursor } from './list-cursor.js';
 import {
   PurchasesDetailResponseSchema,
@@ -29,41 +28,38 @@ import {
   toMobilePurchaseDetail,
   type PurchasesListRow,
 } from './list-wire.js';
-import {
-  PurchasesReceiptBytesSchema,
-  PurchasesReceiptOutcomeSchema,
-  toMobileReceiptOutcome,
-} from './wire.js';
+import { PURCHASES_PILLAR_ID } from './pillar-id.js';
+import { PurchasesReceiptBytesSchema } from './wire.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
 import type {
+  MobileCreateManualPurchaseBody,
+  MobileExtractOutcome,
+  MobileSaveReceiptDraftBody,
+} from '../../contract/receipt-draft.js';
+import type {
   MobilePurchaseDetail,
   MobilePurchasesPage,
   MobileReceiptBytes,
-  MobileReceiptOutcome,
   MobileReceiptPart,
 } from '../../contract/rest-schemas.js';
 
-/** The purchases pillar id, as registered with the registry. */
-export const PURCHASES_PILLAR_ID = 'purchases';
+export { PURCHASES_PILLAR_ID };
 
 /**
- * The subset of purchases' router bfm calls. A `type` rather than an
- * `interface` so it satisfies the SDK proxy's `Record<string, unknown>`
- * constraint.
+ * The subset of purchases' router bfm calls to read orders. A `type` rather
+ * than an `interface` so it satisfies the SDK proxy's `Record<string,
+ * unknown>` constraint.
  *
- * An assertion about a peer, not a compile-time link to one — `wire.ts`
- * validates what comes back, which is where the guarantee lives.
+ * An assertion about a peer, not a compile-time link to one — `list-wire.ts`
+ * validates what comes back, which is where the guarantee lives. The
+ * receipt-draft calls (`extractReceipt`, `saveReceiptDraft`,
+ * `createManualPurchase`) carry their own router assertion in
+ * `draft-client.ts`.
  */
 export type PurchasesReceiptRouter = {
-  receipt: {
-    upload: (input: {
-      parts: readonly MobileReceiptPart[];
-      capture?: MobileCaptureMetadata;
-    }) => Promise<unknown>;
-  };
   purchase: {
     list: (input: {
       limit?: number;
@@ -96,10 +92,14 @@ export interface ListPurchasesRequest {
 }
 
 export interface MobilePurchasesClient {
-  uploadReceipt(
+  extractReceipt(
     parts: readonly MobileReceiptPart[],
     capture?: MobileCaptureMetadata
-  ): Promise<GatewayOutcome<MobileReceiptOutcome>>;
+  ): Promise<GatewayOutcome<MobileExtractOutcome>>;
+  saveReceiptDraft(body: MobileSaveReceiptDraftBody): Promise<GatewayOutcome<MobilePurchaseDetail>>;
+  createManualPurchase(
+    body: MobileCreateManualPurchaseBody
+  ): Promise<GatewayOutcome<MobilePurchaseDetail>>;
   listPurchases(request: ListPurchasesRequest): Promise<GatewayOutcome<MobilePurchasesPage>>;
   getPurchase(id: string): Promise<GatewayOutcome<MobilePurchaseDetail>>;
   getReceipt(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
@@ -108,30 +108,9 @@ export interface MobilePurchasesClient {
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
   return {
-    async uploadReceipt(parts: readonly MobileReceiptPart[], capture?: MobileCaptureMetadata) {
-      // The parts travel unchanged. Re-encoding them here would be a second
-      // representation of bytes the producer content-addresses, so a byte-level
-      // difference would break its dedup and turn a retry into a second
-      // purchase.
-      // The capture block travels unchanged too, and is omitted entirely when
-      // the handset sent none rather than passed as an explicit `undefined`:
-      // the producer's body schema distinguishes absent from present, and
-      // relying on JSON dropping the key would be relying on a coincidence.
-      const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
-        PURCHASES_PILLAR_ID,
-        (handle) => handle.receipt.upload(capture === undefined ? { parts } : { parts, capture })
-      );
-
-      const answered = parseOrMismatch(
-        PURCHASES_PILLAR_ID,
-        outcome,
-        PurchasesReceiptOutcomeSchema,
-        'receipt.upload'
-      );
-      if (!isGatewayOk(answered)) return answered;
-
-      return { kind: 'ok', value: toMobileReceiptOutcome(answered.value) };
-    },
+    extractReceipt: (parts, capture) => extractReceipt(gateway, parts, capture),
+    saveReceiptDraft: (body) => saveReceiptDraft(gateway, body),
+    createManualPurchase: (body) => createManualPurchase(gateway, body),
 
     async listPurchases(request: ListPurchasesRequest) {
       // One row past the page, exactly as the finance leg does: the extra
