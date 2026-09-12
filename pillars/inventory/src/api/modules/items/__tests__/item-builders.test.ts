@@ -71,6 +71,10 @@ describe('buildInventoryUpdate', () => {
     });
   });
 
+  it('clears inUse back to unreviewed (NULL) on an explicit null (POPS-2432)', () => {
+    expect(buildInventoryUpdate({ inUse: null })).toMatchObject({ inUse: null });
+  });
+
   it('derives the purchase transaction URI and drops the stale verdict', () => {
     expect(buildInventoryUpdate({ purchaseTransactionId: 'tx-1' })).toMatchObject({
       purchaseTransactionId: 'tx-1',
@@ -152,5 +156,35 @@ describe('buildCreateValues', () => {
     expect(buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput())).toMatchObject({
       purchaseTransactionUri: null,
     });
+  });
+
+  it('leaves inUse unset when absent, so the row lands NULL — "nobody has reviewed this row" (POPS-2432)', () => {
+    const values = buildCreateValues(
+      'item-1',
+      '2026-09-06T00:00:00.000Z',
+      createInput({ inUse: undefined })
+    );
+
+    expect(Object.keys(values)).not.toContain('inUse');
+  });
+
+  it('leaves inUse unset when explicitly null, same as absent (POPS-2432)', () => {
+    const values = buildCreateValues(
+      'item-1',
+      '2026-09-06T00:00:00.000Z',
+      createInput({ inUse: null })
+    );
+
+    expect(Object.keys(values)).not.toContain('inUse');
+  });
+
+  it('writes an explicit false through as 0, distinct from the unreviewed NULL (POPS-2432)', () => {
+    const values = buildCreateValues(
+      'item-1',
+      '2026-09-06T00:00:00.000Z',
+      createInput({ inUse: false })
+    );
+
+    expect(values).toMatchObject({ inUse: 0 });
   });
 });

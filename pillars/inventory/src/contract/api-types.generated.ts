@@ -1387,7 +1387,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -2142,7 +2142,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -2193,8 +2193,7 @@ export interface operations {
           containerId?: string | null;
           /** @default false */
           deductible: boolean;
-          /** @default false */
-          inUse: boolean;
+          inUse?: boolean | null;
           itemId?: string | null;
           itemName: string;
           location?: string | null;
@@ -2229,7 +2228,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -2318,7 +2317,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -2413,7 +2412,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -2562,7 +2561,7 @@ export interface operations {
           condition?: string | null;
           containerId?: string | null;
           deductible?: boolean;
-          inUse?: boolean;
+          inUse?: boolean | null;
           itemId?: string | null;
           itemName?: string;
           location?: string | null;
@@ -2597,7 +2596,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;
@@ -4440,7 +4439,7 @@ export interface operations {
               containerId: string | null;
               deductible: boolean;
               id: string;
-              inUse: boolean;
+              inUse: boolean | null;
               itemId: string | null;
               itemName: string;
               lastEditedTime: string;

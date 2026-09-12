@@ -82,7 +82,7 @@ function assignItemName(updates: InventoryUpdate, input: UpdateInventoryItemInpu
 function assignBooleanFlags(updates: InventoryUpdate, input: UpdateInventoryItemInput): boolean {
   let touched = false;
   if (input.inUse !== undefined) {
-    updates.inUse = input.inUse ? 1 : 0;
+    updates.inUse = input.inUse === null ? null : Number(input.inUse);
     touched = true;
   }
   if (input.deductible !== undefined) {

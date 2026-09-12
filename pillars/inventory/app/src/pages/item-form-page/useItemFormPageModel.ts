@@ -151,6 +151,10 @@ export function useItemFormPageModel() {
     id,
     isEditMode,
     pendingConnections: local.pendingConnections,
+    // Read fresh at submit time rather than destructured here: dirtyFields
+    // is a live Proxy, and a value captured at this render could be stale
+    // by the time the user actually submits.
+    isInUseTouched: () => !!form.formState.dirtyFields.inUse,
   });
 
   const { searchResults, searchLoading } = useConnectionSearch(local.connectionSearch, isEditMode);
@@ -163,7 +167,12 @@ export function useItemFormPageModel() {
     error,
   } = useQuery({
     queryKey: ['inventory', 'items', 'get', { id: id ?? '' }],
-    queryFn: async () => unwrap(await itemsGet({ path: { id: id ?? '' } })),
+    queryFn: async () => {
+      const result = await unwrap(await itemsGet({ path: { id: id ?? '' } }));
+      // The form's inUse checkbox is a plain boolean; NULL (unreviewed) has
+      // no separate control here, so it starts unchecked like `false` does.
+      return { ...result, data: { ...result.data, inUse: result.data.inUse ?? false } };
+    },
     enabled: isEditMode,
   });
 

@@ -77,7 +77,6 @@ it("sends the body inventory declares, not this pillar's own row shape", async (
       purchasePrice: 199,
       purchasedFromName: 'Bunnings Warehouse',
       purchaseTransactionId: 't-9',
-      inUse: false,
       deductible: false,
       notes: 'Created from purchases order p-1, line i-1.',
     },

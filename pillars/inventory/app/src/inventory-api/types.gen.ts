@@ -472,7 +472,7 @@ export type ContainersItemsResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -1059,7 +1059,7 @@ export type ItemsListResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -1103,7 +1103,7 @@ export type ItemsCreateData = {
     condition?: string | null;
     containerId?: string | null;
     deductible: boolean;
-    inUse: boolean;
+    inUse?: boolean | null;
     itemId?: string | null;
     itemName: string;
     location?: string | null;
@@ -1167,7 +1167,7 @@ export type ItemsCreateResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -1213,7 +1213,7 @@ export type ItemsSearchByAssetIdResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -1382,7 +1382,7 @@ export type ItemsGetResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -1416,7 +1416,7 @@ export type ItemsUpdateData = {
     condition?: string | null;
     containerId?: string | null;
     deductible?: boolean;
-    inUse?: boolean;
+    inUse?: boolean | null;
     itemId?: string | null;
     itemName?: string;
     location?: string | null;
@@ -1482,7 +1482,7 @@ export type ItemsUpdateResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;
@@ -2980,7 +2980,7 @@ export type ReportsWarrantiesResponses = {
       containerId: string | null;
       deductible: boolean;
       id: string;
-      inUse: boolean;
+      inUse: boolean | null;
       itemId: string | null;
       itemName: string;
       lastEditedTime: string;

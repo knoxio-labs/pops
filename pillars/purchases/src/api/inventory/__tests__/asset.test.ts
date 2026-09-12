@@ -173,14 +173,19 @@ describe('the purchase date crosses as a calendar day', () => {
 });
 
 describe('the fields inventory would otherwise default for us', () => {
-  it('states the review flags rather than inheriting the other pillar’s defaults', () => {
-    // `false` is not "unreviewed" — inventory's create body cannot say that
-    // — but it is the value purchases can defend, and stating it means a
-    // change to inventory's default cannot silently restamp these assets.
-    expect(toInventoryItemCreateBody(offer())).toMatchObject({
-      inUse: false,
-      deductible: false,
-    });
+  it('states deductible rather than inheriting the other pillar’s default', () => {
+    // `false` is a claim purchases can defend: it holds no evidence either
+    // way, and stating it means a change to inventory's default cannot
+    // silently restamp these assets.
+    expect(toInventoryItemCreateBody(offer())).toMatchObject({ deductible: false });
+  });
+
+  it('does not send inUse — the fan-out asset is unreviewed, not "not in use" (POPS-2432)', () => {
+    // Sending `false` would mean "reviewed, not in use", which is a claim
+    // nobody has made about a row nobody has looked at. Inventory's create
+    // body can now express "unreviewed" by omitting the field, so this
+    // sends nothing rather than restate the old wrong default.
+    expect(toInventoryItemCreateBody(offer())).not.toHaveProperty('inUse');
   });
 });
 

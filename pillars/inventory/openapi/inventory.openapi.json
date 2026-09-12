@@ -1117,6 +1117,7 @@
                             "type": "string"
                           },
                           "inUse": {
+                            "nullable": true,
                             "type": "boolean"
                           },
                           "itemId": {
@@ -2772,6 +2773,7 @@
                             "type": "string"
                           },
                           "inUse": {
+                            "nullable": true,
                             "type": "boolean"
                           },
                           "itemId": {
@@ -2945,7 +2947,7 @@
                     "type": "boolean"
                   },
                   "inUse": {
-                    "default": false,
+                    "nullable": true,
                     "type": "boolean"
                   },
                   "itemId": {
@@ -3013,7 +3015,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["itemName", "inUse", "deductible"],
+                "required": ["itemName", "deductible"],
                 "type": "object"
               }
             }
@@ -3053,6 +3055,7 @@
                           "type": "string"
                         },
                         "inUse": {
+                          "nullable": true,
                           "type": "boolean"
                         },
                         "itemId": {
@@ -3283,6 +3286,7 @@
                           "type": "string"
                         },
                         "inUse": {
+                          "nullable": true,
                           "type": "boolean"
                         },
                         "itemId": {
@@ -3621,6 +3625,7 @@
                           "type": "string"
                         },
                         "inUse": {
+                          "nullable": true,
                           "type": "boolean"
                         },
                         "itemId": {
@@ -3837,6 +3842,7 @@
                     "type": "boolean"
                   },
                   "inUse": {
+                    "nullable": true,
                     "type": "boolean"
                   },
                   "itemId": {
@@ -3943,6 +3949,7 @@
                           "type": "string"
                         },
                         "inUse": {
+                          "nullable": true,
                           "type": "boolean"
                         },
                         "itemId": {
@@ -7703,6 +7710,7 @@
                             "type": "string"
                           },
                           "inUse": {
+                            "nullable": true,
                             "type": "boolean"
                           },
                           "itemId": {

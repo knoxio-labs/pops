@@ -84,7 +84,9 @@ export function ItemsContent({
   if (viewMode === 'table') {
     return (
       <InventoryTable
-        items={items}
+        // Unreviewed (NULL) has no separate column state here; render it
+        // as "not in use", same as false.
+        items={items.map((item) => ({ ...item, inUse: item.inUse ?? false }))}
         locationPathMap={locationPathMap}
         onEdit={onEdit}
         onDeleteRequest={onDeleteRequest}
