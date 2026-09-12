@@ -74,7 +74,16 @@ export interface ShopMoment {
   readonly source: string;
   readonly orderedAt: string;
   readonly totalCents: number;
-  readonly currency: string;
+  /**
+   * `null` when the currency itself is not reliable evidence for THIS
+   * upload — an inferred or unresolved receipt currency (see
+   * `CURRENCY_UNCERTAIN` in `receipt-persist.ts`) can read differently
+   * between two photographs of the very same paper, so matching on it
+   * would miss the re-upload this lookup exists to catch. `null` drops the
+   * currency term from the match rather than comparing against a value
+   * that was never transcribed.
+   */
+  readonly currency: string | null;
 }
 
 export function findPurchaseAtInstantForAmount(
@@ -92,8 +101,9 @@ export function findPurchaseAtInstantForAmount(
         eq(purchases.totalCents, totalCents),
         // Cents are a number without one. 3000 is $30.00 and ¥3000, and a
         // traveller can hold both — refusing the second as a duplicate of
-        // the first would lose a real shop.
-        eq(purchases.currency, currency)
+        // the first would lose a real shop. Skipped entirely when the
+        // caller's own currency is not reliable evidence (see above).
+        ...(currency === null ? [] : [eq(purchases.currency, currency)])
       )
     )
     .all()[0];
