@@ -57,6 +57,9 @@ export interface ReviewTabsProps {
   ) => void;
   entities?: Array<{ id: string; name: string }>;
   entityVerification: EntityVerification;
+  /** Matched tab only: restrict it to the rows that will not commit. */
+  blockedOnly: boolean;
+  onBlockedOnlyChange: (value: boolean) => void;
 }
 
 function buildTabSharedProps(props: ReviewTabsProps) {
@@ -95,6 +98,8 @@ export function ReviewTabs(props: ReviewTabsProps) {
         <MatchedTab
           transactions={localTransactions.matched}
           groups={matchedGroups}
+          blockedOnly={props.blockedOnly}
+          onBlockedOnlyChange={props.onBlockedOnlyChange}
           {...tabSharedProps}
         />
       </TabsContent>
