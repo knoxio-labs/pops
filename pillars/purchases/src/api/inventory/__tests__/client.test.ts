@@ -80,6 +80,7 @@ it("sends the body inventory declares, not this pillar's own row shape", async (
       inUse: false,
       deductible: false,
       notes: 'Created from purchases order p-1, line i-1.',
+      sourceRef: 'pops://purchases/order/p-1/item/i-1/slot/0',
     },
   ]);
 });

@@ -43,6 +43,13 @@
       "when": 1781650200004,
       "tag": "0010_inventory_containers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781650200005,
+      "tag": "0011_inventory_source_ref",
+      "breakpoints": true
     }
   ]
 }

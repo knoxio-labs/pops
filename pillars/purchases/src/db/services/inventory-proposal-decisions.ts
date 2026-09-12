@@ -35,6 +35,33 @@ export type InventoryProposalDecision =
   | { readonly decision: 'declined'; readonly unitId?: string };
 
 /**
+ * The unit already recorded against a given inventory asset, if one exists.
+ *
+ * The read side of the POPS-2433 retry: inventory's create is idempotent on
+ * `sourceRef`, so two concurrent accepts of one slot compute the same
+ * `inventoryItemUri` before either records a decision. Whichever request
+ * loses `decideInventoryProposal`'s race can look here instead of treating
+ * the asset as orphaned — it is not orphaned, the other request already
+ * named it.
+ */
+export function findUnitByInventoryItemUri(
+  db: PurchasesDb,
+  itemId: string,
+  inventoryItemUri: string
+): PurchaseItemUnitRow | undefined {
+  return db
+    .select()
+    .from(purchaseItemUnits)
+    .where(
+      and(
+        eq(purchaseItemUnits.itemId, itemId),
+        eq(purchaseItemUnits.inventoryItemUri, inventoryItemUri)
+      )
+    )
+    .get();
+}
+
+/**
  * The existing unit an answer named, when the caller named one.
  *
  * A named unit that has already been answered is a conflict rather than an
@@ -81,6 +108,17 @@ function findNamedUnit(
  * answer unnamed, and a decision that names nothing is a conflict rather
  * than a silent extra unit: that is what stops a double-submitted accept
  * putting two assets in inventory for one physical thing.
+ *
+ * An accepted `inventoryItemUri` already recorded on one of the line's
+ * units is answered by returning that unit rather than inserting another
+ * (POPS-2433). Without this, two unnamed accepts racing for the same
+ * still-undecided slot both read it before either writes, both compute the
+ * same idempotent asset via inventory's `sourceRef` dedup, and — with only
+ * the count-based guard above — both insert their own row against that one
+ * URI: two `purchase_item_units` rows, one asset, and the line's other
+ * physical unit silently left unrepresented in inventory. Converging on the
+ * existing row instead makes the pair behave as one accept, the same
+ * outcome the named-unit path already gets from `findNamedUnit`.
  */
 export function decideInventoryProposal(
   db: PurchasesDb,
@@ -118,6 +156,12 @@ export function decideInventoryProposal(
       .from(purchaseItemUnits)
       .where(eq(purchaseItemUnits.itemId, itemId))
       .all();
+
+    if (input.decision === 'accepted') {
+      const converged = existing.find((u) => u.inventoryItemUri === input.inventoryItemUri);
+      if (converged !== undefined) return converged;
+    }
+
     // The projection offers at least one slot however small the quantity,
     // so the write half counts slots the same way rather than refusing to
     // answer an offer it just made.
