@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 // Fakes for the receipt-draft write path (POPS-2454).
 //
