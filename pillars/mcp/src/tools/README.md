@@ -43,6 +43,14 @@ though nothing enforces it mechanically.
   groups them under `accounts` for discoverability.
 - The `finance.*` family is read-only on purpose: no create/update/delete tool
   is wired, and `finance.test.ts` asserts no mutation-shaped name ever appears.
+- `finance.summary.get` is the tool to reach for on any "where did the money
+  go" question. It is one call to an aggregation the finance pillar already
+  did, and the alternative — paging `finance.transactions.list` and adding it
+  up in context — costs a page per 50 rows and produces an answer nobody can
+  check afterwards. It is deliberately one tool rather than a family: the
+  endpoint returns every breakdown for a window in one response, so splitting
+  it per axis would be several calls for data already fetched, and would make
+  the mcp package mirror the response shape it currently never has to know.
 - The `purchases.*` family is read-only for a sharper reason, asserted the same
   way in `purchases.test.ts`. Every write on that pillar is an ingest (which
   needs a checksum only an adapter can compute) or a classification decision —
