@@ -2,6 +2,7 @@
 //!
 //! - [`model`] — wire ↔ row mapping and the request/response body shapes.
 //! - [`colours`] — the fixed colour palette `colour` is assigned/rerolled from.
+//! - [`name_identity`] — what makes two names "the same name" for uniqueness.
 //! - [`repo`] — parameterized data access (list/get/create/update/delete plus
 //!   the bulk lookup and find-by-name idempotency helpers).
 //! - [`routes`] — the axum handlers carrying the DOTTED `entities.*`
@@ -9,6 +10,7 @@
 
 pub mod colours;
 pub mod model;
+pub mod name_identity;
 pub mod repo;
 pub mod routes;
 
