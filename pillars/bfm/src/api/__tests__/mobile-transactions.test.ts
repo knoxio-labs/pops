@@ -136,11 +136,63 @@ describe('the list row is mobile-shaped', () => {
     expect(byId.get('earn')?.type).toBe('income');
   });
 
-  it('states the currency the fleet has always assumed', async () => {
-    const { app, token } = openWithRows([financeRow({ id: 'txn-1' })]);
+  it("emits the transaction's own account currency, not a fleet-wide assumption (POPS-3571)", async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-brl', accountId: 'acc-brazil-cash' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-brazil-cash', currency: 'BRL' })]
+    );
+    const { app, token } = openWith(fake.factory);
 
     const res = await get(app, token, LIST_PATH);
 
+    expect(res.body.data[0].currency).toBe('BRL');
+  });
+
+  it('still emits AUD for a transaction on an AUD account', async () => {
+    const { app, token } = openWithRows([
+      financeRow({ id: 'txn-1', accountId: 'acc-up-everyday' }),
+    ]);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.body.data[0].currency).toBe('AUD');
+  });
+
+  it('resolves each row against its own account when a page spans several currencies', async () => {
+    const fake = createFinanceFake(
+      [
+        financeRow({ id: 'txn-aud', date: '2026-03-05', accountId: 'acc-up-everyday' }),
+        financeRow({ id: 'txn-brl', date: '2026-03-04', accountId: 'acc-brazil-cash' }),
+      ],
+      undefined,
+      [
+        financeAccountRow({ id: 'acc-up-everyday', currency: 'AUD' }),
+        financeAccountRow({ id: 'acc-brazil-cash', currency: 'BRL' }),
+      ]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    const byId = new Map<string, string>(
+      res.body.data.map((row: { id: string; currency: string }) => [row.id, row.currency])
+    );
+    expect(byId.get('txn-aud')).toBe('AUD');
+    expect(byId.get('txn-brl')).toBe('BRL');
+  });
+
+  it('falls back to AUD for one row alone when only that row’s account lookup misses', async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-1', accountId: 'acc-deleted' })],
+      undefined,
+      []
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, LIST_PATH);
+
+    expect(res.status).toBe(200);
     expect(res.body.data[0].currency).toBe('AUD');
   });
 
@@ -387,6 +439,21 @@ describe('the detail record', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.account).toBe('Unknown account');
+    expect(res.body.currency).toBe('AUD');
+  });
+
+  it("resolves the account's currency from accountId, not a fleet-wide assumption (POPS-3571)", async () => {
+    const fake = createFinanceFake(
+      [financeRow({ id: 'txn-1', accountId: 'acc-brazil-cash' })],
+      undefined,
+      [financeAccountRow({ id: 'acc-brazil-cash', currency: 'BRL' })]
+    );
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, `${LIST_PATH}/txn-1`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.currency).toBe('BRL');
   });
 
   it('404s a transaction finance does not have', async () => {

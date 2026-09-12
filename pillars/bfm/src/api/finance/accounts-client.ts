@@ -1,3 +1,4 @@
+import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 /**
  * bfm's finance leg for the accounts screens, expressed as calls to the
  * finance pillar.
@@ -8,9 +9,9 @@
  * The failure discipline is the same and stated there: nothing here throws,
  * catches, or substitutes an empty list for a failure.
  *
- * `resolveAccountName` lives here rather than beside the transaction detail
- * that uses it, because it is an account lookup — the only account this file
- * fetches on somebody else's behalf.
+ * `resolveAccount`/`resolveAccountCurrencies` live here rather than beside
+ * the transaction screens that use them, because they are account lookups —
+ * the only account data this file fetches on somebody else's behalf.
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
@@ -142,16 +143,54 @@ export async function getAccountDetail(
 /** Placeholder shown when an account lookup fails — a display nicety, not a hard dependency. */
 const UNKNOWN_ACCOUNT_NAME = 'Unknown account';
 
+/** What a transaction's currency reads as when its account cannot be resolved (POPS-3571). */
+const UNRESOLVED_ACCOUNT_CURRENCY = FALLBACK_MOBILE_CURRENCY;
+
+/** An account's display name and currency, or the fallbacks for a failed lookup. */
+export interface ResolvedAccount {
+  readonly name: string;
+  readonly currency: string;
+}
+
 /**
- * Resolve an account's display name for the transaction detail screen
- * (POPS-2770). Falls back to a placeholder rather than failing the whole
- * transaction fetch — a stale or unreachable account lookup should not stop
- * someone from reading the rest of the transaction they opened.
+ * Resolve an account's display name and currency for the transaction detail
+ * screen (POPS-2770, POPS-3571). Falls back to placeholders rather than
+ * failing the whole transaction fetch — a stale or unreachable account
+ * lookup should not stop someone from reading the rest of the transaction
+ * they opened, and a currency this unsure of is exactly what
+ * {@link import('../../contract/transaction.js').FALLBACK_MOBILE_CURRENCY} is for.
  */
-export async function resolveAccountName(
+export async function resolveAccount(
   gateway: PillarGateway,
   accountId: string
-): Promise<string> {
+): Promise<ResolvedAccount> {
   const outcome = await fetchAccountRow(gateway, accountId);
-  return isGatewayOk(outcome) ? outcome.value.name : UNKNOWN_ACCOUNT_NAME;
+  return isGatewayOk(outcome)
+    ? { name: outcome.value.name, currency: outcome.value.currency }
+    : { name: UNKNOWN_ACCOUNT_NAME, currency: UNRESOLVED_ACCOUNT_CURRENCY };
+}
+
+/**
+ * Resolve the currency of every account named in `accountIds`, for the
+ * transaction list screen (POPS-3571) — a page can span several accounts, so
+ * this dedupes and fetches each named account once rather than once per row.
+ *
+ * An id missing from the result failed its own lookup; the caller falls
+ * back to {@link import('../../contract/transaction.js').FALLBACK_MOBILE_CURRENCY}
+ * for that row alone rather than failing the whole page over one bad account.
+ */
+export async function resolveAccountCurrencies(
+  gateway: PillarGateway,
+  accountIds: readonly string[]
+): Promise<ReadonlyMap<string, string>> {
+  const uniqueIds = [...new Set(accountIds)];
+  const rows = await Promise.all(
+    uniqueIds.map(async (id) => [id, await fetchAccountRow(gateway, id)] as const)
+  );
+
+  const currencies = new Map<string, string>();
+  for (const [id, outcome] of rows) {
+    if (isGatewayOk(outcome)) currencies.set(id, outcome.value.currency);
+  }
+  return currencies;
 }

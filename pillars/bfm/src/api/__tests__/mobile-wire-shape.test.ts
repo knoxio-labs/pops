@@ -133,7 +133,7 @@ describe('the list row', () => {
     // Not a `type`/`literal` pin: this field sits inside every array element
     // of a page a build already on a phone still calls. An `enum` here
     // becomes a closed Swift enum, and the day bfm emits a currency besides
-    // `MOBILE_CURRENCY`, every such build fails to decode the whole page —
+    // `FALLBACK_MOBILE_CURRENCY`, every such build fails to decode the whole page —
     // one bad value, not just the row it is on.
     const schema = okSchema(LIST_PATH);
 

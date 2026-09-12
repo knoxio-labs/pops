@@ -17,8 +17,6 @@
  */
 import { z } from 'zod';
 
-import { MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
-
 import type {
   MobileAccount,
   MobileAccountBalancePoint,
@@ -38,6 +36,8 @@ import type {
 export const FinanceTransactionRowSchema = z.object({
   id: z.string(),
   description: z.string(),
+  /** FK to `accounts.id` — a transaction's currency is its account's (POPS-3571). */
+  accountId: z.string(),
   amount: z.number(),
   /**
    * Date-only `YYYY-MM-DD`, enforced rather than accepted as a bare string:
@@ -54,8 +54,6 @@ export type FinanceTransactionRow = z.infer<typeof FinanceTransactionRowSchema>;
 
 /** The fields the detail screen adds on top of a list row. */
 export const FinanceTransactionDetailSchema = FinanceTransactionRowSchema.extend({
-  /** FK to `accounts.id` — finance carries no denormalised account name (POPS-2770). */
-  accountId: z.string(),
   entityId: z.string().nullable(),
   location: z.string().nullable(),
   country: z.string().nullable(),
@@ -74,13 +72,24 @@ export const FinanceTransactionGetResponseSchema = z.object({
   data: FinanceTransactionDetailSchema,
 });
 
-/** Finance list row → mobile list row. Field-for-field; no arithmetic. */
-export function toMobileTransaction(row: FinanceTransactionRow): MobileTransaction {
+/**
+ * Finance list row → mobile list row. Field-for-field; no arithmetic.
+ *
+ * `currency` is the caller's to resolve — a transaction's currency is its
+ * account's (POPS-3571), and this mapper never reaches finance itself. The
+ * caller passes {@link import('../../contract/transaction.js').FALLBACK_MOBILE_CURRENCY}
+ * when that lookup failed,
+ * never as the ordinary answer.
+ */
+export function toMobileTransaction(
+  row: FinanceTransactionRow,
+  currency: string
+): MobileTransaction {
   return {
     id: row.id,
     description: row.description,
     amount: row.amount,
-    currency: MOBILE_CURRENCY,
+    currency,
     date: row.date,
     type: row.type,
     entityName: row.entityName,
@@ -91,16 +100,17 @@ export function toMobileTransaction(row: FinanceTransactionRow): MobileTransacti
 /**
  * Finance record → the mobile detail record.
  *
- * `accountName` is resolved by the caller via the accounts lookup (POPS-2770)
- * — finance's own response carries only `accountId`, and this mapper has no
- * way to reach finance itself.
+ * `accountName` and `currency` are resolved by the caller via the accounts
+ * lookup (POPS-2770, POPS-3571) — finance's own response carries only
+ * `accountId`, and this mapper has no way to reach finance itself.
  */
 export function toMobileTransactionDetail(
   row: FinanceTransactionDetail,
-  accountName: string
+  accountName: string,
+  currency: string
 ): MobileTransactionDetail {
   return {
-    ...toMobileTransaction(row),
+    ...toMobileTransaction(row, currency),
     account: accountName,
     entityId: row.entityId,
     location: row.location,
