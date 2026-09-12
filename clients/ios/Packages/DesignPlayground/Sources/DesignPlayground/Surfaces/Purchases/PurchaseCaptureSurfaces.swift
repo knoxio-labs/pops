@@ -43,11 +43,12 @@ internal enum PurchaseCaptureSurfaces {
     static let staging = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "staging"),
         title: "Staging",
-        synopsis: "What was picked, one receipt per file until somebody groups them.",
+        synopsis:
+            "What was picked, as a grid. Drag one onto another to make them one receipt.",
         chrome: .navigation,
         states: [
             DesignState.standard {
-                PurchaseStagingSurface(receipts: [
+                PurchaseStagingGrid(receipts: [
                     receipt("r1", [page(0, "IMG_4821.HEIC")]),
                     receipt("r2", [page(1, "IMG_4822.HEIC")]),
                     receipt("r3", [page(2, "IMG_4823.HEIC")]),
@@ -55,12 +56,12 @@ internal enum PurchaseCaptureSurfaces {
                 ])
             },
             DesignState("single", "One photograph") {
-                PurchaseStagingSurface(receipts: [receipt("r1", [page(0, "IMG_4821.HEIC")])])
+                PurchaseStagingGrid(receipts: [receipt("r1", [page(0, "IMG_4821.HEIC")])])
             },
             // What the camera produces: a scan is already one receipt, so this
             // is the state a person reaches without ever touching Combine.
             DesignState("scan", "A three-page scan") {
-                PurchaseStagingSurface(receipts: [
+                PurchaseStagingGrid(receipts: [
                     receipt(
                         "r1",
                         [
@@ -69,35 +70,17 @@ internal enum PurchaseCaptureSurfaces {
                         ])
                 ])
             },
-            DesignState("selecting", "Two selected, ready to combine") {
-                PurchaseStagingSurface(
-                    receipts: [
-                        receipt("r1", [page(0, "IMG_4821.HEIC")]),
-                        receipt("r2", [page(1, "IMG_4822.HEIC")]),
-                        receipt("r3", [page(2, "IMG_4823.HEIC")]),
-                    ],
-                    selection: ["pg-0", "pg-1"]
-                )
-            },
             DesignState("combined", "One grouped, one not") {
-                PurchaseStagingSurface(receipts: [
+                PurchaseStagingGrid(receipts: [
                     receipt("r1", [page(0, "IMG_4821.HEIC"), page(1, "IMG_4822.HEIC")]),
                     receipt("r2", [page(2, "IMG_4823.HEIC")]),
                 ])
             },
             DesignState("mixed", "A file among the photographs") {
-                PurchaseStagingSurface(receipts: [
+                PurchaseStagingGrid(receipts: [
                     receipt("r1", [page(0, "IMG_4821.HEIC")]),
                     receipt("r2", [page(1, "tax-invoice-8841.pdf", media: .pdf)]),
                     receipt("r3", [page(2, "order-confirmation.txt", media: .plainText)]),
-                ])
-            },
-            // The BFM refuses more than `ReceiptPart.maxPerReceipt`, so the
-            // refusal happens here with the count rather than as a rejection
-            // after the bytes went up.
-            DesignState("over-cap", "A group past the page cap") {
-                PurchaseStagingSurface(receipts: [
-                    receipt("r1", (0..<10).map { page($0, "Scan page \($0 + 1)") })
                 ])
             },
         ]

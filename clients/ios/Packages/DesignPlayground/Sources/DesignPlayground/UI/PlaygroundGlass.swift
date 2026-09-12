@@ -84,6 +84,17 @@ extension View {
         #endif
     }
 
+    /// The paging tab-view style, which is iOS-only. Without it the viewer is
+    /// a tab bar rather than a thing you swipe between pages of.
+    @ViewBuilder
+    func playgroundPagedTabs() -> some View {
+        #if os(iOS)
+            tabViewStyle(.page(indexDisplayMode: .never))
+        #else
+            self
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.
