@@ -14,9 +14,11 @@ import SwiftUI
 /// receipt-filled one and a manual one that drift apart.
 @MainActor
 internal enum PurchaseCaptureSurfaces {
-    internal static let surfaces: [DesignSurface] = [staging, reading]
+    internal static let surfaces: [DesignSurface] = [
+        staging, reading, PurchaseReviewSurfaces.review,
+    ]
 
-    private static func page(_ index: Int, _ label: String, media: ReceiptMediaType = .jpeg)
+    internal static func page(_ index: Int, _ label: String, media: ReceiptMediaType = .jpeg)
         -> StagedPage
     {
         StagedPage(

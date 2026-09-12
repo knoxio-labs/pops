@@ -25,26 +25,35 @@ internal struct PurchasesShellView: View {
 
     @State private var query: String
     @State private var searching: Bool
-    @State private var selected: Int = 1
+    @State private var selected: Int
 
     internal init(purchases: [Purchase], query: String = "", searching: Bool = false) {
         self.purchases = purchases
         _query = State(initialValue: query)
         _searching = State(initialValue: searching)
+        // The search field lives on the search tab, so a state that pins it
+        // open has to start on that tab. Defaulting to Purchases meant every
+        // staged search state drew the Purchases tab instead — five states
+        // that were pixel-identical to the standard one, which is how it was
+        // noticed.
+        _selected = State(initialValue: searching ? Self.searchTab : Self.purchasesTab)
     }
+
+    private static let purchasesTab = 1
+    private static let searchTab = 3
 
     internal var body: some View {
         TabView(selection: $selected) {
             Tab("Transactions", systemImage: "list.bullet", value: 0) {
                 otherTab("Transactions")
             }
-            Tab("Purchases", systemImage: "cart", value: 1) {
+            Tab("Purchases", systemImage: "cart", value: Self.purchasesTab) {
                 purchasesTab
             }
             Tab("Accounts", systemImage: "building.columns", value: 2) {
                 otherTab("Accounts")
             }
-            Tab(value: 3, role: .search) {
+            Tab(value: Self.searchTab, role: .search) {
                 NavigationStack {
                     PurchasesSearchResults(purchases: purchases, query: query)
                         .navigationTitle("Search")
