@@ -152,6 +152,7 @@ every allowlisted path appears in this document.
 | `pillars/design/src/screens/finance/import-tag-rule-dialog.tsx`                             | 1        | POPS-3260 |
 | `pillars/food/app/src/pages/plan/SlotRow.tsx`                                               | 1        | POPS-3260 |
 | `pillars/inventory/app/src/pages/location-tree-page/sections/location-node/InlineInput.tsx` | 1        | POPS-3201 |
+| `pillars/design/src/kit/inventory/locations-tree/inline-input.tsx`                          | 1        | POPS-3643 |
 
 The remaining entries are exceptions in a different sense: they are shapes
 the guard does not and should not count at all, recorded so nobody
