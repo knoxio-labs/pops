@@ -76,7 +76,7 @@ ${lines}
 Tag axes and their available values:
 ${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, "entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}, ...]
 
 ${ENTITY_NAME_RULES}
 
@@ -106,6 +106,20 @@ export async function callBatchApi(opts: BatchApiCallOptions): Promise<ApiCallRe
 }
 
 /**
+ * Place each reply object in the slot for the line number it echoes as `n`.
+ *
+ * The reply used to be aligned by array position, and nothing in it could be
+ * checked against: a model that dropped one object from the middle of a batch
+ * silently gave every later row its neighbour's classification (POPS-3670). Now
+ * an object says which line it answers, and a line with no answer is null.
+ *
+ * A reply that cannot be trusted to be aligned at all — an object with no
+ * usable `n`, an `n` outside `1..expectedCount`, or two objects claiming the
+ * same line — throws `PARSE_ERROR`, which every caller already degrades to "no
+ * result" for the whole batch. A short reply whose objects all carry distinct,
+ * in-range numbers is not misaligned, only truncated: the rows it covers keep
+ * their answers.
+ *
  * Parse a reply that should hold a JSON array of `expectedCount` objects into
  * exactly that many slots.
  *
@@ -144,14 +158,34 @@ export function parseJsonArrayReply(
       'PARSE_ERROR'
     );
   }
-  return Array.from({ length: expectedCount }, (_, i) => {
-    const item: unknown = parsed[i];
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return null;
-    return item as Record<string, unknown>;
-  });
+  const slots: (Record<string, unknown> | null)[] = Array.from(
+    { length: expectedCount },
+    () => null
+  );
+  for (const item of parsed) {
+    if (!isPlainObject(item)) continue;
+    const line = item['n'];
+    if (typeof line !== 'number' || !Number.isInteger(line) || line < 1 || line > expectedCount) {
+      throw unalignedReply(`an object carries no usable line number (n=${JSON.stringify(line)})`);
+    }
+    if (slots[line - 1] !== null) throw unalignedReply(`two objects claim line ${line}`);
+    slots[line - 1] = item;
+  }
+  return slots;
 }
 
-/** Parse a batched categorization reply into one {@link AiCacheEntry} per input, aligned by array position. */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function unalignedReply(reason: string): AiCategorizationError {
+  return new AiCategorizationError(
+    `AI categorizer batch reply cannot be aligned to its rows: ${reason}`,
+    'PARSE_ERROR'
+  );
+}
+
+/** Parse a batched categorization reply into one {@link AiCacheEntry} per input, aligned by the echoed line number. */
 export function parseBatchEntries(
   text: string,
   expectedCount: number,

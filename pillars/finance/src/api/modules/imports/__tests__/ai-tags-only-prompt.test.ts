@@ -76,7 +76,7 @@ describe('tag-only prompt', () => {
 describe('tag-only reply parsing', () => {
   it('validates values against the closed vocabulary and counts what it refuses', () => {
     const entries = parseTagsOnlyEntries(
-      '[{"venue": "supermarket", "contains": ["groceries", "plutonium"]}]',
+      '[{"n": 1, "venue": "supermarket", "contains": ["groceries", "plutonium"]}]',
       1,
       VOCAB
     );
@@ -88,14 +88,14 @@ describe('tag-only reply parsing', () => {
   });
 
   it('degrades one malformed entry to null without losing the rest of the chunk', () => {
-    const entries = parseTagsOnlyEntries('[{"venue": "cafe"}, "nope"]', 2, VOCAB);
+    const entries = parseTagsOnlyEntries('[{"n": 1, "venue": "cafe"}, "nope"]', 2, VOCAB);
 
     expect(entries[0]?.tags).toEqual(['venue:cafe']);
     expect(entries[1]).toBeNull();
   });
 
   it('pads a short reply rather than misaligning the rows that did come back', () => {
-    const entries = parseTagsOnlyEntries('[{"venue": "cafe"}]', 3, VOCAB);
+    const entries = parseTagsOnlyEntries('[{"n": 1, "venue": "cafe"}]', 3, VOCAB);
 
     expect(entries).toHaveLength(3);
     expect(entries[1]).toBeNull();

@@ -101,10 +101,10 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
     process.env[KEY] = 'sk-test';
   });
 
-  it('sends one call for the whole batch and maps replies back by position', async () => {
+  it('sends one call for the whole batch and maps replies back by their line numbers', async () => {
     createMock.mockResolvedValue(
       textResponse(
-        '[{"entityName":"Woolworths","contains":["groceries"]},{"entityName":"Aldi","contains":["groceries"]}]'
+        '[{"n":1,"entityName":"Woolworths","contains":["groceries"]},{"n":2,"entityName":"Aldi","contains":["groceries"]}]'
       )
     );
 
@@ -123,7 +123,9 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
   });
 
   it('numbers each transaction in the prompt and asks for a same-length JSON array reply', async () => {
-    createMock.mockResolvedValue(textResponse('[{"entityName":"A"},{"entityName":"B"}]'));
+    createMock.mockResolvedValue(
+      textResponse('[{"n":1,"entityName":"A"},{"n":2,"entityName":"B"}]')
+    );
     await categorizeBatchWithAi(
       [{ description: 'FIRST ROW' }, { description: 'SECOND ROW' }],
       undefined,
@@ -139,7 +141,9 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
 
   it('degrades a single malformed entry to null without failing the rest of the batch', async () => {
     createMock.mockResolvedValue(
-      textResponse('[{"entityName":"Woolworths"}, "not an object", {"entityName":"Aldi"}]')
+      textResponse(
+        '[{"n":1,"entityName":"Woolworths"}, "not an object", {"n":3,"entityName":"Aldi"}]'
+      )
     );
 
     const out = await categorizeBatchWithAi(
@@ -155,7 +159,7 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
   });
 
   it('pads a short reply with null for the rows the model dropped', async () => {
-    createMock.mockResolvedValue(textResponse('[{"entityName":"Woolworths"}]'));
+    createMock.mockResolvedValue(textResponse('[{"n":1,"entityName":"Woolworths"}]'));
 
     const out = await categorizeBatchWithAi(
       [{ description: 'WOOLWORTHS' }, { description: 'UNSEEN ROW' }],
@@ -197,7 +201,7 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
 
   it('honours the FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS override', async () => {
     process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'] = '999';
-    createMock.mockResolvedValue(textResponse('[{"entityName":"A"}]'));
+    createMock.mockResolvedValue(textResponse('[{"n":1,"entityName":"A"}]'));
     await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB, { db });
     const req = createMock.mock.calls[0]?.[0] as { max_tokens: number };
     expect(req.max_tokens).toBe(999);
@@ -211,7 +215,7 @@ describe('categorizeBatchWithAi — PII allowlist (CF008)', () => {
   });
 
   it('never renders raw-row/account fields into the batch prompt', async () => {
-    createMock.mockResolvedValue(textResponse('[{"entityName":"Aldi"}]'));
+    createMock.mockResolvedValue(textResponse('[{"n":1,"entityName":"Aldi"}]'));
     await categorizeBatchWithAi(
       [{ description: 'ALDI STORES', amount: 18.9, date: '2026-03-14' }],
       undefined,
