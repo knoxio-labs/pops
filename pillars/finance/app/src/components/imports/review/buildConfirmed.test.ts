@@ -116,6 +116,51 @@ describe('buildConfirmedTransactions', () => {
   });
 });
 
+describe('buildConfirmedTransactions — pre-accepting suggestions (POPS-3671)', () => {
+  it('ticks a suggestion the server allowed, and leaves one it did not unticked but offered', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:supermarket', source: 'ai', confidence: 0.92, preAccept: true },
+          { tag: 'occasion:out', source: 'ai', confidence: 0.31, preAccept: false },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:supermarket']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual([
+      'venue:supermarket',
+      'occasion:out',
+    ]);
+  });
+
+  it('still ticks a suggestion with no pre-accept decision — rule, entity, or a draft from before', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'contains:groceries', source: 'rule', pattern: 'WOOLWORTHS' },
+          { tag: 'venue:supermarket', source: 'entity' },
+          { tag: 'channel:in-person', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([
+      'contains:groceries',
+      'venue:supermarket',
+      'channel:in-person',
+    ]);
+  });
+
+  it('ticks nothing when every AI suggestion was held back', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({ suggestedTags: [{ tag: 'contains:food', source: 'ai', preAccept: false }] }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([]);
+  });
+});
+
 describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
   it('returns a dropped entity-required row instead of silently discarding it', () => {
     const droppable = matched({ transactionType: 'purchase', entity: { matchType: 'exact' } });

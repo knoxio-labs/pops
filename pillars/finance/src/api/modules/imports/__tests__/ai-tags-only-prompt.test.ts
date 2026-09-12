@@ -31,13 +31,16 @@ describe('tag-only prompt', () => {
     expect(prompt).toContain('do not revise it');
   });
 
-  it('asks for the facet fields only — no entityName, no confidence', () => {
+  it('asks for the facet fields and a confidence in them — never an entityName', () => {
     const prompt = buildTagsOnlyPrompt([ROW], VOCAB);
 
     expect(prompt).toContain('"venue": "..." | null');
     expect(prompt).toContain('"contains": ["..."]');
+    // The confidence is in the tags (POPS-3671), so there is no merchant to rate.
+    expect(prompt).toContain('"confidence": 0.0-1.0');
+    expect(prompt).toContain('confidence (0.0-1.0) is your confidence that every tag you returned');
     expect(prompt).not.toContain('entityName');
-    expect(prompt).not.toContain('confidence');
+    expect(prompt).not.toContain('tagConfidence');
   });
 
   it('carries the shared closed-set rules rather than a second copy of them', () => {
@@ -66,7 +69,7 @@ describe('tag-only prompt', () => {
   });
 
   it('has a prompt version distinct from the categorize prompts', () => {
-    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v2.0');
+    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v2.3');
   });
 });
 

@@ -76,7 +76,7 @@ ${lines}
 Tag axes and their available values:
 ${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}, ...]
 
 ${ENTITY_NAME_RULES}
 

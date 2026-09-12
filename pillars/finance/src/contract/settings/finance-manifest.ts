@@ -1,5 +1,6 @@
 import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
+  AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
   AI_CATEGORIZER_MODEL_KEY,
   RULE_GEN_MAX_TOKENS_KEY,
   RULE_GEN_MODEL_KEY,
@@ -49,6 +50,19 @@ export const financeManifest: SettingsManifest = {
             max: 2000,
             message:
               'Use 50-2000. Below 50 the reply is truncated and the row stays uncertain; above 2000 you only pay more for the same answer.',
+          },
+        },
+        {
+          key: AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
+          label: 'Pre-accept confidence (%)',
+          type: 'number',
+          default: '80',
+          description:
+            'An AI tag suggestion the model rates at least this confident is ticked for you in Tag Review; one below it is shown but left for you to accept. A suggestion with no confidence at all is never pre-accepted. 0 pre-accepts every AI suggestion that carries a confidence, which is how it behaved before the model was asked for one; 100 pre-accepts none.',
+          validation: {
+            min: 0,
+            max: 100,
+            message: 'Use a whole number from 0 to 100.',
           },
         },
         {

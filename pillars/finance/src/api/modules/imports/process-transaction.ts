@@ -12,7 +12,7 @@
  *
  * Ported from the monolith `lib/process-transaction.ts`, db-injected. The
  * non-AI stages (`classifyWithoutAi`) and the AI-result finalizer
- * (`finalizeAiResult`) are exported separately so the import batch resolver
+ * (`finalizeAiResult`, in `ai-result.ts`) are exported separately so the import batch resolver
  * (`ai-batch-resolver.ts`, CP025/#3656) can run the cheap stages per row and
  * defer the AI stage to a shared batched call instead of one round-trip per
  * row; `classifyTransaction`/`processTransactionSafely` compose the same two
@@ -23,7 +23,7 @@
  * `AiCategorizationError` (enabled but key/API failure) degrades to an
  * uncertain row with reason `'AI categorization unavailable'`.
  */
-import { type EntityLookupEntry, type FinanceDb } from '../../../db/index.js';
+import { type FinanceDb } from '../../../db/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import {
   type AiCacheEntry,
@@ -31,14 +31,13 @@ import {
   isAiCategorizerEnabled,
   toCategorizerInput,
 } from './ai-categorizer.js';
+import { finalizeAiResult } from './ai-result.js';
 import { applyLearnedCorrection } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
 import {
   buildFailure,
   buildFromEntityMatch,
-  buildUncertainFromAi,
-  buildUncertainNoMatch,
   matchDerivedType,
 } from './process-transaction-helpers.js';
 
@@ -169,77 +168,6 @@ async function tryAiCategorization(
     counters.aiCacheHits++;
   }
   return result;
-}
-
-/**
- * Resolve the AI's suggested entity name against the same canonical +
- * alias lookups the deterministic matcher uses (CF024): the AI can only see
- * the transaction description, not which of several known spellings is
- * canonical, so a reply that happens to match a stored alias rather than the
- * entity's canonical name must still resolve — the deterministic stage one
- * step earlier would have.
- */
-function resolveAiEntity(
-  aiEntityName: string,
-  context: ProcessContext
-): EntityLookupEntry | undefined {
-  const key = aiEntityName.toLowerCase();
-  const direct = context.entityLookup.get(key);
-  if (direct) return direct;
-  const canonicalName = context.aliases.get(key);
-  return canonicalName ? context.entityLookup.get(canonicalName.toLowerCase()) : undefined;
-}
-
-/**
- * Turn an AI categorization outcome (or `null`, on a disabled/failed/no-op
- * call) into the row's final `TransactionProcessResult`. Shared by the
- * single-row path (`classifyTransaction`) and the batched import resolver, so
- * both routes bucket a batch reply exactly like a live per-row call would.
- */
-export function finalizeAiResult(
-  args: ProcessTransactionArgs,
-  aiEntry: AiCacheEntry | null
-): TransactionProcessResult {
-  const { db, transaction, context, counters } = args;
-  counters.aiTagValuesRejected += aiEntry?.rejectedTagValues ?? 0;
-  if (aiEntry?.entityName) {
-    const aiTags = aiEntry.tags ?? [];
-    const aiCategory = aiEntry.tags?.length ? null : (aiEntry.category ?? null);
-    const entry = resolveAiEntity(aiEntry.entityName, context);
-    const ai = { aiTags, aiPromptVersion: aiEntry.promptVersion };
-    const processed = entry
-      ? buildFromEntityMatch(db, {
-          transaction,
-          entry,
-          matchType: 'ai',
-          ...ai,
-          category: aiCategory,
-          confidence: aiEntry.confidence,
-          knownTags: context.knownTags,
-          entityDefaultTags: context.entityDefaultTags,
-        })
-      : buildUncertainFromAi(db, {
-          transaction,
-          entityName: aiEntry.entityName,
-          ...ai,
-          aiCategory,
-          confidence: aiEntry.confidence,
-          knownTags: context.knownTags,
-        });
-    const bucket = processed.status === 'matched' ? 'matched' : 'uncertain';
-    return { [bucket]: processed, batchStatus: 'success' } as TransactionProcessResult;
-  }
-
-  return {
-    uncertain: buildUncertainNoMatch(db, transaction, noMatchReason(counters), context.knownTags),
-    batchStatus: 'success',
-  };
-}
-
-function noMatchReason(counters: AiCounters): string {
-  if (counters.aiError) return 'AI categorization unavailable';
-  if (counters.aiDisabled) return 'No entity match found (AI categorization disabled)';
-  return 'No entity match found';
 }
 
 async function classifyTransaction(

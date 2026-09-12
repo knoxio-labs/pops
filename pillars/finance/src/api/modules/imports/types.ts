@@ -86,6 +86,11 @@ export interface ProcessContext {
    * transaction re-querying + re-sorting the whole table.
    */
   correctionRules: CorrectionRow[];
+  /**
+   * The tag confidence, as a fraction, at or above which an AI suggestion is
+   * pre-accepted in Tag Review (POPS-3671). Resolved from settings once per run.
+   */
+  preAcceptThreshold: number;
 }
 
 export function createAiCounters(): AiCounters {

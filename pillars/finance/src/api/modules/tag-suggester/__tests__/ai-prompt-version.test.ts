@@ -37,7 +37,7 @@ describe('AI suggestion prompt version', () => {
     const suggested = buildAiSuggestedTags(
       ['venue:supermarket'],
       tagVocabularyService.loadKnownTagSet(db),
-      'tags-v9.9'
+      { promptVersion: 'tags-v9.9', preAcceptThreshold: 0 }
     );
 
     expect(suggested).toEqual([
@@ -63,7 +63,7 @@ describe('AI suggestion prompt version', () => {
       description: 'WOOLWORTHS 2246',
       entityId: 'entity-1',
       aiTags: ['venue:supermarket'],
-      aiPromptVersion: 'categorize-v9.9',
+      aiProvenance: { promptVersion: 'categorize-v9.9', preAcceptThreshold: 0 },
       entityDefaultTags: new Map([['entity-1', ['contains:groceries']]]),
       recordTagRuleUsage: false,
     });

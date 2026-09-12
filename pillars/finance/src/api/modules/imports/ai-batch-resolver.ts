@@ -27,9 +27,9 @@ import {
   toCategorizerInput,
 } from './ai-categorizer.js';
 import { AiCircuitBreaker } from './ai-circuit-breaker.js';
+import { finalizeAiResult } from './ai-result.js';
 import { buildKnownEntityHint } from './entity-vocabulary.js';
 import { buildFailure } from './process-transaction-helpers.js';
-import { finalizeAiResult } from './process-transaction.js';
 import { PROGRESS_INTERVAL_ROWS, yieldToEventLoop } from './processing-helpers.js';
 
 import type { FinanceDb } from '../../../db/index.js';

@@ -5801,9 +5801,11 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -5870,9 +5872,11 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -5939,9 +5943,11 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6008,9 +6014,11 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6188,9 +6196,11 @@ export type ImportsCommitImportData = {
       pending?: boolean;
       rawRow: string;
       suggestedTags?: Array<{
+        confidence?: number;
         entityScoped?: boolean;
         isNew?: boolean;
         pattern?: string;
+        preAccept?: boolean;
         promptVersion?: string;
         source: 'ai' | 'rule' | 'entity';
         tag: string;
@@ -6542,9 +6552,11 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6611,9 +6623,11 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6680,9 +6694,11 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6749,9 +6765,11 @@ export type ImportsGetImportProgressResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -6969,9 +6987,11 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7038,9 +7058,11 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7107,9 +7129,11 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7176,9 +7200,11 @@ export type ImportsReevaluateWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7341,9 +7367,11 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7410,9 +7438,11 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7479,9 +7509,11 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7548,9 +7580,11 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7675,9 +7709,11 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7744,9 +7780,11 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7813,9 +7851,11 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -7882,9 +7922,11 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
         skipReason?: string;
         status: 'matched' | 'uncertain' | 'failed' | 'skipped';
         suggestedTags?: Array<{
+          confidence?: number;
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          preAccept?: boolean;
           promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
@@ -8198,6 +8240,7 @@ export type SettingsGetData = {
     key:
       | 'finance.aiCategorizer.model'
       | 'finance.aiCategorizer.maxTokens'
+      | 'finance.aiCategorizer.preAcceptConfidencePercent'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
       | 'finance.upSync.enabled'
@@ -8262,6 +8305,7 @@ export type SettingsSetData = {
     key:
       | 'finance.aiCategorizer.model'
       | 'finance.aiCategorizer.maxTokens'
+      | 'finance.aiCategorizer.preAcceptConfidencePercent'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
       | 'finance.upSync.enabled'
@@ -8327,6 +8371,7 @@ export type SettingsEnsureData = {
     key:
       | 'finance.aiCategorizer.model'
       | 'finance.aiCategorizer.maxTokens'
+      | 'finance.aiCategorizer.preAcceptConfidencePercent'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
       | 'finance.upSync.enabled'
@@ -8391,6 +8436,7 @@ export type SettingsResetKeyData = {
     key:
       | 'finance.aiCategorizer.model'
       | 'finance.aiCategorizer.maxTokens'
+      | 'finance.aiCategorizer.preAcceptConfidencePercent'
       | 'finance.ruleGen.model'
       | 'finance.ruleGen.maxTokens'
       | 'finance.upSync.enabled'
@@ -10013,9 +10059,11 @@ export type TransactionsSuggestTagsResponses = {
    */
   200: {
     tags: Array<{
+      confidence?: number;
       entityScoped?: boolean;
       isNew?: boolean;
       pattern?: string;
+      preAccept?: boolean;
       promptVersion?: string;
       source: 'ai' | 'rule' | 'entity';
       tag: string;

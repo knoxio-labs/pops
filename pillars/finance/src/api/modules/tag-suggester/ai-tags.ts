@@ -6,12 +6,12 @@
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
 import { remember } from './seen-tags.js';
 
-import type { SuggestedTag } from './types.js';
+import type { AiSuggestionProvenance, SuggestedTag } from './types.js';
 
 export interface AddAiTagsArgs {
   aiTags: string[] | undefined;
   aiCategory: string | null | undefined;
-  aiPromptVersion: string | undefined;
+  aiProvenance: AiSuggestionProvenance | undefined;
   knownTags: string[] | undefined;
   db: FinanceDb;
   seen: Set<string>;
@@ -33,7 +33,7 @@ export interface AddAiTagsArgs {
 export function buildAiSuggestedTags(
   aiTags: readonly string[],
   knownTagSet: tagVocabularyService.KnownTagSet,
-  promptVersion?: string
+  provenance?: AiSuggestionProvenance
 ): SuggestedTag[] {
   const seen = new Set<string>();
   const result: SuggestedTag[] = [];
@@ -44,10 +44,30 @@ export function buildAiSuggestedTags(
       tag,
       source: 'ai',
       ...(isNew ? { isNew: true } : {}),
-      ...(promptVersion === undefined ? {} : { promptVersion }),
+      ...provenanceFields(provenance),
     });
   }
   return result;
+}
+
+/**
+ * The provenance an AI suggestion carries. `preAccept` is decided here, once,
+ * so no consumer re-derives it from a threshold it would have to be sent: a
+ * suggestion is pre-accepted only when the model reported a confidence and that
+ * confidence meets the threshold. A suggestion with no reported confidence is
+ * not pre-accepted — the model declining to say how sure it is is not a reason
+ * to tick the tag for the person (POPS-3671).
+ */
+function provenanceFields(
+  provenance: AiSuggestionProvenance | undefined
+): Pick<SuggestedTag, 'promptVersion' | 'confidence' | 'preAccept'> {
+  if (provenance === undefined) return {};
+  const { promptVersion, confidence, preAcceptThreshold } = provenance;
+  return {
+    ...(promptVersion === undefined ? {} : { promptVersion }),
+    ...(confidence === undefined ? {} : { confidence }),
+    preAccept: confidence !== undefined && confidence >= preAcceptThreshold,
+  };
 }
 
 /**
@@ -66,7 +86,7 @@ export function buildAiSuggestedTags(
  * AI-classified row, on a path already waiting on a model call.
  */
 export function addAiTags(args: AddAiTagsArgs): void {
-  const { aiTags, aiCategory, aiPromptVersion, knownTags, db, seen, result } = args;
+  const { aiTags, aiCategory, aiProvenance, knownTags, db, seen, result } = args;
   let tags: string[];
   if (aiTags && aiTags.length > 0) {
     tags = aiTags;
@@ -81,7 +101,7 @@ export function addAiTags(args: AddAiTagsArgs): void {
   for (const suggestion of buildAiSuggestedTags(
     tags,
     tagVocabularyService.loadKnownTagSet(db),
-    aiPromptVersion
+    aiProvenance
   )) {
     if (!remember(seen, suggestion.tag)) continue;
     result.push(suggestion);

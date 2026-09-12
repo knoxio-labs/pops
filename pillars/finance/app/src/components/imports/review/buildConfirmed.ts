@@ -122,7 +122,8 @@ export function buildConfirmedTransactions(
     transactionType: t.transactionType,
     entityId: t.entity?.entityId,
     entityName: t.entity?.entityName,
-    tags: (t.suggestedTags ?? []).map((s) => s.tag),
+    // An AI suggestion the server marked not to pre-accept is offered, not ticked (POPS-3671).
+    tags: (t.suggestedTags ?? []).filter((s) => s.preAccept !== false).map((s) => s.tag),
     suggestedTags: t.suggestedTags,
     matchType: t.entity?.matchType,
     matchRuleId: t.ruleProvenance?.ruleId,
