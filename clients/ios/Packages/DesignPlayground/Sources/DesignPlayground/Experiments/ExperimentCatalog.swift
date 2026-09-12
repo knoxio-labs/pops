@@ -20,6 +20,20 @@ internal enum ExperimentCatalog {
             question:
                 "Where does the purchases digest get its finish — from the system's own structure, from the material it is drawn in, or from the figures relating to each other?",
             subject: SurfaceID(area: "purchases", slug: "list"),
+            status: .decided(
+                variant: "composed",
+                rationale:
+                    "Composed, decided on the device 2026-09-12. None of the three won outright and the reviewer "
+                    + "assembled one: Glass for the figure, the unmatched strip, Recent and the All-N control, "
+                    + "because on a platform whose own chrome refracts a page of flat rectangles reads as a form "
+                    + "from somewhere else; Grouped's ranked rows for Where it went, because a till name needs the "
+                    + "width a chip scroller could not give it; and Grouped's delta line, which was singled out — "
+                    + "the arrow and `less than Aug` is the one thing on the screen that says whether the figure "
+                    + "above it is a lot. The share bars and the rank numeral both went: the order ranks the rows "
+                    + "on its own and the two of them were spending exactly the width the merchant name was short "
+                    + "of. What is given up is the share each merchant holds, which no longer appears anywhere on "
+                    + "this screen — Chart is the record of what that looked like."
+            ),
             variants: [
                 purchasesVariant(
                     id: "composed",
