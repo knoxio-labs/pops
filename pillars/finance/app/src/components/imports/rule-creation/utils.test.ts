@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { describeForMatching, patternMatchesDescription } from '@pops/finance';
 
-import { buildChangeSet, computeProposals } from './utils';
+import { buildChangeSet, computeProposals, IMPORT_BATCH_SOURCE } from './utils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
+
+import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
 
 function txn(overrides: Partial<ConfirmedTransaction> & { description: string }) {
   return {
@@ -129,5 +131,139 @@ describe('computeProposals pattern derivation', () => {
         txn({ description: 'SIMBA CAR HIRE', entityId: 'e1', tags: ['trip:cairns-2026'] }),
       ])
     ).toEqual([]);
+  });
+});
+
+describe('computeProposals subtracts what already applies (POPS-3676)', () => {
+  const woolworths = { entityId: 'e1', entityName: 'Woolworths' };
+  const descriptors = ['WOOLWORTHS 1034 CANTERBURY', 'WOOLWORTHS 2201 NEWTOWN'];
+
+  function rows(
+    tags: string[],
+    suggestedTags: NonNullable<ConfirmedTransaction['suggestedTags']> = []
+  ): ConfirmedTransaction[] {
+    return descriptors.map((description, index) =>
+      txn({ description, checksum: `w${index}`, ...woolworths, tags, suggestedTags })
+    );
+  }
+
+  function staged(
+    source: string,
+    sourceChecksums: string[],
+    tags: string[]
+  ): PendingTagRuleChangeSet {
+    return {
+      tempId: `temp:${source}:${sourceChecksums.join(',')}`,
+      source,
+      appliedAt: '2026-09-12T00:00:00.000Z',
+      sourceChecksums,
+      changeSet: {
+        source,
+        ops: [
+          {
+            op: 'add',
+            data: {
+              descriptionPattern: 'WOOLWORTHS',
+              matchType: 'contains',
+              entityId: 'e1',
+              tags,
+              confidence: 0.9,
+              isActive: true,
+            },
+          },
+        ],
+      },
+    };
+  }
+
+  it('proposes nothing for a tag every row got from a stored rule', () => {
+    const imported = rows(
+      ['Groceries'],
+      [{ tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS' }]
+    );
+    expect(computeProposals(imported)).toEqual([]);
+  });
+
+  it('proposes nothing for a tag the merchant’s default tags supplied', () => {
+    const imported = rows(['Groceries'], [{ tag: 'Groceries', source: 'entity' }]);
+    expect(computeProposals(imported)).toEqual([]);
+  });
+
+  it('keeps a tag the AI suggested, since nothing re-applies it on the next import', () => {
+    const [proposal] = computeProposals(rows(['Groceries'], [{ tag: 'Groceries', source: 'ai' }]));
+    expect(proposal?.tags).toEqual(['Groceries']);
+  });
+
+  it('keeps a tag added by hand', () => {
+    const [proposal] = computeProposals(rows(['Groceries']));
+    expect(proposal?.tags).toEqual(['Groceries']);
+  });
+
+  it('subtracts only the supplied tags from a proposal that mixes both', () => {
+    const [proposal] = computeProposals(
+      rows(
+        ['Groceries', 'venue:supermarket'],
+        [
+          { tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS' },
+          { tag: 'venue:supermarket', source: 'ai' },
+        ]
+      )
+    );
+    expect(proposal?.tags).toEqual(['venue:supermarket']);
+  });
+
+  it('counts a row towards the threshold only where nothing supplied the tag', () => {
+    const supplied = [{ tag: 'Groceries', source: 'rule' as const, pattern: 'WOOLWORTHS' }];
+    const imported = [
+      txn({
+        description: 'WOOLWORTHS 1034 CANTERBURY',
+        checksum: 'w0',
+        ...woolworths,
+        tags: ['Groceries'],
+        suggestedTags: supplied,
+      }),
+      txn({
+        description: 'WOOLWORTHS 2201 NEWTOWN',
+        checksum: 'w1',
+        ...woolworths,
+        tags: ['Groceries'],
+        suggestedTags: supplied,
+      }),
+      txn({
+        description: 'WOOLWORTHS 3310 GLEBE',
+        checksum: 'w2',
+        ...woolworths,
+        tags: ['Groceries'],
+      }),
+    ];
+    expect(computeProposals(imported)).toEqual([]);
+  });
+
+  it('drops a tag a rule staged on Tag Review already covers on every row', () => {
+    const proposals = computeProposals(rows(['Groceries']), [
+      staged('tag-review:Woolworths', ['w0', 'w1'], ['Groceries']),
+    ]);
+    expect(proposals).toEqual([]);
+  });
+
+  it('keeps a tag the staged rule covers on only some of the rows', () => {
+    const [proposal] = computeProposals(rows(['Groceries']), [
+      staged('tag-review:WOOLWORTHS 1034 CANTERBURY', ['w0'], ['Groceries']),
+    ]);
+    expect(proposal?.tags).toEqual(['Groceries']);
+  });
+
+  it('keeps the tags a staged rule does not write', () => {
+    const [proposal] = computeProposals(rows(['Groceries', 'venue:supermarket']), [
+      staged('tag-review:Woolworths', ['w0', 'w1'], ['Groceries']),
+    ]);
+    expect(proposal?.tags).toEqual(['venue:supermarket']);
+  });
+
+  it('never subtracts against its own earlier batch rules, which a new visit replaces', () => {
+    const [proposal] = computeProposals(rows(['Groceries']), [
+      staged(IMPORT_BATCH_SOURCE, ['w0', 'w1'], ['Groceries']),
+    ]);
+    expect(proposal?.tags).toEqual(['Groceries']);
   });
 });

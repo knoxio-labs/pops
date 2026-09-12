@@ -6,6 +6,11 @@ import {
 
 import { parseTag } from '../../../lib/tags';
 
+import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
+
+/** The `source` step 6 stages its rules under, and the only staged entries it replaces. */
+export const IMPORT_BATCH_SOURCE = 'import-batch';
+
 export interface RuleProposal {
   id: string;
   entityId: string | null;
@@ -43,11 +48,24 @@ function groupByEntity(txns: ConfirmedTransaction[]): Map<string, EntityGroup> {
  */
 const EPISODIC_TAG_FACETS = new Set(['trip', 'project', 'hobby']);
 
+/**
+ * Whether the next import puts `tag` back on `txn` with no new rule: a stored
+ * rule or the merchant's default tags suggested it here. Proposing a rule for
+ * such a tag re-creates something that already exists (POPS-3676).
+ */
+function suppliedAlready(txn: ConfirmedTransaction, tag: string): boolean {
+  return (txn.suggestedTags ?? []).some(
+    (suggestion) =>
+      suggestion.tag === tag && (suggestion.source === 'rule' || suggestion.source === 'entity')
+  );
+}
+
 function commonTagsForGroup(group: EntityGroup): string[] {
   const counts = new Map<string, number>();
   for (const txn of group.txns) {
     for (const tag of new Set(txn.tags ?? [])) {
       if (EPISODIC_TAG_FACETS.has(parseTag(tag).facet ?? '')) continue;
+      if (suppliedAlready(txn, tag)) continue;
       counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
   }
@@ -69,17 +87,50 @@ function derivePattern(group: EntityGroup): string | null {
 }
 
 /**
+ * The tags each row already has a staged rule for, from any step but this
+ * one. Step 6's own entries are replaced on every visit rather than subtracted
+ * against, or a second visit would hide what the first one staged.
+ */
+function tagsStagedByRow(staged: readonly PendingTagRuleChangeSet[]): Map<string, Set<string>> {
+  const byRow = new Map<string, Set<string>>();
+  for (const entry of staged) {
+    if (entry.source === IMPORT_BATCH_SOURCE) continue;
+    const tags = entry.changeSet.ops.flatMap((op) => (op.op === 'add' ? op.data.tags : []));
+    for (const checksum of entry.sourceChecksums ?? []) {
+      const rowTags = byRow.get(checksum) ?? new Set<string>();
+      for (const tag of tags) rowTags.add(tag);
+      byRow.set(checksum, rowTags);
+    }
+  }
+  return byRow;
+}
+
+/**
  * Tag rules worth proposing for a confirmed import batch — one per entity
- * group that carries common tags and yields a usable descriptor pattern.
+ * group whose common tags nothing already accounts for, and that yields a
+ * usable descriptor pattern.
+ *
+ * Subtracted before anything is proposed (POPS-3676): a tag a stored rule or
+ * the merchant's default tags supplied on a row does not count for that row,
+ * and a tag a rule `staged` elsewhere in the wizard already covers on every
+ * row of the group is dropped. The second is compared by the rows a staged
+ * rule came from, never by its pattern, because Tag Review and this step can
+ * derive different patterns for the same merchant (POPS-3674).
  *
  * `entityName` stays the proposal's label; `pattern` is what the rule will
  * match on, and the two are deliberately different things.
  */
-export function computeProposals(confirmedTransactions: ConfirmedTransaction[]): RuleProposal[] {
+export function computeProposals(
+  confirmedTransactions: ConfirmedTransaction[],
+  staged: readonly PendingTagRuleChangeSet[] = []
+): RuleProposal[] {
+  const stagedByRow = tagsStagedByRow(staged);
   const proposals: RuleProposal[] = [];
   let seq = 0;
   for (const [, group] of groupByEntity(confirmedTransactions)) {
-    const tags = commonTagsForGroup(group);
+    const tags = commonTagsForGroup(group).filter(
+      (tag) => !group.txns.every((txn) => stagedByRow.get(txn.checksum)?.has(tag) ?? false)
+    );
     if (!tags.length) continue;
     const pattern = derivePattern(group);
     if (pattern === null) continue;
@@ -98,7 +149,7 @@ export function computeProposals(confirmedTransactions: ConfirmedTransaction[]):
 
 export function buildChangeSet(p: RuleProposal): TagRuleChangeSet {
   return {
-    source: 'import-batch',
+    source: IMPORT_BATCH_SOURCE,
     reason: `Rule detected from import batch for ${p.entityName}`,
     ops: [
       {
