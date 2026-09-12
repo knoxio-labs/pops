@@ -192,15 +192,48 @@ internal struct ReceiptDraftAdjustmentTests {
 
     // MARK: who it was from
 
-    @Test("a merchant typed rather than picked resolves to no entity")
-    func typedMerchantHasNoEntity() {
-        var draft = ReceiptDraft.blank()
+    /// There is no way to type a merchant, so the only unresolved state is
+    /// one nobody has answered — and it stops a save, because a purchase
+    /// attributed to nothing is what this model exists to prevent.
+    @Test("a purchase with no merchant cannot be saved")
+    func unresolvedMerchantBlocksSave() {
+        var draft = ReceiptDraft.fake(tillNames)
 
-        draft.merchant.value = "TONGLI SUPERMARKET"
+        #expect(draft.merchantResolution == .unresolved)
+        #expect(draft.problems.contains(.merchantUnresolved))
+        #expect(draft.isSaveable == false)
 
-        #expect(draft.merchantResolution == .typed)
+        draft.merchantResolution = .chosen(id: "ent-kmart")
+
+        #expect(draft.problems.contains(.merchantUnresolved) == false)
+        #expect(draft.isSaveable)
+    }
+
+    /// A merchant being created has no id yet — the save mints it — and that
+    /// is still a resolved merchant, because the purchase will be attributed
+    /// to something. Treating it as unresolved would refuse the save that
+    /// creates it.
+    @Test("a merchant being created resolves without an id")
+    func createdMerchantIsResolvedWithoutAnID() {
+        var draft = ReceiptDraft.fake(tillNames)
+
+        draft.merchantResolution = .created(value: "Tongli Supermarket")
+
+        #expect(draft.merchantResolution.isResolved)
         #expect(draft.merchantResolution.entityID == nil)
-        #expect(draft.isEdited)
+        #expect(draft.merchantResolution.createdValue == "Tongli Supermarket")
+        #expect(draft.problems.contains(.merchantUnresolved) == false)
+    }
+
+    /// An address is descriptive where a merchant is operative — nothing keys
+    /// on a branch — so an unanswered one must not hold the save.
+    @Test("an unresolved address does not block a save")
+    func unresolvedAddressDoesNotBlock() {
+        var draft = ReceiptDraft.fake(tillNames)
+        draft.merchantResolution = .chosen(id: "ent-kmart")
+
+        #expect(draft.addressResolution == .unresolved)
+        #expect(draft.isSaveable)
     }
 
     /// The handset resolves nothing itself. Whatever the server matched
@@ -210,7 +243,7 @@ internal struct ReceiptDraftAdjustmentTests {
     func readingArrivesUnresolved() {
         let draft = ReceiptDraft.fake(tillNames)
 
-        #expect(draft.merchantResolution == .typed)
+        #expect(draft.merchantResolution == .unresolved)
         #expect(draft.merchantResolution.isConfirmed == false)
     }
 
@@ -220,19 +253,21 @@ internal struct ReceiptDraftAdjustmentTests {
     @Test(
         "only a picked merchant counts as settled",
         arguments: [
-            (MerchantResolution.matched(id: "ent-bunnings"), false),
+            (RecordResolution.matched(id: "ent-bunnings"), false),
             (.chosen(id: "ent-bunnings"), true),
-            (.typed, false),
+            (.created(value: "Tongli Supermarket"), true),
+            (.unresolved, false),
         ]
     )
-    func onlyAPickIsConfirmed(resolution: MerchantResolution, expected: Bool) {
+    func onlyAPickIsConfirmed(resolution: RecordResolution, expected: Bool) {
         #expect(resolution.isConfirmed == expected)
     }
 
     @Test("a match and a pick both carry the id; typing carries none")
     func idSurvivesEitherWay() {
-        #expect(MerchantResolution.matched(id: "ent-aldi").entityID == "ent-aldi")
-        #expect(MerchantResolution.chosen(id: "ent-aldi").entityID == "ent-aldi")
-        #expect(MerchantResolution.typed.entityID == nil)
+        #expect(RecordResolution.matched(id: "ent-aldi").entityID == "ent-aldi")
+        #expect(RecordResolution.chosen(id: "ent-aldi").entityID == "ent-aldi")
+        #expect(RecordResolution.created(value: "Aldi").entityID == nil)
+        #expect(RecordResolution.unresolved.entityID == nil)
     }
 }

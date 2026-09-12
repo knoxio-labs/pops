@@ -35,7 +35,15 @@ import Foundation
 /// human correction is a third origin, and this is the shape it is carried in
 /// on the handset.
 public struct ReceiptDraft: Hashable, Sendable {
-    internal var merchant: ReceiptDraftValue
+    /// What the till printed, kept verbatim and never edited here.
+    ///
+    /// It used to be the merchant field. It is not the answer to "who was this
+    /// from" — `merchantEntityId` is — and offering it as an editable text
+    /// field invited a purchase whose merchant is a string, which is the
+    /// outcome `RecordResolution` exists to make impossible. Kept because it
+    /// is what `merchantEntityName` stores and what a later match is attempted
+    /// against.
+    internal let printedMerchant: ReceiptDraftValue
     /// How the merchant came to be attached to an entity, if it did.
     ///
     /// Three states rather than an optional id, because "the server matched
@@ -48,8 +56,18 @@ public struct ReceiptDraft: Hashable, Sendable {
     /// It matters on this screen in particular: a match the reader has not
     /// looked at is a suggestion, and presenting it identically to one they
     /// picked would collect agreement nobody gave.
-    internal var merchantResolution: MerchantResolution
-    internal var address: ReceiptDraftValue
+    internal var merchantResolution: RecordResolution
+    /// What the till printed for the branch, kept verbatim. Provenance, the
+    /// same way ``printedMerchant`` is — contacts owns the addresses, so the
+    /// answer is which of them this was, not what the paper spelled.
+    internal let printedAddress: ReceiptDraftValue
+    /// Which of the merchant's addresses this purchase was made at.
+    ///
+    /// Not gated on save. An address is descriptive where a merchant is
+    /// operative: reconciliation, the merchant lens and every total key on
+    /// `merchantEntityId` and none of them on a branch, so an unresolved
+    /// address costs detail and an unresolved merchant costs attribution.
+    internal var addressResolution: RecordResolution
     /// Bought online, so there is no branch to record.
     ///
     /// Not the same as an address the extractor failed to read. An empty
@@ -82,9 +100,10 @@ public struct ReceiptDraft: Hashable, Sendable {
     internal let reconciliationDetail: String?
 
     internal init(
-        merchant: ReceiptDraftValue,
-        merchantResolution: MerchantResolution = .typed,
-        address: ReceiptDraftValue,
+        printedMerchant: ReceiptDraftValue,
+        merchantResolution: RecordResolution = .unresolved,
+        printedAddress: ReceiptDraftValue,
+        addressResolution: RecordResolution = .unresolved,
         online: Bool = false,
         date: ReceiptDraftValue,
         lines: [ReceiptDraftLine],
@@ -96,9 +115,10 @@ public struct ReceiptDraft: Hashable, Sendable {
         readingReconciled: Bool = true,
         reconciliationDetail: String? = nil
     ) {
-        self.merchant = merchant
+        self.printedMerchant = printedMerchant
         self.merchantResolution = merchantResolution
-        self.address = address
+        self.printedAddress = printedAddress
+        self.addressResolution = addressResolution
         self.online = online
         self.date = date
         self.lines = lines
@@ -196,6 +216,11 @@ extension ReceiptDraft {
     internal var problems: [ReceiptDraftProblem] {
         var problems: [ReceiptDraftProblem] = []
         if total.isEmpty { problems.append(.totalMissing) }
+        // The rule that follows from a merchant being an entity: if there is
+        // no free-text escape, an unresolved merchant is not a thing that can
+        // be saved and quietly fixed later — it is the purchase having nobody
+        // to attribute it to.
+        if !merchantResolution.isResolved { problems.append(.merchantUnresolved) }
         // A row with nothing in it is one the form offered, not one the
         // reader filled in badly. Reporting it would mean the blank form's
         // first frame accuses somebody of leaving out an amount they were
@@ -227,32 +252,52 @@ extension ReceiptDraft {
     /// Whether anything at all differs from what the extractor read. What a
     /// caller needs to know before deciding a save is worth making.
     internal var isEdited: Bool {
-        merchant.isEdited || address.isEdited || date.isEdited || total.isEdited
+        merchantResolution.isConfirmed || addressResolution.isConfirmed || date.isEdited
+            || total.isEdited
             || adjustments.contains { $0.amount.isEdited } || lines.contains { $0.isEdited }
             || lines.contains { !$0.wasExtracted && !$0.isBlank }
     }
 }
 
-/// How a merchant name came to point at a contacts entity.
+/// Which record a field points at.
 ///
-/// The server resolves what it can at ingest — an exact name or alias match,
-/// with ambiguity deliberately resolving to nothing, because a wrong
-/// `merchantEntityId` silently files somebody else's spending. What it
-/// resolved is a proposal until a person has seen it.
-internal enum MerchantResolution: Hashable, Sendable {
-    /// The server matched it. A proposal: nobody has looked yet.
+/// One type for the merchant and the address because they are the same shape
+/// and change for the same reason: contacts owns entities, an entity owns a
+/// list of addresses, and both fields on this form are "which of those is
+/// this" rather than "what does it say". Two near-identical enums would drift
+/// the moment one of them learned something.
+///
+/// **Neither is ever a string somebody typed.** The operative field in
+/// `purchases` is `merchantEntityId`, and a name with no id behind it is a
+/// purchase nothing can be reconciled or totalled against — which is how two
+/// of the five purchases in production ended up attributed to nobody. A
+/// record the receipt names and nothing recognises is not a record typed, it
+/// is one ``unresolved``, and resolving it means choosing or creating.
+///
+/// The receipt's own wording survives separately, as provenance. It is what a
+/// later match is attempted against; it is not the answer.
+internal enum RecordResolution: Hashable, Sendable {
+    /// The server matched it at ingest. A proposal: nobody has looked yet.
     case matched(id: String)
     /// A person picked it from the list. Asserted.
     case chosen(id: String)
-    /// Free text. Nothing is attached, which is the honest outcome for a
-    /// till name nothing recognised.
-    case typed
+    /// A person is creating one. No id until the save mints it, which is why
+    /// this carries a value rather than an id — and why it is a distinct case
+    /// rather than a `chosen` with a blank id.
+    case created(value: String)
+    /// Nothing is attached yet. Where a reading lands when the server matched
+    /// nothing. A purchase may not be saved with an unresolved *merchant*; an
+    /// unresolved address is ordinary, because an address is descriptive and a
+    /// merchant is what everything else keys on.
+    case unresolved
 
-    /// The operative id, when there is one.
+    /// The operative id, when one exists. A merchant being created has none
+    /// yet, and that absence is the difference between "will be attributed"
+    /// and "is attributed".
     internal var entityID: String? {
         switch self {
         case .matched(let id), .chosen(let id): id
-        case .typed: nil
+        case .created, .unresolved: nil
         }
     }
 
@@ -260,8 +305,25 @@ internal enum MerchantResolution: Hashable, Sendable {
     /// mark and the confirmed one.
     internal var isConfirmed: Bool {
         switch self {
-        case .chosen: true
-        case .matched, .typed: false
+        case .chosen, .created: true
+        case .matched, .unresolved: false
+        }
+    }
+
+    /// Whether there is a merchant at all. The save gate.
+    internal var isResolved: Bool {
+        switch self {
+        case .matched, .chosen, .created: true
+        case .unresolved: false
+        }
+    }
+
+    /// What to show, when this case carries it. A chosen or matched record's
+    /// name lives with the record, not here.
+    internal var createdValue: String? {
+        switch self {
+        case .created(let value): value
+        case .matched, .chosen, .unresolved: nil
         }
     }
 }
@@ -462,6 +524,11 @@ internal enum ReceiptDraftProblem: Hashable, Sendable {
     /// sum. A line with an amount and no name is fine — that is a Salvos
     /// receipt, and the paper genuinely does not say.
     case lineAmountMissing(lineID: String)
+    /// Nobody to attribute the purchase to. Unlike a missing total this can
+    /// often be fixed in one tap, because the server usually matched
+    /// something — but it cannot be skipped, or the purchase joins the ones
+    /// attributed to a string.
+    case merchantUnresolved
 }
 
 /// What the screen may say about whether the figures add up.

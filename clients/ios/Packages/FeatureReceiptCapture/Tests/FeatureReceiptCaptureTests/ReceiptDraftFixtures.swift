@@ -101,4 +101,18 @@ extension ReceiptDraft {
     internal static func blank(currency: String? = nil) -> ReceiptDraft {
         ReceiptDraftPresentation().blankDraft(currency: currency)
     }
+
+    /// The same form with a merchant chosen.
+    ///
+    /// A purchase may not be saved without one, so every suite that is about
+    /// something *else* — a line's amount, a hint, a blank row — has to say
+    /// so rather than inherit a draft that happens to be saveable. An opt-in
+    /// helper keeps that visible at the call site; making `fake()` resolve a
+    /// merchant would hide the real default, which is that a reading arrives
+    /// attributed to nobody.
+    internal func attributed(id: String = "ent-test") -> ReceiptDraft {
+        var copy = self
+        copy.merchantResolution = .chosen(id: id)
+        return copy
+    }
 }

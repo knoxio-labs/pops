@@ -22,57 +22,57 @@ extension ReceiptDraftForm {
         }
     }
 
-    /// One field, with the known merchants attached to it.
+    /// A select, not a field.
     ///
-    /// It was a picker *and* a text field, which put two controls on one
-    /// value: a reading resolves no entity on the handset, so the form opened
-    /// with an empty picker beside the name it had just read. The value has
-    /// one place to be, and choosing from the list is a way of filling it
-    /// rather than a second thing to fill.
-    ///
-    /// Typing drops the resolution to ``MerchantResolution/typed``, because a name typed
-    /// over a chosen entity is the reader saying it was the wrong entity —
-    /// keeping the id would file the purchase under a merchant whose name is
-    /// no longer on screen. Picking sets it, which is the whole reason the
-    /// list is here: `merchantEntityId` is the operative half of the pair, and
-    /// a form that only ever produced a label could never attach one.
+    /// There was a text field here and it was the wrong control, because it
+    /// admitted an answer the data model has no room for: a merchant is
+    /// `merchantEntityId`, and a name with no id behind it is a purchase
+    /// nothing can be reconciled or totalled against. Every route through
+    /// this control ends at an entity — matched, chosen, or created.
     private var merchantField: some View {
-        ReceiptDraftFieldWithChoices(
+        ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.merchantLabel,
-            placeholder: ReceiptDraftCopy.merchantPlaceholder,
-            text: $draft.merchant.value,
-            font: .popsTitle,
-            note: hint(.merchant),
-            choices: merchants.map(\.name),
-            resolution: draft.merchantResolution,
-            onChoose: { name in
-                if let merchant = merchants.first(where: { $0.name == name }) {
-                    choose(merchant)
-                }
-            },
-            onType: { draft.merchantResolution = .typed }
+            resolution: $draft.merchantResolution,
+            printed: draft.printedMerchant.value,
+            records: merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) },
+            symbol: "building.2",
+            placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
+            createTitle: ReceiptDraftCopy.createMerchantSection,
+            note: merchantNote
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
 
-    /// The same, over the chosen merchant's branches.
+    /// The gate's complaint about the merchant, unless there is no merchant —
+    /// which outranks it. A reader who has not chosen one needs telling that,
+    /// not reminding that the print was smudged.
+    private var merchantNote: PopsFieldNote? {
+        if !draft.merchantResolution.isResolved {
+            return .problem(ReceiptDraftCopy.merchantUnresolved)
+        }
+        return hint(.merchant)
+    }
+
+    /// The same control over the chosen merchant's branches.
     ///
-    /// There is nothing to offer until there is a merchant to offer it for,
-    /// and a list of every address in contacts is not a help — so an
-    /// unresolved merchant leaves this a plain field, which is also what an
-    /// entity with no address on file gets.
+    /// Contacts owns the addresses and an entity owns a list of them, so a
+    /// branch is a record like a merchant is — which is why this is a select
+    /// and not a field. It needs a merchant first: there is nothing to offer
+    /// until there is an entity whose branches these are, and a list of every
+    /// address in contacts is not a help.
     private var addressField: some View {
         let known = merchants.first { $0.id == draft.merchantResolution.entityID }?.addresses ?? []
-        return ReceiptDraftFieldWithChoices(
+        return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.addressLabel,
-            placeholder: ReceiptDraftCopy.addressPlaceholder,
-            text: $draft.address.value,
-            font: .popsSubheadline,
+            resolution: $draft.addressResolution,
+            printed: draft.printedAddress.value,
+            records: known.map { ReceiptDraftRecord(id: $0.id, name: $0.value) },
+            symbol: "mappin.and.ellipse",
+            placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
+            createTitle: ReceiptDraftCopy.createAddressSection,
             note: hint(.address),
-            choices: known,
-            resolution: known.contains(trimmedAddress) ? .chosen(id: trimmedAddress) : .typed,
-            onChoose: { draft.address.value = $0 },
-            onType: {}
+            unavailable: draft.merchantResolution.isResolved
+                ? nil : ReceiptDraftCopy.addressNeedsMerchant
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.address)
     }
@@ -95,20 +95,5 @@ extension ReceiptDraftForm {
             }
         }
         .tint(Color.popsAccent)
-    }
-
-    /// `trimmed` is `fileprivate` to the model's own file, and widening it
-    /// for a comparison here would put a string helper on the package's
-    /// surface for the sake of one call site.
-    fileprivate var trimmedAddress: String {
-        draft.address.value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func choose(_ merchant: ReceiptMerchantChoice) {
-        draft.merchantResolution = .chosen(id: merchant.id)
-        draft.merchant.value = merchant.name
-        if !merchant.addresses.contains(trimmedAddress) {
-            draft.address.value = merchant.addresses.count == 1 ? merchant.addresses[0] : ""
-        }
     }
 }

@@ -55,15 +55,27 @@ public enum ReceiptDraftCopy {
     internal static let itemQuantityPlaceholder = "—"
     internal static let itemUnitNotePlaceholder = "Unit price or weight"
     internal static let addItem = "Add an item"
-    internal static let chooseFromKnown = "Choose from the ones on file"
     internal static let resolvedByPerson = "You chose this record"
+    internal static let resolvedByCreation = "You are creating this record"
     internal static let resolvedByServer = "Matched automatically — not checked yet"
     internal static let searchChoices = "Search"
     internal static let noMatches = "Nothing on file matches that."
+    internal static let nothingOnFile = "Nothing on file yet."
     internal static let cancelChoosing = "Cancel"
+    internal static let newRecordPlaceholder = "Name"
+    internal static let merchantPlaceholderSelect = "Choose or create a merchant"
+    internal static let addressPlaceholderSelect = "Choose or create a branch"
+    internal static let merchantUnresolved = "Every purchase needs a merchant."
+    internal static let createMerchantSection = "New merchant"
+    internal static let createAddressSection = "New branch"
+    internal static let addressNeedsMerchant = "Choose a merchant first."
 
-    internal static func keepTyped(_ value: String) -> String {
-        "Keep “\(value)”"
+    internal static func createRecord(_ value: String) -> String {
+        value.isEmpty ? "Create" : "Create “\(value)”"
+    }
+
+    internal static func printedAs(_ value: String) -> String {
+        "The receipt says “\(value)”"
     }
     internal static let chooseMerchant = "Choose a merchant"
     internal static let newMerchant = "New merchant"

@@ -24,7 +24,7 @@ public struct ReceiptDraftPresentation: Sendable {
     ///   at ingest against contacts, deliberately conservatively — an exact
     ///   name or alias hit, with ambiguity resolving to nothing. So it is one
     ///   of the things a reading is, and it lands as
-    ///   ``MerchantResolution/matched`` rather than `chosen`: nobody has
+    ///   ``RecordResolution/matched`` rather than `chosen`: nobody has
     ///   looked at it yet, and presenting a suggestion as a decision collects
     ///   agreement nobody gave.
     public func draft(
@@ -34,9 +34,9 @@ public struct ReceiptDraftPresentation: Sendable {
     ) -> ReceiptDraft {
         let attached = hints(failures)
         return ReceiptDraft(
-            merchant: ReceiptDraftValue(extracted: extracted.merchantName),
-            merchantResolution: matchedMerchantID.map(MerchantResolution.matched) ?? .typed,
-            address: ReceiptDraftValue(extracted: extracted.address),
+            printedMerchant: ReceiptDraftValue(extracted: extracted.merchantName),
+            merchantResolution: matchedMerchantID.map(RecordResolution.matched) ?? .unresolved,
+            printedAddress: ReceiptDraftValue(extracted: extracted.address),
             date: ReceiptDraftValue(extracted: ReceiptPrintedDate.oneLine(extracted)),
             lines: lines(extracted.lines),
             adjustments: adjustments(extracted),
@@ -59,8 +59,8 @@ public struct ReceiptDraftPresentation: Sendable {
     /// section the reader has to discover an "Add" control for.
     public func blankDraft(currency: String?) -> ReceiptDraft {
         ReceiptDraft(
-            merchant: ReceiptDraftValue(extracted: nil),
-            address: ReceiptDraftValue(extracted: nil),
+            printedMerchant: ReceiptDraftValue(extracted: nil),
+            printedAddress: ReceiptDraftValue(extracted: nil),
             date: ReceiptDraftValue(extracted: nil),
             lines: [.blank(id: "line-0")],
             adjustments: [],
