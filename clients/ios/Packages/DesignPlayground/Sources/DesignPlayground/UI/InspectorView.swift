@@ -82,9 +82,9 @@ internal struct InspectorView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.popsForeground)
-        .padding(.horizontal, PopsSpacing.lg)
-        .padding(.vertical, PopsSpacing.sm)
-        .playgroundGlass(in: .capsule)
+        .padding(.horizontal, InspectorShape.contentInset)
+        .padding(.vertical, InspectorShape.barPadding)
+        .playgroundGlass(in: InspectorShape.bar)
         .gesture(liftGesture)
     }
 
@@ -129,8 +129,8 @@ internal struct InspectorView: View {
             appearanceAndDirection
             typeSizeSlider
         }
-        .padding(PopsSpacing.lg)
-        .playgroundGlass(in: .capsule)
+        .padding(InspectorShape.contentInset)
+        .playgroundGlass(in: InspectorShape.panel)
         .padding(.bottom, PopsSpacing.sm)
     }
 
@@ -246,4 +246,40 @@ internal struct Chip: Identifiable {
     internal let id: String
     internal let title: String
     internal var symbol: String?
+}
+
+/// The shapes the inspector is drawn in, and the measurements they come from.
+///
+/// Named and separated because the difference between the two is where this
+/// went wrong. The bar and the panel read as one control, so both were drawn
+/// in a `Capsule` — and a capsule rounds the ends of the *shorter* side, which
+/// on a panel several rows deep is half its height. `glassEffect` fills a shape
+/// behind its content rather than clipping to it, so what that produced was a
+/// lozenge: a panel whose row labels and outermost chips sat on bare background
+/// with the glass curving away underneath them.
+internal enum InspectorShape {
+    /// The step above and below the bar's controls.
+    internal static let barPadding = PopsSpacing.sm
+
+    /// How far inside the glass the content of either piece sits. Named rather
+    /// than inlined at the two padding calls because it is half of the
+    /// invariant both have to hold: the glass must reach the corners of the box
+    /// this inset describes.
+    internal static let contentInset = PopsSpacing.lg
+
+    /// A single-line strip, whose ends are meant to be round.
+    internal static var bar: Capsule { Capsule() }
+
+    /// A touch target with ``barPadding`` above and below it.
+    internal static let barHeight = PopsSize.touchTarget + barPadding * 2
+
+    /// The panel's corner, matched to the bar's so the two still read as one
+    /// control: a capsule ``barHeight`` tall is round to half of it.
+    internal static let panelCorner = barHeight / 2
+
+    /// A panel several rows deep. Continuous rather than circular because the
+    /// bar's ends are, and the two sit one above the other.
+    internal static var panel: RoundedRectangle {
+        RoundedRectangle(cornerRadius: panelCorner, style: .continuous)
+    }
 }
