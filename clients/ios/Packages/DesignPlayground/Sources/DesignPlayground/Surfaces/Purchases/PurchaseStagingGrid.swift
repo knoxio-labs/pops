@@ -85,7 +85,7 @@ internal struct PurchaseStagingGrid: View {
         .safeAreaInset(edge: .bottom) { actions }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
-                pages: staged.everyPage,
+                staged: staged,
                 showing: page,
                 onDelete: {
                     staged.delete($0.id)
