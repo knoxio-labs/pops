@@ -9,7 +9,7 @@
  *   3. Processing         → polls GET /imports/progress until `completed`
  *   4. Review             → both transactions land in Matched tab, grouped by merchant
  *   5. Tag Review         → no edits, continue
- *   6. Create Rules       → skip (no patterns in mocked data)
+ *   6. Create Rules       → passed over (the mocked rows carry no tags, so nothing to offer)
  *   7. Final Review       → Approve & Commit All
  *   8. Summary            → "Import Complete" with 2 transactions imported
  *
@@ -485,9 +485,6 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible();
     await page.getByRole('button', { name: /continue to final review/i }).click();
 
-    // Step 6: Create Rules — no patterns in mocked test, skip.
-    await page.getByRole('button', { name: /^skip$/i }).click();
-
     // Step 7: Final Review — approve, then confirm. The wizard puts an
     // irreversible write behind a confirmation whose button carries the same
     // label as the one that opened it, so the second click is scoped to the
@@ -505,9 +502,10 @@ test.describe('Finance — import wizard happy path (mocked)', () => {
     // step change up to Commit, and handed to the commit to delete.
     expect(draftTraffic.created).toBe(1);
     expect(page.url()).toContain(`draft=${DRAFT_ID}`);
-    expect(draftTraffic.writes.map((w) => w.step)).toEqual(
-      expect.arrayContaining([2, 3, 4, 5, 6, 7])
-    );
+    const writtenSteps = draftTraffic.writes.map((w) => w.step);
+    expect(writtenSteps).toEqual(expect.arrayContaining([2, 3, 4, 5, 7]));
+    // Nothing to propose, so Create Rules is passed over rather than landed on (POPS-3676).
+    expect(writtenSteps).not.toContain(6);
     await expect(page.getByText('Transactions Imported')).toBeVisible();
     // The SummaryCard for imported transactions shows the value "2".
     await expect(page.getByRole('button', { name: /new import/i })).toBeVisible();

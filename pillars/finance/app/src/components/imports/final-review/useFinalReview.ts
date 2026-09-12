@@ -12,6 +12,8 @@ import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { reconcilePendingTagRule } from '../../../lib/tag-rule-reconcile';
 import { useImportStore } from '../../../store/importStore';
 import { IMPORT_DRAFTS_LIST_KEY } from '../hooks/useDraftWriteThrough';
+import { rulesStepHasProposals } from '../rule-creation/utils';
+import { TAG_REVIEW_STEP } from '../step-labels';
 import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
 
 import type { PendingTagRuleChangeSet } from '../../../store/importStore';
@@ -30,6 +32,7 @@ function useStoreSlice() {
     dialectId: useImportStore((s) => s.dialectId),
     sourceFileNames: useImportStore((s) => s.sourceFileNames),
     prevStep: useImportStore((s) => s.prevStep),
+    goToStep: useImportStore((s) => s.goToStep),
     nextStep: useImportStore((s) => s.nextStep),
     setCommitResult: useImportStore((s) => s.setCommitResult),
     draftId: useImportStore((s) => s.draftId),
@@ -128,7 +131,9 @@ export function useFinalReview() {
   const slice = useStoreSlice();
   const reconciledTagRuleChangeSets = useReconciledTagRules(slice);
   const counts = useDerivedCounts(slice, reconciledTagRuleChangeSets);
-  const tagRuleAddCollisions = useTagRuleAddCollisions(reconciledTagRuleChangeSets);
+  const tagRuleAddCollisions = useTagRuleAddCollisions(
+    reconciledTagRuleChangeSets.map((pcs) => pcs.changeSet)
+  );
   const [commitError, setCommitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitKey] = useState(() => crypto.randomUUID());
@@ -163,6 +168,13 @@ export function useFinalReview() {
   };
   const cancelConfirm = () => setConfirmOpen(false);
   const confirmCommit = () => commitMutation.mutate(commitBodyFor(slice, commitKey));
+  const goBack = () => {
+    if (rulesStepHasProposals(slice.confirmedTransactions, slice.pendingTagRuleChangeSets)) {
+      slice.prevStep();
+    } else {
+      slice.goToStep(TAG_REVIEW_STEP);
+    }
+  };
   return {
     pendingEntities: slice.pendingEntities,
     pendingChangeSets: slice.pendingChangeSets,
@@ -176,7 +188,7 @@ export function useFinalReview() {
     openConfirm,
     cancelConfirm,
     confirmCommit,
-    prevStep: slice.prevStep,
+    goBack,
     removeTagRule: slice.removePendingTagRuleChangeSet,
   };
 }

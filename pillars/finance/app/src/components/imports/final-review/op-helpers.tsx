@@ -1,4 +1,4 @@
-import { Ban, Merge, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Ban, Merge, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 
 import { describeTag } from '../../../lib/tags';
 
@@ -51,6 +51,16 @@ export const MERGE_BADGE: { label: string; icon: React.ReactNode; className: str
   className: 'bg-accent/10 text-accent-foreground dark:bg-accent/10 dark:text-accent-foreground/60',
 };
 
+/**
+ * A staged `add` op that lands on a disabled rule, which committing switches
+ * back on (POPS-3676) — its own badge, so a re-enable is never read as a merge.
+ */
+export const REENABLE_BADGE: { label: string; icon: React.ReactNode; className: string } = {
+  label: 'Re-enable',
+  icon: <RotateCcw className="h-3 w-3" />,
+  className: 'bg-warning/10 text-warning dark:bg-warning/10 dark:text-warning/60',
+};
+
 export function opDisplayLabel(op: ChangeSetOp): string {
   switch (op.op) {
     case 'add':
@@ -63,16 +73,21 @@ export function opDisplayLabel(op: ChangeSetOp): string {
   }
 }
 
-/** `OP_BADGE.add`, unless `collision` says this `add` would merge (POPS-2955). */
+/**
+ * `OP_BADGE.add`, unless `collision` says this `add` lands on an existing
+ * rule: MERGE when that rule is live (POPS-2955), RE-ENABLE when it is
+ * disabled (POPS-3676).
+ */
 export function tagRuleOpBadge(
   op: TagRuleChangeSetOp,
   collision: TagRuleAddCollision | null | undefined
 ): (typeof OP_BADGE)[string] | undefined {
-  if (op.op === 'add' && collision) return MERGE_BADGE;
+  if (op.op === 'add' && collision) return collision.isActive ? MERGE_BADGE : REENABLE_BADGE;
   return OP_BADGE[op.op];
 }
 
-function formatTags(tags: string[] | undefined): string {
+/** A tag list as a reader sees it, or `''` for none. */
+export function formatTags(tags: string[] | undefined): string {
   return tags?.length ? tags.map((tag) => describeTag(tag).ariaLabel).join(', ') : '';
 }
 
@@ -92,7 +107,8 @@ export function tagRuleOpDisplayLabel(
       const newTags = formatTags(op.data.tags);
       if (collision) {
         const existing = formatTags(collision.existingTags) || '(no tags yet)';
-        return `${op.data.descriptionPattern} — existing: ${existing}${newTags ? ` + ${newTags}` : ''}`;
+        const reenables = collision.isActive ? '' : 're-enables a rule you disabled; ';
+        return `${op.data.descriptionPattern} — ${reenables}existing: ${existing}${newTags ? ` + ${newTags}` : ''}`;
       }
       return newTags ? `${op.data.descriptionPattern} → ${newTags}` : op.data.descriptionPattern;
     }

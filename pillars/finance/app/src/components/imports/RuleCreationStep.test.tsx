@@ -1,27 +1,27 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockAddPendingTagRuleChangeSet = vi.fn();
+const mockRemovePendingTagRuleChangeSet = vi.fn();
 
-let storeState: Record<string, unknown> = {
-  confirmedTransactions: [],
-  nextStep: mockNextStep,
-  prevStep: mockPrevStep,
-  addPendingTagRuleChangeSet: mockAddPendingTagRuleChangeSet,
-};
+let storeState: Record<string, unknown> = {};
 
 const taxonomy: { facets: Array<{ facet: string; kind: string }>; tags: string[] } = {
   facets: [],
   tags: [],
 };
 
+const { mockResolveCollisions } = vi.hoisted(() => ({ mockResolveCollisions: vi.fn() }));
+let collisions: unknown[][] = [];
+
 vi.mock('../../finance-api/index.js', () => ({
   tagRulesFacets: async () => ({ data: { facets: taxonomy.facets }, error: undefined }),
   tagRulesVocabulary: async () => ({ data: { tags: taxonomy.tags }, error: undefined }),
+  tagRulesResolveAddCollisions: (...args: unknown[]) => mockResolveCollisions(...args),
 }));
 
 vi.mock('../../store/importStore', () => ({
@@ -51,15 +51,63 @@ function makeTxn(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function stagedRule(options: {
+  tempId: string;
+  source: string;
+  sourceChecksums: string[];
+  descriptionPattern?: string;
+  tags?: string[];
+}) {
+  return {
+    tempId: options.tempId,
+    source: options.source,
+    appliedAt: '2026-09-12T00:00:00.000Z',
+    sourceChecksums: options.sourceChecksums,
+    changeSet: {
+      source: options.source,
+      ops: [
+        {
+          op: 'add',
+          data: {
+            descriptionPattern: options.descriptionPattern ?? 'WOOLWORTHS 1034 SYDNEY',
+            matchType: 'contains',
+            entityId: 'entity-woolworths',
+            tags: options.tags ?? ['Groceries'],
+            confidence: 0.9,
+            isActive: true,
+          },
+        },
+      ],
+    },
+  };
+}
+
+function twoWoolworthsRows() {
+  return [makeTxn(), makeTxn({ checksum: 'abc2' })];
+}
+
+function tickAll() {
+  for (const box of screen.getAllByRole('checkbox')) {
+    if (!box.hasAttribute('disabled')) fireEvent.click(box);
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   taxonomy.facets = [];
   taxonomy.tags = [];
+  collisions = [];
+  mockResolveCollisions.mockImplementation(async () => ({
+    data: { collisions },
+    error: undefined,
+  }));
   storeState = {
     confirmedTransactions: [],
+    pendingTagRuleChangeSets: [],
     nextStep: mockNextStep,
     prevStep: mockPrevStep,
     addPendingTagRuleChangeSet: mockAddPendingTagRuleChangeSet,
+    removePendingTagRuleChangeSet: mockRemovePendingTagRuleChangeSet,
   };
 });
 
@@ -76,48 +124,44 @@ describe('RuleCreationStep', () => {
   });
 
   it('shows a proposal card for an entity with consistent tags', () => {
-    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
+    storeState.confirmedTransactions = twoWoolworthsRows();
     render(withQuery(<RuleCreationStep />));
     expect(screen.getByText('Woolworths')).toBeInTheDocument();
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.getByText(/2 transactions/i)).toBeInTheDocument();
   });
 
-  it('a proposal backed by only one transaction is not checked by default', () => {
-    storeState.confirmedTransactions = [makeTxn()];
+  it('starts with nothing ticked, however many rows back a proposal (POPS-3676)', () => {
+    storeState.confirmedTransactions = twoWoolworthsRows();
     render(withQuery(<RuleCreationStep />));
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).not.toBeChecked();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /Create.*rule/i })).toBeDisabled();
   });
 
-  it('a proposal backed by more than one transaction is checked by default', () => {
-    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
+  it('creates rules for the proposals ticked', () => {
+    storeState.confirmedTransactions = twoWoolworthsRows();
     render(withQuery(<RuleCreationStep />));
-    const checkbox = screen.getByRole('checkbox');
-    expect(checkbox).toBeChecked();
-  });
-
-  it('creates rules for checked proposals on confirm', () => {
-    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
-    render(withQuery(<RuleCreationStep />));
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
     expect(mockNextStep).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
+    expect(call.source).toBe('import-batch');
     expect(call.changeSet.ops[0].op).toBe('add');
     expect(call.changeSet.ops[0].data.descriptionPattern).toBe('WOOLWORTHS 1034 SYDNEY');
     expect(call.changeSet.ops[0].data.tags).toEqual(['Groceries']);
   });
 
   it('carries the proposal tags as acceptedNewTags, so they gain vocabulary standing', () => {
-    storeState.confirmedTransactions = [makeTxn(), makeTxn({ checksum: 'abc2' })];
+    storeState.confirmedTransactions = twoWoolworthsRows();
     render(withQuery(<RuleCreationStep />));
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
     expect(call.acceptedNewTags).toEqual(['Groceries']);
   });
 
-  it('unchecking a proposal excludes it from rule creation', () => {
+  it('stages only the proposals ticked', () => {
     storeState.confirmedTransactions = [
       makeTxn({ entityId: 'e1', entityName: 'Woolworths' }),
       makeTxn({ entityId: 'e1', entityName: 'Woolworths', checksum: 'w2' }),
@@ -137,8 +181,7 @@ describe('RuleCreationStep', () => {
       }),
     ];
     render(withQuery(<RuleCreationStep />));
-    const checkboxes = screen.getAllByRole('checkbox');
-    fireEvent.click(checkboxes[0]!);
+    fireEvent.click(screen.getAllByRole('checkbox')[1]!);
     fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]![0];
@@ -159,6 +202,30 @@ describe('RuleCreationStep', () => {
     expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
   });
 
+  it('offers nothing for a tag every row got from a stored rule', () => {
+    const supplied = [{ tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS' }];
+    storeState.confirmedTransactions = [
+      makeTxn({ suggestedTags: supplied }),
+      makeTxn({ checksum: 'abc2', suggestedTags: supplied }),
+    ];
+    render(withQuery(<RuleCreationStep />));
+    expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
+  });
+
+  it('offers nothing a rule staged on Tag Review already covers', () => {
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    storeState.pendingTagRuleChangeSets = [
+      stagedRule({
+        tempId: 'review-1',
+        source: 'tag-review:Woolworths',
+        sourceChecksums: ['abc', 'abc2'],
+        descriptionPattern: 'Woolworths',
+      }),
+    ];
+    render(withQuery(<RuleCreationStep />));
+    expect(screen.getByText(/No tag patterns detected/i)).toBeInTheDocument();
+  });
+
   it('shows a Back button that calls prevStep, in the empty state', () => {
     render(withQuery(<RuleCreationStep />));
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
@@ -172,6 +239,7 @@ describe('RuleCreationStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
     expect(mockPrevStep).toHaveBeenCalledOnce();
     expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
+    expect(mockRemovePendingTagRuleChangeSet).not.toHaveBeenCalled();
   });
 
   it('only includes tags appearing on ≥50% of transactions in a group', () => {
@@ -186,10 +254,79 @@ describe('RuleCreationStep', () => {
   });
 });
 
+describe('RuleCreationStep — a previous visit’s rules (POPS-3676)', () => {
+  function withEarlierVisit() {
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    storeState.pendingTagRuleChangeSets = [
+      stagedRule({ tempId: 'batch-1', source: 'import-batch', sourceChecksums: ['abc', 'abc2'] }),
+      stagedRule({
+        tempId: 'review-1',
+        source: 'tag-review:Coles',
+        sourceChecksums: ['coles-1'],
+        descriptionPattern: 'COLES',
+      }),
+    ];
+  }
+
+  it('keeps an earlier visit’s choice ticked on return', () => {
+    withEarlierVisit();
+    render(withQuery(<RuleCreationStep />));
+    expect(screen.getByRole('checkbox')).toBeChecked();
+  });
+
+  it('replaces what an earlier visit staged instead of adding to it', () => {
+    withEarlierVisit();
+    render(withQuery(<RuleCreationStep />));
+    fireEvent.click(screen.getByRole('button', { name: /Create.*rule/i }));
+    expect(mockRemovePendingTagRuleChangeSet.mock.calls).toEqual([['batch-1']]);
+    expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledOnce();
+    expect(mockRemovePendingTagRuleChangeSet.mock.invocationCallOrder[0]).toBeLessThan(
+      mockAddPendingTagRuleChangeSet.mock.invocationCallOrder[0]!
+    );
+  });
+
+  it('drops what an earlier visit staged when skipped', () => {
+    withEarlierVisit();
+    render(withQuery(<RuleCreationStep />));
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+    expect(mockRemovePendingTagRuleChangeSet.mock.calls).toEqual([['batch-1']]);
+    expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
+    expect(mockNextStep).toHaveBeenCalledOnce();
+  });
+});
+
+describe('RuleCreationStep — existing rules (POPS-3676)', () => {
+  it('says when a proposal would re-enable a rule you disabled, and leaves it unticked', async () => {
+    collisions = [[{ ruleId: 'r1', existingTags: ['Groceries'], isActive: false }]];
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    render(withQuery(<RuleCreationStep />));
+    expect(await screen.findByText(/re-enables a rule you disabled/i)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('says when a proposal would add to an existing rule', async () => {
+    collisions = [[{ ruleId: 'r1', existingTags: ['Groceries'], isActive: true }]];
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    render(withQuery(<RuleCreationStep />));
+    expect(await screen.findByText(/adds to an existing rule/i)).toBeInTheDocument();
+  });
+
+  it('says nothing about a rule that does not exist yet', async () => {
+    collisions = [[null]];
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    render(withQuery(<RuleCreationStep />));
+    await waitFor(() => {
+      expect(mockResolveCollisions).toHaveBeenCalled();
+    });
+    expect(screen.queryByText(/adds to an existing rule|re-enables a rule/i)).toBeNull();
+  });
+});
+
 describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
   it('stages the checksums of exactly the rows the proposal was built from', () => {
     storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
     render(withQuery(<RuleCreationStep />));
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     const call = mockAddPendingTagRuleChangeSet.mock.calls[0]?.[0];
@@ -206,6 +343,7 @@ describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
       makeTxn({ checksum: 'c-2', ...coles }),
     ];
     render(withQuery(<RuleCreationStep />));
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     const staged = new Map(
@@ -221,6 +359,7 @@ describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
   it('never stages a rule with no provenance, which reconciliation would drop whole', () => {
     storeState.confirmedTransactions = [makeTxn({ checksum: 'w-1' }), makeTxn({ checksum: 'w-2' })];
     render(withQuery(<RuleCreationStep />));
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
 
     expect(mockAddPendingTagRuleChangeSet.mock.calls.length).toBeGreaterThan(0);
@@ -249,7 +388,7 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('venue:speakeasy');
   });
 
-  it('stages the valid proposal and not the refused one, though both were checked by default', async () => {
+  it('stages the valid proposal and not the refused one, though both were ticked', async () => {
     taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
     taxonomy.tags = ['venue:bar'];
     storeState = {
@@ -283,6 +422,7 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
     };
     render(withQuery(<RuleCreationStep />));
     await screen.findByRole('alert');
+    tickAll();
     fireEvent.click(screen.getByRole('button', { name: /create 1 rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
     const staged = JSON.stringify(mockAddPendingTagRuleChangeSet.mock.calls);
@@ -301,6 +441,10 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
       ],
     };
     render(withQuery(<RuleCreationStep />));
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox')).not.toBeDisabled();
+    });
+    tickAll();
     fireEvent.click(await screen.findByRole('button', { name: /create 1 rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).toBeNull();

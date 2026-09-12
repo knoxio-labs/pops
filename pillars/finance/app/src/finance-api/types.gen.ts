@@ -9304,6 +9304,7 @@ export type TagRulesResolveAddCollisionsResponses = {
     collisions: Array<
       Array<{
         existingTags: Array<string>;
+        isActive: boolean;
         ruleId: string;
       } | null>
     >;
