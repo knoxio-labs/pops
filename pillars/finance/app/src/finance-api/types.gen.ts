@@ -5804,6 +5804,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -5872,6 +5873,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -5940,6 +5942,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6008,6 +6011,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6187,6 +6191,7 @@ export type ImportsCommitImportData = {
         entityScoped?: boolean;
         isNew?: boolean;
         pattern?: string;
+        promptVersion?: string;
         source: 'ai' | 'rule' | 'entity';
         tag: string;
       }>;
@@ -6540,6 +6545,7 @@ export type ImportsGetImportProgressResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6608,6 +6614,7 @@ export type ImportsGetImportProgressResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6676,6 +6683,7 @@ export type ImportsGetImportProgressResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6744,6 +6752,7 @@ export type ImportsGetImportProgressResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -6963,6 +6972,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7031,6 +7041,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7099,6 +7110,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7167,6 +7179,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7331,6 +7344,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7399,6 +7413,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7467,6 +7482,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7535,6 +7551,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7661,6 +7678,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7729,6 +7747,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7797,6 +7816,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -7865,6 +7885,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           entityScoped?: boolean;
           isNew?: boolean;
           pattern?: string;
+          promptVersion?: string;
           source: 'ai' | 'rule' | 'entity';
           tag: string;
         }>;
@@ -9995,6 +10016,7 @@ export type TransactionsSuggestTagsResponses = {
       entityScoped?: boolean;
       isNew?: boolean;
       pattern?: string;
+      promptVersion?: string;
       source: 'ai' | 'rule' | 'entity';
       tag: string;
     }>;

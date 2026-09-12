@@ -46,6 +46,8 @@ export interface TagsOnlyEntry {
   tags: string[];
   /** How many returned values the closed-set validation refused (POPS-2606). Absent when nothing was refused. */
   rejectedTagValues?: number;
+  /** The `PROMPT_VERSION_*` of the call that produced this entry (POPS-3677). */
+  promptVersion?: string;
 }
 
 export interface TagsOnlyBatchResult {
