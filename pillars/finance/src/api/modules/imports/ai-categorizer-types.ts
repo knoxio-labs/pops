@@ -29,6 +29,12 @@ export interface AiCacheEntry {
    * of rejection, never stored.
    */
   rejectedTagValues?: number;
+  /**
+   * The `PROMPT_VERSION_*` of the call that produced this entry (POPS-3677),
+   * carried onto its AI tag suggestions so a committed outcome can be joined
+   * back to the prompt revision that suggested it.
+   */
+  promptVersion?: string;
 }
 
 /** Per-call token/cost accounting surfaced to the batch counters. */
