@@ -141,6 +141,7 @@ The contract (`src/contract/rest.ts`) composes these sub-routers:
 | `entityUsage`  | read-only usage counts for `contacts` entities                |
 | `search`       | cross-domain search                                           |
 | `settings`     | per-pillar settings                                           |
+| `summary`      | `/summary` — spend for a window + the period before it        |
 
 ## Layout
 

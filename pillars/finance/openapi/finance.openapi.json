@@ -24415,6 +24415,591 @@
         "tags": ["settings"]
       }
     },
+    "/summary": {
+      "get": {
+        "operationId": "summary.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window",
+            "schema": {
+              "enum": ["30d", "90d", "month", "year", "all"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "topLimit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 50,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "byAccount": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "archived": {
+                                "type": "boolean"
+                              },
+                              "currency": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "shareOfTotal": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "spend": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "accountName",
+                              "currency",
+                              "archived",
+                              "spend",
+                              "shareOfTotal"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byEntity": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "shareOfTotal": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "spend": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              }
+                            },
+                            "required": ["entityId", "entityName", "spend", "shareOfTotal"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byMonth": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "byAccount": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "accountId": {
+                                      "type": "string"
+                                    },
+                                    "spend": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "cents": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": -9007199254740991,
+                                          "type": "integer"
+                                        },
+                                        "transactionCount": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["cents", "transactionCount"],
+                                      "type": "object"
+                                    }
+                                  },
+                                  "required": ["accountId", "spend"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "month": {
+                                "type": "string"
+                              },
+                              "spend": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              }
+                            },
+                            "required": ["month", "spend", "byAccount"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "byTag": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "shareOfTotal": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "spend": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "cents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "transactionCount": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["cents", "transactionCount"],
+                                "type": "object"
+                              },
+                              "tag": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["tag", "spend", "shareOfTotal"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "currencies": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "deltaCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "deltaRatio": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "empty": {
+                          "type": "boolean"
+                        },
+                        "inference": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "concentration": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "cents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "entityCount": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "shareOfTotal": {
+                                  "nullable": true,
+                                  "type": "number"
+                                }
+                              },
+                              "required": ["entityCount", "cents", "shareOfTotal"],
+                              "type": "object"
+                            },
+                            "foreign": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "fees": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "cents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "transactionCount": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": ["cents", "transactionCount"],
+                                  "type": "object"
+                                },
+                                "spend": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "cents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "transactionCount": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": ["cents", "transactionCount"],
+                                  "type": "object"
+                                }
+                              },
+                              "required": ["spend", "fees"],
+                              "type": "object"
+                            },
+                            "largestCharge": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "accountId": {
+                                  "type": "string"
+                                },
+                                "accountName": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "cents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "date": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "entityId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "entityName": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "description",
+                                "date",
+                                "cents",
+                                "entityId",
+                                "entityName",
+                                "accountId",
+                                "accountName"
+                              ],
+                              "type": "object"
+                            },
+                            "recurringSubscriptions": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byEntity": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "entityId": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "entityName": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "spend": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "cents": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          },
+                                          "transactionCount": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["cents", "transactionCount"],
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": ["entityId", "entityName", "spend"],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "spend": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "cents": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "transactionCount": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": ["cents", "transactionCount"],
+                                  "type": "object"
+                                },
+                                "tag": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["tag", "spend", "byEntity"],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "largestCharge",
+                            "concentration",
+                            "recurringSubscriptions",
+                            "foreign"
+                          ],
+                          "type": "object"
+                        },
+                        "previousTotal": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "cents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["cents", "transactionCount"],
+                          "type": "object"
+                        },
+                        "total": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "cents": {
+                              "maximum": 9007199254740991,
+                              "minimum": -9007199254740991,
+                              "type": "integer"
+                            },
+                            "transactionCount": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["cents", "transactionCount"],
+                          "type": "object"
+                        },
+                        "window": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "end": {
+                              "type": "string"
+                            },
+                            "key": {
+                              "enum": ["30d", "90d", "month", "year", "all"],
+                              "type": "string"
+                            },
+                            "previous": {
+                              "additionalProperties": false,
+                              "nullable": true,
+                              "properties": {
+                                "end": {
+                                  "type": "string"
+                                },
+                                "start": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["start", "end"],
+                              "type": "object"
+                            },
+                            "start": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["key", "start", "end", "previous"],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "window",
+                        "empty",
+                        "currencies",
+                        "total",
+                        "previousTotal",
+                        "deltaCents",
+                        "deltaRatio",
+                        "byAccount",
+                        "byMonth",
+                        "byTag",
+                        "byEntity",
+                        "inference"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Spend for a window and the period before it, broken down by account, month, tag and entity, with the largest charge, concentration, subscriptions and foreign spend",
+        "tags": ["summary"]
+      }
+    },
     "/tag-rules": {
       "get": {
         "operationId": "tagRules.list",

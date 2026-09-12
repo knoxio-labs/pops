@@ -24,6 +24,7 @@ import { makeImportsHandlers } from './imports-handlers.js';
 import { makeLoanHandlers } from './loan-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
+import { makeSummaryHandlers } from './summary-handlers.js';
 import { makeTagRulesHandlers } from './tag-rules-handlers.js';
 import { makeTransactionsHandlers } from './transactions-handlers.js';
 import { makeWishlistHandlers } from './wishlist-handlers.js';
@@ -53,5 +54,6 @@ export function makeFinanceRestHandlers(deps: {
     search: makeSearchHandlers(db),
     settings: makeSettingsHandlers(db),
     dataQuality: makeDataQualityHandlers(db),
+    summary: makeSummaryHandlers(db),
   });
 }

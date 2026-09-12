@@ -146,8 +146,8 @@ describe('the other real pillars', () => {
     }
   );
 
-  it('FINANCE_ROUTES names all 16 finance routes known to carry query fields', () => {
-    expect(FINANCE_ROUTES.length).toBe(16);
+  it('FINANCE_ROUTES names all 17 finance routes known to carry query fields', () => {
+    expect(FINANCE_ROUTES.length).toBe(17);
   });
 
   it('CEREBRUM_ROUTES names all 4 cerebrum routes known to carry query fields', () => {
