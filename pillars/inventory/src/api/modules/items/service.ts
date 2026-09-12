@@ -16,6 +16,7 @@ import {
   type InventoryDb,
   locationsService,
 } from '../../../db/index.js';
+import { isSourceRefConflict } from '../../../db/services/source-ref-conflict.js';
 import { NotFoundError } from '../../shared/errors.js';
 import { buildCreateValues } from './create-builder.js';
 import { buildInventoryUpdate } from './update-builder.js';
@@ -159,6 +160,11 @@ export function getInventoryItem(db: InventoryDb, id: string): InventoryRow {
   return row;
 }
 
+/** The row a given `source_ref` already names, if any. */
+function getBySourceRef(db: InventoryDb, sourceRef: string): InventoryRow | undefined {
+  return db.select().from(homeInventory).where(eq(homeInventory.sourceRef, sourceRef)).get();
+}
+
 /**
  * Where an item assigned to a container currently sits — the container is
  * authoritative over the item's own `locationId` while it holds it, per
@@ -175,6 +181,13 @@ function resolveContainerLocationId(db: InventoryDb, containerId: string): strin
 /**
  * Create a new inventory item. Returns the created row.
  * Generates a local UUID and inserts directly into SQLite.
+ *
+ * Idempotent when `input.sourceRef` is supplied (POPS-2433): two concurrent
+ * calls naming the same reference race to the insert, the loser's write
+ * raises the `idx_inventory_source_ref` UNIQUE violation, and that loser
+ * returns the winner's row rather than surfacing the error or minting a
+ * second one. A caller with no `sourceRef` gets the old, non-idempotent
+ * behaviour — a plain insert.
  */
 export function createInventoryItem(
   db: InventoryDb,
@@ -188,7 +201,15 @@ export function createInventoryItem(
     values.locationId = resolveContainerLocationId(db, input.containerId);
   }
 
-  db.insert(homeInventory).values(values).run();
+  try {
+    db.insert(homeInventory).values(values).run();
+  } catch (err) {
+    if (typeof input.sourceRef === 'string' && input.sourceRef.length > 0) {
+      const existing = isSourceRefConflict(err) ? getBySourceRef(db, input.sourceRef) : undefined;
+      if (existing !== undefined) return existing;
+    }
+    throw err;
+  }
 
   return getInventoryItem(db, id);
 }

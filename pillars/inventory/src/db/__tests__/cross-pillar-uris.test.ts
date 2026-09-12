@@ -38,6 +38,7 @@ CREATE TABLE home_inventory (
   owner_uri text,
   owner_stale_at text,
   asset_id text UNIQUE,
+  source_ref text UNIQUE,
   notes text,
   location_id text,
   container_id text,

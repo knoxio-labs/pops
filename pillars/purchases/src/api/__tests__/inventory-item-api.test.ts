@@ -1,27 +1,31 @@
 /**
  * The accept that creates the asset, end to end over HTTP.
  *
- * The four things this route promises, and each is a way the fan-out has
+ * The five things this route promises, and each is a way the fan-out has
  * been wrong before it existed: one accept mints one asset, a repeated
- * accept mints none, a declined slot mints none, and a create that fails is
- * loud rather than recorded. What it does not promise is that two accepts
- * of one slot in flight together mint one between them — the last block
- * pins what really happens there. The inventory pillar is a fake here —
- * the transport it stands in for is asserted on the wire in
- * `pillars/__tests__/outbound-credential.test.ts` — so what is under test is
- * the ordering purchases keeps around it.
+ * accept mints none, a declined slot mints none, a create that fails is
+ * loud rather than recorded, and — since POPS-2433 — two accepts of one
+ * slot in flight together also mint one between them, not two. The last
+ * block pins that last promise: the fake inventory below models the real
+ * pillar's `sourceRef` dedup (same slot → same URI), which is what turns
+ * the second request's `ACCEPT_NOT_RECORDED` conflict into "already
+ * recorded, here is the same answer" instead of an orphan. The inventory
+ * pillar is a fake here — the transport it stands in for is asserted on the
+ * wire in `pillars/__tests__/outbound-credential.test.ts` — so what is
+ * under test is the ordering purchases keeps around it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { amazonOrder, openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import { createPurchase, getPurchase, listDistinctInventoryItemUris } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
+import { sourceRefFor } from '../inventory/asset.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
 
-import type { OpenedPurchasesDb } from '../../db/index.js';
+import type { InventoryProposal, OpenedPurchasesDb } from '../../db/index.js';
 import type { InventoryAssetCreateResult, InventoryAssetCreator } from '../inventory/client.js';
 
 const { requestOn } = createTestTransport();
@@ -44,6 +48,32 @@ function fakeInventory(
     create: async (proposal) => {
       calls.push(proposal);
       return answer(calls.length);
+    },
+  };
+}
+
+/**
+ * A stand-in inventory pillar that models the real one's `sourceRef` dedup
+ * (POPS-2433): two creates naming the same offer return the same URI, the
+ * same way the real pillar's UNIQUE index turns a second insert into a
+ * fetch of the first. This is the fake the race test needs — `fakeInventory`
+ * above answers every call with a fresh URI regardless of what it names,
+ * which cannot exercise a fix that depends on the two calls agreeing.
+ */
+function idempotentFakeInventory(): InventoryAssetCreator & { readonly calls: unknown[] } {
+  const calls: InventoryProposal[] = [];
+  const bySourceRef = new Map<string, string>();
+  return {
+    calls,
+    create: async (proposal) => {
+      calls.push(proposal);
+      const ref = sourceRefFor(proposal);
+      let uri = bySourceRef.get(ref);
+      if (uri === undefined) {
+        uri = `pops://inventory/item/inv-${bySourceRef.size + 1}`;
+        bySourceRef.set(ref, uri);
+      }
+      return { kind: 'created', inventoryItemUri: uri };
     },
   };
 }
@@ -139,6 +169,23 @@ describe('an accept becomes one asset', () => {
     await accept(app).expect(201);
 
     expect(inventory.calls[0]).toMatchObject({ itemId, itemName: 'Cordless Drill', slot: 0 });
+  });
+
+  it('mints a distinct asset for each unnamed slot of a multi-unit line, not one shared asset (POPS-2433 review finding)', async () => {
+    // sourceRefFor must key on slot, not itemId alone: two different
+    // physical units of one line both answer unnamed (no unitId to send),
+    // and colliding their sourceRefs would make the second accept silently
+    // return the first's asset via inventory's idempotent-create dedup.
+    seedOrder(2);
+    const inventory = idempotentFakeInventory();
+    const app = appWith(inventory);
+
+    const first = await accept(app).expect(201);
+    const second = await accept(app).expect(201);
+
+    expect(first.body.inventoryItemUri).not.toBe(second.body.inventoryItemUri);
+    expect(inventory.calls).toHaveLength(2);
+    expect(listDistinctInventoryItemUris(opened.db)).toHaveLength(2);
   });
 });
 
@@ -286,15 +333,17 @@ describe('a create that fails is visible, never recorded', () => {
     }
   });
 
-  it('two accepts in flight together each mint an asset, and only one is recorded', async () => {
-    // The limit of the ordering, asserted rather than argued. Step 1 reads
-    // this pillar's tables and step 2 is a network call, so two requests
-    // that pass step 1 before either finishes step 2 both create. The
-    // ordering removes the inverse failure — a decision recorded for an
-    // asset that does not exist — and narrows this one; it does not close
-    // it, and nothing in the docs may claim it does.
+  it('two accepts in flight together mint one asset between them, not two (POPS-2433)', async () => {
+    // Step 1 reads this pillar's tables and step 2 is a network call, so two
+    // requests that pass step 1 before either finishes step 2 both create.
+    // Before POPS-2433 the fake here answered every call with a fresh URI,
+    // so the loser orphaned a real, unreferenced asset. The real inventory
+    // pillar dedupes creates on `sourceRef`, so `idempotentFakeInventory`
+    // models that: both calls land on ONE URI, and the loser's
+    // `ACCEPT_NOT_RECORDED` conflict resolves to "already recorded" rather
+    // than an orphan to reconcile by hand.
     const released: Array<() => void> = [];
-    const inventory = fakeInventory();
+    const inventory = idempotentFakeInventory();
     const gated: InventoryAssetCreator & { readonly calls: unknown[] } = {
       calls: inventory.calls,
       create: async (proposal) => {
@@ -312,15 +361,48 @@ describe('a create that fails is visible, never recorded', () => {
     for (const release of released) release();
     const [first, second] = await both;
 
-    const statuses = [first.status, second.status].sort((a, b) => a - b);
-    expect(statuses).toEqual([201, 502]);
     expect(gated.calls).toHaveLength(2);
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(first.body.inventoryItemUri).toBe(second.body.inventoryItemUri);
+    expect(first.body.inventoryItemUri).toMatch(/^pops:\/\/inventory\/item\/inv-\d+$/u);
 
-    const orphaned = first.status === 502 ? first : second;
-    expect(orphaned.body).toMatchObject({ code: 'ACCEPT_NOT_RECORDED' });
-    expect(orphaned.body.inventoryItemUri).toMatch(/^pops:\/\/inventory\/item\/inv-\d+$/u);
-    expect(listDistinctInventoryItemUris(opened.db)).toHaveLength(1);
-    expect(listDistinctInventoryItemUris(opened.db)).not.toContain(orphaned.body.inventoryItemUri);
+    const uris = listDistinctInventoryItemUris(opened.db);
+    expect(uris).toHaveLength(1);
+    expect(uris).toContain(first.body.inventoryItemUri);
+  });
+
+  it('two unnamed accepts racing for the same slot on a multi-unit line converge on one unit row, not two sharing an asset (POPS-2433 review finding)', async () => {
+    // Both requests omit unitId, so findOffer hands both the identical
+    // first unanswered proposal (same slot) before either has written.
+    // idempotentFakeInventory then answers both with the same URI. Without
+    // decideInventoryProposal's convergence check, each request inserts its
+    // own purchase_item_units row against that one URI: two rows, one
+    // asset, and the line's other physical unit silently unrepresented.
+    seedOrder(2);
+    const released: Array<() => void> = [];
+    const inventory = idempotentFakeInventory();
+    const gated: InventoryAssetCreator & { readonly calls: unknown[] } = {
+      calls: inventory.calls,
+      create: async (proposal) => {
+        await new Promise<void>((resolve) => released.push(resolve));
+        return inventory.create(proposal);
+      },
+    };
+    const app = appWith(gated);
+
+    const both = Promise.all([accept(app), accept(app)]);
+    await vi.waitFor(() => expect(released).toHaveLength(2));
+    for (const release of released) release();
+    const [first, second] = await both;
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(first.body.unit.id).toBe(second.body.unit.id);
+
+    const units = getPurchase(opened.db, purchaseId)?.items[0]?.units ?? [];
+    expect(units).toHaveLength(1);
+
+    const offers = await requestOn(app).get(`/purchases/${purchaseId}/inventory-proposals`);
+    expect(offers.body.proposals).toHaveLength(1);
   });
 
   it('does not record an orphaned asset against the slot someone else answered', async () => {

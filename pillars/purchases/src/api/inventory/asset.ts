@@ -39,6 +39,7 @@ export interface InventoryItemCreateBody {
   readonly inUse: boolean;
   readonly deductible: boolean;
   readonly notes: string;
+  readonly sourceRef: string;
 }
 
 /**
@@ -79,6 +80,36 @@ export function provenanceNote(proposal: InventoryProposal): string {
   return proposal.serialNumber === null
     ? source
     : `${source} Serial number: ${proposal.serialNumber}.`;
+}
+
+/**
+ * The idempotency key sent as inventory's `sourceRef` (POPS-2433).
+ *
+ * Deterministic from the offer, not from anything either side mints at
+ * request time: two concurrent accepts of the same slot compute the
+ * identical key, and inventory's UNIQUE index on it turns the second create
+ * into a fetch of the first insert's row rather than minting a second one.
+ *
+ * `unitId` is the second half of the key when the offer names one. When it
+ * does not, `slot` takes that place instead of being dropped: a durable
+ * line with quantity > 1 and no unit rows yet offers one proposal per
+ * remaining physical unit, all with `unitId: null` but a distinct `slot`
+ * (`listInventoryProposals`'s `for (const [slot, price] of ...)` — the
+ * absolute position in the line, stable across snapshots because it indexes
+ * `lineUnits[slot]` directly rather than counting what remains). Keying on
+ * `itemId` alone would collide those units' sourceRefs, so accepting the
+ * second one — genuinely a different physical thing — would silently return
+ * the first's asset instead of minting its own. `slot` cannot be sent BACK
+ * to address a decision (`decideInventoryProposal`'s docstring is explicit
+ * about that), but reading it off a proposal this pillar itself just
+ * produced, to derive a key, is a different use than trusting it from a
+ * caller.
+ */
+export function sourceRefFor(proposal: InventoryProposal): string {
+  const base = `pops://purchases/order/${proposal.purchaseId}/item/${proposal.itemId}`;
+  return proposal.unitId === null
+    ? `${base}/slot/${proposal.slot}`
+    : `${base}/unit/${proposal.unitId}`;
 }
 
 /**
@@ -143,5 +174,6 @@ export function toInventoryItemCreateBody(proposal: InventoryProposal): Inventor
     inUse: false,
     deductible: false,
     notes: provenanceNote(proposal),
+    sourceRef: sourceRefFor(proposal),
   };
 }

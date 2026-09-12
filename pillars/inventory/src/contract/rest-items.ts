@@ -67,6 +67,14 @@ const CreateItemBody = z.object({
   purchasedFromId: z.string().nullable().optional(),
   purchasedFromName: z.string().nullable().optional(),
   assetId: z.string().nullable().optional(),
+  /**
+   * Idempotency key for a create driven by another pillar's fan-out, e.g.
+   * `pops://purchases/order/<id>/item/<id>`. Unique when supplied: a second
+   * create naming the same reference returns the first insert's row rather
+   * than minting a second one (POPS-2433). Absent for a row a person typed
+   * in directly.
+   */
+  sourceRef: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
   containerId: z.string().nullable().optional(),

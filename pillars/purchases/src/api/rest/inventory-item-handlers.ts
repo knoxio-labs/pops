@@ -19,15 +19,21 @@
  * Step 2 is a network call, so anything answering the same slot while it is
  * in flight — a decline through the other route, or a second request to
  * this one, which creates its own asset first — reaches step 3 before this
- * request does, and step 3 refuses to overwrite a decision. This request's
- * asset is then real and unreferenced, which the response says in those
- * words and hands back the URI for: a decision cannot be retracted and
- * inventory has no create keyed on the line, so there is nothing to repair
- * it with, and the alternative to naming it is a row appearing in inventory
- * that nothing explains.
+ * request does, and step 3 refuses to overwrite a decision.
+ *
+ * That used to leave this request's asset real and unreferenced. It no
+ * longer does when both requests answer the same slot (POPS-2433): inventory
+ * creates idempotently on a `sourceRef` this pillar derives from the offer,
+ * so the two concurrent creates in step 2 land on ONE row, not two — the
+ * loser's create returns the winner's id. Step 3 still refuses to overwrite
+ * the winner's decision, but the loser can now tell that refusal apart from
+ * a genuine orphan: {@link findUnitByInventoryItemUri} looks up whether the
+ * asset step 2 named is already recorded, and if it is, this request reports
+ * the same success the winner did rather than an asset to reconcile by hand.
  */
 import {
   decideInventoryProposal,
+  findUnitByInventoryItemUri,
   InventoryProposalConflictError,
   listInventoryProposals,
 } from '../../db/index.js';
@@ -119,12 +125,15 @@ function logOrphan(inventoryItemUri: string, reason: string): void {
  * The one failure that leaves an asset behind, named and with its URI.
  *
  * It happens when the slot is answered between the projection and the
- * write. A decision cannot be retracted, so this is not a retry: repeating
- * the request would mint a second asset for one physical thing, and
- * recording the accept afterwards is refused by the same conflict that
- * caused this. The URI is here because it is the only trace of a row
- * purchases holds no reference to, and a person has to decide what happens
- * to it.
+ * write, and the asset step 2 created is NOT the one the winning request
+ * recorded — inventory's `sourceRef` dedup (POPS-2433) only converges the
+ * two when both requests answer the *same* slot; a genuinely different
+ * write racing this one still orphans. A decision cannot be retracted, so
+ * this is not a retry: repeating the request would mint a second asset for
+ * one physical thing, and recording the accept afterwards is refused by the
+ * same conflict that caused this. The URI is here because it is the only
+ * trace of a row purchases holds no reference to, and a person has to
+ * decide what happens to it.
  */
 function assetOrphaned(inventoryItemUri: string, reason: string) {
   logOrphan(inventoryItemUri, reason);
@@ -166,6 +175,13 @@ export function makeInventoryItemHandlers(
         unit = decideInventoryProposal(db, params.id, params.itemId, decision);
       } catch (err) {
         if (err instanceof InventoryProposalConflictError) {
+          const already = findUnitByInventoryItemUri(db, params.itemId, created.inventoryItemUri);
+          if (already !== undefined) {
+            return {
+              status: 201 as const,
+              body: { inventoryItemUri: created.inventoryItemUri, unit: already },
+            };
+          }
           return assetOrphaned(created.inventoryItemUri, err.message);
         }
         logOrphan(created.inventoryItemUri, err instanceof Error ? err.message : String(err));
