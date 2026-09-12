@@ -13,6 +13,7 @@ const addOp = (tags: string[] = []): TagRuleChangeSetOp => ({
 const collision: TagRuleAddCollision = {
   ruleId: 'rule-1',
   existingTags: ['venue:cafe', 'occasion:birthday'],
+  isActive: true,
 };
 
 describe('tagRuleOpBadge (POPS-2955)', () => {
@@ -56,6 +57,7 @@ describe('tagRuleOpDisplayLabel (POPS-2955)', () => {
     const label = tagRuleOpDisplayLabel(addOp(['venue:cafe']), {
       ruleId: 'rule-2',
       existingTags: [],
+      isActive: true,
     });
     expect(label).toMatch(/no tags/i);
   });

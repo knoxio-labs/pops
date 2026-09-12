@@ -1005,7 +1005,9 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
         },
       ],
     });
-    expect(collisions).toEqual([[{ ruleId, existingTags: ['venue:cafe', 'occasion:birthday'] }]]);
+    expect(collisions).toEqual([
+      [{ ruleId, existingTags: ['venue:cafe', 'occasion:birthday'], isActive: true }],
+    ]);
   });
 
   it('lines up one entry per op, null for edit/disable/remove ops', async () => {
@@ -1068,7 +1070,61 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
       ],
     });
     expect(collisions[0]).toEqual([null]);
-    expect(collisions[1]).toEqual([{ ruleId, existingTags: ['x'] }]);
+    expect(collisions[1]).toEqual([{ ruleId, existingTags: ['x'], isActive: true }]);
+  });
+});
+
+describe('tagRules — resolveAddCollisions on a disabled rule', () => {
+  async function disabledRule(pattern: string): Promise<string> {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          { op: 'add', data: { descriptionPattern: pattern, matchType: 'contains', tags: ['x'] } },
+        ],
+      },
+      acceptedNewTags: ['x'],
+    });
+    const ruleId = created.rules[0]!.id;
+    await client().tagRules.disable(ruleId);
+    return ruleId;
+  }
+
+  it('says the rule an add would land on is disabled', async () => {
+    const ruleId = await disabledRule('SWITCHED OFF');
+
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'SWITCHED OFF', matchType: 'contains', tags: ['y'] },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(collisions).toEqual([[{ ruleId, existingTags: ['x'], isActive: false }]]);
+  });
+
+  it('re-enables the disabled rule when that add is committed, which is what the collision warns of', async () => {
+    const ruleId = await disabledRule('SWITCHED BACK ON');
+
+    await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'SWITCHED BACK ON', matchType: 'contains', tags: ['y'] },
+          },
+        ],
+      },
+      acceptedNewTags: ['y'],
+    });
+
+    const refetched = await client().tagRules.get(ruleId);
+    expect(refetched.data.isActive).toBe(true);
   });
 });
 

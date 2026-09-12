@@ -27088,11 +27088,14 @@
                               },
                               "type": "array"
                             },
+                            "isActive": {
+                              "type": "boolean"
+                            },
                             "ruleId": {
                               "type": "string"
                             }
                           },
-                          "required": ["ruleId", "existingTags"],
+                          "required": ["ruleId", "existingTags", "isActive"],
                           "type": "object"
                         },
                         "type": "array"

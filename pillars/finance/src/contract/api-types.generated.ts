@@ -12563,6 +12563,7 @@ export interface operations {
           'application/json': {
             collisions: ({
               existingTags: string[];
+              isActive: boolean;
               ruleId: string;
             } | null)[][];
           };
