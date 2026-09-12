@@ -44,6 +44,46 @@ extension View {
         #endif
     }
 
+    /// The inset-grouped list style, which is iOS-only — on the host
+    /// toolchain the platform's own default stands in. Here for the reason
+    /// stated above: this file holds the package's platform conditionals, and
+    /// a second `#if os(iOS)` somewhere else is how two of them drift.
+    @ViewBuilder
+    func playgroundInsetGroupedList() -> some View {
+        #if os(iOS)
+            listStyle(.insetGrouped)
+        #else
+            self
+        #endif
+    }
+
+    /// The tab bar that shrinks to a capsule as content scrolls under it —
+    /// iOS 26's own behaviour, and iOS-only. Without it the bar stays full
+    /// height and the search capsule beside it never gets the room it expands
+    /// into, so the arrangement being reviewed is not the one that ships.
+    @ViewBuilder
+    func playgroundMinimizingTabBar() -> some View {
+        #if os(iOS)
+            tabBarMinimizeBehavior(.onScrollDown)
+        #else
+            self
+        #endif
+    }
+
+    /// `searchable` with an explicit presentation binding, so a staged state
+    /// can pin the field open with a query already in it. The binding form is
+    /// iOS-only.
+    @ViewBuilder
+    func playgroundSearchable(
+        text: Binding<String>, isPresented: Binding<Bool>, prompt: String
+    ) -> some View {
+        #if os(iOS)
+            searchable(text: text, isPresented: isPresented, prompt: prompt)
+        #else
+            searchable(text: text, prompt: prompt)
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.
