@@ -32,7 +32,7 @@ export type TransactionListInput = {
   startDate?: string;
   endDate?: string;
   entityId?: string;
-  account?: string;
+  accountId?: string;
   type?: TransactionType;
   limit?: number;
   offset?: number;
