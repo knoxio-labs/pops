@@ -82,7 +82,10 @@ internal struct InspectorView: View {
                 .accessibilityHint(
                     "Drag up to lift the controls clear of the screen\u{2019}s own")
 
-                stateStrip
+                // A surface with one state is not offering a choice, and a
+                // chip that looks pressable and does nothing is worse than no
+                // chip. `SurfaceRow` draws its state count on the same test.
+                if surface.states.count > 1 { stateStrip }
             }
             // The strip takes only the width its chips need, so without this
             // the whole cluster centres itself and sits somewhere different on
@@ -153,7 +156,6 @@ internal struct InspectorView: View {
     private var modificationBadge: String {
         settings.modifications(from: surface).joined(separator: " · ")
     }
-
 }
 
 /// The shapes the inspector is drawn in, and the measurements they come from.
