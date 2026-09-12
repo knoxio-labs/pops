@@ -15,6 +15,8 @@ Depending on `@pops/finance` would buy nothing anyway: `pillar<TRouter>()` is ty
 
 **Which is exactly why the response is validated with zod** (`wire.ts`). For a name lookup an unchecked assertion is tolerable. For the numbers a subset-sum runs on it is not: a producer-side shape change would otherwise surface as wrong arithmetic rather than as a failure. The schema is the substitute for the gate this leg cannot have.
 
+**A schema is only that substitute while it is right about the producer.** This one asked for `account` where finance has always published `accountId`, so every page failed validation and every window was reported unreadable — the outage path above, fired permanently instead of during an outage, and invisible because the fixtures were written from the same misreading (POPS-3569). `check-cross-pillar-expectations.mjs` did not catch it: it pins the operation and the query parameters this leg sends, not the response fields it reads. Extending it to the response is POPS-3600. Until then, `wire.test.ts` parses a row copied field for field out of finance's published spec, and that is the only thing standing between this leg and the same failure.
+
 The proxy resolves `handle.transactions.list` by joining the property chain with `.` and looking it up as an `operationId`. Finance publishes `transactions.list` for `GET /transactions`, so the chain and the contract line up — if that operationId ever changes, this leg fails at runtime, not at build.
 
 ## The money boundary
@@ -39,10 +41,14 @@ The same reasoning makes truncation a failure rather than a short read: a partia
 
 ## What finance can and cannot filter
 
-`GET /transactions` accepts `search`, `account`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
+`GET /transactions` accepts `search`, `accountId`, `startDate`, `endDate`, `tag`, `entityId`, `type`, `limit` (**capped at 500**) and `offset`, returning `{ data, pagination }`.
 
 **This leg uses four of them** — `startDate`, `endDate`, `search` and the paging pair. The rest are available and deliberately unused: `entityId` and `tag` describe finance's own classification of a transaction, and a charge should match on date and amount regardless of how finance happens to have categorised it. Narrowing by them would hide exactly the mis-categorised transactions reconciliation most needs to find.
 
 There is **no amount filter** in that set, so amount narrowing happens in the solver after the window pull. `search` is a substring filter used for stage-0 descriptor blocking from `purchase_sources.descriptorPattern`; it narrows the pull and never decides a match.
+
+**The foreign charge comes through unconverted.** `foreignAmountMinor` and `foreignCurrency` are what the issuer says was charged abroad, and the amount is already an integer in that currency's own ISO-4217 minor units — so unlike `amount` it is carried across as it stands. Scaling it the way the dollar figure is scaled would be a hundredfold error for a zero-decimal currency. `fxFeeCents` is deliberately not read at all: see `reconcile/README.md`.
+
+Both are tolerated absent, unlike `amount`. Absent and null mean the same thing — no importer captured a foreign charge for this row — and that reads downstream as a refusal to match across currencies, which is the safe direction. An absent `amount` is a number the arithmetic needs, so that one stays required.
 
 Two shape mismatches the caller has to handle: finance's `date` is a date-only `YYYY-MM-DD`, while `purchases.orderedAt` is a full ISO timestamp; and there is no "already linked" flag on the wire — `relatedTransactionId` covers finance's own transfer pairs and says nothing about this pillar's links.

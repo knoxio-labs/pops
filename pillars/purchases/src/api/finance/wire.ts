@@ -16,6 +16,18 @@ import { z } from 'zod';
 const CENTS_PER_DOLLAR = 100;
 
 /**
+ * The currency every `amount` finance publishes is denominated in.
+ *
+ * Finance states no settlement currency on the wire — its ledger is
+ * single-currency and its own importers hardcode the same constant (the ANZ
+ * statement parser calls it `SETTLEMENT_CURRENCY`). Naming it once here is
+ * what lets the solver COMPARE currencies instead of assuming two integers
+ * are the same kind of thing. When finance begins publishing the field,
+ * this constant is the one place that has to change.
+ */
+export const FINANCE_SETTLEMENT_CURRENCY = 'AUD';
+
+/**
  * Convert a decimal-dollar amount to integer cents.
  *
  * Rounds rather than truncates, matching finance's own `dollarsToCents` and
@@ -47,7 +59,17 @@ export function dollarsToCents(dollars: number): number {
 export const FinanceTransactionWireSchema = z.object({
   id: z.string(),
   description: z.string(),
-  account: z.string(),
+  /**
+   * The producer's field is `accountId`, and it always was.
+   *
+   * This schema asked for `account`, which finance has never served, so
+   * every page failed validation and every sweep treated its whole window
+   * as unreadable — the degradation this file's own comment describes,
+   * fired permanently rather than during an outage. Nothing downstream ever
+   * read the value, which is why it cost a silent outage rather than a
+   * wrong answer.
+   */
+  accountId: z.string(),
   /** DECIMAL DOLLARS, not cents. Converted at the boundary; never propagated. */
   amount: z.number(),
   /**
@@ -73,6 +95,20 @@ export const FinanceTransactionWireSchema = z.object({
   type: z.string(),
   entityId: z.string().nullable(),
   entityName: z.string().nullable(),
+  /**
+   * What the issuer says was charged abroad, in `foreignCurrency`'s own
+   * ISO-4217 minor units. ANZ, Amex and Up all record it; the rest of
+   * finance's importers do not.
+   *
+   * Tolerated absent, unlike `amount`. An absent foreign amount and a null
+   * one mean the same thing — nobody captured one — and that reads as a
+   * refusal to match across currencies, which is the safe direction. An
+   * absent `amount` would read as a missing number the arithmetic needs,
+   * which is why that one stays required.
+   */
+  foreignAmountMinor: z.number().int().nullish(),
+  /** ISO-4217 alpha-3 of the charge abroad, tolerated absent for the same reason. */
+  foreignCurrency: z.string().nullish(),
 });
 
 export const FinanceListResponseSchema = z.object({
@@ -95,8 +131,14 @@ export interface CandidateTransaction {
   readonly id: string;
   readonly uri: string;
   readonly description: string;
-  readonly account: string;
+  readonly accountId: string;
   readonly amountCents: number;
+  /** {@link FINANCE_SETTLEMENT_CURRENCY} — what `amountCents` is stated in. */
+  readonly settlementCurrency: string;
+  /** The issuer's foreign amount in its own minor units, or null when none was captured. */
+  readonly foreignAmountMinor: number | null;
+  /** ISO-4217 of that foreign amount, or null. */
+  readonly foreignCurrency: string | null;
   readonly date: string;
   readonly type: string;
   readonly entityId: string | null;
@@ -115,8 +157,11 @@ export function toCandidateTransaction(
     id: wire.id,
     uri: financeTransactionUri(wire.id),
     description: wire.description,
-    account: wire.account,
+    accountId: wire.accountId,
     amountCents: dollarsToCents(wire.amount),
+    settlementCurrency: FINANCE_SETTLEMENT_CURRENCY,
+    foreignAmountMinor: wire.foreignAmountMinor ?? null,
+    foreignCurrency: wire.foreignCurrency ?? null,
     date: wire.date,
     type: wire.type,
     entityId: wire.entityId,

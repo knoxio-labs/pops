@@ -78,9 +78,14 @@ export const purchaseCharges = sqliteTable(
     /** Signed integer cents in {@link currency}. Negative for a refund. */
     amountCents: integer('amount_cents').notNull(),
     /**
-     * ISO 4217 the charge settles in — the ACCOUNT's currency, which for a
-     * USD AliExpress order is still AUD. Subset-sum matches on this side,
-     * because this is the unit finance transactions are in.
+     * ISO 4217 {@link amountCents} is stated in — the account's currency
+     * where the source states one, and the order's otherwise, which is what
+     * a photographed foreign receipt leaves behind.
+     *
+     * The ladder matches on this side, and reads this column to know what
+     * the integer beside it means: a receipt captured abroad is compared
+     * against the transaction's foreign amount in this currency, never
+     * against the AUD the account settled.
      */
     currency: text('currency').notNull(),
     /**

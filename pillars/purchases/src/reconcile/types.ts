@@ -42,8 +42,18 @@ export interface SolvableCharge {
    * reach a different answer from the same source document.
    */
   readonly position: number;
-  /** Signed, integer cents, in the settlement currency. */
+  /** Signed, integer cents, in {@link currency}. */
   readonly amountCents: number;
+  /**
+   * ISO-4217 the charge is stated in — `purchase_charges.currency`.
+   *
+   * Carried because {@link amountCents} is meaningless without it the
+   * moment a receipt is captured abroad: a BRL total and an AUD one are
+   * different quantities that happen to be spelled as integers, and a
+   * ladder comparing them without this field matches on coincidence. See
+   * `currency.ts`.
+   */
+  readonly currency: string;
   readonly role: SettlementRole;
   /** The parent order's `orderedAt`, which anchors the settlement window. */
   readonly orderedAt: string;
@@ -60,8 +70,21 @@ export interface SolvableCharge {
 export interface SolvableTransaction {
   readonly uri: string;
   readonly description: string;
-  /** Signed, integer cents. */
+  /** Signed, integer cents, in {@link settlementCurrency}. */
   readonly amountCents: number;
+  /** ISO-4217 the account settled in — what {@link amountCents} is stated in. */
+  readonly settlementCurrency: string;
+  /**
+   * What the issuer says was charged abroad, in {@link foreignCurrency}'s
+   * own ISO-4217 minor units, or null when no importer captured one.
+   *
+   * Null is not "domestic": it is "nobody looked". A cross-currency charge
+   * is refused against a null rather than fitted to the settlement figure —
+   * see `currency.ts`.
+   */
+  readonly foreignAmountMinor: number | null;
+  /** ISO-4217 of the charge abroad, or null. */
+  readonly foreignCurrency: string | null;
   /** Date-only `YYYY-MM-DD`. */
   readonly date: string;
 }
@@ -153,7 +176,12 @@ export interface ProposedLink {
    * rule that scored its own evidence would be a matcher grading itself.
    */
   readonly transactionDescription: string;
-  /** The portion of the transaction attributed to this charge. */
+  /**
+   * The portion of the transaction attributed to this charge, in the
+   * CHARGE's currency — which for a charge captured abroad is not the
+   * currency the account settled in. `purchase_charge_links.amount_cents`
+   * is defined in that unit, and the two agree everywhere they can.
+   */
   readonly amountCents: number;
   readonly linkType: LinkType;
   readonly confidence: number;

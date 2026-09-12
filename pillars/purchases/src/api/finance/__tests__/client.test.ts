@@ -7,7 +7,9 @@ import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 interface WireRow {
   id: string;
   description: string;
-  account: string;
+  accountId: string;
+  foreignAmountMinor: number | null;
+  foreignCurrency: string | null;
   amount: number;
   date: string;
   type: string;
@@ -19,7 +21,9 @@ function row(overrides: Partial<WireRow> = {}): WireRow {
   return {
     id: 'txn-1',
     description: 'AMAZON MKTPLACE AU',
-    account: 'everyday',
+    accountId: 'everyday',
+    foreignAmountMinor: null,
+    foreignCurrency: null,
     amount: 41.28,
     date: '2026-03-04',
     type: 'purchase',
