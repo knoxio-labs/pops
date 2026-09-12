@@ -80,7 +80,7 @@ pub async fn list(
 
     let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
         "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) \
-         ORDER BY name COLLATE NOCASE LIMIT ?3 OFFSET ?4"
+         ORDER BY name COLLATE UNICODE_NOCASE LIMIT ?3 OFFSET ?4"
     ))
     .bind(like.as_deref())
     .bind(ty)
@@ -110,13 +110,14 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<EntityRow>, sqlx:
         .await
 }
 
-/// Fetch one entity by name, matched case-insensitively, or `None`. Backs the
-/// finance commit create-or-fetch-by-name idempotency path (a 409 on create
-/// fetches here). The `NOCASE` collation matches the name-uniqueness rule, so a
-/// `409` raised by a case-variant create resolves to the row that already owns
-/// that name.
+/// Fetch one entity by name, matched under the same identity rule as the
+/// unique index (`entities::name_identity`), or `None`. Backs the finance
+/// commit create-or-fetch-by-name idempotency path (a 409 on create fetches
+/// here) — the collation matches the name-uniqueness rule, so a `409`
+/// raised by a case- or diacritic-variant create resolves to the row that
+/// already owns that name.
 pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<EntityRow>, sqlx::Error> {
-    sqlx::query_as::<_, EntityRow>(select_entities!("WHERE name COLLATE NOCASE = ?1"))
+    sqlx::query_as::<_, EntityRow>(select_entities!("WHERE name COLLATE UNICODE_NOCASE = ?1"))
         .bind(name)
         .fetch_optional(pool)
         .await
@@ -293,7 +294,7 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
 /// entity-usage rollup.
 pub async fn lookup_bulk(pool: &SqlitePool) -> Result<Vec<EntityLookupRow>, sqlx::Error> {
     sqlx::query_as::<_, EntityLookupRow>(
-        "SELECT id, name, aliases FROM entities ORDER BY name COLLATE NOCASE",
+        "SELECT id, name, aliases FROM entities ORDER BY name COLLATE UNICODE_NOCASE",
     )
     .fetch_all(pool)
     .await
@@ -339,16 +340,17 @@ fn is_name_unique_violation(err: &sqlx::Error) -> bool {
         .is_some_and(|db| db.is_unique_violation() && db.message().contains("entities.name"))
 }
 
-/// Whether an entity with `name` exists (matched case-insensitively, mirroring
-/// the `NOCASE` unique index), optionally excluding the row `exclude` (so a
-/// no-op rename of an entity to its own name is not a conflict).
+/// Whether an entity with `name` exists, matched under the same identity
+/// rule as the unique index (`entities::name_identity`), optionally
+/// excluding the row `exclude` (so a no-op rename of an entity to its own
+/// name is not a conflict).
 async fn name_exists(
     pool: &SqlitePool,
     name: &str,
     exclude: Option<&str>,
 ) -> Result<bool, sqlx::Error> {
     let found: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM entities WHERE name COLLATE NOCASE = ?1 AND (?2 IS NULL OR id <> ?2) LIMIT 1",
+        "SELECT id FROM entities WHERE name COLLATE UNICODE_NOCASE = ?1 AND (?2 IS NULL OR id <> ?2) LIMIT 1",
     )
     .bind(name)
     .bind(exclude)
@@ -487,6 +489,96 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_rejects_ascii_case_variant_name_unchanged_behaviour() {
+        // The ASCII case-fold behaviour `COLLATE NOCASE` always had must
+        // survive the switch to `UNICODE_NOCASE` unchanged.
+        let pool = pool().await;
+        create(&pool, body("Padaria")).await.expect("first create");
+
+        let err = create(&pool, body("PADARIA")).await.unwrap_err();
+        assert!(matches!(err, RepoError::Conflict(_)));
+    }
+
+    #[tokio::test]
+    async fn create_rejects_unicode_case_variant_name() {
+        // `ã`/`Ã` sit outside ASCII, so the old `COLLATE NOCASE` let both
+        // rows insert — a receipt's own spelling beside a card issuer's
+        // upper-cased one for the same merchant (POPS-3572).
+        let pool = pool().await;
+        create(&pool, body("São João")).await.expect("first create");
+
+        let err = create(&pool, body("SÃO JOÃO")).await.unwrap_err();
+        assert!(
+            matches!(err, RepoError::Conflict(_)),
+            "a Unicode-case-variant create must 409, not insert a second row"
+        );
+
+        let (rows, total) = list(&pool, None, None, 50, 0).await.expect("list");
+        assert_eq!(total, 1, "no second row was inserted");
+        assert_eq!(
+            rows[0].name, "São João",
+            "the original spelling is preserved"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_orders_accented_names_beside_their_unaccented_neighbours() {
+        // `list` and `lookup_bulk` must sort under the same collation that
+        // decides identity. Under ASCII-only `NOCASE`, `São Paulo` sorts by
+        // raw UTF-8 byte value and lands after every ASCII `S` name, so a
+        // paginated list can put a merchant pages away from the names a
+        // reader expects it beside (POPS-3572 review).
+        let pool = pool().await;
+        for name in ["Szechuan Palace", "São Paulo Grill", "Sabor Mineiro"] {
+            create(&pool, body(name)).await.expect("create");
+        }
+
+        let (rows, _) = list(&pool, None, None, 50, 0).await.expect("list");
+        let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["Sabor Mineiro", "São Paulo Grill", "Szechuan Palace"],
+            "an accented name sorts among its neighbours, not after every ASCII name"
+        );
+
+        let bulk = lookup_bulk(&pool).await.expect("lookup_bulk");
+        let bulk_names: Vec<&str> = bulk.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            bulk_names,
+            vec!["Sabor Mineiro", "São Paulo Grill", "Szechuan Palace"],
+            "lookup_bulk sorts under the same collation as list"
+        );
+    }
+
+    #[tokio::test]
+    async fn create_rejects_diacritic_variant_name_in_both_directions() {
+        // Decided in `entities::name_identity`: a diacritic-only difference
+        // is the same name too, matching how purchases already matches
+        // merchant descriptors.
+        let accented_first = pool().await;
+        create(&accented_first, body("São João"))
+            .await
+            .expect("first create");
+        let err = create(&accented_first, body("Sao Joao")).await.unwrap_err();
+        assert!(
+            matches!(err, RepoError::Conflict(_)),
+            "accented then unaccented must 409"
+        );
+
+        let unaccented_first = pool().await;
+        create(&unaccented_first, body("Sao Joao"))
+            .await
+            .expect("first create, unaccented this time");
+        let err = create(&unaccented_first, body("São João"))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, RepoError::Conflict(_)),
+            "unaccented then accented must 409"
+        );
+    }
+
+    #[tokio::test]
     async fn unique_index_blocks_a_direct_case_variant_insert() {
         let pool = pool().await;
         create(&pool, body("Acme")).await.expect("seed via repo");
@@ -566,6 +658,24 @@ mod tests {
             .expect("find")
             .expect("a case-variant lookup resolves to the stored row");
         assert_eq!(found.name, "Acme");
+    }
+
+    #[tokio::test]
+    async fn find_by_name_folds_unicode_case_and_diacritics() {
+        let pool = pool().await;
+        create(&pool, body("São João")).await.expect("create");
+
+        let found = find_by_name(&pool, "SÃO JOÃO")
+            .await
+            .expect("find")
+            .expect("a Unicode-case-variant lookup resolves to the stored row");
+        assert_eq!(found.name, "São João");
+
+        let found = find_by_name(&pool, "Sao Joao")
+            .await
+            .expect("find")
+            .expect("a diacritic-variant lookup resolves to the stored row");
+        assert_eq!(found.name, "São João");
     }
 
     #[tokio::test]
