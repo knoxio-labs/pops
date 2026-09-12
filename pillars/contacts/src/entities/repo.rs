@@ -80,7 +80,7 @@ pub async fn list(
 
     let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
         "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) \
-         ORDER BY name COLLATE NOCASE LIMIT ?3 OFFSET ?4"
+         ORDER BY name COLLATE UNICODE_NOCASE LIMIT ?3 OFFSET ?4"
     ))
     .bind(like.as_deref())
     .bind(ty)
@@ -294,7 +294,7 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
 /// entity-usage rollup.
 pub async fn lookup_bulk(pool: &SqlitePool) -> Result<Vec<EntityLookupRow>, sqlx::Error> {
     sqlx::query_as::<_, EntityLookupRow>(
-        "SELECT id, name, aliases FROM entities ORDER BY name COLLATE NOCASE",
+        "SELECT id, name, aliases FROM entities ORDER BY name COLLATE UNICODE_NOCASE",
     )
     .fetch_all(pool)
     .await
@@ -518,6 +518,35 @@ mod tests {
         assert_eq!(
             rows[0].name, "São João",
             "the original spelling is preserved"
+        );
+    }
+
+    #[tokio::test]
+    async fn list_orders_accented_names_beside_their_unaccented_neighbours() {
+        // `list` and `lookup_bulk` must sort under the same collation that
+        // decides identity. Under ASCII-only `NOCASE`, `São Paulo` sorts by
+        // raw UTF-8 byte value and lands after every ASCII `S` name, so a
+        // paginated list can put a merchant pages away from the names a
+        // reader expects it beside (POPS-3572 review).
+        let pool = pool().await;
+        for name in ["Szechuan Palace", "São Paulo Grill", "Sabor Mineiro"] {
+            create(&pool, body(name)).await.expect("create");
+        }
+
+        let (rows, _) = list(&pool, None, None, 50, 0).await.expect("list");
+        let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["Sabor Mineiro", "São Paulo Grill", "Szechuan Palace"],
+            "an accented name sorts among its neighbours, not after every ASCII name"
+        );
+
+        let bulk = lookup_bulk(&pool).await.expect("lookup_bulk");
+        let bulk_names: Vec<&str> = bulk.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(
+            bulk_names,
+            vec!["Sabor Mineiro", "São Paulo Grill", "Szechuan Palace"],
+            "lookup_bulk sorts under the same collation as list"
         );
     }
 
