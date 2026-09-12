@@ -29,6 +29,7 @@ const NULLABLE_STRING_KEYS = [
   'assetId',
   'notes',
   'locationId',
+  'containerId',
 ] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateInventoryItemInput, string>>;
 
 const NULLABLE_NUMBER_KEYS = [

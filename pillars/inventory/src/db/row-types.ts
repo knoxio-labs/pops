@@ -6,6 +6,7 @@
  * underlying tables live in `./schema/*.ts`.
  */
 import type {
+  containers,
   fixtures,
   homeInventory,
   itemConnections,
@@ -16,6 +17,8 @@ import type {
   locations,
 } from './schema.js';
 
+export type ContainerRow = typeof containers.$inferSelect;
+export type ContainerInsert = typeof containers.$inferInsert;
 export type FixtureRow = typeof fixtures.$inferSelect;
 export type FixtureInsert = typeof fixtures.$inferInsert;
 export type InventoryRow = typeof homeInventory.$inferSelect;

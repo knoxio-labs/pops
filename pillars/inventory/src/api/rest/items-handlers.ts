@@ -42,6 +42,7 @@ export function makeItemsHandlers(db: InventoryDb) {
             limit,
             offset,
             locationId: query.locationId,
+            containerId: query.containerId,
             assetId: query.assetId,
             includeChildren: query.includeChildren,
           }

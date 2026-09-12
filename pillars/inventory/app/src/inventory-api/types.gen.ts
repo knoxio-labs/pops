@@ -137,6 +137,569 @@ export type ConnectionsConnectResponses = {
 export type ConnectionsConnectResponse =
   ConnectionsConnectResponses[keyof ConnectionsConnectResponses];
 
+export type ContainersListData = {
+  body?: never;
+  path?: never;
+  query?: {
+    state?: 'open' | 'sealed' | 'moved' | 'unpacked';
+  };
+  url: '/containers';
+};
+
+export type ContainersListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    }>;
+    total: number;
+  };
+};
+
+export type ContainersListResponse = ContainersListResponses[keyof ContainersListResponses];
+
+export type ContainersCreateData = {
+  /**
+   * Body
+   */
+  body?: {
+    code?: string | null;
+    label: string;
+    notes?: string | null;
+    originLocationId?: string | null;
+  };
+  path?: never;
+  query?: never;
+  url: '/containers';
+};
+
+export type ContainersCreateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersCreateError = ContainersCreateErrors[keyof ContainersCreateErrors];
+
+export type ContainersCreateResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type ContainersCreateResponse = ContainersCreateResponses[keyof ContainersCreateResponses];
+
+export type ContainersDeleteData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}';
+};
+
+export type ContainersDeleteErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersDeleteError = ContainersDeleteErrors[keyof ContainersDeleteErrors];
+
+export type ContainersDeleteResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type ContainersDeleteResponse = ContainersDeleteResponses[keyof ContainersDeleteResponses];
+
+export type ContainersGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}';
+};
+
+export type ContainersGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersGetError = ContainersGetErrors[keyof ContainersGetErrors];
+
+export type ContainersGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+  };
+};
+
+export type ContainersGetResponse = ContainersGetResponses[keyof ContainersGetResponses];
+
+export type ContainersUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    code?: string | null;
+    label?: string;
+    notes?: string | null;
+    originLocationId?: string | null;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}';
+};
+
+export type ContainersUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersUpdateError = ContainersUpdateErrors[keyof ContainersUpdateErrors];
+
+export type ContainersUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type ContainersUpdateResponse = ContainersUpdateResponses[keyof ContainersUpdateResponses];
+
+export type ContainersItemsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    limit?: number;
+    offset?: number;
+  };
+  url: '/containers/{id}/items';
+};
+
+export type ContainersItemsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersItemsError = ContainersItemsErrors[keyof ContainersItemsErrors];
+
+export type ContainersItemsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      assetId: string | null;
+      brand: string | null;
+      condition: string | null;
+      containerId: string | null;
+      deductible: boolean;
+      id: string;
+      inUse: boolean;
+      itemId: string | null;
+      itemName: string;
+      lastEditedTime: string;
+      location: string | null;
+      locationId: string | null;
+      model: string | null;
+      notes: string | null;
+      purchaseDate: string | null;
+      purchasePrice: number | null;
+      purchaseTransactionId: string | null;
+      purchasedFromId: string | null;
+      purchasedFromName: string | null;
+      replacementValue: number | null;
+      resaleValue: number | null;
+      room: string | null;
+      type: string | null;
+      warrantyExpires: string | null;
+    }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
+  };
+};
+
+export type ContainersItemsResponse = ContainersItemsResponses[keyof ContainersItemsResponses];
+
+export type ContainersMoveData = {
+  /**
+   * Body
+   */
+  body?: {
+    destinationLocationId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}/move';
+};
+
+export type ContainersMoveErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersMoveError = ContainersMoveErrors[keyof ContainersMoveErrors];
+
+export type ContainersMoveResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type ContainersMoveResponse = ContainersMoveResponses[keyof ContainersMoveResponses];
+
+export type ContainersSealData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}/seal';
+};
+
+export type ContainersSealErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersSealError = ContainersSealErrors[keyof ContainersSealErrors];
+
+export type ContainersSealResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type ContainersSealResponse = ContainersSealResponses[keyof ContainersSealResponses];
+
+export type ContainersUnpackData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/containers/{id}/unpack';
+};
+
+export type ContainersUnpackErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type ContainersUnpackError = ContainersUnpackErrors[keyof ContainersUnpackErrors];
+
+export type ContainersUnpackResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      code: string | null;
+      createdAt: string;
+      currentLocationId: string | null;
+      destinationLocationId: string | null;
+      id: string;
+      label: string;
+      notes: string | null;
+      originLocationId: string | null;
+      state: 'open' | 'sealed' | 'moved' | 'unpacked';
+      updatedAt: string;
+    };
+    message: string;
+  };
+};
+
+export type ContainersUnpackResponse = ContainersUnpackResponses[keyof ContainersUnpackResponses];
+
 export type DocumentsUnlinkData = {
   /**
    * Body
@@ -476,6 +1039,7 @@ export type ItemsListData = {
     deductible?: 'true' | 'false';
     locationId?: string;
     includeChildren?: boolean;
+    containerId?: string;
     assetId?: string;
     limit?: number;
     offset?: number;
@@ -492,6 +1056,7 @@ export type ItemsListResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
@@ -536,6 +1101,7 @@ export type ItemsCreateData = {
     assetId?: string | null;
     brand?: string | null;
     condition?: string | null;
+    containerId?: string | null;
     deductible: boolean;
     inUse: boolean;
     itemId?: string | null;
@@ -598,6 +1164,7 @@ export type ItemsCreateResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
@@ -643,6 +1210,7 @@ export type ItemsSearchByAssetIdResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
@@ -811,6 +1379,7 @@ export type ItemsGetResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
@@ -845,6 +1414,7 @@ export type ItemsUpdateData = {
     assetId?: string | null;
     brand?: string | null;
     condition?: string | null;
+    containerId?: string | null;
     deductible?: boolean;
     inUse?: boolean;
     itemId?: string | null;
@@ -909,6 +1479,7 @@ export type ItemsUpdateResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
@@ -2406,6 +2977,7 @@ export type ReportsWarrantiesResponses = {
       assetId: string | null;
       brand: string | null;
       condition: string | null;
+      containerId: string | null;
       deductible: boolean;
       id: string;
       inUse: boolean;
