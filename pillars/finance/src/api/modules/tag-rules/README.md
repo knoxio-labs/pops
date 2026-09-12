@@ -25,7 +25,7 @@ Everything downstream treats a tag rule's output as a proposal. Nothing in this 
 
 `POST /tag-rules/reject` writes the refused ChangeSet and the reason the user gave to `tag_rule_rejections`, and answers with a message. It does not return a replacement.
 
-It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Whether tag rules get an engine, a deterministic narrowing pass, or nothing at all is POPS-253's call; until then the rejection is stored so that decision has evidence to work from, and nothing claims a capability that does not exist.
+It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Nothing revises a proposal from a rejection, by decision (finance ADR-006): the rejection is stored as evidence, and nothing claims a capability that does not exist.
 
 ## The preview is a diff, not a match test
 
