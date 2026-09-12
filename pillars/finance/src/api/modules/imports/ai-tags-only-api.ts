@@ -93,7 +93,7 @@ ${lines}
 Tag axes and their available values:
 ${closedFacetFields(facets)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction IN THE SAME ORDER as listed above: [{${closedFacetReplyShape(facets)}}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}}, ...]
 
 ${TAGS_RULES}
 
@@ -113,7 +113,7 @@ export async function callTagsOnlyApi(opts: TagsOnlyApiCallOptions): Promise<Api
   });
 }
 
-/** Parse a tag-only reply into one {@link TagsOnlyEntry} per input, aligned by array position. */
+/** Parse a tag-only reply into one {@link TagsOnlyEntry} per input, aligned by the echoed line number. */
 export function parseTagsOnlyEntries(
   text: string,
   expectedCount: number,

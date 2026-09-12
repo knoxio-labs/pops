@@ -70,7 +70,7 @@ describe('prompt version stamping', () => {
 
   it('stamps every non-null batch entry with the batch version and leaves a null slot null', async () => {
     createMock.mockResolvedValue(
-      reply('[{"entityName": "Woolworths", "venue": "supermarket", "confidence": 0.9}, 7]')
+      reply('[{"n": 1, "entityName": "Woolworths", "venue": "supermarket", "confidence": 0.9}, 7]')
     );
 
     const { results } = await categorizeBatchWithAi(
@@ -85,7 +85,7 @@ describe('prompt version stamping', () => {
   });
 
   it('stamps a tag-only entry with the tags-only version', async () => {
-    createMock.mockResolvedValue(reply('[{"venue": "supermarket"}]'));
+    createMock.mockResolvedValue(reply('[{"n": 1, "venue": "supermarket"}]'));
 
     const { results } = await tagsOnlyBatchWithAi(
       [{ entityName: 'Woolworths', input: { description: 'WOOLWORTHS' } }],
