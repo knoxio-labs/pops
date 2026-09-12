@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { describeForMatching, patternMatchesDescription } from '@pops/finance';
 
-import { buildChangeSet, computeProposals, IMPORT_BATCH_SOURCE } from './utils';
+import {
+  batchRuleTempIds,
+  buildChangeSet,
+  computeProposals,
+  IMPORT_BATCH_SOURCE,
+  previouslyStagedProposalIds,
+} from './utils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
 
@@ -265,5 +271,84 @@ describe('computeProposals subtracts what already applies (POPS-3676)', () => {
       staged(IMPORT_BATCH_SOURCE, ['w0', 'w1'], ['Groceries']),
     ]);
     expect(proposal?.tags).toEqual(['Groceries']);
+  });
+});
+
+describe('what a previous visit to the Rules step staged (POPS-3676)', () => {
+  function entry(tempId: string, source: string, descriptionPattern: string, tags: string[]) {
+    return {
+      tempId,
+      source,
+      appliedAt: '2026-09-12T00:00:00.000Z',
+      sourceChecksums: ['w0'],
+      changeSet: {
+        source,
+        ops: [
+          {
+            op: 'add' as const,
+            data: { descriptionPattern, matchType: 'contains' as const, entityId: 'e1', tags },
+          },
+        ],
+      },
+    };
+  }
+
+  it('lists only this step’s own staged entries', () => {
+    expect(
+      batchRuleTempIds([
+        entry('batch-1', IMPORT_BATCH_SOURCE, 'WOOLWORTHS', ['Groceries']),
+        entry('review-1', 'tag-review:Woolworths', 'WOOLWORTHS', ['Groceries']),
+      ])
+    ).toEqual(['batch-1']);
+  });
+
+  it('recognises a proposal as already staged by its rule identity, whatever its tags now are', () => {
+    const [proposal] = computeProposals([
+      txn({
+        description: 'WOOLWORTHS 1034 CANTERBURY',
+        checksum: 'w0',
+        entityId: 'e1',
+        entityName: 'Woolworths',
+        tags: ['Groceries'],
+      }),
+      txn({
+        description: 'WOOLWORTHS 2201 NEWTOWN',
+        checksum: 'w1',
+        entityId: 'e1',
+        entityName: 'Woolworths',
+        tags: ['Groceries'],
+      }),
+    ]);
+    expect(
+      previouslyStagedProposalIds(
+        [proposal!],
+        [entry('batch-1', IMPORT_BATCH_SOURCE, 'WOOLWORTHS', ['Other'])]
+      )
+    ).toEqual([proposal!.id]);
+  });
+
+  it('does not count a rule staged by another step as this step’s earlier choice', () => {
+    const [proposal] = computeProposals([
+      txn({
+        description: 'WOOLWORTHS 1034 CANTERBURY',
+        checksum: 'w0',
+        entityId: 'e1',
+        entityName: 'Woolworths',
+        tags: ['Groceries'],
+      }),
+      txn({
+        description: 'WOOLWORTHS 2201 NEWTOWN',
+        checksum: 'w1',
+        entityId: 'e1',
+        entityName: 'Woolworths',
+        tags: ['Groceries'],
+      }),
+    ]);
+    expect(
+      previouslyStagedProposalIds(
+        [proposal!],
+        [entry('review-1', 'tag-review:Woolworths', 'WOOLWORTHS', ['Other'])]
+      )
+    ).toEqual([]);
   });
 });

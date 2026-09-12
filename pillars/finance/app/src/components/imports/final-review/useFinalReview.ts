@@ -128,7 +128,9 @@ export function useFinalReview() {
   const slice = useStoreSlice();
   const reconciledTagRuleChangeSets = useReconciledTagRules(slice);
   const counts = useDerivedCounts(slice, reconciledTagRuleChangeSets);
-  const tagRuleAddCollisions = useTagRuleAddCollisions(reconciledTagRuleChangeSets);
+  const tagRuleAddCollisions = useTagRuleAddCollisions(
+    reconciledTagRuleChangeSets.map((pcs) => pcs.changeSet)
+  );
   const [commitError, setCommitError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitKey] = useState(() => crypto.randomUUID());

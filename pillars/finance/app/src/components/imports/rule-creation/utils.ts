@@ -4,6 +4,7 @@ import {
   type TagRuleChangeSet,
 } from '@pops/finance';
 
+import { pendingTagRuleKey } from '../../../lib/tag-rule-reconcile';
 import { parseTag } from '../../../lib/tags';
 
 import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
@@ -165,4 +166,34 @@ export function buildChangeSet(p: RuleProposal): TagRuleChangeSet {
       },
     ],
   };
+}
+
+/** The staged entries this step made on an earlier visit, which every exit from it replaces. */
+export function batchRuleTempIds(staged: readonly PendingTagRuleChangeSet[]): string[] {
+  return staged
+    .filter((entry) => entry.source === IMPORT_BATCH_SOURCE)
+    .map((entry) => entry.tempId);
+}
+
+/**
+ * The proposals this step already staged on an earlier visit, matched by rule
+ * identity, so returning to it keeps a choice the user made.
+ *
+ * Nothing else starts ticked (POPS-3676). Most tags reaching this step are
+ * suggestions Tag Review accepted by default, so pre-ticking a proposal would
+ * turn a guess into a rule without anyone deciding it should be one.
+ */
+export function previouslyStagedProposalIds(
+  proposals: readonly RuleProposal[],
+  staged: readonly PendingTagRuleChangeSet[]
+): string[] {
+  const stagedKeys = new Set(
+    staged.filter((entry) => entry.source === IMPORT_BATCH_SOURCE).map(pendingTagRuleKey)
+  );
+  return proposals
+    .filter((proposal) => {
+      const key = pendingTagRuleKey({ changeSet: buildChangeSet(proposal) });
+      return key !== null && stagedKeys.has(key);
+    })
+    .map((proposal) => proposal.id);
 }

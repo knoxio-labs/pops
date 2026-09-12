@@ -72,7 +72,8 @@ export function tagRuleOpBadge(
   return OP_BADGE[op.op];
 }
 
-function formatTags(tags: string[] | undefined): string {
+/** A tag list as a reader sees it, or `''` for none. */
+export function formatTags(tags: string[] | undefined): string {
   return tags?.length ? tags.map((tag) => describeTag(tag).ariaLabel).join(', ') : '';
 }
 
