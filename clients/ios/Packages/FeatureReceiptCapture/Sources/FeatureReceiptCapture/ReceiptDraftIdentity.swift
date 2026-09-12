@@ -22,106 +22,59 @@ extension ReceiptDraftForm {
         }
     }
 
-    /// A picker when there is anything to pick from, and the same text field
-    /// as before when there is not.
+    /// One field, with the known merchants attached to it.
     ///
-    /// Picking is what sets `merchantEntityID`, which is the operative half of
-    /// the pair and the reason the picker exists at all. Typing stays possible
-    /// and clears the id, because a name typed over a chosen entity is the
-    /// reader saying it was the wrong entity — keeping the id then would file
-    /// the purchase under a merchant whose name is no longer on screen.
-    @ViewBuilder private var merchantField: some View {
-        if merchants.isEmpty {
-            PopsTextField(
-                ReceiptDraftCopy.merchantLabel,
-                placeholder: ReceiptDraftCopy.merchantPlaceholder,
-                text: $draft.merchant.value,
-                font: .popsTitle,
-                note: hint(.merchant)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
-        } else {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                ReceiptDraftPicker(
-                    label: ReceiptDraftCopy.merchantLabel,
-                    value: draft.merchant.value,
-                    placeholder: ReceiptDraftCopy.chooseMerchant,
-                    font: .popsTitle,
-                    resolved: draft.merchantEntityID != nil
-                ) {
-                    ForEach(merchants) { merchant in
-                        Button {
-                            choose(merchant)
-                        } label: {
-                            Label(merchant.name, systemImage: "building.2")
-                        }
-                    }
-                    Divider()
-                    Button {
-                        draft.merchantEntityID = nil
-                    } label: {
-                        Label(ReceiptDraftCopy.newMerchant, systemImage: "plus")
-                    }
+    /// It was a picker *and* a text field, which put two controls on one
+    /// value: a reading resolves no entity on the handset, so the form opened
+    /// with an empty picker beside the name it had just read. The value has
+    /// one place to be, and choosing from the list is a way of filling it
+    /// rather than a second thing to fill.
+    ///
+    /// Typing clears ``ReceiptDraft/merchantEntityID``, because a name typed
+    /// over a chosen entity is the reader saying it was the wrong entity —
+    /// keeping the id would file the purchase under a merchant whose name is
+    /// no longer on screen. Picking sets it, which is the whole reason the
+    /// list is here: `merchantEntityId` is the operative half of the pair, and
+    /// a form that only ever produced a label could never attach one.
+    private var merchantField: some View {
+        ReceiptDraftFieldWithChoices(
+            label: ReceiptDraftCopy.merchantLabel,
+            placeholder: ReceiptDraftCopy.merchantPlaceholder,
+            text: $draft.merchant.value,
+            font: .popsTitle,
+            note: hint(.merchant),
+            choices: merchants.map(\.name),
+            resolved: draft.merchantEntityID != nil,
+            onChoose: { name in
+                if let merchant = merchants.first(where: { $0.name == name }) {
+                    choose(merchant)
                 }
-                .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
-                if draft.merchantEntityID == nil {
-                    PopsTextField(
-                        placeholder: ReceiptDraftCopy.merchantPlaceholder,
-                        text: $draft.merchant.value,
-                        note: hint(.merchant)
-                    )
-                }
-            }
-        }
+            },
+            onType: { draft.merchantEntityID = nil }
+        )
+        .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
 
-    /// The chosen merchant's addresses, or free text when no merchant is
-    /// resolved — there is nothing to offer until there is a merchant to offer
-    /// it for, and a list of every address in contacts is not a help.
-    @ViewBuilder private var addressField: some View {
+    /// The same, over the chosen merchant's branches.
+    ///
+    /// There is nothing to offer until there is a merchant to offer it for,
+    /// and a list of every address in contacts is not a help — so an
+    /// unresolved merchant leaves this a plain field, which is also what an
+    /// entity with no address on file gets.
+    private var addressField: some View {
         let known = merchants.first { $0.id == draft.merchantEntityID }?.addresses ?? []
-        if known.isEmpty {
-            PopsTextField(
-                ReceiptDraftCopy.addressLabel,
-                placeholder: ReceiptDraftCopy.addressPlaceholder,
-                text: $draft.address.value,
-                font: .popsSubheadline,
-                note: hint(.address)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.address)
-        } else {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                ReceiptDraftPicker(
-                    label: ReceiptDraftCopy.addressLabel,
-                    value: draft.address.value,
-                    placeholder: ReceiptDraftCopy.chooseAddress,
-                    font: .popsSubheadline,
-                    resolved: known.contains(trimmedAddress)
-                ) {
-                    ForEach(known, id: \.self) { address in
-                        Button {
-                            draft.address.value = address
-                        } label: {
-                            Label(address, systemImage: "mappin.and.ellipse")
-                        }
-                    }
-                    Divider()
-                    Button {
-                        draft.address.value = ""
-                    } label: {
-                        Label(ReceiptDraftCopy.newAddress, systemImage: "plus")
-                    }
-                }
-                .accessibilityIdentifier(ReceiptDraftAccessibility.address)
-                if !known.contains(trimmedAddress) {
-                    PopsTextField(
-                        placeholder: ReceiptDraftCopy.addressPlaceholder,
-                        text: $draft.address.value,
-                        note: hint(.address)
-                    )
-                }
-            }
-        }
+        return ReceiptDraftFieldWithChoices(
+            label: ReceiptDraftCopy.addressLabel,
+            placeholder: ReceiptDraftCopy.addressPlaceholder,
+            text: $draft.address.value,
+            font: .popsSubheadline,
+            note: hint(.address),
+            choices: known,
+            resolved: known.contains(trimmedAddress),
+            onChoose: { draft.address.value = $0 },
+            onType: {}
+        )
+        .accessibilityIdentifier(ReceiptDraftAccessibility.address)
     }
 
     /// Removes the address field rather than disabling it. A field that is

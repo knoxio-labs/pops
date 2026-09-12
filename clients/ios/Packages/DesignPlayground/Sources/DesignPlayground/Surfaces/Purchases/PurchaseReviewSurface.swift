@@ -87,7 +87,11 @@ internal struct PurchaseReviewSurface: View {
         .navigationTitle(remaining.isEmpty ? "Nothing left" : "\(position) of \(remaining.count)")
         .playgroundTitleDisplay(large: false)
         .playgroundLeadingBarItem { cancel }
-        .overlay(alignment: .bottom) { controls }
+        // An inset, not an overlay. An overlay reserves nothing, so the last
+        // row of the content sat underneath the controls with no way to
+        // scroll past them; an inset takes the height out of the scroll's safe
+        // area and the content clears it.
+        .safeAreaInset(edge: .bottom) { controls }
     }
 
     /// `ReceiptDraftView` itself, not a second form. POPS-2455 was cancelled

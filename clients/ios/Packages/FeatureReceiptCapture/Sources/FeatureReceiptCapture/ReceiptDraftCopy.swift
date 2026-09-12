@@ -55,6 +55,8 @@ public enum ReceiptDraftCopy {
     internal static let itemQuantityPlaceholder = "—"
     internal static let itemUnitNotePlaceholder = "Unit price or weight"
     internal static let addItem = "Add an item"
+    internal static let chooseFromKnown = "Choose from the ones on file"
+    internal static let resolvedFromContacts = "Matched to a record"
     internal static let chooseMerchant = "Choose a merchant"
     internal static let newMerchant = "New merchant"
     internal static let typeMerchant = "Type it instead"

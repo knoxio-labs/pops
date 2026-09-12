@@ -83,7 +83,11 @@ internal struct PurchaseDetailSurface: View {
             .padding(PopsSpacing.lg)
         }
         .background(Color.popsBackground)
-        .overlay(alignment: .bottom) { actions }
+        // An inset, not an overlay. An overlay reserves nothing, so the last
+        // row of the content sat underneath the controls with no way to
+        // scroll past them; an inset takes the height out of the scroll's safe
+        // area and the content clears it.
+        .safeAreaInset(edge: .bottom) { actions }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
                 staged: StagedReceipts([StagedReceipt(id: detail.id, pages: detail.pages)]),
