@@ -15,7 +15,8 @@ internal struct PurchasesListViewModelTests {
             orderedOn: .now,
             total: MoneyAmount(minorUnits: 1999, currencyCode: "AUD"),
             itemCount: 3,
-            receiptURI: nil
+            receiptURI: nil,
+            status: .awaitingSettlement
         )
         let dependencies = AppDependencies.fake(
             purchases: InMemoryPurchasesRepository(rows: [purchase])

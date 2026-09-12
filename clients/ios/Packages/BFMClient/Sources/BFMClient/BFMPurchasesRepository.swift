@@ -61,7 +61,8 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             orderedOn: orderedOn,
             total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
             itemCount: wire.itemCount,
-            receiptURI: wire.receiptUri
+            receiptURI: wire.receiptUri,
+            status: PurchaseSettlement(wire: wire.status)
         )
     }
 
