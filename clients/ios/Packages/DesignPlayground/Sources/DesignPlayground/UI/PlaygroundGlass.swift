@@ -95,6 +95,31 @@ extension View {
         #endif
     }
 
+    /// iOS 26's own glass button styles, which are the reason a hand-rolled
+    /// capsule was the wrong answer: the platform ships both the plain and the
+    /// prominent one, and they carry the press state, the tint and the
+    /// morphing that a `Capsule` with a glass background does not.
+    ///
+    /// `prominent` is the one call to action on a screen. Everything else is
+    /// `playgroundGlassButton()`.
+    @ViewBuilder
+    func playgroundProminentGlassButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glassProminent)
+        #else
+            buttonStyle(.borderedProminent)
+        #endif
+    }
+
+    @ViewBuilder
+    func playgroundGlassButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glass)
+        #else
+            buttonStyle(.bordered)
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.

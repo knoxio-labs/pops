@@ -11,6 +11,20 @@ internal struct StagedPage: Identifiable, Hashable {
     internal let label: String
     internal let media: ReceiptMediaType
     internal let bytes: Data?
+
+    /// The plate's glyph when there is no picture to draw — a page that is not
+    /// an image still has to occupy the plate and say which kind it is, the
+    /// rule `ReceiptPageMedia` already follows on the result screen. Here
+    /// rather than in each view that draws a page, because three copies of one
+    /// switch is three chances for a new media type to be handled twice and
+    /// forgotten once.
+    internal var symbolName: String {
+        switch media {
+        case .jpeg, .png, .webp, .gif: "doc.text.image"
+        case .pdf: "doc.richtext"
+        case .plainText: "doc.plaintext"
+        }
+    }
 }
 
 /// Pages that will be sent as one receipt and one call.

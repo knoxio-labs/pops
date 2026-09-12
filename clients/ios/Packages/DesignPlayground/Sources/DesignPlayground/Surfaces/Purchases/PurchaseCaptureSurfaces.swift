@@ -89,29 +89,94 @@ internal enum PurchaseCaptureSurfaces {
     static let reading = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "reading"),
         title: "Reading",
-        synopsis: "The paper, while a model reads it, and when it cannot.",
+        synopsis: "Each staged receipt reporting what the model made of it, as it lands.",
         chrome: .navigation,
         states: [
+            // The state the screen exists for: some done, one in flight, one
+            // still waiting, and a result already readable on the finished
+            // rows.
             DesignState.standard {
-                PurchaseReadingSurface(
-                    pages: [
-                        page(0, "Scan page 1"), page(1, "Scan page 2"), page(2, "Scan page 3"),
-                    ],
-                    progress: .reading(done: 0, total: 1)
-                )
+                PurchaseProcessingSurface(readings: [
+                    reading(
+                        "k1", [page(0, "IMG_4821.HEIC")],
+                        .read(
+                            merchant: "Bunnings", total: Fixtures.money(15_600), lines: 7)),
+                    reading(
+                        "k2", [page(1, "IMG_4822.HEIC")],
+                        .read(
+                            merchant: "Woolworths", total: Fixtures.money(11_847), lines: 23)),
+                    reading("k3", [page(2, "IMG_4823.HEIC")], .reading),
+                    reading("k4", [page(3, "IMG_4824.HEIC")], .queued),
+                ])
             },
-            DesignState("one-of-four", "Third of four receipts") {
-                PurchaseReadingSurface(
-                    pages: [page(2, "IMG_4823.HEIC")],
-                    progress: .reading(done: 2, total: 4)
-                )
+            DesignState("single", "One receipt, in flight") {
+                PurchaseProcessingSurface(readings: [
+                    reading(
+                        "k1",
+                        [page(0, "Scan page 1"), page(1, "Scan page 2"), page(2, "Scan page 3")],
+                        .reading)
+                ])
             },
-            DesignState("unreadable", "Could not be read") {
-                PurchaseReadingSurface(
-                    pages: [page(1, "IMG_4822.HEIC")],
-                    progress: .unreadable(page: "IMG_4822.HEIC")
-                )
+            DesignState("starting", "Nothing done yet") {
+                PurchaseProcessingSurface(readings: [
+                    reading("k1", [page(0, "IMG_4821.HEIC")], .reading),
+                    reading("k2", [page(1, "IMG_4822.HEIC")], .queued),
+                    reading("k3", [page(2, "IMG_4823.HEIC")], .queued),
+                ])
+            },
+            // One unreadable among successes. It does not stop the others and
+            // does not leave the batch — it goes to the review step with
+            // nothing filled in.
+            DesignState("one-unreadable", "One could not be read") {
+                PurchaseProcessingSurface(readings: [
+                    reading(
+                        "k1", [page(0, "IMG_4821.HEIC")],
+                        .read(
+                            merchant: "Bunnings", total: Fixtures.money(15_600), lines: 7)),
+                    reading(
+                        "k2", [page(1, "IMG_4822.HEIC")],
+                        .unreadable(
+                            reason: "The total could not be found on the page.")),
+                    reading(
+                        "k3", [page(2, "IMG_4823.HEIC")],
+                        .read(
+                            merchant: "ALDI", total: Fixtures.money(802), lines: 1)),
+                ])
+            },
+            DesignState("finished", "All read") {
+                PurchaseProcessingSurface(readings: [
+                    reading(
+                        "k1", [page(0, "IMG_4821.HEIC")],
+                        .read(
+                            merchant: "Bunnings", total: Fixtures.money(15_600), lines: 7)),
+                    reading(
+                        "k2", [page(1, "IMG_4822.HEIC")],
+                        .read(
+                            merchant: "Woolworths", total: Fixtures.money(11_847), lines: 23)),
+                    reading(
+                        "k3", [page(2, "IMG_4823.HEIC")],
+                        .read(
+                            merchant: "Monster Sushi", total: Fixtures.money(1_609), lines: 1)),
+                ])
+            },
+            DesignState("all-unreadable", "None could be read") {
+                PurchaseProcessingSurface(readings: [
+                    reading(
+                        "k1", [page(0, "IMG_4821.HEIC")],
+                        .unreadable(
+                            reason: "The page is too blurred to read.")),
+                    reading(
+                        "k2", [page(1, "IMG_4822.HEIC")],
+                        .unreadable(
+                            reason: "The total could not be found on the page.")),
+                ])
             },
         ]
     )
+
+    private static func reading(
+        _ id: String, _ pages: [StagedPage], _ outcome: ReceiptReading.Outcome
+    ) -> ReceiptReading {
+        ReceiptReading(id: id, pages: pages, outcome: outcome)
+    }
 }

@@ -41,7 +41,7 @@ internal struct ZoomablePage: View {
     }
 
     @ViewBuilder private var picture: some View {
-        let plate = PopsPhoto(data: page.bytes, placeholderSymbol: glyph)
+        let plate = PopsPhoto(data: page.bytes, placeholderSymbol: page.symbolName)
             .padding(PopsSpacing.xl)
         if scale > 1 {
             plate.gesture(pan.simultaneously(with: magnify))
@@ -93,13 +93,5 @@ internal struct ZoomablePage: View {
         scale = 1
         committed = 1
         recentre()
-    }
-
-    private var glyph: String {
-        switch page.media {
-        case .jpeg, .png, .webp, .gif: "doc.text.image"
-        case .pdf: "doc.richtext"
-        case .plainText: "doc.plaintext"
-        }
     }
 }

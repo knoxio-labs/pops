@@ -53,20 +53,7 @@ internal struct PurchaseStagingGrid: View {
     ]
     private let tileWidth: CGFloat = 96
     private let groupTile: CGFloat = 64
-    private let ratio: CGFloat = PopsSize.pageHeight / PopsSize.pageWidth
-    /// The target settles *into* the well rather than swelling out of it.
-    private let targetScale: CGFloat = 0.88
-    private let liftScale: CGFloat = 1.08
-
-    /// What rides under the finger. Opaque, because the system composites a
-    /// translucent preview over its own platter and the paper came out looking
-    /// like a grey slab; and scaled up a little, because the home screen lifts
-    /// what you are holding rather than dimming it.
-    private func lifted(_ page: StagedPage, width: CGFloat) -> some View {
-        PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
-            .frame(width: width * liftScale, height: width * ratio * liftScale)
-            .background(Color.popsSurface, in: .rect(cornerRadius: PopsRadius.card))
-    }
+    private let groupTargetScale: CGFloat = 0.94
 
     private var groups: [StagedReceipt] { staged.groups }
     private var loose: [StagedPage] { staged.loose }
@@ -82,7 +69,7 @@ internal struct PurchaseStagingGrid: View {
             .padding(PopsSpacing.lg)
         }
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { actions }
+        .overlay(alignment: .bottom) { actions }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
                 staged: staged,
@@ -119,28 +106,14 @@ internal struct PurchaseStagingGrid: View {
             RoundedRectangle(cornerRadius: PopsRadius.card)
                 .strokeBorder(Color.popsSeparator, lineWidth: PopsBorder.hairline)
         )
-        .scaleEffect(targeted == .receipt(group.id) ? targetScale : 1)
-        .background { well(active: targeted == .receipt(group.id)) }
+        .scaleEffect(targeted == .receipt(group.id) ? groupTargetScale : 1)
+        .background { StagedDropWell(active: targeted == .receipt(group.id)) }
         .animation(.snappy(duration: 0.18), value: targeted)
         .onDrop(
             of: [.plainText],
             delegate: delegate(for: .receipt(group.id)) { ids in
                 staged.move(ids, into: group.id)
             })
-    }
-
-    /// The soft container the home screen grows behind the icon you are
-    /// hovering over — larger than the thing itself, its own corner radius,
-    /// no border. A ring reads as a selection; a well reads as somewhere the
-    /// item is about to go into, which is what is about to happen.
-    ///
-    /// The target shrinks as the well grows, rather than swelling. Two things
-    /// getting bigger at once is a fight; one settling into the other is the
-    /// gesture.
-    private func well(active: Bool) -> some View {
-        RoundedRectangle(cornerRadius: PopsRadius.card)
-            .fill(Color.popsAccent.opacity(active ? 0.3 : 0))
-            .padding(-PopsSpacing.sm)
     }
 
     private func delegate(
@@ -228,47 +201,29 @@ internal struct PurchaseStagingGrid: View {
     }
 
     private func tile(_ page: StagedPage, width: CGFloat, caption: String) -> some View {
-        let isTarget = targeted == .page(page.id)
-        return VStack(spacing: PopsSpacing.xs) {
-            PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
-                .frame(width: width, height: width * ratio)
-                .scaleEffect(isTarget ? targetScale : 1)
-                .background { well(active: isTarget) }
-                .animation(.snappy(duration: 0.18), value: targeted)
-            Text(caption)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(width: width)
-        }
-        .contentShape(.rect)
-        .onTapGesture { viewing = page }
-        .draggable(page.id) { lifted(page, width: width) }
-        .onDrop(
-            of: [.plainText],
-            delegate: delegate(for: .page(page.id)) { ids in
+        StagedPageTile(
+            page: page,
+            width: width,
+            caption: caption,
+            isTarget: targeted == .page(page.id),
+            onTap: { viewing = page },
+            drop: delegate(for: .page(page.id)) { ids in
                 staged.combine(ids, with: page.id)
             }
         )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(caption)
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private func glyph(for media: ReceiptMediaType) -> String {
-        switch media {
-        case .jpeg, .png, .webp, .gif: "doc.text.image"
-        case .pdf: "doc.richtext"
-        case .plainText: "doc.plaintext"
-        }
     }
 
     private var actions: some View {
-        PopsActionBar {
-            PopsButton(readTitle, prominence: .prominent) {}
-                .disabled(staged.isEmpty)
+        Button {
+        } label: {
+            Label(readTitle, systemImage: "text.viewfinder")
+                .font(.popsHeadline)
+                .padding(.horizontal, PopsSpacing.md)
+                .padding(.vertical, PopsSpacing.xs)
         }
+        .playgroundProminentGlassButton()
+        .disabled(staged.isEmpty)
+        .padding(.bottom, PopsSpacing.lg)
     }
 
     private var readTitle: String {
