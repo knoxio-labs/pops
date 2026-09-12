@@ -54,7 +54,19 @@ internal struct PurchaseStagingGrid: View {
     private let tileWidth: CGFloat = 96
     private let groupTile: CGFloat = 64
     private let ratio: CGFloat = PopsSize.pageHeight / PopsSize.pageWidth
-    private let targetScale: CGFloat = 1.12
+    /// The target settles *into* the well rather than swelling out of it.
+    private let targetScale: CGFloat = 0.88
+    private let liftScale: CGFloat = 1.08
+
+    /// What rides under the finger. Opaque, because the system composites a
+    /// translucent preview over its own platter and the paper came out looking
+    /// like a grey slab; and scaled up a little, because the home screen lifts
+    /// what you are holding rather than dimming it.
+    private func lifted(_ page: StagedPage, width: CGFloat) -> some View {
+        PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
+            .frame(width: width * liftScale, height: width * ratio * liftScale)
+            .background(Color.popsSurface, in: .rect(cornerRadius: PopsRadius.card))
+    }
 
     private var groups: [StagedReceipt] { staged.groups }
     private var loose: [StagedPage] { staged.loose }
@@ -108,25 +120,40 @@ internal struct PurchaseStagingGrid: View {
                 .strokeBorder(Color.popsSeparator, lineWidth: PopsBorder.hairline)
         )
         .scaleEffect(targeted == .receipt(group.id) ? targetScale : 1)
-        .overlay(highlight(when: targeted == .receipt(group.id)))
+        .background { well(active: targeted == .receipt(group.id)) }
         .animation(.snappy(duration: 0.18), value: targeted)
-        .dropDestination(for: String.self) { ids, _ in
-            staged.move(ids, into: group.id)
-            targeted = nil
-            return true
-        } isTargeted: { over in
-            note(over, as: .receipt(group.id))
-        }
+        .onDrop(
+            of: [.plainText],
+            delegate: delegate(for: .receipt(group.id)) { ids in
+                staged.move(ids, into: group.id)
+            })
     }
 
-    /// The ring the home screen puts around the icon you are hovering over.
-    /// On the *target*, not on the thing in your hand: the dragged item is
-    /// under a finger and mostly hidden, and what a person needs to know is
-    /// where it will land.
-    private func highlight(when active: Bool) -> some View {
+    /// The soft container the home screen grows behind the icon you are
+    /// hovering over — larger than the thing itself, its own corner radius,
+    /// no border. A ring reads as a selection; a well reads as somewhere the
+    /// item is about to go into, which is what is about to happen.
+    ///
+    /// The target shrinks as the well grows, rather than swelling. Two things
+    /// getting bigger at once is a fight; one settling into the other is the
+    /// gesture.
+    private func well(active: Bool) -> some View {
         RoundedRectangle(cornerRadius: PopsRadius.card)
-            .strokeBorder(Color.popsAccent, lineWidth: PopsBorder.emphasis)
-            .opacity(active ? 1 : 0)
+            .fill(Color.popsAccent.opacity(active ? 0.3 : 0))
+            .padding(-PopsSpacing.sm)
+    }
+
+    private func delegate(
+        for target: DropTarget, perform: @escaping ([String]) -> Void
+    ) -> PageDropDelegate {
+        PageDropDelegate(
+            onEntered: { note(true, as: target) },
+            onExited: { note(false, as: target) },
+            onDropped: { ids in
+                perform(ids)
+                targeted = nil
+            }
+        )
     }
 
     /// Only ever clears the target it was told about, so a `false` arriving
@@ -163,17 +190,14 @@ internal struct PurchaseStagingGrid: View {
         .contentShape(.rect)
         .background(
             RoundedRectangle(cornerRadius: PopsRadius.card)
-                .fill(Color.popsAccent.opacity(targeted == .loose ? 0.12 : 0))
+                .fill(Color.popsAccent.opacity(targeted == .loose ? 0.16 : 0))
         )
-        .overlay(highlight(when: targeted == .loose))
         .animation(.snappy(duration: 0.18), value: targeted)
-        .dropDestination(for: String.self) { ids, _ in
-            staged.separate(ids)
-            targeted = nil
-            return true
-        } isTargeted: { over in
-            note(over, as: .loose)
-        }
+        .onDrop(
+            of: [.plainText],
+            delegate: delegate(for: .loose) { ids in
+                staged.separate(ids)
+            })
     }
 
     private let looseMinHeight: CGFloat = 140
@@ -204,9 +228,13 @@ internal struct PurchaseStagingGrid: View {
     }
 
     private func tile(_ page: StagedPage, width: CGFloat, caption: String) -> some View {
-        VStack(spacing: PopsSpacing.xs) {
+        let isTarget = targeted == .page(page.id)
+        return VStack(spacing: PopsSpacing.xs) {
             PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
                 .frame(width: width, height: width * ratio)
+                .scaleEffect(isTarget ? targetScale : 1)
+                .background { well(active: isTarget) }
+                .animation(.snappy(duration: 0.18), value: targeted)
             Text(caption)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
@@ -215,21 +243,14 @@ internal struct PurchaseStagingGrid: View {
                 .frame(width: width)
         }
         .contentShape(.rect)
-        .scaleEffect(targeted == .page(page.id) ? targetScale : 1)
-        .overlay(highlight(when: targeted == .page(page.id)))
-        .animation(.snappy(duration: 0.18), value: targeted)
         .onTapGesture { viewing = page }
-        .draggable(page.id) {
-            PopsPhoto(data: page.bytes, placeholderSymbol: glyph(for: page.media))
-                .frame(width: width, height: width * ratio)
-        }
-        .dropDestination(for: String.self) { ids, _ in
-            staged.combine(ids, with: page.id)
-            targeted = nil
-            return true
-        } isTargeted: { over in
-            note(over, as: .page(page.id))
-        }
+        .draggable(page.id) { lifted(page, width: width) }
+        .onDrop(
+            of: [.plainText],
+            delegate: delegate(for: .page(page.id)) { ids in
+                staged.combine(ids, with: page.id)
+            }
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
         .accessibilityAddTraits(.isButton)
