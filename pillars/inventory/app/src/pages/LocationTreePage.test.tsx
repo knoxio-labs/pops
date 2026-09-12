@@ -308,7 +308,9 @@ describe('LocationTreePage', () => {
     expect(capturedDragHandlers.onDragEnd).toBeDefined();
 
     // Dragging "desk" (parentId=office) onto "home" (parentId=null): different
-    // parents → reparent desk under home.
+    // parents → reparent desk under home, appended after home's existing
+    // children (bedroom sortOrder=0, kitchen sortOrder=1) so it lands last
+    // rather than jumping to the front on the default sortOrder=0.
     act(() => {
       capturedDragHandlers.onDragEnd!({
         active: { id: 'desk' },
@@ -319,7 +321,7 @@ describe('LocationTreePage', () => {
     await waitFor(() =>
       expect(mockLocationsUpdate).toHaveBeenCalledWith({
         path: { id: 'desk' },
-        body: { parentId: 'home' },
+        body: { parentId: 'home', sortOrder: 2 },
       })
     );
   });
