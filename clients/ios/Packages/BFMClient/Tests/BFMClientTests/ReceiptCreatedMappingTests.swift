@@ -53,12 +53,14 @@ internal struct ReceiptCreatedMappingTests {
 
     @Test("a manual purchase maps through the same field set")
     func manualPurchase() async throws {
-        let purchase = try await BFMReceiptCaptureRepository
+        let purchase =
+            try await BFMReceiptCaptureRepository
             .stubbed(
                 StubTransport(
                     status: .ok,
                     json: ReceiptCaptureWire.purchaseDetail(
-                        id: "purchase-manual-1", totalCents: 500, itemCount: 1)))
+                        id: "purchase-manual-1", totalCents: 500, itemCount: 1))
+            )
             .createManualPurchase(.fake())
 
         #expect(purchase.id == "purchase-manual-1")

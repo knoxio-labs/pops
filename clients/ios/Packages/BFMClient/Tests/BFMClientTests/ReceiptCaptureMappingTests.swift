@@ -6,6 +6,17 @@ import Testing
 
 @testable import BFMClient
 
+private let sumMismatch = ReceiptCaptureWire.gateFailure(
+    code: "sum-mismatch",
+    detail: "off by $2.10",
+    deltaCents: "-210"
+)
+
+private let oneLine = """
+    {"name":"Timber Pine DAR 42x19","quantity":null,\
+    "unitPriceCents":1250,"lineTotalCents":1250,"notes":[]}
+    """
+
 /// The wire's two `extractReceipt` outcomes into ``ReceiptExtraction``, and
 /// the request this repository sends to get there.
 @Suite("BFMReceiptCaptureRepository extract mapping")
@@ -15,8 +26,7 @@ internal struct ReceiptCaptureMappingTests {
         let outcome = try await extractReceipt(
             json: ReceiptCaptureWire.draft(
                 reconciled: false,
-                failures:
-                    "[\(ReceiptCaptureWire.gateFailure(code: "sum-mismatch", detail: "off by $2.10", deltaCents: "-210"))]"
+                failures: "[\(sumMismatch)]"
             )
         )
 
@@ -84,8 +94,7 @@ internal struct ReceiptCaptureMappingTests {
                 reconciled: true,
                 merchantName: "Bunnings Warehouse",
                 totalCents: 2750,
-                items:
-                    "[{\"name\":\"Timber Pine DAR 42x19\",\"quantity\":null,\"unitPriceCents\":1250,\"lineTotalCents\":1250,\"notes\":[]}]"
+                items: "[\(oneLine)]"
             )
         )
 
@@ -96,11 +105,12 @@ internal struct ReceiptCaptureMappingTests {
         #expect(reading.reconciled == true)
         #expect(reading.extracted.merchantName == "Bunnings Warehouse")
         #expect(reading.extracted.total == "27.50")
-        #expect(reading.extracted.lines == [
-            ExtractedReceiptLine(
-                description: "Timber Pine DAR 42x19", amount: "12.50", quantity: nil,
-                unitNote: nil)
-        ])
+        #expect(
+            reading.extracted.lines == [
+                ExtractedReceiptLine(
+                    description: "Timber Pine DAR 42x19", amount: "12.50", quantity: nil,
+                    unitNote: nil)
+            ])
     }
 
     @Test("an unreadable receipt carries the pillar's own reason")

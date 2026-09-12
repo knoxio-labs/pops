@@ -98,7 +98,8 @@ public struct ReceiptResultView: View {
             }
         case .unreadable(let receiptCount, let reason):
             ReceiptResultCard(
-                content: presentation.content(.unreadable(receiptCount: receiptCount, reason: reason))
+                content: presentation.content(
+                    .unreadable(receiptCount: receiptCount, reason: reason))
             )
             .accessibilityIdentifier(ReceiptResultAccessibility.unreadable)
         case .draft(let reading):
@@ -125,7 +126,8 @@ public struct ReceiptResultView: View {
 
     private func draftView(for reading: ReceiptDraftReading) -> some View {
         ReceiptDraftView(
-            draft: draftPresentation.draft(extracted: reading.extracted, failures: reading.failures),
+            draft: draftPresentation.draft(
+                extracted: reading.extracted, failures: reading.failures),
             title: ReceiptDraftCopy.title,
             subtitle: ReceiptDraftCopy.subtitle,
             status: reading.reconciled ? nil : draftStatus,

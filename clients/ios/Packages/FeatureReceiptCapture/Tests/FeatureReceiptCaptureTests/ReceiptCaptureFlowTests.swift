@@ -340,8 +340,22 @@ internal struct ReceiptCaptureFlowTests {
             """)
         #expect(await repository.received.map(\.count) == [1, 2])
     }
+}
 
-    // MARK: manual entry (POPS-2454)
+/// The view model is main-actor isolated, as the capturing suite above is —
+/// both drive a screen's state.
+@MainActor
+@Suite("ReceiptCaptureViewModel — manual entry")
+internal struct ReceiptManualEntryTests {
+    private static func model(
+        camera: StubCameraAuthorization = StubCameraAuthorization(standing: .authorized),
+        repository: InMemoryReceiptCaptureRepository = InMemoryReceiptCaptureRepository()
+    ) -> ReceiptCaptureViewModel {
+        ReceiptCaptureViewModel(
+            dependencies: .fake(receiptCapture: repository),
+            camera: camera
+        )
+    }
 
     /// The reachability proof this ticket asks for at the model level:
     /// starting from the screen's own ready state — no camera, no submission
@@ -349,11 +363,13 @@ internal struct ReceiptCaptureFlowTests {
     /// `createManualPurchase` rather than `saveDraft`. A view-mount test
     /// would show the form renders; this shows the production wiring from
     /// `ReceiptCaptureViewModel` actually gets there and actually saves.
-    @Test("manual entry is reachable from the ready state and persists through createManualPurchase")
+    @Test(
+        "manual entry is reachable from the ready state and persists through createManualPurchase")
     func manualEntryReachesAndPersists() async {
         let repository = InMemoryReceiptCaptureRepository()
         await repository.respondToManualPurchase(with: .success(.fake(id: "purchase-manual-1")))
-        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized), repository: repository)
+        let model = Self.model(
+            camera: StubCameraAuthorization(standing: .authorized), repository: repository)
 
         #expect(model.state == .ready)
         model.startManualEntry()
