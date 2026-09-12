@@ -42,7 +42,16 @@ function reorderSiblings({
   });
 }
 
-function handleDragEndCore({ event, nodeMap, treeNodes, updateMutation }: DragEndArgs): void {
+function nextSortOrder(node: LocationTreeNode): number {
+  return node.children.reduce((max, child) => Math.max(max, child.sortOrder), -1) + 1;
+}
+
+export function handleDragEndCore({
+  event,
+  nodeMap,
+  treeNodes,
+  updateMutation,
+}: DragEndArgs): void {
   const { active, over } = event;
   if (!over || active.id === over.id) return;
   const activeNode = nodeMap.get(active.id as string);
@@ -61,7 +70,10 @@ function handleDragEndCore({ event, nodeMap, treeNodes, updateMutation }: DragEn
       updateMutation,
     });
   } else {
-    updateMutation.mutate({ id: activeNode.id, data: { parentId: overNode.id } });
+    updateMutation.mutate({
+      id: activeNode.id,
+      data: { parentId: overNode.id, sortOrder: nextSortOrder(overNode) },
+    });
   }
 }
 
