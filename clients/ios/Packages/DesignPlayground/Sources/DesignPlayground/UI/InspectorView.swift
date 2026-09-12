@@ -84,6 +84,10 @@ internal struct InspectorView: View {
 
                 stateStrip
             }
+            // The strip takes only the width its chips need, so without this
+            // the whole cluster centres itself and sits somewhere different on
+            // every surface. Close and the cog are fixtures; they stay put.
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
         .gesture(liftGesture)
@@ -122,11 +126,9 @@ internal struct InspectorView: View {
             ChipStrip(
                 items: surface.states.map { Chip(id: $0.id, title: $0.title) },
                 isOn: { $0 == settings.stateID },
-                select: { settings.stateID = $0 }
+                select: { settings.stateID = $0 },
+                inset: InspectorShape.contentInset
             )
-            // On the content rather than the scroll view, so a chip scrolls
-            // under the capsule's end instead of stopping a step short of it.
-            .contentMargins(.horizontal, InspectorShape.contentInset, for: .scrollContent)
             .frame(height: InspectorShape.elementHeight)
             // The one piece that has to clip: `glassEffect` fills its shape
             // behind the content, so without this a chip mid-scroll draws
@@ -171,13 +173,15 @@ internal enum InspectorShape {
     /// floating control, and the smallest square a fingertip reliably hits.
     internal static let elementHeight = PopsSize.touchTarget
 
-    /// The gap between the pieces.
-    internal static let elementGap = PopsSpacing.sm
+    /// The gap between the pieces. Wide enough that they read as three
+    /// floating controls rather than as a bar someone cut two notches into.
+    internal static let elementGap = PopsSpacing.md
 
-    /// How near two pieces have to be before the platform blends them into
-    /// one. Under ``elementGap`` on purpose — these are meant to read as
-    /// separate floating controls, not as one bar with seams in it.
-    internal static let blendDistance = PopsSpacing.xs
+    /// How near two pieces have to be before the platform merges their glass.
+    /// Zero: merging is the one thing this layout must not do — at
+    /// ``PopsSpacing/xs`` the close button and the cog grew a bridge between
+    /// them and stopped reading as two buttons.
+    internal static let blendDistance = PopsSpacing.zero
 
     /// One row of system chrome at the bottom edge, which the inspector starts
     /// clear of. A tab bar is one; so is the search field iOS 26 moved down

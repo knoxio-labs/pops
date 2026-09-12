@@ -11,18 +11,32 @@ internal struct ChipStrip: View {
     let items: [Chip]
     let isOn: (String) -> Bool
     let select: (String) -> Void
+    /// How far the chips sit inside whatever is drawn behind them. Applied to
+    /// the chips rather than to the strip so that when they do scroll they
+    /// pass under its ends, instead of stopping a step short of them.
+    var inset: CGFloat = PopsSpacing.zero
 
+    /// Two chips in a strip sized for twenty is a capsule mostly full of
+    /// nothing, so the strip takes only the width it needs until the chips
+    /// outgrow it and scrolling is what it is for.
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.sm) {
-                ForEach(items) { item in
-                    ChipButton(chip: item, isOn: isOn(item.id)) { select(item.id) }
-                        // The identity a `ScrollViewReader` scrolls back to.
-                        .id(item.id)
-                }
+        ViewThatFits(in: .horizontal) {
+            chips.padding(.horizontal, inset)
+
+            ScrollView(.horizontal) { chips }
+                .scrollIndicators(.hidden)
+                .contentMargins(.horizontal, inset, for: .scrollContent)
+        }
+    }
+
+    private var chips: some View {
+        HStack(spacing: PopsSpacing.sm) {
+            ForEach(items) { item in
+                ChipButton(chip: item, isOn: isOn(item.id)) { select(item.id) }
+                    // The identity a `ScrollViewReader` scrolls back to.
+                    .id(item.id)
             }
         }
-        .scrollIndicators(.hidden)
     }
 }
 
@@ -50,8 +64,13 @@ internal struct ChipButton: View {
             }
             .padding(.horizontal, PopsSpacing.md)
             .padding(.vertical, PopsSpacing.sm)
+            // `popsSeparator` is a hairline colour, and at a third of its
+            // opacity an unselected chip disappeared entirely against dark
+            // glass — twenty variants read as nineteen floating labels and one
+            // button. A scrim off the foreground is legible over either
+            // scheme's glass without becoming a second filled state.
             .background(
-                isOn ? Color.popsAccent : Color.popsSeparator.opacity(0.35),
+                isOn ? Color.popsAccent : Color.popsForeground.opacity(0.12),
                 in: .capsule
             )
             .foregroundStyle(isOn ? Color.popsBackground : Color.popsForeground)

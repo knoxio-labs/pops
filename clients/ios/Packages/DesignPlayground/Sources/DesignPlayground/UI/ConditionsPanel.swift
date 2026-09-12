@@ -15,28 +15,35 @@ internal struct ConditionsPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             chromeRow
-            appearanceAndDirection
-            typeSizeSlider
+            appearanceAndDirection.padding(.horizontal, InspectorShape.contentInset)
+            typeSizeSlider.padding(.horizontal, InspectorShape.contentInset)
         }
-        .padding(InspectorShape.contentInset)
+        .padding(.vertical, InspectorShape.contentInset)
         .playgroundGlass(in: InspectorShape.panel)
         .padding(.bottom, PopsSpacing.sm)
     }
 
+    /// The one row that reaches the panel's edges. Six chromes do not fit on
+    /// an iPhone, so this row always scrolls — and a scrolling row inset like
+    /// the others cuts a chrome's name in half a step short of the glass, with
+    /// the panel plainly continuing beside it. Inset the chips instead and
+    /// they pass under the edge, which is what says "there is more".
     private var chromeRow: some View {
-        row("Chrome") {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            label("Chrome").padding(.horizontal, InspectorShape.contentInset)
             ChipStrip(
                 items: Chrome.allCases.map {
                     Chip(id: $0.rawValue, title: $0.title, symbol: $0.symbol)
                 },
                 isOn: { $0 == settings.chrome.rawValue },
-                select: { if let chrome = Chrome(rawValue: $0) { settings.chrome = chrome } }
+                select: { if let chrome = Chrome(rawValue: $0) { settings.chrome = chrome } },
+                inset: InspectorShape.contentInset
             )
         }
     }
 
     private var appearanceAndDirection: some View {
-        row("Appearance") {
+        labelled("Appearance") {
             HStack(spacing: PopsSpacing.sm) {
                 ForEach(Appearance.allCases) { option in
                     ChipButton(
@@ -96,7 +103,7 @@ internal struct ConditionsPanel: View {
         )
     }
 
-    private func row(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+    private func labelled(_ title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             label(title)
             content()
