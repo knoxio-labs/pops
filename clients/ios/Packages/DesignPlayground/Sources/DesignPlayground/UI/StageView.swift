@@ -43,10 +43,12 @@ internal struct StageView: View {
                 expanded: $inspectorExpanded,
                 onClose: { dismiss() }
             )
-            // Starts clear of a tab bar when the chrome draws one. Only a
-            // starting point — what else sits at that edge (on iPhone, iOS 26
-            // puts the search field there too) is the drag's job.
-            .padding(.bottom, settings.chrome.showsTabBar ? 58 : 0)
+            // Unconditionally, not only under a chrome that draws a tab bar:
+            // keying it on the chrome left a searchable surface under every
+            // other chrome with the inspector resting on top of the search
+            // field iOS 26 puts at that edge — where the field wins the tap
+            // and the inspector's own controls are dead until it is dragged.
+            .padding(.bottom, InspectorShape.bottomChromeClearance)
         }
         // Keyed on everything that changes the tree's shape. `NavigationStack`
         // and `TabView` keep internal state that outlives a swap between them,

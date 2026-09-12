@@ -1,12 +1,19 @@
 import DesignSystem
 import SwiftUI
 
-/// The stage's controls: a glass capsule that expands into a panel.
+/// The stage's controls: a glass bar that expands into a panel.
 ///
 /// It floats *over* the surface rather than sitting beside it, and it is
 /// glass rather than a filled panel, for one reason — the surface has to keep
 /// the whole device. A review of a screen at 393pt conducted in 393 minus a
 /// control strip is a review of a screen that does not exist.
+///
+/// The bar carries the surface's states, which for an experiment are its
+/// variants. They sit in the open rather than behind the panel because
+/// flipping between them *is* the review — an A/B that costs two taps to
+/// alternate is one the reader stops alternating. Everything describing the
+/// conditions rather than the subject — chrome, appearance, text size — is a
+/// rarer choice, and lives behind the cog.
 internal struct InspectorView: View {
     let surface: DesignSurface
     @Binding var settings: StageSettings
@@ -28,7 +35,7 @@ internal struct InspectorView: View {
     var body: some View {
         VStack(spacing: PopsSpacing.zero) {
             if expanded { panel }
-            capsule
+            bar
         }
         .padding(.horizontal, PopsSpacing.lg)
         .padding(.bottom, PopsSpacing.sm)
@@ -47,38 +54,10 @@ internal struct InspectorView: View {
             }
     }
 
-    private var capsule: some View {
+    private var bar: some View {
         HStack(spacing: PopsSpacing.md) {
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.popsSubheadline.weight(.semibold))
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-            }
-            .accessibilityLabel("Close")
-
-            Divider().frame(height: PopsSpacing.xl)
-
-            Button {
-                expanded.toggle()
-            } label: {
-                HStack(spacing: PopsSpacing.sm) {
-                    Text(currentStateTitle)
-                        .font(.popsSubheadline)
-                        .lineLimit(1)
-                    if settings.isModified(from: surface) {
-                        Text(modificationBadge)
-                            .font(.popsCaption)
-                            .foregroundStyle(Color.popsAccent)
-                    }
-                    Image(systemName: expanded ? "chevron.down" : "chevron.up")
-                        .font(.popsSectionLabel)
-                        .foregroundStyle(Color.popsMutedForeground)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .accessibilityLabel(expanded ? "Hide inspector" : "Show inspector")
-            .accessibilityHint(
-                "Drag the bar up to lift it clear of the screen\u{2019}s own controls")
+            controls
+            stateStrip
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.popsForeground)
@@ -88,35 +67,64 @@ internal struct InspectorView: View {
         .gesture(liftGesture)
     }
 
-    /// What is off-default, shortest first. A reviewer glancing at this should
-    /// be able to tell in one word whether what they are seeing is the
-    /// author's intent or their own experiment.
-    private var modificationBadge: String {
-        var parts: [String] = []
-        if settings.appearance != .light { parts.append("Dark") }
-        if settings.typeSize != .playgroundDefault {
-            parts.append(settings.typeSize.playgroundLabel)
+    /// The fixed end of the bar: leave, and open the conditions.
+    ///
+    /// It is also where the bar gets dragged from in practice. ``liftGesture``
+    /// is attached to the whole bar rather than here — a `DragGesture` bound
+    /// to a container this tight claims the touch before the buttons inside it
+    /// do, and both of them go dead — but a drag beginning inside the state
+    /// strip belongs to that scroll view, so the part that actually lifts is
+    /// this end.
+    private var controls: some View {
+        HStack(spacing: PopsSpacing.xs) {
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.popsSubheadline.weight(.semibold))
+                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+            }
+            .accessibilityLabel("Close")
+
+            Button {
+                expanded.toggle()
+            } label: {
+                // Filled when something is off-default rather than only
+                // tinted: a state a reader can get only from a hue is a state
+                // a reader who cannot separate those hues does not have.
+                Image(systemName: isModified ? "gearshape.fill" : "gearshape")
+                    .font(.popsSubheadline.weight(.semibold))
+                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+                    .foregroundStyle(isModified ? Color.popsAccent : Color.popsForeground)
+            }
+            .accessibilityLabel(expanded ? "Hide conditions" : "Show conditions")
+            .accessibilityValue(isModified ? modificationBadge : "Surface defaults")
+            .accessibilityHint(
+                "Drag the bar up to lift it clear of the screen\u{2019}s own controls")
+
+            Divider().frame(height: PopsSpacing.xl)
         }
-        if settings.rightToLeft { parts.append("RTL") }
-        if settings.chrome != surface.chrome { parts.append(settings.chrome.title) }
-        return parts.joined(separator: " · ")
     }
 
-    private var currentStateTitle: String {
-        surface.state(id: settings.stateID)?.title ?? "Default"
+    /// The states, which for an experiment are its variants.
+    private var stateStrip: some View {
+        chipStrip(
+            items: surface.states.map { Chip(id: $0.id, title: $0.title) },
+            isOn: { $0 == settings.stateID },
+            select: { settings.stateID = $0 }
+        )
+    }
+
+    private var isModified: Bool { settings.isModified(from: surface) }
+
+    /// Read out by the cog rather than drawn beside it. The bar's width now
+    /// belongs to the states, and a summary free to grow to four terms would
+    /// take it back; the cog's own shape carries that something is
+    /// off-default, and this says what.
+    private var modificationBadge: String {
+        settings.modifications(from: surface).joined(separator: " · ")
     }
 
     private var panel: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-            if surface.states.count > 1 {
-                chipRow(
-                    title: "State",
-                    items: surface.states.map { Chip(id: $0.id, title: $0.title) },
-                    isOn: { $0 == settings.stateID },
-                    select: { settings.stateID = $0 }
-                )
-            }
-
             chipRow(
                 title: "Chrome",
                 items: Chrome.allCases.map {
@@ -204,17 +212,25 @@ internal struct InspectorView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             label(title)
-            ScrollView(.horizontal) {
-                HStack(spacing: PopsSpacing.sm) {
-                    ForEach(items) { item in
-                        chip(item.title, symbol: item.symbol, isOn: isOn(item.id)) {
-                            select(item.id)
-                        }
+            chipStrip(items: items, isOn: isOn, select: select)
+        }
+    }
+
+    private func chipStrip(
+        items: [Chip],
+        isOn: @escaping (String) -> Bool,
+        select: @escaping (String) -> Void
+    ) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: PopsSpacing.sm) {
+                ForEach(items) { item in
+                    chip(item.title, symbol: item.symbol, isOn: isOn(item.id)) {
+                        select(item.id)
                     }
                 }
             }
-            .scrollIndicators(.hidden)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func chip(
@@ -276,6 +292,12 @@ internal enum InspectorShape {
     /// The panel's corner, matched to the bar's so the two still read as one
     /// control: a capsule ``barHeight`` tall is round to half of it.
     internal static let panelCorner = barHeight / 2
+
+    /// One row of system chrome at the bottom edge, which the inspector starts
+    /// clear of. A tab bar is one; so is the search field iOS 26 moved down
+    /// there on iPhone, which a surface declares for itself and the stage
+    /// cannot see. Anything deeper than a row is the drag's job.
+    internal static let bottomChromeClearance: CGFloat = 58
 
     /// A panel several rows deep. Continuous rather than circular because the
     /// bar's ends are, and the two sit one above the other.
