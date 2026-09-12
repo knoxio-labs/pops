@@ -37,15 +37,27 @@ public struct ReceiptResultView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                ReceiptPagesView(parts: model.parts)
+        Group {
+            if isForm {
+                // `ReceiptDraftView` is a `ScrollView` of its own, with its own
+                // pages, its own bottom bar and its own accessibility root —
+                // wrapping it in a second one here nests two vertical scroll
+                // views, and the inner one renders at zero height. That is
+                // not hypothetical: it is what the first real render of this
+                // branch, a Maestro flow reaching manual entry, actually hit.
                 content
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                        ReceiptPagesView(parts: model.parts)
+                        content
+                    }
+                    .padding(PopsSpacing.lg)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.popsBackground)
             }
-            .padding(PopsSpacing.lg)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.popsBackground)
         .task { await model.extract() }
         .alert(
             ReceiptResultCopy.saveFailedTitle,
@@ -101,12 +113,23 @@ public struct ReceiptResultView: View {
         }
     }
 
+    /// Whether ``content`` is, itself, a complete scrollable screen —
+    /// ``ReceiptDraftView`` — rather than a card ``body`` needs to wrap in its
+    /// own `ScrollView` alongside ``ReceiptPagesView``.
+    private var isForm: Bool {
+        switch model.state {
+        case .draft, .manualEntry: true
+        case .extracting, .extractionFailed, .unreadable, .saved: false
+        }
+    }
+
     private func draftView(for reading: ReceiptDraftReading) -> some View {
         ReceiptDraftView(
             draft: draftPresentation.draft(extracted: reading.extracted, failures: reading.failures),
             title: ReceiptDraftCopy.title,
             subtitle: ReceiptDraftCopy.subtitle,
             status: reading.reconciled ? nil : draftStatus,
+            parts: model.parts,
             save: { draft in Task { await model.save(draft) } }
         )
     }
@@ -116,6 +139,7 @@ public struct ReceiptResultView: View {
             draft: draftPresentation.blankDraft(currency: nil),
             title: ReceiptDraftCopy.manualTitle,
             subtitle: ReceiptDraftCopy.manualSubtitle,
+            parts: model.parts,
             save: { draft in Task { await model.save(draft) } }
         )
     }
