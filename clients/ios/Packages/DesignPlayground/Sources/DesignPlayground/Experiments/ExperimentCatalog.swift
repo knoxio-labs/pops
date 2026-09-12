@@ -16,10 +16,56 @@ import SwiftUI
 internal enum ExperimentCatalog {
     internal static let all: [DesignExperiment] = [
         DesignExperiment(
+            id: "purchases-digest-finish",
+            question:
+                "Where does the purchases digest get its finish — from the system's own structure, from the material it is drawn in, or from the figures relating to each other?",
+            subject: SurfaceID(area: "purchases", slug: "list"),
+            variants: [
+                purchasesVariant(
+                    id: "draft",
+                    title: "Draft",
+                    note:
+                        "What won `purchases-home-shape`, unchanged. The baseline the other three are arguing with, "
+                        + "not a candidate."
+                ) { PurchasesDigestSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "grouped",
+                    title: "Grouped",
+                    note:
+                        "Inset containers, dividers past the mark, a disclosure row where the button was, the "
+                        + "unmatched banner promoted above the figure, and a delta against last month."
+                ) { PurchasesDigestGroupedSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "glass",
+                    title: "Glass",
+                    note:
+                        "iOS 26 materials. The figure on glass over a tinted wash, the unmatched strip and the "
+                        + "merchant chips likewise. Judge it on the device — this is the effect CSS cannot show."
+                ) { PurchasesDigestGlassSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "chart",
+                    title: "Chart",
+                    note:
+                        "A month trend behind the figure, the backlog as a proportion answered rather than a tally, "
+                        + "and each merchant carrying its share."
+                ) { PurchasesDigestChartSurface(purchases: $0) },
+            ]
+        ),
+        DesignExperiment(
             id: "purchases-home-shape",
             question:
                 "Is the purchases home an archive, a queue of unmatched purchases, a digest, or the receipts themselves?",
             subject: SurfaceID(area: "purchases", slug: "list"),
+            status: .decided(
+                variant: "digest",
+                rationale:
+                    "Digest, decided on the device 2026-09-12. The tab was asked to do four jobs at once — find an "
+                    + "old purchase, work down what is unmatched, see where the money went, and catch what was just "
+                    + "photographed — and it is the only variant that gives each of them a lane instead of picking "
+                    + "one and demoting the rest. Ledger and Paper answer the archive well and say nothing about the "
+                    + "other three; Inbox answers triage and needs mobile reconcile routes that do not exist. What "
+                    + "Digest gives up is density: the history is a band with four rows on it, reached by See all."
+            ),
             variants: [
                 purchasesVariant(
                     id: "ledger",

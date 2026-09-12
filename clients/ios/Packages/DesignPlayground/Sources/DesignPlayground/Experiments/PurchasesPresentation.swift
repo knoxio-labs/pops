@@ -125,6 +125,72 @@ internal enum PurchasesPresentation {
     }
 }
 
+/// The figures a finished digest wants beside its totals — a comparison, a
+/// share, a proportion accounted for.
+///
+/// Every one is computed from rows already loaded. There is no mobile
+/// analytics route, so a digest that wanted a figure the phone cannot derive
+/// would be a design the backend cannot feed.
+@MainActor
+extension PurchasesPresentation {
+    /// What the month before came to, in the same currency, and which way it
+    /// moved. `nil` when there is no earlier month to compare against — the
+    /// first month a person uses the app has no delta, and inventing one by
+    /// treating the absence as zero would read as a 100% fall.
+    static func delta(
+        for month: Date, in months: [(month: Date, purchases: [Purchase])], currency: String
+    ) -> (amount: MoneyAmount, isUp: Bool)? {
+        guard
+            let index = months.firstIndex(where: { $0.month == month }),
+            months.indices.contains(index + 1)
+        else { return nil }
+        let current = total(months[index].purchases, in: currency)
+        let previous = total(months[index + 1].purchases, in: currency)
+        guard previous != 0 else { return nil }
+        return (
+            amount: MoneyAmount(minorUnits: abs(current - previous), currencyCode: currency),
+            isUp: current > previous
+        )
+    }
+
+    static func total(_ purchases: [Purchase], in currency: String) -> Int {
+        purchases
+            .filter { $0.total.currencyCode == currency }
+            .reduce(0) { $0 + $1.total.minorUnits }
+    }
+
+    /// A merchant's share of the currency's spend, 0...1, for a bar that has
+    /// to be drawn at some width.
+    static func share(_ amount: MoneyAmount, of total: Int) -> Double {
+        guard total > 0 else { return 0 }
+        return min(max(Double(amount.minorUnits) / Double(total), 0), 1)
+    }
+
+    /// How much of the history is answered — the count, not the money, because
+    /// the money is in currencies that do not add up and the count always
+    /// does.
+    static func accounted(_ purchases: [Purchase]) -> (settled: Int, total: Int) {
+        (settled: purchases.filter { !$0.status.isUnsettled }.count, total: purchases.count)
+    }
+
+    /// The last `limit` months, oldest first, as one figure each in a single
+    /// currency — the shape a trend strip draws. Oldest first because a bar
+    /// chart of time reads left to right, while ``byMonth`` is newest first
+    /// because a list does not.
+    static func trend(
+        _ purchases: [Purchase], currency: String, limit: Int
+    ) -> [(month: Date, minorUnits: Int)] {
+        byMonth(purchases)
+            .prefix(limit)
+            .map { (month: $0.month, minorUnits: total($0.purchases, in: currency)) }
+            .reversed()
+    }
+
+    static func shortMonth(_ date: Date) -> String {
+        date.formatted(.dateTime.month(.abbreviated))
+    }
+}
+
 /// The merchant as a mark: initials on a stable tint, or a glyph when the
 /// pillar resolved no merchant at all.
 ///
@@ -201,5 +267,71 @@ internal struct PurchaseStatusBadge: View {
             .padding(.vertical, PopsSpacing.xs)
             .background(tone.opacity(0.14), in: .rect(cornerRadius: PopsRadius.control))
             .lineLimit(1)
+    }
+}
+
+/// A purchase at its smallest useful size: mark, name, day, amount.
+///
+/// Shared across the digest-finish variants because the row is not what those
+/// variants disagree about — they disagree about what contains it. A row
+/// redrawn three ways would put three changes in front of a reviewer asked to
+/// judge one.
+internal struct PurchaseCompactRow: View {
+    internal let purchase: Purchase
+    internal var markSize: CGFloat = 30
+
+    internal var body: some View {
+        HStack(spacing: PopsSpacing.md) {
+            PurchaseMark(purchase: purchase, size: markSize)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text(PurchasesPresentation.merchant(purchase))
+                    .font(.popsSubheadline)
+                    .foregroundStyle(
+                        PurchasesPresentation.isUnattributed(purchase)
+                            ? Color.popsMutedForeground : Color.popsForeground
+                    )
+                    .lineLimit(1)
+                Text(PurchasesPresentation.day(purchase))
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+            Spacer(minLength: PopsSpacing.sm)
+            Text(purchase.total.formatted())
+                .font(.popsSubheadline)
+                .monospacedDigit()
+                .foregroundStyle(Color.popsForeground)
+                .lineLimit(1)
+                .layoutPriority(1)
+        }
+        .padding(.vertical, PopsSpacing.sm)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            """
+            \(PurchasesPresentation.merchant(purchase)), \
+            \(purchase.total.formatted()), \
+            \(PurchasesPresentation.day(purchase))
+            """
+        )
+    }
+}
+
+/// A section's name, set above what it introduces, with an optional note on
+/// the right for the thing the section is qualified by — a currency, a count.
+internal struct DigestSectionLabel: View {
+    internal let title: String
+    internal var note: String?
+
+    internal var body: some View {
+        HStack(spacing: PopsSpacing.sm) {
+            Text(title.uppercased())
+                .font(.popsSectionLabel)
+                .foregroundStyle(Color.popsMutedForeground)
+            Spacer(minLength: PopsSpacing.sm)
+            if let note {
+                Text(note)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+        }
     }
 }
