@@ -1,3 +1,4 @@
+import AppCore
 import SwiftUI
 
 /// The questions asked about a surface, and the answers competing to settle
@@ -14,6 +15,42 @@ import SwiftUI
 @MainActor
 internal enum ExperimentCatalog {
     internal static let all: [DesignExperiment] = [
+        DesignExperiment(
+            id: "purchases-home-shape",
+            question:
+                "Is the purchases home an archive, a queue of unmatched purchases, a digest, or the receipts themselves?",
+            subject: SurfaceID(area: "purchases", slug: "list"),
+            variants: [
+                purchasesVariant(
+                    id: "ledger",
+                    title: "Ledger",
+                    note:
+                        "One unbroken run in date order, cut by month, with the month's total in the header. "
+                        + "Settlement is a dot on the mark, not a section."
+                ) { PurchasesLedgerSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "inbox",
+                    title: "Inbox",
+                    note:
+                        "Unmatched purchases as cards that state why they are open and offer the two answers. "
+                        + "Everything settled is compressed underneath."
+                ) { PurchasesInboxSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "digest",
+                    title: "Digest",
+                    note:
+                        "The month's figure, the unmatched count, and where the money went — the history is the "
+                        + "last band, reached by See all."
+                ) { PurchasesDigestSurface(purchases: $0) },
+                purchasesVariant(
+                    id: "paper",
+                    title: "Paper",
+                    note:
+                        "The receipt photograph leads every row. Argues against the merchant mark, and takes "
+                        + "POPS-2452's \"show the captured image\" at the list rather than only the detail."
+                ) { PurchasesPaperSurface(purchases: $0) },
+            ]
+        ),
         DesignExperiment(
             id: "accounts-list-shape",
             question: "Does the accounts list read better as rows or as a card grid?",
@@ -101,4 +138,40 @@ internal enum ExperimentCatalog {
             ]
         ),
     ]
+}
+
+extension ExperimentCatalog {
+    /// One variant of the purchases home, in the two conditions worth
+    /// comparing it in.
+    ///
+    /// The second state is the point of the pair. `PurchasesFixtures.history`
+    /// is an archive somebody has been feeding for months; `all` is the five
+    /// receipts the pillar actually holds, every one of them unmatched. A
+    /// variant that reads well on the first and collapses on the second is a
+    /// variant designed for a corpus that does not exist yet.
+    @MainActor
+    fileprivate static func purchasesVariant<Content: View>(
+        id: String,
+        title: String,
+        note: String,
+        content: @escaping ([Purchase]) -> Content
+    ) -> DesignVariant {
+        DesignVariant(
+            id: id,
+            title: title,
+            note: note,
+            surface: DesignSurface(
+                id: SurfaceID(area: "purchases", slug: "list"),
+                title: "Purchases",
+                chrome: .navigationAndTabs,
+                states: [
+                    DesignState.standard { content(PurchasesFixtures.history) },
+                    DesignState("today", "Today's five") {
+                        content(PurchasesFixtures.all)
+                    },
+                    DesignState("empty", "Empty") { content([]) },
+                ]
+            )
+        )
+    }
 }
