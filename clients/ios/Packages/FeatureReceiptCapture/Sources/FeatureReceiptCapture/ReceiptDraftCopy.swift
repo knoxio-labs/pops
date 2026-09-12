@@ -65,10 +65,8 @@ public enum ReceiptDraftCopy {
     internal static let newRecordPlaceholder = "Name"
     internal static let merchantPlaceholderSelect = "Choose or create a merchant"
     internal static let addressPlaceholderSelect = "Choose or create a branch"
-    internal static let merchantUnresolved = "Every purchase needs a merchant."
     internal static let createMerchantSection = "New merchant"
     internal static let createAddressSection = "New branch"
-    internal static let addressNeedsMerchant = "Choose a merchant first."
 
     internal static func createRecord(_ value: String) -> String {
         value.isEmpty ? "Create" : "Create “\(value)”"
@@ -77,11 +75,6 @@ public enum ReceiptDraftCopy {
     internal static func printedAs(_ value: String) -> String {
         "The receipt says “\(value)”"
     }
-    internal static let chooseMerchant = "Choose a merchant"
-    internal static let newMerchant = "New merchant"
-    internal static let typeMerchant = "Type it instead"
-    internal static let chooseAddress = "Choose an address"
-    internal static let newAddress = "New address"
     internal static let onlineLabel = "Bought online"
     internal static let onlineCaption = "No branch to record."
     internal static let includedLabel = "In the item prices"

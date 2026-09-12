@@ -1,4 +1,3 @@
-import AppCore
 import DesignSystem
 import SwiftUI
 

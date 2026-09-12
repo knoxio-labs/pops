@@ -131,8 +131,4 @@ internal enum PurchasesFixtures {
             "pur-market", .printed("EVELEIGH FARMERS MARKET STALL 12"),
             daysAgo: 58, aud(4_150), items: 6),
     ]
-
-    /// Only the rows still waiting on somebody — what a status-led variant
-    /// pins above the fold.
-    static var unsettled: [Purchase] { history.filter(\.status.isUnsettled) }
 }

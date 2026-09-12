@@ -1,5 +1,4 @@
 import DesignSystem
-import Foundation
 import SwiftUI
 
 extension ReceiptDraftForm {
@@ -32,25 +31,35 @@ extension ReceiptDraftForm {
     private var merchantField: some View {
         ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.merchantLabel,
-            resolution: $draft.merchantResolution,
+            resolution: merchantBinding,
             printed: draft.printedMerchant.value,
             records: merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) },
             symbol: "building.2",
             placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createMerchantSection,
-            note: merchantNote
+            note: hint(.merchant)
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
 
-    /// The gate's complaint about the merchant, unless there is no merchant —
-    /// which outranks it. A reader who has not chosen one needs telling that,
-    /// not reminding that the print was smudged.
-    private var merchantNote: PopsFieldNote? {
-        if !draft.merchantResolution.isResolved {
-            return .problem(ReceiptDraftCopy.merchantUnresolved)
-        }
-        return hint(.merchant)
+    /// Writes the merchant, and drops the branch when the merchant changes.
+    ///
+    /// A branch belongs to a merchant. Switching from Woolworths to Kmart
+    /// leaves a Woolworths branch id attached to a Kmart purchase, and nothing
+    /// downstream would catch it: the address select scopes its list to the
+    /// new merchant so the control shows a placeholder, while the stored id is
+    /// still the old one — and an address is not gated on save, so it would be
+    /// written. Dropping it is the only honest answer, since no branch of the
+    /// new merchant has been chosen.
+    ///
+    /// The rule itself lives on ``ReceiptDraft/setMerchant(_:)`` — an
+    /// invariant between two fields belongs with them, not in whichever view
+    /// happens to write one.
+    private var merchantBinding: Binding<RecordResolution> {
+        Binding(
+            get: { draft.merchantResolution },
+            set: { draft.setMerchant($0) }
+        )
     }
 
     /// The same control over the chosen merchant's branches.
@@ -70,9 +79,7 @@ extension ReceiptDraftForm {
             symbol: "mappin.and.ellipse",
             placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createAddressSection,
-            note: hint(.address),
-            unavailable: draft.merchantResolution.isResolved
-                ? nil : ReceiptDraftCopy.addressNeedsMerchant
+            note: hint(.address)
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.address)
     }

@@ -1,5 +1,5 @@
 import AppCore
-import SwiftUI
+import Foundation
 
 /// A saved purchase, in the conditions the archive actually holds.
 @MainActor

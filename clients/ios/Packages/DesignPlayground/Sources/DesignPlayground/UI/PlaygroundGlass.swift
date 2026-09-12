@@ -84,17 +84,6 @@ extension View {
         #endif
     }
 
-    /// The paging tab-view style, which is iOS-only. Without it the viewer is
-    /// a tab bar rather than a thing you swipe between pages of.
-    @ViewBuilder
-    func playgroundPagedTabs() -> some View {
-        #if os(iOS)
-            tabViewStyle(.page(indexDisplayMode: .never))
-        #else
-            self
-        #endif
-    }
-
     /// iOS 26's own glass button styles, which are the reason a hand-rolled
     /// capsule was the wrong answer: the platform ships both the plain and the
     /// prominent one, and they carry the press state, the tint and the

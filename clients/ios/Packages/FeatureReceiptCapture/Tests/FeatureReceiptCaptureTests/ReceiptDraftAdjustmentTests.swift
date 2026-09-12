@@ -118,6 +118,49 @@ internal struct ReceiptDraftAdjustmentTests {
         #expect(draft.adjustments.map(\.id) == survivors)
     }
 
+    /// A branch belongs to a merchant, so changing the merchant has to drop
+    /// it. Nothing downstream would catch a stale one: the address select
+    /// scopes its list to the new merchant and shows a placeholder, while the
+    /// stored id is still the old merchant's — and an address is not gated on
+    /// save, so it would be written.
+    @Test("changing the merchant drops the branch that belonged to the old one")
+    func switchingMerchantClearsTheBranch() {
+        var draft = ReceiptDraft.fake(tillNames)
+        draft.merchantResolution = .chosen(id: "ent-woolworths")
+        draft.addressResolution = .chosen(id: "adr-woolworths-1")
+
+        draft.setMerchant(.chosen(id: "ent-kmart"))
+
+        #expect(draft.merchantResolution == .chosen(id: "ent-kmart"))
+        #expect(
+            draft.addressResolution == .unresolved,
+            "a Woolworths branch survived onto a Kmart purchase")
+    }
+
+    /// Confirming the server's own match is not a change of merchant, so the
+    /// branch it came with has to survive it.
+    @Test("confirming the same merchant keeps the branch")
+    func confirmingTheSameMerchantKeepsTheBranch() {
+        var draft = ReceiptDraft.fake(tillNames)
+        draft.merchantResolution = .matched(id: "ent-kmart")
+        draft.addressResolution = .chosen(id: "adr-kmart-0")
+
+        draft.setMerchant(.chosen(id: "ent-kmart"))
+
+        #expect(draft.addressResolution == .chosen(id: "adr-kmart-0"))
+    }
+
+    @Test("switching to a merchant being created also drops the branch")
+    func switchingToACreatedMerchantClearsTheBranch() {
+        var draft = ReceiptDraft.fake(tillNames)
+        draft.merchantResolution = .chosen(id: "ent-woolworths")
+        draft.addressResolution = .chosen(id: "adr-woolworths-0")
+
+        draft.setMerchant(.created(value: "Tongli Supermarket"))
+
+        #expect(draft.addressResolution == .unresolved)
+    }
+
     // MARK: what it would have cost
 
     @Test("a list price is empty until somebody types one, and is not from the paper")

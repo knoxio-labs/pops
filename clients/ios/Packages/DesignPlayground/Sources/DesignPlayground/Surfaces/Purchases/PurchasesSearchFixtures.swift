@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// One line item a search matched, and the purchase it belongs to.
 ///

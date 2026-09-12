@@ -1,6 +1,5 @@
 import AppCore
 import FeatureReceiptCapture
-import SwiftUI
 
 /// The review step: what was read, checked one purchase at a time before any
 /// of it is written.

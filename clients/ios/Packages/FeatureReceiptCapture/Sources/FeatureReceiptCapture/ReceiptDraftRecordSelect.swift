@@ -36,10 +36,6 @@ internal struct ReceiptDraftRecordSelect: View {
     internal let placeholder: String
     internal let createTitle: String
     internal let note: PopsFieldNote?
-    /// Said when there is nothing to choose from yet — an address before a
-    /// merchant is chosen, for instance, which is a different situation from
-    /// a merchant with no branches on file.
-    internal var unavailable: String?
 
     @State private var choosing = false
 
@@ -54,14 +50,7 @@ internal struct ReceiptDraftRecordSelect: View {
             Text(label)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
-            if let unavailable {
-                Text(unavailable)
-                    .font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                control
-            }
+            control
             provenance
             if let note {
                 Text(note.text)
@@ -96,7 +85,7 @@ internal struct ReceiptDraftRecordSelect: View {
             choosing = true
         } label: {
             HStack(spacing: PopsSpacing.sm) {
-                Text(chosen ?? placeholder)
+                Text(chosen ?? unresolvedLabel)
                     .font(.popsBody)
                     .foregroundStyle(
                         chosen == nil ? Color.popsMutedForeground : Color.popsForeground
@@ -135,12 +124,27 @@ internal struct ReceiptDraftRecordSelect: View {
             .accessibilityLabel(label)
     }
 
-    /// What the paper said, when that is not what the field now points at.
-    /// Absent when they agree, because repeating the same words at two
-    /// weights says nothing.
+    /// What to show before anything is resolved.
+    ///
+    /// The till's wording, not a prompt. It used to be the placeholder with
+    /// the wording repeated in a sentence underneath and an error under that —
+    /// three lines to say one thing, two of them prose, and the error shown
+    /// before anybody had touched the form. The wording is the useful part and
+    /// it is data, so it goes where the value goes.
+    private var unresolvedLabel: String {
+        let trimmed = printed.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? placeholder : trimmed
+    }
+
+    /// What the paper said, once the field points somewhere else.
+    ///
+    /// Only then: while nothing is resolved the wording is already the value
+    /// above, and printing it twice at two weights says nothing.
     @ViewBuilder private var provenance: some View {
         let trimmed = printed.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty, trimmed.caseInsensitiveCompare(chosen ?? "") != .orderedSame {
+        if let chosen, !trimmed.isEmpty,
+            trimmed.caseInsensitiveCompare(chosen) != .orderedSame
+        {
             Text(ReceiptDraftCopy.printedAs(trimmed))
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)

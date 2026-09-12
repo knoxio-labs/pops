@@ -1,5 +1,4 @@
 import DesignSystem
-import Foundation
 import SwiftUI
 
 /// The reading, editable.

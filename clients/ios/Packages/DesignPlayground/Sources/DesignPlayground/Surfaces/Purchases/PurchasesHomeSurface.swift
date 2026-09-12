@@ -1,6 +1,3 @@
-import AppCore
-import SwiftUI
-
 /// The purchases tab whole — the decided digest inside the shell that carries
 /// it, with the search the platform draws and the control that starts a
 /// capture.

@@ -1,5 +1,5 @@
 import AppCore
-import SwiftUI
+import Foundation
 
 /// The capture flow, from what was picked to what was read.
 ///
