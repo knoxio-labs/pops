@@ -10,7 +10,6 @@ import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { PurchasesExtractOutcomeSchema, toMobileExtractOutcome } from './draft-wire.js';
 import { PurchasesDetailResponseSchema, toMobilePurchaseDetail } from './list-wire.js';
-import { PURCHASES_PILLAR_ID } from './pillar-id.js';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
 import type {
@@ -19,6 +18,17 @@ import type {
   MobileSaveReceiptDraftBody,
 } from '../../contract/receipt-draft.js';
 import type { MobilePurchaseDetail, MobileReceiptPart } from '../../contract/rest-schemas.js';
+
+/**
+ * The purchases pillar id, as registered with the registry.
+ *
+ * Declared here rather than imported from a shared module on purpose:
+ * `scripts/ci/check-cross-pillar-expectations.mjs` resolves a `pillar()`
+ * call's target from the calling file alone, so an imported constant is
+ * undecidable and the expectation cannot be pinned. `finance/client.ts` and
+ * `finance/accounts-client.ts` each carry their own for the same reason.
+ */
+export const PURCHASES_PILLAR_ID = 'purchases';
 
 /**
  * The subset of purchases' `receipt.*` and `purchase.*` routers these three

@@ -28,7 +28,6 @@ import {
   toMobilePurchaseDetail,
   type PurchasesListRow,
 } from './list-wire.js';
-import { PURCHASES_PILLAR_ID } from './pillar-id.js';
 import { PurchasesReceiptBytesSchema } from './wire.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
@@ -46,7 +45,16 @@ import type {
   MobileReceiptPart,
 } from '../../contract/rest-schemas.js';
 
-export { PURCHASES_PILLAR_ID };
+/**
+ * The purchases pillar id, as registered with the registry.
+ *
+ * Declared here rather than imported from a shared module on purpose:
+ * `scripts/ci/check-cross-pillar-expectations.mjs` resolves a `pillar()`
+ * call's target from the calling file alone, so an imported constant is
+ * undecidable and the expectation cannot be pinned. `finance/client.ts` and
+ * `finance/accounts-client.ts` each carry their own for the same reason.
+ */
+export const PURCHASES_PILLAR_ID = 'purchases';
 
 /**
  * The subset of purchases' router bfm calls to read orders. A `type` rather
