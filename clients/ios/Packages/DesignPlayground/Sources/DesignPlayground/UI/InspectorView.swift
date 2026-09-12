@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// The stage's controls: a glass bar that expands into a panel.
+/// The stage's controls: floating glass, and a panel behind the cog.
 ///
 /// It floats *over* the surface rather than sitting beside it, and it is
 /// glass rather than a filled panel, for one reason — the surface has to keep
@@ -14,10 +14,17 @@ import SwiftUI
 /// alternate is one the reader stops alternating. Everything describing the
 /// conditions rather than the subject — chrome, appearance, text size — is a
 /// rarer choice, and lives behind the cog.
+///
+/// Three separate pieces of glass rather than one bar with things inside it,
+/// which is what the platform does with a floating control now: two round
+/// actions that are always exactly where they were, and beside them a capsule
+/// holding the choices, which is the only piece that scrolls. A surface with
+/// twenty variants moves the twenty and leaves close and the cog alone.
 internal struct InspectorView: View {
     let surface: DesignSurface
     @Binding var settings: StageSettings
     @Binding var expanded: Bool
+    @Binding var lift: CGFloat
     let onClose: () -> Void
 
     /// How far the inspector has been lifted off the bottom edge.
@@ -29,12 +36,13 @@ internal struct InspectorView: View {
     /// the inspector depends on the surface, the chrome and whether search is
     /// declared, and guessing produces a collision on whichever combination
     /// was not considered. Letting it be moved is both smaller and correct.
-    @State private var lift: CGFloat = 0
+    ///
+    /// Bound rather than owned: see ``StageView/inspectorLift``.
     @GestureState private var dragging: CGFloat = 0
 
     var body: some View {
         VStack(spacing: PopsSpacing.zero) {
-            if expanded { panel }
+            if expanded { ConditionsPanel(settings: $settings) }
             bar
         }
         .padding(.horizontal, PopsSpacing.lg)
@@ -55,62 +63,83 @@ internal struct InspectorView: View {
     }
 
     private var bar: some View {
-        HStack(spacing: PopsSpacing.md) {
-            controls
-            stateStrip
+        PlaygroundGlassGroup(spacing: InspectorShape.blendDistance) {
+            HStack(spacing: InspectorShape.elementGap) {
+                action("xmark", label: "Close", action: onClose)
+
+                action(
+                    isModified ? "gearshape.fill" : "gearshape",
+                    label: expanded ? "Hide conditions" : "Show conditions",
+                    // Filled when something is off-default rather than only
+                    // tinted: a state a reader can get only from a hue is a
+                    // state a reader who cannot separate those hues does not
+                    // have.
+                    tint: isModified ? Color.popsAccent : Color.popsForeground
+                ) {
+                    expanded.toggle()
+                }
+                .accessibilityValue(isModified ? modificationBadge : "Surface defaults")
+                .accessibilityHint(
+                    "Drag up to lift the controls clear of the screen\u{2019}s own")
+
+                stateStrip
+            }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.popsForeground)
-        .padding(.horizontal, InspectorShape.contentInset)
-        .padding(.vertical, InspectorShape.barPadding)
-        .playgroundGlass(in: InspectorShape.bar)
         .gesture(liftGesture)
     }
 
-    /// The fixed end of the bar: leave, and open the conditions.
-    ///
-    /// It is also where the bar gets dragged from in practice. ``liftGesture``
-    /// is attached to the whole bar rather than here — a `DragGesture` bound
-    /// to a container this tight claims the touch before the buttons inside it
-    /// do, and both of them go dead — but a drag beginning inside the state
-    /// strip belongs to that scroll view, so the part that actually lifts is
-    /// this end.
-    private var controls: some View {
-        HStack(spacing: PopsSpacing.xs) {
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.popsSubheadline.weight(.semibold))
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-            }
-            .accessibilityLabel("Close")
-
-            Button {
-                expanded.toggle()
-            } label: {
-                // Filled when something is off-default rather than only
-                // tinted: a state a reader can get only from a hue is a state
-                // a reader who cannot separate those hues does not have.
-                Image(systemName: isModified ? "gearshape.fill" : "gearshape")
-                    .font(.popsSubheadline.weight(.semibold))
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                    .foregroundStyle(isModified ? Color.popsAccent : Color.popsForeground)
-            }
-            .accessibilityLabel(expanded ? "Hide conditions" : "Show conditions")
-            .accessibilityValue(isModified ? modificationBadge : "Surface defaults")
-            .accessibilityHint(
-                "Drag the bar up to lift it clear of the screen\u{2019}s own controls")
-
-            Divider().frame(height: PopsSpacing.xl)
+    /// One round floating action. Its own piece of glass, and always in the
+    /// same place: the strip beside it is what moves.
+    private func action(
+        _ symbol: String,
+        label: String,
+        tint: Color = .popsForeground,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.popsSubheadline.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(
+                    width: InspectorShape.elementHeight,
+                    height: InspectorShape.elementHeight
+                )
         }
+        .playgroundGlass(in: InspectorShape.action)
+        .accessibilityLabel(label)
     }
 
     /// The states, which for an experiment are its variants.
+    ///
+    /// The selected chip is scrolled back into view rather than the offset
+    /// being preserved, and that is the stronger behaviour for the same
+    /// reason it is the necessary one: ``StageView`` re-identifies the tree on
+    /// every state change, so there is no offset to preserve — and with twenty
+    /// variants, landing on the one you just chose is what you wanted anyway.
     private var stateStrip: some View {
-        chipStrip(
-            items: surface.states.map { Chip(id: $0.id, title: $0.title) },
-            isOn: { $0 == settings.stateID },
-            select: { settings.stateID = $0 }
-        )
+        ScrollViewReader { proxy in
+            ChipStrip(
+                items: surface.states.map { Chip(id: $0.id, title: $0.title) },
+                isOn: { $0 == settings.stateID },
+                select: { settings.stateID = $0 }
+            )
+            // On the content rather than the scroll view, so a chip scrolls
+            // under the capsule's end instead of stopping a step short of it.
+            .contentMargins(.horizontal, InspectorShape.contentInset, for: .scrollContent)
+            .frame(height: InspectorShape.elementHeight)
+            // The one piece that has to clip: `glassEffect` fills its shape
+            // behind the content, so without this a chip mid-scroll draws
+            // outside the capsule rather than sliding under it.
+            .clipShape(InspectorShape.strip)
+            .playgroundGlass(in: InspectorShape.strip)
+            .onAppear { proxy.scrollTo(settings.stateID, anchor: .center) }
+            .onChange(of: settings.stateID) { _, selected in
+                withAnimation(.snappy(duration: 0.28)) {
+                    proxy.scrollTo(selected, anchor: .center)
+                }
+            }
+        }
     }
 
     private var isModified: Bool { settings.isModified(from: surface) }
@@ -123,145 +152,6 @@ internal struct InspectorView: View {
         settings.modifications(from: surface).joined(separator: " · ")
     }
 
-    private var panel: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-            chipRow(
-                title: "Chrome",
-                items: Chrome.allCases.map {
-                    Chip(id: $0.rawValue, title: $0.title, symbol: $0.symbol)
-                },
-                isOn: { $0 == settings.chrome.rawValue },
-                select: { if let chrome = Chrome(rawValue: $0) { settings.chrome = chrome } }
-            )
-
-            appearanceAndDirection
-            typeSizeSlider
-        }
-        .padding(InspectorShape.contentInset)
-        .playgroundGlass(in: InspectorShape.panel)
-        .padding(.bottom, PopsSpacing.sm)
-    }
-
-    private var appearanceAndDirection: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            label("Appearance")
-            HStack(spacing: PopsSpacing.sm) {
-                ForEach(Appearance.allCases) { option in
-                    chip(option.title, symbol: option.symbol, isOn: settings.appearance == option) {
-                        settings.appearance = option
-                    }
-                }
-                chip(
-                    "RTL", symbol: "text.alignright", isOn: settings.rightToLeft,
-                    action: { settings.rightToLeft.toggle() })
-            }
-        }
-    }
-
-    /// The control the web playground structurally cannot have.
-    ///
-    /// `type-scale.css` pins every size at the default because a `Font.TextStyle`
-    /// has no point size until the system resolves one — so the HTML frame
-    /// shows one text size and the accessibility sizes, which is where iOS
-    /// layouts actually break, go unreviewed. Here they are a drag away.
-    private var typeSizeSlider: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            HStack {
-                label("Dynamic Type")
-                Spacer()
-                Text(settings.typeSize.playgroundLabel)
-                    .font(.popsCaption)
-                    .monospacedDigit()
-                    .foregroundStyle(
-                        settings.typeSize.isAccessibilitySize
-                            ? Color.popsWarning : Color.popsMutedForeground)
-            }
-            Slider(
-                value: typeSizeIndex,
-                in: 0...Double(DynamicTypeSize.allCases.count - 1),
-                step: 1
-            )
-            .tint(Color.popsAccent)
-        }
-    }
-
-    private var typeSizeIndex: Binding<Double> {
-        Binding(
-            get: {
-                Double(DynamicTypeSize.allCases.firstIndex(of: settings.typeSize) ?? 3)
-            },
-            set: { newValue in
-                let sizes = DynamicTypeSize.allCases
-                let index = min(max(Int(newValue.rounded()), 0), sizes.count - 1)
-                settings.typeSize = sizes[index]
-            }
-        )
-    }
-
-    private func label(_ text: String) -> some View {
-        Text(text)
-            .font(.popsSectionLabel)
-            .foregroundStyle(Color.popsMutedForeground)
-    }
-
-    private func chipRow(
-        title: String,
-        items: [Chip],
-        isOn: @escaping (String) -> Bool,
-        select: @escaping (String) -> Void
-    ) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            label(title)
-            chipStrip(items: items, isOn: isOn, select: select)
-        }
-    }
-
-    private func chipStrip(
-        items: [Chip],
-        isOn: @escaping (String) -> Bool,
-        select: @escaping (String) -> Void
-    ) -> some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.sm) {
-                ForEach(items) { item in
-                    chip(item.title, symbol: item.symbol, isOn: isOn(item.id)) {
-                        select(item.id)
-                    }
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func chip(
-        _ title: String, symbol: String?, isOn: Bool, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: PopsSpacing.xs) {
-                if let symbol {
-                    Image(systemName: symbol).font(.popsSectionLabel)
-                }
-                Text(title).font(.popsCaption)
-            }
-            .padding(.horizontal, PopsSpacing.md)
-            .padding(.vertical, PopsSpacing.sm)
-            .background(
-                isOn ? Color.popsAccent : Color.popsSeparator.opacity(0.35),
-                in: .capsule
-            )
-            .foregroundStyle(isOn ? Color.popsBackground : Color.popsForeground)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// One switchable option in the inspector. A named type rather than a tuple:
-/// three members is past where a tuple stops explaining itself, and these are
-/// built at two call sites that would otherwise have to agree by position.
-internal struct Chip: Identifiable {
-    internal let id: String
-    internal let title: String
-    internal var symbol: String?
 }
 
 /// The shapes the inspector is drawn in, and the measurements they come from.
@@ -274,24 +164,20 @@ internal struct Chip: Identifiable {
 /// lozenge: a panel whose row labels and outermost chips sat on bare background
 /// with the glass curving away underneath them.
 internal enum InspectorShape {
-    /// The step above and below the bar's controls.
-    internal static let barPadding = PopsSpacing.sm
-
-    /// How far inside the glass the content of either piece sits. Named rather
-    /// than inlined at the two padding calls because it is half of the
-    /// invariant both have to hold: the glass must reach the corners of the box
-    /// this inset describes.
+    /// How far inside its glass a piece's content sits.
     internal static let contentInset = PopsSpacing.lg
 
-    /// A single-line strip, whose ends are meant to be round.
-    internal static var bar: Capsule { Capsule() }
+    /// Every floating piece is one touch target tall — what iOS gives a
+    /// floating control, and the smallest square a fingertip reliably hits.
+    internal static let elementHeight = PopsSize.touchTarget
 
-    /// A touch target with ``barPadding`` above and below it.
-    internal static let barHeight = PopsSize.touchTarget + barPadding * 2
+    /// The gap between the pieces.
+    internal static let elementGap = PopsSpacing.sm
 
-    /// The panel's corner, matched to the bar's so the two still read as one
-    /// control: a capsule ``barHeight`` tall is round to half of it.
-    internal static let panelCorner = barHeight / 2
+    /// How near two pieces have to be before the platform blends them into
+    /// one. Under ``elementGap`` on purpose — these are meant to read as
+    /// separate floating controls, not as one bar with seams in it.
+    internal static let blendDistance = PopsSpacing.xs
 
     /// One row of system chrome at the bottom edge, which the inspector starts
     /// clear of. A tab bar is one; so is the search field iOS 26 moved down
@@ -299,8 +185,25 @@ internal enum InspectorShape {
     /// cannot see. Anything deeper than a row is the drag's job.
     internal static let bottomChromeClearance: CGFloat = 58
 
+    /// A single action, standing on its own.
+    internal static var action: Circle { Circle() }
+
+    /// A row of choices, which is the only piece that scrolls.
+    internal static var strip: Capsule { Capsule() }
+
+    /// The panel's corner, matched to the pieces under it so the whole control
+    /// reads as one thing: a capsule ``elementHeight`` tall is round to half
+    /// of it.
+    ///
+    /// Not a `Capsule` itself. A capsule rounds the ends of the *shorter*
+    /// side, which on a panel several rows deep is half its height, and
+    /// `glassEffect` fills a shape behind its content rather than clipping to
+    /// it — so what that produced was a lozenge with the panel's row labels
+    /// and outermost chips sitting on bare background beside it.
+    internal static let panelCorner = elementHeight / 2
+
     /// A panel several rows deep. Continuous rather than circular because the
-    /// bar's ends are, and the two sit one above the other.
+    /// pieces under it are, and they sit one above the other.
     internal static var panel: RoundedRectangle {
         RoundedRectangle(cornerRadius: panelCorner, style: .continuous)
     }

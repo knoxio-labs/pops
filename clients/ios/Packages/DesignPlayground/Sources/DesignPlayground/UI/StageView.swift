@@ -12,6 +12,12 @@ internal struct StageView: View {
     let surface: DesignSurface
     @State private var settings: StageSettings
     @State private var inspectorExpanded = false
+    /// Owned here rather than inside the inspector because ``stageIdentity``
+    /// rebuilds everything under it on every state change — and with twenty
+    /// variants on the bar, a bar that dropped back onto the search field
+    /// each time one was tapped would have to be dragged clear again on every
+    /// comparison.
+    @State private var inspectorLift: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
 
     init(surface: DesignSurface) {
@@ -41,6 +47,7 @@ internal struct StageView: View {
                 surface: surface,
                 settings: $settings,
                 expanded: $inspectorExpanded,
+                lift: $inspectorLift,
                 onClose: { dismiss() }
             )
             // Unconditionally, not only under a chrome that draws a tab bar:
