@@ -2,7 +2,11 @@ import { isPendingContactId } from '@pops/finance';
 
 import { requiresEntity } from '../../../lib/transaction-type';
 
-import type { ConfirmedTransaction, ParsedTransaction } from '@pops/finance';
+import type {
+  ConfirmedTransaction,
+  ParsedTransaction,
+  ProcessedTransaction as ContractProcessedTransaction,
+} from '@pops/finance';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
@@ -42,10 +46,12 @@ export function needsTransactionType(t: {
  * (POPS-2754). Surfacing the row here makes it fixable in the Matched tab
  * instead.
  *
- * This is the single predicate behind both the commit filter and the
- * pre-commit count/notice, so the two can never drift (#3765).
+ * This is the single predicate behind both the commit filter, the pre-commit
+ * count/notice and the badge on the row itself, so the three can never drift
+ * (#3765, POPS-3659). It takes the contract row rather than the store's, so a
+ * card holding either shape can ask.
  */
-export function dropReason(t: ProcessedTransaction): DropReason | null {
+export function dropReason(t: ContractProcessedTransaction): DropReason | null {
   if (needsTransactionType(t)) return 'type';
   const entityId = t.entity?.entityId;
   const hasEntity = Boolean(entityId && t.entity?.entityName && !isPendingContactId(entityId));

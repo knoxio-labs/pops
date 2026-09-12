@@ -62,7 +62,7 @@ export function ReviewStep() {
       {bulk.entityVerification === 'unavailable' && (
         <EntityLookupUnavailableNotice onRetry={() => void bulk.retryEntityLookup()} />
       )}
-      <DroppedRowsNotice dropped={commit.dropped} />
+      <DroppedRowsNotice dropped={commit.dropped} onShowDropped={review.showBlockedRows} />
       <ReviewTabs
         activeTab={review.activeTab}
         onTabChange={review.handleTabChange}
@@ -84,6 +84,8 @@ export function ReviewStep() {
         handleCreateAndAssignAll={bulk.handleCreateAndAssignAll}
         entities={bulk.entities}
         entityVerification={bulk.entityVerification}
+        blockedOnly={review.blockedOnly}
+        onBlockedOnlyChange={review.setBlockedOnly}
       />
       <ReviewFooter
         unresolvedCount={review.unresolvedCount}

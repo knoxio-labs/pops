@@ -123,10 +123,10 @@ export function ListView({
 }) {
   return (
     <div className="space-y-3">
-      {props.transactions.map((t, idx) =>
+      {props.transactions.map((t) =>
         props.editingTransaction === t ? (
           <EditableTransactionCard
-            key={idx}
+            key={t.checksum}
             transaction={t}
             onSave={props.onSaveEdit}
             onCancel={props.onCancelEdit}
@@ -134,7 +134,7 @@ export function ListView({
           />
         ) : (
           <TransactionCard
-            key={idx}
+            key={t.checksum}
             transaction={t}
             onEntitySelect={props.onEntitySelect}
             onCreateEntityWithName={props.onCreateEntityWithName}
