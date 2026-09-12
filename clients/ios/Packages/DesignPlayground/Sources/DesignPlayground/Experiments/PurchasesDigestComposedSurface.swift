@@ -18,10 +18,11 @@ import SwiftUI
 ///
 /// Two deliberate departures from a literal reading of that table.
 ///
-/// **The bars are gone from Where it went.** They were what ranked the rows in
-/// `Grouped`; without them the rank numeral does that work alone, which is
-/// what it was there for. The share each merchant holds is a figure this
-/// screen no longer states — `Chart` is where that lives.
+/// **The bars and the rank numeral are both gone from Where it went.** The
+/// bars ranked the rows in `Grouped` and the numeral restated it; the order
+/// says it on its own, and the two of them together were spending the width a
+/// merchant name needed. The share each merchant holds is a figure this screen
+/// no longer states — `Chart` is where that lives.
 ///
 /// **Where it went is glass, not the opaque card it wore in `Grouped`.** Every
 /// other container on the page refracts, and one flat card between two that do
@@ -31,7 +32,6 @@ internal struct PurchasesDigestComposedSurface: View {
     internal let purchases: [Purchase]
 
     private let markSize: CGFloat = 34
-    private let rankColumn: CGFloat = 18
     private let heroWash: CGFloat = 190
     private let recentCount = 4
 
@@ -168,8 +168,8 @@ internal struct PurchasesDigestComposedSurface: View {
         return VStack(alignment: .leading, spacing: PopsSpacing.md) {
             DigestSectionLabel(title: "Where it went", note: currency)
             VStack(spacing: PopsSpacing.zero) {
-                ForEach(Array(leaders.enumerated()), id: \.element.name) { index, leader in
-                    leaderRow(index: index, leader: leader)
+                ForEach(leaders, id: \.name) { leader in
+                    leaderRow(leader)
                     if leader.name != leaders.last?.name { insetDivider }
                 }
             }
@@ -178,13 +178,8 @@ internal struct PurchasesDigestComposedSurface: View {
         }
     }
 
-    private func leaderRow(index: Int, leader: (name: String, total: MoneyAmount)) -> some View {
+    private func leaderRow(_ leader: (name: String, total: MoneyAmount)) -> some View {
         HStack(spacing: PopsSpacing.md) {
-            Text("\(index + 1)")
-                .font(.popsCaption)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsMutedForeground)
-                .frame(width: rankColumn, alignment: .leading)
             marked(leader.name)
             Text(leader.name)
                 .font(.popsSubheadline)
@@ -205,7 +200,7 @@ internal struct PurchasesDigestComposedSurface: View {
 
     private var insetDivider: some View {
         PopsDivider()
-            .padding(.leading, rankColumn + markSize + PopsSpacing.md + PopsSpacing.md)
+            .padding(.leading, markSize + PopsSpacing.md)
     }
 
     @ViewBuilder private func marked(_ name: String) -> some View {

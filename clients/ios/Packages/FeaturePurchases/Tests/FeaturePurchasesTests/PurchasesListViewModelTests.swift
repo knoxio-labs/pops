@@ -11,7 +11,7 @@ internal struct PurchasesListViewModelTests {
     func loadsRows() async {
         let purchase = Purchase(
             id: "purchase-1",
-            merchantName: "Kmart",
+            merchant: .printed("Kmart"),
             orderedOn: .now,
             total: MoneyAmount(minorUnits: 1999, currencyCode: "AUD"),
             itemCount: 3,

@@ -16,6 +16,15 @@ import Foundation
 /// build has never heard of. Each of those is a row that breaks a layout, and
 /// a variant that only looks right without them is one that has not been
 /// reviewed.
+///
+/// The merchants are split the way the pillar splits them. The resolved ones
+/// carry both names — `Bunnings` from contacts and
+/// `BUNNINGS WAREHOUSE ALEXANDRIA` from the till — because that is the pair a
+/// resolved purchase actually holds. The rest carry only what was printed,
+/// and are shown that way rather than tidied. Note that the phone cannot tell
+/// these apart today: `GET /mobile/purchases` sends one nullable string, so
+/// every row a live device draws is a `printed` one (POPS-3634). These
+/// fixtures describe the data, not the wire.
 internal enum PurchasesFixtures {
     /// 2026-09-12, the day this set was written. Every row is placed relative
     /// to it so the months keep their boundaries and the newest row stays
@@ -28,7 +37,7 @@ internal enum PurchasesFixtures {
 
     private static func purchase(
         _ id: String,
-        _ merchantName: String?,
+        _ merchant: MerchantIdentity,
         daysAgo days: Int,
         _ cents: Int,
         items: Int,
@@ -38,7 +47,7 @@ internal enum PurchasesFixtures {
     ) -> Purchase {
         Purchase(
             id: id,
-            merchantName: merchantName,
+            merchant: merchant,
             orderedOn: daysAgo(days),
             total: Fixtures.money(cents, currency),
             itemCount: items,
@@ -56,31 +65,31 @@ internal enum PurchasesFixtures {
     /// variant that groups by month has more than one group to draw.
     static let history: [Purchase] = [
         purchase(
-            "pur-sushi", "Monster Sushi Bar Barrack Place",
+            "pur-sushi", .entity(id: "ent-sushi", name: "Monster Sushi", printed: "Monster Sushi Bar Barrack Place"),
             daysAgo: 1, 1_609, items: 1, status: .awaitingSettlement),
         purchase(
-            "pur-tongli", "TONGLI SUPERMARKET",
+            "pur-tongli", .printed("TONGLI SUPERMARKET"),
             daysAgo: 3, 4_376, items: 5, status: .awaitingSettlement),
         purchase(
-            "pur-unattributed", nil,
+            "pur-unattributed", .unattributed,
             daysAgo: 4, 2_280, items: 2, status: .awaitingSettlement),
         purchase(
-            "pur-aldi", "ALDI STORES",
+            "pur-aldi", .entity(id: "ent-aldi", name: "ALDI", printed: "ALDI STORES"),
             daysAgo: 8, 802, items: 1, status: .linked),
         purchase(
-            "pur-chemist", "CHEMIST WAREHOUSE BROADWAY",
+            "pur-chemist", .entity(id: "ent-chemist", name: "Chemist Warehouse", printed: "CHEMIST WAREHOUSE BROADWAY"),
             daysAgo: 11, 3_495, items: 4, status: .partial),
         purchase(
-            "pur-salvos", "Salvos Stores",
+            "pur-salvos", .printed("Salvos Stores"),
             daysAgo: 16, 6_600, items: 10, status: .awaitingSettlement),
         purchase(
-            "pur-kmart", "K mart",
+            "pur-kmart", .entity(id: "ent-kmart", name: "Kmart", printed: "K mart"),
             daysAgo: 19, 3_000, items: 3, status: .linked),
         purchase(
-            "pur-coffee", "SAMPLE COFFEE SURRY HILLS",
+            "pur-coffee", .printed("SAMPLE COFFEE SURRY HILLS"),
             daysAgo: 22, 540, items: 1, status: .settledCash, receipt: false),
         purchase(
-            "pur-woolworths", "WOOLWORTHS METRO TOWN HALL 3182",
+            "pur-woolworths", .entity(id: "ent-woolworths", name: "Woolworths", printed: "WOOLWORTHS METRO TOWN HALL 3182"),
             daysAgo: 27, 11_847, items: 23, status: .awaitingSettlement),
         // Priced in a currency none of the others are. A screen that shows one
         // figure for a month has to decide what this row does to it, and the
@@ -88,23 +97,23 @@ internal enum PurchasesFixtures {
         // exists — so a variant that quietly adds it in is wrong rather than
         // approximate.
         purchase(
-            "pur-storage", "BACKBLAZE INC",
+            "pur-storage", .entity(id: "ent-backblaze", name: "Backblaze", printed: "BACKBLAZE INC"),
             daysAgo: 31, 1_100, items: 1, status: .linked, currency: "USD",
             receipt: false),
         purchase(
-            "pur-bunnings", "BUNNINGS WAREHOUSE ALEXANDRIA",
+            "pur-bunnings", .entity(id: "ent-bunnings", name: "Bunnings", printed: "BUNNINGS WAREHOUSE ALEXANDRIA"),
             daysAgo: 38, 15_600, items: 7, status: .awaitingSettlement),
         // A status added to the pillar after this build shipped. It draws as
         // itself rather than as a mismatch, which is the whole point of
         // ``PurchaseSettlement/unrecognised``.
         purchase(
-            "pur-returned", "UNIQLO AUSTRALIA PITT ST",
+            "pur-returned", .entity(id: "ent-uniqlo", name: "Uniqlo", printed: "UNIQLO AUSTRALIA PITT ST"),
             daysAgo: 44, 7_990, items: 2, status: .unrecognised("refunded")),
         purchase(
-            "pur-ignored", "TRANSPORTFORNSW TAP ON",
+            "pur-ignored", .printed("TRANSPORTFORNSW TAP ON"),
             daysAgo: 52, 452, items: 1, status: .ignored, receipt: false),
         purchase(
-            "pur-market", "EVELEIGH FARMERS MARKET STALL 12",
+            "pur-market", .printed("EVELEIGH FARMERS MARKET STALL 12"),
             daysAgo: 58, 4_150, items: 6, status: .awaitingSettlement),
     ]
 

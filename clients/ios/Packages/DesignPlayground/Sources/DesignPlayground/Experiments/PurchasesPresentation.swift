@@ -12,16 +12,19 @@ import SwiftUI
 /// first.
 @MainActor
 internal enum PurchasesPresentation {
-    /// The merchant as the pillar holds it. Never tidied, never title-cased:
-    /// `merchantEntityName` is a label the extractor read off a till, and a
-    /// screen that prettifies it is a screen showing something the pillar
-    /// cannot be searched by.
+    /// What to call the merchant.
+    ///
+    /// A resolved purchase answers with the contacts entity's name —
+    /// `Bunnings`, not `BUNNINGS WAREHOUSE ALEXANDRIA`. One that resolved to
+    /// nothing answers with what the till printed, as printed: there is no
+    /// tidier name to show, and title-casing it here would be a screen having
+    /// an opinion about a label the pillar is searched by.
     static func merchant(_ purchase: Purchase) -> String {
-        purchase.merchantName ?? "Merchant not recognised"
+        purchase.merchant.displayName ?? "Merchant not recognised"
     }
 
     static func isUnattributed(_ purchase: Purchase) -> Bool {
-        purchase.merchantName == nil
+        purchase.merchant == .unattributed
     }
 
     static func day(_ purchase: Purchase) -> String {

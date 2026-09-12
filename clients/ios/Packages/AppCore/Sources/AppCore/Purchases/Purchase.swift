@@ -45,10 +45,53 @@ public enum PurchaseSettlement: Hashable, Sendable {
     }
 }
 
+/// Who a purchase was made from, and how sure the pillar is about it.
+///
+/// Three cases because the purchases pillar draws three, and collapsing them
+/// to `String?` loses the one distinction that matters: `merchantEntityName`
+/// is **always the receipt's own wording**, printed by a till, kept verbatim
+/// even when the entity resolves — `pillars/purchases/src/api/contacts/
+/// merchant.ts` says so, and refuses to fuzzy-match precisely because
+/// `merchantEntityId` is operative data and a wrong one silently files
+/// somebody else's spending.
+///
+/// So a resolved merchant has two names: the till's and the entity's. The
+/// entity's is the one worth reading. The till's is the one worth searching.
+public enum MerchantIdentity: Hashable, Sendable {
+    /// Matched to a contacts entity. `name` is that entity's name — the one a
+    /// person would recognise — and `printed` is what the receipt said.
+    case entity(id: String, name: String, printed: String)
+    /// The receipt's wording, matched to nothing. Shown as printed: there is
+    /// no tidier name to show, and inventing one by title-casing it would be
+    /// this app having an opinion about a label the pillar is searched by.
+    case printed(String)
+    /// The pillar read no merchant at all.
+    case unattributed
+
+    /// What to put on screen.
+    public var displayName: String? {
+        switch self {
+        case .entity(_, let name, _): name
+        case .printed(let printed): printed
+        case .unattributed: nil
+        }
+    }
+
+    /// Whether the name on screen is a label nothing has confirmed. The web
+    /// playground draws the same distinction as an attribution legend; a row
+    /// is the phone's version of it.
+    public var isUnverified: Bool {
+        switch self {
+        case .entity: false
+        case .printed, .unattributed: true
+        }
+    }
+}
+
 /// One purchase in the mobile list.
 public struct Purchase: Hashable, Sendable, Identifiable {
     public let id: String
-    public let merchantName: String?
+    public let merchant: MerchantIdentity
     public let orderedOn: Date
     public let total: MoneyAmount
     public let itemCount: Int
@@ -57,7 +100,7 @@ public struct Purchase: Hashable, Sendable, Identifiable {
 
     public init(
         id: String,
-        merchantName: String?,
+        merchant: MerchantIdentity,
         orderedOn: Date,
         total: MoneyAmount,
         itemCount: Int,
@@ -65,7 +108,7 @@ public struct Purchase: Hashable, Sendable, Identifiable {
         status: PurchaseSettlement
     ) {
         self.id = id
-        self.merchantName = merchantName
+        self.merchant = merchant
         self.orderedOn = orderedOn
         self.total = total
         self.itemCount = itemCount

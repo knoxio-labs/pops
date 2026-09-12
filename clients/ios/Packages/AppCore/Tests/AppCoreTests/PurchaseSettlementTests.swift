@@ -51,3 +51,58 @@ internal struct PurchaseSettlementTests {
         #expect(status.isUnsettled == expected)
     }
 }
+
+/// A resolved merchant carries two names and the screen has to pick the right
+/// one; an unresolved one carries a label nothing confirmed. Collapsing the
+/// two was the defect POPS-3634 records.
+@Suite("Merchant identity")
+internal struct MerchantIdentityTests {
+    @Test("a resolved merchant shows the entity's name, not the till's")
+    func entityPrefersItsOwnName() {
+        let merchant = MerchantIdentity.entity(
+            id: "ent-bunnings", name: "Bunnings", printed: "BUNNINGS WAREHOUSE ALEXANDRIA")
+
+        #expect(merchant.displayName == "Bunnings")
+        #expect(merchant.isUnverified == false)
+    }
+
+    /// The printed wording is kept rather than discarded: it is what the
+    /// pillar is searched by, so a resolved purchase has to be able to answer
+    /// with it even though the screen does not show it.
+    @Test("a resolved merchant still carries what the receipt said")
+    func entityKeepsThePrintedWording() {
+        let merchant = MerchantIdentity.entity(
+            id: "ent-kmart", name: "Kmart", printed: "K mart")
+
+        guard case .entity(_, _, let printed) = merchant else {
+            Issue.record("expected an entity")
+            return
+        }
+        #expect(printed == "K mart")
+    }
+
+    @Test("an unresolved merchant shows what was printed, untidied")
+    func printedIsShownAsPrinted() {
+        let merchant = MerchantIdentity.printed("TONGLI SUPERMARKET")
+
+        #expect(merchant.displayName == "TONGLI SUPERMARKET")
+        #expect(merchant.isUnverified)
+    }
+
+    @Test("a merchant the pillar could not read has no name to show")
+    func unattributedHasNoName() {
+        #expect(MerchantIdentity.unattributed.displayName == nil)
+        #expect(MerchantIdentity.unattributed.isUnverified)
+    }
+
+    /// Two purchases at the same shop, one resolved and one not, are not the
+    /// same merchant as far as this type is concerned — which is the point of
+    /// modelling it rather than comparing strings.
+    @Test("a resolved merchant and the bare label it printed are not equal")
+    func resolutionIsPartOfIdentity() {
+        let resolved = MerchantIdentity.entity(id: "ent-aldi", name: "ALDI", printed: "ALDI STORES")
+
+        #expect(resolved != .printed("ALDI STORES"))
+        #expect(resolved != .printed("ALDI"))
+    }
+}
