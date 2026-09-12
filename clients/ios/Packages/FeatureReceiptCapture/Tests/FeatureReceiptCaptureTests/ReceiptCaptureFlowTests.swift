@@ -340,4 +340,44 @@ internal struct ReceiptCaptureFlowTests {
             """)
         #expect(await repository.received.map(\.count) == [1, 2])
     }
+
+    // MARK: manual entry (POPS-2454)
+
+    /// The reachability proof this ticket asks for at the model level:
+    /// starting from the screen's own ready state — no camera, no submission
+    /// — manual entry is reachable, opens blank, and its save reaches
+    /// `createManualPurchase` rather than `saveDraft`. A view-mount test
+    /// would show the form renders; this shows the production wiring from
+    /// `ReceiptCaptureViewModel` actually gets there and actually saves.
+    @Test("manual entry is reachable from the ready state and persists through createManualPurchase")
+    func manualEntryReachesAndPersists() async {
+        let repository = InMemoryReceiptCaptureRepository()
+        await repository.respondToManualPurchase(with: .success(.fake(id: "purchase-manual-1")))
+        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized), repository: repository)
+
+        #expect(model.state == .ready)
+        model.startManualEntry()
+        #expect(model.state == .enteringManually)
+
+        let resultModel = model.manualEntryModel()
+        #expect(resultModel.state == .manualEntry)
+
+        var draft = ReceiptDraftPresentation().blankDraft(currency: "AUD")
+        draft.total.value = "5.00"
+        draft.date.value = "2026-08-01"
+        await resultModel.save(draft)
+
+        #expect(await repository.manualPurchases.count == 1)
+        #expect(await repository.savedDrafts.isEmpty)
+    }
+
+    @Test("finishing a manual entry returns the screen to ready, for another")
+    func finishingManualEntryReturnsToReady() {
+        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
+        model.startManualEntry()
+
+        model.captureAnother()
+
+        #expect(model.state == .ready)
+    }
 }

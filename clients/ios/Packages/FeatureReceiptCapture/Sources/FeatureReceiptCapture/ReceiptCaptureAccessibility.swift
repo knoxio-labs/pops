@@ -21,4 +21,12 @@ internal enum ReceiptCaptureAccessibility {
     /// by its label.
     internal static let openSettings = "receipt-capture-open-settings"
     internal static let problem = "receipt-capture-problem"
+    /// Opens the same form a corrected reading uses, blank — reachable
+    /// without a camera, which is what lets a Maestro flow exercise this
+    /// screen's whole write path on the Simulator (POPS-2454).
+    internal static let manualEntryButton = "receipt-capture-manual-entry"
+    /// Distinct from ``captureAnotherButton``: it ends a manual entry, not a
+    /// photograph, and the two must be tellable apart by a flow that has
+    /// only ever taken one of the two paths through this screen.
+    internal static let manualEntryDoneButton = "receipt-capture-manual-entry-done"
 }

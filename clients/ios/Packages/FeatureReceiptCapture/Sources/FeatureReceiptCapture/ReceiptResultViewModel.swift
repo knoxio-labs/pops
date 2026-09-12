@@ -65,14 +65,29 @@ public final class ReceiptResultViewModel {
             makeIdempotencyKey: { UUID().uuidString })
     }
 
+    /// A purchase typed by hand — no parts, no `extract` call. ``state``
+    /// opens directly on ``ReceiptResultState/manualEntry``, and ``save(_:)``
+    /// persists through
+    /// ``ReceiptCaptureRepository/createManualPurchase(_:)`` rather than
+    /// ``ReceiptCaptureRepository/saveDraft(_:)`` — the branch is on
+    /// ``state``, so the same method serves both entry points without either
+    /// caller needing to say which.
+    public convenience init(enteringManuallyWith dependencies: AppDependencies) {
+        self.init(
+            parts: [], repository: dependencies.receiptCapture,
+            makeIdempotencyKey: { UUID().uuidString }, initialState: .manualEntry)
+    }
+
     internal init(
         parts: [ReceiptPart],
         repository: any ReceiptCaptureRepository,
-        makeIdempotencyKey: @escaping @Sendable () -> String = { UUID().uuidString }
+        makeIdempotencyKey: @escaping @Sendable () -> String = { UUID().uuidString },
+        initialState: ReceiptResultState = .extracting
     ) {
         self.parts = parts
         self.repository = repository
         self.makeIdempotencyKey = makeIdempotencyKey
+        state = initialState
     }
 }
 
@@ -88,7 +103,7 @@ extension ReceiptResultViewModel {
     public func extract() async {
         guard !isExtracting else { return }
         switch state {
-        case .draft, .saved, .unreadable: return
+        case .draft, .saved, .unreadable, .manualEntry: return
         case .extracting, .extractionFailed: break
         }
 
@@ -110,15 +125,18 @@ extension ReceiptResultViewModel {
         }
     }
 
-    /// Persists `draft` as a purchase, from whatever the reader confirmed or
-    /// corrected.
+    /// Persists `draft` as a purchase, from whatever the reader confirmed,
+    /// corrected, or typed by hand.
     ///
-    /// Only meaningful while ``state`` is ``ReceiptResultState/draft(_:)`` —
-    /// the reading the save is derived from. A stray call from any other
-    /// state does nothing, which cannot happen from ``ReceiptDraftView``
-    /// itself since it only exists on screen while that is the state.
+    /// Which call this makes is decided by ``state``, never by the caller: a
+    /// ``ReceiptResultState/draft(_:)`` saves through
+    /// ``ReceiptCaptureRepository/saveDraft(_:)``, carrying that reading's
+    /// receipt URIs and capture facts forward; a
+    /// ``ReceiptResultState/manualEntry`` creates a purchase with neither. A
+    /// stray call from any other state does nothing, which cannot happen from
+    /// ``ReceiptDraftView`` itself since it only exists on screen while one
+    /// of those two is the state.
     public func save(_ draft: ReceiptDraft) async {
-        guard case .draft(let reading) = state else { return }
         guard !isSaving else { return }
         isSaving = true
         saveError = nil
@@ -126,9 +144,18 @@ extension ReceiptResultViewModel {
         defer { isSaving = false }
 
         do {
-            let payload = try draft.toSavePayload(
-                reading: reading, idempotencyKey: makeIdempotencyKey())
-            let purchase = try await repository.saveDraft(payload)
+            let purchase: ReceiptPurchase
+            switch state {
+            case .draft(let reading):
+                let payload = try draft.toSavePayload(
+                    reading: reading, idempotencyKey: makeIdempotencyKey())
+                purchase = try await repository.saveDraft(payload)
+            case .manualEntry:
+                let payload = try draft.toManualPayload(idempotencyKey: makeIdempotencyKey())
+                purchase = try await repository.createManualPurchase(payload)
+            case .extracting, .unreadable, .extractionFailed, .saved:
+                return
+            }
             state = .saved(purchase)
         } catch let error where error.isCancellation {
             return

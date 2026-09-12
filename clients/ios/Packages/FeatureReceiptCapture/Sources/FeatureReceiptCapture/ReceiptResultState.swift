@@ -15,6 +15,10 @@ public enum ReceiptResultState: Hashable, Sendable {
     case extracting
     /// A usable reading, reconciled or not — see ``ReceiptDraftReading``.
     case draft(ReceiptDraftReading)
+    /// A purchase typed by hand — no reading, so no receipt to compare
+    /// against. Saves through
+    /// ``ReceiptCaptureRepository/createManualPurchase(_:)``.
+    case manualEntry
     /// Nothing usable came back. Terminal: there is nothing to edit.
     case unreadable(receiptCount: Int, reason: String)
     /// The extract call never got far enough to answer at all. Carries a

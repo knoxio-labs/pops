@@ -13,6 +13,11 @@ internal enum ReceiptCaptureCopy {
         "Photograph a receipt and it's read into a purchase — merchant, items and total."
     internal static let captureButton = "Photograph a receipt"
     internal static let captureAnother = "Photograph another receipt"
+    /// The manual-entry action (POPS-2454) — a purchase with no receipt to
+    /// photograph. Offered beside the camera button rather than behind it:
+    /// it needs no camera and is not a fallback for one being unavailable.
+    internal static let addPurchase = "Add a purchase"
+    internal static let doneAddingPurchase = "Done"
 
     // MARK: getting a readable photograph
 

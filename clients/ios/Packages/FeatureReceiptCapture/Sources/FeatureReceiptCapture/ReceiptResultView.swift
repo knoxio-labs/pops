@@ -91,6 +91,8 @@ public struct ReceiptResultView: View {
             .accessibilityIdentifier(ReceiptResultAccessibility.unreadable)
         case .draft(let reading):
             draftView(for: reading)
+        case .manualEntry:
+            manualEntryView
         case .saved(let purchase):
             ReceiptResultCard(
                 content: presentation.content(.created(purchase: purchase, alreadyStored: false))
@@ -105,6 +107,15 @@ public struct ReceiptResultView: View {
             title: ReceiptDraftCopy.title,
             subtitle: ReceiptDraftCopy.subtitle,
             status: reading.reconciled ? nil : draftStatus,
+            save: { draft in Task { await model.save(draft) } }
+        )
+    }
+
+    private var manualEntryView: some View {
+        ReceiptDraftView(
+            draft: draftPresentation.blankDraft(currency: nil),
+            title: ReceiptDraftCopy.manualTitle,
+            subtitle: ReceiptDraftCopy.manualSubtitle,
             save: { draft in Task { await model.save(draft) } }
         )
     }
