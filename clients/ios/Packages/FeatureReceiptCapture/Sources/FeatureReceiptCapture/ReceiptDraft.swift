@@ -263,6 +263,17 @@ extension ReceiptDraft {
         total.isEmpty && (total.wasExtracted || isEdited)
     }
 
+    /// The same rule for the merchant, which is the other thing that stops a
+    /// save.
+    ///
+    /// Reported the moment the form opens on a reading, because a receipt
+    /// whose merchant the server did not match is already wrong and the
+    /// reader is the only one who can say which entity it is. On a form
+    /// nobody has typed into yet it stays quiet, for the reason above.
+    internal var reportsUnresolvedMerchant: Bool {
+        !merchantResolution.isResolved && (printedMerchant.wasExtracted || isEdited)
+    }
+
     /// The problem to draw against one line, if any.
     internal func problem(forLine id: String) -> ReceiptDraftProblem? {
         problems.first { $0 == .lineAmountMissing(lineID: id) }

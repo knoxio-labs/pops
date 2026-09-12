@@ -249,6 +249,53 @@ extension ReceiptDraftTests {
         #expect(draft.reportsMissingTotal, "once there is something to save, say what stops it")
     }
 
+    /// The Save button is disabled while the merchant is unresolved, and a
+    /// disabled button with nothing beside it is a screen refusing to say
+    /// what it wants. A reading whose merchant the server did not match is
+    /// wrong on arrival, so it is named on arrival.
+    @Test("a reading with no merchant behind it says so before anyone types")
+    func anUnmatchedMerchantIsNamedOnOpen() {
+        let draft = ReceiptDraft.fake(.tillNamedItems())
+
+        #expect(!draft.isSaveable)
+        #expect(draft.reportsUnresolvedMerchant)
+    }
+
+    /// The same restraint the total gets: a form nobody has touched does not
+    /// open by listing what is missing from it.
+    @Test("a blank form names its missing merchant only once there is something to save")
+    func aBlankFormNamesTheMerchantLate() {
+        var draft = ReceiptDraft.blank(currency: nil)
+
+        #expect(!draft.reportsUnresolvedMerchant)
+
+        draft.total.value = "12.00"
+
+        #expect(draft.reportsUnresolvedMerchant)
+    }
+
+    @Test("pointing the purchase at a merchant withdraws the complaint")
+    func resolvingTheMerchantWithdrawsTheComplaint() {
+        var draft = ReceiptDraft.fake(.tillNamedItems())
+
+        draft.setMerchant(.chosen(id: "ent-kmart"))
+
+        #expect(!draft.reportsUnresolvedMerchant)
+        #expect(draft.isSaveable)
+    }
+
+    /// A server's own match is a proposal nobody has looked at, but it is
+    /// still an entity: it saves, so it must not be drawn as an error.
+    @Test("a merchant the server matched is not complained about")
+    func aServerMatchIsNotAComplaint() {
+        var draft = ReceiptDraft.fake(.tillNamedItems())
+
+        draft.setMerchant(.matched(id: "ent-kmart"))
+
+        #expect(!draft.reportsUnresolvedMerchant)
+        #expect(draft.isSaveable)
+    }
+
     /// A reading that arrived with a total and had it emptied is a real
     /// omission from the first keystroke — there is nothing tentative about
     /// deleting a figure the model read.

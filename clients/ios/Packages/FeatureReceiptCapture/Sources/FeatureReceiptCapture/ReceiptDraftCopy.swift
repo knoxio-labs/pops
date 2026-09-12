@@ -116,6 +116,7 @@ public enum ReceiptDraftCopy {
     // MARK: problems
 
     internal static let totalMissing = "A total is needed before this can be saved."
+    internal static let merchantUnresolved = "A merchant is needed before this can be saved."
     internal static let lineAmountMissing = "An amount is needed, or remove the line."
 
     /// The gate's complaints that name no field, kept as one line under the

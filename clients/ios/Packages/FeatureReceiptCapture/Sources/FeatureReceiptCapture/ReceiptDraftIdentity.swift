@@ -37,9 +37,25 @@ extension ReceiptDraftForm {
             symbol: "building.2",
             placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createMerchantSection,
-            note: hint(.merchant)
+            note: merchantNote
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
+    }
+
+    /// An unresolved merchant is what stops a save, so it outranks the gate's
+    /// complaint about the same field, exactly as a missing total does.
+    ///
+    /// Without it the Save button is disabled and nothing on screen says why:
+    /// the control shows the till's wording, which is muted for the reason it
+    /// is muted everywhere else, and reads as an ordinary value rather than
+    /// as the one thing left to answer. It says so only once
+    /// ``ReceiptDraft/reportsUnresolvedMerchant`` does, so a blank form does
+    /// not open by naming what nobody has failed to do yet.
+    private var merchantNote: PopsFieldNote? {
+        if draft.reportsUnresolvedMerchant {
+            return .problem(ReceiptDraftCopy.merchantUnresolved)
+        }
+        return hint(.merchant)
     }
 
     /// Writes the merchant, and drops the branch when the merchant changes.
