@@ -66,7 +66,7 @@ extension DesignExperiment {
             id: SurfaceID(area: "experiments", slug: id),
             title: question,
             synopsis: variants.map(\.title).joined(separator: " vs "),
-            chrome: variants.first?.surface.chrome ?? .navigationLarge,
+            chrome: (variants.first?.surface.chrome ?? .navigationLarge).withoutTabBar,
             states: variants.map { variant in
                 DesignState(variant.id, variant.title) {
                     variant.surface.openingState?.build()
