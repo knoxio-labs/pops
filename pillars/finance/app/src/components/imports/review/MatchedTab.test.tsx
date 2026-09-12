@@ -184,6 +184,38 @@ describe('MatchedTab (POPS-2448)', () => {
     expect(onBlockedOnlyChange).toHaveBeenCalledWith(false);
   });
 
+  it('shows the list mode as active while filtering, and leaves the filter on Grouped', async () => {
+    const user = userEvent.setup();
+    const rows = [
+      ...matchedRows(2, ['Woolworths']),
+      {
+        ...matchedTx(9, 'Coles'),
+        entity: {
+          entityId: 'pending:contact:coles',
+          entityName: 'Coles',
+          matchType: 'learned' as const,
+          confidence: 1,
+        },
+      },
+    ];
+    const onBlockedOnlyChange = vi.fn();
+    const { props } = renderTab(rows, {
+      viewMode: 'grouped',
+      blockedOnly: true,
+      onBlockedOnlyChange,
+    });
+
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Grouped' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Grouped' }));
+    expect(onBlockedOnlyChange).toHaveBeenCalledWith(false);
+    expect(props.onViewModeChange).toHaveBeenCalledWith('grouped');
+  });
+
   it('falls back to the full tab once the blocked rows are fixed', () => {
     renderTab(matchedRows(3, ['Woolworths']), {
       viewMode: 'grouped',

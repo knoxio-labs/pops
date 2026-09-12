@@ -89,7 +89,17 @@ export function MatchedTab({
         ) : (
           <span />
         )}
-        <ViewModeToggle viewMode={props.viewMode} onViewModeChange={props.onViewModeChange} />
+        {/* While the filter is on the tab is a flat list whatever the stored
+            mode says, so the toggle must show `list` rather than a `Grouped`
+            that is pressed but not on screen; asking for Grouped clears the
+            filter, which is the only way back to groups from here. */}
+        <ViewModeToggle
+          viewMode={filtering ? 'list' : props.viewMode}
+          onViewModeChange={(mode) => {
+            if (mode === 'grouped' && filtering) onBlockedOnlyChange?.(false);
+            props.onViewModeChange(mode);
+          }}
+        />
       </div>
       {props.viewMode === 'grouped' && !filtering ? (
         <GroupedView variant="matched" props={props} />
