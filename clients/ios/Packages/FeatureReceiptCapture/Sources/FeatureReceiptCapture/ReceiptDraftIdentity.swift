@@ -30,7 +30,7 @@ extension ReceiptDraftForm {
     /// one place to be, and choosing from the list is a way of filling it
     /// rather than a second thing to fill.
     ///
-    /// Typing clears ``ReceiptDraft/merchantEntityID``, because a name typed
+    /// Typing drops the resolution to ``MerchantResolution/typed``, because a name typed
     /// over a chosen entity is the reader saying it was the wrong entity —
     /// keeping the id would file the purchase under a merchant whose name is
     /// no longer on screen. Picking sets it, which is the whole reason the
@@ -44,13 +44,13 @@ extension ReceiptDraftForm {
             font: .popsTitle,
             note: hint(.merchant),
             choices: merchants.map(\.name),
-            resolved: draft.merchantEntityID != nil,
+            resolution: draft.merchantResolution,
             onChoose: { name in
                 if let merchant = merchants.first(where: { $0.name == name }) {
                     choose(merchant)
                 }
             },
-            onType: { draft.merchantEntityID = nil }
+            onType: { draft.merchantResolution = .typed }
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
@@ -62,7 +62,7 @@ extension ReceiptDraftForm {
     /// unresolved merchant leaves this a plain field, which is also what an
     /// entity with no address on file gets.
     private var addressField: some View {
-        let known = merchants.first { $0.id == draft.merchantEntityID }?.addresses ?? []
+        let known = merchants.first { $0.id == draft.merchantResolution.entityID }?.addresses ?? []
         return ReceiptDraftFieldWithChoices(
             label: ReceiptDraftCopy.addressLabel,
             placeholder: ReceiptDraftCopy.addressPlaceholder,
@@ -70,7 +70,7 @@ extension ReceiptDraftForm {
             font: .popsSubheadline,
             note: hint(.address),
             choices: known,
-            resolved: known.contains(trimmedAddress),
+            resolution: known.contains(trimmedAddress) ? .chosen(id: trimmedAddress) : .typed,
             onChoose: { draft.address.value = $0 },
             onType: {}
         )
@@ -105,7 +105,7 @@ extension ReceiptDraftForm {
     }
 
     private func choose(_ merchant: ReceiptMerchantChoice) {
-        draft.merchantEntityID = merchant.id
+        draft.merchantResolution = .chosen(id: merchant.id)
         draft.merchant.value = merchant.name
         if !merchant.addresses.contains(trimmedAddress) {
             draft.address.value = merchant.addresses.count == 1 ? merchant.addresses[0] : ""

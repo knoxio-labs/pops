@@ -15,10 +15,27 @@ public struct ReceiptDraftPresentation: Sendable {
 
     /// A form pre-filled from what the model read, with the gate's complaints
     /// attached to the fields they name.
-    public func draft(extracted: ExtractedReceipt, failures: [ReceiptGateFailure]) -> ReceiptDraft {
+    ///
+    /// - Parameter matchedMerchantID: the contacts entity the *server*
+    ///   resolved from the printed name, when it resolved one.
+    ///
+    ///   A parameter here rather than a property somebody sets afterwards,
+    ///   because the match arrives with the reading: `purchases` resolves it
+    ///   at ingest against contacts, deliberately conservatively — an exact
+    ///   name or alias hit, with ambiguity resolving to nothing. So it is one
+    ///   of the things a reading is, and it lands as
+    ///   ``MerchantResolution/matched`` rather than `chosen`: nobody has
+    ///   looked at it yet, and presenting a suggestion as a decision collects
+    ///   agreement nobody gave.
+    public func draft(
+        extracted: ExtractedReceipt,
+        failures: [ReceiptGateFailure],
+        matchedMerchantID: String? = nil
+    ) -> ReceiptDraft {
         let attached = hints(failures)
         return ReceiptDraft(
             merchant: ReceiptDraftValue(extracted: extracted.merchantName),
+            merchantResolution: matchedMerchantID.map(MerchantResolution.matched) ?? .typed,
             address: ReceiptDraftValue(extracted: extracted.address),
             date: ReceiptDraftValue(extracted: ReceiptPrintedDate.oneLine(extracted)),
             lines: lines(extracted.lines),

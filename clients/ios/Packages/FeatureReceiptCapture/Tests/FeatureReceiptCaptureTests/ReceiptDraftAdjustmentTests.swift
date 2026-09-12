@@ -198,13 +198,41 @@ internal struct ReceiptDraftAdjustmentTests {
 
         draft.merchant.value = "TONGLI SUPERMARKET"
 
-        #expect(draft.merchantEntityID == nil)
+        #expect(draft.merchantResolution == .typed)
+        #expect(draft.merchantResolution.entityID == nil)
         #expect(draft.isEdited)
     }
 
-    @Test("a draft carries the entity it was given")
-    func entityIsCarried() {
+    /// The handset resolves nothing itself. Whatever the server matched
+    /// arrives with the reading, and until POPS-3654 sends it the reading
+    /// carries no entity at all.
+    @Test("a reading arrives unresolved until the server sends its match")
+    func readingArrivesUnresolved() {
         let draft = ReceiptDraft.fake(tillNames)
-        #expect(draft.merchantEntityID == nil, "a reading resolves no entity on the handset")
+
+        #expect(draft.merchantResolution == .typed)
+        #expect(draft.merchantResolution.isConfirmed == false)
+    }
+
+    /// A match is a proposal and a pick is an assertion. Presenting them
+    /// identically would collect agreement nobody gave, which is the whole
+    /// reason this is three states and not an optional id.
+    @Test(
+        "only a picked merchant counts as settled",
+        arguments: [
+            (MerchantResolution.matched(id: "ent-bunnings"), false),
+            (.chosen(id: "ent-bunnings"), true),
+            (.typed, false),
+        ]
+    )
+    func onlyAPickIsConfirmed(resolution: MerchantResolution, expected: Bool) {
+        #expect(resolution.isConfirmed == expected)
+    }
+
+    @Test("a match and a pick both carry the id; typing carries none")
+    func idSurvivesEitherWay() {
+        #expect(MerchantResolution.matched(id: "ent-aldi").entityID == "ent-aldi")
+        #expect(MerchantResolution.chosen(id: "ent-aldi").entityID == "ent-aldi")
+        #expect(MerchantResolution.typed.entityID == nil)
     }
 }

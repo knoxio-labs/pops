@@ -17,12 +17,19 @@ internal enum PurchaseReviewSurfaces {
         extracted: ExtractedReceipt? = nil,
         failures: [ReceiptGateFailure] = [],
         status: ReceiptDraftView.Status? = nil,
-        pages: Int = 1
+        pages: Int = 1,
+        matched: String? = nil
     ) -> ReviewEntry {
-        ReviewEntry(
+        // `matched` is what the server resolved at ingest, arriving with the
+        // reading rather than being set afterwards — a proposal until
+        // somebody looks at it.
+        let draft =
+            extracted.map {
+                drafts.draft(extracted: $0, failures: failures, matchedMerchantID: matched)
+            } ?? drafts.blankDraft(currency: Fixtures.aud)
+        return ReviewEntry(
             id: id,
-            draft: extracted.map { drafts.draft(extracted: $0, failures: failures) }
-                ?? drafts.blankDraft(currency: Fixtures.aud),
+            draft: draft,
             wasUnreadable: extracted == nil,
             status: status,
             parts: ReceiptPlaygroundPaper.pages(pages)
@@ -77,6 +84,17 @@ internal enum PurchaseReviewSurfaces {
             DesignState("adjustments", "Every adjustment, with its basis") {
                 PurchaseReviewSurface(entries: [
                     entry("e1", extracted: ReceiptPlaygroundFixtures.typicalExtracted)
+                ])
+            },
+            // The server matched the merchant at ingest. The mark is hollow
+            // because nobody has looked at it yet — a match is a proposal,
+            // and drawing it the same as a pick would collect agreement
+            // nobody gave.
+            DesignState("matched", "The server matched the merchant") {
+                PurchaseReviewSurface(entries: [
+                    entry(
+                        "e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted,
+                        matched: "ent-kmart")
                 ])
             },
             // A merchant with no address on file, which is what makes the

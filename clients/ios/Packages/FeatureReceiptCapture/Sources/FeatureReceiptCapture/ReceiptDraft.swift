@@ -36,14 +36,19 @@ import Foundation
 /// on the handset.
 public struct ReceiptDraft: Hashable, Sendable {
     internal var merchant: ReceiptDraftValue
-    /// The contacts entity the merchant was picked from, when it was picked
-    /// rather than typed.
+    /// How the merchant came to be attached to an entity, if it did.
     ///
-    /// This is the operative half of the pair and the name is only its label
-    /// — the invariant `pillars/purchases` keeps everywhere and the one
-    /// POPS-3634 exists to carry through to the phone. A merchant typed as
-    /// free text leaves this nil, which is honest: nothing resolved it.
-    internal var merchantEntityID: String?
+    /// Three states rather than an optional id, because "the server matched
+    /// this" and "a person chose this" are different evidence and the pillar
+    /// draws that distinction everywhere else it has one — an item's `kind`
+    /// and its tags both carry a `confirmedAt`, null meaning a pass proposed
+    /// it and non-null meaning somebody asserted it. A merchant should not be
+    /// the one place the difference is thrown away.
+    ///
+    /// It matters on this screen in particular: a match the reader has not
+    /// looked at is a suggestion, and presenting it identically to one they
+    /// picked would collect agreement nobody gave.
+    internal var merchantResolution: MerchantResolution
     internal var address: ReceiptDraftValue
     /// Bought online, so there is no branch to record.
     ///
@@ -78,7 +83,7 @@ public struct ReceiptDraft: Hashable, Sendable {
 
     internal init(
         merchant: ReceiptDraftValue,
-        merchantEntityID: String? = nil,
+        merchantResolution: MerchantResolution = .typed,
         address: ReceiptDraftValue,
         online: Bool = false,
         date: ReceiptDraftValue,
@@ -92,7 +97,7 @@ public struct ReceiptDraft: Hashable, Sendable {
         reconciliationDetail: String? = nil
     ) {
         self.merchant = merchant
-        self.merchantEntityID = merchantEntityID
+        self.merchantResolution = merchantResolution
         self.address = address
         self.online = online
         self.date = date
@@ -225,6 +230,39 @@ extension ReceiptDraft {
         merchant.isEdited || address.isEdited || date.isEdited || total.isEdited
             || adjustments.contains { $0.amount.isEdited } || lines.contains { $0.isEdited }
             || lines.contains { !$0.wasExtracted && !$0.isBlank }
+    }
+}
+
+/// How a merchant name came to point at a contacts entity.
+///
+/// The server resolves what it can at ingest — an exact name or alias match,
+/// with ambiguity deliberately resolving to nothing, because a wrong
+/// `merchantEntityId` silently files somebody else's spending. What it
+/// resolved is a proposal until a person has seen it.
+internal enum MerchantResolution: Hashable, Sendable {
+    /// The server matched it. A proposal: nobody has looked yet.
+    case matched(id: String)
+    /// A person picked it from the list. Asserted.
+    case chosen(id: String)
+    /// Free text. Nothing is attached, which is the honest outcome for a
+    /// till name nothing recognised.
+    case typed
+
+    /// The operative id, when there is one.
+    internal var entityID: String? {
+        switch self {
+        case .matched(let id), .chosen(let id): id
+        case .typed: nil
+        }
+    }
+
+    /// Whether a person has settled it. What decides between the proposal
+    /// mark and the confirmed one.
+    internal var isConfirmed: Bool {
+        switch self {
+        case .chosen: true
+        case .matched, .typed: false
+        }
     }
 }
 

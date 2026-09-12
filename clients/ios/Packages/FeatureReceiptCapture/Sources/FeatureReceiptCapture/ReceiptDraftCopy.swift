@@ -56,7 +56,15 @@ public enum ReceiptDraftCopy {
     internal static let itemUnitNotePlaceholder = "Unit price or weight"
     internal static let addItem = "Add an item"
     internal static let chooseFromKnown = "Choose from the ones on file"
-    internal static let resolvedFromContacts = "Matched to a record"
+    internal static let resolvedByPerson = "You chose this record"
+    internal static let resolvedByServer = "Matched automatically — not checked yet"
+    internal static let searchChoices = "Search"
+    internal static let noMatches = "Nothing on file matches that."
+    internal static let cancelChoosing = "Cancel"
+
+    internal static func keepTyped(_ value: String) -> String {
+        "Keep “\(value)”"
+    }
     internal static let chooseMerchant = "Choose a merchant"
     internal static let newMerchant = "New merchant"
     internal static let typeMerchant = "Type it instead"
