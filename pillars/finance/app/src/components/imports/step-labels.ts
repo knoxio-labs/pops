@@ -22,6 +22,15 @@ export const IMPORT_STEP_KEYS = [
   'import.pending.step.summary',
 ] as const;
 
+/** Where Tag Review sits, and where Final Review's Back lands when the Rules step has nothing to offer. */
+export const TAG_REVIEW_STEP = IMPORT_STEP_KEYS.indexOf('import.pending.step.tags') + 1;
+
+/** Where the Rules step sits. */
+export const RULES_STEP = IMPORT_STEP_KEYS.indexOf('import.pending.step.rules') + 1;
+
+/** Where Final Review sits, and where Tag Review's Continue lands when the Rules step is skipped. */
+export const COMMIT_STEP = IMPORT_STEP_KEYS.indexOf('import.pending.step.commit') + 1;
+
 /** How many steps a full run has. What the numbering is derived from. */
 export const IMPORT_STEP_COUNT = IMPORT_STEP_KEYS.length;
 

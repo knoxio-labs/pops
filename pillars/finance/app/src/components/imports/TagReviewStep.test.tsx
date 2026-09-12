@@ -7,13 +7,21 @@ const mockAddPendingTagRuleChangeSet = vi.fn();
 const mockUpdateTransactionTags = vi.fn();
 const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
+const mockGoToStep = vi.fn();
+const mockRemovePendingTagRuleChangeSet = vi.fn();
 
 const mockConfirmedTransactions: unknown[] = [];
+const mockPendingTagRuleChangeSets: unknown[] = [];
 
 const mockStoreState = {
   get confirmedTransactions() {
     return mockConfirmedTransactions;
   },
+  get pendingTagRuleChangeSets() {
+    return mockPendingTagRuleChangeSets;
+  },
+  goToStep: mockGoToStep,
+  removePendingTagRuleChangeSet: mockRemovePendingTagRuleChangeSet,
   updateTransactionTags: mockUpdateTransactionTags,
   nextStep: mockNextStep,
   prevStep: mockPrevStep,
@@ -251,6 +259,9 @@ function renderTagReviewStep() {
 
 beforeEach(() => {
   mockConfirmedTransactions.length = 0;
+  mockPendingTagRuleChangeSets.length = 0;
+  mockGoToStep.mockReset();
+  mockRemovePendingTagRuleChangeSet.mockReset();
   mockOnAppliedFn = null;
   mockDialogCapture.signal = null;
   mockDialogCapture.previewTransactions = null;
@@ -487,13 +498,51 @@ describe('TagReviewStep — Save tag rule wiring (US-02 / US-03)', () => {
 });
 
 describe('TagReviewStep — Continue and navigation', () => {
-  it('calls updateTransactionTags and nextStep on Continue', () => {
-    seedTransactions([woolworthsTx1]);
+  it('calls updateTransactionTags and moves on to the Rules step when it has something to offer', () => {
+    seedTransactions([netflixTx]);
     renderTagReviewStep();
 
     fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
     expect(mockUpdateTransactionTags).toHaveBeenCalled();
     expect(mockNextStep).toHaveBeenCalled();
+    expect(mockGoToStep).not.toHaveBeenCalled();
+  });
+
+  it('skips the Rules step when nothing is left to propose, and drops an earlier visit’s rules (POPS-3676)', () => {
+    seedTransactions([woolworthsTx1]);
+    mockPendingTagRuleChangeSets.push(
+      {
+        tempId: 'batch-1',
+        source: 'import-batch',
+        appliedAt: '2026-09-12T00:00:00.000Z',
+        sourceChecksums: [woolworthsTx1.checksum],
+        changeSet: { ops: [] },
+      },
+      {
+        tempId: 'review-1',
+        source: 'tag-review:Woolworths',
+        appliedAt: '2026-09-12T00:00:00.000Z',
+        sourceChecksums: [woolworthsTx1.checksum],
+        changeSet: { ops: [] },
+      }
+    );
+    renderTagReviewStep();
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    expect(mockUpdateTransactionTags).toHaveBeenCalled();
+    expect(mockGoToStep).toHaveBeenCalledWith(7);
+    expect(mockNextStep).not.toHaveBeenCalled();
+    expect(mockRemovePendingTagRuleChangeSet.mock.calls).toEqual([['batch-1']]);
+  });
+
+  it('judges the Rules step on the tags as reviewed here, not as they arrived', () => {
+    seedTransactions([woolworthsTx1]);
+    renderTagReviewStep();
+
+    fireEvent.click(screen.getAllByTestId('tag-editor-trigger-edit')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /Continue to final review/i }));
+    expect(mockNextStep).toHaveBeenCalled();
+    expect(mockGoToStep).not.toHaveBeenCalled();
   });
 
   it('Continue button is disabled when there are no transactions', () => {

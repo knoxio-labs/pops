@@ -197,3 +197,15 @@ export function previouslyStagedProposalIds(
     })
     .map((proposal) => proposal.id);
 }
+
+/**
+ * Whether the Rules step has anything to offer. When it does not, the wizard
+ * passes over it in both directions rather than stopping on a step whose only
+ * action is Skip (POPS-3676).
+ */
+export function rulesStepHasProposals(
+  confirmedTransactions: ConfirmedTransaction[],
+  staged: readonly PendingTagRuleChangeSet[]
+): boolean {
+  return computeProposals(confirmedTransactions, staged).length > 0;
+}
