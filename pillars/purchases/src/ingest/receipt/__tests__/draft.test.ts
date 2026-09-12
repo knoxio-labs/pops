@@ -14,6 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { resolveCapture } from '../capture.js';
 import { shapeReceiptDraft } from '../draft.js';
 import { ExtractedReceiptSchema } from '../extraction.js';
 import { gateExtraction } from '../gate.js';
@@ -188,14 +189,15 @@ describe('shapeReceiptDraft — context defaults', () => {
   });
 
   it('uses a capture the caller resolved rather than resolving its own', () => {
+    // The phone said when and where it photographed this, so the zone is
+    // known rather than guessed off an address — and an undated receipt
+    // takes the shutter's moment instead of the upload's.
     const extracted = receipt({ purchasedOn: null, purchasedAt: null });
-    const capture = {
-      capturedAt: '2026-07-04T01:02:03.000Z',
-      timeReference: 'Australia/Perth',
-      zoneCertain: true,
-      latitude: null,
-      longitude: null,
-    };
+    const capture = resolveCapture(
+      { capturedAt: '2026-07-04T01:02:03.000Z', timeZone: 'Australia/Perth' },
+      null,
+      extracted.timeZone
+    );
     const draft = shapeReceiptDraft(extracted, gateExtraction(extracted), [STORED], {
       uploadedAt: UPLOADED_AT,
       capture,
