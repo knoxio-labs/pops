@@ -30,9 +30,17 @@ import SwiftUI
 /// different job. The rows are `Grouped`'s; the material is the page's.
 internal struct PurchasesDigestComposedSurface: View {
     internal let purchases: [Purchase]
+    /// A purchase just saved, marked so the capture that produced it is
+    /// visibly where it landed.
+    ///
+    /// Landing on the home with nothing changed is the one outcome a capture
+    /// flow must not have: somebody who photographed four receipts and pressed
+    /// Save needs the screen to say so, and a toast says it and then takes it
+    /// away. The mark is on the row, which is the thing they are being told
+    /// about.
+    internal var highlighted: String?
 
     private let markSize: CGFloat = 34
-    private let heroWash: CGFloat = 190
     private let recentCount = 4
 
     internal var body: some View {
@@ -88,7 +96,7 @@ internal struct PurchasesDigestComposedSurface: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(PopsSpacing.lg)
-        .background(alignment: .topTrailing) { wash }
+        .background(alignment: .topTrailing) { PurchaseHeroWash() }
         .clipShape(RoundedRectangle(cornerRadius: PopsRadius.card))
         .playgroundGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
     }
@@ -116,17 +124,6 @@ internal struct PurchasesDigestComposedSurface: View {
         let direction = delta.isUp ? "more" : "less"
         return
             "\(delta.amount.formatted()) \(direction) than \(PurchasesPresentation.shortMonth(previous))"
-    }
-
-    private var wash: some View {
-        RadialGradient(
-            colors: [Color.popsAccent.opacity(0.55), Color.popsAccent.opacity(0)],
-            center: .topTrailing,
-            startRadius: PopsSpacing.zero,
-            endRadius: heroWash
-        )
-        .frame(width: heroWash, height: heroWash)
-        .accessibilityHidden(true)
     }
 
     private func countLine(_ totals: [MoneyAmount]) -> String {
@@ -215,13 +212,29 @@ internal struct PurchasesDigestComposedSurface: View {
         }
     }
 
+    /// The newest rows, and a just-saved one among them wherever its date
+    /// puts it. Not lifted to the top: a purchase's place in the history is
+    /// its date, and moving it would tell the reader something false about
+    /// when it happened in order to tell them something true about when it was
+    /// saved.
+    private var recentRows: [Purchase] {
+        Array(purchases.prefix(recentCount))
+    }
+
     private var recent: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            DigestSectionLabel(title: "Recent")
+            DigestSectionLabel(title: "Recent", note: highlighted == nil ? nil : "Just saved")
             VStack(spacing: PopsSpacing.zero) {
-                ForEach(purchases.prefix(recentCount)) { purchase in
+                ForEach(recentRows) { purchase in
                     PurchaseCompactRow(purchase: purchase, markSize: markSize)
-                    if purchase.id != purchases.prefix(recentCount).last?.id { PopsDivider() }
+                        .padding(.horizontal, PopsSpacing.sm)
+                        .background {
+                            RoundedRectangle(cornerRadius: PopsRadius.control)
+                                .fill(
+                                    Color.popsSuccess.opacity(
+                                        purchase.id == highlighted ? 0.18 : 0))
+                        }
+                    if purchase.id != recentRows.last?.id { PopsDivider() }
                 }
             }
             .padding(.horizontal, PopsSpacing.md)

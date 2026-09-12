@@ -22,13 +22,20 @@ import SwiftUI
 /// capture control, which is the merge decided before the digest was.
 internal struct PurchasesShellView: View {
     internal let purchases: [Purchase]
+    internal var highlighted: String?
 
     @State private var query: String
     @State private var searching: Bool
     @State private var selected: Int
 
-    internal init(purchases: [Purchase], query: String = "", searching: Bool = false) {
+    internal init(
+        purchases: [Purchase],
+        query: String = "",
+        searching: Bool = false,
+        highlighted: String? = nil
+    ) {
         self.purchases = purchases
+        self.highlighted = highlighted
         _query = State(initialValue: query)
         _searching = State(initialValue: searching)
         // The search field lives on the search tab, so a state that pins it
@@ -71,7 +78,7 @@ internal struct PurchasesShellView: View {
 
     private var purchasesTab: some View {
         NavigationStack {
-            PurchasesDigestComposedSurface(purchases: purchases)
+            PurchasesDigestComposedSurface(purchases: purchases, highlighted: highlighted)
                 .navigationTitle("Purchases")
                 .playgroundTitleDisplay(large: true)
                 // An inset rather than an overlay: an overlaid control sits on

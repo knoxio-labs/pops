@@ -55,6 +55,22 @@ public enum ReceiptDraftCopy {
     internal static let itemQuantityPlaceholder = "—"
     internal static let itemUnitNotePlaceholder = "Unit price or weight"
     internal static let addItem = "Add an item"
+    internal static let chooseMerchant = "Choose a merchant"
+    internal static let newMerchant = "New merchant"
+    internal static let typeMerchant = "Type it instead"
+    internal static let chooseAddress = "Choose an address"
+    internal static let newAddress = "New address"
+    internal static let onlineLabel = "Bought online"
+    internal static let onlineCaption = "No branch to record."
+    internal static let includedLabel = "In the item prices"
+    internal static let addAdjustment = "Add an adjustment"
+    internal static let itemListPriceLabel = "Was"
+    internal static let itemListPricePlaceholder = "Normal price"
+    internal static let itemDetails = "Details"
+
+    internal static func removeAdjustment(_ label: String) -> String {
+        "Remove \(label)"
+    }
 
     /// Named after what it removes rather than after the gesture, so
     /// VoiceOver says which row is about to go.

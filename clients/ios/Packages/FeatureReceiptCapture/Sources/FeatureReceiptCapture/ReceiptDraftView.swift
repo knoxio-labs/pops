@@ -36,6 +36,7 @@ public struct ReceiptDraftView: View {
     private let status: Status?
     private let parts: [ReceiptPart]
     private let complaints: ComplaintStyle
+    private let merchants: [ReceiptMerchantChoice]
     private let secondaryAction: SecondaryAction?
     private let save: ((ReceiptDraft) -> Void)?
 
@@ -66,6 +67,7 @@ public struct ReceiptDraftView: View {
         subtitle: String? = nil,
         status: Status? = nil,
         complaints: ComplaintStyle = .banner,
+        merchants: [ReceiptMerchantChoice] = [],
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
         save: ((ReceiptDraft) -> Void)? = nil
@@ -75,6 +77,7 @@ public struct ReceiptDraftView: View {
         self.subtitle = subtitle
         self.status = status
         self.complaints = complaints
+        self.merchants = merchants
         self.parts = parts
         self.secondaryAction = secondaryAction
         self.save = save
@@ -157,7 +160,7 @@ public struct ReceiptDraftView: View {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
             if complaints != .belowForm { complaint }
             if title != nil || subtitle != nil { heading }
-            ReceiptDraftForm(draft: $draft)
+            ReceiptDraftForm(draft: $draft, merchants: merchants)
             if complaints == .belowForm { complaint }
         }
     }

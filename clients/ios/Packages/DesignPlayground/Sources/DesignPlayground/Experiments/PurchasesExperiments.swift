@@ -17,6 +17,19 @@ internal enum PurchasesExperiments {
                 "How much of the review screen should the gate's complaint take, when none of it "
                 + "can be acted on?",
             subject: SurfaceID(area: "purchases", slug: "review"),
+            status: .decided(
+                variant: "hints-only",
+                rationale:
+                    "Hints only, decided on the device 2026-09-13. Nothing at the top at all. The review step's "
+                    + "whole job is the form, the complaint block could not be acted on, and at the text sizes "
+                    + "this app has to survive it took the screen — the reading it was about was below the fold "
+                    + "before anybody had touched anything. Every complaint that names a field is already drawn "
+                    + "beside that field, which is where it points rather than where it summarises, so the banner "
+                    + "was restating what the form already said. What this gives up is the complaints that name no "
+                    + "field: a receipt read as damaged is about the paper and has no field to sit beside, and it "
+                    + "now appears only in the form's own `About the paper itself` group. Compact and One line were "
+                    + "both smaller versions of the wrong idea, and Below the form kept the cost and moved it."
+            ),
             variants: [
                 reviewVariant(
                     id: "banner",
@@ -216,7 +229,12 @@ extension PurchasesExperiments {
                 states: [
                     DesignState.standard {
                         PurchaseReviewSurface(
-                            entries: PurchaseReviewSurfaces.complaintEntries, complaints: style)
+                            entries: PurchaseReviewSurfaces.complaintEntries,
+                            complaints: style,
+                            // No pickers in the variants. The question is how
+                            // loud a complaint should be, and a picker in the
+                            // middle of the comparison is a second difference.
+                            merchants: [])
                     }
                 ]
             )

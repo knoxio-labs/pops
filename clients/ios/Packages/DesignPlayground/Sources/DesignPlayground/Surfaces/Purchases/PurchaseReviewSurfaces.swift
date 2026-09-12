@@ -71,6 +71,30 @@ internal enum PurchaseReviewSurfaces {
                     entry("e2", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
                 ])
             },
+            // Every adjustment stated, so the four included-toggles are all
+            // on screen. Tax opens included because GST is inside a marked
+            // price here; the rest do not.
+            DesignState("adjustments", "Every adjustment, with its basis") {
+                PurchaseReviewSurface(entries: [
+                    entry("e1", extracted: ReceiptPlaygroundFixtures.typicalExtracted)
+                ])
+            },
+            // A merchant with no address on file, which is what makes the
+            // address picker fall back to a field rather than offer an empty
+            // list.
+            DesignState("no-addresses", "A merchant with no branch on file") {
+                PurchaseReviewSurface(
+                    entries: [entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted)],
+                    merchants: [PurchaseMerchantFixtures.all[3]])
+            },
+            // No catalogue at all — a device that cannot reach contacts. Both
+            // fields are plain text, which is what this form did before
+            // pickers and what it must still do.
+            DesignState("no-catalogue", "Nothing to pick from") {
+                PurchaseReviewSurface(
+                    entries: [entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted)],
+                    merchants: [])
+            },
             DesignState("single", "One purchase") {
                 PurchaseReviewSurface(entries: [
                     entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, pages: 2)

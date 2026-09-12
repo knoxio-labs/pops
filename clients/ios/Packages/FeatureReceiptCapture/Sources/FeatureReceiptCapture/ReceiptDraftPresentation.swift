@@ -64,13 +64,20 @@ extension ReceiptDraftPresentation {
                 description: ReceiptDraftValue(extracted: line.description),
                 amount: ReceiptDraftValue(extracted: line.amount),
                 quantity: ReceiptDraftValue(extracted: line.quantity.map(String.init)),
-                unitNote: ReceiptDraftValue(extracted: line.unitNote)
+                unitNote: ReceiptDraftValue(extracted: line.unitNote),
+                // `ExtractedReceiptLine` carries no list price, so this is
+                // always empty for the reader to fill. Asking the model for
+                // the `WAS` figure is the server half of POPS-3652; the field
+                // exists first so there is somewhere to put it.
+                listPrice: ReceiptDraftValue(extracted: nil)
             )
         }
     }
 
     /// One row per stated adjustment, and none for the ones the receipt did
-    /// not state.
+    /// not state. A kind the receipt never mentioned can still be added by
+    /// hand — `ReceiptDraft.addAdjustment` — which is how a surcharge the
+    /// reading missed entirely gets onto the form.
     ///
     /// This is the one place the form does drop what was not read, and the
     /// reason is that an adjustment is not a fact about the purchase the way
@@ -83,7 +90,14 @@ extension ReceiptDraftPresentation {
         if let tax = extracted.tax {
             adjustments.append(
                 ReceiptDraftAdjustment(
-                    id: "tax", kind: .tax, amount: ReceiptDraftValue(extracted: tax)))
+                    id: "tax", kind: .tax, amount: ReceiptDraftValue(extracted: tax),
+                    // GST is inside the marked price on an Australian
+                    // receipt, so included is the assumption that is right
+                    // more often. It is an assumption either way — the
+                    // extractor is not told which convention it read — and
+                    // the toggle is there because a default cannot be right
+                    // for every receipt.
+                    isIncluded: true))
         }
         adjustments += extracted.discounts.enumerated().map { index, discount in
             ReceiptDraftAdjustment(

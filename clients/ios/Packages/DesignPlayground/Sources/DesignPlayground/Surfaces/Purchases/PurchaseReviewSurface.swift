@@ -46,7 +46,10 @@ internal struct ReviewEntry: Identifiable {
 /// with work unsaved would be a promise the app cannot keep.
 internal struct PurchaseReviewSurface: View {
     internal let entries: [ReviewEntry]
-    internal var complaints: ReceiptDraftView.ComplaintStyle = .banner
+    /// Defaults to what `review-complaint-density` decided. The experiment's
+    /// own variants pass the others.
+    internal var complaints: ReceiptDraftView.ComplaintStyle = .hintsOnly
+    internal var merchants: [ReceiptMerchantChoice] = PurchaseMerchantFixtures.all
 
     @Environment(\.dismiss) private var dismiss
     @State private var index = 0
@@ -105,6 +108,7 @@ internal struct PurchaseReviewSurface: View {
                 : nil,
             status: entry.status,
             complaints: complaints,
+            merchants: merchants,
             parts: entry.parts
         )
         .id(entry.id)

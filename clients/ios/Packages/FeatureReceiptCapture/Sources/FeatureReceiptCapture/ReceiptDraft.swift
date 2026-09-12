@@ -36,7 +36,21 @@ import Foundation
 /// on the handset.
 public struct ReceiptDraft: Hashable, Sendable {
     internal var merchant: ReceiptDraftValue
+    /// The contacts entity the merchant was picked from, when it was picked
+    /// rather than typed.
+    ///
+    /// This is the operative half of the pair and the name is only its label
+    /// — the invariant `pillars/purchases` keeps everywhere and the one
+    /// POPS-3634 exists to carry through to the phone. A merchant typed as
+    /// free text leaves this nil, which is honest: nothing resolved it.
+    internal var merchantEntityID: String?
     internal var address: ReceiptDraftValue
+    /// Bought online, so there is no branch to record.
+    ///
+    /// Not the same as an address the extractor failed to read. An empty
+    /// address field on a screen for an online order is an invitation to
+    /// invent one, and an address invented is worse than an address absent.
+    internal var online: Bool
     /// As printed, verbatim. Not parsed into a `Date`: the extractor
     /// transcribes what the paper says, and running that through a formatter
     /// is how a form comes to state a day the receipt never did.
@@ -64,7 +78,9 @@ public struct ReceiptDraft: Hashable, Sendable {
 
     internal init(
         merchant: ReceiptDraftValue,
+        merchantEntityID: String? = nil,
         address: ReceiptDraftValue,
+        online: Bool = false,
         date: ReceiptDraftValue,
         lines: [ReceiptDraftLine],
         adjustments: [ReceiptDraftAdjustment],
@@ -76,7 +92,9 @@ public struct ReceiptDraft: Hashable, Sendable {
         reconciliationDetail: String? = nil
     ) {
         self.merchant = merchant
+        self.merchantEntityID = merchantEntityID
         self.address = address
+        self.online = online
         self.date = date
         self.lines = lines
         self.adjustments = adjustments
@@ -106,15 +124,55 @@ extension ReceiptDraft {
         lines.removeAll { $0.id == id }
     }
 
+    /// An adjustment the model never found.
+    ///
+    /// Without this a surcharge the reading missed cannot be corrected by
+    /// editing what is on screen, because it is not on screen — and the only
+    /// way forward is retyping the total, which hides the discrepancy instead
+    /// of explaining it.
+    ///
+    /// Included defaults to false. A figure the reader is adding by hand is
+    /// one the line prices demonstrably did not account for, or they would
+    /// not have noticed it missing.
+    internal mutating func addAdjustment(kind: ReceiptDraftAdjustment.Kind) {
+        adjustments.append(
+            ReceiptDraftAdjustment(
+                id: "added-\(UUID().uuidString)",
+                kind: kind,
+                amount: ReceiptDraftValue(extracted: nil),
+                isIncluded: false
+            ))
+    }
+
+    internal mutating func removeAdjustment(id: String) {
+        adjustments.removeAll { $0.id == id }
+    }
+
+    /// Which kinds are not on the form yet. One of each is enough: two tax
+    /// rows on one receipt is a reading nobody should be helped to produce.
+    internal var addableAdjustments: [ReceiptDraftAdjustment.Kind] {
+        let present = Set(adjustments.map(\.kind))
+        return ReceiptDraftAdjustment.Kind.allCases.filter { !present.contains($0) }
+    }
+
     /// Whether the reader has moved any figure since the reading came back.
     ///
     /// The reconciliation the gate reported is a statement about the numbers
     /// the model read. The moment one of them changes it is a statement about
     /// numbers that are no longer on screen, and continuing to show it would
     /// be this screen vouching for arithmetic nobody has done.
+    /// Whether the reader has moved any figure — or changed what the figures
+    /// mean — since the reading came back.
+    ///
+    /// Toggling an adjustment's ``ReceiptDraftAdjustment/isIncluded`` counts,
+    /// and that is the subtle one: it changes no number at all, and changes
+    /// the arithmetic the gate's verdict was about. A reconciliation that
+    /// survived it would be this screen vouching for a sum computed on the
+    /// other assumption.
     internal var amountsEdited: Bool {
         total.isEdited || lines.contains { $0.amount.isEdited }
-            || adjustments.contains { $0.amount.isEdited }
+            || adjustments.contains { $0.amount.isEdited || $0.basisChanged }
+            || adjustments.contains { !$0.wasExtracted }
     }
 
     /// What the screen may honestly say about whether this adds up.
@@ -216,19 +274,29 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     internal var quantity: ReceiptDraftValue
     /// `$4.90/kg`, `2 @ $3.00` — whatever qualified the price.
     internal var unitNote: ReceiptDraftValue
+    /// What the line would have cost at list — the `WAS 5.50` beside a
+    /// `3.50`.
+    ///
+    /// Kept beside what was paid rather than instead of it: the charged
+    /// figure is the operative one and the only one the gate checked, and a
+    /// list price read off paper is checked against nothing. It is a separate
+    /// field for that reason, not a second opinion about `amount`.
+    internal var listPrice: ReceiptDraftValue
 
     internal init(
         id: String,
         description: ReceiptDraftValue,
         amount: ReceiptDraftValue,
         quantity: ReceiptDraftValue,
-        unitNote: ReceiptDraftValue
+        unitNote: ReceiptDraftValue,
+        listPrice: ReceiptDraftValue = ReceiptDraftValue(extracted: nil)
     ) {
         self.id = id
         self.description = description
         self.amount = amount
         self.quantity = quantity
         self.unitNote = unitNote
+        self.listPrice = listPrice
     }
 
     /// A row the reader added. Nothing was extracted into any of it, which is
@@ -239,7 +307,8 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
             description: ReceiptDraftValue(extracted: nil),
             amount: ReceiptDraftValue(extracted: nil),
             quantity: ReceiptDraftValue(extracted: nil),
-            unitNote: ReceiptDraftValue(extracted: nil)
+            unitNote: ReceiptDraftValue(extracted: nil),
+            listPrice: ReceiptDraftValue(extracted: nil)
         )
     }
 
@@ -249,11 +318,12 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     /// something.
     internal var wasExtracted: Bool {
         description.wasExtracted || amount.wasExtracted || quantity.wasExtracted
-            || unitNote.wasExtracted
+            || unitNote.wasExtracted || listPrice.wasExtracted
     }
 
     internal var isEdited: Bool {
         description.isEdited || amount.isEdited || quantity.isEdited || unitNote.isEdited
+            || listPrice.isEdited
     }
 
     /// Nothing in it. A row the reader has been offered and not yet used —
@@ -261,6 +331,13 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     /// untouched form look authored.
     internal var isBlank: Bool {
         description.isEmpty && amount.isEmpty && quantity.isEmpty && unitNote.isEmpty
+            && listPrice.isEmpty
+    }
+
+    /// Whether anything qualifies the price — a quantity, a unit note, a list
+    /// price. What decides whether the row opens with its second tier showing.
+    internal var hasQualifiers: Bool {
+        !quantity.isEmpty || !unitNote.isEmpty || !listPrice.isEmpty
     }
 }
 
@@ -273,6 +350,36 @@ internal struct ReceiptDraftAdjustment: Hashable, Sendable, Identifiable {
     internal let id: String
     internal let kind: Kind
     internal var amount: ReceiptDraftValue
+    /// Whether this figure is already inside the line prices, or sits on top
+    /// of them.
+    ///
+    /// Australian receipts print both conventions and a reading often cannot
+    /// tell which it found. Without this, a reading whose every figure is
+    /// right still fails its own total check, and the person correcting it has
+    /// no field to fix — the numbers are all correct and the arithmetic
+    /// assumption is not.
+    internal var isIncluded: Bool
+    /// What the extractor assumed, so a change to ``isIncluded`` can be told
+    /// from the reading's own basis.
+    internal let extractedIsIncluded: Bool
+
+    internal init(
+        id: String,
+        kind: Kind,
+        amount: ReceiptDraftValue,
+        isIncluded: Bool = false
+    ) {
+        self.id = id
+        self.kind = kind
+        self.amount = amount
+        self.isIncluded = isIncluded
+        extractedIsIncluded = isIncluded
+    }
+
+    /// The reader has changed what the figure means, without changing it.
+    internal var basisChanged: Bool { isIncluded != extractedIsIncluded }
+
+    internal var wasExtracted: Bool { amount.wasExtracted }
 
     /// Which way it moves the total, and what it is called.
     internal enum Kind: Hashable, Sendable, CaseIterable {
