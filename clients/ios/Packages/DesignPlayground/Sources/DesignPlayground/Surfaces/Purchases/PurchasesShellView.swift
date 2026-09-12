@@ -25,19 +25,12 @@ internal struct PurchasesShellView: View {
 
     @State private var query: String
     @State private var searching: Bool
-    @State private var offeringCapture: Bool
     @State private var selected: Int = 1
 
-    internal init(
-        purchases: [Purchase],
-        query: String = "",
-        searching: Bool = false,
-        offeringCapture: Bool = false
-    ) {
+    internal init(purchases: [Purchase], query: String = "", searching: Bool = false) {
         self.purchases = purchases
         _query = State(initialValue: query)
         _searching = State(initialValue: searching)
-        _offeringCapture = State(initialValue: offeringCapture)
     }
 
     internal var body: some View {
@@ -84,9 +77,39 @@ internal struct PurchasesShellView: View {
     /// A circle rather than a labelled button, matched in size to the search
     /// capsule the system draws under it so the two read as a pair rather than
     /// as one control and one accident.
+    /// A `Menu`, not a confirmation dialog. `confirmationDialog` is the native
+    /// action sheet — `UIAlertController` underneath — and an alert
+    /// controller's actions cannot carry an icon through any API SwiftUI
+    /// exposes. A `Menu` is a real `UIMenu`, takes a `Label` per item, and is
+    /// what iOS 26 reaches for when one control offers several ways to do the
+    /// same thing.
+    ///
+    /// Four items and not three: the two pickers are separate because iOS's
+    /// own are separate. Photos come from `PHPicker` and files from the
+    /// document picker, and collapsing them behind one verb would promise a
+    /// chooser that does not exist.
+    ///
+    /// A circle rather than a labelled button, matched in size to the search
+    /// capsule the system draws under it so the two read as a pair rather than
+    /// as one control and one accident.
     private var captureControl: some View {
-        Button {
-            offeringCapture = true
+        Menu {
+            Button {
+            } label: {
+                Label("Scan a receipt", systemImage: "doc.viewfinder")
+            }
+            Button {
+            } label: {
+                Label("Choose photos", systemImage: "photo.on.rectangle")
+            }
+            Button {
+            } label: {
+                Label("Choose a file", systemImage: "folder")
+            }
+            Button {
+            } label: {
+                Label("Enter it by hand", systemImage: "square.and.pencil")
+            }
         } label: {
             Image(systemName: "plus")
                 .font(.popsTitle)
@@ -97,17 +120,6 @@ internal struct PurchasesShellView: View {
         .padding(.trailing, PopsSpacing.lg)
         .padding(.top, PopsSpacing.sm)
         .accessibilityLabel("Add a purchase")
-        .confirmationDialog(
-            "Add a purchase", isPresented: $offeringCapture, titleVisibility: .visible
-        ) {
-            Button("Scan a receipt") {}
-            Button("Choose photos") {}
-            Button("Choose a file") {}
-            Button("Enter it by hand") {}
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("A receipt is read for you. Entering by hand opens the same form, empty.")
-        }
     }
 
     private let captureDiameter: CGFloat = 56

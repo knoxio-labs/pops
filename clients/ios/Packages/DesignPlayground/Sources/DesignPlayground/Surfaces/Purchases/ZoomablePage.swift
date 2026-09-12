@@ -11,17 +11,15 @@ import SwiftUI
 ///
 /// ## Why panning is conditional
 ///
-/// The viewer pages between photographs with a horizontal swipe, and a pan is
-/// also a drag. The two cannot both own the gesture, so the rule is the one
-/// Photos uses: at rest a drag belongs to the pager, and once the page is
-/// zoomed it belongs to the picture. That is why the pan gesture is attached
-/// only while `scale > 1` rather than always attached and ignoring events —
-/// an attached gesture still competes for the drag even when it does nothing
-/// with it.
+/// It used to be because the viewer paged on a horizontal swipe and the two
+/// drags fought. That pager is gone — three gestures competing for one finger
+/// was the bug — so the remaining reason is smaller and still holds: a drag on
+/// an unzoomed page would slide a picture that already fits entirely on
+/// screen off the side of it, which is movement with nothing to reveal.
 ///
-/// Zoom resets when the page leaves the screen. A photograph you return to
-/// holding the magnification you left on a different one is a photograph you
-/// have to unzoom before you can tell which it is.
+/// This view owns no reset. The viewer gives each page its own identity, so
+/// moving to the next photograph builds a new one at rest rather than handing
+/// this one a different picture to still be magnified over.
 internal struct ZoomablePage: View {
     internal let page: StagedPage
 
@@ -39,7 +37,6 @@ internal struct ZoomablePage: View {
             .offset(offset)
             .animation(.snappy(duration: 0.2), value: scale)
             .onTapGesture(count: 2) { toggleZoom() }
-            .onDisappear { reset() }
             .accessibilityLabel(page.label)
     }
 

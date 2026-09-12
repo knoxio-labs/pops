@@ -11,8 +11,12 @@ import SwiftUI
 /// you are: without it, paging from the last page of one receipt to the first
 /// of another is indistinguishable from paging within one.
 ///
-/// Three ways out — the close button, a downward swipe, and a tap on the
-/// ground around the page. A viewer opened by a tap should close by one.
+/// Nothing here is reached by a swipe. There were three drags on this screen
+/// at once — the pager's, the pan, and a swipe to dismiss — and three gestures
+/// competing for one finger is a screen that misreads most of them. So paging
+/// is the arrows and closing is the button or a tap on the ground around the
+/// page; the drag belongs to the picture alone, which is the one that cannot
+/// be a button.
 internal struct PurchasePageViewer: View {
     internal let staged: StagedReceipts
     internal let showing: StagedPage
@@ -20,8 +24,6 @@ internal struct PurchasePageViewer: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var current: String
-    @State private var drag: CGFloat = 0
-    @State private var replacing = false
 
     internal init(
         staged: StagedReceipts, showing: StagedPage, onDelete: @escaping (StagedPage) -> Void
@@ -31,8 +33,6 @@ internal struct PurchasePageViewer: View {
         self.onDelete = onDelete
         _current = State(initialValue: showing.id)
     }
-
-    private let dismissThreshold: CGFloat = 120
 
     private var pages: [StagedPage] { staged.everyPage }
 
@@ -45,56 +45,18 @@ internal struct PurchasePageViewer: View {
             Color.popsBackground
                 .ignoresSafeArea()
                 .onTapGesture { dismiss() }
-            pager
-                .offset(y: drag)
-                // Simultaneous, not exclusive: the pager owns the horizontal
-                // drag and this only ever acts on the vertical one, so taking
-                // the gesture outright would break paging to dismiss a screen
-                // nobody was dismissing.
-                .simultaneousGesture(dismissDrag)
+            if let page {
+                ZoomablePage(page: page)
+                    // A fresh instance per page, so the magnification does not
+                    // survive into the next photograph. Cheaper and more
+                    // certain than resetting it by hand on the way out.
+                    .id(page.id)
+                    .transition(.opacity)
+            }
         }
+        .animation(.snappy(duration: 0.2), value: current)
         .safeAreaInset(edge: .top) { header }
         .overlay(alignment: .bottom) { actions }
-    }
-
-    private var pager: some View {
-        TabView(selection: $current) {
-            ForEach(pages) { page in
-                ZoomablePage(page: page)
-                    .tag(page.id)
-            }
-        }
-        .playgroundPagedTabs()
-    }
-
-    /// Downward only, and released below the threshold it springs back. An
-    /// upward drag does nothing rather than dismissing, so a mis-swipe while
-    /// looking at a tall receipt does not close the thing being looked at.
-    ///
-    /// Ignores any drag that is more sideways than down, because that one
-    /// belongs to the pager. The threshold is a distance to beat, not the
-    /// gesture's `minimumDistance` — setting it there would mean the gesture
-    /// never fires until it has already passed the test, and the springback
-    /// below could not happen.
-    private var dismissDrag: some Gesture {
-        DragGesture(minimumDistance: PopsSpacing.xl)
-            .onChanged { value in
-                guard Self.isVertical(value.translation) else { return }
-                drag = max(value.translation.height, 0)
-            }
-            .onEnded { value in
-                if Self.isVertical(value.translation),
-                    value.translation.height > dismissThreshold
-                {
-                    dismiss()
-                } else {
-                    drag = 0
-                }
-            }
-    }
-
-    private static func isVertical(_ translation: CGSize) -> Bool {
-        abs(translation.height) > abs(translation.width)
     }
 
     // MARK: Where you are
@@ -138,11 +100,10 @@ internal struct PurchasePageViewer: View {
         .padding(.vertical, PopsSpacing.sm)
     }
 
-    /// Arrows as well as the swipe. The swipe is how it will be used; the
-    /// arrows are how it is used one-handed with a receipt in the other hand,
-    /// which is the posture this screen is actually met in — and once a page
-    /// is zoomed the swipe is a pan, so they stop being an alternative and
-    /// become the only way across.
+    /// The only way between photographs, now that the drag belongs to the
+    /// picture. Disabled at the ends rather than wrapping: a viewer that
+    /// silently returns to the first photograph is one where you cannot tell
+    /// you have reached the last.
     private var stepper: some View {
         HStack(spacing: PopsSpacing.sm) {
             circle("chevron.left") { step(-1) }
@@ -168,22 +129,45 @@ internal struct PurchasePageViewer: View {
     /// these sit over it and let the paper run underneath.
     private var actions: some View {
         HStack(spacing: PopsSpacing.md) {
-            capsule("arrow.triangle.2.circlepath", "Replace", tone: Color.popsForeground) {
-                replacing = true
-            }
-            capsule("trash", "Delete", tone: Color.popsDestructive) {
+            replace
+            Button {
                 if let page { onDelete(page) }
+            } label: {
+                capsuleLabel("trash", "Delete", tone: Color.popsDestructive)
             }
+            .playgroundGlass(in: Capsule())
         }
         .padding(.bottom, PopsSpacing.xl)
-        .confirmationDialog(
-            "Replace this photo", isPresented: $replacing, titleVisibility: .visible
-        ) {
-            Button("Scan a receipt") {}
-            Button("Choose a photo") {}
-            Button("Choose a file") {}
-            Button("Cancel", role: .cancel) {}
+    }
+
+    /// A `Menu` rather than a confirmation dialog, and the reason is the
+    /// icons. `confirmationDialog` *is* the native action sheet — it is
+    /// `UIAlertController` underneath — and an alert controller's actions
+    /// cannot carry an image through any API SwiftUI exposes. A `Menu` is a
+    /// real `UIMenu`, takes a `Label` per item, and is what iOS 26 reaches for
+    /// when one control offers a few ways to do the same thing.
+    ///
+    /// The sources are the capture sheet's minus manual entry: replacing a
+    /// photograph with something typed is not a replacement, it is a different
+    /// screen.
+    private var replace: some View {
+        Menu {
+            Button {
+            } label: {
+                Label("Scan a receipt", systemImage: "doc.viewfinder")
+            }
+            Button {
+            } label: {
+                Label("Choose a photo", systemImage: "photo.on.rectangle")
+            }
+            Button {
+            } label: {
+                Label("Choose a file", systemImage: "folder")
+            }
+        } label: {
+            capsuleLabel("arrow.triangle.2.circlepath", "Replace", tone: Color.popsForeground)
         }
+        .playgroundGlass(in: Capsule())
     }
 
     private func circle(_ symbol: String, action: @escaping () -> Void) -> some View {
@@ -196,20 +180,15 @@ internal struct PurchasePageViewer: View {
         .playgroundGlass(in: Circle())
     }
 
-    private func capsule(
-        _ symbol: String, _ title: String, tone: Color, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: PopsSpacing.sm) {
-                Image(systemName: symbol)
-                Text(title)
-            }
-            .font(.popsSubheadline)
-            .fontWeight(.medium)
-            .foregroundStyle(tone)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.vertical, PopsSpacing.md)
+    private func capsuleLabel(_ symbol: String, _ title: String, tone: Color) -> some View {
+        HStack(spacing: PopsSpacing.sm) {
+            Image(systemName: symbol)
+            Text(title)
         }
-        .playgroundGlass(in: Capsule())
+        .font(.popsSubheadline)
+        .fontWeight(.medium)
+        .foregroundStyle(tone)
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.vertical, PopsSpacing.md)
     }
 }

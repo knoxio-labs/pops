@@ -23,13 +23,14 @@ internal enum PurchasesHomeSurface {
         synopsis:
             "The digest, the tab bar's own search, and the one control that starts a capture.",
         chrome: .bare,
+        // The capture menu has no staged state. A `Menu` is presented by the
+        // system on a tap and cannot be pinned open, so it is reviewed by
+        // tapping it — the same answer POPS-2911 recorded for the pairing
+        // scanner's viewfinder, and for the same reason: staging it would mean
+        // drawing a facsimile of the thing being judged.
         states: [
             DesignState.standard {
                 PurchasesShellView(purchases: PurchasesFixtures.history)
-            },
-            DesignState("capture", "Capture sheet open") {
-                PurchasesShellView(
-                    purchases: PurchasesFixtures.history, offeringCapture: true)
             },
             // The searching states pin the field open rather than asking a
             // reviewer to tap into it, because what is being reviewed is the
