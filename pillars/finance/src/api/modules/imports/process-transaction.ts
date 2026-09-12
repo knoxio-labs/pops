@@ -46,22 +46,11 @@ import type {
   ParsedTransaction,
   ProcessContext,
   ProcessedTransaction,
+  ProcessTransactionArgs,
+  TransactionProcessResult,
 } from './types.js';
 
-export interface TransactionProcessResult {
-  matched?: ProcessedTransaction;
-  uncertain?: ProcessedTransaction;
-  failed?: ProcessedTransaction;
-  batchStatus: 'success' | 'failed';
-  errorEntry?: { description: string; error: string };
-}
-
-export interface ProcessTransactionArgs {
-  db: FinanceDb;
-  transaction: ParsedTransaction;
-  context: ProcessContext;
-  counters: AiCounters;
-}
+export type { ProcessTransactionArgs, TransactionProcessResult } from './types.js';
 
 /** Outcome of the non-AI classification stages — either a final result, or a signal that the row needs the AI fallback. */
 export type ClassifyStageResult =

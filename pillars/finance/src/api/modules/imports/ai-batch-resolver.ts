@@ -34,7 +34,7 @@ import { PROGRESS_INTERVAL_ROWS, yieldToEventLoop } from './processing-helpers.j
 
 import type { FinanceDb } from '../../../db/index.js';
 import type { AiCacheEntry } from './ai-categorizer.js';
-import type { ProcessTransactionArgs, TransactionProcessResult } from './process-transaction.js';
+import type { ProcessTransactionArgs, TransactionProcessResult } from './types.js';
 import type { AiCounters, ParsedTransaction, ProcessContext } from './types.js';
 
 export interface PendingAiItem {

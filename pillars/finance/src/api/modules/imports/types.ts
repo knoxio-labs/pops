@@ -1,3 +1,7 @@
+import type {
+  ParsedTransaction,
+  ProcessedTransaction,
+} from '../../../contract/rest-imports-schemas.js';
 /**
  * Internal TS shapes for the imports domain logic.
  *
@@ -6,7 +10,7 @@
  * types for the pipeline plus the internal-only coordination types that never
  * cross the wire (progress batch items, AI counters, the per-batch context).
  */
-import type { EntityMaps } from '../../../db/index.js';
+import type { EntityMaps, FinanceDb } from '../../../db/index.js';
 import type { CorrectionRow } from '../corrections/index.js';
 
 export type { CommitBatch } from '../../../contract/import-source.js';
@@ -91,6 +95,27 @@ export interface ProcessContext {
    * pre-accepted in Tag Review (POPS-3671). Resolved from settings once per run.
    */
   preAcceptThreshold: number;
+}
+
+/**
+ * One row's classification outcome and the arguments it is computed from. Kept
+ * here rather than beside the stage runner in `process-transaction.ts` so
+ * `ai-result.ts`, which that runner imports, can use them without an import
+ * cycle between the two.
+ */
+export interface TransactionProcessResult {
+  matched?: ProcessedTransaction;
+  uncertain?: ProcessedTransaction;
+  failed?: ProcessedTransaction;
+  batchStatus: 'success' | 'failed';
+  errorEntry?: { description: string; error: string };
+}
+
+export interface ProcessTransactionArgs {
+  db: FinanceDb;
+  transaction: ParsedTransaction;
+  context: ProcessContext;
+  counters: AiCounters;
 }
 
 export function createAiCounters(): AiCounters {

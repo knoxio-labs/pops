@@ -15,7 +15,7 @@ import {
 } from './process-transaction-helpers.js';
 
 import type { AiCacheEntry } from './ai-categorizer.js';
-import type { ProcessTransactionArgs, TransactionProcessResult } from './process-transaction.js';
+import type { ProcessTransactionArgs, TransactionProcessResult } from './types.js';
 import type { AiCounters, ProcessContext } from './types.js';
 
 /**
