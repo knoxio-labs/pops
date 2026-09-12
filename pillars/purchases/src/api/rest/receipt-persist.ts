@@ -73,12 +73,15 @@ type Persisted =
  * so it would never match, and matching on it would be wrong anyway, since
  * two undated receipts uploaded in the same second are not one receipt.
  *
- * The currency term is dropped the same way when `CURRENCY_UNCERTAIN` is
- * set. An inferred or unresolved currency depends on how legibly THIS
- * photograph's address read — one shot of a receipt can resolve `BRL` and a
- * blurrier second shot of the same paper can fall through to `XXX` — so
- * matching on it would miss the very re-upload this check exists to catch
- * and silently double-count the spend.
+ * Currency is treated the same way when `CURRENCY_UNCERTAIN` is set. An
+ * inferred or unresolved currency depends on how legibly THIS photograph's
+ * address read — one shot of a receipt can resolve `BRL` and a blurrier
+ * second shot of the same paper can fall through to `XXX` — so matching on
+ * the value would miss the very re-upload this check exists to catch and
+ * silently double-count the spend. The match is narrowed to the rows that
+ * are equally untranscribed rather than dropping currency altogether,
+ * which would let a receipt that DID state its currency be refused as a
+ * duplicate of one that did not.
  */
 export function sameShopAlreadyRecorded(
   db: PurchasesDb,
@@ -90,7 +93,8 @@ export function sameShopAlreadyRecorded(
     source: RECEIPT_SOURCE_ID,
     orderedAt: purchase.orderedAt,
     totalCents: purchase.totalCents,
-    currency: currencyUncertain ? null : purchase.currency,
+    currency: purchase.currency,
+    uncertainCurrencyTag: currencyUncertain ? CURRENCY_UNCERTAIN : null,
   });
 }
 
