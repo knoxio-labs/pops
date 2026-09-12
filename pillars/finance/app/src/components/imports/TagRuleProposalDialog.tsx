@@ -8,7 +8,13 @@ import {
   DialogTitle,
 } from '@pops/ui';
 
-import { FormFields, ImpactPreview, NewTagsPanel, RejectPanel } from './tag-rule-dialog/DialogBody';
+import {
+  FormFields,
+  ImpactPreview,
+  NewTagsPanel,
+  NoCommonDescriptorHint,
+  RejectPanel,
+} from './tag-rule-dialog/DialogBody';
 import { useTagRuleProposal } from './tag-rule-dialog/useTagRuleProposal';
 
 import type {
@@ -70,9 +76,10 @@ function DialogActions(props: DialogFooterProps) {
 
 interface BodyProps {
   state: ReturnType<typeof useTagRuleProposal>;
+  signal: TagRuleLearnSignal;
 }
 
-function DialogContentBody({ state }: BodyProps) {
+function DialogContentBody({ state, signal }: BodyProps) {
   const { form, proposal, proposeQuery, newTagNames, refusedTags } = state;
   return (
     <div className="space-y-4 text-sm">
@@ -84,6 +91,9 @@ function DialogContentBody({ state }: BodyProps) {
         setMatchType={form.setMatchType}
         setTagsText={form.setTagsText}
       />
+      {signal.noCommonDescriptor === true && form.pattern.trim() === '' && (
+        <NoCommonDescriptorHint entityId={signal.entityId} />
+      )}
       {proposeQuery.isLoading && <p className="text-muted-foreground">Generating preview…</p>}
       {proposeQuery.isError && (
         <p className="text-destructive text-xs">{proposeQuery.error.message}</p>
@@ -127,7 +137,7 @@ export function TagRuleProposalDialog(props: TagRuleProposalDialogProps) {
             on future imports and never overwrite tags you set manually.
           </DialogDescription>
         </DialogHeader>
-        {props.signal && <DialogContentBody state={state} />}
+        {props.signal && <DialogContentBody state={state} signal={props.signal} />}
         <DialogActions
           busy={busy}
           proposal={proposal}
