@@ -23,6 +23,7 @@ import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
+import { popsUriPattern } from '../../contract/schemas/scalars.js';
 import { MEDIA_TYPES } from './vision.js';
 
 import type { DecodedReceiptPart, ReceiptMediaType } from './vision.js';
@@ -333,11 +334,20 @@ export function receiptKey(stored: readonly StoredReceipt[]): string {
   return digest.digest('hex');
 }
 
-const RECEIPT_URI_RE = /^pops:\/\/purchases\/receipt\/([0-9a-f]{64})$/u;
+const RECEIPT_URI_RE = popsUriPattern('purchases', 'receipt');
+const RECEIPT_SHA_RE = /^[0-9a-f]{64}$/u;
 
-/** The sha256 out of a `pops://purchases/receipt/<sha256>` URI, or null. */
+/**
+ * The sha256 out of a `pops://purchases/receipt/<sha256>` URI, or null.
+ *
+ * The pillar and type segments come from the shared factory so a renamed
+ * pillar cannot leave a stale spelling pinned here; the digest is checked
+ * separately because the factory's capture is any id, and this URI's id is
+ * always a sha256.
+ */
 export function receiptShaFromUri(uri: string): string | null {
-  return RECEIPT_URI_RE.exec(uri)?.[1] ?? null;
+  const id = RECEIPT_URI_RE.exec(uri)?.[1];
+  return id !== undefined && RECEIPT_SHA_RE.test(id) ? id : null;
 }
 
 /**
