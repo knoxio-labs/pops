@@ -156,7 +156,9 @@ export function manualRoute(document) {
  *   registered: boolean,
  *   status: string,
  *   lastHeartbeatAt: string,
- *   manifest: Record<string, unknown>,
+ *   manifest: Record<string, unknown> & {
+ *     routes: { queries: string[], mutations: string[], subscriptions: string[] },
+ *   },
  * }} RegistryEntry
  */
 
