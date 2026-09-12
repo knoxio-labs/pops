@@ -1,5 +1,3 @@
-import Foundation
-
 /// What `receipt.extract` answered, before anything is saved (POPS-2454).
 ///
 /// Two arms, matching the BFM's own separation of extraction from
