@@ -631,9 +631,9 @@ export function makeClient(app: Express) {
       reject: (body: Record<string, unknown>) =>
         call<{ message: string }>((r) => r.post('/tag-rules/reject').send(body)),
       resolveAddCollisions: (body: Record<string, unknown>) =>
-        call<{ collisions: ({ ruleId: string; existingTags: string[] } | null)[][] }>((r) =>
-          r.post('/tag-rules/resolve-add-collisions').send(body)
-        ),
+        call<{
+          collisions: ({ ruleId: string; existingTags: string[]; isActive: boolean } | null)[][];
+        }>((r) => r.post('/tag-rules/resolve-add-collisions').send(body)),
     },
     corrections: {
       list: (query: CorrectionListQuery = {}) =>
