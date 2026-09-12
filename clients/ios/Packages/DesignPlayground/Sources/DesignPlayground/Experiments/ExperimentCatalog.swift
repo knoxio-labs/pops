@@ -22,6 +22,14 @@ internal enum ExperimentCatalog {
             subject: SurfaceID(area: "purchases", slug: "list"),
             variants: [
                 purchasesVariant(
+                    id: "composed",
+                    title: "Composed",
+                    note:
+                        "Glass for the figure, the unmatched strip, Recent and All N; Grouped's delta line and its "
+                        + "ranked rows with the share bars removed. Assembled from the other three, not chosen "
+                        + "among them."
+                ) { PurchasesDigestComposedSurface(purchases: $0) },
+                purchasesVariant(
                     id: "draft",
                     title: "Draft",
                     note:
