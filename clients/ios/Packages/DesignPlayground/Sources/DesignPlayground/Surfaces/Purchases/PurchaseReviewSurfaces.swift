@@ -32,7 +32,7 @@ internal enum PurchaseReviewSurfaces {
     /// The banner an entry carries when the gate found something. A reading
     /// that failed its own total check is still handed over to be corrected —
     /// the complaint names a field and becomes a hint beside it, never a lock.
-    private static let needsReview = ReceiptDraftView.Status(
+    internal static let needsReview = ReceiptDraftView.Status(
         tone: .warning,
         heading: "Needs review",
         message: "Some of what came back does not check out."
@@ -90,4 +90,17 @@ internal enum PurchaseReviewSurfaces {
             },
         ]
     )
+
+    /// A batch whose first reading the gate complained about, and a clean one
+    /// behind it — the shape the `review-complaint-density` experiment is
+    /// argued over. Both variants get the same two, because a complaint shown
+    /// against different receipts is not a comparison.
+    internal static let complaintEntries: [ReviewEntry] = [
+        entry(
+            "e1",
+            extracted: ReceiptPlaygroundFixtures.hardwareExtracted,
+            failures: ReceiptPlaygroundFixtures.hardwareFailures,
+            status: needsReview),
+        entry("e2", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
+    ]
 }

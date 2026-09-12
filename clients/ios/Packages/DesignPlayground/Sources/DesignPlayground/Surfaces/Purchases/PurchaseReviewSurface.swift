@@ -46,12 +46,17 @@ internal struct ReviewEntry: Identifiable {
 /// with work unsaved would be a promise the app cannot keep.
 internal struct PurchaseReviewSurface: View {
     internal let entries: [ReviewEntry]
+    internal var complaints: ReceiptDraftView.ComplaintStyle = .banner
 
     @Environment(\.dismiss) private var dismiss
     @State private var index = 0
     @State private var discarded: Set<String> = []
     @State private var cancelling = false
     @State private var discarding = false
+    /// Which have been on screen. Only the flagged ones are gated on it, so
+    /// this is not a record of what was read — nothing can be — it is a record
+    /// of what was put in front of somebody.
+    @State private var visited: Set<String> = []
 
     private var remaining: [ReviewEntry] {
         entries.filter { !discarded.contains($0.id) }
@@ -74,6 +79,8 @@ internal struct PurchaseReviewSurface: View {
             }
         }
         .background(Color.popsBackground)
+        .onAppear { markSeen() }
+        .onChange(of: index) { markSeen() }
         .navigationTitle(remaining.isEmpty ? "Nothing left" : "\(position) of \(remaining.count)")
         .playgroundTitleDisplay(large: false)
         .playgroundLeadingBarItem { cancel }
@@ -97,6 +104,7 @@ internal struct PurchaseReviewSurface: View {
                 ? "Nothing could be read off this one. The paper is stored, so fill in what it says."
                 : nil,
             status: entry.status,
+            complaints: complaints,
             parts: entry.parts
         )
         .id(entry.id)
@@ -109,6 +117,15 @@ internal struct PurchaseReviewSurface: View {
     // MARK: Getting about
 
     private var controls: some View {
+        VStack(spacing: PopsSpacing.sm) {
+            gate
+            row
+        }
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.bottom, PopsSpacing.lg)
+    }
+
+    private var row: some View {
         HStack(spacing: PopsSpacing.md) {
             step("chevron.left", back: true)
             step("chevron.right", back: false)
@@ -116,8 +133,6 @@ internal struct PurchaseReviewSurface: View {
             discard
             save
         }
-        .padding(.horizontal, PopsSpacing.lg)
-        .padding(.bottom, PopsSpacing.lg)
     }
 
     private func step(_ symbol: String, back: Bool) -> some View {
@@ -168,7 +183,50 @@ internal struct PurchaseReviewSurface: View {
                 .padding(.vertical, PopsSpacing.xs)
         }
         .playgroundProminentGlassButton()
-        .disabled(remaining.isEmpty)
+        .disabled(remaining.isEmpty || !unseenFlagged.isEmpty)
+    }
+
+    /// Flagged readings that have not been on screen yet.
+    ///
+    /// The gate is only on these. A reading the model is confident about is
+    /// approved by saving, because asking somebody to page through eleven
+    /// clean receipts to unlock a button trains them to page without looking —
+    /// which buys a worse signal than not asking at all. The ones the gate
+    /// itself could not reconcile are where a human's eye is the only thing
+    /// that settles it, so those get put in front of one.
+    ///
+    /// "Seen" is not "read", and this does not pretend otherwise. It is the
+    /// strongest claim an interface can actually make.
+    private var unseenFlagged: [ReviewEntry] {
+        remaining.filter { $0.status != nil && !visited.contains($0.id) }
+    }
+
+    /// Says what is holding Save, and goes to it. A disabled button with no
+    /// explanation is the thing this exists to avoid.
+    @ViewBuilder private var gate: some View {
+        if let next = unseenFlagged.first, !remaining.isEmpty {
+            Button {
+                if let target = remaining.firstIndex(where: { $0.id == next.id }) {
+                    index = target
+                }
+            } label: {
+                Label(
+                    unseenFlagged.count == 1
+                        ? "1 still needs checking" : "\(unseenFlagged.count) still need checking",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.popsCaption)
+                .padding(.horizontal, PopsSpacing.md)
+                .padding(.vertical, PopsSpacing.sm)
+            }
+            .playgroundGlassButton()
+            .tint(Color.popsWarning)
+        }
+    }
+
+    private func markSeen() {
+        guard let current else { return }
+        visited.insert(current.id)
     }
 
     private var saveTitle: String {

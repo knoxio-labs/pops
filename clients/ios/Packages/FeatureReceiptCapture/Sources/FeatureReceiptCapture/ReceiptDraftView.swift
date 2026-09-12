@@ -35,6 +35,7 @@ public struct ReceiptDraftView: View {
     private let subtitle: String?
     private let status: Status?
     private let parts: [ReceiptPart]
+    private let complaints: ComplaintStyle
     private let secondaryAction: SecondaryAction?
     private let save: ((ReceiptDraft) -> Void)?
 
@@ -64,6 +65,7 @@ public struct ReceiptDraftView: View {
         title: String? = nil,
         subtitle: String? = nil,
         status: Status? = nil,
+        complaints: ComplaintStyle = .banner,
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
         save: ((ReceiptDraft) -> Void)? = nil
@@ -72,9 +74,36 @@ public struct ReceiptDraftView: View {
         self.title = title
         self.subtitle = subtitle
         self.status = status
+        self.complaints = complaints
         self.parts = parts
         self.secondaryAction = secondaryAction
         self.save = save
+    }
+
+    /// How much room the gate's complaint is given.
+    ///
+    /// It is a full status header today, which is right when the reading is
+    /// the whole screen — the result screen opens on it and the tone is the
+    /// first thing read. Inside the review step the same block costs the top
+    /// of a screen whose entire job is the form below it, and none of it can
+    /// be acted on.
+    ///
+    /// Every style keeps the per-field hints, which are where a complaint
+    /// that names a field actually belongs. What the styles differ on is what
+    /// happens to the complaints that name no field, and how loudly.
+    public enum ComplaintStyle: Hashable, Sendable, CaseIterable {
+        /// The full header, above the fields. What the result screen uses.
+        case banner
+        /// The same words at caption weight in one row.
+        case compact
+        /// A single line saying how many, opening on a tap.
+        case collapsed
+        /// Nothing at the top at all. The fields carry their own hints and
+        /// anything naming no field is not shown here.
+        case hintsOnly
+        /// The full header, after the fields, so the screen opens on
+        /// something that can be acted on.
+        case belowForm
     }
 
     /// What happened to the receipt this form was read off, as the glyph and
@@ -126,14 +155,45 @@ public struct ReceiptDraftView: View {
     @ViewBuilder internal var content: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
-            if let status {
+            if complaints != .belowForm { complaint }
+            if title != nil || subtitle != nil { heading }
+            ReceiptDraftForm(draft: $draft)
+            if complaints == .belowForm { complaint }
+        }
+    }
+
+    @ViewBuilder private var complaint: some View {
+        if let status {
+            switch complaints {
+            case .banner, .belowForm:
                 PopsStatusHeader(
                     tone: status.tone, title: status.heading, message: status.message,
                     caption: status.caption)
+            case .compact:
+                compactComplaint(status)
+            case .collapsed:
+                CollapsedComplaint(status: status)
+            case .hintsOnly:
+                EmptyView()
             }
-            if title != nil || subtitle != nil { heading }
-            ReceiptDraftForm(draft: $draft)
         }
+    }
+
+    private func compactComplaint(_ status: Status) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.popsCaption)
+                .foregroundStyle(status.tone.color)
+            Text(status.message)
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: PopsSpacing.zero)
+        }
+        .padding(PopsSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
     }
 
     /// The screen's own name and what it is asking for.
@@ -171,5 +231,57 @@ public struct ReceiptDraftView: View {
                 PopsButton(secondaryAction.title, action: secondaryAction.action)
             }
         }
+    }
+}
+
+/// The gate's complaint as one line, opening on a tap.
+///
+/// Closed, it gives the screen back to the form and still says there is
+/// something to know. Open, it says the same thing the banner does. The bet is
+/// that a person who has read the complaint once does not need it occupying
+/// the top of every subsequent receipt in the batch.
+internal struct CollapsedComplaint: View {
+    internal let status: ReceiptDraftView.Status
+
+    @State private var open = false
+
+    internal var body: some View {
+        Button {
+            open.toggle()
+        } label: {
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                HStack(spacing: PopsSpacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.popsCaption)
+                        .foregroundStyle(status.tone.color)
+                    Text(status.heading)
+                        .font(.popsSubheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.popsForeground)
+                    Spacer(minLength: PopsSpacing.sm)
+                    Image(systemName: open ? "chevron.up" : "chevron.down")
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
+                if open {
+                    Text(status.message)
+                        .font(.popsSubheadline)
+                        .foregroundStyle(Color.popsMutedForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let caption = status.caption {
+                        Text(caption)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsMutedForeground)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PopsSpacing.md)
+            .background(
+                status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
+        }
+        .buttonStyle(.plain)
+        .animation(.snappy(duration: 0.2), value: open)
     }
 }
