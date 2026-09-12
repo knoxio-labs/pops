@@ -28,7 +28,10 @@ const transactionsList: ToolDef = {
       startDate: { type: 'string', description: 'Start date (ISO 8601, e.g. "2025-01-01")' },
       endDate: { type: 'string', description: 'End date (ISO 8601, e.g. "2025-12-31")' },
       entityId: { type: 'string', description: 'Filter by entity (merchant) ID' },
-      account: { type: 'string', description: 'Filter by account name' },
+      accountId: {
+        type: 'string',
+        description: 'Filter by account ID (see finance.accounts.list)',
+      },
       type: {
         type: 'string',
         enum: TRANSACTION_TYPES,
@@ -44,7 +47,7 @@ const transactionsList: ToolDef = {
       startDate: typeof args['startDate'] === 'string' ? args['startDate'] : undefined,
       endDate: typeof args['endDate'] === 'string' ? args['endDate'] : undefined,
       entityId: typeof args['entityId'] === 'string' ? args['entityId'] : undefined,
-      account: typeof args['account'] === 'string' ? args['account'] : undefined,
+      accountId: typeof args['accountId'] === 'string' ? args['accountId'] : undefined,
       type: (TRANSACTION_TYPES as readonly string[]).includes(args['type'] as string)
         ? (args['type'] as TransactionType)
         : undefined,

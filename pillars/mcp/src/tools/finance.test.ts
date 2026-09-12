@@ -50,6 +50,13 @@ describe('finance.transactions.list', () => {
     );
   });
 
+  it('forwards the account filter as accountId, which is what finance.transactions.list (GET /transactions) actually reads (POPS-3579)', async () => {
+    await tool.handler({ accountId: 'acc_everyday' });
+    expect(transactions.list).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'acc_everyday' })
+    );
+  });
+
   it.each(['purchase', 'transfer', 'income', 'refund', 'reversal', 'loan', 'rebate', 'tax'])(
     'forwards the real transaction type %s to finance.transactions.list',
     async (type) => {
