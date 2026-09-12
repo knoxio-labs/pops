@@ -25,6 +25,18 @@ export const WOOLWORTHS_SOURCE_ID = 'woolworths';
 /** `purchase_sources.id` every uploaded receipt is written under, whatever shop it is from. */
 export const RECEIPT_SOURCE_ID = 'receipt';
 
+/**
+ * `purchase_sources.id` a purchase typed by hand is written under.
+ *
+ * Its own source rather than a flag on {@link RECEIPT_SOURCE_ID}: the two
+ * answer different questions about a purchase's evidence — a receipt source
+ * means a photograph exists somewhere, a manual one means nothing does. A
+ * reviewer scanning the source column must be able to tell the difference
+ * without opening the order, which a shared source id with a "manual: true"
+ * flag buried on the row would not give them.
+ */
+export const MANUAL_SOURCE_ID = 'manual';
+
 const ONE_MERCHANT_SOURCES: ReadonlySet<string> = new Set([AMAZON_SOURCE_ID, WOOLWORTHS_SOURCE_ID]);
 
 /**

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import {
   AUTO_LINK_POLICIES,
+  CAPTURE_SOURCES,
   CHARGE_ORIGINS,
   DOCUMENT_KINDS,
   INGEST_METHODS,
@@ -48,6 +49,8 @@ export const SettlementRoleSchema = z.enum(SETTLEMENT_ROLES);
 export const ChargeOriginSchema = z.enum(CHARGE_ORIGINS);
 export const DocumentKindSchema = z.enum(DOCUMENT_KINDS);
 export const AutoLinkPolicySchema = z.enum(AUTO_LINK_POLICIES);
+/** Who stated a capture fact — the client, or the photograph's own EXIF. */
+export const CaptureSourceSchema = z.enum(CAPTURE_SOURCES);
 
 export const PurchaseSchema = z.object({
   id: z.string(),
