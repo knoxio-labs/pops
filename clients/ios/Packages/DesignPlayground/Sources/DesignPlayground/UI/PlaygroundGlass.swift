@@ -120,6 +120,19 @@ extension View {
         #endif
     }
 
+    /// A leading item in the navigation bar. `topBarLeading` is an iOS-only
+    /// placement, so like every other platform conditional in this package it
+    /// lives here; on the host toolchain the bar's default placement stands
+    /// in.
+    @ViewBuilder
+    func playgroundLeadingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
+        #if os(iOS)
+            toolbar { ToolbarItem(placement: .topBarLeading, content: item) }
+        #else
+            toolbar { ToolbarItem(content: item) }
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.

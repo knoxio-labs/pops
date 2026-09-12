@@ -28,11 +28,13 @@ import SwiftUI
 internal struct PurchaseStagingGrid: View {
     @State private var staged: StagedReceipts
     @State private var viewing: StagedPage?
+    @Environment(\.dismiss) private var dismiss
     /// Which drop target the drag is currently over, if any. One value rather
     /// than a flag per tile: a drag is over exactly one thing at a time, and
     /// two tiles both believing they are the target is a state that can only
     /// be wrong.
     @State private var targeted: DropTarget?
+    @State private var discarding = false
 
     internal init(receipts: [StagedReceipt]) {
         _staged = State(initialValue: StagedReceipts(receipts))
@@ -70,6 +72,7 @@ internal struct PurchaseStagingGrid: View {
         }
         .background(Color.popsBackground)
         .overlay(alignment: .bottom) { actions }
+        .playgroundLeadingBarItem { close }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
                 staged: staged,
@@ -211,6 +214,42 @@ internal struct PurchaseStagingGrid: View {
                 staged.combine(ids, with: page.id)
             }
         )
+    }
+
+    /// The way out, back to the purchases home.
+    ///
+    /// An X rather than a back chevron, because there is nowhere to go back
+    /// to: the camera and the pickers are system presentations that have
+    /// already closed by the time this appears, so the only destination is
+    /// where the whole thing started.
+    ///
+    /// It asks first when anything is staged. Nothing here has been uploaded
+    /// yet, so the cost of leaving is only the picking — but the picking is
+    /// the part that took a person walking around with a phone, and a
+    /// mis-tapped X in the corner is how it would be lost.
+    private var close: some View {
+        Button {
+            if staged.isEmpty {
+                dismiss()
+            } else {
+                discarding = true
+            }
+        } label: {
+            Image(systemName: "xmark")
+        }
+        .accessibilityLabel("Close")
+        .confirmationDialog(
+            discardTitle, isPresented: $discarding, titleVisibility: .visible
+        ) {
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Keep picking", role: .cancel) {}
+        }
+    }
+
+    private var discardTitle: String {
+        let pages = staged.everyPage.count
+        return pages == 1
+            ? "Discard this photo?" : "Discard these \(pages) photos?"
     }
 
     private var actions: some View {
