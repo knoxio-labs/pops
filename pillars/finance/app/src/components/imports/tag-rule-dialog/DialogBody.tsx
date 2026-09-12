@@ -58,28 +58,29 @@ export function FormFields(props: FormFieldsProps) {
  * specific enough to match on (POPS-255). Tagging every transaction from a
  * merchant is what the merchant's default tags are for, so the hint points
  * there rather than suggesting a pattern that would over- or under-match.
+ *
+ * The link sits on its own line so its 44px touch target does not stretch the
+ * sentence around it.
  */
 export function NoCommonDescriptorHint({ entityId }: { entityId: string | null }) {
   return (
-    <p className="text-xs text-muted-foreground" data-testid="no-common-descriptor">
-      These transactions share no descriptor text to match on, so there is no pattern to suggest.
-      Type one to save a rule.
+    <div className="space-y-1" data-testid="no-common-descriptor">
+      <p className="text-xs text-muted-foreground">
+        These transactions share no descriptor text to match on, so there is no pattern to suggest.
+        Type one to save a rule.
+      </p>
       {entityId !== null && (
-        <>
-          {' '}
-          To tag every transaction from this merchant instead, set its{' '}
-          <a
-            href={`/finance/entities/${entityId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-primary hover:underline"
-          >
-            default tags <ExternalLink className="h-3 w-3" />
-          </a>
-          .
-        </>
+        <a
+          href={`/finance/entities/${entityId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 min-w-11 items-center gap-1 text-xs text-primary hover:underline"
+        >
+          Or tag every transaction from this merchant with its default tags
+          <ExternalLink className="h-3 w-3" />
+        </a>
       )}
-    </p>
+    </div>
   );
 }
 
