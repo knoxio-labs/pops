@@ -23,6 +23,7 @@ export function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge 
     source: 'amazon',
     position: 0,
     amountCents: 4128,
+    currency: 'AUD',
     role: 'capture',
     orderedAt: '2026-03-04T00:00:00Z',
     descriptorPattern: null,
@@ -36,6 +37,9 @@ export function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTrans
     uri: 'pops://finance/transaction/t1',
     description: 'AMAZON MKTPLACE AU',
     amountCents: 4128,
+    settlementCurrency: 'AUD',
+    foreignAmountMinor: null,
+    foreignCurrency: null,
     date: '2026-03-06',
     ...overrides,
   };

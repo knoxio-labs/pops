@@ -11,6 +11,7 @@
  * time can only ever ask "does something here sum to *me*".
  */
 
+import { comparableAmountCents } from './currency.js';
 import { eligibilityFor, linkOf, orderedTransactions, type BlockingContext } from './stages.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 
@@ -34,9 +35,10 @@ export interface CombinedResult {
  * multi-charge partition needed.
  *
  * A charge only takes part if the transaction is eligible for it on its own
- * terms — inside *its* window, matching *its* source descriptor, same sign.
- * Two orders from different merchants cannot be combined just because their
- * amounts happen to add up.
+ * terms — inside *its* window, matching *its* source descriptor, same sign,
+ * and stating a comparable amount. Two orders from different merchants,
+ * currencies or years cannot be combined just because their amounts happen
+ * to add up.
  */
 export function matchCombined(
   charges: readonly SolvableCharge[],
@@ -61,13 +63,54 @@ export function matchCombined(
     const eligible = admissible
       .filter((entry) => !matchedChargeIds.has(entry.charge.id) && entry.accepts(transaction))
       .map((entry) => entry.charge);
+
+    const partition = onlyPartitionOf(eligible, transaction);
+    if (partition === null) continue;
+
+    for (const charge of partition) {
+      links.push(linkOf(charge, transaction, charge.amountCents, 'combined'));
+      matchedChargeIds.add(charge.id);
+    }
+    claimedUris.add(transaction.uri);
+  }
+
+  return { links, matchedChargeIds, claimedUris };
+}
+
+/**
+ * The one set of charges that together settle this transaction, or null.
+ *
+ * **Charges are partitioned by currency before anything is added up.** A
+ * sum across currencies is not a quantity, so a BRL charge and an AUD one
+ * can never be members of the same combination however neatly their
+ * integers happen to add up — and each group is summed against the figure
+ * the transaction states in that group's currency, which for a foreign
+ * group is the issuer's own foreign amount rather than a converted total.
+ *
+ * Two currencies each closing exactly is treated as no answer, the same way
+ * two partitions within one currency are. The transaction settled one of
+ * them and the arithmetic cannot say which; the charges stay unmatched and
+ * reach the caller's fallback on their own terms.
+ */
+function onlyPartitionOf(
+  eligible: readonly SolvableCharge[],
+  transaction: SolvableTransaction
+): readonly SolvableCharge[] | null {
+  let found: readonly SolvableCharge[] | null = null;
+
+  for (const group of byCurrency(eligible).values()) {
     // Fewer than two eligible charges cannot be a *combined* settlement; a
     // single charge for this amount is an exact match and was already tried.
-    if (eligible.length < MIN_SPLIT_SIZE) continue;
+    if (group.length < MIN_SPLIT_SIZE) continue;
+
+    const [first] = group;
+    if (first === undefined) continue;
+    const target = comparableAmountCents(first, transaction);
+    if (target === null) continue;
 
     const search = findSubsetSummingTo(
-      eligible.map((charge) => charge.amountCents),
-      transaction.amountCents,
+      group.map((charge) => charge.amountCents),
+      target,
       { minSize: MIN_SPLIT_SIZE }
     );
     // Ambiguity is left alone rather than routed to review here: the charges
@@ -76,15 +119,27 @@ export function matchCombined(
     // combined" about charges that may have a perfectly good reason of their
     // own for being unmatched.
     if (search.kind !== 'unique') continue;
+    if (found !== null) return null;
 
-    for (const index of search.indices) {
-      const charge = eligible[index];
-      if (charge === undefined) continue;
-      links.push(linkOf(charge, transaction, charge.amountCents, 'combined'));
-      matchedChargeIds.add(charge.id);
-    }
-    claimedUris.add(transaction.uri);
+    found = search.indices.flatMap((index) => {
+      const charge = group[index];
+      return charge === undefined ? [] : [charge];
+    });
   }
 
-  return { links, matchedChargeIds, claimedUris };
+  return found;
+}
+
+/** Groups in first-seen order, so the search stays deterministic. */
+function byCurrency(
+  charges: readonly SolvableCharge[]
+): ReadonlyMap<string, readonly SolvableCharge[]> {
+  const groups = new Map<string, SolvableCharge[]>();
+  for (const charge of charges) {
+    const code = charge.currency.toUpperCase();
+    const group = groups.get(code) ?? [];
+    group.push(charge);
+    groups.set(code, group);
+  }
+  return groups;
 }

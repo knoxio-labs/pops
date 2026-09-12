@@ -203,7 +203,9 @@ describe('the leg resolves against finance real contract', () => {
         {
           id: 'txn-1',
           description: 'AMAZON MKTPLACE AU',
-          account: 'everyday',
+          accountId: 'everyday',
+          foreignAmountMinor: null,
+          foreignCurrency: null,
           amount: 19.99,
           date: '2026-03-04',
           type: 'purchase',
@@ -236,7 +238,9 @@ describe('the leg resolves against finance real contract', () => {
               {
                 id: `txn-${String(page)}`,
                 description: 'AMAZON MKTPLACE AU',
-                account: 'everyday',
+                accountId: 'everyday',
+                foreignAmountMinor: null,
+                foreignCurrency: null,
                 amount: 10,
                 date: '2026-03-04',
                 type: 'purchase',

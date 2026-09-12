@@ -14,16 +14,38 @@ Links are **re-derived from scratch on every sweep, never patched**, so identica
 
 Deterministic first, AI never. Matching is arithmetic, and a model asked to partition a set of amounts produces a plausible partition that is wrong.
 
-| stage | what                                                                   | link type |
-| ----- | ---------------------------------------------------------------------- | --------- |
-| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign | —         |
-| 1     | exactly one transaction for the charge amount                          | `exact`   |
-| 2     | subset-sum over the remaining candidates                               | `split`   |
-| 4     | a learned merchant descriptor, at exactly the charge amount            | `rule`    |
-| 3     | one candidate smaller than the charge — a part-payment                 | `partial` |
-| 5     | anything ambiguous or unmatched                                        | review    |
+| stage | what                                                                                        | link type |
+| ----- | ------------------------------------------------------------------------------------------- | --------- |
+| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign, comparable currency | —         |
+| 1     | exactly one transaction for the charge amount                                               | `exact`   |
+| 2     | subset-sum over the remaining candidates                                                    | `split`   |
+| 4     | a learned merchant descriptor, at exactly the charge amount                                 | `rule`    |
+| 3     | one candidate smaller than the charge — a part-payment                                      | `partial` |
+| 5     | anything ambiguous or unmatched                                                             | review    |
 
 Stage 4 runs between combined and partial, which is why the table is out of numerical order.
+
+## Two amounts are only comparable in one currency
+
+A receipt photographed in Brazil is priced in BRL. The card charge for it lands in AUD, at a rate nobody recorded, plus a conversion fee. Every amount stage used to compare those two integers directly, so a foreign receipt could never match — and, worse, a foreign one whose number happened to coincide with an AUD transaction's could match by accident. Nothing refused the pairing; the numbers simply usually differed (POPS-3569).
+
+**The comparison is made in the charge's own currency, never in the settlement one.** `currency.ts` answers one question — what is this transaction's amount, stated in this charge's currency? — with three outcomes:
+
+| the charge is in                    | compared against                                             |
+| ----------------------------------- | ------------------------------------------------------------ |
+| the settlement currency             | the settlement amount, to the cent, exactly as before        |
+| the transaction's `foreignCurrency` | `foreignAmountMinor`, rescaled, signed by the settlement row |
+| anything else                       | nothing — the pair is refused                                |
+
+The third row is the one that matters. A refusal is not a weak match: the pair never becomes a candidate at all, so it is invisible to every stage, and the charge reports `no-candidate` rather than being part-paid or coincidentally linked. That is also why **no tolerance was widened anywhere**. The foreign path is not an approximate version of the domestic one, it is the same exact-equality test applied to the only pair of numbers the two systems ever agreed on.
+
+**The conversion fee is never read.** `fxFeeCents` is an AUD fee, and a cross-currency comparison never looks at the AUD side — so it makes no difference whether the issuer folded the fee into the row (ANZ) or billed it as a row of its own (the separate fee line is in AUD, carries no foreign amount, and is therefore not a candidate for a foreign charge at all). Subtracting a fee to make an amount fit would be exactly the invented arithmetic the ladder refuses everywhere else.
+
+**Minor units are not cents.** This pillar's receipt parser scales every printed price by 100 whatever the currency (`ingest/money.ts`), so ¥1,200 is stored as `120000`; finance stores the yen's own 1200. The rescale is by the currency's ISO-4217 exponent, read from the platform's own currency data. A currency with more than two decimals is refused rather than divided: the digit that division needs was already rounded away when the receipt was read, so the equality it would produce is manufactured rather than found.
+
+**A combination is partitioned by currency before anything is summed.** `combined.ts` groups the eligible charges by currency and runs its subset-sum once per group against the figure the transaction states in that group's currency. A sum across currencies is not a quantity, so a BRL charge and an AUD one cannot be members of one combination however neatly their integers add up — and two currencies each closing exactly is treated as no answer, the same way two partitions within one currency are.
+
+**Finance publishes no settlement currency.** Its ledger is single-currency and its own importers hardcode AUD; `api/finance/wire.ts` names that constant once, at the boundary, which is what lets the solver compare currencies rather than assume. When finance starts publishing the field, that constant is the only thing that changes.
 
 ## Stage 4 widens blocking and nothing else
 

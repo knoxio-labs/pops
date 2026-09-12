@@ -231,7 +231,7 @@ describe('a backfilled order reconciles', () => {
   });
 
   it('moves an order from unexplained to matched once its transaction exists', async () => {
-    const list = await requestOn(app).get('/purchases').expect(200);
+    const list = await requestOn(app).get('/purchases?currency=AUD').expect(200);
     const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
     expect(target).toBeDefined();
 
@@ -262,7 +262,8 @@ describe('a backfilled order reconciles', () => {
 
   it('leaves every other order untouched by that one match', async () => {
     const list = await requestOn(app).get('/purchases').expect(200);
-    const target = list.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
+    const audOnly = await requestOn(app).get('/purchases?currency=AUD').expect(200);
+    const target = audOnly.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
 
     await runSweep({
       db: opened.db,
@@ -284,5 +285,32 @@ describe('a backfilled order reconciles', () => {
       }
     }
     expect(claims.filter((uri) => uri === 'pops://finance/transaction/t1')).toHaveLength(1);
+  });
+
+  it('does not settle a foreign-priced order from an AUD row of the same cents', async () => {
+    // Real data: this backfill holds one USD order among the AUD ones. An
+    // AUD transaction for the same integer is not a weak match for it, it
+    // is a different quantity — and before POPS-3569 the ladder linked the
+    // two, because nothing compared currencies.
+    const foreign = await requestOn(app).get('/purchases?currency=USD').expect(200);
+    const target = foreign.body.items.find((p: { totalCents: number }) => p.totalCents > 0);
+    expect(target).toBeDefined();
+
+    await runSweep({
+      db: opened.db,
+      finance: financeReturning({
+        id: 'aud-lookalike',
+        amountCents: target.totalCents,
+        date: String(target.orderedAt).slice(0, 10),
+      }),
+      defaultWindowDays: 21,
+    });
+
+    const after = await requestOn(app).get(`/purchases/${target.id}`).expect(200);
+    expect(after.body.accounting.matchedCents).toBe(0);
+    const linked = after.body.charges.flatMap(
+      (charge: { links?: { transactionUri: string }[] }) => charge.links ?? []
+    );
+    expect(linked).toEqual([]);
   });
 });

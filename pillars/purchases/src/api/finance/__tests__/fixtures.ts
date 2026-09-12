@@ -7,7 +7,11 @@
  * of {@link CandidateTransaction} lets those tests agree on a shape that
  * finance never actually sends.
  */
-import { financeTransactionUri, type CandidateTransaction } from '../wire.js';
+import {
+  financeTransactionUri,
+  FINANCE_SETTLEMENT_CURRENCY,
+  type CandidateTransaction,
+} from '../wire.js';
 
 import type { CandidateFetch, FinanceClient } from '../client.js';
 
@@ -24,8 +28,11 @@ export type CandidateOverrides = Partial<Omit<CandidateTransaction, 'id' | 'uri'
 function aCandidateTransaction(overrides: CandidateOverrides): CandidateTransaction {
   return {
     description: 'AMAZON MKTPLACE AU',
-    account: 'everyday',
+    accountId: 'everyday',
     amountCents: 4128,
+    settlementCurrency: FINANCE_SETTLEMENT_CURRENCY,
+    foreignAmountMinor: null,
+    foreignCurrency: null,
     date: '2026-03-06',
     type: 'purchase',
     entityId: null,

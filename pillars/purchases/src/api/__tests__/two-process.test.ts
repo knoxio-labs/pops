@@ -39,7 +39,9 @@ let dataDir: string;
 const TRANSACTION = {
   id: 'txn-smoke-1',
   description: 'AMAZON MKTPLACE AU SMOKE',
-  account: 'smoke',
+  accountId: 'smoke',
+  foreignAmountMinor: null,
+  foreignCurrency: null,
   amount: 41.28,
   date: '2026-03-06',
   type: 'purchase',
