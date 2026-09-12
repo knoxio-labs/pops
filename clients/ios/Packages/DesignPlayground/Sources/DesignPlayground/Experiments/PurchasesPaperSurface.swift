@@ -49,7 +49,8 @@ internal struct PurchasesPaperSurface: View {
     /// A distinct drawing per row, reusing the receipts area's own synthesised
     /// paper so the two surfaces show the same kind of artefact rather than
     /// two different inventions of one.
-    private static let sheets: [Data] = ReceiptPlaygroundPaper
+    private static let sheets: [Data] =
+        ReceiptPlaygroundPaper
         .pages(ReceiptPart.maxPerReceipt)
         .map(\.data)
 
@@ -65,40 +66,46 @@ internal struct PurchasesPaperSurface: View {
                 placeholderSymbol: "banknote"
             )
             .frame(width: plateWidth, height: plateHeight)
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                Text(PurchasesPresentation.merchant(purchase))
-                    .font(.popsHeadline)
-                    .foregroundStyle(
-                        PurchasesPresentation.isUnattributed(purchase)
-                            ? Color.popsMutedForeground : Color.popsForeground
-                    )
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(
-                    "\(PurchasesPresentation.day(purchase)) · \(PurchasesPresentation.items(purchase))"
-                )
-                .font(.popsSubheadline)
-                .foregroundStyle(Color.popsMutedForeground)
-                Text(purchase.total.formatted())
-                    .font(.popsTitle)
-                    .monospacedDigit()
-                    .foregroundStyle(Color.popsForeground)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                PurchaseStatusBadge(status: purchase.status)
-            }
+            details(purchase)
             Spacer(minLength: PopsSpacing.zero)
         }
         .padding(.vertical, PopsSpacing.md)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            """
-            \(PurchasesPresentation.merchant(purchase)), \
-            \(purchase.total.formatted()), \
-            \(PurchasesPresentation.day(purchase)), \
-            \(PurchasesPresentation.label(for: purchase.status)), \
-            \(purchase.receiptURI == nil ? "no receipt" : "receipt attached")
-            """
-        )
+        .accessibilityLabel(label(purchase))
+    }
+
+    private func details(_ purchase: Purchase) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            Text(PurchasesPresentation.merchant(purchase))
+                .font(.popsHeadline)
+                .foregroundStyle(
+                    PurchasesPresentation.isUnattributed(purchase)
+                        ? Color.popsMutedForeground : Color.popsForeground
+                )
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                "\(PurchasesPresentation.day(purchase)) · \(PurchasesPresentation.items(purchase))"
+            )
+            .font(.popsSubheadline)
+            .foregroundStyle(Color.popsMutedForeground)
+            Text(purchase.total.formatted())
+                .font(.popsTitle)
+                .monospacedDigit()
+                .foregroundStyle(Color.popsForeground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            PurchaseStatusBadge(status: purchase.status)
+        }
+    }
+
+    private func label(_ purchase: Purchase) -> String {
+        """
+        \(PurchasesPresentation.merchant(purchase)), \
+        \(purchase.total.formatted()), \
+        \(PurchasesPresentation.day(purchase)), \
+        \(PurchasesPresentation.label(for: purchase.status)), \
+        \(purchase.receiptURI == nil ? "no receipt" : "receipt attached")
+        """
     }
 }

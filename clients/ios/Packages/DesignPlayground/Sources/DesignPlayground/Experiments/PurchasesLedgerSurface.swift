@@ -20,7 +20,8 @@ internal struct PurchasesLedgerSurface: View {
 
     internal var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: PopsSpacing.zero, pinnedViews: [.sectionHeaders]
+            LazyVStack(
+                alignment: .leading, spacing: PopsSpacing.zero, pinnedViews: [.sectionHeaders]
             ) {
                 summary
                 ForEach(PurchasesPresentation.byMonth(purchases), id: \.month) { group in
@@ -67,7 +68,9 @@ internal struct PurchasesLedgerSurface: View {
             // Stacked rather than added together: a month holding two
             // currencies has two totals, and there is no third number.
             VStack(alignment: .trailing, spacing: PopsSpacing.zero) {
-                ForEach(PurchasesPresentation.totals(group.purchases), id: \.currencyCode) { total in
+                ForEach(
+                    PurchasesPresentation.totals(group.purchases), id: \.currencyCode
+                ) { total in
                     Text(total.formatted())
                         .font(.popsCaption)
                         .monospacedDigit()
@@ -79,21 +82,25 @@ internal struct PurchasesLedgerSurface: View {
         .background(Color.popsBackground)
     }
 
+    private func mark(_ purchase: Purchase) -> some View {
+        PurchaseMark(purchase: purchase)
+            .overlay(alignment: .topTrailing) {
+                if purchase.status.isUnsettled {
+                    Circle()
+                        .fill(Color.popsWarning)
+                        .frame(width: unsettledDot, height: unsettledDot)
+                        .overlay(
+                            Circle().strokeBorder(
+                                Color.popsBackground, lineWidth: PopsBorder.emphasis)
+                        )
+                        .offset(x: PopsSpacing.xs, y: -PopsSpacing.xs)
+                }
+            }
+    }
+
     private func row(_ purchase: Purchase) -> some View {
         HStack(spacing: PopsSpacing.md) {
-            PurchaseMark(purchase: purchase)
-                .overlay(alignment: .topTrailing) {
-                    if purchase.status.isUnsettled {
-                        Circle()
-                            .fill(Color.popsWarning)
-                            .frame(width: unsettledDot, height: unsettledDot)
-                            .overlay(
-                                Circle().strokeBorder(
-                                    Color.popsBackground, lineWidth: PopsBorder.emphasis)
-                            )
-                            .offset(x: PopsSpacing.xs, y: -PopsSpacing.xs)
-                    }
-                }
+            mark(purchase)
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(PurchasesPresentation.merchant(purchase))
                     .font(.popsHeadline)

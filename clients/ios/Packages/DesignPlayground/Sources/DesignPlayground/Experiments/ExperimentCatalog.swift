@@ -18,7 +18,8 @@ internal enum ExperimentCatalog {
         DesignExperiment(
             id: "purchases-digest-finish",
             question:
-                "Where does the purchases digest get its finish — from the system's own structure, from the material it is drawn in, or from the figures relating to each other?",
+                "Where does the purchases digest get its finish — from the system's own structure, "
+                + "from the material it is drawn in, or from the figures relating to each other?",
             subject: SurfaceID(area: "purchases", slug: "list"),
             status: .decided(
                 variant: "composed",
@@ -76,7 +77,8 @@ internal enum ExperimentCatalog {
         DesignExperiment(
             id: "purchases-home-shape",
             question:
-                "Is the purchases home an archive, a queue of unmatched purchases, a digest, or the receipts themselves?",
+                "Is the purchases home an archive, a queue of unmatched purchases, a digest, or "
+                + "the receipts themselves?",
             subject: SurfaceID(area: "purchases", slug: "list"),
             status: .decided(
                 variant: "digest",

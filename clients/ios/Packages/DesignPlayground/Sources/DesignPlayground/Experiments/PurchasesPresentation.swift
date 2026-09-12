@@ -121,7 +121,9 @@ internal enum PurchasesPresentation {
         }
         return
             byMerchant
-            .map { (name: $0.key, total: MoneyAmount(minorUnits: $0.value, currencyCode: currency)) }
+            .map {
+                (name: $0.key, total: MoneyAmount(minorUnits: $0.value, currencyCode: currency))
+            }
             .sorted { $0.total.minorUnits > $1.total.minorUnits }
             .prefix(limit)
             .map { $0 }

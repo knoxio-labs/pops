@@ -103,13 +103,19 @@ internal struct PurchasesDigestComposedSurface: View {
             HStack(spacing: PopsSpacing.xs) {
                 Image(systemName: delta.isUp ? "arrow.up.right" : "arrow.down.right")
                     .font(.popsCaption)
-                Text(
-                    "\(delta.amount.formatted()) \(delta.isUp ? "more" : "less") than \(PurchasesPresentation.shortMonth(previous.month))"
-                )
-                .font(.popsSubheadline)
+                Text(deltaSentence(delta, against: previous.month))
+                    .font(.popsSubheadline)
             }
             .foregroundStyle(delta.isUp ? Color.popsWarning : Color.popsSuccess)
         }
+    }
+
+    private func deltaSentence(
+        _ delta: (amount: MoneyAmount, isUp: Bool), against previous: Date
+    ) -> String {
+        let direction = delta.isUp ? "more" : "less"
+        return
+            "\(delta.amount.formatted()) \(direction) than \(PurchasesPresentation.shortMonth(previous))"
     }
 
     private var wash: some View {

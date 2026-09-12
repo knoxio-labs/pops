@@ -76,7 +76,8 @@ internal struct PurchasesDigestSurface: View {
     /// mentioning. "1 currencies" is the kind of sentence a screen says when
     /// nobody read it back.
     private func countLine(_ totals: [MoneyAmount]) -> String {
-        let purchases = latest.purchases.count == 1 ? "1 purchase" : "\(latest.purchases.count) purchases"
+        let purchases =
+            latest.purchases.count == 1 ? "1 purchase" : "\(latest.purchases.count) purchases"
         return totals.count > 1 ? "\(purchases) in \(totals.count) currencies" : purchases
     }
 

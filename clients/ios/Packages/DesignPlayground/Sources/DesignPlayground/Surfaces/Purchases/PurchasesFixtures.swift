@@ -35,26 +35,31 @@ internal enum PurchasesFixtures {
         reference.addingTimeInterval(TimeInterval(-days * 86_400))
     }
 
+    /// `status` defaults to ``PurchaseSettlement/awaitingSettlement`` because
+    /// that is what every purchase the pillar actually holds is — a row that
+    /// is settled is the exception here, and saying so at the exceptions is
+    /// shorter and truer than repeating it fourteen times.
     private static func purchase(
         _ id: String,
         _ merchant: MerchantIdentity,
         daysAgo days: Int,
-        _ cents: Int,
+        _ total: MoneyAmount,
         items: Int,
-        status: PurchaseSettlement,
-        currency: String = Fixtures.aud,
+        status: PurchaseSettlement = .awaitingSettlement,
         receipt: Bool = true
     ) -> Purchase {
         Purchase(
             id: id,
             merchant: merchant,
             orderedOn: daysAgo(days),
-            total: Fixtures.money(cents, currency),
+            total: total,
             itemCount: items,
             receiptURI: receipt ? "pops://purchases/receipt/\(id)" : nil,
             status: status
         )
     }
+
+    private static func aud(_ cents: Int) -> MoneyAmount { Fixtures.money(cents) }
 
     /// The five the playground shipped with, kept because
     /// ``PurchasesSurfaces`` reviews the list's own states against them and a
@@ -65,56 +70,66 @@ internal enum PurchasesFixtures {
     /// variant that groups by month has more than one group to draw.
     static let history: [Purchase] = [
         purchase(
-            "pur-sushi", .entity(id: "ent-sushi", name: "Monster Sushi", printed: "Monster Sushi Bar Barrack Place"),
-            daysAgo: 1, 1_609, items: 1, status: .awaitingSettlement),
+            "pur-sushi",
+            .entity(
+                id: "ent-sushi", name: "Monster Sushi", printed: "Monster Sushi Bar Barrack Place"),
+            daysAgo: 1, aud(1_609), items: 1),
         purchase(
             "pur-tongli", .printed("TONGLI SUPERMARKET"),
-            daysAgo: 3, 4_376, items: 5, status: .awaitingSettlement),
+            daysAgo: 3, aud(4_376), items: 5),
         purchase(
             "pur-unattributed", .unattributed,
-            daysAgo: 4, 2_280, items: 2, status: .awaitingSettlement),
+            daysAgo: 4, aud(2_280), items: 2),
         purchase(
             "pur-aldi", .entity(id: "ent-aldi", name: "ALDI", printed: "ALDI STORES"),
-            daysAgo: 8, 802, items: 1, status: .linked),
+            daysAgo: 8, aud(802), items: 1, status: .linked),
         purchase(
-            "pur-chemist", .entity(id: "ent-chemist", name: "Chemist Warehouse", printed: "CHEMIST WAREHOUSE BROADWAY"),
-            daysAgo: 11, 3_495, items: 4, status: .partial),
+            "pur-chemist",
+            .entity(
+                id: "ent-chemist", name: "Chemist Warehouse", printed: "CHEMIST WAREHOUSE BROADWAY"),
+            daysAgo: 11, aud(3_495), items: 4, status: .partial),
         purchase(
             "pur-salvos", .printed("Salvos Stores"),
-            daysAgo: 16, 6_600, items: 10, status: .awaitingSettlement),
+            daysAgo: 16, aud(6_600), items: 10),
         purchase(
             "pur-kmart", .entity(id: "ent-kmart", name: "Kmart", printed: "K mart"),
-            daysAgo: 19, 3_000, items: 3, status: .linked),
+            daysAgo: 19, aud(3_000), items: 3, status: .linked),
         purchase(
             "pur-coffee", .printed("SAMPLE COFFEE SURRY HILLS"),
-            daysAgo: 22, 540, items: 1, status: .settledCash, receipt: false),
+            daysAgo: 22, aud(540), items: 1, status: .settledCash, receipt: false),
         purchase(
-            "pur-woolworths", .entity(id: "ent-woolworths", name: "Woolworths", printed: "WOOLWORTHS METRO TOWN HALL 3182"),
-            daysAgo: 27, 11_847, items: 23, status: .awaitingSettlement),
+            "pur-woolworths",
+            .entity(
+                id: "ent-woolworths", name: "Woolworths", printed: "WOOLWORTHS METRO TOWN HALL 3182"
+            ),
+            daysAgo: 27, aud(11_847), items: 23),
         // Priced in a currency none of the others are. A screen that shows one
         // figure for a month has to decide what this row does to it, and the
         // analytics endpoint's own answer is that no cross-currency total
         // exists — so a variant that quietly adds it in is wrong rather than
         // approximate.
         purchase(
-            "pur-storage", .entity(id: "ent-backblaze", name: "Backblaze", printed: "BACKBLAZE INC"),
-            daysAgo: 31, 1_100, items: 1, status: .linked, currency: "USD",
+            "pur-storage",
+            .entity(id: "ent-backblaze", name: "Backblaze", printed: "BACKBLAZE INC"),
+            daysAgo: 31, Fixtures.money(1_100, "USD"), items: 1, status: .linked,
             receipt: false),
         purchase(
-            "pur-bunnings", .entity(id: "ent-bunnings", name: "Bunnings", printed: "BUNNINGS WAREHOUSE ALEXANDRIA"),
-            daysAgo: 38, 15_600, items: 7, status: .awaitingSettlement),
+            "pur-bunnings",
+            .entity(id: "ent-bunnings", name: "Bunnings", printed: "BUNNINGS WAREHOUSE ALEXANDRIA"),
+            daysAgo: 38, aud(15_600), items: 7),
         // A status added to the pillar after this build shipped. It draws as
         // itself rather than as a mismatch, which is the whole point of
         // ``PurchaseSettlement/unrecognised``.
         purchase(
-            "pur-returned", .entity(id: "ent-uniqlo", name: "Uniqlo", printed: "UNIQLO AUSTRALIA PITT ST"),
-            daysAgo: 44, 7_990, items: 2, status: .unrecognised("refunded")),
+            "pur-returned",
+            .entity(id: "ent-uniqlo", name: "Uniqlo", printed: "UNIQLO AUSTRALIA PITT ST"),
+            daysAgo: 44, aud(7_990), items: 2, status: .unrecognised("refunded")),
         purchase(
             "pur-ignored", .printed("TRANSPORTFORNSW TAP ON"),
-            daysAgo: 52, 452, items: 1, status: .ignored, receipt: false),
+            daysAgo: 52, aud(452), items: 1, status: .ignored, receipt: false),
         purchase(
             "pur-market", .printed("EVELEIGH FARMERS MARKET STALL 12"),
-            daysAgo: 58, 4_150, items: 6, status: .awaitingSettlement),
+            daysAgo: 58, aud(4_150), items: 6),
     ]
 
     /// Only the rows still waiting on somebody — what a status-led variant
