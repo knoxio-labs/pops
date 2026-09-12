@@ -1044,6 +1044,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Spend for a window and the period before it, broken down by account, month, tag and entity, with the largest charge, concentration, subscriptions and foreign spend */
+    get: operations['summary.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tag-rules': {
     parameters: {
       query?: never;
@@ -11501,6 +11518,177 @@ export interface operations {
               value: string;
             };
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'summary.get': {
+    parameters: {
+      query?: {
+        window?: '30d' | '90d' | 'month' | 'year' | 'all';
+        topLimit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              byAccount: {
+                accountId: string;
+                accountName: string | null;
+                archived: boolean;
+                currency: string | null;
+                shareOfTotal: number | null;
+                spend: {
+                  cents: number;
+                  transactionCount: number;
+                };
+              }[];
+              byEntity: {
+                entityId: string | null;
+                entityName: string | null;
+                shareOfTotal: number | null;
+                spend: {
+                  cents: number;
+                  transactionCount: number;
+                };
+              }[];
+              byMonth: {
+                byAccount: {
+                  accountId: string;
+                  spend: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                }[];
+                month: string;
+                spend: {
+                  cents: number;
+                  transactionCount: number;
+                };
+              }[];
+              byTag: {
+                shareOfTotal: number | null;
+                spend: {
+                  cents: number;
+                  transactionCount: number;
+                };
+                tag: string;
+              }[];
+              currencies: string[];
+              deltaCents: number | null;
+              deltaRatio: number | null;
+              empty: boolean;
+              inference: {
+                concentration: {
+                  cents: number;
+                  entityCount: number;
+                  shareOfTotal: number | null;
+                };
+                foreign: {
+                  fees: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                  spend: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                };
+                largestCharge: {
+                  accountId: string;
+                  accountName: string | null;
+                  cents: number;
+                  date: string;
+                  description: string;
+                  entityId: string | null;
+                  entityName: string | null;
+                  id: string;
+                } | null;
+                recurringSubscriptions: {
+                  byEntity: {
+                    entityId: string | null;
+                    entityName: string | null;
+                    spend: {
+                      cents: number;
+                      transactionCount: number;
+                    };
+                  }[];
+                  spend: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                  tag: string;
+                };
+              };
+              previousTotal: {
+                cents: number;
+                transactionCount: number;
+              } | null;
+              total: {
+                cents: number;
+                transactionCount: number;
+              };
+              window: {
+                end: string;
+                /** @enum {string} */
+                key: '30d' | '90d' | 'month' | 'year' | 'all';
+                previous: {
+                  end: string;
+                  start: string;
+                } | null;
+                start: string | null;
+              };
+            };
           };
         };
       };

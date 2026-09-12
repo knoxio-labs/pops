@@ -243,6 +243,9 @@ import type {
   SettingsSetManyErrors,
   SettingsSetManyResponses,
   SettingsSetResponses,
+  SummaryGetData,
+  SummaryGetErrors,
+  SummaryGetResponses,
   TagRulesApplyData,
   TagRulesApplyErrors,
   TagRulesApplyExistingData,
@@ -1679,6 +1682,17 @@ export const settingsResetKey = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Spend for a window and the period before it, broken down by account, month, tag and entity, with the largest charge, concentration, subscriptions and foreign spend
+ */
+export const summaryGet = <ThrowOnError extends boolean = false>(
+  options?: Options<SummaryGetData, ThrowOnError>
+): RequestResult<SummaryGetResponses, SummaryGetErrors, ThrowOnError> =>
+  (options?.client ?? client).get<SummaryGetResponses, SummaryGetErrors, ThrowOnError>({
+    url: '/summary',
+    ...options,
   });
 
 /**

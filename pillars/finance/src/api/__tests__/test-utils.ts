@@ -49,6 +49,7 @@ import type { Express } from 'express';
 
 import type { UpSyncJob } from '../../contract/rest-account-sync-schemas.js';
 import type { ChangeSet } from '../../contract/rest-corrections-schemas.js';
+import type { FinanceSummaryBody } from '../../contract/rest-summary-schemas.js';
 import type { AccountBalance, BalancePoint as BalanceHistoryPoint } from '../../db/index.js';
 import type { ImportBatch, ImportConfig } from '../modules/account-imports-types.js';
 import type { Account, AccountMergePreviewBody } from '../modules/accounts-types.js';
@@ -736,6 +737,13 @@ export function makeClient(app: Express) {
     },
     dataQuality: {
       nudges: () => call<{ data: Nudge[] }>((r) => r.get('/data-quality/nudges')),
+    },
+    summary: {
+      // The query is deliberately loose: the rejection cases send a window and
+      // a limit the contract does not accept, which a narrow type would make
+      // unwritable rather than unnecessary.
+      get: (query: { window?: string; topLimit?: number } = {}) =>
+        call<{ data: FinanceSummaryBody }>((r) => r.get('/summary').query(query)),
     },
   };
 }

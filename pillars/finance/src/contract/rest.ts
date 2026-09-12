@@ -3,7 +3,7 @@
  *
  * Composes the domain sub-routers (wishlist, budgets, accounts, checkpoints, accountImports,
  * giftCardDetails, loan, currencies, transactions, tagRules,
- * corrections, imports, dataQuality) into the public wire surface.
+ * corrections, imports, dataQuality, summary) into the public wire surface.
  * `generateOpenApi(financeContract, …)` projects this to
  * `openapi/finance.openapi.json`; `openapi-typescript` then projects the
  * JSON to `src/contract/api-types.generated.ts`.
@@ -27,6 +27,7 @@ import { financeImportsContract } from './rest-imports.js';
 import { financeLoanContract } from './rest-loan.js';
 import { financeSearchContract } from './rest-search.js';
 import { financeSettingsContract } from './rest-settings.js';
+import { financeSummaryContract } from './rest-summary.js';
 import { financeTagRulesContract } from './rest-tag-rules.js';
 import { financeTransactionsContract } from './rest-transactions.js';
 import { financeWishlistContract } from './rest-wishlist.js';
@@ -52,6 +53,7 @@ export const financeContract = c.router(
     search: financeSearchContract,
     settings: financeSettingsContract,
     dataQuality: financeDataQualityContract,
+    summary: financeSummaryContract,
   },
   {
     pathPrefix: '',

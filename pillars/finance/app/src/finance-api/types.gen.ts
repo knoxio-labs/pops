@@ -8424,6 +8424,162 @@ export type SettingsResetKeyResponses = {
 
 export type SettingsResetKeyResponse = SettingsResetKeyResponses[keyof SettingsResetKeyResponses];
 
+export type SummaryGetData = {
+  body?: never;
+  path?: never;
+  query?: {
+    window?: '30d' | '90d' | 'month' | 'year' | 'all';
+    topLimit?: number;
+  };
+  url: '/summary';
+};
+
+export type SummaryGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SummaryGetError = SummaryGetErrors[keyof SummaryGetErrors];
+
+export type SummaryGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      byAccount: Array<{
+        accountId: string;
+        accountName: string | null;
+        archived: boolean;
+        currency: string | null;
+        shareOfTotal: number | null;
+        spend: {
+          cents: number;
+          transactionCount: number;
+        };
+      }>;
+      byEntity: Array<{
+        entityId: string | null;
+        entityName: string | null;
+        shareOfTotal: number | null;
+        spend: {
+          cents: number;
+          transactionCount: number;
+        };
+      }>;
+      byMonth: Array<{
+        byAccount: Array<{
+          accountId: string;
+          spend: {
+            cents: number;
+            transactionCount: number;
+          };
+        }>;
+        month: string;
+        spend: {
+          cents: number;
+          transactionCount: number;
+        };
+      }>;
+      byTag: Array<{
+        shareOfTotal: number | null;
+        spend: {
+          cents: number;
+          transactionCount: number;
+        };
+        tag: string;
+      }>;
+      currencies: Array<string>;
+      deltaCents: number | null;
+      deltaRatio: number | null;
+      empty: boolean;
+      inference: {
+        concentration: {
+          cents: number;
+          entityCount: number;
+          shareOfTotal: number | null;
+        };
+        foreign: {
+          fees: {
+            cents: number;
+            transactionCount: number;
+          };
+          spend: {
+            cents: number;
+            transactionCount: number;
+          };
+        };
+        largestCharge: {
+          accountId: string;
+          accountName: string | null;
+          cents: number;
+          date: string;
+          description: string;
+          entityId: string | null;
+          entityName: string | null;
+          id: string;
+        } | null;
+        recurringSubscriptions: {
+          byEntity: Array<{
+            entityId: string | null;
+            entityName: string | null;
+            spend: {
+              cents: number;
+              transactionCount: number;
+            };
+          }>;
+          spend: {
+            cents: number;
+            transactionCount: number;
+          };
+          tag: string;
+        };
+      };
+      previousTotal: {
+        cents: number;
+        transactionCount: number;
+      } | null;
+      total: {
+        cents: number;
+        transactionCount: number;
+      };
+      window: {
+        end: string;
+        key: '30d' | '90d' | 'month' | 'year' | 'all';
+        previous: {
+          end: string;
+          start: string;
+        } | null;
+        start: string | null;
+      };
+    };
+  };
+};
+
+export type SummaryGetResponse = SummaryGetResponses[keyof SummaryGetResponses];
+
 export type TagRulesListData = {
   body?: never;
   path?: never;
