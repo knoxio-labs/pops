@@ -108,7 +108,7 @@ ${buildTransactionData(input)}
 Tag axes and their available values:
 ${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, SINGLE_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply in JSON only: {"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}
+Reply in JSON only: {"entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}
 
 ${ENTITY_NAME_RULES}
 
@@ -206,17 +206,26 @@ export function entryFromParsed(
 ): AiCacheEntry {
   const { tags, rejected } = validateAiTags(parsed, knownTags);
   logRejectedTagValues(rejected);
-  const confidence =
-    typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1
-      ? parsed.confidence
-      : DEFAULT_AI_CATEGORIZATION_CONFIDENCE;
+  const tagConfidence = parseConfidence(parsed['tagConfidence']);
   return {
     entityName: sanitizeEntityName(parsed.entityName ?? null),
     category: tags[0] ?? null,
     tags,
-    confidence,
+    confidence: parseConfidence(parsed.confidence) ?? DEFAULT_AI_CATEGORIZATION_CONFIDENCE,
+    ...(tagConfidence === undefined ? {} : { tagConfidence }),
     ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}),
   };
+}
+
+/**
+ * A reported confidence, or `undefined` when the reply omitted it or sent
+ * something outside `[0, 1]`. The merchant confidence falls back to a default
+ * where this is undefined; a tag confidence deliberately does not, because an
+ * absent one must read as "not pre-accept" rather than as a middling guess
+ * (POPS-3671).
+ */
+export function parseConfidence(raw: unknown): number | undefined {
+  return typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : undefined;
 }
 
 /**

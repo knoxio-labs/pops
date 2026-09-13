@@ -93,6 +93,15 @@ export const SuggestedTagSchema = z.object({
    * against the prompt that made it.
    */
   promptVersion: z.string().optional(),
+  /** The model's confidence in the tags of a `source: 'ai'` suggestion, in `[0, 1]` (POPS-3671). */
+  confidence: z.number().min(0).max(1).optional(),
+  /**
+   * Whether Tag Review may tick this suggestion for the person. `false` on an AI
+   * suggestion below the pre-accept threshold, or with no confidence at all;
+   * absent on every other source, which keeps its existing pre-accepted
+   * behaviour (POPS-3671).
+   */
+  preAccept: z.boolean().optional(),
 });
 
 export const RuleProvenanceSchema = z.object({

@@ -15,6 +15,7 @@ import { buildSuggestedTags } from './tag-management.js';
 
 import type { DerivedClassification } from '../../../contract/transaction-classification.js';
 import type { EntityLookupEntry } from '../../../db/index.js';
+import type { AiSuggestionProvenance } from '../tag-suggester/index.js';
 import type { ErrorEntry, ParsedTransaction, ProcessedTransaction, SuggestedTag } from './types.js';
 
 /**
@@ -77,8 +78,8 @@ export interface MatchedFromEntityArgs {
   entry: EntityLookupEntry;
   matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai';
   aiTags?: string[];
-  /** The prompt revision that produced `aiTags` (POPS-3677). */
-  aiPromptVersion?: string;
+  /** The prompt, confidence and pre-accept threshold behind `aiTags` (POPS-3677, POPS-3671). */
+  aiProvenance?: AiSuggestionProvenance;
   category?: string | null;
   /** Model-reported confidence, carried onto the entity for `matchType: 'ai'` only. */
   confidence?: number;
@@ -121,7 +122,7 @@ export function buildFromEntityMatch(
       entityId: args.entry.id,
       correctionTags: [],
       aiTags: args.aiTags,
-      aiPromptVersion: args.aiPromptVersion,
+      aiProvenance: args.aiProvenance,
       aiCategory: args.category ?? null,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags,
@@ -134,8 +135,8 @@ export interface UncertainFromAiArgs {
   entityName: string;
   aiTags: string[];
   aiCategory: string | null;
-  /** The prompt revision that produced `aiTags` (POPS-3677). */
-  aiPromptVersion?: string;
+  /** The prompt, confidence and pre-accept threshold behind `aiTags` (POPS-3677, POPS-3671). */
+  aiProvenance?: AiSuggestionProvenance;
   /** The model's reported confidence (0.0-1.0) that `entityName` is correct (CF037/#3655). */
   confidence: number;
   knownTags: string[];
@@ -154,7 +155,7 @@ export function buildUncertainFromAi(
       entityId: null,
       correctionTags: [],
       aiTags: args.aiTags,
-      aiPromptVersion: args.aiPromptVersion,
+      aiProvenance: args.aiProvenance,
       aiCategory: args.aiCategory,
       knownTags: args.knownTags,
     }),

@@ -79,7 +79,7 @@ ${lines}
 Tag axes and their available values:
 ${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, "entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, "entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}, ...]
 
 ${ENTITY_NAME_RULES}
 

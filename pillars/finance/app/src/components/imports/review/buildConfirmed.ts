@@ -123,9 +123,12 @@ export function buildConfirmedTransactions(
     transactionType: t.transactionType,
     entityId: t.entity?.entityId,
     entityName: t.entity?.entityName,
+    // An AI suggestion the server marked not to pre-accept is offered, not ticked (POPS-3671).
+    // Filtered before the single-valued merge, so a held-back value cannot displace a ticked one
+    // on the same facet and then be dropped, leaving the facet empty.
     tags: mergeTagsReplacingSingleValued(
       [],
-      (t.suggestedTags ?? []).map((s) => s.tag)
+      (t.suggestedTags ?? []).filter((s) => s.preAccept !== false).map((s) => s.tag)
     ),
     suggestedTags: t.suggestedTags,
     matchType: t.entity?.matchType,

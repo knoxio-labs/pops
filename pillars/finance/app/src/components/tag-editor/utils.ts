@@ -11,6 +11,10 @@ export interface TagMetaEntry {
   pattern?: string;
   /** True for an AI tag not yet in the known vocabulary. */
   isNew?: boolean;
+  /** For AI tags: the model's confidence in them, in `[0, 1]` (POPS-3671). */
+  confidence?: number;
+  /** For AI tags: `false` when the suggestion was not pre-accepted (POPS-3671). */
+  preAccept?: boolean;
 }
 
 export interface TagEditorProps {
@@ -45,6 +49,12 @@ export const SUGGESTION_LIMIT = 8;
 export function buildTagMetaMap(suggestedTags: SuggestedTag[]): Map<string, TagMetaEntry> {
   const map = new Map<string, TagMetaEntry>();
   for (const s of suggestedTags)
-    map.set(s.tag, { source: s.source, pattern: s.pattern, isNew: s.isNew });
+    map.set(s.tag, {
+      source: s.source,
+      pattern: s.pattern,
+      isNew: s.isNew,
+      confidence: s.confidence,
+      preAccept: s.preAccept,
+    });
   return map;
 }

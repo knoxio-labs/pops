@@ -16082,6 +16082,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -16090,6 +16095,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -16326,6 +16334,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -16334,6 +16347,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -16570,6 +16586,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -16578,6 +16599,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -16814,6 +16838,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -16822,6 +16851,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -17560,6 +17592,11 @@
                           "items": {
                             "additionalProperties": false,
                             "properties": {
+                              "confidence": {
+                                "maximum": 1,
+                                "minimum": 0,
+                                "type": "number"
+                              },
                               "entityScoped": {
                                 "type": "boolean"
                               },
@@ -17568,6 +17605,9 @@
                               },
                               "pattern": {
                                 "type": "string"
+                              },
+                              "preAccept": {
+                                "type": "boolean"
                               },
                               "promptVersion": {
                                 "type": "string"
@@ -18544,6 +18584,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -18552,6 +18597,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -18788,6 +18836,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -18796,6 +18849,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -19032,6 +19088,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -19040,6 +19101,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -19276,6 +19340,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -19284,6 +19353,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -19950,6 +20022,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -19958,6 +20035,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -20194,6 +20274,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -20202,6 +20287,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -20438,6 +20526,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -20446,6 +20539,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -20682,6 +20778,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -20690,6 +20791,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -21332,6 +21436,11 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
                                   "entityScoped": {
                                     "type": "boolean"
                                   },
@@ -21340,6 +21449,9 @@
                                   },
                                   "pattern": {
                                     "type": "string"
+                                  },
+                                  "preAccept": {
+                                    "type": "boolean"
                                   },
                                   "promptVersion": {
                                     "type": "string"
@@ -21576,6 +21688,11 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
                                   "entityScoped": {
                                     "type": "boolean"
                                   },
@@ -21584,6 +21701,9 @@
                                   },
                                   "pattern": {
                                     "type": "string"
+                                  },
+                                  "preAccept": {
+                                    "type": "boolean"
                                   },
                                   "promptVersion": {
                                     "type": "string"
@@ -21820,6 +21940,11 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
                                   "entityScoped": {
                                     "type": "boolean"
                                   },
@@ -21828,6 +21953,9 @@
                                   },
                                   "pattern": {
                                     "type": "string"
+                                  },
+                                  "preAccept": {
+                                    "type": "boolean"
                                   },
                                   "promptVersion": {
                                     "type": "string"
@@ -22064,6 +22192,11 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "confidence": {
+                                    "maximum": 1,
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
                                   "entityScoped": {
                                     "type": "boolean"
                                   },
@@ -22072,6 +22205,9 @@
                                   },
                                   "pattern": {
                                     "type": "string"
+                                  },
+                                  "preAccept": {
+                                    "type": "boolean"
                                   },
                                   "promptVersion": {
                                     "type": "string"
@@ -22394,6 +22530,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -22402,6 +22543,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -22638,6 +22782,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -22646,6 +22795,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -22882,6 +23034,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -22890,6 +23047,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -23126,6 +23286,11 @@
                                 "items": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "confidence": {
+                                      "maximum": 1,
+                                      "minimum": 0,
+                                      "type": "number"
+                                    },
                                     "entityScoped": {
                                       "type": "boolean"
                                     },
@@ -23134,6 +23299,9 @@
                                     },
                                     "pattern": {
                                       "type": "string"
+                                    },
+                                    "preAccept": {
+                                      "type": "boolean"
                                     },
                                     "promptVersion": {
                                       "type": "string"
@@ -23943,6 +24111,7 @@
               "enum": [
                 "finance.aiCategorizer.model",
                 "finance.aiCategorizer.maxTokens",
+                "finance.aiCategorizer.preAcceptConfidencePercent",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
                 "finance.upSync.enabled",
@@ -24066,6 +24235,7 @@
               "enum": [
                 "finance.aiCategorizer.model",
                 "finance.aiCategorizer.maxTokens",
+                "finance.aiCategorizer.preAcceptConfidencePercent",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
                 "finance.upSync.enabled",
@@ -24210,6 +24380,7 @@
               "enum": [
                 "finance.aiCategorizer.model",
                 "finance.aiCategorizer.maxTokens",
+                "finance.aiCategorizer.preAcceptConfidencePercent",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
                 "finance.upSync.enabled",
@@ -24351,6 +24522,7 @@
               "enum": [
                 "finance.aiCategorizer.model",
                 "finance.aiCategorizer.maxTokens",
+                "finance.aiCategorizer.preAcceptConfidencePercent",
                 "finance.ruleGen.model",
                 "finance.ruleGen.maxTokens",
                 "finance.upSync.enabled",
@@ -29121,6 +29293,11 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "confidence": {
+                            "maximum": 1,
+                            "minimum": 0,
+                            "type": "number"
+                          },
                           "entityScoped": {
                             "type": "boolean"
                           },
@@ -29129,6 +29306,9 @@
                           },
                           "pattern": {
                             "type": "string"
+                          },
+                          "preAccept": {
+                            "type": "boolean"
                           },
                           "promptVersion": {
                             "type": "string"

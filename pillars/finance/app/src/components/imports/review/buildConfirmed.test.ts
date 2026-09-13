@@ -131,6 +131,83 @@ describe('buildConfirmedTransactions', () => {
   });
 });
 
+describe('buildConfirmedTransactions — pre-accepting suggestions (POPS-3671)', () => {
+  it('ticks a suggestion the server allowed, and leaves one it did not unticked but offered', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:supermarket', source: 'ai', confidence: 0.92, preAccept: true },
+          { tag: 'occasion:out', source: 'ai', confidence: 0.31, preAccept: false },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:supermarket']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual([
+      'venue:supermarket',
+      'occasion:out',
+    ]);
+  });
+
+  it('still ticks a suggestion with no pre-accept decision — rule, entity, or a draft from before', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'contains:groceries', source: 'rule', pattern: 'WOOLWORTHS' },
+          { tag: 'venue:supermarket', source: 'entity' },
+          { tag: 'channel:in-person', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([
+      'contains:groceries',
+      'venue:supermarket',
+      'channel:in-person',
+    ]);
+  });
+
+  it('ticks nothing when every AI suggestion was held back', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({ suggestedTags: [{ tag: 'contains:food', source: 'ai', preAccept: false }] }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([]);
+  });
+});
+
+describe('buildConfirmedTransactions — pre-accept meets the single-valued facet limit (POPS-3671, POPS-3668)', () => {
+  it('ticks the allowed value when a held-back suggestion comes first on the same single-valued facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:club', source: 'ai', confidence: 0.3, preAccept: false },
+          { tag: 'venue:pub', source: 'rule', pattern: 'PALMS' },
+        ],
+      }),
+    ]);
+
+    // Filtering after the facet merge would let venue:club claim the facet, skip
+    // venue:pub, and then drop club: a held-back suggestion displacing a ticked one.
+    expect(confirmed?.tags).toEqual(['venue:pub']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual(['venue:club', 'venue:pub']);
+  });
+
+  it('ticks the first allowed AI value behind a held-back one on the same facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'ai', confidence: 0.2, preAccept: false },
+          { tag: 'venue:restaurant', source: 'ai', confidence: 0.9, preAccept: true },
+          { tag: 'venue:cafe', source: 'ai', confidence: 0.85, preAccept: true },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:restaurant']);
+  });
+});
+
 describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
   it('returns a dropped entity-required row instead of silently discarding it', () => {
     const droppable = matched({ transactionType: 'purchase', entity: { matchType: 'exact' } });

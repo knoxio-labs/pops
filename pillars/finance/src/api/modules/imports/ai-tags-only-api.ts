@@ -19,13 +19,14 @@ import {
   closedFacetReplyShape,
   type TagDescriptions,
 } from '../vocabulary-prompt.js';
-import { callRawApi, type ApiCallResponse } from './ai-categorizer-api.js';
+import { callRawApi, parseConfidence, type ApiCallResponse } from './ai-categorizer-api.js';
 import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
 import {
   AXIS_OPTIONALITY,
   buildMatchedTransactionData,
   PROMPT_VERSION_TAGS_ONLY,
+  tagConfidenceRule,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags, type RawTagFields } from './ai-tag-validation.js';
@@ -44,9 +45,11 @@ export interface TagsOnlyInput {
   transactionType?: string;
 }
 
-/** One row's classification. No `entityName` and no `confidence` — the merchant was given, not guessed. */
+/** One row's classification. No `entityName` — the merchant was given, not guessed. */
 export interface TagsOnlyEntry {
   tags: string[];
+  /** The model's confidence in `tags`, or absent when it gave none (POPS-3671). */
+  confidence?: number;
   /** How many returned values the closed-set validation refused (POPS-2606). Absent when nothing was refused. */
   rejectedTagValues?: number;
   /** The `PROMPT_VERSION_*` of the call that produced this entry (POPS-3677). */
@@ -71,9 +74,9 @@ export interface TagsOnlyApiCallOptions {
 }
 
 /**
- * Render the tag-only prompt. The reply shape carries the facet fields alone,
- * so a model that volunteers an `entityName` is answering a question that was
- * not asked and the field is ignored — the entity is not the model's to revise
+ * Render the tag-only prompt. The reply shape carries the facet fields and a
+ * confidence in them, so a model that volunteers an `entityName` is answering a
+ * question that was not asked and the field is ignored — the entity is not the model's to revise
  * here, and a row's merchant must not change on a tag pass.
  */
 export function buildTagsOnlyPrompt(
@@ -98,9 +101,12 @@ ${lines}
 Tag axes and their available values:
 ${closedFacetFields(facets)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
 
 ${TAGS_RULES}
+
+confidence rules:
+${tagConfidenceRule('confidence')}
 
 Return ONLY the JSON array, no markdown, no explanation.`;
 }
@@ -128,7 +134,12 @@ export function parseTagsOnlyEntries(
     if (item === null) return null;
     const { tags, rejected } = validateAiTags(item as RawTagFields, knownTags);
     logRejectedTagValues(rejected);
-    return { tags, ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}) };
+    const confidence = parseConfidence(item['confidence']);
+    return {
+      tags,
+      ...(confidence === undefined ? {} : { confidence }),
+      ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}),
+    };
   });
 }
 

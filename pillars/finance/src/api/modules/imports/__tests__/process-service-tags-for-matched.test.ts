@@ -103,8 +103,8 @@ describe('tag-only pass through processImportCore', () => {
     expect(tagsOnlyBatchWithAi.mock.calls[0]?.[0] as TagsOnlyInput[]).toHaveLength(3);
     for (const row of output.matched) {
       expect(row.suggestedTags).toEqual([
-        { tag: 'venue:supermarket', source: 'ai' },
-        { tag: 'contains:groceries', source: 'ai' },
+        { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+        { tag: 'contains:groceries', source: 'ai', preAccept: false },
       ]);
     }
     expect(output.aiUsage?.apiCalls).toBe(1);

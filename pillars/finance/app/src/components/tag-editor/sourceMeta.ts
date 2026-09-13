@@ -31,9 +31,18 @@ export interface SourceMarkerText {
 export function describeSourceMeta(t: TFunction<'finance'>, meta: TagMetaEntry): SourceMarkerText {
   const parts = [t(`tag.source.${meta.source}`)];
   if (meta.isNew) parts.push(t('tag.source.new'));
+  // Carried in words as well as a percentage, so a hesitant suggestion does not
+  // read as a confident one to anyone who cannot see a colour (POPS-3671).
+  if (meta.preAccept === false) parts.push(t('tag.source.unconfirmed'));
+  if (meta.confidence !== undefined) parts.push(`${Math.round(meta.confidence * 100)}%`);
   const visibleText = parts.join(' · ');
 
   const accessibleParts = [visibleText];
+  if (meta.confidence !== undefined) {
+    accessibleParts.push(
+      t('tag.source.confidence', { percent: Math.round(meta.confidence * 100) })
+    );
+  }
   if (meta.source === 'rule' && meta.pattern) {
     accessibleParts.push(t('tag.source.rulePattern', { pattern: meta.pattern }));
   }

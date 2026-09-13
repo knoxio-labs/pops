@@ -301,6 +301,8 @@
   "tag.source.entity": "Entidade",
   "tag.source.new": "Nova",
   "tag.source.rulePattern": "Correspondeu a \"{{pattern}}\"",
+  "tag.source.unconfirmed": "Não marcada",
+  "tag.source.confidence": "Confiança do modelo {{percent}}%",
   "rules.title": "Regras de Categorização",
   "rules.description": "Navegar e gerenciar regras de categorização por IA",
   "rules.addRule": "Adicionar Regra",

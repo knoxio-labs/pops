@@ -301,6 +301,8 @@
   "tag.source.entity": "Entity",
   "tag.source.new": "New",
   "tag.source.rulePattern": "Matched \"{{pattern}}\"",
+  "tag.source.unconfirmed": "Not ticked",
+  "tag.source.confidence": "Model confidence {{percent}}%",
   "rules.title": "Categorisation Rules",
   "rules.description": "Browse and manage AI categorisation rules",
   "rules.addRule": "Add Rule",
