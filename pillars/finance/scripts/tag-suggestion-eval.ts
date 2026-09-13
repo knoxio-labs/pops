@@ -103,30 +103,7 @@ export function facetRates(score: FacetScore): FacetRates {
   };
 }
 
-/** 32-bit FNV-1a — stable across runs and machines, which a split has to be. */
-function fnv1a(input: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash;
-}
-
-/** Share of transactions, in percent, reserved for evaluation. */
-export const HELD_OUT_PERCENT = 20;
-
-/**
- * Whether a transaction belongs to the held-out evaluation set.
- *
- * Deterministic on the id alone, so the same rows are held out on every run
- * and by every consumer: anything that shows the model prior tagging as
- * examples must exclude these rows, or the eval scores the model on answers it
- * was just shown.
- */
-export function isHeldOut(transactionId: string): boolean {
-  return fnv1a(transactionId) % 100 < HELD_OUT_PERCENT;
-}
+export { HELD_OUT_PERCENT, isHeldOut } from '../src/api/modules/imports/eval-split.js';
 
 function formatRate(value: number | null): string {
   return value === null ? 'n/a' : `${(value * 100).toFixed(1)}%`;
