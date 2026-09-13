@@ -53,7 +53,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
 
-import { entryUrlForThisLoad } from './remote-entry-url';
+import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
 
 import type { RouteObject } from 'react-router';
 
@@ -208,7 +208,10 @@ function remotePageElement(
 ): RouteObject {
   const LazyComponent = lazy(() => loadRemoteComponent(descriptor, page.bundleSlot, importer));
   const element = (
-    <ErrorBoundary fallback={() => RemoteLoadFallback}>
+    <ErrorBoundary
+      fallback={() => RemoteLoadFallback}
+      staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
+    >
       <Suspense fallback={RemoteSuspenseFallback}>
         <LazyComponent />
       </Suspense>
@@ -251,7 +254,10 @@ function remoteSlotComponent<P extends object>(
   ) as ComponentType<P>;
   return function RemoteSlot(props: P) {
     return (
-      <ErrorBoundary fallback={() => RemoteLoadFallback}>
+      <ErrorBoundary
+        fallback={() => RemoteLoadFallback}
+        staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
+      >
         <Suspense fallback={RemoteSuspenseFallback}>
           <LazySlot {...props} />
         </Suspense>
