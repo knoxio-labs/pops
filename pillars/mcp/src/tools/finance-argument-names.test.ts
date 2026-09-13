@@ -97,6 +97,7 @@ const ROUTES: readonly RouteExpectation[] = [
   { toolName: 'finance.wishlist.get', path: '/wishlist/{id}', method: 'get' },
   { toolName: 'finance.imports.getImportProgress', path: '/imports/progress', method: 'get' },
   { toolName: 'finance.search', path: '/search', method: 'post', bodyPath: ['query'] },
+  { toolName: 'finance.summary.get', path: '/summary', method: 'get' },
 ];
 
 /** `finance.entities.list` calls contacts, not finance — nothing here checks it. */

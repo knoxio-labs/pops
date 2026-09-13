@@ -10,7 +10,7 @@
     "sourceMap": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/test-helpers.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/test-helpers*.ts"],
   "references": [
     { "path": "../../libs/sdk/tsconfig.build.json" },
     { "path": "../../libs/types/tsconfig.build.json" }
