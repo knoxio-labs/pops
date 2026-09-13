@@ -33,6 +33,7 @@ function baseProps(overrides: Partial<ReviewTabBaseProps> = {}): ReviewTabBasePr
     onBulkEntitySelect: vi.fn(),
     onCreateEntityWithName: vi.fn(),
     onAcceptAiSuggestion: vi.fn(),
+    onLeaveUnassigned: vi.fn(),
     onAcceptAll: vi.fn(),
     onCreateAndAssignAll: vi.fn(),
     onEdit: vi.fn(),

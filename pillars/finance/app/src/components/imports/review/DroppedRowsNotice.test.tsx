@@ -48,7 +48,7 @@ describe('DroppedRowsNotice (POPS-3659)', () => {
     expect(listed[0]).toHaveTextContent('REFUND FROM APPLE');
     expect(listed[0]).toHaveTextContent('2026-01-15 • $139.72');
     expect(listed[0]).toHaveTextContent('needs a transaction type');
-    expect(listed[1]).toHaveTextContent('needs a merchant');
+    expect(listed[1]).toHaveTextContent('still points at a placeholder contact');
   });
 
   it('caps the named rows and counts the rest', () => {

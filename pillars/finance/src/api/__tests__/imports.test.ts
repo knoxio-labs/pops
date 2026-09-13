@@ -33,6 +33,7 @@ import {
   transactionTagRulesService,
   type OpenedFinanceDb,
 } from '../../db/index.js';
+import { transactionCountsByEntity } from '../../db/services/entity-usage.js';
 import { createImportDraft, getImportDraft } from '../../db/services/import-drafts.js';
 import { createFinanceApiApp } from '../app.js';
 import { page, stubHandle } from '../contacts/__tests__/stub-handle.js';
@@ -774,6 +775,35 @@ describe('imports.commitImport — pre-create contacts then write the finance tx
 
     const list = await c.transactions.list({ search: 'COLES SUPERMARKET' });
     expect(list.data).toHaveLength(1);
+  });
+
+  it('stores a purchase left unassigned with entity_id NULL, excluded from entity usage counts (POPS-3748)', async () => {
+    const c = client();
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({ description: 'UNKNOWN CHARGE', checksum: 'commit-no-entity' }),
+        confirmed({
+          description: 'WOOLWORTHS METRO',
+          checksum: 'commit-with-entity',
+          entityId: 'ent-woolworths',
+          entityName: 'Woolworths',
+        }),
+      ],
+    });
+
+    const row = financeDb.raw
+      .prepare('SELECT entity_id, type FROM transactions WHERE checksum = ?')
+      .get('commit-no-entity') as { entity_id: string | null; type: string };
+    expect(row.entity_id).toBeNull();
+    expect(row.type).toBe('purchase');
+
+    const counts = transactionCountsByEntity(financeDb.db);
+    expect(counts.has('ent-woolworths')).toBe(true);
+    expect(counts.get('ent-woolworths')).toBe(1);
+    // The entity-less row minted no key of its own — it is structurally
+    // absent from the rollup (`isNotNull(transactions.entityId)`), not merely
+    // zero, so a null entity can never masquerade as an orphaned real one.
+    expect([...counts.keys()]).toEqual(['ent-woolworths']);
   });
 
   it('commits against the picked accountId end-to-end, not an account that name-matches the dialect label (POPS-2852)', async () => {

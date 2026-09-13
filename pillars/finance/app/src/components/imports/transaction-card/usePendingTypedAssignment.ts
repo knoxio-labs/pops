@@ -4,7 +4,8 @@ import type { TransactionType } from '../../../lib/transaction-type';
 
 export type PendingAssignment =
   | { kind: 'select'; entityId: string; entityName: string }
-  | { kind: 'create'; entityName: string };
+  | { kind: 'create'; entityName: string }
+  | { kind: 'none' };
 
 /**
  * Holds an entity pick/create that is waiting on a required transaction type

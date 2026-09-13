@@ -33,6 +33,7 @@ function renderSection(overrides: Partial<Parameters<typeof EntitySection>[0]> =
       onEntitySelect={vi.fn()}
       onCreateEntityWithName={vi.fn()}
       onAcceptAiSuggestion={vi.fn()}
+      onLeaveUnassigned={vi.fn()}
       {...overrides}
     />
   );
@@ -145,6 +146,59 @@ describe('EntitySection — an entity the picker cannot show', () => {
 });
 
 /**
+ * POPS-3748: the review wizard cannot progress unless every purchase/refund
+ * has a merchant. "Leave unassigned" resolves the row with deliberately none.
+ */
+describe('EntitySection — leaving a row unassigned', () => {
+  function failedPurchase(): ProcessedTransaction {
+    return {
+      date: '2026-05-27',
+      description: 'UNKNOWN CHARGE',
+      amount: -18.4,
+      dialectAccountLabel: 'ANZ Everyday',
+      rawRow: '{"checksum":"unknown-1"}',
+      checksum: 'unknown-1',
+      transactionType: 'purchase',
+      entity: { matchType: 'none' },
+      status: 'failed',
+    };
+  }
+
+  it('fires the callback directly when no type is needed (a debit)', async () => {
+    const user = userEvent.setup();
+    const onLeaveUnassigned = vi.fn();
+    renderSection({ transaction: failedPurchase(), onLeaveUnassigned });
+
+    await user.click(screen.getByRole('button', { name: /leave unassigned/i }));
+
+    expect(onLeaveUnassigned).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: 'unknown-1' })
+    );
+    expect(screen.queryByRole('group', { name: /transaction type required/i })).toBeNull();
+  });
+
+  it('does not render the action when no handler is given', () => {
+    renderSection({ transaction: failedPurchase(), onLeaveUnassigned: undefined });
+
+    expect(screen.queryByRole('button', { name: /leave unassigned/i })).not.toBeInTheDocument();
+  });
+
+  it('says a matched row was left unassigned on purpose, not merely unresolved', () => {
+    renderSection({
+      transaction: { ...failedPurchase(), status: 'matched' },
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent(/unassigned/i);
+  });
+
+  it('stays quiet about "unassigned" for a row still awaiting resolution', () => {
+    renderSection({ transaction: failedPurchase() });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+/**
  * POPS-2754/manual-entity-pick gap: `moveOneToMatched` never wrote a
  * `transactionType`, so a credit assigned through this picker stayed
  * "Untyped" forever and was silently excluded from import. The picker now
@@ -212,6 +266,28 @@ describe('EntitySection — forcing a type on an untyped credit', () => {
     expect(
       screen.queryByRole('group', { name: /transaction type required/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('forces a type before leaving an untyped credit unassigned', async () => {
+    const user = userEvent.setup();
+    const onLeaveUnassigned = vi.fn();
+    renderSection({ transaction: untypedCredit(), onLeaveUnassigned });
+
+    await user.click(screen.getByRole('button', { name: /leave unassigned/i }));
+
+    expect(onLeaveUnassigned).not.toHaveBeenCalled();
+    expect(screen.getByRole('group', { name: /transaction type required/i })).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /transaction type/i }),
+      'transfer'
+    );
+    await user.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(onLeaveUnassigned).toHaveBeenCalledWith(
+      expect.objectContaining({ checksum: 'credit-1' }),
+      'transfer'
+    );
   });
 
   it('also forces a type when creating a new entity for an untyped credit', async () => {

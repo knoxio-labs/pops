@@ -8,8 +8,8 @@ import type { DropReason } from './buildConfirmed';
  */
 export const dropReasonCopy: Record<DropReason, { label: string; remedy: string }> = {
   entity: {
-    label: 'needs a merchant',
-    remedy: 'assign a merchant entity, or change the type to a non-merchant one',
+    label: 'still points at a placeholder contact',
+    remedy: 'replace the placeholder with a real merchant, or leave the row unassigned',
   },
   type: {
     label: 'needs a transaction type',

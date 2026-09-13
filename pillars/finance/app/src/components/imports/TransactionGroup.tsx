@@ -40,6 +40,7 @@ interface TransactionGroupProps {
     transactionType?: TransactionType
   ) => void;
   onAcceptAiSuggestion: (transaction: ProcessedTransaction) => void;
+  onLeaveUnassigned: (transaction: ProcessedTransaction, transactionType?: TransactionType) => void;
   onEdit: (transaction: ProcessedTransaction) => void;
   editingTransaction?: ProcessedTransaction | null;
   onSaveEdit?: (
@@ -60,6 +61,7 @@ interface TransactionListProps {
   onEntitySelect: TransactionGroupProps['onEntitySelect'];
   onCreateEntityWithName: TransactionGroupProps['onCreateEntityWithName'];
   onAcceptAiSuggestion: TransactionGroupProps['onAcceptAiSuggestion'];
+  onLeaveUnassigned: TransactionGroupProps['onLeaveUnassigned'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
   entityVerification: EntityVerification;
@@ -94,6 +96,7 @@ function TransactionList(props: TransactionListProps) {
             onEntitySelect={props.onEntitySelect}
             onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
+            onLeaveUnassigned={props.onLeaveUnassigned}
             onEdit={props.onEdit}
             entities={entities}
             entityVerification={entityVerification}
@@ -138,6 +141,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
             onBulkEntitySelect={props.onBulkEntitySelect}
             onEntitySelect={props.onEntitySelect}
             onCreateAndAssignAll={props.onCreateAndAssignAll}
+            onLeaveUnassigned={props.onLeaveUnassigned}
             onClose={() => setShowEntitySelector(false)}
           />
         )}
@@ -150,6 +154,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
             onEntitySelect={props.onEntitySelect}
             onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
+            onLeaveUnassigned={props.onLeaveUnassigned}
             onEdit={props.onEdit}
             entities={entities}
             entityVerification={entityVerification}

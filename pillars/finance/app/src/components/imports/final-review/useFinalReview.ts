@@ -75,6 +75,10 @@ function useDerivedCounts(
       manual: processedTransactions.failed.length,
       skipped: processedTransactions.skipped.length,
       total: confirmedTransactions.length,
+      // Rows committing with no merchant — left unassigned, or matched to
+      // none for an entity-optional type (POPS-3748). Not a problem to fix,
+      // just a count worth seeing before the commit.
+      noMerchant: confirmedTransactions.filter((t) => !t.entityId).length,
     }),
     [processedTransactions, confirmedTransactions]
   );

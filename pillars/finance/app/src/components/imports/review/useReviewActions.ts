@@ -23,9 +23,10 @@ type GenerateProposal = (args: {
 
 export interface MoveArgs {
   transaction: ProcessedTransaction;
-  entityId: string;
-  entityName: string;
-  matchType: 'manual' | 'ai';
+  /** Omitted together with `entityName` for `matchType: 'none'` — the row is left with no merchant (POPS-3748). */
+  entityId?: string;
+  entityName?: string;
+  matchType: 'manual' | 'ai' | 'none';
   /**
    * A type chosen alongside this entity assignment (the inline picker's
    * forced-type prompt, for a row that needed one). Falls back to whatever
@@ -36,8 +37,9 @@ export interface MoveArgs {
 }
 
 /**
- * Move a transaction into the `matched` bucket with the chosen entity, removing
- * any prior copy of it from every bucket first.
+ * Move a transaction into the `matched` bucket with the chosen entity — or
+ * with none at all, for `matchType: 'none'` (POPS-3748's "leave unassigned") —
+ * removing any prior copy of it from every bucket first.
  *
  * Thin wrapper around the canonical `replaceByChecksum` identity (#3590/#3620):
  * any prior copy of the checksum is dropped from every bucket — including
@@ -57,7 +59,7 @@ export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxSta
   const { transaction, entityId, entityName, matchType, transactionType } = args;
   return replaceByChecksum(prev, transaction.checksum, 'matched', () => ({
     ...transaction,
-    entity: { entityId, entityName, matchType, confidence: 1 },
+    entity: { entityId, entityName, matchType, confidence: matchType === 'none' ? undefined : 1 },
     status: 'matched' as const,
     transactionType: transactionType ?? transaction.transactionType,
     error: undefined,
@@ -189,8 +191,34 @@ function useHandleEntitySelect({
   );
 }
 
+/**
+ * Resolve a row with deliberately no merchant (POPS-3748): the row moves to
+ * `matched` exactly like an entity pick does, just with `entityId`/`entityName`
+ * left off and `matchType: 'none'` recorded instead of `'manual'`/`'ai'` — the
+ * same provenance value an entity-optional type (a transfer, say) already
+ * carries, and the value `buildConfirmed`'s commit filter and the draft
+ * write-through already round-trip without a new field.
+ *
+ * A credit still forces the type choice first — `EntitySection` routes here
+ * through the same pending-assignment machinery as an entity pick, so leaving
+ * a credit unassigned can never skip `needsTransactionType`.
+ */
+function useHandleLeaveUnassigned({
+  setLocalTransactions,
+}: Pick<UseReviewActionsArgs, 'setLocalTransactions'>) {
+  return useCallback(
+    (transaction: ProcessedTransaction, transactionType?: TransactionType) => {
+      setLocalTransactions((prev) =>
+        moveOneToMatched(prev, { transaction, matchType: 'none', transactionType })
+      );
+    },
+    [setLocalTransactions]
+  );
+}
+
 export function useReviewActions(args: UseReviewActionsArgs) {
   const handleBulkEntitySelect = useHandleBulkEntitySelect(args);
   const handleEntitySelect = useHandleEntitySelect(args);
-  return { handleBulkEntitySelect, handleEntitySelect };
+  const handleLeaveUnassigned = useHandleLeaveUnassigned(args);
+  return { handleBulkEntitySelect, handleEntitySelect, handleLeaveUnassigned };
 }
