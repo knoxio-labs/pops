@@ -26,7 +26,7 @@ function baseProps(overrides: Partial<ReviewTabBaseProps> = {}): ReviewTabBasePr
   const transactions = [aiSuggestedTx()];
   return {
     transactions,
-    groups: groupTransactionsByEntity(transactions, 'size'),
+    groups: groupTransactionsByEntity(transactions, 'name'),
     viewMode: 'list',
     onViewModeChange: vi.fn(),
     onEntitySelect: vi.fn(),

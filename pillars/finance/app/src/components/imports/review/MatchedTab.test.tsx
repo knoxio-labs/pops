@@ -35,7 +35,7 @@ function matchedRows(count: number, entities: string[]): ProcessedTransaction[] 
 function renderTab(transactions: ProcessedTransaction[], overrides: Partial<MatchedTabProps> = {}) {
   const props: MatchedTabProps = {
     transactions,
-    groups: groupTransactionsByEntity(transactions, 'size'),
+    groups: groupTransactionsByEntity(transactions, 'name'),
     viewMode: 'grouped',
     onViewModeChange: vi.fn(),
     onEntitySelect: vi.fn(),
@@ -60,7 +60,7 @@ function renderTab(transactions: ProcessedTransaction[], overrides: Partial<Matc
 }
 
 describe('MatchedTab (POPS-2448)', () => {
-  it('groups by entity with a count per group, largest first, and collapsed', () => {
+  it('groups by entity with a count per group, alphabetical by name, and collapsed', () => {
     const rows = [
       ...matchedRows(5, ['Woolworths']),
       ...matchedRows(2, ['Coles']),
@@ -70,11 +70,11 @@ describe('MatchedTab (POPS-2448)', () => {
 
     const groups = screen.getAllByTestId('transaction-group');
     expect(groups.map((g) => within(g).getByRole('heading').textContent)).toEqual([
-      'Woolworths',
       'Bunnings',
       'Coles',
+      'Woolworths',
     ]);
-    expect(within(groups[0] as HTMLElement).getByText('5 transactions')).toBeInTheDocument();
+    expect(within(groups[2] as HTMLElement).getByText('5 transactions')).toBeInTheDocument();
     expect(screen.queryAllByTestId('transaction-card')).toHaveLength(0);
   });
 
@@ -90,20 +90,20 @@ describe('MatchedTab (POPS-2448)', () => {
     expect(screen.getAllByTestId('transaction-card')).toHaveLength(40);
   });
 
-  it('keeps the largest group first even when a smaller one was matched by the AI', () => {
+  it('keeps alphabetical order even when a later group was matched by the AI', () => {
     const rows = [
-      ...matchedRows(1, ['Coles']).map((t) => ({
+      ...matchedRows(4, ['Coles']),
+      ...matchedRows(1, ['Woolworths']).map((t) => ({
         ...t,
         entity: { ...t.entity, matchType: 'ai' as const },
       })),
-      ...matchedRows(4, ['Woolworths']),
     ];
     renderTab(rows);
 
     const groups = screen.getAllByTestId('transaction-group');
     expect(groups.map((g) => within(g).getByRole('heading').textContent)).toEqual([
-      'Woolworths',
       'Coles',
+      'Woolworths',
     ]);
   });
 
