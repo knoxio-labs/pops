@@ -59,7 +59,7 @@ internal struct AccountRowRenderingTests {
         let once = try #require(Self.render(Self.row(named: Self.firstName), at: .large))
         let again = try #require(Self.render(Self.row(named: Self.firstName), at: .large))
 
-        #expect(once == again)
+        #expect(RenderedPixels.drawTheSame(once, again))
     }
 
     /// The control for the accessibility-size test below: at the default size

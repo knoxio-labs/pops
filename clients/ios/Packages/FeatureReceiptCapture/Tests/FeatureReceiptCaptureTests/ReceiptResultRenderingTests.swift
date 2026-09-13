@@ -63,7 +63,7 @@ internal struct ReceiptResultRenderingTests {
         let once = try #require(Self.render(Self.card(outcome)))
         let again = try #require(Self.render(Self.card(outcome)))
 
-        #expect(once == again)
+        #expect(RenderedPixels.drawTheSame(once, again))
     }
 
     /// The three outcomes must look distinct from one another, not merely say

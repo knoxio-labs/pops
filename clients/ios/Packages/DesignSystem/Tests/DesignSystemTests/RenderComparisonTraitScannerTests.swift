@@ -174,6 +174,42 @@ internal struct RenderComparisonTraitScannerTests {
         #expect(Self.violations(source) == ["rendersDeterministically"])
     }
 
+    /// The same check written the way the tree now writes it, because renders
+    /// are not byte-stable. It carries no `==` for the scan to find, so
+    /// without this it would leave the rule silently.
+    @Test("a determinism check through RenderedPixels with no trait is caught")
+    func anUndeclaredTolerantDeterminismCheckIsCaught() {
+        let source = RenderComparisonTraitFixtures.suite(
+            """
+                @Test("renders the same way twice")
+                func rendersDeterministically() throws {
+                    let once = try #require(render(view))
+                    let again = try #require(render(view))
+                    #expect(RenderedPixels.drawTheSame(once, again))
+                }
+            """)
+
+        #expect(Self.violations(source) == ["rendersDeterministically"])
+        #expect(Self.reasons(source) == [.undeclared])
+    }
+
+    /// And it is an equality, so the opt-out is no answer to it either.
+    @Test("a determinism check through RenderedPixels cannot answer with the opt-out")
+    func aTolerantDeterminismOptOutIsCaught() {
+        let source = RenderComparisonTraitFixtures.suite(
+            """
+                @Test("renders the same way twice", .comparisonSurvivesAnUncompiledCatalog)
+                func rendersDeterministically() throws {
+                    let once = try #require(render(view))
+                    let again = try #require(render(view))
+                    #expect(RenderedPixels.drawTheSame(once, again))
+                }
+            """)
+
+        #expect(Self.violations(source) == ["rendersDeterministically"])
+        #expect(Self.reasons(source) == [.optedOutOfAnEqualityOnlyComparison])
+    }
+
     /// The comparison hidden one call deep, in a helper of the suite's own.
     @Test("a comparison moved into a helper is still the calling test's to declare")
     func aComparisonBehindAHelperIsCaught() {

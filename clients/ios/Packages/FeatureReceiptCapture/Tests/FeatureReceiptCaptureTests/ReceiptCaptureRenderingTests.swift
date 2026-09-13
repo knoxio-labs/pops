@@ -82,7 +82,7 @@ internal struct ReceiptCaptureRenderingTests {
         let once = try #require(Self.render(Self.prompt(access: .authorized)))
         let again = try #require(Self.render(Self.prompt(access: .authorized)))
 
-        #expect(once == again)
+        #expect(RenderedPixels.drawTheSame(once, again))
     }
 
     /// The canvas is not blank. Every comparison below is between two renders
