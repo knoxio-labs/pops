@@ -310,13 +310,33 @@ export function hasTagValue(tags: string[], facet: string, value: string): boole
   });
 }
 
+function foldSeparators(text: string): string {
+  return text.replace(/[-_]+/g, ' ');
+}
+
+const NO_MATCH = 4;
+
+function suggestionRank(raw: string, needle: string, looseNeedle: string): number {
+  const value = foldSeparators(parseTag(raw).value.toLowerCase());
+  if (value.startsWith(looseNeedle)) return 0;
+  const lowerRaw = raw.toLowerCase();
+  if (lowerRaw.startsWith(needle)) return 1;
+  if (value.includes(looseNeedle)) return 2;
+  if (lowerRaw.includes(needle)) return 3;
+  return NO_MATCH;
+}
+
 /**
  * Rank a vocabulary against what the user has typed, for autocomplete.
  *
- * Prefix matches come before substring matches, and already-selected tags
- * never appear. An empty input ranks nothing and returns the unselected
- * vocabulary in its given order. The result is uncapped: how many entries a
- * picker shows is its own layout decision.
+ * What someone types is the value they can see on a chip (`food`), not the
+ * stored string (`contains:food`), so the value is matched first and its
+ * prefix matches outrank everything else; the raw string is matched after it
+ * so typing an axis (`venue`) still lists that axis. Separators are folded to
+ * spaces on both sides, letting `fast f` reach `contains:fast-food`.
+ * Already-selected tags never appear. An empty input ranks nothing and
+ * returns the unselected vocabulary in its given order. The result is
+ * uncapped: how many entries a picker shows is its own layout decision.
  */
 export function rankTagSuggestions(
   input: string,
@@ -325,13 +345,11 @@ export function rankTagSuggestions(
 ): string[] {
   const unselected = availableTags.filter((tag) => !selectedTags.includes(tag));
   if (input === '') return unselected;
-  const lower = input.toLowerCase();
-  const startsWith: string[] = [];
-  const contains: string[] = [];
-  for (const tag of unselected) {
-    const tagLower = tag.toLowerCase();
-    if (tagLower.startsWith(lower)) startsWith.push(tag);
-    else if (tagLower.includes(lower)) contains.push(tag);
-  }
-  return [...startsWith, ...contains];
+  const needle = input.toLowerCase();
+  const looseNeedle = foldSeparators(needle);
+  return unselected
+    .map((tag) => ({ tag, rank: suggestionRank(tag, needle, looseNeedle) }))
+    .filter(({ rank }) => rank !== NO_MATCH)
+    .toSorted((a, b) => a.rank - b.rank)
+    .map(({ tag }) => tag);
 }

@@ -236,10 +236,30 @@ describe('rankTagSuggestions', () => {
   });
 
   it('ranks prefix matches ahead of substring matches', () => {
-    expect(rankTagSuggestions('ca', ['venue:cafe', 'cafeteria', 'candy'], [])).toEqual([
+    expect(rankTagSuggestions('ca', ['cafeteria', 'scandal', 'candy'], [])).toEqual([
       'cafeteria',
       'candy',
-      'venue:cafe',
+      'scandal',
+    ]);
+  });
+
+  it('matches the value a chip shows, not the stored facet prefix', () => {
+    expect(rankTagSuggestions('food', ['contains:fast-food', 'contains:food'], [])).toEqual([
+      'contains:food',
+      'contains:fast-food',
+    ]);
+  });
+
+  it('ranks a value prefix ahead of a facet prefix', () => {
+    expect(rankTagSuggestions('ven', ['venue:bar', 'occasion:vending'], [])).toEqual([
+      'occasion:vending',
+      'venue:bar',
+    ]);
+  });
+
+  it('folds hyphens so a typed space reaches a hyphenated value', () => {
+    expect(rankTagSuggestions('fast f', ['contains:fast-food'], [])).toEqual([
+      'contains:fast-food',
     ]);
   });
 
