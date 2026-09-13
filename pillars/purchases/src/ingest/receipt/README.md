@@ -303,6 +303,18 @@ created, dated from the upload, and tagged `date-uncertain`, because losing
 a shop that happened is worse than carrying an inferred date the tag stops
 anyone mistaking for a stated one.
 
+A receipt that states no **currency** is handled the same way, in
+`purchase.ts`. The model returns `null` when it cannot read one, and that
+is never turned into a stated currency by assuming the fleet's home
+currency — the pipeline is not single-currency any more (POPS-3565). The
+timezone the model already infers from the printed address decides it when
+it names a zone this pipeline recognises (an `Australia/*` zone still
+resolves to `AUD`, a Brazilian one to `BRL`); an unrecognised or absent
+zone leaves it genuinely unresolved, recorded as `XXX` — ISO 4217's own
+code for "no currency stated" rather than a fallback wearing a currency's
+clothes. Either way the purchase is tagged `currency-uncertain`, so an
+inferred or unresolved currency is never mistaken for a transcribed one.
+
 Re-uploading the same file is a `409`, because `sourceOrderId` is its
 SHA-256. The check happens **before the model is asked** — the hash is
 known the moment the bytes are stored, so a duplicate costs nothing rather
