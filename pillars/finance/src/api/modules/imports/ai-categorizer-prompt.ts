@@ -76,6 +76,17 @@ export const ENTITY_NAME_RULES = `entityName rules:
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.`;
 
+/**
+ * Stated in each prompt's opening, before the transaction and the axis list
+ * (POPS-3667). It used to live only at the tail of {@link TAGS_RULES}, after an
+ * opening that told the model to classify on every axis, and the opening won:
+ * a crypto wallet top-up came back `occasion:out + contains:food +
+ * venue:takeaway + channel:in-person`, the head of each usage-ranked list, where
+ * the true answer on every offered axis was null.
+ */
+export const AXIS_OPTIONALITY =
+  'Classify on an axis only where a listed value is actually true of the transaction. Leave every other axis null (or [] for a list axis): an empty axis is a correct answer, not a gap to fill.';
+
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.
 - Where a value is followed by a description, that description is its definition. Classify against it, not against what the word suggests on its own.

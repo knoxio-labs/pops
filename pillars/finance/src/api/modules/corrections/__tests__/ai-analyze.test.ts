@@ -164,8 +164,8 @@ describe('buildGeneratePrompt — few-shot grounding', () => {
   it('presents the vocabulary per facet with its cardinality, not as a flat list', () => {
     const prompt = buildGeneratePrompt(txns, VOCAB);
 
-    expect(prompt).toContain('- venue: exactly one of [supermarket]');
-    expect(prompt).toContain('- occasion: exactly one of [home, out]');
+    expect(prompt).toContain('- venue: at most one of [supermarket]');
+    expect(prompt).toContain('- occasion: at most one of [home, out]');
     expect(prompt).toContain('- contains: any of [groceries]');
     expect(prompt).not.toContain('Available tags:');
   });

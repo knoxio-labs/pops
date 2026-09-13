@@ -105,7 +105,7 @@ Return a JSON array; each rule: {"descriptionPattern":"...","matchType":"exact|c
 tag rules:
 - Every tag must be one of the \`facet:value\` combinations listed above, written exactly as listed. A value that is not listed is not available — do NOT invent one, coin a near-synonym, or move a value to a different facet.
 - Where a value is followed by a description, that description is its definition. Propose against it, not against what the word suggests on its own.
-- A rule asserting "exactly one of" may carry at most one value from that axis; a rule that would need two is two rules or neither.
+- A rule may carry at most one value from an "at most one of" axis; a rule that would need two is two rules or neither.
 - Assert only what the pattern itself guarantees. A rule fires on every future transaction matching it with nobody in the loop, so a tag that is merely usually true is a tag that will be wrong on a row nobody looks at. Fewer tags is a better rule.
 Return ONLY the JSON array, no markdown.`;
 }

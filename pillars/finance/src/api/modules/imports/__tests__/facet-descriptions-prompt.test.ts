@@ -47,7 +47,7 @@ describe('closedFacetOptions', () => {
 describe('closedFacetFields', () => {
   it('renders a facet with no described value in the compact bracketed form', () => {
     expect(render(new Map())).toBe(
-      '- occasion: exactly one of [home, out]\n- channel: exactly one of [online, in-person]'
+      '- occasion: at most one of [home, out]\n- channel: at most one of [online, in-person]'
     );
   });
 
@@ -56,10 +56,10 @@ describe('closedFacetFields', () => {
 
     expect(rendered).toBe(
       [
-        '- occasion: exactly one of',
+        '- occasion: at most one of',
         '    - home: The dwelling itself.',
         '    - out',
-        '- channel: exactly one of [online, in-person]',
+        '- channel: at most one of [online, in-person]',
       ].join('\n')
     );
   });

@@ -20,6 +20,7 @@ import {
 } from './ai-categorizer-api.js';
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
+  AXIS_OPTIONALITY,
   buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
@@ -69,7 +70,9 @@ export function buildBatchPrompt(
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
 
-  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify EACH one on every tag axis below.
+  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify each one on the tag axes below.
+
+${AXIS_OPTIONALITY}
 
 ${lines}
 
