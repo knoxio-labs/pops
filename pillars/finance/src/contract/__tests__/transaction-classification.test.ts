@@ -28,8 +28,21 @@ describe('classifyFromDescription — fees', () => {
     ['CASH ADVANCE FEE', 'fee:atm'],
     ['CASH ADVANCE INTEREST', 'fee:interest'],
     ['CARD SURCHARGE', 'fee:surcharge'],
+    ['ACCOUNT SERVICING FEE MINIMUM $2000 IN DEPOSITS NOT RECEIVED', 'fee:account-keeping'],
+    ['ACCOUNT KEEPING FEE', 'fee:account-keeping'],
   ])('%s is a fee tagged %s', (description, tag) => {
     expect(classifyFromDescription(description)).toMatchObject({ type: 'fee', tag });
+  });
+
+  // The credit that undoes the charge is typed the same as the debit, so the
+  // two net out in a fee report — no reversal special-case, the same
+  // convention every other fee pattern here follows (unlike the ATM-withdrawal
+  // override just above, which is specific to that one descriptor shape).
+  it('types the reversal credit the same as the charge, so totals net', () => {
+    expect(classifyFromDescription('REVERSAL OF ACCOUNT SERVICING FEE')).toMatchObject({
+      type: 'fee',
+      tag: 'fee:account-keeping',
+    });
   });
 
   it('matches regardless of case, digits and punctuation in the descriptor', () => {
@@ -50,6 +63,7 @@ describe('classifyFromDescription — fees', () => {
     'WOOLWORTHS METRO 1234',
     'ATM CBA GEORGE ST',
     'INTEREST FREE FURNITURE PTY LTD',
+    'ACCOUNT SUPPLIES WAREHOUSE',
   ])('does not type an ordinary merchant: %s', (description) => {
     expect(classifyFromDescription(description)).toBeNull();
   });
