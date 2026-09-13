@@ -13,7 +13,7 @@
  */
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
-import { tagVocabulary } from '../schema.js';
+import { tagVocabulary, transactions } from '../schema.js';
 import { CLASSIFIED_TAG_FACETS, parseTagFacet, tagFacetKind } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
@@ -283,4 +283,53 @@ export function loadKnownTagSet(db: FinanceDb): KnownTagSet {
 /** Whether one tag is in the active vocabulary. Prefer {@link loadKnownTagSet} in a loop. */
 export function isKnownTag(db: FinanceDb, tag: string): boolean {
   return loadKnownTagSet(db).has(tag);
+}
+
+/** One active vocabulary row whose maintained count disagrees with the ledger. */
+export interface VocabularyUsageDrift {
+  tag: string;
+  usageCount: number;
+  actual: number;
+}
+
+/**
+ * Active vocabulary rows whose `usage_count` disagrees with the number of
+ * transactions that actually carry the tag, empty when every count is
+ * consistent.
+ *
+ * `usage_count` is {@link applyVocabularyUsageDelta}'s running total, and a
+ * hand-kept counter drifts the moment one writer of `transactions.tags`
+ * forgets to touch it — twice already, corrected by migrations 0102 and 0114
+ * rather than caught in the moment. This is the standing check migration
+ * 0114's one-off recount should have had from the start: it reports every
+ * drift it finds (never repairs one), so `/health` can surface it as an
+ * unattended ops signal instead of the next drift going unnoticed until
+ * someone happens to re-run the recount SQL by hand.
+ *
+ * `COUNT(DISTINCT r.id)` matches {@link applyVocabularyUsageDelta}'s
+ * `Set`-based accounting: a row carrying the same tag twice — malformed input
+ * or an un-deduped merge — counts once, the same as the maintained column
+ * would after a normal write. Retired (`is_active = 0`) rows are excluded:
+ * nothing keeps a retired tag's count in step once it stops being written, so
+ * comparing it would just report the moment it was retired as permanent
+ * drift.
+ *
+ * One correlated subquery per active vocabulary row — active rows are a small
+ * fraction of the table and `/health` is polled often, so this stays cheap
+ * without an index; `transactions.tags` is filtered by `json_each` rather than
+ * indexed, so an index on `tag_vocabulary` alone would not help. Revisit only
+ * if a profiled `/health` call shows this query as the cost, not before.
+ */
+export function findVocabularyUsageDrift(db: FinanceDb): VocabularyUsageDrift[] {
+  return db.all<VocabularyUsageDrift>(sql`
+    SELECT tag, usageCount, actual FROM (
+      SELECT ${tagVocabulary.tag} AS tag, ${tagVocabulary.usageCount} AS usageCount,
+        (SELECT COUNT(DISTINCT r.id) FROM ${transactions} r, json_each(r.tags) je
+          WHERE je.value = ${tagVocabulary.tag}) AS actual
+      FROM ${tagVocabulary}
+      WHERE ${tagVocabulary.isActive} = 1
+    )
+    WHERE usageCount <> actual
+    ORDER BY tag
+  `);
 }

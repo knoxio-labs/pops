@@ -5,6 +5,7 @@
  * shape directly without booting Express.
  */
 import { entityPrecreateOutboxService } from '../db/index.js';
+import { findVocabularyUsageDrift } from '../db/services/tag-vocabulary.js';
 import { getLastImportInfo } from '../db/services/transactions-reads.js';
 import { getPillarRegistry } from './pillars/registry.js';
 import { resolveServiceAccountKey } from './pillars/service-account.js';
@@ -81,6 +82,20 @@ export interface HealthResponse {
       deadLettered: number;
     };
   };
+  vocabulary: {
+    /**
+     * Active vocabulary rows whose `usage_count` disagrees with the
+     * transactions carrying the tag. Empty when consistent.
+     *
+     * Same shape of ops signal as `contacts`: `usage_count` has drifted from
+     * the ledger before, each time caught by a one-off recount migration
+     * (0102, 0114) rather than something that runs on its own. `ok` stays
+     * `true` on a nonempty list — the categorizer still serves
+     * requests with a mis-ranked vocabulary, and the healthcheck must not
+     * restart-loop over a data problem a restart cannot fix.
+     */
+    usageDrift: { tag: string; usageCount: number; actual: number }[];
+  };
 }
 
 export interface PillarsResponse {
@@ -115,6 +130,9 @@ export function makeRequestHandler(deps: FinanceApiDeps): {
         contacts: {
           serviceAccountKey: resolveServiceAccountKey() === undefined ? 'missing' : 'present',
           outbox: { pending: outbox.pending, deadLettered: outbox.failed },
+        },
+        vocabulary: {
+          usageDrift: findVocabularyUsageDrift(deps.financeDb.db),
         },
       };
     },
