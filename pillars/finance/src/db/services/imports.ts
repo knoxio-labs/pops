@@ -137,9 +137,10 @@ export function insertImportTransaction(
   // assumed safe. The automatic classifier will not produce one — a credit
   // whose entity resolves is left `uncertain` with no defaulted type — but the
   // type a commit carries can also come from the review wizard, which is where
-  // POPS-2680's rows came from. Throwing rolls the whole commit back, which is
-  // the point: a batch is atomic, so the alternative is storing the bad row
-  // alongside the good ones and finding it months later by migration.
+  // POPS-2680's rows came from. Throwing refuses this row only: the commit's
+  // `writeTransactionsPhase` catches it per row, records it in `failedDetails`
+  // and commits the rest of the batch, so the bad row is reported at commit
+  // instead of being stored and found months later by migration.
   if (isPositiveAmountPurchase(input.amountCents, input.type)) {
     throw new PositiveAmountPurchaseError(input.amountCents);
   }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { useImportStore } from '../../../store/importStore';
 import { useTagRuleAddCollisions } from '../final-review/useTagRuleAddCollisions';
+import { useTagFacets } from '../tag-review/useTagTaxonomy';
 import { useRefusedProposals } from './refused-proposals';
 import {
   batchRuleTempIds,
@@ -24,18 +25,25 @@ export function useRuleProposals() {
   const removePendingTagRuleChangeSet = useImportStore((s) => s.removePendingTagRuleChangeSet);
   const nextStep = useImportStore((s) => s.nextStep);
   const prevStep = useImportStore((s) => s.prevStep);
+  const facets = useTagFacets();
   const proposals = useMemo(
-    () => computeProposals(confirmedTransactions, staged),
-    [confirmedTransactions, staged]
+    () => computeProposals(confirmedTransactions, staged, facets),
+    [confirmedTransactions, staged, facets]
   );
   const refusedById = useRefusedProposals(proposals);
   const collisions = useTagRuleAddCollisions(proposals.map((proposal) => buildChangeSet(proposal)));
   const [checked, setChecked] = useState<Set<string>>(
     () => new Set(previouslyStagedProposalIds(proposals, staged))
   );
-  const [prevProposals, setPrevProposals] = useState(proposals);
-  if (proposals !== prevProposals) {
-    setPrevProposals(proposals);
+  // Keyed on content, not identity: the taxonomy query resolving rebuilds the
+  // array without changing what is proposed, and must not untick a choice.
+  const proposalsKey = useMemo(
+    () => JSON.stringify(proposals.map((p) => [p.entityId, p.pattern, p.tags, p.sourceChecksums])),
+    [proposals]
+  );
+  const [prevProposalsKey, setPrevProposalsKey] = useState(proposalsKey);
+  if (proposalsKey !== prevProposalsKey) {
+    setPrevProposalsKey(proposalsKey);
     setChecked(new Set(previouslyStagedProposalIds(proposals, staged)));
   }
 

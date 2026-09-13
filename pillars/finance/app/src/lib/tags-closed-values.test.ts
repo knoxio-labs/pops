@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { closedValuesOutsideVocabulary, type TagFacetOption } from './tags';
+import { closedValuesOutsideVocabulary, withoutMarkerTags, type TagFacetOption } from './tags';
 
 const facets: TagFacetOption[] = [
   { facet: 'venue', kind: 'closed' },
@@ -53,5 +53,22 @@ describe('closedValuesOutsideVocabulary', () => {
 
   it('refuses nothing it cannot judge: with no taxonomy loaded, no axis is closed', () => {
     expect(closedValuesOutsideVocabulary(['venue:speakeasy'], [], vocabulary)).toEqual([]);
+  });
+});
+
+describe('withoutMarkerTags', () => {
+  it('drops marker-axis values and keeps every other tag in order (POPS-3704)', () => {
+    expect(
+      withoutMarkerTags(
+        ['venue:pub', 'flag:needs-review', 'trip:cairns-2026', 'Groceries', 'mood:cheerful'],
+        facets
+      )
+    ).toEqual(['venue:pub', 'trip:cairns-2026', 'Groceries', 'mood:cheerful']);
+  });
+
+  it('drops a marker value whatever its casing and padding, as the server compares it', () => {
+    expect(withoutMarkerTags([' FLAG:needs-review ', 'Flag:x', 'venue:pub'], facets)).toEqual([
+      'venue:pub',
+    ]);
   });
 });

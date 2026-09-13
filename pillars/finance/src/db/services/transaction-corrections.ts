@@ -20,6 +20,7 @@ import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
 import { transactionCorrections } from '../schema.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
+import { assertEntityIdNotPlaceholder } from './tag-rule-write-guards.js';
 import {
   buildCorrectionUpdates,
   isTagsOnlyCorrectionInput,
@@ -207,6 +208,7 @@ export function createOrUpdateTransactionCorrection(
   db: FinanceDb,
   input: CreateTransactionCorrectionInput
 ): TransactionCorrectionRow {
+  assertEntityIdNotPlaceholder(input.entityId);
   const normalized = storablePattern(input.descriptionPattern, input.matchType);
 
   const accountId = input.accountId ?? null;
@@ -244,6 +246,7 @@ export function updateTransactionCorrection(
   id: string,
   input: UpdateTransactionCorrectionInput
 ): TransactionCorrectionRow {
+  assertEntityIdNotPlaceholder(input.entityId);
   const existing = getTransactionCorrection(db, id);
   const updates = buildCorrectionUpdates(input, existing);
 

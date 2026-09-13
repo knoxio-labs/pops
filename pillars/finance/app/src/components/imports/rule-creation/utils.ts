@@ -5,8 +5,9 @@ import {
 } from '@pops/finance';
 
 import { pendingTagRuleKey } from '../../../lib/tag-rule-reconcile';
-import { parseTag } from '../../../lib/tags';
+import { parseTag, withoutMarkerTags } from '../../../lib/tags';
 
+import type { TagFacetOption } from '../../../lib/tags';
 import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
 
 /** The `source` step 6 stages its rules under, and the only staged entries it replaces. */
@@ -84,10 +85,10 @@ function suppliedAlready(txn: ConfirmedTransaction, tag: string): boolean {
   );
 }
 
-function commonTagsForGroup(group: EntityGroup): string[] {
+function commonTagsForGroup(group: EntityGroup, facets: readonly TagFacetOption[]): string[] {
   const counts = new Map<string, number>();
   for (const txn of group.txns) {
-    for (const tag of new Set(txn.tags ?? [])) {
+    for (const tag of new Set(withoutMarkerTags(txn.tags ?? [], facets))) {
       if (EPISODIC_TAG_FACETS.has(parseTag(tag).facet ?? '')) continue;
       if (suppliedAlready(txn, tag)) continue;
       counts.set(tag, (counts.get(tag) ?? 0) + 1);
@@ -159,17 +160,22 @@ function tagsStagedByRow(staged: readonly PendingTagRuleChangeSet[]): Map<string
  *
  * `entityName` stays the proposal's label; `pattern` is what the rule will
  * match on, and the two are deliberately different things.
+ *
+ * A `marker`-facet tag (`flag:`, `person:`) on the group's rows is never
+ * proposed: the server refuses a tag rule carrying one, and the refusal would
+ * reject the whole commit (POPS-3704). `facets` is the loaded taxonomy.
  */
 export function computeProposals(
   confirmedTransactions: ConfirmedTransaction[],
-  staged: readonly PendingTagRuleChangeSet[] = []
+  staged: readonly PendingTagRuleChangeSet[] = [],
+  facets: readonly TagFacetOption[] = []
 ): RuleProposal[] {
   const stagedByRow = tagsStagedByRow(staged);
   const byGroupKey = descriptorsByGroupKey(confirmedTransactions);
   const proposals: RuleProposal[] = [];
   let seq = 0;
   for (const [key, group] of groupByEntity(confirmedTransactions)) {
-    const tags = commonTagsForGroup(group).filter(
+    const tags = commonTagsForGroup(group, facets).filter(
       (tag) => !group.txns.every((txn) => stagedByRow.get(txn.checksum)?.has(tag) ?? false)
     );
     if (!tags.length) continue;
@@ -245,7 +251,8 @@ export function previouslyStagedProposalIds(
  */
 export function rulesStepHasProposals(
   confirmedTransactions: ConfirmedTransaction[],
-  staged: readonly PendingTagRuleChangeSet[]
+  staged: readonly PendingTagRuleChangeSet[],
+  facets: readonly TagFacetOption[]
 ): boolean {
-  return computeProposals(confirmedTransactions, staged).length > 0;
+  return computeProposals(confirmedTransactions, staged, facets).length > 0;
 }

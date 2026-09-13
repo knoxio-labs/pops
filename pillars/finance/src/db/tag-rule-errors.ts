@@ -28,7 +28,8 @@ export class MarkerFacetTagRuleError extends Error {
 }
 
 /**
- * A tag-rule write scoped to an unresolved `temp:` placeholder entity id.
+ * A tag-rule or correction write scoped to an unresolved `temp:` placeholder
+ * entity id.
  *
  * No contact ever carries such an id, so the rule could never fire and would
  * sit in the table as a dead duplicate of the rule on the real entity.
@@ -38,7 +39,7 @@ export class PlaceholderEntityScopeError extends Error {
   readonly entityId: string;
 
   constructor(entityId: string) {
-    super(`Refusing to scope a tag rule to unresolved placeholder entity id '${entityId}'`);
+    super(`Refusing to scope a rule to unresolved placeholder entity id '${entityId}'`);
     this.entityId = entityId;
   }
 }

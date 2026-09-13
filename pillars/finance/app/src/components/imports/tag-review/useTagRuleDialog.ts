@@ -3,10 +3,12 @@ import { toast } from 'sonner';
 
 import { derivePatternFromDescriptions } from '@pops/finance';
 
+import { withoutMarkerTags } from '../../../lib/tags';
 import { unionTags } from './tagReviewUtils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
 
+import type { TagFacetOption } from '../../../lib/tags';
 import type { TagRuleLearnSignal } from '../TagRuleProposalDialog';
 import type { ConfirmedGroup } from './tagReviewUtils';
 
@@ -17,12 +19,16 @@ export interface TagRuleDialogState {
   sourceChecksums: string[];
 }
 
-/** `null` when the group carries no tags yet, so there is no rule to propose. */
+/** `null` when the group carries no rule-writable tags yet, so there is no rule to propose. */
 function groupDialogState(
   group: ConfirmedGroup,
-  localTags: Record<string, string[]>
+  localTags: Record<string, string[]>,
+  facets: readonly TagFacetOption[]
 ): TagRuleDialogState | null {
-  const tags = unionTags(group.transactions.map((t) => localTags[t.checksum] ?? []));
+  const tags = withoutMarkerTags(
+    unionTags(group.transactions.map((t) => localTags[t.checksum] ?? [])),
+    facets
+  );
   if (tags.length === 0) return null;
   // From the descriptors, never the entity name: a rule is tested against what
   // the bank sent, and a merchant's display name is routinely not a substring
@@ -46,8 +52,10 @@ function groupDialogState(
 
 function transactionDialogState(
   transaction: ConfirmedTransaction,
-  tags: string[]
+  rowTags: string[],
+  facets: readonly TagFacetOption[]
 ): TagRuleDialogState | null {
+  const tags = withoutMarkerTags(rowTags, facets);
   if (tags.length === 0) return null;
   const signal: TagRuleLearnSignal = {
     descriptionPattern: transaction.description,
@@ -77,32 +85,40 @@ function useDialogContextRefs(tagRuleDialog: TagRuleDialogState | null) {
   return { dialogGroupNameRef, dialogSourceChecksumsRef };
 }
 
-export function useTagRuleDialog(localTags: Record<string, string[]>) {
+/**
+ * The Tag Review step's "Save tag rule…" dialog state. A proposed rule never
+ * carries a `marker`-facet tag (POPS-3704), so `facets` must be the loaded
+ * taxonomy; a group or row whose only tags are markers proposes nothing.
+ */
+export function useTagRuleDialog(
+  localTags: Record<string, string[]>,
+  facets: readonly TagFacetOption[]
+) {
   const [tagRuleDialog, setTagRuleDialog] = useState<TagRuleDialogState | null>(null);
   const { dialogGroupNameRef, dialogSourceChecksumsRef } = useDialogContextRefs(tagRuleDialog);
 
   const handleOpenTagRuleDialog = useCallback(
     (group: ConfirmedGroup) => {
-      const next = groupDialogState(group, localTags);
+      const next = groupDialogState(group, localTags, facets);
       if (!next) {
         toast.info('Add at least one tag to this group before saving a rule.');
         return;
       }
       setTagRuleDialog(next);
     },
-    [localTags]
+    [localTags, facets]
   );
 
   const handleOpenTagRuleDialogForTransaction = useCallback(
     (transaction: ConfirmedTransaction, tags: string[]) => {
-      const next = transactionDialogState(transaction, tags);
+      const next = transactionDialogState(transaction, tags, facets);
       if (!next) {
         toast.info('Add at least one tag to this transaction before saving a rule.');
         return;
       }
       setTagRuleDialog(next);
     },
-    []
+    [facets]
   );
 
   const setTagRuleDialogOpen = useCallback((open: boolean) => {

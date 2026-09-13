@@ -187,6 +187,27 @@ export interface TagFacetOption {
 }
 
 /**
+ * `tags` without any value on a `marker` axis (`flag:`, `person:`), in order.
+ *
+ * A marker is written from provenance, never by a rule, and the server refuses
+ * a tag rule carrying one (POPS-3666). A rule proposed from a group's row tags
+ * must drop them before it is staged, or the whole commit is refused over it
+ * (POPS-3704). The facet compares trimmed and case-insensitive, as the server
+ * does. Until the taxonomy loads `facets` is empty and nothing is dropped; the
+ * commit still checks.
+ */
+export function withoutMarkerTags(
+  tags: readonly string[],
+  facets: readonly TagFacetOption[]
+): string[] {
+  const markers = new Set(facets.filter((o) => o.kind === 'marker').map((o) => o.facet));
+  return tags.filter((tag) => {
+    const { facet } = parseTag(tag.trim());
+    return facet === null || !markers.has(facet.toLowerCase());
+  });
+}
+
+/**
  * The tags a staged rule would write that a closed axis does not hold.
  *
  * A closed facet (`venue`, `occasion`, …) is a fixed set: the commit refuses a

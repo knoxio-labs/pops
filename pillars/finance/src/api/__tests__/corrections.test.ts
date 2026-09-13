@@ -456,6 +456,94 @@ describe('corrections — request validation', () => {
     expect(list.data.find((c) => c.descriptionPattern === 'GOOD RULE')).toBeUndefined();
   });
 
+  it('400s a createOrUpdate scoped to a temp: placeholder entity id, however it is cased or padded (POPS-3717)', async () => {
+    for (const entityId of ['temp:entity:0b8c', ' TEMP:entity:0b8c ']) {
+      await expect(
+        client().corrections.createOrUpdate({
+          descriptionPattern: 'PLACEHOLDER SHOP',
+          matchType: 'contains',
+          entityId,
+          entityName: 'Placeholder Shop',
+        })
+      ).rejects.toMatchObject({
+        status: 400,
+        body: { message: expect.stringContaining('placeholder') },
+      });
+    }
+    const list = await client().corrections.list();
+    expect(list.data.find((c) => c.descriptionPattern === 'PLACEHOLDER SHOP')).toBeUndefined();
+  });
+
+  it('400s a createOrUpdate that would reinforce an existing rule onto a temp: entity id, leaving the rule untouched (POPS-3717)', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'REAL SHOP',
+      matchType: 'contains',
+      entityId: 'ent-real',
+      entityName: 'Real Shop',
+    });
+    await expect(
+      client().corrections.createOrUpdate({
+        descriptionPattern: 'REAL SHOP',
+        matchType: 'contains',
+        entityId: 'temp:entity:0b8c',
+        entityName: 'Real Shop',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.entityId).toBe('ent-real');
+  });
+
+  it('400s an update onto a temp: entity id, leaving the rule untouched (POPS-3717)', async () => {
+    const created = await client().corrections.createOrUpdate({
+      descriptionPattern: 'REAL SHOP',
+      matchType: 'contains',
+      entityId: 'ent-real',
+      entityName: 'Real Shop',
+    });
+    await expect(
+      client().corrections.update(created.data.id, { entityId: 'temp:entity:0b8c' })
+    ).rejects.toMatchObject({ status: 400 });
+    const unchanged = await client().corrections.get(created.data.id);
+    expect(unchanged.data.entityId).toBe('ent-real');
+  });
+
+  it('400s an applyChangeSet add or edit op scoped to a temp: entity id, writing nothing (POPS-3717)', async () => {
+    const seed = await client().corrections.createOrUpdate({
+      descriptionPattern: 'REAL SHOP',
+      matchType: 'contains',
+      entityId: 'ent-real',
+      entityName: 'Real Shop',
+    });
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [
+            {
+              op: 'add',
+              data: {
+                descriptionPattern: 'PLACEHOLDER SHOP',
+                matchType: 'contains',
+                entityId: 'Temp:entity:0b8c',
+                entityName: 'Placeholder Shop',
+              },
+            },
+          ],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      client().corrections.applyChangeSet({
+        changeSet: {
+          ops: [{ op: 'edit', id: seed.data.id, data: { entityId: 'temp:entity:0b8c' } }],
+        },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+
+    const list = await client().corrections.list();
+    expect(list.data.find((c) => c.descriptionPattern === 'PLACEHOLDER SHOP')).toBeUndefined();
+    expect(list.data.find((c) => c.id === seed.data.id)?.entityId).toBe('ent-real');
+  });
+
   it('400s an adjustConfidence with an out-of-range delta', async () => {
     const created = await client().corrections.createOrUpdate({
       descriptionPattern: 'DELTA',
