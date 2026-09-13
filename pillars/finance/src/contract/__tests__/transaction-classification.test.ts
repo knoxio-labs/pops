@@ -30,6 +30,9 @@ describe('classifyFromDescription — fees', () => {
     ['CARD SURCHARGE', 'fee:surcharge'],
     ['ACCOUNT SERVICING FEE MINIMUM $2000 IN DEPOSITS NOT RECEIVED', 'fee:account-keeping'],
     ['ACCOUNT KEEPING FEE', 'fee:account-keeping'],
+    ['MONTHLY ACCOUNT FEE', 'fee:account-keeping'],
+    ['ACCOUNT SERVICE FEE', 'fee:account-keeping'],
+    ['ANYTOWN GYM MEMBERSHIP FEE', 'fee:membership'],
   ])('%s is a fee tagged %s', (description, tag) => {
     expect(classifyFromDescription(description)).toMatchObject({ type: 'fee', tag });
   });
