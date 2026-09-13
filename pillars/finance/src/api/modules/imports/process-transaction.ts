@@ -206,12 +206,13 @@ export function finalizeAiResult(
     const aiTags = aiEntry.tags ?? [];
     const aiCategory = aiEntry.tags?.length ? null : (aiEntry.category ?? null);
     const entry = resolveAiEntity(aiEntry.entityName, context);
+    const ai = { aiTags, aiPromptVersion: aiEntry.promptVersion };
     const processed = entry
       ? buildFromEntityMatch(db, {
           transaction,
           entry,
           matchType: 'ai',
-          aiTags,
+          ...ai,
           category: aiCategory,
           confidence: aiEntry.confidence,
           knownTags: context.knownTags,
@@ -220,7 +221,7 @@ export function finalizeAiResult(
       : buildUncertainFromAi(db, {
           transaction,
           entityName: aiEntry.entityName,
-          aiTags,
+          ...ai,
           aiCategory,
           confidence: aiEntry.confidence,
           knownTags: context.knownTags,

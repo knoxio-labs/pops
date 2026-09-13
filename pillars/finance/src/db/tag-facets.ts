@@ -120,6 +120,17 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * a fee is not a purchase — it has its own `type` and a `fee:` value naming
  * which fee it is. The rows the classifier could not type keep the tag and
  * carry `flag:needs-review`, because there the tag is the only evidence left.
+ *
+ * `hobby` is the one open facet classified here besides `contains` (POPS-3675).
+ * The model may not coin a hobby — `validateAiTags` refuses any value the
+ * vocabulary does not already hold — but it may recognise one that exists. A
+ * crypto wallet top-up whose honest tag is `hobby:crypto` otherwise has no axis
+ * to answer on, and a model offered only venue/occasion/contains fills those
+ * with the nearest wrong value instead. The other open facets stay out, each for
+ * its own reason: `trip` is a date range someone declares, not a property of a
+ * descriptor; `asset` links spend to one owned thing the descriptor cannot name;
+ * `tax` is a claim with consequences, deferred until AI tags stop being
+ * pre-accepted (POPS-3685); `enrich` is written from provenance.
  */
 /**
  * Marks a row a human still owes a decision on.
@@ -148,6 +159,7 @@ export const CLASSIFIED_TAG_FACETS = [
   { facet: 'contains', single: false },
   { facet: 'channel', single: true },
   { facet: 'fee', single: false },
+  { facet: 'hobby', single: false },
 ] as const satisfies readonly { facet: keyof typeof TAG_FACET_KINDS; single: boolean }[];
 
 /** A classified facet — the only facets the categorizer may write into. */

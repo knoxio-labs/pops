@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // --- Store mock state ---
 
 const mockPrevStep = vi.fn();
+const mockGoToStep = vi.fn();
 const mockNextStep = vi.fn();
 const mockSetCommitResult = vi.fn();
 const mockSetDraftId = vi.fn();
@@ -80,6 +81,7 @@ function makeStoreState(overrides: Partial<typeof storeState> = {}) {
     accountName: 'ANZ Everyday',
     commitResult: null,
     prevStep: mockPrevStep,
+    goToStep: mockGoToStep,
     nextStep: mockNextStep,
     setCommitResult: mockSetCommitResult,
     draftId: 'draft-1',
@@ -433,9 +435,32 @@ describe('FinalReviewStep', () => {
     resolveCommit({ data: { data: {}, message: 'ok' }, error: undefined });
   });
 
-  it('calls prevStep on Back click', () => {
+  it('goes back to Tag Review when the Rules step has nothing to offer (POPS-3676)', () => {
+    render(renderStep());
+    fireEvent.click(screen.getByText('Back'));
+    expect(mockGoToStep).toHaveBeenCalledWith(5);
+    expect(mockPrevStep).not.toHaveBeenCalled();
+  });
+
+  it('goes back to the Rules step when it has something to offer', () => {
+    storeState = makeStoreState({
+      confirmedTransactions: ['WOOLWORTHS METRO', 'WOOLWORTHS ONLINE'].map(
+        (description, index) => ({
+          description,
+          date: '2026-03-01',
+          amount: -20,
+          dialectAccountLabel: 'Amex',
+          rawRow: '{}',
+          checksum: `w${index}`,
+          entityId: 'woolworths-id',
+          entityName: 'Woolworths',
+          tags: ['Groceries'],
+        })
+      ),
+    });
     render(renderStep());
     fireEvent.click(screen.getByText('Back'));
     expect(mockPrevStep).toHaveBeenCalledOnce();
+    expect(mockGoToStep).not.toHaveBeenCalled();
   });
 });

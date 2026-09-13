@@ -9,6 +9,13 @@ export const SOURCE_ICONS: Record<TagSource, string> = {
   entity: '🏪',
 };
 
+/** The tooltip a tag badge carries for its source: a rule's pattern when there is one. */
+export function sourceTooltip(meta: TagMetaEntry | undefined): string | undefined {
+  if (meta?.source === 'rule' && meta.pattern) return `Rule: "${meta.pattern}"`;
+  if (meta?.source) return `${meta.source} suggestion`;
+  return undefined;
+}
+
 export interface SourceMarkerText {
   icon: string;
   /** Short label shown alongside the tag, e.g. "AI · New". */

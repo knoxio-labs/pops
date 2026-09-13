@@ -166,7 +166,7 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
     if (!entry) return;
     counters.aiTagValuesRejected += entry.rejectedTagValues ?? 0;
     if (entry.tags.length === 0) return;
-    const suggested = buildAiSuggestedTags(entry.tags, knownTagSet);
+    const suggested = buildAiSuggestedTags(entry.tags, knownTagSet, entry.promptVersion);
     // A fresh array per row: the rows in a group are distinct transactions and
     // the wizard edits their suggestions independently.
     for (const row of group.rows) row.suggestedTags = suggested.map((tag) => ({ ...tag }));

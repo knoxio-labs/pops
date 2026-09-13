@@ -6,7 +6,7 @@ import {
   type TagRulesResolveAddCollisionsResponse,
 } from '../../../finance-api/index.js';
 
-import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
+import type { TagRuleChangeSet } from '@pops/finance';
 
 export type TagRuleAddCollision =
   NonNullable<TagRulesResolveAddCollisionsResponse>['collisions'][number][number];
@@ -21,12 +21,11 @@ export type TagRuleAddCollision =
  * second copy of that key (drift risk) or fetching the paginated Tag Rules
  * browser list and treating a page as the complete set (POPS-2696).
  *
- * Returns `collisions[i][j]` lined up with `pendingTagRuleChangeSets[i].changeSet.ops[j]`
+ * Returns `collisions[i][j]` lined up with `changeSets[i].ops[j]`
  * — `undefined` while the query has not resolved yet, so a caller not ready
  * to render provisional badges can fall back to the plain ADD label.
  */
-export function useTagRuleAddCollisions(pendingTagRuleChangeSets: PendingTagRuleChangeSet[]) {
-  const changeSets = pendingTagRuleChangeSets.map((pcs) => pcs.changeSet);
+export function useTagRuleAddCollisions(changeSets: TagRuleChangeSet[]) {
   const hasOps = changeSets.some((cs) => cs.ops.length > 0);
   return useQuery({
     queryKey: ['finance', 'tagRules', 'resolveAddCollisions', changeSets],

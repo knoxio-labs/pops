@@ -31,6 +31,7 @@ export { loanOffsetLinks } from './schema/loan-offset-links.js';
 export { importSessions } from './schema/import-sessions.js';
 export { loanRateHistory } from './schema/loan-rate-history.js';
 export { loanTerms } from './schema/loan-terms.js';
+export { aiTagSuggestionOutcomes } from './schema/ai-tag-suggestion-outcomes.js';
 export { tagRuleRejections } from './schema/tag-rule-rejections.js';
 export { tagVocabulary } from './schema/tag-vocabulary.js';
 export { settings } from './schema/settings.js';

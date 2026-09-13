@@ -54,6 +54,7 @@ const SAMPLE_KNOWN_TAGS = [
   'channel:online',
   'channel:in-person',
   'fee:surcharge',
+  'hobby:brewing',
 ];
 
 /**

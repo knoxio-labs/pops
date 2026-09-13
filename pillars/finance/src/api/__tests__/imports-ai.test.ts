@@ -65,7 +65,7 @@ function client() {
 describe('imports — AI categorizer wired (F2)', () => {
   it('routes an unmatched row to the AI fallback and surfaces the suggestion', async () => {
     createMock.mockResolvedValue({
-      content: [{ type: 'text', text: '[{"entityName":"Aldi","tags":["groceries"]}]' }],
+      content: [{ type: 'text', text: '[{"n":1,"entityName":"Aldi","tags":["groceries"]}]' }],
       usage: { input_tokens: 80, output_tokens: 12 },
     });
     const c = client();

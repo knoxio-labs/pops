@@ -16091,6 +16091,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -16330,6 +16333,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -16573,6 +16579,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -16812,6 +16821,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -17555,6 +17567,9 @@
                                 "type": "boolean"
                               },
                               "pattern": {
+                                "type": "string"
+                              },
+                              "promptVersion": {
                                 "type": "string"
                               },
                               "source": {
@@ -18538,6 +18553,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -18777,6 +18795,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -19020,6 +19041,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -19259,6 +19283,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -19932,6 +19959,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -20171,6 +20201,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -20414,6 +20447,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -20653,6 +20689,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -21302,6 +21341,9 @@
                                   "pattern": {
                                     "type": "string"
                                   },
+                                  "promptVersion": {
+                                    "type": "string"
+                                  },
                                   "source": {
                                     "enum": ["ai", "rule", "entity"],
                                     "type": "string"
@@ -21541,6 +21583,9 @@
                                     "type": "boolean"
                                   },
                                   "pattern": {
+                                    "type": "string"
+                                  },
+                                  "promptVersion": {
                                     "type": "string"
                                   },
                                   "source": {
@@ -21784,6 +21829,9 @@
                                   "pattern": {
                                     "type": "string"
                                   },
+                                  "promptVersion": {
+                                    "type": "string"
+                                  },
                                   "source": {
                                     "enum": ["ai", "rule", "entity"],
                                     "type": "string"
@@ -22023,6 +22071,9 @@
                                     "type": "boolean"
                                   },
                                   "pattern": {
+                                    "type": "string"
+                                  },
+                                  "promptVersion": {
                                     "type": "string"
                                   },
                                   "source": {
@@ -22352,6 +22403,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -22591,6 +22645,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -22834,6 +22891,9 @@
                                     "pattern": {
                                       "type": "string"
                                     },
+                                    "promptVersion": {
+                                      "type": "string"
+                                    },
                                     "source": {
                                       "enum": ["ai", "rule", "entity"],
                                       "type": "string"
@@ -23073,6 +23133,9 @@
                                       "type": "boolean"
                                     },
                                     "pattern": {
+                                      "type": "string"
+                                    },
+                                    "promptVersion": {
                                       "type": "string"
                                     },
                                     "source": {
@@ -25091,6 +25154,26 @@
                             "enum": ["exact", "contains", "regex"],
                             "type": "string"
                           },
+                          "overlaps": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "descriptionPattern": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["contradicts", "redundant"],
+                                  "type": "string"
+                                },
+                                "ruleId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["ruleId", "descriptionPattern", "kind"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "priority": {
                             "type": "number"
                           },
@@ -25116,7 +25199,8 @@
                           "timesApplied",
                           "createdAt",
                           "lastUsedAt",
-                          "ledgerMatchStatus"
+                          "ledgerMatchStatus",
+                          "overlaps"
                         ],
                         "type": "object"
                       },
@@ -27088,11 +27172,14 @@
                               },
                               "type": "array"
                             },
+                            "isActive": {
+                              "type": "boolean"
+                            },
                             "ruleId": {
                               "type": "string"
                             }
                           },
-                          "required": ["ruleId", "existingTags"],
+                          "required": ["ruleId", "existingTags", "isActive"],
                           "type": "object"
                         },
                         "type": "array"
@@ -27381,6 +27468,26 @@
                           "enum": ["exact", "contains", "regex"],
                           "type": "string"
                         },
+                        "overlaps": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "descriptionPattern": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["contradicts", "redundant"],
+                                "type": "string"
+                              },
+                              "ruleId": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["ruleId", "descriptionPattern", "kind"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "priority": {
                           "type": "number"
                         },
@@ -27406,7 +27513,8 @@
                         "timesApplied",
                         "createdAt",
                         "lastUsedAt",
-                        "ledgerMatchStatus"
+                        "ledgerMatchStatus",
+                        "overlaps"
                       ],
                       "type": "object"
                     }
@@ -29020,6 +29128,9 @@
                             "type": "boolean"
                           },
                           "pattern": {
+                            "type": "string"
+                          },
+                          "promptVersion": {
                             "type": "string"
                           },
                           "source": {

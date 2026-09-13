@@ -13,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.1';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.4';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.1';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.4';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.1';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.1';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.4';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"

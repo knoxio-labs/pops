@@ -8418,6 +8418,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -8495,6 +8496,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -8572,6 +8574,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -8649,6 +8652,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -8929,6 +8933,7 @@ export interface operations {
               entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
+              promptVersion?: string;
               /** @enum {string} */
               source: 'ai' | 'rule' | 'entity';
               tag: string;
@@ -9309,6 +9314,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9386,6 +9392,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9463,6 +9470,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9540,6 +9548,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9789,6 +9798,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9866,6 +9876,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -9943,6 +9954,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -10020,6 +10032,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -10263,6 +10276,7 @@ export interface operations {
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
                 tag: string;
@@ -10340,6 +10354,7 @@ export interface operations {
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
                 tag: string;
@@ -10417,6 +10432,7 @@ export interface operations {
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
                 tag: string;
@@ -10494,6 +10510,7 @@ export interface operations {
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
                 tag: string;
@@ -10600,6 +10617,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -10677,6 +10695,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -10754,6 +10773,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -10831,6 +10851,7 @@ export interface operations {
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
                   tag: string;
@@ -11767,6 +11788,12 @@ export interface operations {
               ledgerMatchStatus: 'matched' | 'unused' | 'broken';
               /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
+              overlaps: {
+                descriptionPattern: string;
+                /** @enum {string} */
+                kind: 'contradicts' | 'redundant';
+                ruleId: string;
+              }[];
               priority: number;
               tags: string[];
               timesApplied: number;
@@ -12563,6 +12590,7 @@ export interface operations {
           'application/json': {
             collisions: ({
               existingTags: string[];
+              isActive: boolean;
               ruleId: string;
             } | null)[][];
           };
@@ -12661,6 +12689,12 @@ export interface operations {
               ledgerMatchStatus: 'matched' | 'unused' | 'broken';
               /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
+              overlaps: {
+                descriptionPattern: string;
+                /** @enum {string} */
+                kind: 'contradicts' | 'redundant';
+                ruleId: string;
+              }[];
               priority: number;
               tags: string[];
               timesApplied: number;
@@ -13448,6 +13482,7 @@ export interface operations {
               entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
+              promptVersion?: string;
               /** @enum {string} */
               source: 'ai' | 'rule' | 'entity';
               tag: string;

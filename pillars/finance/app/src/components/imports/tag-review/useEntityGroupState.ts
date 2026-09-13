@@ -6,6 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { groupTagSources } from './groupTagSources';
 import { unionTags } from './tagReviewUtils';
 
 import type { SuggestedTag } from '@pops/finance';
@@ -72,6 +73,11 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
     [group.transactions, suggestedTagMeta]
   );
 
+  const tagSources = useMemo(
+    () => groupTagSources(group.transactions, suggestedTagMeta),
+    [group.transactions, suggestedTagMeta]
+  );
+
   const handleApplySuggestions = useCallback(() => {
     if (suggestedUnion.length === 0) return;
     const applied = applySuggestionsToGroup(group, localTags, suggestedTagMeta, onUpdateTag);
@@ -108,6 +114,7 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
     setExpanded,
     currentUnion,
     suggestedUnion,
+    tagSources,
     groupStagedTags,
     handleApplySuggestions,
     handleApplyStagedToGroup,

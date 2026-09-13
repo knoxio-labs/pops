@@ -27,6 +27,8 @@ const { normalizePatternForStorage } = transactionCorrectionsService;
 export interface TagRuleAddCollision {
   ruleId: string;
   existingTags: string[];
+  /** Whether that rule is live. Reinforcing a disabled rule re-enables it. */
+  isActive: boolean;
 }
 
 /**
@@ -52,6 +54,10 @@ export function resolveTagRuleAddCollisions(
     );
     if (!existing) return null;
 
-    return { ruleId: existing.id, existingTags: parseStoredTags(existing.tags) };
+    return {
+      ruleId: existing.id,
+      existingTags: parseStoredTags(existing.tags),
+      isActive: existing.isActive,
+    };
   });
 }
