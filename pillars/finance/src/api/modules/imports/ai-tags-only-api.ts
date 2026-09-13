@@ -40,6 +40,8 @@ export const TAGS_ONLY_OPERATION = 'imports.tags_only';
 export interface TagsOnlyInput {
   entityName: string;
   input: CategorizerInput;
+  /** The type the ladder resolved the row to — always a spend type on this pass (POPS-3678). */
+  transactionType?: string;
 }
 
 /** One row's classification. No `entityName` — the merchant was given, not guessed. */
@@ -83,8 +85,8 @@ export function buildTagsOnlyPrompt(
 ): string {
   const lines = inputs
     .map(
-      ({ entityName, input }, i) =>
-        `${i + 1}. ${buildMatchedTransactionData(entityName, input).replaceAll('\n', ' | ')}`
+      ({ entityName, input, transactionType }, i) =>
+        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}`
     )
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);

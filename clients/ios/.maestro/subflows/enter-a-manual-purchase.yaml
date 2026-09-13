@@ -1,0 +1,57 @@
+appId: com.knoxiolabs.pops
+name: Fill in a blank receipt draft and submit it
+---
+# The manual-entry half of `receipt-manual-entry.yaml`, pulled into its own
+# subflow for the same reason `enter-the-pairing-details.yaml` is: five fields
+# share the one typing hazard that file's own header explains at length —
+# `tapOn` returns once the tap is delivered, not once the tapped field has
+# become first responder, so a field can silently keep whatever it already
+# held. Asserting every field's own text AFTER all five are typed, and
+# retrying the whole set together on a miss, is what keeps the values that
+# reach Save the values that were checked.
+#
+# `receipt-draft-item-description` and `receipt-draft-item-amount` are safe to
+# address by id without an index: `ReceiptDraftPresentation.blankDraft`
+# starts with exactly one line, so each identifier matches exactly one field
+# on this screen.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: 'receipt-draft-merchant'
+      - eraseText
+      - inputText: 'Corner Store'
+      - tapOn:
+          id: 'receipt-draft-date'
+      - eraseText
+      - inputText: '2026-09-01'
+      - tapOn:
+          id: 'receipt-draft-item-description'
+      - eraseText
+      - inputText: 'Coffee'
+      - tapOn:
+          id: 'receipt-draft-item-amount'
+      - eraseText
+      - inputText: '5.00'
+      - tapOn:
+          id: 'receipt-draft-total'
+      - eraseText
+      - inputText: '5.00'
+      - assertVisible:
+          id: 'receipt-draft-merchant'
+          text: 'Corner Store'
+      - assertVisible:
+          id: 'receipt-draft-date'
+          text: '2026-09-01'
+      - assertVisible:
+          id: 'receipt-draft-item-description'
+          text: 'Coffee'
+      - assertVisible:
+          id: 'receipt-draft-item-amount'
+          text: '5.00'
+      - assertVisible:
+          id: 'receipt-draft-total'
+          text: '5.00'
+
+- tapOn:
+    id: 'receipt-draft-save'

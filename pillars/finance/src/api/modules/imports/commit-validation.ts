@@ -7,25 +7,12 @@
  *
  * `ValidationError` maps to a 400 through the shared `HttpError` path.
  */
+import { PLACEHOLDER_ENTITY_ID_PREFIX as TEMP_ID_PREFIX } from '../../../db/services/tag-rule-write-guards.js';
 import { ValidationError } from '../../shared/errors.js';
 
 import type { CommitPayload } from './types.js';
 
 const TEMP_ENTITY_PREFIX = 'temp:entity:';
-
-/**
- * Reserved namespace for any commit-time placeholder id. Real contact ids are
- * v4 UUIDs, so nothing legitimate written to `entity_id` ever starts with
- * `temp:`. The only well-formed placeholder is a `temp:entity:{uuid}` pending
- * reference; any other bare `temp:`-prefixed id (a stale scheme, a partially
- * resolved id) is a bug and must be rejected before it reaches the database.
- *
- * `pending:contact:{uuid}` (see `entity-precreate-outbox.ts`) is a DIFFERENT
- * namespace and deliberately NOT covered by this guard: it's the one
- * placeholder that IS meant to be persisted while contacts is unreachable,
- * tracked by an outbox row until the background reconciler resolves it.
- */
-const TEMP_ID_PREFIX = 'temp:';
 
 export const COMMIT_TEMP_ENTITY_PREFIX = TEMP_ENTITY_PREFIX;
 

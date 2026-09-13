@@ -282,6 +282,42 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'purchases',
+    operationId: 'receipt.extract',
+    path: '/receipts/extract',
+    method: 'post',
+    // Reading a receipt no longer writes one. The phone asks for the
+    // extraction, shows it for editing, and saves separately — so this leg
+    // carries the captured parts and answers a reading, never an id.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/draft-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'receipt.saveDraft',
+    path: '/receipts/draft',
+    method: 'post',
+    // The other half of the split: an edited reading becomes a purchase.
+    // The whole request is the body, the edited fields included, because
+    // what the person corrected is the point of the call.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/draft-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.createManual',
+    path: '/purchases/manual',
+    method: 'post',
+    // A purchase typed by hand, with no photograph behind it. Same shape as
+    // a saved draft minus the reading, so it is a separate operation rather
+    // than a nullable field on one.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/draft-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
     operationId: 'purchase.list',
     path: '/purchases',
     method: 'get',

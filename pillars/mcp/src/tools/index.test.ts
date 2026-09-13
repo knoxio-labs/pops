@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 45 tools', () => {
-    expect(allTools).toHaveLength(45);
+  it('exports exactly 46 tools', () => {
+    expect(allTools).toHaveLength(46);
   });
 
   it('includes all inventory write tools', () => {
@@ -38,6 +38,7 @@ describe('allTools', () => {
       'finance.accounts.checkpoints',
       'finance.imports.getImportProgress',
       'finance.search',
+      'finance.summary.get',
     ]) {
       expect(names.has(required), `missing tool: ${required}`).toBe(true);
     }

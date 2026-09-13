@@ -201,15 +201,16 @@ export function makeTagRulesHandlers(db: FinanceDb) {
       runHttp(() => {
         try {
           const known = tagVocabularyService.loadKnownTagSet(db);
-          for (const tag of body.acceptedNewTags) {
-            if (tag.trim()) tagVocabularyService.upsertVocabularyTag(db, tag.trim(), 'user');
-          }
           const filtered = filterTagRuleChangeSetEntry(known, {
             changeSet: body.changeSet,
             acceptedNewTags: body.acceptedNewTags,
           });
           const changeSet = filtered?.changeSet ?? { ...body.changeSet, ops: [] };
           const { rules } = applyTagRuleChangeSet(db, changeSet);
+          // After the apply, so a ChangeSet the write guards refuse leaves no vocabulary row behind.
+          for (const tag of body.acceptedNewTags) {
+            if (tag.trim()) tagVocabularyService.upsertVocabularyTag(db, tag.trim(), 'user');
+          }
           return { status: 200 as const, body: { rules } };
         } catch (err) {
           translateTagRuleError(err);

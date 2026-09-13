@@ -5,10 +5,10 @@ import Testing
 
 @testable import BFMClient
 
-/// The failure map for `POST /mobile/purchases/receipts` — the gateway
-/// failure modes an upload never gets far enough to answer a ``ReceiptOutcome``
-/// for: no credential, the pillar unreachable, and a response this build
-/// cannot read.
+/// The failure map for `POST /mobile/purchases/receipts/extract` — the
+/// gateway failure modes an extraction never gets far enough to answer a
+/// ``ReceiptExtraction`` for: no credential, the pillar unreachable, and a
+/// response this build cannot read.
 @Suite("BFMReceiptCaptureRepository failures")
 internal struct ReceiptCaptureFailureTests {
     private static let onePart = [ReceiptPart(mediaType: .jpeg, data: Data([0xFF]))]
@@ -17,11 +17,11 @@ internal struct ReceiptCaptureFailureTests {
         await failure {
             try await BFMReceiptCaptureRepository
                 .stubbed(StubTransport(status: status, json: json))
-                .capture(Self.onePart)
+                .extract(Self.onePart)
         }
     }
 
-    private func failure(_ work: () async throws -> ReceiptOutcome) async -> RepositoryError? {
+    private func failure(_ work: () async throws -> ReceiptExtraction) async -> RepositoryError? {
         do {
             _ = try await work()
             return nil
@@ -92,32 +92,16 @@ internal struct ReceiptCaptureFailureTests {
     /// would spend that guarantee — the reader would be told to update the app
     /// about a receipt that merely needs reviewing. The mapping test suite
     /// covers what it becomes instead.
-    @Test("a needs-review code outside the known set is not a failure")
+    @Test("an unreconciled-draft code outside the known set is not a failure")
     func unrecognisedGateFailureCode() async {
         let actual = await error(
             status: .ok,
-            json: ReceiptCaptureWire.needsReview(
-                problems: ReceiptCaptureWire.problem(code: "receipt-ate-the-model"))
+            json: ReceiptCaptureWire.draft(
+                reconciled: false,
+                failures: "[\(ReceiptCaptureWire.gateFailure(code: "receipt-ate-the-model"))]")
         )
 
         #expect(actual == nil)
-    }
-
-    /// The reading is the one part of `needs-review` the review screen cannot
-    /// be drawn without, so a body missing it fails rather than arriving as an
-    /// outcome with nothing in it — which is exactly what this arm used to do
-    /// on every upload.
-    @Test("a needs-review body with no reading does not decode as an empty review")
-    func needsReviewWithoutExtraction() async {
-        let actual = await error(
-            status: .ok,
-            json: """
-                {"kind":"needs-review","receiptCount":1,\
-                "problems":[{"code":"no-lines","detail":"none","deltaCents":null}]}
-                """
-        )
-
-        #expect(isTransport(actual))
     }
 
     private func isTransport(_ error: RepositoryError?) -> Bool {

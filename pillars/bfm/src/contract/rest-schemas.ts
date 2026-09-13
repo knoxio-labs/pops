@@ -15,7 +15,7 @@ export {
 } from './account.js';
 
 export {
-  MOBILE_CURRENCY,
+  FALLBACK_MOBILE_CURRENCY,
   MobileTransactionDetailSchema,
   MobileTransactionSchema,
   MobileTransactionsPageSchema,

@@ -132,6 +132,14 @@ export const ALLOWLIST = [
       'A compact tree row (px-0.5 py-0, ~20px line height). Same h-9 constraint as ' +
       'SlotRow, measured rather than assumed.',
   },
+  {
+    path: 'pillars/design/src/kit/inventory/locations-tree/inline-input.tsx',
+    controls: 1,
+    ticket: 'POPS-3643',
+    reason:
+      'The design playground reproducing the row above, byte for byte, so the locations ' +
+      'tree can be redesigned against what ships. Same measurement, same reason.',
+  },
 ];
 
 /** Only `pillars/**` — never `libs/**`, so the kit itself is structurally out of scope. */

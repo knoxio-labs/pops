@@ -30,7 +30,8 @@ export const InventoryItemSchema = z.object({
   location: z.string().nullable(),
   type: z.string().nullable(),
   condition: z.string().nullable(),
-  inUse: z.boolean(),
+  /** `null` means nobody has reviewed this row (POPS-2432). */
+  inUse: z.boolean().nullable(),
   deductible: z.boolean(),
   purchaseDate: z.string().nullable(),
   warrantyExpires: z.string().nullable(),
@@ -56,7 +57,12 @@ const CreateItemBody = z.object({
   location: z.string().nullable().optional(),
   type: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
-  inUse: z.boolean().optional().default(false),
+  /**
+   * `null` (or absent) means "nobody has reviewed this row" — the tri-state
+   * `home_inventory.in_use` was designed to carry. Only an explicit
+   * `true`/`false` marks the row reviewed (POPS-2432).
+   */
+  inUse: z.boolean().nullable().optional(),
   deductible: z.boolean().optional().default(false),
   purchaseDate: z.string().nullable().optional(),
   warrantyExpires: z.string().nullable().optional(),
@@ -89,7 +95,8 @@ const UpdateItemBody = z.object({
   location: z.string().nullable().optional(),
   type: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
-  inUse: z.boolean().optional(),
+  /** `null` clears the review back to unreviewed; absent leaves it unchanged. */
+  inUse: z.boolean().nullable().optional(),
   deductible: z.boolean().optional(),
   purchaseDate: z.string().nullable().optional(),
   warrantyExpires: z.string().nullable().optional(),

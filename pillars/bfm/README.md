@@ -358,7 +358,7 @@ That supersedes the ingestion-only rule
 ([ADR-046](../../docs/architecture/adr-046-mobile-write-surface-is-ingestion-only.md)),
 which forbade `PUT`, `PATCH` and `DELETE` under `/mobile` outright. What
 survives from it is everything below. Five properties follow, and each is
-asserted in `src/api/__tests__/mobile-receipts.test.ts`,
+asserted in `src/api/__tests__/mobile-receipt-drafts.test.ts`,
 `src/api/purchases/__tests__/client.test.ts` or
 `src/contract/__tests__/mobile-capabilities.test.ts`:
 
@@ -366,16 +366,21 @@ asserted in `src/api/__tests__/mobile-receipts.test.ts`,
   what makes a retry idempotent, so bfm mints no idempotency key and re-encodes
   nothing. A second dedup rule here would be two purchases for one receipt the
   first time the two disagreed.
-- **All three producer outcomes are a `200`.** `created`, `needs-review` and
-  `unreadable` are told apart by the body's `kind`, because all three are
-  purchases having read the upload and answered. Only a failure to get an
-  answer at all is a non-200, through the same upstream mapping the read routes
-  use. Each arm carries what its screen draws: `created` the purchase summary,
-  `needs-review` the gate's objections **and** the reading they are about,
-  because an objection without the reading names a discrepancy the reader has
-  nothing to check it against. What no arm carries is the stored parts'
-  `pops://` URIs — no mobile route serves those bytes, so `receiptCount` is
-  published instead of a pointer the handset cannot follow.
+- **Reading and writing are separate calls.** `extractReceipt` answers a draft
+  and persists nothing; `saveReceiptDraft` turns a reviewed draft into a
+  purchase. The old upload-and-persist route that this path used to name is
+  gone — see this contract's git history for `uploadReceipt`. What made it
+  worth splitting is that a reading the arithmetic gate refused is still worth
+  editing, and the old route could only answer with a record or with nothing.
+- **Both extraction outcomes are a `200`.** A draft and `unreadable` are told
+  apart by the body's `kind`, because both are purchases having read the
+  upload and answered. Only a failure to get an answer at all is a non-200,
+  through the same upstream mapping the read routes use. A draft carries the
+  gate's objections **and** the reading they are about, because an objection
+  without the reading names a discrepancy the reader has nothing to check it
+  against. What no arm carries is the stored parts' `pops://` URIs — no mobile
+  route serves those bytes, so `receiptCount` is published instead of a
+  pointer the handset cannot follow.
 - **The size ceiling is bfm's own.** `MOBILE_UPLOAD_MAX_BYTES` (12mb) is
   mounted on that one path — every other route keeps Express's 100kb default —
   and an oversized body is refused here, in the shape the contract declares,

@@ -8,6 +8,8 @@ import {
   type FinanceDb,
   transactionTagRulesService,
   InvalidPatternError,
+  MarkerFacetTagRuleError,
+  PlaceholderEntityScopeError,
   TransactionTagRuleNotFoundError,
   UnmatchablePatternError,
 } from '../../db/index.js';
@@ -61,6 +63,12 @@ export function translateTagRuleError(err: unknown, id?: string): never {
   }
   if (err instanceof InvalidPatternError || err instanceof UnmatchablePatternError) {
     throw new ValidationError(err.message, { pattern: err.pattern });
+  }
+  if (err instanceof MarkerFacetTagRuleError) {
+    throw new ValidationError(err.message, { tags: err.tags });
+  }
+  if (err instanceof PlaceholderEntityScopeError) {
+    throw new ValidationError(err.message, { entityId: err.entityId });
   }
   throw err;
 }

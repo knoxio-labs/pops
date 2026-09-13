@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveCapture } from '../capture.js';
+import { CURRENCY_UNCERTAIN } from '../currency.js';
 import { ExtractedReceiptSchema } from '../extraction.js';
 import { gateExtraction } from '../gate.js';
 import { receiptToPurchase, RECEIPT_SOURCE_ID } from '../purchase.js';
@@ -186,9 +187,35 @@ describe('an admitted reading', () => {
     expect(mapped({ merchantName: null }).merchantEntityName).toBeNull();
   });
 
-  it('defaults the currency rather than refusing a receipt without one', () => {
-    expect(mapped({ currency: null }).currency).toBe('AUD');
-    expect(mapped({ currency: 'NZD' }).currency).toBe('NZD');
+  it('keeps a stated currency untouched, and never tags it uncertain', () => {
+    const result = mapped({ currency: 'NZD' });
+    expect(result.currency).toBe('NZD');
+    expect(result.tags).not.toContain(CURRENCY_UNCERTAIN);
+  });
+});
+
+describe('an unread currency', () => {
+  it('infers a Brazilian currency from the timezone rather than defaulting to AUD', () => {
+    const result = mapped({
+      currency: null,
+      address: 'Rua Augusta 123, São Paulo',
+      timeZone: 'America/Sao_Paulo',
+    });
+    expect(result.currency).toBe('BRL');
+    expect(result.tags).toContain(CURRENCY_UNCERTAIN);
+  });
+
+  it('still infers AUD for an Australian receipt, but tags it as inferred rather than read', () => {
+    const result = mapped({ currency: null });
+    expect(result.currency).toBe('AUD');
+    expect(result.tags).toContain(CURRENCY_UNCERTAIN);
+  });
+
+  it('does not silently store AUD when nothing about the receipt signals a currency', () => {
+    const result = mapped({ currency: null, address: null, timeZone: null });
+    expect(result.currency).not.toBe('AUD');
+    expect(result.currency).toBe('XXX');
+    expect(result.tags).toContain(CURRENCY_UNCERTAIN);
   });
 });
 

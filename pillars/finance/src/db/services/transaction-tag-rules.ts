@@ -18,6 +18,7 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
+import { assertTagRuleWritable } from './tag-rule-write-guards.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -138,7 +139,9 @@ function buildTagRuleUpdates(
 }
 
 /**
- * Patch a tag rule. Throws `TransactionTagRuleNotFoundError` if missing.
+ * Patch a tag rule. Throws `TransactionTagRuleNotFoundError` if missing, and
+ * `MarkerFacetTagRuleError` / `PlaceholderEntityScopeError` for a patch that
+ * would store a marker tag or a `temp:` scope.
  *
  * An empty `input` is a no-op that still re-reads and returns the row, so
  * callers can use this as a "fetch with optional patch" without branching.
@@ -149,6 +152,7 @@ export function updateTransactionTagRule(
   input: UpdateTransactionTagRuleInput
 ): TransactionTagRuleRow {
   getTransactionTagRule(db, id);
+  assertTagRuleWritable(input);
 
   const updates = buildTagRuleUpdates(input);
   if (Object.keys(updates).length > 0) {

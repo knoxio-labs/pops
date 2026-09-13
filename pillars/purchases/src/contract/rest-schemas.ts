@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { ProductIdentitySchema } from './schemas/product-identity.js';
 import {
   AutoLinkPolicySchema,
+  CaptureSourceSchema,
   CentsSchema,
   ChargeOriginSchema,
   CurrencySchema,
@@ -200,6 +201,25 @@ export const CreateDocumentBodySchema = z.object({
  */
 export const AttachDocumentBodySchema = CreateDocumentBodySchema.omit({ shipmentRef: true });
 
+/**
+ * What the device and the photograph said about themselves, mirroring
+ * {@link CreateCaptureInput} field for field.
+ *
+ * Every field independently nullable rather than the whole object optional
+ * here: a caller round-tripping a value `receipt.extract` handed back sends
+ * every key it received, and an extraction that resolved nothing for one
+ * field states that explicitly rather than omitting the key.
+ */
+export const CaptureBodySchema = z.object({
+  capturedAt: IsoTimestampSchema.nullable(),
+  capturedAtSource: CaptureSourceSchema.nullable(),
+  utcOffsetMinutes: UtcOffsetMinutesSchema.nullable(),
+  declaredTimeZone: z.string().nullable(),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
+  locationSource: CaptureSourceSchema.nullable(),
+});
+
 export const CreatePurchaseBodySchema = z.object({
   source: z.string().trim().min(1),
   sourceOrderId: z.string().nullable().optional(),
@@ -243,6 +263,56 @@ export const CreatePurchaseBodySchema = z.object({
   items: z.array(CreateItemBodySchema).optional(),
   charges: z.array(CreateChargeBodySchema).optional(),
   documents: z.array(CreateDocumentBodySchema).optional(),
+  /**
+   * What the device and the photograph said about themselves — see
+   * {@link CaptureBodySchema}. Optional because only the receipt ingest
+   * path and the mobile draft routes ever know one; every other adapter
+   * omits it exactly as it did before this field existed.
+   */
+  capture: CaptureBodySchema.optional(),
+});
+
+/**
+ * A caller-chosen dedup key for a write this pillar cannot otherwise
+ * de-duplicate on its own — there is no uploaded file to hash.
+ *
+ * The SAME key resubmitted is a 409, not a twin: `persistDraftPurchase`
+ * carries it as both `checksum` and `sourceOrderId`, and `createPurchase`
+ * already refuses a repeat of either inside one transaction.
+ */
+export const IdempotencyKeySchema = z.string().trim().min(1).max(200);
+
+/**
+ * The fields a reviewer edits before a purchase is written — shared by
+ * saving a corrected receipt-derived draft and typing a manual entry.
+ *
+ * Everything {@link CreatePurchaseBodySchema} carries EXCEPT the fields that
+ * name provenance: `source`, `sourceOrderId`, `ingestMethod` and `checksum`.
+ * Those are never the caller's to set here — the route handler decides them
+ * from which endpoint was called, which is what keeps a manual entry from
+ * masquerading as an upload (POPS-2454, ADR-046).
+ */
+const PurchaseDraftFieldsSchema = CreatePurchaseBodySchema.omit({
+  source: true,
+  sourceOrderId: true,
+  ingestMethod: true,
+  checksum: true,
+}).extend({
+  idempotencyKey: IdempotencyKeySchema,
+  items: z.array(CreateItemBodySchema).min(1),
+});
+
+/** `POST /purchases/manual` — a purchase typed by hand, no receipt at all. */
+export const CreateManualPurchaseBodySchema = PurchaseDraftFieldsSchema;
+
+/**
+ * `POST /receipts/draft` — a corrected receipt-derived draft becoming a
+ * purchase. `documents` is widened to require at least one: a save with
+ * nothing attached is not a receipt-derived purchase, and if that is what
+ * the reviewer meant, `POST /purchases/manual` is the route for it.
+ */
+export const SaveReceiptDraftBodySchema = PurchaseDraftFieldsSchema.extend({
+  documents: z.array(CreateDocumentBodySchema).min(1),
 });
 
 export const UpsertPurchaseSourceBodySchema = z.object({

@@ -108,7 +108,11 @@ function groupTagPoorRows(results: (TransactionProcessResult | undefined)[]): Ta
       continue;
     }
     groups.set(key, {
-      request: { entityName: row.entity.entityName ?? '', input: toCategorizerInput(row) },
+      request: {
+        entityName: row.entity.entityName ?? '',
+        input: toCategorizerInput(row),
+        ...(row.transactionType === undefined ? {} : { transactionType: row.transactionType }),
+      },
       rows: [row],
     });
   }

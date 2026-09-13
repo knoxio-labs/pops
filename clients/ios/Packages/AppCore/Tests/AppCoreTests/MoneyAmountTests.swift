@@ -58,6 +58,16 @@ internal struct MoneyAmountTests {
         #expect(amount.formatted(locale: Locale(identifier: "en_AU")).contains("19.99"))
     }
 
+    @Test("a non-AUD currency renders with its own symbol, not AUD's (POPS-3571)")
+    func brlRendersWithItsOwnSymbol() {
+        let amount = MoneyAmount(minorUnits: 1999, currencyCode: "BRL")
+
+        let rendered = amount.formatted(locale: Locale(identifier: "pt_BR"))
+
+        #expect(rendered.contains("R$"))
+        #expect(!rendered.contains("A$"))
+    }
+
     @Test("no floating point is involved")
     func exactArithmetic() {
         let tenCents = MoneyAmount(minorUnits: 10, currencyCode: "AUD").decimalValue

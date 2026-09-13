@@ -1,0 +1,14 @@
+name: Tags page shape
+question: Does the Tags page read better as a table whose rows expand to show
+  what applies each tag, or as a tag list beside a detail panel for the selected
+  tag?
+status: decided
+screen: finance/tags
+variants:
+  expanding: Table rows that expand to show each tag's sources
+  detail-panel: Tag list beside a detail panel for the selected tag
+chosen: expanding
+decided: 2026-09-13
+rationale: >-
+  Expanding rows, because they work the same at any width. The detail panel
+  stacks below its list under 1024px and loses the point of sitting beside it.

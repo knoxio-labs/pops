@@ -3,17 +3,18 @@ import CoreLocation
 import Foundation
 import OpenAPIRuntime
 
-/// Handing a photographed receipt to the purchases pillar through the BFM.
+/// Reading a photographed receipt into an editable draft, saving one, and
+/// creating a purchase with no receipt at all — all through the BFM
+/// (POPS-2454).
 ///
 /// The screen behind this knows only ``ReceiptCaptureRepository``. What the
-/// BFM's three-outcome contract looks like on the wire — which arm carries
-/// what, and which of the producer's fields never reach a handset at all — is
-/// decided here, once.
+/// BFM's contract looks like on the wire — which arm carries what, and which
+/// of the producer's fields never reach a handset at all — is decided here,
+/// once.
 ///
 /// Carries no credential of its own, matching ``BFMTransactionsRepository``:
-/// `POST /mobile/purchases/receipts` is a device-authenticated write, and the
-/// client handed in is expected to already carry the middleware that attaches
-/// one.
+/// every route here is a device-authenticated call, and the client handed in
+/// is expected to already carry the middleware that attaches one.
 public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
     private let client: BFMHTTPClient
     private let now: @Sendable () -> Date
@@ -43,12 +44,11 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
         self.captureLocation = captureLocation
     }
 
-    /// Uploads one receipt's parts and reports which of the three outcomes
-    /// the purchases pillar's gate produced.
-    public func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
-        let output: UploadReceipt.Output
+    /// Reads one receipt's parts into an editable draft. Persists nothing.
+    public func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
+        let output: ExtractReceipt.Output
         do {
-            output = try await client.generated.mobilePurchases_uploadReceipt(
+            output = try await client.generated.mobilePurchases_extractReceipt(
                 body: .json(
                     .init(
                         capture: Self.capture(
@@ -58,10 +58,36 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
                 )
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: UploadReceipt.id)
+            throw BFMRepositoryFailure.failure(error, operation: ExtractReceipt.id)
         }
 
-        return try outcome(from: output)
+        return try extraction(from: output)
+    }
+
+    public func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
+        let output: SaveReceiptDraft.Output
+        do {
+            output = try await client.generated.mobilePurchases_saveReceiptDraft(
+                body: .json(Self.saveDraftBody(from: payload))
+            )
+        } catch let error as ClientError {
+            throw BFMRepositoryFailure.failure(error, operation: SaveReceiptDraft.id)
+        }
+        return try purchase(from: output, operation: SaveReceiptDraft.id)
+    }
+
+    public func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
+        -> ReceiptPurchase
+    {
+        let output: CreateManualPurchase.Output
+        do {
+            output = try await client.generated.mobilePurchases_createManualPurchase(
+                body: .json(Self.manualBody(from: payload))
+            )
+        } catch let error as ClientError {
+            throw BFMRepositoryFailure.failure(error, operation: CreateManualPurchase.id)
+        }
+        return try purchase(from: output, operation: CreateManualPurchase.id)
     }
 }
 
@@ -70,11 +96,11 @@ extension BFMReceiptCaptureRepository {
         now: Date,
         timeZone: TimeZone,
         location: CaptureLocation?
-    ) -> UploadReceiptCapture {
-        UploadReceiptCapture(
+    ) -> ExtractReceiptCapture {
+        ExtractReceiptCapture(
             capturedAt: CaptureTimestampFormatter.string(from: now, in: timeZone),
             location: location.map {
-                UploadReceiptCaptureLocation(latitude: $0.latitude, longitude: $0.longitude)
+                ExtractReceiptCaptureLocation(latitude: $0.latitude, longitude: $0.longitude)
             },
             timeZone: timeZone.identifier
         )
@@ -99,183 +125,77 @@ extension BFMReceiptCaptureRepository {
         #endif
     }
 
-    private func outcome(from output: UploadReceipt.Output) throws -> ReceiptOutcome {
+    private func extraction(from output: ExtractReceipt.Output) throws -> ReceiptExtraction {
         switch output {
         case .ok(let ok):
-            return try Self.outcome(from: try ok.body.json)
+            return try Self.extraction(from: try ok.body.json)
         case .badRequest:
-            throw RepositoryError.transport("\(UploadReceipt.id): invalid request")
+            throw RepositoryError.transport("\(ExtractReceipt.id): invalid request")
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
         case .contentTooLarge:
-            // The device chose what it sent; a screen offering "retry" for a
-            // fixed-size upload that will fail the same way again is not a
-            // path forward, so this is a transport failure, not `unreadable`
-            // — nothing about the receipt itself was read.
-            throw RepositoryError.transport("\(UploadReceipt.id): payload too large")
+            throw RepositoryError.transport("\(ExtractReceipt.id): payload too large")
         case .tooManyRequests:
-            throw RepositoryError.transport("\(UploadReceipt.id): rate limited")
+            throw RepositoryError.transport("\(ExtractReceipt.id): rate limited")
         case .badGateway(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: UploadReceipt.id)
+                try upstream.body.json.code.rawValue, operation: ExtractReceipt.id)
         case .serviceUnavailable(let upstream):
             throw BFMRepositoryFailure.upstreamFailure(
-                try upstream.body.json.code.rawValue, operation: UploadReceipt.id)
+                try upstream.body.json.code.rawValue, operation: ExtractReceipt.id)
         case .undocumented(let statusCode, _):
             throw RepositoryError.transport(
-                "\(UploadReceipt.id): undocumented status \(statusCode)"
+                "\(ExtractReceipt.id): undocumented status \(statusCode)"
             )
         }
     }
 
-    /// The wire's `oneOf` into ``ReceiptOutcome``.
-    ///
-    /// Neither review arm carries a photo reference, and that is deliberate on
-    /// the BFM's side: the parts are addressed by `pops://` URIs into the
-    /// purchases pillar's own store, and no mobile route serves those bytes,
-    /// so the count is published instead of a pointer this app could only
-    /// ignore.
-    private static func outcome(from payload: UploadReceipt.Output.Ok.Body.JsonPayload) throws
-        -> ReceiptOutcome
-    {
+    private static func extraction(
+        from payload: ExtractReceipt.Output.Ok.Body.JsonPayload
+    ) throws -> ReceiptExtraction {
         switch payload {
-        case .case1(let created):
-            return .created(
-                purchase: purchase(from: created.purchase),
-                alreadyStored: created.alreadyStored
+        case .case1(let draft):
+            return .draft(
+                ReceiptDraftReading(
+                    receiptUris: draft.receiptUris,
+                    reconciled: draft.reconciled,
+                    failures: draft.failures.map(failure(from:)),
+                    extracted: extracted(from: draft.draft),
+                    capture: capture(from: draft.draft.capture)
+                )
             )
-        case .case2(let needsReview):
-            return .needsReview(
-                receiptCount: needsReview.receiptCount,
-                failures: needsReview.problems.map(failure(from:)),
-                extracted: extracted(from: needsReview.extracted)
-            )
-        case .case3(let unreadable):
-            return .unreadable(receiptCount: unreadable.receiptCount, reason: unreadable.reason)
+        case .case2(let unreadable):
+            return .unreadable(
+                receiptCount: unreadable.receiptUris.count, reason: unreadable.reason)
         }
     }
 
-    /// The wire's purchase into the one the confirmation screen draws.
-    ///
-    /// The cents and the currency code become a ``MoneyAmount`` here rather
-    /// than on the screen, matching ``BFMTransactionsRepository``: how many
-    /// minor units a currency has is one question, answered in one place.
-    private static func purchase(from wire: CreatedPurchase) -> ReceiptPurchase {
-        ReceiptPurchase(
-            id: wire.id,
-            merchantName: wire.merchantName,
-            total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
-            orderedAt: wire.orderedAt,
-            itemCount: wire.itemCount
-        )
-    }
-
-    /// One wire problem into ``ReceiptGateFailure``.
-    ///
-    /// A code this build has no copy for becomes
-    /// ``AppCore/ReceiptGateFailureKind/unrecognised(_:)`` rather than sinking
-    /// the outcome. The BFM keeps `code` open precisely so a gate that grows a
-    /// reason does not break an installed build, and refusing the answer here
-    /// would spend that guarantee on nothing — the producer's own `detail` is
-    /// the sentence a reviewer reads either way.
-    private static func failure(from wire: NeedsReviewProblem) -> ReceiptGateFailure {
-        ReceiptGateFailure(
-            kind: ReceiptGateFailureKind(wireCode: wire.code),
-            detail: wire.detail,
-            deltaCents: wire.deltaCents
-        )
-    }
-
-    /// The reading, field for field. Nothing is parsed: every money value is
-    /// the string the model transcribed off the paper, and turning one into a
-    /// number here would be this app asserting a figure the producer's own
-    /// gate has just refused to believe.
-    private static func extracted(from wire: NeedsReviewExtracted) -> ExtractedReceipt {
-        ExtractedReceipt(
-            merchantName: wire.merchantName,
-            address: wire.address,
-            purchasedOn: wire.purchasedOn,
-            purchasedAt: wire.purchasedAt,
-            currency: wire.currency,
-            total: wire.total,
-            tax: wire.tax,
-            discounts: wire.discounts,
-            surcharges: wire.surcharges,
-            shipping: wire.shipping,
-            lines: wire.lines.map(line(from:)),
-            unreadableNotes: wire.unreadableNotes
-        )
-    }
-
-    private static func line(from wire: NeedsReviewExtractedLine) -> ExtractedReceiptLine {
-        ExtractedReceiptLine(
-            description: wire.description,
-            amount: wire.amount,
-            quantity: wire.quantity,
-            unitNote: wire.unitNote
-        )
-    }
-
-    /// One ``ReceiptPart`` into the wire's shape. `Data` becomes base64
-    /// because that is what the contract's `dataBase64` field is — the
-    /// generator carries no `Foundation.Data` binding for a plain JSON
-    /// string.
-    private static func wire(from part: ReceiptPart) -> UploadReceiptPart {
-        UploadReceiptPart(
-            dataBase64: part.data.base64EncodedString(),
-            mediaType: mediaType(from: part.mediaType)
-        )
-    }
-
-    private static func mediaType(from mediaType: ReceiptMediaType) -> UploadReceiptMediaType {
-        switch mediaType {
-        case .jpeg: .imageJpeg
-        case .png: .imagePng
-        case .webp: .imageWebp
-        case .gif: .imageGif
-        case .pdf: .applicationPdf
-        case .plainText: .textPlain
-        }
+    /// One save/manual result, common to both write calls.
+    private func purchase<Output>(
+        from output: Output, operation: String
+    ) throws -> ReceiptPurchase where Output: WriteOutput {
+        try output.asPurchase(operation: operation)
     }
 }
 
-/// The generated names, shortened. Written out in full they pass 120 columns
-/// in every signature above, and the type they abbreviate is `internal` to
-/// this module — nothing here widens what a caller can name.
-private typealias UploadReceipt = Operations.MobilePurchases_uploadReceipt
-private typealias UploadReceiptPart =
-    UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload
-private typealias UploadReceiptCapture =
-    UploadReceipt.Input.Body.JsonPayload.CapturePayload
-private typealias UploadReceiptCaptureLocation =
-    UploadReceipt.Input.Body.JsonPayload.CapturePayload.LocationPayload
-private typealias UploadReceiptMediaType =
-    UploadReceipt.Input.Body.JsonPayload.PartsPayloadPayload.MediaTypePayload
-private typealias CreatedPurchase =
-    UploadReceipt.Output.Ok.Body.JsonPayload.Case1Payload.PurchasePayload
-private typealias NeedsReviewProblem =
-    UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ProblemsPayloadPayload
-private typealias NeedsReviewExtracted =
-    UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload
-private typealias NeedsReviewExtractedLine =
-    UploadReceipt.Output.Ok.Body.JsonPayload.Case2Payload.ExtractedPayload.LinesPayloadPayload
-
-internal struct CaptureLocation: Sendable {
-    internal let latitude: Double
-    internal let longitude: Double
+/// The fields `saveReceiptDraft` and `createManualPurchase` answer with, in
+/// common — two distinct generated types with the same shape, unified so one
+/// mapper serves both.
+/// Internal rather than private: the response mapping that consumes it lives
+/// in a sibling file, and Swift's `private` does not reach across one.
+internal protocol PurchaseDetailPayload {
+    var id: String { get }
+    var merchantName: String? { get }
+    var totalCents: Int { get }
+    var currency: String { get }
+    var orderedAt: String { get }
+    var itemCount: Int { get }
 }
 
-private enum CaptureTimestampFormatter {
-    private static let formatOptions: ISO8601DateFormatter.Options = [
-        .withInternetDateTime,
-        .withFractionalSeconds,
-        .withColonSeparatorInTimeZone,
-    ]
+extension Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload:
+    PurchaseDetailPayload
+{}
 
-    static func string(from date: Date, in timeZone: TimeZone) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = formatOptions
-        formatter.timeZone = timeZone
-        return formatter.string(from: date)
-    }
-}
+extension Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload:
+    PurchaseDetailPayload
+{}

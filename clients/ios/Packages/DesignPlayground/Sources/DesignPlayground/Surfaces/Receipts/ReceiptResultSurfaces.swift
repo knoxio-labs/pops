@@ -1,55 +1,45 @@
 import AppCore
 import FeatureReceiptCapture
 
-/// What reading an uploaded receipt came back as: a purchase, a reading
-/// waiting on a person, nothing usable, or the upload never landing at all.
+/// What reading an uploaded receipt came back as: an editable draft —
+/// reconciled or not — nothing usable, a purchase saved, or the call never
+/// landing at all.
 ///
 /// `ReceiptResultView` itself, driven by a ``PlaygroundReceiptCaptureRepository``
-/// that answers with whichever outcome or ``RepositoryError`` a state names
-/// instead of reaching a BFM. The three ``needsReview`` states between them
-/// exercise all eight ``ReceiptGateFailureKind`` cases — not one row per kind,
-/// since the screen draws the same warning-toned card regardless of which
-/// kind is in the list, but every kind still has to appear somewhere or a gap
-/// in ``ReceiptResultPresentation``'s wording would have nothing to show it.
+/// that answers with whichever extraction, save result or ``RepositoryError``
+/// a state names instead of reaching a BFM. Every usable reading is a
+/// `.draft` (POPS-2454) — the states below exercise every
+/// ``ReceiptGateFailureKind`` between them, not one row per kind, since the
+/// screen draws the same warning-toned header regardless of which kind is in
+/// the list.
 @MainActor
 internal enum ReceiptResultSurfaces {
+    private static let receiptUris = [
+        "pops://purchases/receipt/" + String(repeating: "a", count: 64)
+    ]
+
     internal static let surface = DesignSurface(
         id: SurfaceID(area: "receipts", slug: "result"),
         title: "Receipt result",
         synopsis: "What reading an uploaded receipt came back as.",
         chrome: .tabbed,
         states: [
-            DesignState.standard { ReceiptResultView(model: model(.success(created))) },
-            DesignState("already-stored", "Already on file") {
-                ReceiptResultView(model: model(.success(alreadyStoredCreated)))
-            },
-            DesignState("needs-review", "Needs review") {
+            DesignState.standard { ReceiptResultView(model: model(.success(.draft(tillNames)))) },
+            DesignState("saved", "Saved") {
                 ReceiptResultView(
                     model: model(
-                        .success(
-                            .needsReview(
-                                receiptCount: 2,
-                                failures: ReceiptPlaygroundFixtures.typicalFailures,
-                                extracted: ReceiptPlaygroundFixtures.typicalExtracted)),
-                        pages: 2))
+                        .success(.draft(tillNames)),
+                        writing: .success(ReceiptPlaygroundFixtures.purchase)))
             },
-            DesignState("needs-review-flagged", "Needs review — damaged, unrecognised") {
+            DesignState("needs-review", "Draft — unreconciled") {
                 ReceiptResultView(
-                    model: model(
-                        .success(
-                            .needsReview(
-                                receiptCount: 1,
-                                failures: ReceiptPlaygroundFixtures.hardwareFailures,
-                                extracted: ReceiptPlaygroundFixtures.hardwareExtracted))))
+                    model: model(.success(.draft(typical)), pages: 2))
             },
-            DesignState("needs-review-empty", "Needs review — no lines read") {
-                ReceiptResultView(
-                    model: model(
-                        .success(
-                            .needsReview(
-                                receiptCount: 1,
-                                failures: ReceiptPlaygroundFixtures.noLinesFailures,
-                                extracted: ReceiptPlaygroundFixtures.noLinesExtracted))))
+            DesignState("needs-review-flagged", "Draft — damaged, unrecognised") {
+                ReceiptResultView(model: model(.success(.draft(hardware))))
+            },
+            DesignState("needs-review-empty", "Draft — no lines read") {
+                ReceiptResultView(model: model(.success(.draft(noLines))))
             },
             DesignState("unreadable", "Unreadable") {
                 ReceiptResultView(
@@ -59,8 +49,11 @@ internal enum ReceiptResultSurfaces {
                                 receiptCount: 1,
                                 reason: ReceiptPlaygroundFixtures.unreadableReason))))
             },
-            DesignState("submitting", "Reading") {
-                ReceiptResultView(model: model(.success(created), neverAnswers: true))
+            DesignState("manual-entry", "Manual entry") {
+                ReceiptResultView(model: manualEntryModel())
+            },
+            DesignState("extracting", "Reading") {
+                ReceiptResultView(model: model(.success(.draft(tillNames)), neverAnswers: true))
             },
             DesignState("gateway-failed", "Could not reach the server") {
                 ReceiptResultView(model: model(.failure(.unavailable)))
@@ -68,17 +61,37 @@ internal enum ReceiptResultSurfaces {
         ]
     )
 
-    private static var created: ReceiptOutcome {
-        .created(purchase: ReceiptPlaygroundFixtures.purchase, alreadyStored: false)
+    private static var tillNames: ReceiptDraftReading {
+        ReceiptDraftReading(
+            receiptUris: receiptUris, reconciled: true, failures: [],
+            extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, capture: nil)
     }
 
-    private static var alreadyStoredCreated: ReceiptOutcome {
-        .created(purchase: ReceiptPlaygroundFixtures.purchase, alreadyStored: true)
+    private static var typical: ReceiptDraftReading {
+        ReceiptDraftReading(
+            receiptUris: receiptUris, reconciled: false,
+            failures: ReceiptPlaygroundFixtures.typicalFailures,
+            extracted: ReceiptPlaygroundFixtures.typicalExtracted, capture: nil)
+    }
+
+    private static var hardware: ReceiptDraftReading {
+        ReceiptDraftReading(
+            receiptUris: receiptUris, reconciled: false,
+            failures: ReceiptPlaygroundFixtures.hardwareFailures,
+            extracted: ReceiptPlaygroundFixtures.hardwareExtracted, capture: nil)
+    }
+
+    private static var noLines: ReceiptDraftReading {
+        ReceiptDraftReading(
+            receiptUris: receiptUris, reconciled: false,
+            failures: ReceiptPlaygroundFixtures.noLinesFailures,
+            extracted: ReceiptPlaygroundFixtures.noLinesExtracted, capture: nil)
     }
 
     private static func model(
-        _ answer: Result<ReceiptOutcome, RepositoryError>,
+        _ answer: Result<ReceiptExtraction, RepositoryError>,
         pages: Int = 1,
+        writing writeAnswer: Result<ReceiptPurchase, RepositoryError> = .failure(.unavailable),
         neverAnswers: Bool = false
     ) -> ReceiptResultViewModel {
         ReceiptResultViewModel(
@@ -88,7 +101,20 @@ internal enum ReceiptResultSurfaces {
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: PlaygroundReceiptCaptureRepository(
-                    answer, neverAnswers: neverAnswers),
+                    answer, writing: writeAnswer, neverAnswers: neverAnswers),
+                purchases: AppDependencies.unbound.purchases,
+                accounts: AppDependencies.unbound.accounts
+            ))
+    }
+
+    private static func manualEntryModel() -> ReceiptResultViewModel {
+        ReceiptResultViewModel(
+            enteringManuallyWith: AppDependencies(
+                transactions: AppDependencies.unbound.transactions,
+                pairing: AppDependencies.unbound.pairing,
+                reachability: AppDependencies.unbound.reachability,
+                receiptCapture: PlaygroundReceiptCaptureRepository(
+                    .failure(.unavailable), writing: .failure(.unavailable)),
                 purchases: AppDependencies.unbound.purchases,
                 accounts: AppDependencies.unbound.accounts
             ))

@@ -98,7 +98,11 @@ function DetailContent({ model, id, item }: { model: Model; id: string; item: It
         renderLink={Link}
         className="mb-8"
       />
-      <DetailHeaderSection item={item} locationPath={locationPath} />
+      {/* Unreviewed (NULL) has no separate badge here; render it as "Stored", same as false. */}
+      <DetailHeaderSection
+        item={{ ...item, inUse: item.inUse ?? false }}
+        locationPath={locationPath}
+      />
       <PhotoGallerySection
         photos={photosData?.data ?? []}
         isLoading={photosLoading}

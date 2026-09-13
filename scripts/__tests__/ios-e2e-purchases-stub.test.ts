@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MANUAL_OPERATION_ID,
   PURCHASES_PILLAR_ID,
   UPLOAD_OPERATION_ID,
+  manualRoute,
   purchasesRegistryEntry,
   readPurchasesContract,
   startPurchasesStub,
@@ -26,6 +28,22 @@ describe('the purchases contract this stub serves', () => {
     expect(() =>
       uploadRoute({ paths: { '/receipts': { post: { operationId: 'other' } } } })
     ).toThrow(new RegExp(`declares no ${UPLOAD_OPERATION_ID}`, 'u'));
+  });
+
+  it('also declares the manual-purchase operation the bfm calls by name', () => {
+    // The one write POPS-2454's stub answers for real — see this stub's
+    // header on why. Same failure mode as `receipt.upload`'s: a rename here
+    // would leave the stub reporting a pillar the bfm cannot actually call.
+    expect(manualRoute(readPurchasesContract())).toEqual({
+      method: 'POST',
+      path: '/purchases/manual',
+    });
+  });
+
+  it('names the missing operation when a rename takes the manual route away', () => {
+    expect(() =>
+      manualRoute({ paths: { '/purchases/manual': { post: { operationId: 'other' } } } })
+    ).toThrow(new RegExp(`declares no ${MANUAL_OPERATION_ID}`, 'u'));
   });
 });
 
@@ -53,6 +71,13 @@ describe('the purchases registry entry', () => {
       status: 'healthy',
       lastHeartbeatAt: '2026-08-20T00:00:00.000Z',
     });
+  });
+
+  it('names both mutations this stub answers reachability for', () => {
+    expect(entry.manifest.routes.mutations).toEqual([
+      `purchases.${UPLOAD_OPERATION_ID}`,
+      `purchases.${MANUAL_OPERATION_ID}`,
+    ]);
   });
 });
 
@@ -97,6 +122,65 @@ describe('the purchases stub', () => {
       // flow started reaching it by accident.
       expect(answered.status).toBe(404);
       expect((await answered.json()).message).toMatch(/serves nothing at POST \/receipts/u);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers POST /purchases/manual for real, echoing what it was sent', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          merchantEntityName: 'Corner Store',
+          orderedAt: '2026-09-01T00:00:00.000Z',
+          currency: 'AUD',
+          totalCents: 500,
+          items: [{ name: 'Coffee', quantity: 1, unitPriceCents: 500, lineTotalCents: 500 }],
+          idempotencyKey: 'a-key',
+        }),
+      });
+
+      expect(answered.status).toBe(200);
+      const body = await answered.json();
+      // `PurchasesDetailResponseSchema` — `pillars/bfm/src/api/purchases/list-wire.ts` —
+      // is what the bfm validates this against before mapping it onto the
+      // phone's wire shape. A field this drops or renames would read on a
+      // handset as a purchase with no merchant and no total, not as an error.
+      expect(body).toMatchObject({
+        purchase: {
+          source: 'manual',
+          merchantEntityName: 'Corner Store',
+          totalCents: 500,
+          subtotalCents: 500,
+          currency: 'AUD',
+          orderedAt: '2026-09-01T00:00:00.000Z',
+        },
+        items: [{ item: { name: 'Coffee', quantity: 1, lineTotalCents: 500 } }],
+        documents: [],
+      });
+      expect(body.purchase.id).toEqual(expect.any(String));
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers the manual write whether or not the pillar is currently reachable', async () => {
+    // `reachable` gates only `/openapi` — the reachability probe the BFM
+    // caches process-wide — not the routes underneath it. Gating the write on
+    // it too would make this stub a worse model of `purchases` than not
+    // gating it at all: nothing about a real pillar's write route consults
+    // that cache.
+    const stub = await startPurchasesStub();
+    try {
+      expect(stub.isReachable()).toBe(false);
+      const answered = await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        body: JSON.stringify({ items: [] }),
+      });
+      expect(answered.status).toBe(200);
     } finally {
       await stub.close();
     }

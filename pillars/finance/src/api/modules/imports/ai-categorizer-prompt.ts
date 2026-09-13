@@ -40,6 +40,8 @@ export function buildTransactionData(input: CategorizerInput): string {
   if (input.date !== undefined && input.date !== '') {
     lines.push(`Date: ${sanitizePromptField(input.date)}`);
   }
+  const location = input.location === undefined ? '' : sanitizePromptField(input.location);
+  if (location !== '') lines.push(`Location: ${location}`);
   return lines.join('\n');
 }
 
@@ -49,9 +51,20 @@ export function buildTransactionData(input: CategorizerInput): string {
  * merchant name is sanitized at this boundary like every other interpolated
  * field — it reaches here from the contacts pillar, which is not a source the
  * prompt gets to trust unconditionally.
+ *
+ * `transactionType` is rendered only here (POPS-3678). A row reaches this shape
+ * already resolved, so its type is known; a row reaches the categorize shapes
+ * precisely because nothing could type it yet, and there is none to send.
  */
-export function buildMatchedTransactionData(entityName: string, input: CategorizerInput): string {
-  return `Merchant: ${sanitizePromptField(entityName)}\n${buildTransactionData(input)}`;
+export function buildMatchedTransactionData(
+  entityName: string,
+  input: CategorizerInput,
+  transactionType?: string
+): string {
+  const lines = [`Merchant: ${sanitizePromptField(entityName)}`];
+  const type = transactionType === undefined ? '' : sanitizePromptField(transactionType);
+  if (type !== '') lines.push(`Type: ${type}`);
+  return `${lines.join('\n')}\n${buildTransactionData(input)}`;
 }
 
 export const ENTITY_NAME_RULES = `entityName rules:

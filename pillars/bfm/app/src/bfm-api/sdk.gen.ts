@@ -30,6 +30,12 @@ import type {
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
+  MobilePurchasesCreateManualPurchaseData,
+  MobilePurchasesCreateManualPurchaseErrors,
+  MobilePurchasesCreateManualPurchaseResponses,
+  MobilePurchasesExtractReceiptData,
+  MobilePurchasesExtractReceiptErrors,
+  MobilePurchasesExtractReceiptResponses,
   MobilePurchasesGetPurchaseData,
   MobilePurchasesGetPurchaseErrors,
   MobilePurchasesGetPurchaseResponses,
@@ -42,9 +48,9 @@ import type {
   MobilePurchasesListPurchasesData,
   MobilePurchasesListPurchasesErrors,
   MobilePurchasesListPurchasesResponses,
-  MobilePurchasesUploadReceiptData,
-  MobilePurchasesUploadReceiptErrors,
-  MobilePurchasesUploadReceiptResponses,
+  MobilePurchasesSaveReceiptDraftData,
+  MobilePurchasesSaveReceiptDraftErrors,
+  MobilePurchasesSaveReceiptDraftResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -218,21 +224,67 @@ export const mobilePurchasesListPurchases = <ThrowOnError extends boolean = fals
   >({ url: '/mobile/purchases', ...options });
 
 /**
- * Hand a photographed, scanned or pasted receipt to the purchases pillar
+ * Create a purchase typed by hand, with no receipt
  */
-export const mobilePurchasesUploadReceipt = <ThrowOnError extends boolean = false>(
-  options?: Options<MobilePurchasesUploadReceiptData, ThrowOnError>
+export const mobilePurchasesCreateManualPurchase = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesCreateManualPurchaseData, ThrowOnError>
 ): RequestResult<
-  MobilePurchasesUploadReceiptResponses,
-  MobilePurchasesUploadReceiptErrors,
+  MobilePurchasesCreateManualPurchaseResponses,
+  MobilePurchasesCreateManualPurchaseErrors,
   ThrowOnError
 > =>
   (options?.client ?? client).post<
-    MobilePurchasesUploadReceiptResponses,
-    MobilePurchasesUploadReceiptErrors,
+    MobilePurchasesCreateManualPurchaseResponses,
+    MobilePurchasesCreateManualPurchaseErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/purchases/manual',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Save a reviewed, possibly corrected receipt-derived draft as a purchase
+ */
+export const mobilePurchasesSaveReceiptDraft = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesSaveReceiptDraftData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesSaveReceiptDraftResponses,
+  MobilePurchasesSaveReceiptDraftErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobilePurchasesSaveReceiptDraftResponses,
+    MobilePurchasesSaveReceiptDraftErrors,
     ThrowOnError
   >({
     url: '/mobile/purchases/receipts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Read a photographed, scanned or pasted receipt into an editable draft
+ */
+export const mobilePurchasesExtractReceipt = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesExtractReceiptData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesExtractReceiptResponses,
+  MobilePurchasesExtractReceiptErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobilePurchasesExtractReceiptResponses,
+    MobilePurchasesExtractReceiptErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/purchases/receipts/extract',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -598,6 +598,15 @@ export type PurchaseCreateData = {
    * Body
    */
   body?: {
+    capture?: {
+      capturedAt: string | null;
+      capturedAtSource: 'client' | 'exif' | null;
+      declaredTimeZone: string | null;
+      latitude: number | null;
+      locationSource: 'client' | 'exif' | null;
+      longitude: number | null;
+      utcOffsetMinutes: number | null;
+    };
     charges?: Array<{
       allocations?: Array<{
         amountCents: number;
@@ -845,6 +854,267 @@ export type PurchaseCreateResponses = {
 };
 
 export type PurchaseCreateResponse = PurchaseCreateResponses[keyof PurchaseCreateResponses];
+
+export type PurchaseCreateManualData = {
+  /**
+   * Body
+   */
+  body?: {
+    capture?: {
+      capturedAt: string | null;
+      capturedAtSource: 'client' | 'exif' | null;
+      declaredTimeZone: string | null;
+      latitude: number | null;
+      locationSource: 'client' | 'exif' | null;
+      longitude: number | null;
+      utcOffsetMinutes: number | null;
+    };
+    charges?: Array<{
+      allocations?: Array<{
+        amountCents: number;
+        itemRef: string;
+      }>;
+      amountCents: number;
+      chargedAt?: string | null;
+      currency?: string;
+      orderAmountCents?: number;
+      origin?: 'merchant' | 'derived';
+      paymentHint?: string | null;
+      role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+      shipmentRef?: string | null;
+      sourceChargeRef?: string | null;
+    }>;
+    currency: string;
+    discountCents?: number;
+    documents?: Array<{
+      documentUri: string;
+      kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      shipmentRef?: string | null;
+    }>;
+    idempotencyKey: string;
+    items: Array<{
+      allocatedAdjustmentCents?: number;
+      allocatedShippingCents?: number;
+      gstApplicable?: boolean | null;
+      imageUrl?: string | null;
+      kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+      lineTotalCents: number;
+      merchantCategory?: string | null;
+      merchantCondition?: string | null;
+      name: string;
+      notes?: Array<string>;
+      promotionalPrice?: boolean | null;
+      quantity?: number;
+      ref?: string;
+      shipmentRef?: string | null;
+      sku?: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
+      tags?: Array<string>;
+      unitPriceCents: number;
+      units?: Array<{
+        inventoryItemUri?: string | null;
+        serialNumber?: string | null;
+      }>;
+      url?: string | null;
+    }>;
+    merchantEntityId?: string | null;
+    merchantEntityName?: string | null;
+    orderedAt: string;
+    orderedAtOffsetMinutes?: number | null;
+    paymentHint?: string | null;
+    rawRef?: string | null;
+    settlementMode?: 'card' | 'cash' | 'unknown';
+    shipments?: Array<{
+      carrier?: string | null;
+      deliveredAt?: string | null;
+      ref: string;
+      shippedAt?: string | null;
+      shippingCents?: number;
+      sourceShipmentRef?: string | null;
+      status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+      trackingNumber?: string | null;
+    }>;
+    shippingCents?: number;
+    subtotalCents?: number;
+    surchargeCents?: number;
+    tags?: Array<string>;
+    taxCents?: number;
+    totalCents: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/purchases/manual';
+};
+
+export type PurchaseCreateManualErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseCreateManualError =
+  PurchaseCreateManualErrors[keyof PurchaseCreateManualErrors];
+
+export type PurchaseCreateManualResponses = {
+  /**
+   * 200
+   */
+  200: {
+    accounting: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges: Array<{
+      allocations: Array<{
+        amountCents: number;
+        chargeId: string;
+        createdAt: string;
+        id: string;
+        itemId: string;
+      }>;
+      charge: {
+        amountCents: number;
+        chargedAt: string | null;
+        createdAt: string;
+        currency: string;
+        id: string;
+        orderAmountCents: number;
+        origin: 'merchant' | 'derived';
+        paymentHint: string | null;
+        position: number;
+        purchaseId: string;
+        role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+        shipmentId: string | null;
+        sourceChargeRef: string | null;
+        updatedAt: string;
+      };
+      links: Array<{
+        amountCents: number;
+        chargeId: string;
+        confidence: number;
+        confirmedAt: string | null;
+        createdAt: string;
+        id: string;
+        linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        matchRuleId: string | null;
+        transactionUri: string;
+      }>;
+    }>;
+    documents: Array<{
+      createdAt: string;
+      documentStaleAt: string | null;
+      documentUri: string;
+      id: string;
+      kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      purchaseId: string;
+      shipmentId: string | null;
+    }>;
+    items: Array<{
+      item: {
+        allocatedAdjustmentCents: number;
+        allocatedShippingCents: number;
+        createdAt: string;
+        gstApplicable: boolean | null;
+        id: string;
+        imageUrl: string | null;
+        kind: {
+          confirmedAt: string | null;
+          value: 'consumable' | 'durable' | 'digital' | 'service';
+        } | null;
+        lineTotalCents: number;
+        merchantCategory: string | null;
+        merchantCondition: string | null;
+        name: string;
+        position: number;
+        promotionalPrice: boolean | null;
+        purchaseId: string;
+        quantity: number;
+        refundedCents: number;
+        shipmentId: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
+        unitPriceCents: number;
+        url: string | null;
+      };
+      landedCostCents: number;
+      notes: Array<string>;
+      tags: Array<{
+        confirmedAt: string | null;
+        tag: string;
+      }>;
+      units: Array<{
+        createdAt: string;
+        id: string;
+        inventoryDeclinedAt: string | null;
+        inventoryItemStaleAt: string | null;
+        inventoryItemUri: string | null;
+        itemId: string;
+        serialNumber: string | null;
+      }>;
+    }>;
+    purchase: {
+      checksum: string;
+      createdAt: string;
+      currency: string;
+      discountCents: number;
+      id: string;
+      ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantEntityId: string | null;
+      merchantEntityName: string | null;
+      orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
+      paymentHint: string | null;
+      rawRef: string | null;
+      settlementMode: 'card' | 'cash' | 'unknown';
+      shippingCents: number;
+      source: string;
+      sourceOrderId: string | null;
+      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      subtotalCents: number;
+      surchargeCents: number;
+      taxCents: number;
+      totalCents: number;
+      updatedAt: string;
+    };
+    shipments: Array<{
+      carrier: string | null;
+      createdAt: string;
+      deliveredAt: string | null;
+      id: string;
+      position: number;
+      purchaseId: string;
+      shippedAt: string | null;
+      shippingCents: number;
+      sourceShipmentRef: string | null;
+      status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+      trackingNumber: string | null;
+      updatedAt: string;
+    }>;
+    tags: Array<string>;
+  };
+};
+
+export type PurchaseCreateManualResponse =
+  PurchaseCreateManualResponses[keyof PurchaseCreateManualResponses];
 
 export type PurchaseDeleteData = {
   /**
@@ -1648,6 +1918,434 @@ export type ReceiptUploadResponses = {
 };
 
 export type ReceiptUploadResponse = ReceiptUploadResponses[keyof ReceiptUploadResponses];
+
+export type ReceiptSaveDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    capture?: {
+      capturedAt: string | null;
+      capturedAtSource: 'client' | 'exif' | null;
+      declaredTimeZone: string | null;
+      latitude: number | null;
+      locationSource: 'client' | 'exif' | null;
+      longitude: number | null;
+      utcOffsetMinutes: number | null;
+    };
+    charges?: Array<{
+      allocations?: Array<{
+        amountCents: number;
+        itemRef: string;
+      }>;
+      amountCents: number;
+      chargedAt?: string | null;
+      currency?: string;
+      orderAmountCents?: number;
+      origin?: 'merchant' | 'derived';
+      paymentHint?: string | null;
+      role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+      shipmentRef?: string | null;
+      sourceChargeRef?: string | null;
+    }>;
+    currency: string;
+    discountCents?: number;
+    documents: Array<{
+      documentUri: string;
+      kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      shipmentRef?: string | null;
+    }>;
+    idempotencyKey: string;
+    items: Array<{
+      allocatedAdjustmentCents?: number;
+      allocatedShippingCents?: number;
+      gstApplicable?: boolean | null;
+      imageUrl?: string | null;
+      kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+      lineTotalCents: number;
+      merchantCategory?: string | null;
+      merchantCondition?: string | null;
+      name: string;
+      notes?: Array<string>;
+      promotionalPrice?: boolean | null;
+      quantity?: number;
+      ref?: string;
+      shipmentRef?: string | null;
+      sku?: {
+        scheme: 'asin' | 'merchant';
+        value: string;
+      } | null;
+      tags?: Array<string>;
+      unitPriceCents: number;
+      units?: Array<{
+        inventoryItemUri?: string | null;
+        serialNumber?: string | null;
+      }>;
+      url?: string | null;
+    }>;
+    merchantEntityId?: string | null;
+    merchantEntityName?: string | null;
+    orderedAt: string;
+    orderedAtOffsetMinutes?: number | null;
+    paymentHint?: string | null;
+    rawRef?: string | null;
+    settlementMode?: 'card' | 'cash' | 'unknown';
+    shipments?: Array<{
+      carrier?: string | null;
+      deliveredAt?: string | null;
+      ref: string;
+      shippedAt?: string | null;
+      shippingCents?: number;
+      sourceShipmentRef?: string | null;
+      status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+      trackingNumber?: string | null;
+    }>;
+    shippingCents?: number;
+    subtotalCents?: number;
+    surchargeCents?: number;
+    tags?: Array<string>;
+    taxCents?: number;
+    totalCents: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/receipts/draft';
+};
+
+export type ReceiptSaveDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReceiptSaveDraftError = ReceiptSaveDraftErrors[keyof ReceiptSaveDraftErrors];
+
+export type ReceiptSaveDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    accounting: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges: Array<{
+      allocations: Array<{
+        amountCents: number;
+        chargeId: string;
+        createdAt: string;
+        id: string;
+        itemId: string;
+      }>;
+      charge: {
+        amountCents: number;
+        chargedAt: string | null;
+        createdAt: string;
+        currency: string;
+        id: string;
+        orderAmountCents: number;
+        origin: 'merchant' | 'derived';
+        paymentHint: string | null;
+        position: number;
+        purchaseId: string;
+        role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+        shipmentId: string | null;
+        sourceChargeRef: string | null;
+        updatedAt: string;
+      };
+      links: Array<{
+        amountCents: number;
+        chargeId: string;
+        confidence: number;
+        confirmedAt: string | null;
+        createdAt: string;
+        id: string;
+        linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        matchRuleId: string | null;
+        transactionUri: string;
+      }>;
+    }>;
+    documents: Array<{
+      createdAt: string;
+      documentStaleAt: string | null;
+      documentUri: string;
+      id: string;
+      kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      purchaseId: string;
+      shipmentId: string | null;
+    }>;
+    items: Array<{
+      item: {
+        allocatedAdjustmentCents: number;
+        allocatedShippingCents: number;
+        createdAt: string;
+        gstApplicable: boolean | null;
+        id: string;
+        imageUrl: string | null;
+        kind: {
+          confirmedAt: string | null;
+          value: 'consumable' | 'durable' | 'digital' | 'service';
+        } | null;
+        lineTotalCents: number;
+        merchantCategory: string | null;
+        merchantCondition: string | null;
+        name: string;
+        position: number;
+        promotionalPrice: boolean | null;
+        purchaseId: string;
+        quantity: number;
+        refundedCents: number;
+        shipmentId: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
+        unitPriceCents: number;
+        url: string | null;
+      };
+      landedCostCents: number;
+      notes: Array<string>;
+      tags: Array<{
+        confirmedAt: string | null;
+        tag: string;
+      }>;
+      units: Array<{
+        createdAt: string;
+        id: string;
+        inventoryDeclinedAt: string | null;
+        inventoryItemStaleAt: string | null;
+        inventoryItemUri: string | null;
+        itemId: string;
+        serialNumber: string | null;
+      }>;
+    }>;
+    purchase: {
+      checksum: string;
+      createdAt: string;
+      currency: string;
+      discountCents: number;
+      id: string;
+      ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantEntityId: string | null;
+      merchantEntityName: string | null;
+      orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
+      paymentHint: string | null;
+      rawRef: string | null;
+      settlementMode: 'card' | 'cash' | 'unknown';
+      shippingCents: number;
+      source: string;
+      sourceOrderId: string | null;
+      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      subtotalCents: number;
+      surchargeCents: number;
+      taxCents: number;
+      totalCents: number;
+      updatedAt: string;
+    };
+    shipments: Array<{
+      carrier: string | null;
+      createdAt: string;
+      deliveredAt: string | null;
+      id: string;
+      position: number;
+      purchaseId: string;
+      shippedAt: string | null;
+      shippingCents: number;
+      sourceShipmentRef: string | null;
+      status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+      trackingNumber: string | null;
+      updatedAt: string;
+    }>;
+    tags: Array<string>;
+  };
+};
+
+export type ReceiptSaveDraftResponse = ReceiptSaveDraftResponses[keyof ReceiptSaveDraftResponses];
+
+export type ReceiptExtractData = {
+  /**
+   * Body
+   */
+  body?: {
+    capture?: {
+      capturedAt?: string;
+      location?: {
+        latitude: number;
+        longitude: number;
+      };
+      timeZone?: string;
+    };
+    parts: Array<{
+      dataBase64: string;
+      mediaType:
+        | 'image/jpeg'
+        | 'image/png'
+        | 'image/webp'
+        | 'image/gif'
+        | 'application/pdf'
+        | 'text/plain';
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/receipts/extract';
+};
+
+export type ReceiptExtractErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReceiptExtractError = ReceiptExtractErrors[keyof ReceiptExtractErrors];
+
+export type ReceiptExtractResponses = {
+  /**
+   * 200
+   */
+  200:
+    | {
+        draft: {
+          capture?: {
+            capturedAt: string | null;
+            capturedAtSource: 'client' | 'exif' | null;
+            declaredTimeZone: string | null;
+            latitude: number | null;
+            locationSource: 'client' | 'exif' | null;
+            longitude: number | null;
+            utcOffsetMinutes: number | null;
+          };
+          charges?: Array<{
+            allocations?: Array<{
+              amountCents: number;
+              itemRef: string;
+            }>;
+            amountCents: number;
+            chargedAt?: string | null;
+            currency?: string;
+            orderAmountCents?: number;
+            origin?: 'merchant' | 'derived';
+            paymentHint?: string | null;
+            role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+            shipmentRef?: string | null;
+            sourceChargeRef?: string | null;
+          }>;
+          currency: string;
+          discountCents?: number;
+          documents?: Array<{
+            documentUri: string;
+            kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+            shipmentRef?: string | null;
+          }>;
+          items?: Array<{
+            allocatedAdjustmentCents?: number;
+            allocatedShippingCents?: number;
+            gstApplicable?: boolean | null;
+            imageUrl?: string | null;
+            kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+            lineTotalCents: number;
+            merchantCategory?: string | null;
+            merchantCondition?: string | null;
+            name: string;
+            notes?: Array<string>;
+            promotionalPrice?: boolean | null;
+            quantity?: number;
+            ref?: string;
+            shipmentRef?: string | null;
+            sku?: {
+              scheme: 'asin' | 'merchant';
+              value: string;
+            } | null;
+            tags?: Array<string>;
+            unitPriceCents: number;
+            units?: Array<{
+              inventoryItemUri?: string | null;
+              serialNumber?: string | null;
+            }>;
+            url?: string | null;
+          }>;
+          merchantEntityId?: string | null;
+          merchantEntityName?: string | null;
+          orderedAt: string;
+          orderedAtOffsetMinutes?: number | null;
+          paymentHint?: string | null;
+          rawRef?: string | null;
+          settlementMode?: 'card' | 'cash' | 'unknown';
+          shipments?: Array<{
+            carrier?: string | null;
+            deliveredAt?: string | null;
+            ref: string;
+            shippedAt?: string | null;
+            shippingCents?: number;
+            sourceShipmentRef?: string | null;
+            status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+            trackingNumber?: string | null;
+          }>;
+          shippingCents?: number;
+          subtotalCents?: number;
+          surchargeCents?: number;
+          tags?: Array<string>;
+          taxCents?: number;
+          totalCents: number;
+        };
+        failures: Array<{
+          deltaCents?: number;
+          detail: string;
+          kind:
+            | 'unreadable-total'
+            | 'unreadable-line'
+            | 'no-lines'
+            | 'negative-line'
+            | 'sum-mismatch'
+            | 'ambiguous-tax'
+            | 'damaged';
+        }>;
+        kind: 'draft';
+        receiptUris: Array<string>;
+        reconciled: boolean;
+      }
+    | {
+        kind: 'unreadable';
+        reason: string;
+        receiptUris: Array<string>;
+      };
+};
+
+export type ReceiptExtractResponse = ReceiptExtractResponses[keyof ReceiptExtractResponses];
 
 export type ReceiptReadData = {
   body?: never;

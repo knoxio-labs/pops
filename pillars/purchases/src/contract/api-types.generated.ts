@@ -142,6 +142,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/purchases/manual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a purchase typed by hand, with no receipt */
+    post: operations['purchase.createManual'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/purchases/{id}': {
     parameters: {
       query?: never;
@@ -273,6 +290,40 @@ export interface paths {
     put?: never;
     /** Read an uploaded receipt — photograph, PDF or pasted body — and create its purchase */
     post: operations['receipt.upload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/receipts/draft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Persist a reviewed, possibly corrected receipt-derived draft as a purchase */
+    post: operations['receipt.saveDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/receipts/extract': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Read an uploaded receipt into an editable draft — photograph, PDF or pasted body. Persists nothing. */
+    post: operations['receipt.extract'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1164,6 +1215,17 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          capture?: {
+            capturedAt: string | null;
+            /** @enum {string|null} */
+            capturedAtSource: 'client' | 'exif' | null;
+            declaredTimeZone: string | null;
+            latitude: number | null;
+            /** @enum {string|null} */
+            locationSource: 'client' | 'exif' | null;
+            longitude: number | null;
+            utcOffsetMinutes: number | null;
+          };
           charges?: {
             allocations?: {
               amountCents: number;
@@ -1254,6 +1316,295 @@ export interface operations {
     responses: {
       /** @description 201 */
       201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            accounting: {
+              awaitingImportCents: number;
+              matchedCents: number;
+              netSpendCents: number;
+              refundedCents: number;
+              residualCents: number;
+              totalCents: number;
+            };
+            charges: {
+              allocations: {
+                amountCents: number;
+                chargeId: string;
+                createdAt: string;
+                id: string;
+                itemId: string;
+              }[];
+              charge: {
+                amountCents: number;
+                chargedAt: string | null;
+                createdAt: string;
+                currency: string;
+                id: string;
+                orderAmountCents: number;
+                /** @enum {string} */
+                origin: 'merchant' | 'derived';
+                paymentHint: string | null;
+                position: number;
+                purchaseId: string;
+                /** @enum {string} */
+                role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                shipmentId: string | null;
+                sourceChargeRef: string | null;
+                updatedAt: string;
+              };
+              links: {
+                amountCents: number;
+                chargeId: string;
+                confidence: number;
+                confirmedAt: string | null;
+                createdAt: string;
+                id: string;
+                /** @enum {string} */
+                linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                transactionUri: string;
+              }[];
+            }[];
+            documents: {
+              createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
+              id: string;
+              /** @enum {string} */
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+              purchaseId: string;
+              shipmentId: string | null;
+            }[];
+            items: {
+              item: {
+                allocatedAdjustmentCents: number;
+                allocatedShippingCents: number;
+                createdAt: string;
+                gstApplicable: boolean | null;
+                id: string;
+                imageUrl: string | null;
+                kind: {
+                  confirmedAt: string | null;
+                  /** @enum {string} */
+                  value: 'consumable' | 'durable' | 'digital' | 'service';
+                } | null;
+                lineTotalCents: number;
+                merchantCategory: string | null;
+                merchantCondition: string | null;
+                name: string;
+                position: number;
+                promotionalPrice: boolean | null;
+                purchaseId: string;
+                quantity: number;
+                refundedCents: number;
+                shipmentId: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
+                unitPriceCents: number;
+                url: string | null;
+              };
+              landedCostCents: number;
+              notes: string[];
+              tags: {
+                confirmedAt: string | null;
+                tag: string;
+              }[];
+              units: {
+                createdAt: string;
+                id: string;
+                inventoryDeclinedAt: string | null;
+                inventoryItemStaleAt: string | null;
+                inventoryItemUri: string | null;
+                itemId: string;
+                serialNumber: string | null;
+              }[];
+            }[];
+            purchase: {
+              checksum: string;
+              createdAt: string;
+              currency: string;
+              discountCents: number;
+              id: string;
+              /** @enum {string} */
+              ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantEntityId: string | null;
+              merchantEntityName: string | null;
+              orderedAt: string;
+              orderedAtOffsetMinutes: number | null;
+              paymentHint: string | null;
+              rawRef: string | null;
+              /** @enum {string} */
+              settlementMode: 'card' | 'cash' | 'unknown';
+              shippingCents: number;
+              source: string;
+              sourceOrderId: string | null;
+              /** @enum {string} */
+              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              subtotalCents: number;
+              surchargeCents: number;
+              taxCents: number;
+              totalCents: number;
+              updatedAt: string;
+            };
+            shipments: {
+              carrier: string | null;
+              createdAt: string;
+              deliveredAt: string | null;
+              id: string;
+              position: number;
+              purchaseId: string;
+              shippedAt: string | null;
+              shippingCents: number;
+              sourceShipmentRef: string | null;
+              /** @enum {string} */
+              status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+              trackingNumber: string | null;
+              updatedAt: string;
+            }[];
+            tags: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'purchase.createManual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          capture?: {
+            capturedAt: string | null;
+            /** @enum {string|null} */
+            capturedAtSource: 'client' | 'exif' | null;
+            declaredTimeZone: string | null;
+            latitude: number | null;
+            /** @enum {string|null} */
+            locationSource: 'client' | 'exif' | null;
+            longitude: number | null;
+            utcOffsetMinutes: number | null;
+          };
+          charges?: {
+            allocations?: {
+              amountCents: number;
+              itemRef: string;
+            }[];
+            amountCents: number;
+            chargedAt?: string | null;
+            currency?: string;
+            orderAmountCents?: number;
+            /** @enum {string} */
+            origin?: 'merchant' | 'derived';
+            paymentHint?: string | null;
+            /** @enum {string} */
+            role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+            shipmentRef?: string | null;
+            sourceChargeRef?: string | null;
+          }[];
+          currency: string;
+          discountCents?: number;
+          documents?: {
+            documentUri: string;
+            /** @enum {string} */
+            kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+            shipmentRef?: string | null;
+          }[];
+          idempotencyKey: string;
+          items: {
+            allocatedAdjustmentCents?: number;
+            allocatedShippingCents?: number;
+            gstApplicable?: boolean | null;
+            imageUrl?: string | null;
+            /** @enum {string|null} */
+            kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+            lineTotalCents: number;
+            merchantCategory?: string | null;
+            merchantCondition?: string | null;
+            name: string;
+            notes?: string[];
+            promotionalPrice?: boolean | null;
+            quantity?: number;
+            ref?: string;
+            shipmentRef?: string | null;
+            sku?: {
+              /** @enum {string} */
+              scheme: 'asin' | 'merchant';
+              value: string;
+            } | null;
+            tags?: string[];
+            unitPriceCents: number;
+            units?: {
+              inventoryItemUri?: string | null;
+              serialNumber?: string | null;
+            }[];
+            url?: string | null;
+          }[];
+          merchantEntityId?: string | null;
+          merchantEntityName?: string | null;
+          orderedAt: string;
+          orderedAtOffsetMinutes?: number | null;
+          paymentHint?: string | null;
+          rawRef?: string | null;
+          /** @enum {string} */
+          settlementMode?: 'card' | 'cash' | 'unknown';
+          shipments?: {
+            carrier?: string | null;
+            deliveredAt?: string | null;
+            ref: string;
+            shippedAt?: string | null;
+            shippingCents?: number;
+            sourceShipmentRef?: string | null;
+            /** @enum {string} */
+            status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+            trackingNumber?: string | null;
+          }[];
+          shippingCents?: number;
+          subtotalCents?: number;
+          surchargeCents?: number;
+          tags?: string[];
+          taxCents?: number;
+          totalCents: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -2318,6 +2669,499 @@ export interface operations {
                 /** @enum {string} */
                 kind: 'needs-review';
                 receiptUris: string[];
+              }
+            | {
+                /** @enum {string} */
+                kind: 'unreadable';
+                reason: string;
+                receiptUris: string[];
+              };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'receipt.saveDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          capture?: {
+            capturedAt: string | null;
+            /** @enum {string|null} */
+            capturedAtSource: 'client' | 'exif' | null;
+            declaredTimeZone: string | null;
+            latitude: number | null;
+            /** @enum {string|null} */
+            locationSource: 'client' | 'exif' | null;
+            longitude: number | null;
+            utcOffsetMinutes: number | null;
+          };
+          charges?: {
+            allocations?: {
+              amountCents: number;
+              itemRef: string;
+            }[];
+            amountCents: number;
+            chargedAt?: string | null;
+            currency?: string;
+            orderAmountCents?: number;
+            /** @enum {string} */
+            origin?: 'merchant' | 'derived';
+            paymentHint?: string | null;
+            /** @enum {string} */
+            role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+            shipmentRef?: string | null;
+            sourceChargeRef?: string | null;
+          }[];
+          currency: string;
+          discountCents?: number;
+          documents: {
+            documentUri: string;
+            /** @enum {string} */
+            kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+            shipmentRef?: string | null;
+          }[];
+          idempotencyKey: string;
+          items: {
+            allocatedAdjustmentCents?: number;
+            allocatedShippingCents?: number;
+            gstApplicable?: boolean | null;
+            imageUrl?: string | null;
+            /** @enum {string|null} */
+            kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+            lineTotalCents: number;
+            merchantCategory?: string | null;
+            merchantCondition?: string | null;
+            name: string;
+            notes?: string[];
+            promotionalPrice?: boolean | null;
+            quantity?: number;
+            ref?: string;
+            shipmentRef?: string | null;
+            sku?: {
+              /** @enum {string} */
+              scheme: 'asin' | 'merchant';
+              value: string;
+            } | null;
+            tags?: string[];
+            unitPriceCents: number;
+            units?: {
+              inventoryItemUri?: string | null;
+              serialNumber?: string | null;
+            }[];
+            url?: string | null;
+          }[];
+          merchantEntityId?: string | null;
+          merchantEntityName?: string | null;
+          orderedAt: string;
+          orderedAtOffsetMinutes?: number | null;
+          paymentHint?: string | null;
+          rawRef?: string | null;
+          /** @enum {string} */
+          settlementMode?: 'card' | 'cash' | 'unknown';
+          shipments?: {
+            carrier?: string | null;
+            deliveredAt?: string | null;
+            ref: string;
+            shippedAt?: string | null;
+            shippingCents?: number;
+            sourceShipmentRef?: string | null;
+            /** @enum {string} */
+            status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+            trackingNumber?: string | null;
+          }[];
+          shippingCents?: number;
+          subtotalCents?: number;
+          surchargeCents?: number;
+          tags?: string[];
+          taxCents?: number;
+          totalCents: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            accounting: {
+              awaitingImportCents: number;
+              matchedCents: number;
+              netSpendCents: number;
+              refundedCents: number;
+              residualCents: number;
+              totalCents: number;
+            };
+            charges: {
+              allocations: {
+                amountCents: number;
+                chargeId: string;
+                createdAt: string;
+                id: string;
+                itemId: string;
+              }[];
+              charge: {
+                amountCents: number;
+                chargedAt: string | null;
+                createdAt: string;
+                currency: string;
+                id: string;
+                orderAmountCents: number;
+                /** @enum {string} */
+                origin: 'merchant' | 'derived';
+                paymentHint: string | null;
+                position: number;
+                purchaseId: string;
+                /** @enum {string} */
+                role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                shipmentId: string | null;
+                sourceChargeRef: string | null;
+                updatedAt: string;
+              };
+              links: {
+                amountCents: number;
+                chargeId: string;
+                confidence: number;
+                confirmedAt: string | null;
+                createdAt: string;
+                id: string;
+                /** @enum {string} */
+                linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+                matchRuleId: string | null;
+                transactionUri: string;
+              }[];
+            }[];
+            documents: {
+              createdAt: string;
+              documentStaleAt: string | null;
+              documentUri: string;
+              id: string;
+              /** @enum {string} */
+              kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+              purchaseId: string;
+              shipmentId: string | null;
+            }[];
+            items: {
+              item: {
+                allocatedAdjustmentCents: number;
+                allocatedShippingCents: number;
+                createdAt: string;
+                gstApplicable: boolean | null;
+                id: string;
+                imageUrl: string | null;
+                kind: {
+                  confirmedAt: string | null;
+                  /** @enum {string} */
+                  value: 'consumable' | 'durable' | 'digital' | 'service';
+                } | null;
+                lineTotalCents: number;
+                merchantCategory: string | null;
+                merchantCondition: string | null;
+                name: string;
+                position: number;
+                promotionalPrice: boolean | null;
+                purchaseId: string;
+                quantity: number;
+                refundedCents: number;
+                shipmentId: string | null;
+                sku: {
+                  /** @enum {string} */
+                  scheme: 'asin' | 'merchant';
+                  value: string;
+                } | null;
+                unitPriceCents: number;
+                url: string | null;
+              };
+              landedCostCents: number;
+              notes: string[];
+              tags: {
+                confirmedAt: string | null;
+                tag: string;
+              }[];
+              units: {
+                createdAt: string;
+                id: string;
+                inventoryDeclinedAt: string | null;
+                inventoryItemStaleAt: string | null;
+                inventoryItemUri: string | null;
+                itemId: string;
+                serialNumber: string | null;
+              }[];
+            }[];
+            purchase: {
+              checksum: string;
+              createdAt: string;
+              currency: string;
+              discountCents: number;
+              id: string;
+              /** @enum {string} */
+              ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantEntityId: string | null;
+              merchantEntityName: string | null;
+              orderedAt: string;
+              orderedAtOffsetMinutes: number | null;
+              paymentHint: string | null;
+              rawRef: string | null;
+              /** @enum {string} */
+              settlementMode: 'card' | 'cash' | 'unknown';
+              shippingCents: number;
+              source: string;
+              sourceOrderId: string | null;
+              /** @enum {string} */
+              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              subtotalCents: number;
+              surchargeCents: number;
+              taxCents: number;
+              totalCents: number;
+              updatedAt: string;
+            };
+            shipments: {
+              carrier: string | null;
+              createdAt: string;
+              deliveredAt: string | null;
+              id: string;
+              position: number;
+              purchaseId: string;
+              shippedAt: string | null;
+              shippingCents: number;
+              sourceShipmentRef: string | null;
+              /** @enum {string} */
+              status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+              trackingNumber: string | null;
+              updatedAt: string;
+            }[];
+            tags: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
+  'receipt.extract': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          capture?: {
+            /** Format: date-time */
+            capturedAt?: string;
+            location?: {
+              latitude: number;
+              longitude: number;
+            };
+            timeZone?: string;
+          };
+          parts: {
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType:
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/webp'
+              | 'image/gif'
+              | 'application/pdf'
+              | 'text/plain';
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json':
+            | {
+                draft: {
+                  capture?: {
+                    capturedAt: string | null;
+                    /** @enum {string|null} */
+                    capturedAtSource: 'client' | 'exif' | null;
+                    declaredTimeZone: string | null;
+                    latitude: number | null;
+                    /** @enum {string|null} */
+                    locationSource: 'client' | 'exif' | null;
+                    longitude: number | null;
+                    utcOffsetMinutes: number | null;
+                  };
+                  charges?: {
+                    allocations?: {
+                      amountCents: number;
+                      itemRef: string;
+                    }[];
+                    amountCents: number;
+                    chargedAt?: string | null;
+                    currency?: string;
+                    orderAmountCents?: number;
+                    /** @enum {string} */
+                    origin?: 'merchant' | 'derived';
+                    paymentHint?: string | null;
+                    /** @enum {string} */
+                    role?: 'capture' | 'authorization' | 'refund' | 'adjustment';
+                    shipmentRef?: string | null;
+                    sourceChargeRef?: string | null;
+                  }[];
+                  currency: string;
+                  discountCents?: number;
+                  documents?: {
+                    documentUri: string;
+                    /** @enum {string} */
+                    kind?:
+                      | 'tax_invoice'
+                      | 'receipt'
+                      | 'order_confirmation'
+                      | 'delivery_photo'
+                      | 'other';
+                    shipmentRef?: string | null;
+                  }[];
+                  items?: {
+                    allocatedAdjustmentCents?: number;
+                    allocatedShippingCents?: number;
+                    gstApplicable?: boolean | null;
+                    imageUrl?: string | null;
+                    /** @enum {string|null} */
+                    kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
+                    lineTotalCents: number;
+                    merchantCategory?: string | null;
+                    merchantCondition?: string | null;
+                    name: string;
+                    notes?: string[];
+                    promotionalPrice?: boolean | null;
+                    quantity?: number;
+                    ref?: string;
+                    shipmentRef?: string | null;
+                    sku?: {
+                      /** @enum {string} */
+                      scheme: 'asin' | 'merchant';
+                      value: string;
+                    } | null;
+                    tags?: string[];
+                    unitPriceCents: number;
+                    units?: {
+                      inventoryItemUri?: string | null;
+                      serialNumber?: string | null;
+                    }[];
+                    url?: string | null;
+                  }[];
+                  merchantEntityId?: string | null;
+                  merchantEntityName?: string | null;
+                  orderedAt: string;
+                  orderedAtOffsetMinutes?: number | null;
+                  paymentHint?: string | null;
+                  rawRef?: string | null;
+                  /** @enum {string} */
+                  settlementMode?: 'card' | 'cash' | 'unknown';
+                  shipments?: {
+                    carrier?: string | null;
+                    deliveredAt?: string | null;
+                    ref: string;
+                    shippedAt?: string | null;
+                    shippingCents?: number;
+                    sourceShipmentRef?: string | null;
+                    /** @enum {string} */
+                    status?: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+                    trackingNumber?: string | null;
+                  }[];
+                  shippingCents?: number;
+                  subtotalCents?: number;
+                  surchargeCents?: number;
+                  tags?: string[];
+                  taxCents?: number;
+                  totalCents: number;
+                };
+                failures: {
+                  deltaCents?: number;
+                  detail: string;
+                  /** @enum {string} */
+                  kind:
+                    | 'unreadable-total'
+                    | 'unreadable-line'
+                    | 'no-lines'
+                    | 'negative-line'
+                    | 'sum-mismatch'
+                    | 'ambiguous-tax'
+                    | 'damaged';
+                }[];
+                /** @enum {string} */
+                kind: 'draft';
+                receiptUris: string[];
+                reconciled: boolean;
               }
             | {
                 /** @enum {string} */

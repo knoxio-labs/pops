@@ -155,6 +155,8 @@ describe('trigger predicate', () => {
       {
         entityName: 'Woolworths',
         input: { description: 'WOOLWORTHS 2246', amount: -20, date: '2026-01-01' },
+        // The resolved spend type rides with the row into the tag-only prompt (POPS-3678).
+        transactionType: 'purchase',
       },
     ]);
     // No confidence in the reply, so nothing is pre-accepted (POPS-3671).

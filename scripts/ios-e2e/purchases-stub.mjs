@@ -17,17 +17,17 @@
  * the SDK resolves an operation's path against the base URL, and a prefix in
  * the base URL is not carried onto it. One pillar, one origin, one port.
  *
- * ## Why it serves a contract and nothing else
+ * ## Why it serves a contract, `POST /purchases/manual`, and nothing else
  *
- * `/openapi` is the whole of what reachability is decided from, and
- * reachability is the whole of what the phone can currently exercise: the
- * Simulator has no camera, so no flow can produce a receipt to upload
+ * `/openapi` is the whole of what reachability is decided from. Beyond that,
+ * the Simulator has no camera, so no flow can produce a receipt to upload
  * (`VNDocumentCameraViewController` cannot be driven there at all — the
  * capture spike ran it and the Simulator's AVFoundation backend refuses to
- * configure an input). Serving `POST /receipts` would be a route with no
- * caller, and a fixture nobody exercises is a fixture nobody notices going
- * wrong. When the capture step can be stubbed on the phone, the outcome arms
- * belong here and this comment is what should be replaced.
+ * configure an input). `POST /purchases/manual` needs none of that: manual
+ * entry (POPS-2454) is the one write this Simulator can drive end to end, so
+ * it is the one this stub answers. `POST /receipts*` stays unserved for the
+ * same reason it always was — a fixture nobody's flow can exercise is a
+ * fixture nobody notices going wrong.
  *
  * The document served is purchases' own committed snapshot, verbatim — same
  * bargain `upstream-stub.mjs` strikes with finance's. A contract the pillar
@@ -53,6 +53,7 @@
  * flow arming this before it pairs sees the consequence on the first request
  * the app makes.
  */
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -79,6 +80,13 @@ export const PURCHASES_PILLAR_ID = 'purchases';
 export const UPLOAD_OPERATION_ID = 'receipt.upload';
 
 /**
+ * The operation `POST /purchases/manual` actually answers —
+ * `pillars/bfm/src/api/purchases/draft-client.ts`'s `createManualPurchase`
+ * calls it by this name.
+ */
+export const MANUAL_OPERATION_ID = 'purchase.createManual';
+
+/**
  * purchases' committed OpenAPI snapshot.
  *
  * @returns {Record<string, unknown>} the parsed document
@@ -88,7 +96,7 @@ export function readPurchasesContract() {
 }
 
 /**
- * Whether the document declares the operation the bfm resolves by name.
+ * Finds the method and path an operationId is declared at.
  *
  * Absence is a failure at boot rather than a surprise mid-flow. A renamed
  * operationId would otherwise leave this stub reporting a healthy pillar the
@@ -96,9 +104,10 @@ export function readPurchasesContract() {
  * several minutes later saying something true and useless.
  *
  * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @param {string} operationId
  * @returns {{ method: string, path: string }}
  */
-export function uploadRoute(document) {
+function routeFor(document, operationId) {
   const paths = document?.paths;
   if (paths === null || typeof paths !== 'object') {
     throw new Error('purchases OpenAPI document has no `paths` object');
@@ -107,17 +116,33 @@ export function uploadRoute(document) {
   for (const [path, item] of Object.entries(paths)) {
     if (item === null || typeof item !== 'object') continue;
     for (const [method, operation] of Object.entries(item)) {
-      if (operation?.operationId === UPLOAD_OPERATION_ID) {
+      if (operation?.operationId === operationId) {
         return { method: method.toUpperCase(), path };
       }
     }
   }
 
   throw new Error(
-    `purchases OpenAPI document declares no ${UPLOAD_OPERATION_ID}. ` +
+    `purchases OpenAPI document declares no ${operationId}. ` +
       'The bfm calls that operationId by name, so a pillar without it is not one ' +
       'this harness should be reporting as reachable.'
   );
+}
+
+/**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function uploadRoute(document) {
+  return routeFor(document, UPLOAD_OPERATION_ID);
+}
+
+/**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function manualRoute(document) {
+  return routeFor(document, MANUAL_OPERATION_ID);
 }
 
 /**
@@ -131,7 +156,9 @@ export function uploadRoute(document) {
  *   registered: boolean,
  *   status: string,
  *   lastHeartbeatAt: string,
- *   manifest: Record<string, unknown>,
+ *   manifest: Record<string, unknown> & {
+ *     routes: { queries: string[], mutations: string[], subscriptions: string[] },
+ *   },
  * }} RegistryEntry
  */
 
@@ -165,7 +192,7 @@ export function purchasesRegistryEntry({ baseUrl, now }) {
       },
       routes: {
         queries: [],
-        mutations: [`purchases.${UPLOAD_OPERATION_ID}`],
+        mutations: [`purchases.${UPLOAD_OPERATION_ID}`, `purchases.${MANUAL_OPERATION_ID}`],
         subscriptions: [],
       },
       search: { adapters: [] },
@@ -175,6 +202,91 @@ export function purchasesRegistryEntry({ baseUrl, now }) {
       healthcheck: { path: '/health' },
     },
   };
+}
+
+/**
+ * Reads a request body to completion and parses it as JSON.
+ *
+ * @param {import('node:http').IncomingMessage} request
+ * @returns {Promise<Record<string, unknown>>}
+ */
+function readJsonBody(request) {
+  return new Promise((resolve, reject) => {
+    /** @type {Buffer[]} */
+    const chunks = [];
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    request.on('error', reject);
+  });
+}
+
+/**
+ * Answers `POST /purchases/manual` the way `purchases` itself does: a
+ * `PurchaseDetailResponseSchema`-shaped record
+ * (`pillars/bfm/src/api/purchases/list-wire.ts`), echoing back the fields the
+ * bfm sent rather than inventing values a Maestro assertion could not have
+ * predicted.
+ *
+ * This is the one write the Simulator can drive without a camera, which is
+ * why it is the one this stub answers for real instead of a fixture nobody's
+ * flow can reach — see this file's header.
+ *
+ * @param {import('node:http').IncomingMessage} request
+ * @param {import('node:http').ServerResponse} response
+ * @returns {Promise<void>}
+ */
+async function handleCreateManualPurchase(request, response) {
+  const body = await readJsonBody(request);
+  const items = Array.isArray(body['items']) ? body['items'] : [];
+  const now = new Date().toISOString();
+
+  const detail = {
+    purchase: {
+      id: randomUUID(),
+      source: 'manual',
+      merchantEntityName: body['merchantEntityName'] ?? null,
+      totalCents: body['totalCents'] ?? 0,
+      subtotalCents: body['subtotalCents'] ?? sumLineTotals(items),
+      taxCents: body['taxCents'] ?? 0,
+      shippingCents: body['shippingCents'] ?? 0,
+      discountCents: body['discountCents'] ?? 0,
+      surchargeCents: body['surchargeCents'] ?? 0,
+      currency: body['currency'] ?? 'AUD',
+      orderedAt: body['orderedAt'] ?? now,
+      orderedAtOffsetMinutes: body['orderedAtOffsetMinutes'] ?? null,
+      status: 'linked',
+    },
+    items: items.map((item, index) => ({
+      item: {
+        id: `manual-item-${index}`,
+        name: item?.name ?? '',
+        quantity: item?.quantity ?? 1,
+        lineTotalCents: item?.lineTotalCents ?? 0,
+      },
+    })),
+    documents: [],
+  };
+
+  const responseBody = Buffer.from(JSON.stringify(detail));
+  response.writeHead(200, {
+    'content-type': 'application/json',
+    'content-length': String(responseBody.byteLength),
+  });
+  response.end(responseBody);
+}
+
+/**
+ * @param {readonly { lineTotalCents?: number }[]} items
+ * @returns {number}
+ */
+function sumLineTotals(items) {
+  return items.reduce((total, item) => total + (item?.lineTotalCents ?? 0), 0);
 }
 
 /**
@@ -193,9 +305,10 @@ export async function startPurchasesStub({
   contract = readPurchasesContract(),
   host = '127.0.0.1',
 } = {}) {
-  // Read for its side effect: it throws when the snapshot no longer declares
-  // the operation, and this is the moment to find that out.
+  // Read for their side effect: each throws when the snapshot no longer
+  // declares the operation, and this is the moment to find that out.
   uploadRoute(contract);
+  const manual = manualRoute(contract);
 
   let reachable = false;
 
@@ -225,12 +338,18 @@ export async function startPurchasesStub({
       return;
     }
 
+    if (request.method === manual.method && url.pathname === manual.path) {
+      void handleCreateManualPurchase(request, response);
+      return;
+    }
+
     response.writeHead(404, { 'content-type': 'application/json' });
     response.end(
       JSON.stringify({
         message:
           `ios-e2e purchases stub serves nothing at ${request.method} ${url.pathname}. ` +
-          'It answers `/openapi` and nothing else, on purpose — see its header.',
+          'It answers `/openapi`, `POST /purchases/manual`, and nothing else, on purpose — ' +
+          "see this file's header.",
       })
     );
   });

@@ -35,6 +35,7 @@ import {
 import { parseAmountCents } from '../money.js';
 import { RECEIPT_SOURCE_ID } from '../source-ids.js';
 import { resolveCapture } from './capture.js';
+import { CURRENCY_UNCERTAIN, resolveCurrency } from './currency.js';
 import { receiptKey } from './store.js';
 
 import type {
@@ -76,8 +77,6 @@ export const TIMEZONE_UNCERTAIN = 'timezone-uncertain';
  */
 export const SHIPPING_UNCERTAIN = 'shipping-uncertain';
 
-const DEFAULT_CURRENCY = 'AUD';
-
 export interface ReceiptPurchaseResult {
   readonly purchase: CreatePurchaseInput;
 }
@@ -89,7 +88,7 @@ export interface ReceiptContext {
   readonly capture?: ResolvedCapture;
 }
 
-function toItem(
+export function toItem(
   line: ExtractedReceipt['lines'][number],
   locale: { currency?: string | null }
 ): CreateItemInput | null {
@@ -119,7 +118,7 @@ function toItem(
  * no per-line postage the way `Total Amount` states one for Amazon — so
  * this is the same basis the amazon adapter uses for `Shipping Charge`.
  */
-function withAllocatedShipping(
+export function withAllocatedShipping(
   items: readonly CreateItemInput[],
   shippingCents: number
 ): CreateItemInput[] {
@@ -137,7 +136,7 @@ function withAllocatedShipping(
  * sends only a location leaves the capture time to the camera, and a reader
  * that cannot tell those apart cannot judge either.
  */
-function captureInput(capture: ResolvedCapture): CreateCaptureInput {
+export function captureInput(capture: ResolvedCapture): Required<CreateCaptureInput> {
   return {
     capturedAt: capture.capturedAt,
     capturedAtSource: capture.capturedAtSource,
@@ -157,7 +156,7 @@ function captureInput(capture: ResolvedCapture): CreateCaptureInput {
  * same as none at all, because a normalised 3 March is a fabrication either
  * way.
  */
-function occurredAt(extracted: ExtractedReceipt, reference: TimeReference): string | null {
+export function occurredAt(extracted: ExtractedReceipt, reference: TimeReference): string | null {
   if (extracted.purchasedOn === null) return null;
   const [year, month, day] = extracted.purchasedOn.split('-').map(Number);
   if (year === undefined || month === undefined || day === undefined) return null;
@@ -184,7 +183,7 @@ function occurredAt(extracted: ExtractedReceipt, reference: TimeReference): stri
  * holding. Storing nothing instead would leave a consumer to name the day
  * in UTC and disagree with the receipt outright.
  */
-function offsetAt(instant: string, reference: TimeReference): number | null {
+export function offsetAt(instant: string, reference: TimeReference): number | null {
   return reference.kind === 'offset'
     ? reference.offsetMinutes
     : utcOffsetMinutesAt(instant, reference.zone);
@@ -264,10 +263,12 @@ export function receiptToPurchase(
   }
   const stated = occurredAt(extracted, capture.timeReference);
   const orderedAt = stated ?? capture.capturedAt ?? uploadedAt;
+  const resolvedCurrency = resolveCurrency(extracted);
 
   const tags = [
     ...(stated === null ? [DATE_UNCERTAIN] : []),
     ...(capture.zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+    ...(resolvedCurrency.uncertain ? [CURRENCY_UNCERTAIN] : []),
   ];
 
   const locale = { currency: extracted.currency };
@@ -284,7 +285,7 @@ export function receiptToPurchase(
     ingestMethod: 'upload',
     orderedAt,
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
-    currency: extracted.currency ?? DEFAULT_CURRENCY,
+    currency: resolvedCurrency.currency,
     subtotalCents: gate.lineTotalCents,
     // Zero when the price already contained it: the receipt states the tax
     // as a fact about the total, not as a component to add. Carrying it

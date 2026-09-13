@@ -218,3 +218,29 @@ export function createMerchantResolver(handle?: PillarHandle<ContactsRouter>): M
     },
   };
 }
+
+/**
+ * Best-effort merchant link.
+ *
+ * The guarantee that a contacts outage costs a link rather than the
+ * purchase belongs HERE, not inside whichever resolver happens to be wired
+ * in. The live one catches its own failures; a future one, or a stub, might
+ * not, and a purchase must not be lost to a peer being down. Shared by every
+ * write path that names a merchant from free text — the receipt upload, the
+ * receipt-draft save, and the manual entry (POPS-2454) all call this rather
+ * than each catching contacts' own failures its own way.
+ */
+export async function nameMerchant(
+  merchant: MerchantResolver,
+  merchantName: string | null | undefined
+): Promise<string | null> {
+  if (merchantName === null || merchantName === undefined) return null;
+  try {
+    return await merchant.resolve(merchantName);
+  } catch (error) {
+    console.warn('[purchases-api] merchant lookup failed; leaving the purchase unlinked', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}

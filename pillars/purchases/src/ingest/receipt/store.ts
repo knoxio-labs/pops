@@ -23,6 +23,7 @@ import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
+import { popsUriPattern } from '../../contract/schemas/scalars.js';
 import { MEDIA_TYPES } from './vision.js';
 
 import type { DecodedReceiptPart, ReceiptMediaType } from './vision.js';
@@ -330,5 +331,51 @@ export function receiptKey(stored: readonly StoredReceipt[]): string {
 
   const digest = createHash('sha256');
   for (const one of stored) digest.update(`${one.sha256}:`);
+  return digest.digest('hex');
+}
+
+const RECEIPT_URI_RE = popsUriPattern('purchases', 'receipt');
+const RECEIPT_SHA_RE = /^[0-9a-f]{64}$/u;
+
+/**
+ * The sha256 out of a `pops://purchases/receipt/<sha256>` URI, or null.
+ *
+ * The pillar and type segments come from the shared factory so a renamed
+ * pillar cannot leave a stale spelling pinned here; the digest is checked
+ * separately because the factory's capture is any id, and this URI's id is
+ * always a sha256.
+ */
+export function receiptShaFromUri(uri: string): string | null {
+  const id = RECEIPT_URI_RE.exec(uri)?.[1];
+  return id !== undefined && RECEIPT_SHA_RE.test(id) ? id : null;
+}
+
+/**
+ * {@link receiptKey}, recomputed from the URIs a draft carries rather than
+ * from freshly-stored parts.
+ *
+ * Extracting a receipt and saving it are two requests apart, so saving has
+ * no `StoredReceipt[]` of its own — only the `documentUri`s the extract
+ * response handed back. This is what lets `saveDraft` refuse the same
+ * receipt twice under two different idempotency keys, the same way `upload`
+ * always has: the identity of a receipt is its bytes, and an idempotency key
+ * is only ever a statement about one save REQUEST.
+ *
+ * Null when any URI is not one this pillar minted — a malformed or
+ * fabricated `documentUri` cannot be hashed into a key that means anything.
+ */
+export function receiptKeyFromUris(uris: readonly string[]): string | null {
+  const shas: string[] = [];
+  for (const uri of uris) {
+    const sha = receiptShaFromUri(uri);
+    if (sha === null) return null;
+    shas.push(sha);
+  }
+  const [only] = shas;
+  if (only === undefined) return null;
+  if (shas.length === 1) return only;
+
+  const digest = createHash('sha256');
+  for (const sha of shas) digest.update(`${sha}:`);
   return digest.digest('hex');
 }
