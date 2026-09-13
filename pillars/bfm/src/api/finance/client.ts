@@ -1,3 +1,4 @@
+import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 /**
  * bfm's finance leg: the mobile transaction screens, expressed as calls to the
  * finance pillar.
@@ -15,7 +16,12 @@
  */
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
-import { getAccountDetail, listAccounts, resolveAccountName } from './accounts-client.js';
+import {
+  getAccountDetail,
+  listAccounts,
+  resolveAccount,
+  resolveAccountCurrencies,
+} from './accounts-client.js';
 import { encodePageCursor, type PageCursor } from './cursor.js';
 import {
   FinanceTransactionGetResponseSchema,
@@ -102,7 +108,11 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       );
       if (!isGatewayOk(page)) return page;
 
-      return { kind: 'ok', value: toPage(page.value.data, request.limit) };
+      const currencies = await resolveAccountCurrencies(
+        gateway,
+        page.value.data.map((row) => row.accountId)
+      );
+      return { kind: 'ok', value: toPage(page.value.data, request.limit, currencies) };
     },
 
     async getTransaction(id: string) {
@@ -119,8 +129,11 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
       );
       if (!isGatewayOk(record)) return record;
 
-      const accountName = await resolveAccountName(gateway, record.value.data.accountId);
-      return { kind: 'ok', value: toMobileTransactionDetail(record.value.data, accountName) };
+      const account = await resolveAccount(gateway, record.value.data.accountId);
+      return {
+        kind: 'ok',
+        value: toMobileTransactionDetail(record.value.data, account.name, account.currency),
+      };
     },
 
     listAccounts: () => listAccounts(gateway),
@@ -136,14 +149,26 @@ type FinanceListRows = z.infer<typeof FinanceTransactionListResponseSchema>['dat
  *
  * The cursor comes from the last KEPT row, never the probe: it names the place
  * the app has read up to, and naming a row the app never saw would skip it.
+ *
+ * `currencies` resolves each row's OWN account (POPS-3571) — a page can span
+ * several accounts once an `accountId` filter is not in play. A row whose
+ * account is missing from the map (its own lookup failed) falls back to
+ * {@link FALLBACK_MOBILE_CURRENCY} rather than failing the whole page over
+ * one bad account.
  */
-function toPage(rows: FinanceListRows, limit: number): MobileTransactionsPage {
+function toPage(
+  rows: FinanceListRows,
+  limit: number,
+  currencies: ReadonlyMap<string, string>
+): MobileTransactionsPage {
   const hasMore = rows.length > limit;
   const served = hasMore ? rows.slice(0, limit) : rows;
   const last = served.at(-1);
 
   return {
-    data: served.map(toMobileTransaction),
+    data: served.map((row) =>
+      toMobileTransaction(row, currencies.get(row.accountId) ?? FALLBACK_MOBILE_CURRENCY)
+    ),
     nextCursor:
       hasMore && last !== undefined ? encodePageCursor({ d: last.date, i: last.id }) : null,
   };

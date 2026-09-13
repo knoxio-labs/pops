@@ -4,13 +4,13 @@
  * reads. This asserts the zod schema behind it, which is what the mobile
  * transactions routes actually declare as their `200` body
  * (`pillars/bfm/src/contract/rest.ts`): that a transaction in a currency
- * other than {@link MOBILE_CURRENCY} is carried through unchanged rather than
+ * other than {@link FALLBACK_MOBILE_CURRENCY} is carried through unchanged rather than
  * failing validation, for both the list row and the fuller detail record.
  */
 import { describe, expect, it } from 'vitest';
 
 import {
-  MOBILE_CURRENCY,
+  FALLBACK_MOBILE_CURRENCY,
   MobileTransactionDetailSchema,
   MobileTransactionSchema,
 } from '../rest-schemas.js';
@@ -19,7 +19,7 @@ const row = {
   id: 'txn-1',
   description: 'Coffee',
   amount: -4.5,
-  currency: MOBILE_CURRENCY,
+  currency: FALLBACK_MOBILE_CURRENCY,
   date: '2026-03-05',
   type: 'purchase',
   entityName: 'Cafe',
