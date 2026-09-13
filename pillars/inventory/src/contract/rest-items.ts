@@ -43,6 +43,7 @@ export const InventoryItemSchema = z.object({
   assetId: z.string().nullable(),
   notes: z.string().nullable(),
   locationId: z.string().nullable(),
+  containerId: z.string().nullable(),
   lastEditedTime: z.string(),
 });
 
@@ -66,8 +67,17 @@ const CreateItemBody = z.object({
   purchasedFromId: z.string().nullable().optional(),
   purchasedFromName: z.string().nullable().optional(),
   assetId: z.string().nullable().optional(),
+  /**
+   * Idempotency key for a create driven by another pillar's fan-out, e.g.
+   * `pops://purchases/order/<id>/item/<id>`. Unique when supplied: a second
+   * create naming the same reference returns the first insert's row rather
+   * than minting a second one (POPS-2433). Absent for a row a person typed
+   * in directly.
+   */
+  sourceRef: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 
 const UpdateItemBody = z.object({
@@ -92,6 +102,7 @@ const UpdateItemBody = z.object({
   assetId: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   locationId: z.string().nullable().optional(),
+  containerId: z.string().nullable().optional(),
 });
 
 const ListQuery = z.object({
@@ -103,6 +114,7 @@ const ListQuery = z.object({
   deductible: z.enum(['true', 'false']).optional(),
   locationId: z.string().optional(),
   includeChildren: QueryBool.optional(),
+  containerId: z.string().optional(),
   assetId: z.string().optional(),
   limit: z.coerce.number().positive().optional(),
   offset: z.coerce.number().nonnegative().optional(),

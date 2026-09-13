@@ -1,5 +1,24 @@
 import SwiftUI
 
+/// Several pieces of glass that belong to one control.
+///
+/// iOS 26 renders glass elements that sit near each other as a family — they
+/// pick up each other's edges and merge as they approach — but only inside a
+/// container. A row of separate floating buttons without one is a row of
+/// unrelated blobs, each drawing its own hard rim.
+internal struct PlaygroundGlassGroup<Content: View>: View {
+    let spacing: CGFloat
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        #if os(iOS)
+            GlassEffectContainer(spacing: spacing) { content }
+        #else
+            content
+        #endif
+    }
+}
+
 extension View {
     /// Liquid Glass where the platform has it, and the nearest material where
     /// it does not.

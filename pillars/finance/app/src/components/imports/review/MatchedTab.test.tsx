@@ -3,10 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
-import { MatchedTab } from './MatchedTab';
+import { MatchedTab, type MatchedTabProps } from './MatchedTab';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
-import type { ReviewTabBaseProps } from './ReviewTabShared';
 
 vi.mock('../EditableTransactionCard', () => ({ EditableTransactionCard: () => null }));
 
@@ -33,11 +32,8 @@ function matchedRows(count: number, entities: string[]): ProcessedTransaction[] 
   });
 }
 
-function renderTab(
-  transactions: ProcessedTransaction[],
-  overrides: Partial<ReviewTabBaseProps> = {}
-) {
-  const props: ReviewTabBaseProps = {
+function renderTab(transactions: ProcessedTransaction[], overrides: Partial<MatchedTabProps> = {}) {
+  const props: MatchedTabProps = {
     transactions,
     groups: groupTransactionsByEntity(transactions, 'size'),
     viewMode: 'grouped',
@@ -142,6 +138,112 @@ describe('MatchedTab (POPS-2448)', () => {
     expect(
       screen.getAllByTestId('transaction-card').map((c) => c.getAttribute('aria-label'))
     ).toEqual(rows.map((r) => r.description));
+  });
+
+  it('pulls rows that will not commit to the top of the list and marks them', () => {
+    const rows = [
+      ...matchedRows(2, ['Woolworths']),
+      {
+        ...matchedTx(9, 'Coles'),
+        entity: {
+          entityId: 'pending:contact:coles',
+          entityName: 'Coles',
+          matchType: 'learned' as const,
+          confidence: 1,
+        },
+      },
+    ];
+    renderTab(rows, { viewMode: 'list' });
+
+    const cards = screen.getAllByTestId('transaction-card');
+    expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual([
+      'COLES 9',
+      'WOOLWORTHS 0',
+      'WOOLWORTHS 1',
+    ]);
+    expect(cards[0]).toHaveAttribute('data-blocked', 'entity');
+    expect(cards[0]).toHaveTextContent("Won't be imported: needs a merchant");
+    expect(cards[1]).not.toHaveAttribute('data-blocked');
+  });
+
+  it('hides everything but the blocked rows while the filter is on', async () => {
+    const user = userEvent.setup();
+    const rows = [
+      ...matchedRows(3, ['Woolworths']),
+      { ...matchedTx(9, 'Coles'), amount: 139.72, transactionType: undefined },
+    ];
+    const onBlockedOnlyChange = vi.fn();
+    renderTab(rows, { viewMode: 'list', blockedOnly: true, onBlockedOnlyChange });
+
+    expect(
+      screen.getAllByTestId('transaction-card').map((c) => c.getAttribute('aria-label'))
+    ).toEqual(['COLES 9']);
+    expect(screen.getByText(/1 of these won't be imported/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show all matched' }));
+    expect(onBlockedOnlyChange).toHaveBeenCalledWith(false);
+  });
+
+  it('shows the list mode as active while filtering, and leaves the filter on Grouped', async () => {
+    const user = userEvent.setup();
+    const rows = [
+      ...matchedRows(2, ['Woolworths']),
+      {
+        ...matchedTx(9, 'Coles'),
+        entity: {
+          entityId: 'pending:contact:coles',
+          entityName: 'Coles',
+          matchType: 'learned' as const,
+          confidence: 1,
+        },
+      },
+    ];
+    const onBlockedOnlyChange = vi.fn();
+    const { props } = renderTab(rows, {
+      viewMode: 'grouped',
+      blockedOnly: true,
+      onBlockedOnlyChange,
+    });
+
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Grouped' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Grouped' }));
+    expect(onBlockedOnlyChange).toHaveBeenCalledWith(false);
+    expect(props.onViewModeChange).toHaveBeenCalledWith('grouped');
+  });
+
+  it('falls back to the full tab once the blocked rows are fixed', () => {
+    renderTab(matchedRows(3, ['Woolworths']), {
+      viewMode: 'grouped',
+      blockedOnly: true,
+      onBlockedOnlyChange: vi.fn(),
+    });
+
+    expect(screen.getAllByTestId('transaction-group')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /show (all matched|only these)/i })).toBeNull();
+  });
+
+  it('counts the blocked rows on a collapsed group header', () => {
+    const rows = [
+      ...matchedRows(2, ['Woolworths']),
+      {
+        ...matchedTx(9, 'Woolworths'),
+        entity: {
+          entityId: 'pending:contact:woolworths',
+          entityName: 'Woolworths',
+          matchType: 'learned' as const,
+          confidence: 1,
+        },
+      },
+    ];
+    renderTab(rows);
+
+    expect(screen.queryAllByTestId('transaction-card')).toHaveLength(0);
+    expect(screen.getByText("1 won't import")).toBeInTheDocument();
   });
 
   it('says so when nothing matched', () => {

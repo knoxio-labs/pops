@@ -9,6 +9,7 @@ import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  containers,
   fixtures,
   homeInventory,
   itemConnections,
@@ -21,6 +22,7 @@ import {
 
 describe('inventory schema table names', () => {
   it.each([
+    [containers, 'containers'],
     [fixtures, 'fixtures'],
     [homeInventory, 'home_inventory'],
     [itemConnections, 'item_connections'],

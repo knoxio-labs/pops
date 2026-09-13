@@ -87,6 +87,12 @@ export const SuggestedTagSchema = z.object({
    * reassignment can drop it as stale (POPS-2624).
    */
   entityScoped: z.boolean().optional(),
+  /**
+   * The categorizer prompt revision that produced a `source: 'ai'` tag
+   * (POPS-3677). Carried to commit so the suggestion's outcome is recorded
+   * against the prompt that made it.
+   */
+  promptVersion: z.string().optional(),
 });
 
 export const RuleProvenanceSchema = z.object({

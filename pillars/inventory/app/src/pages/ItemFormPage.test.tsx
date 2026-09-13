@@ -217,6 +217,7 @@ function buildItem(overrides: Partial<ItemRecord> = {}): ItemRecord {
     assetId: 'ELEC01',
     notes: null,
     locationId: null,
+    containerId: null,
     lastEditedTime: '2026-01-01',
     purchaseTransactionId: null,
     purchasedFromId: null,

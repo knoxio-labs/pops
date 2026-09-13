@@ -35,6 +35,7 @@ import {
 import { parseAmountCents } from '../money.js';
 import { RECEIPT_SOURCE_ID } from '../source-ids.js';
 import { resolveCapture } from './capture.js';
+import { CURRENCY_UNCERTAIN, resolveCurrency } from './currency.js';
 import { receiptKey } from './store.js';
 
 import type {
@@ -75,8 +76,6 @@ export const TIMEZONE_UNCERTAIN = 'timezone-uncertain';
  * fee; asserting a clean figure for rows where none exists would be worse.
  */
 export const SHIPPING_UNCERTAIN = 'shipping-uncertain';
-
-const DEFAULT_CURRENCY = 'AUD';
 
 export interface ReceiptPurchaseResult {
   readonly purchase: CreatePurchaseInput;
@@ -264,10 +263,12 @@ export function receiptToPurchase(
   }
   const stated = occurredAt(extracted, capture.timeReference);
   const orderedAt = stated ?? capture.capturedAt ?? uploadedAt;
+  const resolvedCurrency = resolveCurrency(extracted);
 
   const tags = [
     ...(stated === null ? [DATE_UNCERTAIN] : []),
     ...(capture.zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+    ...(resolvedCurrency.uncertain ? [CURRENCY_UNCERTAIN] : []),
   ];
 
   const locale = { currency: extracted.currency };
@@ -284,7 +285,7 @@ export function receiptToPurchase(
     ingestMethod: 'upload',
     orderedAt,
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
-    currency: extracted.currency ?? DEFAULT_CURRENCY,
+    currency: resolvedCurrency.currency,
     subtotalCents: gate.lineTotalCents,
     // Zero when the price already contained it: the receipt states the tax
     // as a fact about the total, not as a component to add. Carrying it

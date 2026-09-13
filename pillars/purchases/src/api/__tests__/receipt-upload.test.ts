@@ -376,6 +376,50 @@ describe('re-uploading the same photograph', () => {
     expect(second.body.code).toBe('ALREADY_IMPORTED');
   });
 
+  it('refuses a second photograph even when its inferred currency differs from the first (POPS-3570 regression)', async () => {
+    // A legible shot resolves the printed address's timezone to a currency
+    // (BRL); a blurrier shot of the SAME paper fails to read the address at
+    // all and falls through to the unresolved code (XXX). Neither is a
+    // stated currency, so matching on it would treat one physical receipt
+    // as two shops — exactly the double-count this dedup check exists to
+    // prevent.
+    //
+    // Both uploads declare the SAME client capture zone, which outranks the
+    // model's address-inferred zone for `orderedAt` (`capture.ts`) — so the
+    // instant this test compares against stays fixed regardless of the
+    // model's own reading, isolating the currency signal as the only thing
+    // that varies between the two uploads.
+    const legible = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      currency: null,
+      address: 'Rua Augusta 123, São Paulo',
+      timeZone: 'America/Sao_Paulo',
+    });
+    const blurry = JSON.stringify({
+      ...JSON.parse(GOOD_READING),
+      currency: null,
+      address: null,
+      timeZone: null,
+    });
+    let answer = legible;
+    const app = appWith({ read: async () => answer });
+    const uploadWithCapture = (dataBase64: string) =>
+      requestOn(app)
+        .post('/receipts')
+        .send({
+          parts: [{ mediaType: 'image/jpeg', dataBase64 }],
+          capture: { timeZone: 'Australia/Sydney' },
+        });
+
+    const first = await uploadWithCapture(JPEG_BASE64);
+    answer = blurry;
+    const second = await uploadWithCapture(OTHER_JPEG_BASE64);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe('ALREADY_IMPORTED');
+  });
+
   it('keeps two genuine shops that differ only in time', async () => {
     // The case the image key was protecting: two identical coffees, an
     // hour apart. The receipts state different times, so they stay apart.

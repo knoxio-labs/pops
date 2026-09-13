@@ -18,6 +18,32 @@ import type {
   ConnectionsTraceData,
   ConnectionsTraceErrors,
   ConnectionsTraceResponses,
+  ContainersCreateData,
+  ContainersCreateErrors,
+  ContainersCreateResponses,
+  ContainersDeleteData,
+  ContainersDeleteErrors,
+  ContainersDeleteResponses,
+  ContainersGetData,
+  ContainersGetErrors,
+  ContainersGetResponses,
+  ContainersItemsData,
+  ContainersItemsErrors,
+  ContainersItemsResponses,
+  ContainersListData,
+  ContainersListResponses,
+  ContainersMoveData,
+  ContainersMoveErrors,
+  ContainersMoveResponses,
+  ContainersSealData,
+  ContainersSealErrors,
+  ContainersSealResponses,
+  ContainersUnpackData,
+  ContainersUnpackErrors,
+  ContainersUnpackResponses,
+  ContainersUpdateData,
+  ContainersUpdateErrors,
+  ContainersUpdateResponses,
   DocumentFilesListForItemData,
   DocumentFilesListForItemResponses,
   DocumentFilesRemoveUploadData,
@@ -214,6 +240,137 @@ export const connectionsConnect = <ThrowOnError extends boolean = false>(
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
+    },
+  });
+
+/**
+ * List all containers, optionally filtered by state
+ */
+export const containersList = <ThrowOnError extends boolean = false>(
+  options?: Options<ContainersListData, ThrowOnError>
+): RequestResult<ContainersListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<ContainersListResponses, unknown, ThrowOnError>({
+    url: '/containers',
+    ...options,
+  });
+
+/**
+ * Create a container
+ */
+export const containersCreate = <ThrowOnError extends boolean = false>(
+  options?: Options<ContainersCreateData, ThrowOnError>
+): RequestResult<ContainersCreateResponses, ContainersCreateErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ContainersCreateResponses, ContainersCreateErrors, ThrowOnError>(
+    {
+      url: '/containers',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    }
+  );
+
+/**
+ * Delete a container; items inside are emptied, never deleted
+ */
+export const containersDelete = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersDeleteData, ThrowOnError>
+): RequestResult<ContainersDeleteResponses, ContainersDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    ContainersDeleteResponses,
+    ContainersDeleteErrors,
+    ThrowOnError
+  >({
+    url: '/containers/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get a single container
+ */
+export const containersGet = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersGetData, ThrowOnError>
+): RequestResult<ContainersGetResponses, ContainersGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<ContainersGetResponses, ContainersGetErrors, ThrowOnError>({
+    url: '/containers/{id}',
+    ...options,
+  });
+
+/**
+ * Update a container (label, code, notes, origin location)
+ */
+export const containersUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersUpdateData, ThrowOnError>
+): RequestResult<ContainersUpdateResponses, ContainersUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<ContainersUpdateResponses, ContainersUpdateErrors, ThrowOnError>(
+    {
+      url: '/containers/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    }
+  );
+
+/**
+ * A container's contents
+ */
+export const containersItems = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersItemsData, ThrowOnError>
+): RequestResult<ContainersItemsResponses, ContainersItemsErrors, ThrowOnError> =>
+  (options.client ?? client).get<ContainersItemsResponses, ContainersItemsErrors, ThrowOnError>({
+    url: '/containers/{id}/items',
+    ...options,
+  });
+
+/**
+ * Move a container to a new location; every item inside moves with it
+ */
+export const containersMove = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersMoveData, ThrowOnError>
+): RequestResult<ContainersMoveResponses, ContainersMoveErrors, ThrowOnError> =>
+  (options.client ?? client).post<ContainersMoveResponses, ContainersMoveErrors, ThrowOnError>({
+    url: '/containers/{id}/move',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Mark a container sealed
+ */
+export const containersSeal = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersSealData, ThrowOnError>
+): RequestResult<ContainersSealResponses, ContainersSealErrors, ThrowOnError> =>
+  (options.client ?? client).post<ContainersSealResponses, ContainersSealErrors, ThrowOnError>({
+    url: '/containers/{id}/seal',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Mark a container unpacked
+ */
+export const containersUnpack = <ThrowOnError extends boolean = false>(
+  options: Options<ContainersUnpackData, ThrowOnError>
+): RequestResult<ContainersUnpackResponses, ContainersUnpackErrors, ThrowOnError> =>
+  (options.client ?? client).post<ContainersUnpackResponses, ContainersUnpackErrors, ThrowOnError>({
+    url: '/containers/{id}/unpack',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
     },
   });
 

@@ -6,6 +6,7 @@
  * smaller one that partly paid it. `solve.ts` decides the order they run in
  * and what happens between them.
  */
+import { comparableAmountCents, comparableCandidates } from './currency.js';
 import { descriptorMatcherFor, type DescriptorMatcher } from './descriptor.js';
 import { ruleMatcherFor } from './rules.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
@@ -69,7 +70,14 @@ export function orderedTransactions(
  *
  * Narrows the field to transactions that could plausibly settle this
  * charge: inside its window, matching its source descriptor, same sign,
- * non-zero on both sides.
+ * non-zero on both sides, and stating an amount that can honestly be
+ * compared with the charge's.
+ *
+ * That last test is where a cross-currency pairing is refused. A charge in
+ * one currency and a transaction that says nothing about that currency have
+ * no comparable amount at all, so the pair never reaches a stage — which is
+ * why an AUD transaction whose cents coincide with a BRL total cannot be
+ * matched by accident. See `currency.ts`.
  *
  * Returned as a predicate rather than applied directly because the combined
  * phase tests one charge against many transactions in a nested loop. Doing
@@ -105,9 +113,9 @@ export function eligibilityFor(
 /**
  * {@link eligibilityFor} with the descriptor test supplied.
  *
- * Every other test blocking makes — window, sign, non-zero, rejected — is
- * a fact about the charge and the transaction, and holds whatever admitted
- * the descriptor. Stage 4 swaps that one test and nothing else, which is
+ * Every other test blocking makes — window, sign, non-zero, comparable
+ * currency, rejected — is a fact about the charge and the transaction, and
+ * holds whatever admitted the descriptor. Stage 4 swaps that one test and nothing else, which is
  * both what makes it a widening of blocking rather than a second ladder,
  * and what stops a learned rule from ever reaching past a rejection or
  * outside a window.
@@ -133,6 +141,7 @@ function eligibilityWith(
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
     if (transaction.amountCents > 0 !== wantPositive) return false;
+    if (comparableAmountCents(charge, transaction) === null) return false;
     return matchesDescriptor(transaction.description);
   };
 }
@@ -150,12 +159,21 @@ export function candidatesFor(
   );
 }
 
-/** Stage 1 — a single transaction for exactly the charge amount. */
+/**
+ * Stage 1 — a single transaction for exactly the charge amount.
+ *
+ * Exactly, in the charge's own currency. For a domestic charge that is the
+ * settlement figure to the cent, unchanged; for one captured abroad it is
+ * the foreign amount the issuer printed, which is the only figure the two
+ * sides ever agreed on. No tolerance is introduced on either path.
+ */
 export function matchExact(
   charge: SolvableCharge,
   candidates: readonly SolvableTransaction[]
 ): MatchOutcome | null {
-  const hits = candidates.filter((t) => t.amountCents === charge.amountCents);
+  const hits = comparableCandidates(charge, candidates).filter(
+    (candidate) => candidate.amountCents === charge.amountCents
+  );
   if (hits.length === 0) return null;
 
   // Two transactions of the same amount in the same window is exactly the
@@ -165,7 +183,7 @@ export function matchExact(
 
   const [only] = hits;
   if (only === undefined) return null;
-  return { kind: 'linked', links: [linkOf(charge, only, only.amountCents, 'exact')] };
+  return { kind: 'linked', links: [linkOf(charge, only.transaction, only.amountCents, 'exact')] };
 }
 
 /**
@@ -177,8 +195,9 @@ export function matchSplit(
   charge: SolvableCharge,
   candidates: readonly SolvableTransaction[]
 ): MatchOutcome | null {
+  const comparable = comparableCandidates(charge, candidates);
   const search = findSubsetSummingTo(
-    candidates.map((t) => t.amountCents),
+    comparable.map((candidate) => candidate.amountCents),
     charge.amountCents,
     { minSize: MIN_SPLIT_SIZE }
   );
@@ -188,10 +207,10 @@ export function matchSplit(
       return {
         kind: 'linked',
         links: search.indices.flatMap((index) => {
-          const transaction = candidates[index];
-          return transaction === undefined
+          const candidate = comparable[index];
+          return candidate === undefined
             ? []
-            : [linkOf(charge, transaction, transaction.amountCents, 'split')];
+            : [linkOf(charge, candidate.transaction, candidate.amountCents, 'split')];
         }),
       };
     case 'ambiguous':
@@ -218,13 +237,18 @@ export function matchPartial(
   charge: SolvableCharge,
   candidates: readonly SolvableTransaction[]
 ): MatchOutcome | null {
-  const smaller = candidates.filter((t) => Math.abs(t.amountCents) < Math.abs(charge.amountCents));
+  const smaller = comparableCandidates(charge, candidates).filter(
+    (candidate) => Math.abs(candidate.amountCents) < Math.abs(charge.amountCents)
+  );
   if (smaller.length === 0) return null;
   if (smaller.length > 1) return { kind: 'review', reason: 'ambiguous-partial' };
 
   const [only] = smaller;
   if (only === undefined) return null;
-  return { kind: 'linked', links: [linkOf(charge, only, only.amountCents, 'partial')] };
+  return {
+    kind: 'linked',
+    links: [linkOf(charge, only.transaction, only.amountCents, 'partial')],
+  };
 }
 
 /** A candidate stage 4 admitted, and the rule that admitted it. */
@@ -245,8 +269,8 @@ export interface RuleCandidate {
  * can rescue: the rule names the merchant, so the ladder still has to find
  * the transaction itself.
  *
- * Every other blocking test still applies, including the rejection set —
- * see {@link eligibilityWith}.
+ * Every other blocking test still applies, including the rejection set and
+ * the currency test — see {@link eligibilityWith}.
  */
 export function ruleCandidatesFor(
   charge: SolvableCharge,
@@ -297,7 +321,7 @@ export function matchLearnedRule(
   candidates: readonly RuleCandidate[]
 ): MatchOutcome | null {
   const hits = candidates.filter(
-    (candidate) => candidate.transaction.amountCents === charge.amountCents
+    (candidate) => comparableAmountCents(charge, candidate.transaction) === charge.amountCents
   );
   if (hits.length === 0) return null;
   if (hits.length > 1) return { kind: 'review', reason: 'ambiguous' };
@@ -308,7 +332,7 @@ export function matchLearnedRule(
     kind: 'linked',
     links: [
       {
-        ...linkOf(charge, only.transaction, only.transaction.amountCents, 'rule'),
+        ...linkOf(charge, only.transaction, charge.amountCents, 'rule'),
         // The rule's own confidence, inherited from the link that taught
         // it, capped by the stage. A rule learned from a part-payment is
         // weaker evidence than one learned from an exact match.

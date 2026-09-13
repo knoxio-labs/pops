@@ -173,6 +173,7 @@ const baseItem: Item = {
   assetId: 'ASSET-001',
   notes: null,
   locationId: 'loc-3',
+  containerId: null,
   lastEditedTime: '2026-01-01T00:00:00Z',
 };
 

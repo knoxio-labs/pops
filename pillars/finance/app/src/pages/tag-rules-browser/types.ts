@@ -9,6 +9,18 @@ export type MatchType = 'exact' | 'contains' | 'regex';
  */
 export type LedgerMatchStatus = 'matched' | 'unused' | 'broken';
 
+/**
+ * Another active rule this one overlaps with in the ledger (POPS-3691):
+ * `contradicts` when both match a transaction and write different values on a
+ * single-valued axis, so one silently loses; `redundant` when the other matches
+ * every transaction this one does and already writes all of its tags.
+ */
+export interface TagRuleOverlap {
+  ruleId: string;
+  descriptionPattern: string;
+  kind: 'contradicts' | 'redundant';
+}
+
 export interface TagRule {
   id: string;
   descriptionPattern: string;
@@ -22,4 +34,5 @@ export interface TagRule {
   createdAt: string;
   lastUsedAt: string | null;
   ledgerMatchStatus: LedgerMatchStatus;
+  overlaps: TagRuleOverlap[];
 }

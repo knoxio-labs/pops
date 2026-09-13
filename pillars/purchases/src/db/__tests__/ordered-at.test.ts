@@ -140,6 +140,7 @@ describe('writing an order', () => {
       orderedAt: '2026-01-31T11:00:00Z',
       totalCents: 4500,
       currency: 'AUD',
+      uncertainCurrencyTag: null,
     });
 
     expect(found?.checksum).toBe('first');

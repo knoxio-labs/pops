@@ -66,6 +66,7 @@ import {
   tagVocabularyService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
+import { recordAiSuggestionOutcome } from './commit-ai-outcomes.js';
 import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
 import { applyChangeSetsPhase, applyTagRuleChangeSetsPhase } from './commit-changesets.js';
 import { mintImportCheckpointsPhase } from './commit-checkpoint.js';
@@ -155,6 +156,7 @@ function writeTransactionsPhase(
       // (POPS-2830); every other row is its own single-element array, so the
       // insert loop below doesn't need to know the split happened at all.
       const rows = expandLoanRepaymentRow(tx, transactionColumns(txn, entityId));
+      const firstLeg = inserted.length;
       for (const columns of rows) {
         const row = importsService.insertImportTransaction(tx, columns);
         imported++;
@@ -165,6 +167,9 @@ function writeTransactionsPhase(
           carriesBalance: txn.balanceCents !== undefined,
         });
       }
+      // A split loan repayment is one suggestion across its legs; count it once.
+      const firstLegId = inserted[firstLeg]?.id;
+      if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);
       tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

@@ -21,6 +21,111 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/containers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List all containers, optionally filtered by state */
+    get: operations['containers.list'];
+    put?: never;
+    /** Create a container */
+    post: operations['containers.create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/containers/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a single container */
+    get: operations['containers.get'];
+    put?: never;
+    post?: never;
+    /** Delete a container; items inside are emptied, never deleted */
+    delete: operations['containers.delete'];
+    options?: never;
+    head?: never;
+    /** Update a container (label, code, notes, origin location) */
+    patch: operations['containers.update'];
+    trace?: never;
+  };
+  '/containers/{id}/items': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** A container's contents */
+    get: operations['containers.items'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/containers/{id}/move': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Move a container to a new location; every item inside moves with it */
+    post: operations['containers.move'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/containers/{id}/seal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark a container sealed */
+    post: operations['containers.seal'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/containers/{id}/unpack': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark a container unpacked */
+    post: operations['containers.unpack'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/documents/{id}': {
     parameters: {
       query?: never;
@@ -904,6 +1009,698 @@ export interface operations {
       };
     };
   };
+  'containers.list': {
+    parameters: {
+      query?: {
+        state?: 'open' | 'sealed' | 'moved' | 'unpacked';
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            }[];
+            total: number;
+          };
+        };
+      };
+    };
+  };
+  'containers.create': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          code?: string | null;
+          label: string;
+          notes?: string | null;
+          originLocationId?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.get': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.delete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.update': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          code?: string | null;
+          label?: string;
+          notes?: string | null;
+          originLocationId?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.items': {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              assetId: string | null;
+              brand: string | null;
+              condition: string | null;
+              containerId: string | null;
+              deductible: boolean;
+              id: string;
+              inUse: boolean;
+              itemId: string | null;
+              itemName: string;
+              lastEditedTime: string;
+              location: string | null;
+              locationId: string | null;
+              model: string | null;
+              notes: string | null;
+              purchaseDate: string | null;
+              purchasePrice: number | null;
+              purchaseTransactionId: string | null;
+              purchasedFromId: string | null;
+              purchasedFromName: string | null;
+              replacementValue: number | null;
+              resaleValue: number | null;
+              room: string | null;
+              type: string | null;
+              warrantyExpires: string | null;
+            }[];
+            pagination: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.move': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          destinationLocationId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.seal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'containers.unpack': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              code: string | null;
+              createdAt: string;
+              currentLocationId: string | null;
+              destinationLocationId: string | null;
+              id: string;
+              label: string;
+              notes: string | null;
+              originLocationId: string | null;
+              /** @enum {string} */
+              state: 'open' | 'sealed' | 'moved' | 'unpacked';
+              updatedAt: string;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'documents.unlink': {
     parameters: {
       query?: never;
@@ -1320,6 +2117,7 @@ export interface operations {
         deductible?: 'true' | 'false';
         locationId?: string;
         includeChildren?: boolean;
+        containerId?: string;
         assetId?: string;
         limit?: number;
         offset?: number;
@@ -1341,6 +2139,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;
@@ -1391,6 +2190,7 @@ export interface operations {
           assetId?: string | null;
           brand?: string | null;
           condition?: string | null;
+          containerId?: string | null;
           /** @default false */
           deductible: boolean;
           /** @default false */
@@ -1409,6 +2209,7 @@ export interface operations {
           replacementValue?: number | null;
           resaleValue?: number | null;
           room?: string | null;
+          sourceRef?: string | null;
           type?: string | null;
           warrantyExpires?: string | null;
         };
@@ -1426,6 +2227,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;
@@ -1514,6 +2316,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;
@@ -1608,6 +2411,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;
@@ -1757,6 +2561,7 @@ export interface operations {
           assetId?: string | null;
           brand?: string | null;
           condition?: string | null;
+          containerId?: string | null;
           deductible?: boolean;
           inUse?: boolean;
           itemId?: string | null;
@@ -1790,6 +2595,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;
@@ -3632,6 +4438,7 @@ export interface operations {
               assetId: string | null;
               brand: string | null;
               condition: string | null;
+              containerId: string | null;
               deductible: boolean;
               id: string;
               inUse: boolean;

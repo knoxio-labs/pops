@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+import { containers } from './containers.js';
 import { locations } from './locations.js';
 
 export const homeInventory = sqliteTable(
@@ -57,8 +58,24 @@ export const homeInventory = sqliteTable(
     // redundant unique index (`home_inventory_asset_id_unique`) that
     // doubles write cost and on-disk footprint for zero functional gain.
     assetId: text('asset_id'),
+    /**
+     * Idempotency key for a create driven by another pillar's fan-out, e.g.
+     * `pops://purchases/order/<id>/item/<id>`. NULL for a row a person typed
+     * in directly. Enforced unique below (POPS-2433) so two concurrent
+     * accepts of the same external slot mint one asset, not two — the second
+     * insert's UNIQUE violation is the signal the caller uses to fetch and
+     * return the first insert's row instead of retrying.
+     */
+    sourceRef: text('source_ref'),
     notes: text('notes'),
     locationId: text('location_id').references(() => locations.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * `set null` on delete, not `cascade`: deleting a container empties it
+     * rather than deleting what was inside — see POPS-3581.
+     */
+    containerId: text('container_id').references(() => containers.id, {
       onDelete: 'set null',
     }),
     createdAt: text('created_at')
@@ -71,8 +88,10 @@ export const homeInventory = sqliteTable(
   },
   (table) => [
     uniqueIndex('idx_inventory_asset_id').on(table.assetId),
+    uniqueIndex('idx_inventory_source_ref').on(table.sourceRef),
     index('idx_inventory_name').on(table.itemName),
     index('idx_inventory_location').on(table.locationId),
+    index('idx_inventory_container').on(table.containerId),
     index('idx_inventory_type').on(table.type),
     index('idx_inventory_warranty').on(table.warrantyExpires),
     index('idx_inventory_purchase_transaction_uri').on(table.purchaseTransactionUri),

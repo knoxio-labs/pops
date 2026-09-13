@@ -160,7 +160,7 @@ describe('categorizeBatchWithAi — telemetry (CF096/#3671)', () => {
   it('tags the batch prompt with its own promptVersion, distinct from the single-row prompt', async () => {
     const captured = captureReports();
     createMock.mockResolvedValue(
-      textResponse('[{"entityName":"Woolworths","tags":["groceries"]}]')
+      textResponse('[{"n":1,"entityName":"Woolworths","tags":["groceries"]}]')
     );
 
     await categorizeBatchWithAi([{ description: 'WOOLWORTHS 1234' }], 'batch-10', VOCAB, { db });

@@ -255,6 +255,7 @@ describe('ItemsPage', () => {
         lastEditedTime: '2026-06-16T00:00:00Z',
         location: null,
         locationId: null,
+        containerId: null,
         model: null,
         notes: null,
         purchaseDate: null,

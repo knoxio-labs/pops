@@ -1,9 +1,10 @@
-import { ChevronRight, Sparkles } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Badge, Button, CollapsibleTrigger } from '@pops/ui';
 
 import { AcceptEntityButton } from '../AcceptEntityButton';
 import { type EntityExistence } from '../entity-existence';
+import { dropReason } from '../review/buildConfirmed';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -54,8 +55,19 @@ export interface GroupHeaderProps extends GroupBulkActionsProps {
   totalAmount: number;
 }
 
+/**
+ * How many of the group's rows will not commit. Collapsed groups are the
+ * default in the Matched tab, so without this the only sign of a blocked row
+ * is a count above the tabs that names no group (POPS-3659).
+ */
+function blockedCount(props: GroupHeaderProps): number {
+  if (props.variant !== 'matched') return 0;
+  return props.group.transactions.filter((t) => dropReason(t) !== null).length;
+}
+
 export function GroupHeader(props: GroupHeaderProps) {
   const { group, isExpanded, totalAmount } = props;
+  const blocked = blockedCount(props);
   return (
     <div
       className={`p-4 ${group.aiSuggestion && props.variant !== 'matched' ? 'bg-app-accent/10' : 'bg-muted'}`}
@@ -86,6 +98,15 @@ export function GroupHeader(props: GroupHeaderProps) {
             {group.category && (
               <Badge variant="outline" className="text-xs">
                 {group.category}
+              </Badge>
+            )}
+            {blocked > 0 && (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1 border-warning/40 bg-warning/10 text-warning"
+              >
+                <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                {blocked} won&apos;t import
               </Badge>
             )}
           </div>

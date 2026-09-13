@@ -51,11 +51,29 @@ public enum Chrome: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Whether this chrome draws a tab bar the inspector has to clear.
+    /// The same chrome with its stand-in tab bar dropped, and everything the
+    /// tab bar was wrapping kept.
     ///
-    /// The inspector floats at the bottom edge, which is exactly where iOS 26
-    /// floats a tab bar — without this the two land on top of each other and
-    /// neither is usable.
+    /// For an experiment. A surface names the chrome it is designed for and
+    /// that naming is meaningful — a tab bar is there because you want to see
+    /// the screen sit under one. An experiment names nothing: it inherits its
+    /// first variant's chrome, so the tab bar arrives by accident, labelled
+    /// with the experiment's own question truncated to fit, beside two tabs
+    /// that are stand-ins and go nowhere. None of that is what is being
+    /// compared, and it costs the comparison the bottom of the screen.
+    public var withoutTabBar: Chrome {
+        switch self {
+        case .tabbed: .bare
+        case .navigationAndTabs: .navigationLarge
+        case .bare, .navigation, .navigationLarge, .sheet: self
+        }
+    }
+
+    /// Whether this chrome draws a tab bar.
+    ///
+    /// A fact about the chrome rather than a layout instruction: the inspector
+    /// clears the bottom edge whatever is down there, because a tab bar is not
+    /// the only thing iOS 26 puts at it.
     public var showsTabBar: Bool {
         switch self {
         case .tabbed, .navigationAndTabs: true

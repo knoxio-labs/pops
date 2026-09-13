@@ -17,33 +17,22 @@
  * transaction (POPS-2602).
  */
 import {
-  tagVocabularyService,
   type FinanceDb,
   type TransactionCorrectionRow,
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
+import { addAiTags } from './ai-tags.js';
+import { remember } from './seen-tags.js';
 import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
 
+import type { SuggestedTag } from './types.js';
+
+export { buildAiSuggestedTags } from './ai-tags.js';
+export type { SuggestedTag, TagSuggestionSource } from './types.js';
+
 import type { InMemoryTagRule } from './tag-rule-matching.js';
-
-export type TagSuggestionSource = 'rule' | 'ai' | 'entity';
-
-export interface SuggestedTag {
-  tag: string;
-  source: TagSuggestionSource;
-  pattern?: string;
-  isNew?: boolean;
-  /**
-   * `true` when a `source: 'rule'` tag came from a tag rule scoped to a
-   * specific entity, rather than a global one. Absent for every other tag,
-   * including a global rule's — the client needs to tell the two `'rule'`
-   * cases apart to drop only the stale one on an entity reassignment
-   * (POPS-2624).
-   */
-  entityScoped?: boolean;
-}
 
 export interface SuggestTagsOptions {
   description: string;
@@ -60,6 +49,8 @@ export interface SuggestTagsOptions {
   accountId?: string | null;
   aiTags?: string[];
   aiCategory?: string | null;
+  /** The prompt revision that produced `aiTags`, stamped onto each AI suggestion (POPS-3677). */
+  aiPromptVersion?: string;
   knownTags?: string[];
   correctionTags?: string[];
   correctionPattern?: string;
@@ -107,19 +98,6 @@ export interface SuggestTagsOptions {
    * option already skips matching entirely.
    */
   corrections?: readonly TransactionCorrectionRow[];
-}
-
-/**
- * Record a tag as emitted, returning false when an equal tag is already in the
- * result. Comparison is case-insensitive and shared with the vocabulary, so an
- * AI `Bar` and an entity-default `bar` collapse to one suggestion instead of
- * landing on the row twice under two spellings.
- */
-function remember(seen: Set<string>, tag: string): boolean {
-  const key = tagVocabularyService.normalizeTagForComparison(tag);
-  if (seen.has(key)) return false;
-  seen.add(key);
-  return true;
 }
 
 interface TagPass {
@@ -212,75 +190,6 @@ function addTagRuleTags(pass: TagPass): void {
   }
 }
 
-interface AddAiTagsArgs {
-  aiTags: string[] | undefined;
-  aiCategory: string | null | undefined;
-  knownTags: string[] | undefined;
-  db: FinanceDb;
-  seen: Set<string>;
-  result: SuggestedTag[];
-}
-
-/**
- * Attribute model-supplied tags as `source: 'ai'` suggestions, flagging any
- * value outside the active vocabulary as `isNew` so the accept/reject gate can
- * tell a vocabulary value from a coined one.
- *
- * Exported because the tag-only pass (POPS-2596) attributes its tags without a
- * full `suggestTags` walk: those rows resolved deterministically and already
- * ran the correction/rule passes, and re-running them would bump `timesApplied`
- * a second time for rules whose tags the row does not even carry. It takes the
- * vocabulary set rather than reading it so that pass can load it once per run
- * instead of once per row.
- */
-export function buildAiSuggestedTags(
-  aiTags: readonly string[],
-  knownTagSet: tagVocabularyService.KnownTagSet
-): SuggestedTag[] {
-  const seen = new Set<string>();
-  const result: SuggestedTag[] = [];
-  for (const tag of aiTags) {
-    if (!remember(seen, tag)) continue;
-    const isNew = !knownTagSet.has(tag) || undefined;
-    result.push({ tag, source: 'ai', ...(isNew ? { isNew: true } : {}) });
-  }
-  return result;
-}
-
-/**
- * The AI pass, and the only pass that answers `isNew`.
- *
- * The vocabulary read happens after the early return, not before it: this pass
- * contributes nothing to a row the model did not classify, and reading the
- * table to then discard it made every deterministic row — and both sides of
- * every `previewTagRuleChangeSet` diff — pay for a set nothing consumed.
- *
- * It is read here rather than threaded from the caller because the answer must
- * come from the whole active vocabulary, and the once-per-batch list the caller
- * carries (`knownTags`) is the *closed* vocabulary the prompt was built from —
- * testing membership against that reported every open value the user had
- * already created as new (POPS-2602). What remains is one indexed read per
- * AI-classified row, on a path already waiting on a model call.
- */
-function addAiTags(args: AddAiTagsArgs): void {
-  const { aiTags, aiCategory, knownTags, db, seen, result } = args;
-  let tags: string[];
-  if (aiTags && aiTags.length > 0) {
-    tags = aiTags;
-  } else if (aiCategory && knownTags) {
-    const matched = knownTags.find((t) => t.toLowerCase() === aiCategory.toLowerCase());
-    tags = matched ? [matched] : [];
-  } else {
-    return;
-  }
-  if (tags.length === 0) return;
-
-  for (const suggestion of buildAiSuggestedTags(tags, tagVocabularyService.loadKnownTagSet(db))) {
-    if (!remember(seen, suggestion.tag)) continue;
-    result.push(suggestion);
-  }
-}
-
 function addEntityTags(pass: TagPass): void {
   const { entityId, entityDefaultTags, seen, result } = pass;
   if (!entityId) return;
@@ -311,6 +220,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
   addAiTags({
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
+    aiPromptVersion: opts.aiPromptVersion,
     knownTags: opts.knownTags,
     db,
     seen: pass.seen,

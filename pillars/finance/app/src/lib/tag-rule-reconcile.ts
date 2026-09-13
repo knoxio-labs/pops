@@ -98,7 +98,9 @@ export function reconcilePendingTagRule(
  * same rule are the same staged intent, however many times the user passed
  * through the step that stages it.
  */
-export function pendingTagRuleKey(entry: PendingTagRuleChangeSet): string | null {
+export function pendingTagRuleKey(
+  entry: Pick<PendingTagRuleChangeSet, 'changeSet'>
+): string | null {
   const first = entry.changeSet.ops[0];
   if (first === undefined || first.op !== 'add') return null;
   return JSON.stringify([

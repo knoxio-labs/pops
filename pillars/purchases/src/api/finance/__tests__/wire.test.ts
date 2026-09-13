@@ -46,7 +46,9 @@ describe('FinanceListResponseSchema', () => {
   const validRow = {
     id: 'txn-1',
     description: 'AMAZON MKTPLACE AU',
-    account: 'everyday',
+    accountId: 'everyday',
+    foreignAmountMinor: null,
+    foreignCurrency: null,
     amount: 41.28,
     date: '2026-03-04',
     type: 'purchase',
@@ -105,7 +107,9 @@ describe('toCandidateTransaction', () => {
   const wire = {
     id: 'txn-9',
     description: 'AMAZON MKTPLACE AU',
-    account: 'everyday',
+    accountId: 'everyday',
+    foreignAmountMinor: null,
+    foreignCurrency: null,
     amount: 19.99,
     date: '2026-03-04',
     type: 'purchase',
@@ -126,5 +130,88 @@ describe('toCandidateTransaction', () => {
   it('carries the pops:// URI a charge link stores', () => {
     expect(toCandidateTransaction(wire).uri).toBe('pops://finance/transaction/txn-9');
     expect(financeTransactionUri('abc')).toBe('pops://finance/transaction/abc');
+  });
+
+  it('carries the foreign charge through in the issuer own minor units', () => {
+    // NOT converted. `amount` is decimal dollars and becomes cents here;
+    // `foreignAmountMinor` is already an integer in its own currency's
+    // minor units, and scaling it again would be a hundredfold error.
+    const foreign = toCandidateTransaction({
+      ...wire,
+      amount: 34.71,
+      foreignAmountMinor: 12_890,
+      foreignCurrency: 'BRL',
+    });
+
+    expect(foreign.foreignAmountMinor).toBe(12_890);
+    expect(foreign.foreignCurrency).toBe('BRL');
+    expect(foreign.settlementCurrency).toBe('AUD');
+  });
+});
+
+/**
+ * The field names in `pillars/finance/openapi/finance.openapi.json`, which
+ * is the document this pillar's reader has to agree with.
+ *
+ * Worth its own suite because the disagreement is silent and total: this
+ * schema asked for `account` where finance has always published
+ * `accountId`, so every page failed to parse, every window read as
+ * unreadable, and every sweep skipped — for as long as the mismatch stood.
+ * Nothing failed loudly, because the fixtures were written from the same
+ * misreading as the schema.
+ */
+describe('the shape finance actually publishes', () => {
+  /** Copied field for field from `GET /transactions` in finance's spec. */
+  const publishedRow = {
+    id: 'txn-1',
+    description: 'PADARIA SAO JOAO SAO PAULO BR',
+    accountId: 'acc-anz-plat',
+    amount: 34.71,
+    date: '2026-11-14',
+    type: 'expense',
+    tags: ['food'],
+    entityId: null,
+    entityName: null,
+    location: 'Sao Paulo',
+    country: 'BR',
+    relatedTransactionId: null,
+    notes: null,
+    foreignAmountMinor: 12_890,
+    foreignCurrency: 'BRL',
+    fxFeeCents: 101,
+    fxCaptureSource: 'anz-descriptor',
+    lastEditedTime: '2026-11-15T02:00:00Z',
+  };
+
+  it('parses a row exactly as finance serves it', () => {
+    const parsed = FinanceListResponseSchema.safeParse({
+      data: [publishedRow],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects a row that renamed the account identifier', () => {
+    const { accountId: _dropped, ...withoutAccountId } = publishedRow;
+    const parsed = FinanceListResponseSchema.safeParse({
+      data: [{ ...withoutAccountId, account: 'acc-anz-plat' }],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('tolerates a producer that states no foreign charge at all', () => {
+    // Absent and null mean the same thing here — nobody captured one — and
+    // both refuse a cross-currency match rather than inventing a rate. An
+    // absent `amount` is a different matter and stays rejected.
+    const { foreignAmountMinor: _a, foreignCurrency: _c, ...withoutForeign } = publishedRow;
+    const parsed = FinanceListResponseSchema.safeParse({
+      data: [withoutForeign],
+      pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+    });
+
+    expect(parsed.success).toBe(true);
   });
 });

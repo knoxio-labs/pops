@@ -10,6 +10,8 @@ use sqlx::{ConnectOptions, SqlitePool};
 use std::str::FromStr;
 use std::time::Duration;
 
+use crate::entities::name_identity::{unicode_identity_collate, UNICODE_IDENTITY_COLLATION};
+
 /// Embedded migration journal under `pillars/contacts/migrations`. Applied on
 /// boot and in tests so the in-memory and on-disk schemas are identical.
 pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
@@ -28,7 +30,12 @@ pub async fn connect(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .foreign_keys(true)
         .busy_timeout(Duration::from_secs(5))
-        .disable_statement_logging();
+        .disable_statement_logging()
+        // Registered on every connection before migrations run, so
+        // `COLLATE UNICODE_NOCASE` is available both to the migration that
+        // creates the unique index on it and to every query afterwards —
+        // see `entities::name_identity`.
+        .collation(UNICODE_IDENTITY_COLLATION, unicode_identity_collate);
 
     let max_connections = if is_in_memory(database_url) { 1 } else { 5 };
 
