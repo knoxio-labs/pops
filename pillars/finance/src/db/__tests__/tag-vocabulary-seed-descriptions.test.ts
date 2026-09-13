@@ -123,6 +123,7 @@ describe('the seeded classified vocabulary', () => {
     'contains:tolls',
     'contains:utilities',
     'contains:withdrawal',
+    'fee:account-keeping',
     'fee:atm',
     'fee:conversion',
     'fee:interest',
@@ -168,7 +169,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
-    expect(EXPECTED).toHaveLength(85);
+    expect(EXPECTED).toHaveLength(86);
   });
 
   it('gives every closed-facet value the closed kind', () => {

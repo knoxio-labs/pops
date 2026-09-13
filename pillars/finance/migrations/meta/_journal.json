@@ -449,6 +449,20 @@
       "when": 1788800000011,
       "tag": "0112_venue_gym",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1788800000012,
+      "tag": "0113_fee_account_keeping",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1788800000013,
+      "tag": "0114_recount_vocabulary_usage",
+      "breakpoints": true
     }
   ]
 }
