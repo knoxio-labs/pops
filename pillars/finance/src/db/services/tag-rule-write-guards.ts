@@ -23,9 +23,16 @@ import { MarkerFacetTagRuleError, PlaceholderEntityScopeError } from '../tag-rul
  */
 export const PLACEHOLDER_ENTITY_ID_PREFIX = 'temp:';
 
-/** True when `entityId` is an unresolved `temp:` placeholder. */
+/**
+ * True when `entityId` is an unresolved `temp:` placeholder.
+ *
+ * Compared trimmed and lower-cased: nothing upstream guarantees an
+ * `entity_id` reaching this guard is already normalised (the REST schemas
+ * accept a plain `z.string()`), so `' temp:entity:…'` or `'TEMP:entity:…'`
+ * must not be a way past the check.
+ */
 export function isPlaceholderEntityId(entityId: string | null | undefined): entityId is string {
-  return entityId?.startsWith(PLACEHOLDER_ENTITY_ID_PREFIX) === true;
+  return entityId?.trim().toLowerCase().startsWith(PLACEHOLDER_ENTITY_ID_PREFIX) === true;
 }
 
 /**

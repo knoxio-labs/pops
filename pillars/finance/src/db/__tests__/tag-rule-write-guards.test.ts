@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { MarkerFacetTagRuleError, PlaceholderEntityScopeError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
-import { markerFacetTags } from '../services/tag-rule-write-guards.js';
+import { isPlaceholderEntityId, markerFacetTags } from '../services/tag-rule-write-guards.js';
 import {
   createOrReinforceTransactionTagRule,
   createTransactionTagRule,
@@ -63,6 +63,22 @@ describe('markerFacetTags', () => {
   });
 });
 
+describe('isPlaceholderEntityId', () => {
+  it.each(['temp:entity:0b8c', ' temp:entity:0b8c', 'TEMP:entity:0b8c', ' TEMP:entity:0b8c '])(
+    'treats %j as a placeholder regardless of case or padding',
+    (entityId) => {
+      expect(isPlaceholderEntityId(entityId)).toBe(true);
+    }
+  );
+
+  it.each([null, undefined, 'e2f1c3a0-real-contact', 'pending:contact:5d7e'])(
+    'does not treat %j as a placeholder',
+    (entityId) => {
+      expect(isPlaceholderEntityId(entityId)).toBe(false);
+    }
+  );
+});
+
 describe('tag-rule create refuses marker tags and placeholder scopes', () => {
   it.each(['flag:needs-review', 'person:x', 'Flag:needs-review'])('refuses %s', (marker) => {
     expect(() => create(['contains:software', marker])).toThrow(MarkerFacetTagRuleError);
@@ -88,6 +104,14 @@ describe('tag-rule create refuses marker tags and placeholder scopes', () => {
     );
     expect(ruleCount()).toBe(0);
   });
+
+  it.each([' temp:entity:0b8c', 'TEMP:entity:0b8c', ' TEMP:entity:0b8c '])(
+    'refuses a temp: entity scope regardless of case or padding (%j)',
+    (entityId) => {
+      expect(() => create(['contains:software'], entityId)).toThrow(PlaceholderEntityScopeError);
+      expect(ruleCount()).toBe(0);
+    }
+  );
 
   it('still accepts a non-marker rule, global or scoped to a real or pending contact', () => {
     create(['contains:software', 'channel:online']);
@@ -126,6 +150,18 @@ describe('tag-rule update refuses marker tags and placeholder scopes', () => {
 
     expect(() =>
       updateTransactionTagRule(opened.db, rule.id, { entityId: 'temp:entity:0b8c' })
+    ).toThrow(PlaceholderEntityScopeError);
+    expect(
+      opened.db.select().from(transactionTagRules).where(eq(transactionTagRules.id, rule.id)).get()
+        ?.entityId
+    ).toBe('e2f1c3a0-real-contact');
+  });
+
+  it('refuses re-scoping a rule to a temp: entity id padded or upper-cased', () => {
+    const rule = create(['contains:software'], 'e2f1c3a0-real-contact');
+
+    expect(() =>
+      updateTransactionTagRule(opened.db, rule.id, { entityId: ' TEMP:entity:0b8c ' })
     ).toThrow(PlaceholderEntityScopeError);
     expect(
       opened.db.select().from(transactionTagRules).where(eq(transactionTagRules.id, rule.id)).get()
