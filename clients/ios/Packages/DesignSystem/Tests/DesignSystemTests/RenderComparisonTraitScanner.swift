@@ -126,6 +126,12 @@ internal enum RenderComparisonTraitScanner {
     /// involved.
     private static let rasterisations = [".cgImage", ".uiImage", ".nsImage"]
 
+    /// `RenderedPixels.drawTheSame(`, the equality a determinism check spells
+    /// instead of `==` — renders are not byte-stable, so it carries no
+    /// operator for the lines below to find, and an equality missed here is
+    /// the silent direction.
+    private static let tolerantEquality = "drawTheSame("
+
     static func violations(inSource source: String, file: String) -> [Violation] {
         let lines = TokenDisciplineScanner.strippingComments(source)
         let stripped = lines.joined(separator: "\n")
@@ -256,7 +262,8 @@ internal enum RenderComparisonTraitScanner {
         return body.split(separator: "\n", omittingEmptySubsequences: false)
             .map(String.init)
             .filter { line in
-                guard line.contains("==") || line.contains("!=") else { return false }
+                guard line.contains("==") || line.contains("!=") || line.contains(tolerantEquality)
+                else { return false }
                 return callCount(of: entryPoints, in: line) > 0
                     || bindings.contains { containsIdentifier($0, in: line) }
             }

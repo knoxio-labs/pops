@@ -85,7 +85,7 @@ internal struct TransactionDetailRenderingTests {
         let once = try #require(Self.render(Self.card(TransactionDetail.fake())))
         let again = try #require(Self.render(Self.card(TransactionDetail.fake())))
 
-        #expect(once == again)
+        #expect(RenderedPixels.drawTheSame(once, again))
     }
 
     /// The canary for every other assertion here.
