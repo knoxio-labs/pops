@@ -15,6 +15,9 @@
 -- newest was left without a venue deliberately, and this migration does not
 -- overrule that.
 --
+-- REQUIRED before running against a real database: take a snapshot first
+-- (finance-audit remediation policy). Rollback = restore the snapshot.
+--
 -- Idempotent: every statement is keyed on the wrong value still being present,
 -- so a second run matches nothing.
 
