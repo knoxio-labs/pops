@@ -107,6 +107,21 @@ describe('buildConfirmedTransactions', () => {
     expect(result[0]).toMatchObject({ transactionType: 'reversal' });
   });
 
+  it('commits one value on a single-valued facet when the suggestions carry two (POPS-3734)', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'rule' },
+          { tag: 'contains:food', source: 'rule' },
+          { tag: 'venue:restaurant', source: 'ai' },
+          { tag: 'contains:alcohol', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:takeaway', 'contains:food', 'contains:alcohol']);
+  });
+
   it('still drops a refund with no entity (merchant transactions require a payee)', () => {
     const result = buildConfirmedTransactions([
       matched({ transactionType: 'refund', entity: { matchType: 'none' } }),

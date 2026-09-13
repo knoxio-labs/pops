@@ -95,3 +95,75 @@ describe('suggestTags — single-valued facets across matched rules', () => {
     expect(suggest()).toEqual(['venue:pub', 'contains:food', 'contains:alcohol']);
   });
 });
+
+describe('suggestTags — single-valued facets across passes (POPS-3734)', () => {
+  const ENTITY = 'entity-palms';
+
+  function suggestAcrossPasses(opts: { aiTags?: string[]; entityDefaults?: string[] }): string[] {
+    return suggestTags(db, {
+      description: DESCRIPTION,
+      entityId: ENTITY,
+      aiTags: opts.aiTags,
+      entityDefaultTags: new Map([[ENTITY, opts.entityDefaults ?? []]]),
+      recordTagRuleUsage: false,
+    }).map((suggestion) => suggestion.tag);
+  }
+
+  function venues(tags: string[]): string[] {
+    return tags.filter((tag) => tag.startsWith('venue:'));
+  }
+
+  function createTakeawayRule(extraTags: string[] = []): void {
+    transactionTagRulesService.createTransactionTagRule(db, {
+      descriptionPattern: 'PALMS ON OXFORD',
+      matchType: 'contains',
+      tags: ['venue:takeaway', ...extraTags],
+    });
+  }
+
+  it('keeps the rule’s venue over the AI’s', () => {
+    createTakeawayRule();
+
+    expect(venues(suggestAcrossPasses({ aiTags: ['venue:restaurant'] }))).toEqual([
+      'venue:takeaway',
+    ]);
+  });
+
+  it('keeps the rule’s venue over the entity default', () => {
+    createTakeawayRule();
+
+    expect(venues(suggestAcrossPasses({ entityDefaults: ['venue:pub'] }))).toEqual([
+      'venue:takeaway',
+    ]);
+  });
+
+  it('keeps the AI’s venue over the entity default', () => {
+    expect(
+      venues(suggestAcrossPasses({ aiTags: ['venue:restaurant'], entityDefaults: ['venue:pub'] }))
+    ).toEqual(['venue:restaurant']);
+  });
+
+  it('keeps the first correction venue over a second correction venue and a tag rule’s', () => {
+    createTakeawayRule();
+
+    const tags = suggestTags(db, {
+      description: DESCRIPTION,
+      entityId: null,
+      correctionTags: ['venue:bar', 'venue:pub'],
+      recordTagRuleUsage: false,
+    }).map((suggestion) => suggestion.tag);
+
+    expect(venues(tags)).toEqual(['venue:bar']);
+  });
+
+  it('still unions contains across rule, AI and entity default', () => {
+    createTakeawayRule(['contains:food']);
+
+    expect(
+      suggestAcrossPasses({
+        aiTags: ['venue:restaurant', 'contains:alcohol'],
+        entityDefaults: ['venue:pub', 'contains:coffee'],
+      })
+    ).toEqual(['venue:takeaway', 'contains:food', 'contains:alcohol', 'contains:coffee']);
+  });
+});
