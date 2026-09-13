@@ -5,7 +5,11 @@
  * line cap: this is row shaping (optionals collapsed to column defaults,
  * provenance sanitised, `type` resolved), with no transaction or phase logic.
  */
-import { resolveCommittedType } from '../../../contract/transaction-classification.js';
+import {
+  feeTagsOnNonFeeType,
+  resolveCommittedType,
+  withoutFeeTagsOnNonFeeType,
+} from '../../../contract/transaction-classification.js';
 import { dollarsToCents } from '../../../money.js';
 import { ValidationError } from '../../shared/errors.js';
 
@@ -86,6 +90,24 @@ function committedType(txn: ConfirmedRow, tags: string[]): TransactionType {
 }
 
 /**
+ * The confirmed row's tags less any `fee:` value its committed `type`
+ * contradicts. Dropped with a warning rather than refused: the categorizer
+ * classifies the `fee` facet and the review wizard's pickers offer its values
+ * on any row, so a refusal would surface only at commit, as a failed row the
+ * user can no longer edit.
+ */
+function committedTags(txn: ConfirmedRow, type: TransactionType): string[] {
+  const tags = txn.tags ?? [];
+  for (const tag of feeTagsOnNonFeeType(type, tags)) {
+    console.warn(
+      `[imports] not committing ${JSON.stringify(tag)} on '${txn.description}' ` +
+        `(${txn.checksum}): a '${type}' row cannot carry a fee tag`
+    );
+  }
+  return withoutFeeTagsOnNonFeeType(type, tags);
+}
+
+/**
  * The confirmed row as it is written: every wire optional collapsed to its
  * column default, and `type` resolved through {@link committedType} so a
  * gift-card purchase is stored as the transfer it is (POPS-2610) and an untyped
@@ -100,15 +122,15 @@ export function transactionColumns(
   entityId: string | undefined
 ): Parameters<typeof importsService.insertImportTransaction>[1] {
   const provenance = sanitizeProvenance(txn);
-  const tags = txn.tags ?? [];
+  const type = committedType(txn, txn.tags ?? []);
   return {
     description: txn.description,
     dialectAccountLabel: txn.dialectAccountLabel,
     accountId: txn.accountId,
     amountCents: dollarsToCents(txn.amount),
     date: txn.date,
-    type: committedType(txn, tags),
-    tags,
+    type,
+    tags: committedTags(txn, type),
     entityId: entityId ?? null,
     entityName: txn.entityName ?? null,
     location: txn.location ?? null,

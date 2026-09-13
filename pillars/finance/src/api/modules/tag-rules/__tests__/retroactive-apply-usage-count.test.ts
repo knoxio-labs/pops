@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import {
@@ -114,6 +114,27 @@ describe('applyTagRuleToExistingTransactions — usage_count (POPS-2627)', () =>
     applyTagRuleToExistingTransactions(db, ruleId, { dryRun: true });
 
     expect(usageCountOf('venue:cafe')).toBe(0);
+  });
+
+  it('does not apply a fee tag to a non-fee row, but still applies the rest', () => {
+    const purchaseId = seedTxn('PLUS FITNESS', []);
+    const feeId = seedTxn('PLUS FITNESS', []);
+    db.update(transactions).set({ type: 'fee' }).where(eq(transactions.id, feeId)).run();
+    const ruleId = seedRule('PLUS FITNESS', ['venue:cafe', 'fee:membership']);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    applyTagRuleToExistingTransactions(db, ruleId);
+
+    const tagsOf = (id: string) =>
+      JSON.parse(
+        db
+          .select({ tags: transactions.tags })
+          .from(transactions)
+          .where(eq(transactions.id, id))
+          .get()?.tags ?? 'null'
+      );
+    expect(tagsOf(purchaseId)).toEqual(['venue:cafe']);
+    expect(tagsOf(feeId)).toEqual(['venue:cafe', 'fee:membership']);
   });
 
   it('running the same rule twice is idempotent about usage as well as tags', () => {

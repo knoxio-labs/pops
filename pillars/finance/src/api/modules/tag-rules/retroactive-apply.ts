@@ -38,6 +38,10 @@
 import { asc, eq } from 'drizzle-orm';
 
 import {
+  feeTagsOnNonFeeType,
+  withoutFeeTagsOnNonFeeType,
+} from '../../../contract/transaction-classification.js';
+import {
   type FinanceDb,
   tagVocabularyService,
   transactionCorrectionsService,
@@ -58,9 +62,17 @@ function mergeTags(
   existing: readonly string[],
   ruleTags: readonly string[],
   ruleId: string,
-  transactionId: string
+  txn: Pick<BatchTxn, 'id' | 'type'>
 ): { tags: string[]; refused: boolean } {
-  const { tags, dropped } = mergeTagsWithinFacetLimits(existing, ruleTags);
+  const transactionId = txn.id;
+  for (const tag of feeTagsOnNonFeeType(txn.type, ruleTags)) {
+    console.warn(
+      `[tag-rules] rule ${ruleId} not applying ${JSON.stringify(tag)} to transaction ` +
+        `${transactionId}: a '${txn.type}' row cannot carry a fee tag`
+    );
+  }
+  const applicable = withoutFeeTagsOnNonFeeType(txn.type, ruleTags);
+  const { tags, dropped } = mergeTagsWithinFacetLimits(existing, applicable);
   for (const tag of dropped) {
     console.warn(
       `[tag-rules] rule ${ruleId} not applying ${JSON.stringify(tag)} to transaction ` +
@@ -74,6 +86,7 @@ interface BatchTxn {
   id: string;
   description: string;
   entityId: string | null;
+  type: string;
   tags: string;
   matchType: string | null;
 }
@@ -84,6 +97,7 @@ function fetchBatch(db: FinanceDb, offset: number): BatchTxn[] {
       id: transactions.id,
       description: transactions.description,
       entityId: transactions.entityId,
+      type: transactions.type,
       tags: transactions.tags,
       matchType: transactions.matchType,
     })
@@ -181,7 +195,7 @@ export function applyTagRuleToExistingTransactions(
       result.matched++;
 
       const existingTags = parseStoredTags(txn.tags);
-      const { tags: merged, refused } = mergeTags(existingTags, ruleTags, rule.id, txn.id);
+      const { tags: merged, refused } = mergeTags(existingTags, ruleTags, rule.id, txn);
       if (refused) result.refusedFacetConflict++;
       if (merged.length === existingTags.length) continue;
 

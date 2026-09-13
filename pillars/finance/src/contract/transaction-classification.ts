@@ -37,6 +37,36 @@ export type FeeTag = (typeof FEE_TAGS)[number];
 /** The `fee:` prefix, so callers can strip foreign fee values without re-deriving it. */
 export const FEE_TAG_PREFIX = 'fee:';
 
+function isFeeTag(tag: string): boolean {
+  return tag.trim().toLowerCase().startsWith(FEE_TAG_PREFIX);
+}
+
+/**
+ * The `fee:` values in `tags` that contradict `type`: every one of them unless
+ * the row is `type = 'fee'`, since the namespace names a fee's sub-kind and
+ * nothing else. The prefix is compared trimmed and case-insensitively, so
+ * `' FEE:late'` is caught too; returned values are verbatim.
+ *
+ * A `null`/`undefined` type is not `fee`, so it flags every fee value: a row is
+ * a fee only when something explicitly typed it one.
+ */
+export function feeTagsOnNonFeeType(
+  type: string | null | undefined,
+  tags: readonly string[]
+): string[] {
+  if (type === 'fee') return [];
+  return tags.filter(isFeeTag);
+}
+
+/** `tags` without the values {@link feeTagsOnNonFeeType} flags for `type`, order preserved. */
+export function withoutFeeTagsOnNonFeeType(
+  type: string | null | undefined,
+  tags: readonly string[]
+): string[] {
+  const contradicting = new Set(feeTagsOnNonFeeType(type, tags));
+  return tags.filter((tag) => !contradicting.has(tag));
+}
+
 /**
  * A foreign-currency ATM cash withdrawal from a bank account. ANZ appends
  * `INCL ... TRANSACTION FEE $X.XX` to the withdrawal line itself as a
@@ -111,8 +141,10 @@ export const FEE_PATTERNS: ReadonlyArray<{ tag: FeeTag; patterns: readonly strin
   },
   /**
    * A bank charging for the account itself — e.g. not meeting a minimum-deposit
-   * condition — not `fee:membership`, which names a card or subscription
-   * membership fee (see `0113_fee_account_keeping.sql`). `MONTHLY ACCOUNT FEE`
+   * condition — not `fee:membership`, which names a card or account membership
+   * fee charged for holding the card itself, never a subscription or gym
+   * membership (see `0113_fee_account_keeping.sql`, narrowed by
+   * `0116_narrow_fee_membership.sql`). `MONTHLY ACCOUNT FEE`
    * and `ACCOUNT SERVICE FEE` moved here from `fee:membership` for the same
    * reason: a bank account fee, not a gym or subscription (POPS-3703, backfilled
    * by `0115_fee_account_keeping_backfill.sql`). No amount-sign special-case:
